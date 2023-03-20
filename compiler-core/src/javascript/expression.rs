@@ -12,6 +12,22 @@ use crate::{
 };
 use std::sync::Arc;
 
+#[derive(Debug, Clone, Copy)]
+pub enum Position {
+    Tail,
+    NotTail,
+}
+
+impl Position {
+    /// Returns `true` if the position is [`Tail`].
+    ///
+    /// [`Tail`]: Position::Tail
+    #[must_use]
+    pub fn is_tail(&self) -> bool {
+        matches!(self, Self::Tail)
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct Generator<'module> {
     module_name: SmolStr,
@@ -19,8 +35,8 @@ pub(crate) struct Generator<'module> {
     function_name: Option<&'module SmolStr>,
     function_arguments: Vec<Option<&'module SmolStr>>,
     current_scope_vars: im::HashMap<SmolStr, usize>,
-    pub tail_position: bool,
-    pub in_iife: bool,
+    pub function_position: Position,
+    pub scope_position: Position,
     // We register whether these features are used within an expression so that
     // the module generator can output a suitable function if it is needed.
     pub tracker: &'module mut UsageTracker,
@@ -51,8 +67,8 @@ impl<'module> Generator<'module> {
             function_arguments,
             tail_recursion_used: false,
             current_scope_vars,
-            tail_position: true,
-            in_iife: false,
+            function_position: Position::Tail,
+            scope_position: Position::Tail,
         }
     }
 
@@ -244,7 +260,7 @@ impl<'module> Generator<'module> {
     }
 
     pub fn wrap_return<'a>(&self, document: Document<'a>) -> Document<'a> {
-        if self.tail_position {
+        if self.scope_position.is_tail() {
             docvec!["return ", document, ";"]
         } else {
             document
@@ -255,10 +271,15 @@ impl<'module> Generator<'module> {
     where
         CompileFn: Fn(&mut Self) -> Output<'a>,
     {
-        let tail = self.tail_position;
-        self.tail_position = false;
+        let function_position = self.function_position;
+        let scope_position = self.scope_position;
+
+        self.function_position = Position::NotTail;
+        self.scope_position = Position::NotTail;
         let result = compile(self);
-        self.tail_position = tail;
+
+        self.function_position = function_position;
+        self.scope_position = scope_position;
         result
     }
 
@@ -300,21 +321,18 @@ impl<'module> Generator<'module> {
         ToDoc: FnOnce(&mut Self, &'a T) -> Output<'a>,
     {
         // Save initial state
-        let tail = self.tail_position;
-        let iife = self.in_iife;
+        let scope_position = self.scope_position;
 
         // Set state for in this iife
-        self.tail_position = true;
-        self.in_iife = true;
+        self.scope_position = Position::Tail;
         let current_scope_vars = self.current_scope_vars.clone();
 
         // Generate the expression
         let result = to_doc(self, statements);
 
         // Reset
-        self.in_iife = iife;
-        self.tail_position = tail;
         self.current_scope_vars = current_scope_vars;
+        self.scope_position = scope_position;
 
         // Wrap in iife document
         Ok(self.immediately_involked_function_expression_document(result?))
@@ -459,7 +477,7 @@ impl<'module> Generator<'module> {
             // Subject must be rendered before the variable for variable numbering
             let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
             let js_name = self.next_local_var(name);
-            return Ok(if self.tail_position {
+            return Ok(if self.scope_position.is_tail() {
                 docvec![
                     "let ",
                     js_name.clone(),
@@ -486,7 +504,7 @@ impl<'module> Generator<'module> {
         let compiled = pattern_generator.take_compiled();
 
         // If we are in tail position we can return value being assigned
-        let afterwards = if self.tail_position {
+        let afterwards = if self.scope_position.is_tail() {
             line()
                 .append("return ")
                 .append(subject_assignment.clone().unwrap_or_else(|| value.clone()))
@@ -657,13 +675,19 @@ impl<'module> Generator<'module> {
     }
 
     fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [CallArg<TypedExpr>]) -> Output<'a> {
-        let tail = self.tail_position;
-        self.tail_position = false;
+        let scope_position = self.scope_position;
+        let function_position = self.function_position;
+
+        self.scope_position = Position::NotTail;
+        self.function_position = Position::NotTail;
         let arguments = arguments
             .iter()
             .map(|element| self.wrap_expression(&element.value))
             .try_collect()?;
-        self.tail_position = tail;
+
+        self.function_position = function_position;
+        self.scope_position = scope_position;
+
         self.call_with_doc_args(fun, arguments)
     }
 
@@ -706,8 +730,7 @@ impl<'module> Generator<'module> {
             // frame, enabling recursion with constant memory usage.
             TypedExpr::Var { name, .. }
                 if self.function_name == Some(name)
-                    && !self.in_iife
-                    && self.tail_position
+                    && self.function_position.is_tail()
                     && self.current_scope_vars.get(name) == Some(&0) =>
             {
                 let mut docs = Vec::with_capacity(arguments.len() * 4);
@@ -756,8 +779,11 @@ impl<'module> Generator<'module> {
 
     fn fn_<'a>(&mut self, arguments: &'a [TypedArg], body: &'a [TypedStatement]) -> Output<'a> {
         // New function, this is now the tail position
-        let tail = self.tail_position;
-        self.tail_position = true;
+        let function_position = self.function_position;
+        let scope_position = self.scope_position;
+        self.function_position = Position::Tail;
+        self.scope_position = Position::Tail;
+
         // And there's a new scope
         let scope = self.current_scope_vars.clone();
         for name in arguments.iter().flat_map(Arg::get_variable_name) {
@@ -773,7 +799,8 @@ impl<'module> Generator<'module> {
         let result = self.statements(body);
 
         // Reset function name, scope, and tail position tracking
-        self.tail_position = tail;
+        self.function_position = function_position;
+        self.scope_position = scope_position;
         self.current_scope_vars = scope;
         std::mem::swap(&mut self.function_name, &mut name);
 
@@ -919,8 +946,8 @@ impl<'module> Generator<'module> {
     }
 
     fn todo<'a>(&mut self, message: &'a Option<SmolStr>, location: &'a SrcSpan) -> Document<'a> {
-        let tail_position = self.tail_position;
-        self.tail_position = false;
+        let scope_position = self.scope_position;
+        self.scope_position = Position::NotTail;
 
         let message = message
             .as_deref()
@@ -929,20 +956,20 @@ impl<'module> Generator<'module> {
 
         // Reset tail position so later values are returned as needed. i.e.
         // following clauses in a case expression.
-        self.tail_position = tail_position;
+        self.scope_position = scope_position;
 
         doc
     }
 
     fn panic<'a>(&mut self, location: &'a SrcSpan) -> Document<'a> {
-        let tail_position = self.tail_position;
-        self.tail_position = false;
+        let scope_position = self.scope_position;
+        self.scope_position = Position::NotTail;
 
         let doc = self.throw_error("todo", "panic expression evaluated", *location, vec![]);
 
         // Reset tail position so later values are returned as needed. i.e.
         // following clauses in a case expression.
-        self.tail_position = tail_position;
+        self.scope_position = scope_position;
 
         doc
     }
