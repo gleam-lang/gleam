@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/erlang/tests/use_.rs
+assertion_line: 56
+expression: "\npub fn main() {\n  let thingy = fn(f) { f() }\n  use <- thingy()\n}\n"
+---
+-module(the_app).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([main/0]).
+
+-spec main() -> any().
+main() ->
+    Thingy = fun(F) ->
+        F()
+    end,
+    Thingy(
+        fun() ->
+            erlang:error(#{gleam_error => todo,
+                    message => <<"This has not yet been implemented"/utf8>>,
+                    module => <<"the_app"/utf8>>,
+                    function => <<"main"/utf8>>,
+                    line => 4})
+        end
+    ).
+

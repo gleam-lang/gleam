@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 220
+expression: "type Point { Point(x: Int, y: Int) }\n                fn y() { fn() { Point }()(4, 6) }"
+---
+-module(the_app).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export_type([point/0]).
+
+-type point() :: {point, integer(), integer()}.
+
+-spec y() -> point().
+y() ->
+    ((fun() ->
+        fun(Field@0, Field@1) -> {point, Field@0, Field@1} end
+    end)())(4, 6).
+

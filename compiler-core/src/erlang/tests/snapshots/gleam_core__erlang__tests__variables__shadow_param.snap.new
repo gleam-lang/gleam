@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/erlang/tests/variables.rs
+assertion_line: 23
+expression: "pub fn main(board) {\nfn(board) { board }\n  board\n}"
+---
+-module(the_app).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([main/1]).
+
+-spec main(I) -> I.
+main(Board) ->
+    fun(Board@1) ->
+        Board@1
+    end,
+    Board.
+
