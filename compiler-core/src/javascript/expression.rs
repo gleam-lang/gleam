@@ -98,6 +98,18 @@ impl<'module> Generator<'module> {
         ))
     }
 
+    fn statement<'a>(&mut self, statement: &'a TypedStatement) -> Output<'a> {
+        match statement {
+            Statement::Expression(expression) => self.expression(expression),
+            Statement::Assignment(assignment) => {
+                self.assignment(&assignment.value, &assignment.pattern)
+            }
+            Statement::Use(_use) => {
+                unreachable!("Use must not be present for JavaScript generation")
+            }
+        }
+    }
+
     pub fn expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         let document = match expression {
             TypedExpr::String { value, .. } => Ok(string(value)),
@@ -136,11 +148,13 @@ impl<'module> Generator<'module> {
                 name, constructor, ..
             } => Ok(self.variable(name, constructor)),
 
-            TypedExpr::Pipeline { expressions, .. } | TypedExpr::Block { expressions, .. } => {
-                self.sequence(expressions)
-            }
+            TypedExpr::Pipeline {
+                assignments,
+                finally,
+                ..
+            } => self.pipeline(assignments.as_slice(), finally),
 
-            TypedExpr::Assignment { value, pattern, .. } => self.assignment(value, pattern),
+            TypedExpr::Block { statements, .. } => self.statements(statements),
 
             TypedExpr::BinOp {
                 name, left, right, ..
@@ -253,8 +267,7 @@ impl<'module> Generator<'module> {
             TypedExpr::Todo { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. }
-            | TypedExpr::Assignment { .. } => {
+            | TypedExpr::Pipeline { .. } => {
                 self.immediately_involked_function_expression(expression)
             }
             _ => self.expression(expression),
@@ -269,10 +282,7 @@ impl<'module> Generator<'module> {
             TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {
                 Ok(docvec!("(", self.expression(expression)?, ")"))
             }
-            TypedExpr::Case { .. }
-            | TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. }
-            | TypedExpr::Assignment { .. } => {
+            TypedExpr::Case { .. } | TypedExpr::Block { .. } | TypedExpr::Pipeline { .. } => {
                 self.immediately_involked_function_expression(expression)
             }
             _ => self.expression(expression),
@@ -375,21 +385,36 @@ impl<'module> Generator<'module> {
         }
     }
 
-    fn sequence<'a>(&mut self, expressions: &'a [TypedExpr]) -> Output<'a> {
-        let count = expressions.len();
+    fn pipeline<'a>(
+        &mut self,
+        assignments: &'a [TypedAssignment],
+        finally: &'a TypedExpr,
+    ) -> Output<'a> {
+        let count = assignments.len();
+        let mut documents = Vec::with_capacity((count + 1) * 3);
+        for assignment in assignments.iter() {
+            documents.push(self.not_in_tail_position(|gen| {
+                gen.assignment(&assignment.value, &assignment.pattern)
+            })?);
+            documents.push(";".to_doc());
+            documents.push(line());
+        }
+        documents.push(self.expression(finally)?);
+        Ok(documents.to_doc().force_break())
+    }
+
+    fn statements<'a>(&mut self, statements: &'a [TypedStatement]) -> Output<'a> {
+        let count = statements.len();
         let mut documents = Vec::with_capacity(count * 3);
-        for (i, expression) in expressions.iter().enumerate() {
+        for (i, statement) in statements.iter().enumerate() {
             if i + 1 < count {
-                documents.push(self.not_in_tail_position(|gen| gen.expression(expression))?);
-                if !matches!(
-                    expression,
-                    TypedExpr::Assignment { .. } | TypedExpr::Case { .. }
-                ) {
+                documents.push(self.not_in_tail_position(|gen| gen.statement(statement))?);
+                if requires_semicolon(statement) {
                     documents.push(";".to_doc());
                 }
                 documents.push(line());
             } else {
-                documents.push(self.expression(expression)?);
+                documents.push(self.statement(statement)?);
             }
         }
         Ok(documents.to_doc().force_break())
@@ -1023,14 +1048,6 @@ impl<'module> Generator<'module> {
         ))
         .group()
     }
-
-    fn statements<'a>(
-        &self,
-        body: &[Statement<Arc<Type>, TypedExpr>],
-    ) -> Result<Document<'a>, Error> {
-        // TODO: it
-        todo!()
-    }
 }
 
 pub fn int(value: &str) -> Document<'_> {
@@ -1247,8 +1264,7 @@ impl TypedExpr {
             | TypedExpr::Case { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. }
-            | TypedExpr::Assignment { .. } => true,
+            | TypedExpr::Pipeline { .. } => true,
 
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
@@ -1300,4 +1316,38 @@ impl BinOp {
 
 pub fn is_js_scalar(t: Arc<Type>) -> bool {
     t.is_int() || t.is_float() || t.is_bool() || t.is_nil() || t.is_string()
+}
+
+fn requires_semicolon(statement: &TypedStatement) -> bool {
+    match statement {
+        Statement::Expression(
+            TypedExpr::Int { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::BitString { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::ModuleSelect { .. },
+        ) => true,
+
+        Statement::Expression(
+            TypedExpr::Todo { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. },
+        ) => false,
+
+        Statement::Assignment(_) => false,
+        Statement::Use(_) => false,
+    }
 }

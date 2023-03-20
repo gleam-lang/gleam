@@ -84,10 +84,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location, value, ..
             } => Ok(self.infer_int(value, location)),
 
-            UntypedExpr::Block {
-                statements: expressions,
-                location,
-            } => self.infer_block(location, expressions),
+            UntypedExpr::Block { statements } => self.infer_block(statements),
 
             UntypedExpr::Tuple {
                 location, elems, ..
@@ -234,7 +231,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location: discarded.location(),
             });
         }
-        if discarded.type_().is_result() && !discarded.is_assignment() {
+        if discarded.type_().is_result() {
             self.environment
                 .warnings
                 .emit(Warning::ImplicitlyDiscardedResult {
@@ -2071,13 +2068,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.environment.check_exhaustiveness(patterns, value_typ)
     }
 
-    fn infer_block(
-        &self,
-        location: SrcSpan,
-        expressions: Vec1<UntypedStatement>,
-    ) -> Result<TypedExpr, Error> {
-        // TODO: it
-        todo!()
+    fn infer_block(&mut self, statements: Vec1<UntypedStatement>) -> Result<TypedExpr, Error> {
+        self.in_new_scope(|typer| {
+            let statements = typer.infer_statements(statements)?;
+            Ok(TypedExpr::Block { statements })
+        })
     }
 }
 

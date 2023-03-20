@@ -6,10 +6,6 @@ expression: "{ 1 2 }"
 [
     Expression(
         Block {
-            location: SrcSpan {
-                start: 0,
-                end: 7,
-            },
             statements: [
                 Expression(
                     Int {

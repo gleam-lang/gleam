@@ -844,11 +844,7 @@ where
         let (_, end) = self.expect_one(&Token::RightBrace)?;
         match body {
             None => parse_error(ParseErrorType::NoExpression, SrcSpan { start, end }),
-
-            Some((statements, _)) => Ok(UntypedExpr::Block {
-                location: SrcSpan::new(start, end),
-                statements,
-            }),
+            Some((statements, _)) => Ok(UntypedExpr::Block { statements }),
         }
     }
 

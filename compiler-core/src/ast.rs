@@ -1568,7 +1568,7 @@ impl TypedStatement {
         match self {
             Statement::Expression(expression) => expression.type_(),
             Statement::Assignment(assignment) => assignment.type_(),
-            Statement::Use(use_) => unreachable!("Use must not exist for typed code"),
+            Statement::Use(_use) => unreachable!("Use must not exist for typed code"),
         }
     }
 
