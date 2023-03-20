@@ -1537,16 +1537,6 @@ pub enum Statement<TypeT, ExpressionT> {
 pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
 pub type UntypedStatement = Statement<(), UntypedExpr>;
 
-impl<T, E> Statement<T, E> {
-    /// Returns `true` if the statement is [`Expression`].
-    ///
-    /// [`Expression`]: Statement::Expression
-    #[must_use]
-    pub fn is_expression(&self) -> bool {
-        matches!(self, Self::Expression(..))
-    }
-}
-
 impl UntypedStatement {
     pub fn location(&self) -> SrcSpan {
         match self {
@@ -1566,6 +1556,13 @@ impl UntypedStatement {
 }
 
 impl TypedStatement {
+    pub fn is_non_pipe_expression(&self) -> bool {
+        match self {
+            Statement::Expression(expression) => !expression.is_pipeline(),
+            _ => false,
+        }
+    }
+
     pub fn location(&self) -> SrcSpan {
         match self {
             Statement::Expression(expression) => expression.location(),

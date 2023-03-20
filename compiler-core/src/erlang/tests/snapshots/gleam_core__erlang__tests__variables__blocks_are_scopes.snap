@@ -11,6 +11,8 @@ expression: "\npub fn main() {\n  let x = 1\n  {\n    let x = 2\n  }\n  x\n}\n"
 -spec main() -> integer().
 main() ->
     X = 1,
-    X@1 = 2,
+    begin
+        X@1 = 2
+    end,
     X.
 
