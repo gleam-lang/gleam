@@ -3171,24 +3171,33 @@ fn tuple_access() {
 }
 "#
     );
+}
 
+#[test]
+fn tuple_access1() {
     assert_format!(
         r#"fn main() {
   tup.1
 }
 "#
     );
+}
 
+#[test]
+fn tuple_access2() {
     assert_format!(
         r#"fn main() {
   tup.777
 }
 "#
     );
+}
 
+#[test]
+fn tuple_access3() {
     assert_format!(
         r#"fn main() {
-  {tup.1}.2
+  { tup.1 }.2
 }
 "#
     );
@@ -4410,7 +4419,10 @@ fn single_empty_line_between_comments() {
 }
 "
     );
+}
 
+#[test]
+fn single_empty_line_between_comments1() {
     // single empty line between comments/statement preserved
     assert_format!(
         "pub fn foo() {
@@ -4422,7 +4434,10 @@ fn single_empty_line_between_comments() {
 }
 "
     );
+}
 
+#[test]
+fn single_empty_line_between_comments2() {
     // multiple consecutive empty lines condensed into one
     assert_format_rewrite!(
         "pub fn foo() {
@@ -4444,7 +4459,10 @@ fn single_empty_line_between_comments() {
 }
 "
     );
+}
 
+#[test]
+fn single_empty_line_between_comments3() {
     // freestanding comments keep empty lines
     assert_format!(
         "// foo
@@ -4452,7 +4470,10 @@ fn single_empty_line_between_comments() {
 // bar
 "
     );
+}
 
+#[test]
+fn single_empty_line_between_comments4() {
     // freestanding comments condense consecutive empty lines
     assert_format_rewrite!(
         "// foo
@@ -4890,7 +4911,7 @@ fn triple_negate() {
 "#,
         r#"pub fn main() {
   let a = 3
-  let b = - { - { -a } }
+  let b = - - -a
 }
 "#
     );
@@ -4922,7 +4943,7 @@ fn binary_double_negate() {
 "#,
         r#"pub fn main() {
   let a = 3
-  let b = - { - { a + 3 } }
+  let b = - -{ a + 3 }
 }
 "#
     );
@@ -4940,7 +4961,7 @@ fn repeated_negate_after_subtract() {
         r#"pub fn main() {
   let a = 3
   let b = 4
-  let c = a - - { - { - { - { - { - { -b } } } } } }
+  let c = a - - - - - - - -b
 }
 "#
     );
@@ -4962,7 +4983,7 @@ fn wrap_long_line_with_int_negation() {
       a * a * a * a * a * a * a * a * a * a
     }
   let c =
-    c * c * c * c * c * c * c * c * c * c * c * c * c * - {
+    c * c * c * c * c * c * c * c * c * c * c * c * c * -{
       c * c * c * c * c * c * c * c * c * c
     }
 }
