@@ -754,7 +754,11 @@ fn statement_sequence<'a>(statements: &'a [TypedStatement], env: &mut Env<'a>) -
             documents.push(line());
         }
     }
-    documents.to_doc().force_break()
+    if count == 1 {
+        documents.to_doc()
+    } else {
+        documents.to_doc().force_break()
+    }
 }
 
 fn bin_op<'a>(

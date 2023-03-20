@@ -266,9 +266,10 @@ impl<'module> Generator<'module> {
     /// required due to being a JS statement
     pub fn wrap_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::Todo { .. } | TypedExpr::Case { .. } | TypedExpr::Pipeline { .. } => {
-                self.immediately_involked_function_expression(expression)
-            }
+            TypedExpr::Todo { .. } | TypedExpr::Case { .. } | TypedExpr::Pipeline { .. } => self
+                .immediately_involked_function_expression(expression, |gen, expr| {
+                    gen.expression(expr)
+                }),
             _ => self.expression(expression),
         }
     }
@@ -281,18 +282,23 @@ impl<'module> Generator<'module> {
             TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {
                 Ok(docvec!("(", self.expression(expression)?, ")"))
             }
-            TypedExpr::Case { .. } | TypedExpr::Pipeline { .. } => {
-                self.immediately_involked_function_expression(expression)
-            }
+            TypedExpr::Case { .. } | TypedExpr::Pipeline { .. } => self
+                .immediately_involked_function_expression(expression, |gen, expr| {
+                    gen.expression(expr)
+                }),
             _ => self.expression(expression),
         }
     }
 
     /// Wrap an expression in an immediately involked function expression
-    fn immediately_involked_function_expression<'a>(
+    fn immediately_involked_function_expression<'a, T, ToDoc>(
         &mut self,
-        expression: &'a TypedExpr,
-    ) -> Output<'a> {
+        statements: &'a T,
+        to_doc: ToDoc,
+    ) -> Output<'a>
+    where
+        ToDoc: FnOnce(&mut Self, &'a T) -> Output<'a>,
+    {
         // Save initial state
         let tail = self.tail_position;
         let iife = self.in_iife;
@@ -303,7 +309,7 @@ impl<'module> Generator<'module> {
         let current_scope_vars = self.current_scope_vars.clone();
 
         // Generate the expression
-        let result = self.expression(expression);
+        let result = to_doc(self, statements);
 
         // Reset
         self.in_iife = iife;
@@ -402,13 +408,30 @@ impl<'module> Generator<'module> {
     }
 
     fn block<'a>(&mut self, statements: &'a Vec1<TypedStatement>) -> Output<'a> {
-        let can_be_js_expression = statements.len() == 1 && requires_semicolon(statements.first());
-        let statements = self.statements(statements.as_slice())?;
+        if statements.len() == 1 {
+            let tail = self.tail_position;
+            self.tail_position = false;
+            let doc = match statements.first() {
+                Statement::Expression(expression) => {
+                    Ok(docvec!['(', self.expression(expression)?, ')'])
+                }
 
-        if can_be_js_expression {
-            Ok(docvec!["(", statements, ")"])
+                Statement::Assignment(assignment) => Ok(docvec![
+                    '(',
+                    self.expression(assignment.value.as_ref())?,
+                    ')'
+                ]),
+
+                Statement::Use(_) => {
+                    unreachable!("use statements must not be present for JavaScript generation")
+                }
+            };
+            self.tail_position = tail;
+            doc
         } else {
-            Ok(self.immediately_involked_function_expression_document(statements))
+            self.immediately_involked_function_expression(statements, |gen, statements| {
+                gen.statements(statements)
+            })
         }
     }
 

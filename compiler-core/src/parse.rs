@@ -829,16 +829,6 @@ where
         }
     }
 
-    fn parse_expression_or_block(&mut self) -> Result<Option<UntypedExpr>, ParseError> {
-        if let Some((start, Token::LeftBrace, _)) = self.tok0.as_ref() {
-            let start = *start;
-            _ = self.next_tok();
-            Ok(Some(self.parse_block(start)?))
-        } else {
-            self.parse_expression()
-        }
-    }
-
     fn parse_block(&mut self, start: u32) -> Result<UntypedExpr, ParseError> {
         let body = self.parse_statement_seq()?;
         let (_, end) = self.expect_one(&Token::RightBrace)?;
@@ -1062,7 +1052,7 @@ where
                 }
                 e
             })?;
-            let then = self.parse_expression_or_block()?;
+            let then = self.parse_expression()?;
             if let Some(then) = then {
                 Ok(Some(Clause {
                     location: SrcSpan {
