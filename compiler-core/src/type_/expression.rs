@@ -753,7 +753,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if kind.performs_exhaustiveness_check() {
             if let Err(unmatched) = self
                 .environment
-                .check_exhaustiveness(vec![pattern.clone()], collapse_links(value_typ.clone()))
+                .check_exhaustiveness(vec![pattern.clone()], collapse_links(value_typ))
             {
                 return Err(Error::NotExhaustivePatternMatch {
                     location,
