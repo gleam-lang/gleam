@@ -1577,7 +1577,7 @@ impl<'comments> Formatter<'comments> {
         match statement {
             Statement::Expression(expression) => self.expr(expression),
             Statement::Assignment(assignment) => self.assignment(assignment),
-            Statement::Use(use_) => todo!(),
+            Statement::Use(use_) => self.use_(use_),
         }
     }
 

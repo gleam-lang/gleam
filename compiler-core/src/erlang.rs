@@ -601,8 +601,13 @@ fn const_segment<'a>(
 }
 
 fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'a> {
-    // TODO: it
-    todo!("statement")
+    match statement {
+        Statement::Expression(e) => expr(e, env),
+        Statement::Assignment(a) => assignment(a, env),
+        Statement::Use(_) => {
+            unreachable!("Use statements must not be present for Erlang generation")
+        }
+    }
 }
 
 fn expr_segment<'a>(
@@ -1473,7 +1478,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             assignments,
             finally,
             ..
-        } => todo!(),
+        } => pipeline(assignments, finally, env),
 
         TypedExpr::Block { statements, .. } => block(statements, env),
 
@@ -1545,6 +1550,30 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
                 .iter()
                 .map(|s| expr_segment(&s.value, &s.options, env)),
         ),
+    }
+}
+
+fn pipeline<'a>(
+    assignments: &'a [Assignment<Arc<Type>, TypedExpr>],
+    finally: &'a TypedExpr,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let mut documents = Vec::with_capacity((assignments.len() + 1) * 3);
+
+    for a in assignments {
+        documents.push(assignment(a, env));
+        documents.push(','.to_doc());
+        documents.push(line());
+    }
+
+    documents.push(expr(finally, env));
+    documents.to_doc()
+}
+
+fn assignment<'a>(assignment: &'a TypedAssignment, env: &mut Env<'a>) -> Document<'a> {
+    match assignment.kind {
+        AssignmentKind::Let => let_(&assignment.value, &assignment.pattern, env),
+        AssignmentKind::Assert => assert(&assignment.value, &assignment.pattern, env),
     }
 }
 
