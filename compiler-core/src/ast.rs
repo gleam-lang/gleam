@@ -1535,11 +1535,41 @@ pub enum Statement<TypeT, ExpressionT> {
 pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
 pub type UntypedStatement = Statement<(), UntypedExpr>;
 
+impl UntypedStatement {
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            Statement::Expression(expression) => expression.location(),
+            Statement::Assignment(assignment) => assignment.location,
+        }
+    }
+
+    pub fn start_byte_index(&self) -> u32 {
+        match self {
+            Statement::Expression(expression) => expression.start_byte_index(),
+            Statement::Assignment(assignment) => assignment.location.start,
+        }
+    }
+}
+
 impl TypedStatement {
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            Statement::Expression(expression) => expression.location(),
+            Statement::Assignment(assignment) => assignment.location,
+        }
+    }
+
     pub fn type_(&self) -> Arc<Type> {
         match self {
             Statement::Expression(expression) => expression.type_(),
             Statement::Assignment(assignment) => assignment.type_(),
+        }
+    }
+
+    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+        match self {
+            Statement::Expression(expression) => expression.definition_location(),
+            Statement::Assignment(assignment) => None,
         }
     }
 
@@ -1566,11 +1596,11 @@ impl TypedStatement {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Assignment<TypeT, ExpressionT> {
-    location: SrcSpan,
-    value: Box<ExpressionT>,
-    pattern: Pattern<TypeT>,
-    kind: AssignmentKind,
-    annotation: Option<TypeAst>,
+    pub location: SrcSpan,
+    pub value: Box<ExpressionT>,
+    pub pattern: Pattern<TypeT>,
+    pub kind: AssignmentKind,
+    pub annotation: Option<TypeAst>,
 }
 
 pub type TypedAssignment = Assignment<Arc<Type>, TypedExpr>;

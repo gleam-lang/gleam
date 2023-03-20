@@ -21,7 +21,7 @@ pub enum UntypedExpr {
 
     Block {
         location: SrcSpan,
-        expressions: Vec<Self>,
+        statements: Vec1<Statement<(), Self>>,
     },
 
     Var {
@@ -130,6 +130,7 @@ impl UntypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
             Self::PipeLine { expressions, .. } => expressions.last().location(),
+
             Self::Fn { location, .. }
             | Self::Use(Use { location, .. })
             | Self::Var { location, .. }
@@ -150,24 +151,14 @@ impl UntypedExpr {
             | Self::RecordUpdate { location, .. }
             | Self::NegateBool { location, .. }
             | Self::NegateInt { location, .. } => *location,
-            Self::Block {
-                location,
-                expressions,
-                ..
-            } => expressions.last().map(Self::location).unwrap_or(*location),
+
+            Self::Block { statements, .. } => statements.last().location(),
         }
     }
 
     pub fn start_byte_index(&self) -> u32 {
         match self {
-            Self::Block {
-                expressions,
-                location,
-                ..
-            } => expressions
-                .first()
-                .map(|e| e.start_byte_index())
-                .unwrap_or(location.start),
+            Self::Block { statements, .. } => statements.first().start_byte_index(),
             Self::PipeLine { expressions, .. } => expressions.first().start_byte_index(),
             Self::Assignment { location, .. } => location.start,
             _ => self.location().start,

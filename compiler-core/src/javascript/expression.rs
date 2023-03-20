@@ -74,10 +74,10 @@ impl<'module> Generator<'module> {
 
     pub fn function_body<'a>(
         &mut self,
-        expression: &'a TypedExpr,
+        body: &'a [TypedStatement],
         args: &'a [TypedArg],
     ) -> Output<'a> {
-        let body = self.expression(expression)?;
+        let body = self.statements(body)?;
         if self.tail_recursion_used {
             self.tail_call_loop(body, args)
         } else {
@@ -697,7 +697,7 @@ impl<'module> Generator<'module> {
         }
     }
 
-    fn fn_<'a>(&mut self, arguments: &'a [TypedArg], body: &'a TypedExpr) -> Output<'a> {
+    fn fn_<'a>(&mut self, arguments: &'a [TypedArg], body: &'a [TypedStatement]) -> Output<'a> {
         // New function, this is now the tail position
         let tail = self.tail_position;
         self.tail_position = true;
@@ -713,7 +713,7 @@ impl<'module> Generator<'module> {
         std::mem::swap(&mut self.function_name, &mut name);
 
         // Generate the function body
-        let result = self.expression(body);
+        let result = self.statements(body);
 
         // Reset function name, scope, and tail position tracking
         self.tail_position = tail;
@@ -1022,6 +1022,14 @@ impl<'module> Generator<'module> {
             operator,
         ))
         .group()
+    }
+
+    fn statements<'a>(
+        &self,
+        body: &[Statement<Arc<Type>, TypedExpr>],
+    ) -> Result<Document<'a>, Error> {
+        // TODO: it
+        todo!()
     }
 }
 

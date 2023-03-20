@@ -218,7 +218,7 @@ fn module_document<'a>(
         module
             .statements
             .iter()
-            .flat_map(|s| statement(&module.name, s, &module.name, line_numbers)),
+            .flat_map(|s| module_statement(&module.name, s, &module.name, line_numbers)),
         lines(2),
     ));
 
@@ -374,7 +374,7 @@ fn register_imports(
     }
 }
 
-fn statement<'a>(
+fn module_statement<'a>(
     current_module: &'a str,
     statement: &'a TypedModuleStatement,
     module: &'a str,
@@ -417,7 +417,7 @@ fn statement<'a>(
 fn mod_fun<'a>(
     name: &'a str,
     args: &'a [TypedArg],
-    body: &'a TypedExpr,
+    body: &'a [TypedStatement],
     module: &'a str,
     return_type: &'a Arc<Type>,
     line_numbers: &'a LineNumbers,
@@ -435,7 +435,12 @@ fn mod_fun<'a>(
     spec.append(atom(name.to_string()))
         .append(fun_args(args, &mut env))
         .append(" ->")
-        .append(line().append(expr(body, &mut env)).nest(INDENT).group())
+        .append(
+            line()
+                .append(statements(body, &mut env))
+                .nest(INDENT)
+                .group(),
+        )
         .append(".")
 }
 
@@ -593,6 +598,16 @@ fn const_segment<'a>(
     let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
     bit_string_segment(document, options, size, unit, true, env)
+}
+
+fn statements<'a>(statement: &'a [TypedStatement], env: &mut Env<'a>) -> Document<'a> {
+    // TODO: it
+    todo!("statement")
+}
+
+fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'a> {
+    // TODO: it
+    todo!("statement")
 }
 
 fn expr_segment<'a>(
@@ -1576,12 +1591,12 @@ fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a str, label: &'a str) ->
     }
 }
 
-fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
+fn fun<'a>(args: &'a [TypedArg], body: &'a [TypedStatement], env: &mut Env<'a>) -> Document<'a> {
     let current_scope_vars = env.current_scope_vars.clone();
     let doc = "fun"
         .to_doc()
         .append(fun_args(args, env).append(" ->"))
-        .append(break_("", " ").append(expr(body, env)).nest(INDENT))
+        .append(break_("", " ").append(statements(body, env)).nest(INDENT))
         .append(break_("", " "))
         .append("end")
         .group();
