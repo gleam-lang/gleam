@@ -205,11 +205,6 @@ impl<'a> CallGraphBuilder<'a> {
                 self.names = names;
             }
 
-            UntypedExpr::Assignment { value, pattern, .. } => {
-                self.expression(value);
-                self.pattern(pattern);
-            }
-
             UntypedExpr::Case {
                 subjects, clauses, ..
             } => {
