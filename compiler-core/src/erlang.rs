@@ -1056,7 +1056,7 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
 
                 let guard = optional_clause_guard(guard.as_ref(), env);
                 if then_doc.is_none() {
-                    then_doc = Some(expr(then, env));
+                    then_doc = Some(clause_consequence(then, env));
                     end_erlang_vars = env.erl_function_scope_vars.clone();
                 }
 
@@ -1072,6 +1072,13 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
     let doc = concat(docs);
     env.erl_function_scope_vars = end_erlang_vars;
     doc
+}
+
+fn clause_consequence<'a>(consequence: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
+    match consequence {
+        TypedExpr::Block { statements } => statement_sequence(statements, env),
+        _ => expr(consequence, env),
+    }
 }
 
 fn optional_clause_guard<'a>(
