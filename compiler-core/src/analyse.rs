@@ -744,7 +744,7 @@ fn infer_function(
         .expect("Preregistered type for fn was not a fn");
 
     // Infer the type using the preregistered args + return types as a starting point
-    let (typ, args, body, safe_to_generalise) = environment.in_new_scope(|environment| {
+    let (type_, args, body, safe_to_generalise) = environment.in_new_scope(|environment| {
         let args = args
             .into_iter()
             .zip(&args_types)
@@ -756,18 +756,18 @@ fn infer_function(
             .expect("Could not find hydrator for fn");
         let (args, body) = expr_typer.infer_fn_with_known_types(args, body, Some(return_type))?;
         let args_types = args.iter().map(|a| a.type_.clone()).collect();
-        let typ = fn_(args_types, body.type_());
+        let typ = fn_(args_types, body.last().type_());
         let safe_to_generalise = !expr_typer.ungeneralised_function_used;
         Ok((typ, args, body, safe_to_generalise))
     })?;
 
     // Assert that the inferred type matches the type of any recursive call
-    unify(preregistered_type, typ.clone()).map_err(|e| convert_unify_error(e, location))?;
+    unify(preregistered_type, type_.clone()).map_err(|e| convert_unify_error(e, location))?;
 
     // Generalise the function if safe to do so
-    let typ = if safe_to_generalise {
+    let type_ = if safe_to_generalise {
         let _ = environment.ungeneralised_functions.remove(&name);
-        let typ = type_::generalise(typ);
+        let type_ = type_::generalise(type_);
         environment.insert_variable(
             name.clone(),
             ValueConstructorVariant::ModuleFn {
@@ -778,12 +778,12 @@ fn infer_function(
                 arity: args.len(),
                 location,
             },
-            typ.clone(),
+            type_.clone(),
             public,
         );
-        typ
+        type_
     } else {
-        typ
+        type_
     };
 
     Ok(ModuleStatement::Function(Function {
@@ -794,7 +794,7 @@ fn infer_function(
         arguments: args,
         end_position: end_location,
         return_annotation,
-        return_type: typ
+        return_type: type_
             .return_type()
             .expect("Could not find return type for fn"),
         body,

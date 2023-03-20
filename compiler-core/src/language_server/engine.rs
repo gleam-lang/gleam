@@ -175,6 +175,7 @@ where
                 Some(Located::Pattern(_pattern)) => None,
                 Some(Located::Statement(_statement)) => None,
                 Some(Located::Expression(_expression)) => None,
+                Some(Located::ModuleStatement(_statement)) => None,
             })
         })
     }
@@ -229,8 +230,9 @@ where
             };
 
             Ok(match found {
-                Located::Statement(_) => None,
+                Located::ModuleStatement(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
+                Located::Statement(statement) => None, // TODO: hover for statement
                 Located::Expression(expression) => Some(hover_for_expression(expression, lines)),
             })
         })
