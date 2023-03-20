@@ -77,7 +77,7 @@ fn expression() {
 
 #[test]
 fn expression1() {
-    assert_infer!("let assert x = let assert x = 1", "Int");
+    assert_infer!("let assert x = { let assert x = 1 }", "Int");
 }
 
 #[test]

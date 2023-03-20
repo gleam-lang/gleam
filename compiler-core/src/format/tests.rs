@@ -4895,7 +4895,7 @@ fn double_negate() {
 "#,
         r#"pub fn main() {
   let a = 3
-  let b = - { -a }
+  let b = - -a
 }
 "#
     );
@@ -4927,7 +4927,7 @@ fn binary_negate() {
 "#,
         r#"pub fn main() {
   let a = 3
-  let b = - { a + 3 }
+  let b = -{ a + 3 }
 }
 "#
     );

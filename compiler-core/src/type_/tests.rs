@@ -1826,7 +1826,15 @@ pub fn a() {
 #[test]
 fn let_as_expression() {
     assert_infer!("let x = 1", "Int");
-    assert_infer!("let x = let x = 1", "Int");
+}
+
+#[test]
+fn let_as_expression1() {
+    assert_infer!("let x = { let x = 1 }", "Int");
+}
+
+#[test]
+fn let_as_expression2() {
     assert_infer!("let x = { let x = 1. }", "Float");
 }
 
