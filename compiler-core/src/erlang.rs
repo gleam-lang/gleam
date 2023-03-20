@@ -737,7 +737,7 @@ where
 }
 
 fn block<'a>(statements: &'a Vec1<TypedStatement>, env: &mut Env<'a>) -> Document<'a> {
-    if statements.len() == 1 && statements.first().is_expression() {
+    if statements.len() == 1 && statements.first().is_non_pipe_expression() {
         return docvec!['(', statement(statements.first(), env), ')'];
     }
 
@@ -1349,7 +1349,7 @@ fn docs_args_call<'a>(
 
         other => {
             let args = wrap_args(args);
-            expr(other, env).append(args)
+            maybe_block_expr(other, env).append(args)
         }
     }
 }

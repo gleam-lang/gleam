@@ -428,6 +428,14 @@ impl TypedExpr {
     pub fn is_case(&self) -> bool {
         matches!(self, Self::Case { .. })
     }
+
+    /// Returns `true` if the typed expr is [`Pipeline`].
+    ///
+    /// [`Pipeline`]: TypedExpr::Pipeline
+    #[must_use]
+    pub fn is_pipeline(&self) -> bool {
+        matches!(self, Self::Pipeline { .. })
+    }
 }
 
 impl<'a> From<&'a TypedExpr> for Located<'a> {
