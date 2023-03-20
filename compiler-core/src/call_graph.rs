@@ -97,14 +97,14 @@ impl<'a> CallGraphBuilder<'a> {
                 self.expression(expression);
             }
             Statement::Assignment(assignment) => {
-                self.pattern(&assignment.pattern);
                 self.expression(&assignment.value);
+                self.pattern(&assignment.pattern);
             }
             Statement::Use(use_) => {
+                self.expression(&use_.call);
                 for pattern in &use_.assignments {
                     self.pattern(pattern);
                 }
-                self.expression(&use_.call);
             }
         };
     }
