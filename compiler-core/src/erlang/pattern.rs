@@ -1,3 +1,5 @@
+use crate::analyse::Inferred;
+
 use super::*;
 
 pub(super) fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
@@ -46,9 +48,16 @@ fn print<'a>(
 
         Pattern::Constructor {
             arguments: args,
-            constructor: PatternConstructor::Record { name, .. },
+            constructor: Inferred::Known(PatternConstructor::Record { name, .. }),
             ..
         } => tag_tuple_pattern(name, args, vars, define_variables, env),
+
+        Pattern::Constructor {
+            constructor: Inferred::Unknown,
+            ..
+        } => {
+            panic!("Erlang generation performed with uninferred pattern constructor")
+        }
 
         Pattern::Tuple { elems, .. } => {
             tuple(elems.iter().map(|p| print(p, vars, define_variables, env)))

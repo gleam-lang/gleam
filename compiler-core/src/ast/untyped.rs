@@ -63,7 +63,7 @@ pub enum UntypedExpr {
     Assignment {
         location: SrcSpan,
         value: Box<Self>,
-        pattern: Pattern<(), ()>,
+        pattern: Pattern<()>,
         kind: AssignmentKind,
         annotation: Option<TypeAst>,
     },
@@ -73,7 +73,7 @@ pub enum UntypedExpr {
     Case {
         location: SrcSpan,
         subjects: Vec<Self>,
-        clauses: Vec<Clause<Self, (), (), ()>>,
+        clauses: Vec<Clause<Self, (), ()>>,
     },
 
     FieldAccess {

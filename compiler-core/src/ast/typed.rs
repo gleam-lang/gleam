@@ -79,7 +79,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         value: Box<Self>,
-        pattern: Pattern<PatternConstructor, Arc<Type>>,
+        pattern: Pattern<Arc<Type>>,
         kind: AssignmentKind,
     },
 
@@ -87,7 +87,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         subjects: Vec<Self>,
-        clauses: Vec<Clause<Self, PatternConstructor, Arc<Type>, SmolStr>>,
+        clauses: Vec<Clause<Self, Arc<Type>, SmolStr>>,
     },
 
     RecordAccess {
@@ -455,7 +455,7 @@ impl HasType for TypedExpr {
     }
 }
 
-impl crate::bit_string::GetLitValue for TypedExpr {
+impl crate::bit_string::GetLiteralValue for TypedExpr {
     fn as_int_literal(&self) -> Option<i64> {
         if let TypedExpr::Int { value: val, .. } = self {
             if let Ok(val) = val.parse::<i64>() {

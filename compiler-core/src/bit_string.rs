@@ -12,7 +12,7 @@ pub fn type_options_for_value<TypedValue>(
     input_options: &[BitStringSegmentOption<TypedValue>],
 ) -> Result<Arc<Type>, Error>
 where
-    TypedValue: GetLitValue,
+    TypedValue: GetLiteralValue,
 {
     type_options(input_options, true, false)
 }
@@ -22,7 +22,7 @@ pub fn type_options_for_pattern<TypedValue>(
     must_have_size: bool,
 ) -> Result<Arc<Type>, Error>
 where
-    TypedValue: GetLitValue,
+    TypedValue: GetLiteralValue,
 {
     type_options(input_options, false, must_have_size)
 }
@@ -72,7 +72,7 @@ fn type_options<TypedValue>(
     must_have_size: bool,
 ) -> Result<Arc<Type>, Error>
 where
-    TypedValue: GetLitValue,
+    TypedValue: GetLiteralValue,
 {
     use BitStringSegmentOption::*;
 
@@ -266,14 +266,11 @@ where
     Ok(categories.segment_type())
 }
 
-pub trait GetLitValue {
+pub trait GetLiteralValue {
     fn as_int_literal(&self) -> Option<i64>;
 }
 
-impl<A> GetLitValue for crate::ast::Pattern<A, Arc<Type>>
-where
-    A: std::fmt::Debug,
-{
+impl GetLiteralValue for crate::ast::Pattern<Arc<Type>> {
     fn as_int_literal(&self) -> Option<i64> {
         match self {
             crate::ast::Pattern::Int { value, .. } => {

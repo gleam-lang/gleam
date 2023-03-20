@@ -1,5 +1,8 @@
 use super::{expression::is_js_scalar, *};
-use crate::type_::{FieldMap, PatternConstructor};
+use crate::{
+    analyse::Inferred,
+    type_::{FieldMap, PatternConstructor},
+};
 use lazy_static::lazy_static;
 
 pub static ASSIGNMENT_VAR: &str = "$";
@@ -337,7 +340,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
             Pattern::Constructor {
                 type_,
-                constructor: PatternConstructor::Record { name, .. },
+                constructor: Inferred::Known(PatternConstructor::Record { name, .. }),
                 ..
             } if type_.is_bool() && name == "True" => {
                 self.push_booly_check(subject.clone(), true);
@@ -346,7 +349,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
             Pattern::Constructor {
                 type_,
-                constructor: PatternConstructor::Record { name, .. },
+                constructor: Inferred::Known(PatternConstructor::Record { name, .. }),
                 ..
             } if type_.is_bool() && name == "False" => {
                 self.push_booly_check(subject.clone(), false);
@@ -355,11 +358,18 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
             Pattern::Constructor {
                 type_,
-                constructor: PatternConstructor::Record { .. },
+                constructor: Inferred::Known(PatternConstructor::Record { .. }),
                 ..
             } if type_.is_nil() => {
                 self.push_booly_check(subject.clone(), false);
                 Ok(())
+            }
+
+            Pattern::Constructor {
+                constructor: Inferred::Unknown,
+                ..
+            } => {
+                panic!("JavaScript generation performed with uninferred pattern constructor");
             }
 
             Pattern::Concatenate {
@@ -378,11 +388,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
             Pattern::Constructor {
                 constructor:
-                    PatternConstructor::Record {
+                    Inferred::Known(PatternConstructor::Record {
                         field_map,
                         name: record_name,
                         ..
-                    },
+                    }),
                 arguments,
                 name,
                 type_,

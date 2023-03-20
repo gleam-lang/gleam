@@ -4,8 +4,8 @@ use std::{path::PathBuf, time::SystemTime};
 
 use crate::{
     ast::{
-        CustomType, ExternalFunction, ExternalType, Function, ModuleConstant, Statement, TypeAlias,
-        TypedStatement,
+        CustomType, ExternalFunction, ExternalType, Function, ModuleConstant, ModuleStatement,
+        TypeAlias, TypedModuleStatement,
     },
     build::Module,
     config::{DocsPage, PackageConfig},
@@ -474,12 +474,12 @@ fn import_synonyms(parent: &str, child: &str) -> String {
 
 fn function<'a>(
     source_links: &SourceLinker,
-    statement: &'a TypedStatement,
+    statement: &'a TypedModuleStatement,
 ) -> Option<DocsFunction<'a>> {
     let mut formatter = format::Formatter::new();
 
     match statement {
-        Statement::ExternalFunction(ExternalFunction {
+        ModuleStatement::ExternalFunction(ExternalFunction {
             public: true,
             name,
             documentation: doc,
@@ -495,7 +495,7 @@ fn function<'a>(
             source_url: source_links.url(location),
         }),
 
-        Statement::Function(Function {
+        ModuleStatement::Function(Function {
             public: true,
             name,
             documentation: doc,
@@ -536,11 +536,11 @@ fn render_markdown(text: &str) -> String {
     s
 }
 
-fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Option<Type<'a>> {
+fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedModuleStatement) -> Option<Type<'a>> {
     let mut formatter = format::Formatter::new();
 
     match statement {
-        Statement::ExternalType(ExternalType {
+        ModuleStatement::ExternalType(ExternalType {
             public: true,
             name,
             documentation: doc,
@@ -555,7 +555,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             source_url: source_links.url(location),
         }),
 
-        Statement::CustomType(CustomType {
+        ModuleStatement::CustomType(CustomType {
             public: true,
             opaque: false,
             name,
@@ -593,7 +593,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             source_url: source_links.url(location),
         }),
 
-        Statement::CustomType(CustomType {
+        ModuleStatement::CustomType(CustomType {
             public: true,
             opaque: true,
             name,
@@ -610,7 +610,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             source_url: source_links.url(location),
         }),
 
-        Statement::TypeAlias(TypeAlias {
+        ModuleStatement::TypeAlias(TypeAlias {
             public: true,
             alias: name,
             type_ast: typ,
@@ -633,11 +633,11 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
 
 fn constant<'a>(
     source_links: &SourceLinker,
-    statement: &'a TypedStatement,
+    statement: &'a TypedModuleStatement,
 ) -> Option<Constant<'a>> {
     let mut formatter = format::Formatter::new();
     match statement {
-        Statement::ModuleConstant(ModuleConstant {
+        ModuleStatement::ModuleConstant(ModuleConstant {
             public: true,
             documentation: doc,
             name,

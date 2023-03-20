@@ -54,14 +54,15 @@ pub mod extra;
 pub mod lexer;
 mod token;
 
+use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption,
     CallArg, Clause, ClauseGuard, Constant, CustomType, ExternalFnArg, ExternalFunction,
-    ExternalType, Function, HasLocation, Import, Module, ModuleConstant, Pattern,
-    RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetGroup,
-    TodoKind, TypeAlias, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
-    UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule, UntypedPattern,
-    UntypedRecordUpdateArg, UntypedStatement, Use, CAPTURE_VARIABLE,
+    ExternalType, Function, HasLocation, Import, Module, ModuleConstant, ModuleStatement, Pattern,
+    RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, TargetGroup, TodoKind,
+    TypeAlias, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
+    UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule, UntypedModuleStatement,
+    UntypedPattern, UntypedRecordUpdateArg, Use, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -211,12 +212,12 @@ where
         }
     }
 
-    fn expect_statements(&mut self) -> Result<Vec<UntypedStatement>, ParseError> {
+    fn expect_statements(&mut self) -> Result<Vec<UntypedModuleStatement>, ParseError> {
         let statements = Parser::series_of(self, &Parser::parse_statement, None);
         self.ensure_no_errors(statements)
     }
 
-    fn parse_statement(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
+    fn parse_statement(&mut self) -> Result<Option<UntypedModuleStatement>, ParseError> {
         match (self.tok0.take(), self.tok1.as_ref()) {
             // Imports
             (Some((_, Token::Import, _)), _) => {
@@ -502,7 +503,7 @@ where
             Some((start, Token::Fn, _)) => {
                 let _ = self.next_tok();
                 match self.parse_function(start, false, true)? {
-                    Some(Statement::Function(Function {
+                    Some(ModuleStatement::Function(Function {
                         location,
                         arguments: args,
                         body,
@@ -1248,7 +1249,7 @@ where
             module: module.map(|(_, n, _)| n),
             name,
             with_spread,
-            constructor: (),
+            constructor: Inferred::Unknown,
             type_: (),
         })
     }
@@ -1362,7 +1363,7 @@ where
         start: u32,
         public: bool,
         is_anon: bool,
-    ) -> Result<Option<UntypedStatement>, ParseError> {
+    ) -> Result<Option<UntypedModuleStatement>, ParseError> {
         let documentation = if is_anon {
             None
         } else {
@@ -1396,7 +1397,7 @@ where
             },
             Some((body, _)) => body,
         };
-        Ok(Some(Statement::Function(Function {
+        Ok(Some(ModuleStatement::Function(Function {
             documentation,
             location: SrcSpan { start, end },
             end_position: rbr_e - 1,
@@ -1418,7 +1419,7 @@ where
         &mut self,
         start: u32,
         public: bool,
-    ) -> Result<Option<UntypedStatement>, ParseError> {
+    ) -> Result<Option<UntypedModuleStatement>, ParseError> {
         let documentation = self.take_documentation(start);
         let (_, name, _) = self.expect_name()?;
         let _ = self.expect_one(&Token::LeftParen)?;
@@ -1431,7 +1432,7 @@ where
         let (_, fun, end) = self.expect_string()?;
 
         if let Some(retrn) = return_annotation {
-            Ok(Some(Statement::ExternalFunction(ExternalFunction {
+            Ok(Some(ModuleStatement::ExternalFunction(ExternalFunction {
                 documentation,
                 location: SrcSpan { start, end },
                 public,
@@ -1646,10 +1647,10 @@ where
         &mut self,
         start: u32,
         public: bool,
-    ) -> Result<Option<UntypedStatement>, ParseError> {
+    ) -> Result<Option<UntypedModuleStatement>, ParseError> {
         let documentation = self.take_documentation(start);
         let (_, name, args, end) = self.expect_type_name()?;
-        Ok(Some(Statement::ExternalType(ExternalType {
+        Ok(Some(ModuleStatement::ExternalType(ExternalType {
             location: SrcSpan { start, end },
             public,
             name,
@@ -1672,7 +1673,7 @@ where
         start: u32,
         public: bool,
         opaque: bool,
-    ) -> Result<Option<UntypedStatement>, ParseError> {
+    ) -> Result<Option<UntypedModuleStatement>, ParseError> {
         let documentation = self.take_documentation(start);
         let (_, name, parameters, end) = self.expect_type_name()?;
         if self.maybe_one(&Token::LeftBrace).is_some() {
@@ -1701,7 +1702,7 @@ where
             if constructors.is_empty() {
                 parse_error(ParseErrorType::NoConstructors, SrcSpan { start, end })
             } else {
-                Ok(Some(Statement::CustomType(CustomType {
+                Ok(Some(ModuleStatement::CustomType(CustomType {
                     documentation,
                     location: SrcSpan { start, end },
                     public,
@@ -1717,7 +1718,7 @@ where
             if !opaque {
                 if let Some(t) = self.parse_type(false)? {
                     let type_end = t.location().end;
-                    Ok(Some(Statement::TypeAlias(TypeAlias {
+                    Ok(Some(ModuleStatement::TypeAlias(TypeAlias {
                         documentation,
                         location: SrcSpan {
                             start,
@@ -1973,7 +1974,7 @@ where
     //   import a/b
     //   import a/b.{c}
     //   import a/b.{c as d} as e
-    fn parse_import(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
+    fn parse_import(&mut self) -> Result<Option<UntypedModuleStatement>, ParseError> {
         let mut start = 0;
         let mut end;
         let mut module = String::new();
@@ -2024,7 +2025,7 @@ where
             end = e;
         }
 
-        Ok(Some(Statement::Import(Import {
+        Ok(Some(ModuleStatement::Import(Import {
             documentation,
             location: SrcSpan { start, end },
             unqualified,
@@ -2094,7 +2095,10 @@ where
     //   const a = 1
     //   const a:Int = 1
     //   pub const a:Int = 1
-    fn parse_module_const(&mut self, public: bool) -> Result<Option<UntypedStatement>, ParseError> {
+    fn parse_module_const(
+        &mut self,
+        public: bool,
+    ) -> Result<Option<UntypedModuleStatement>, ParseError> {
         let (start, name, end) = self.expect_name()?;
         let documentation = self.take_documentation(start);
 
@@ -2102,7 +2106,7 @@ where
 
         let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
         if let Some(value) = self.parse_const_value()? {
-            Ok(Some(Statement::ModuleConstant(ModuleConstant {
+            Ok(Some(ModuleStatement::ModuleConstant(ModuleConstant {
                 documentation,
                 location: SrcSpan { start, end },
                 public,

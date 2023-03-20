@@ -5,7 +5,10 @@ use itertools::Itertools;
 ///! and variables bindings.
 ///!
 use super::*;
-use crate::ast::{AssignName, UntypedPatternBitStringSegment};
+use crate::{
+    analyse::Inferred,
+    ast::{AssignName, UntypedPatternBitStringSegment},
+};
 use std::sync::Arc;
 
 pub struct PatternTyper<'a, 'b> {
@@ -520,7 +523,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 module,
                                 name,
                                 arguments: pattern_args,
-                                constructor,
+                                constructor: Inferred::Known(constructor),
                                 with_spread,
                                 type_: retrn.clone(),
                             })
@@ -543,7 +546,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 module,
                                 name,
                                 arguments: vec![],
-                                constructor,
+                                constructor: Inferred::Known(constructor),
                                 with_spread,
                                 type_: instantiated_constructor_type,
                             })
