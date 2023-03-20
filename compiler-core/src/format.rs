@@ -221,14 +221,7 @@ impl<'comments> Formatter<'comments> {
                 return_annotation,
                 end_position,
                 ..
-            }) => self.statement_fn(
-                public,
-                name,
-                args,
-                return_annotation,
-                body.as_slice(),
-                *end_position,
-            ),
+            }) => self.statement_fn(public, name, args, return_annotation, &body, *end_position),
 
             ModuleStatement::TypeAlias(TypeAlias {
                 alias,
@@ -535,7 +528,7 @@ impl<'comments> Formatter<'comments> {
         name: &'a str,
         args: &'a [UntypedArg],
         return_annotation: &'a Option<TypeAst>,
-        body: &'a [UntypedStatement],
+        body: &'a Vec1<UntypedStatement>,
         end_location: u32,
     ) -> Document<'a> {
         // Fn name and args
@@ -587,7 +580,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         args: &'a [UntypedArg],
         return_annotation: Option<&'a TypeAst>,
-        body: &'a [UntypedStatement],
+        body: &'a Vec1<UntypedStatement>,
     ) -> Document<'a> {
         let args = wrap_args(args.iter().map(|e| self.fn_arg(e))).group();
         let body = self.statements(body);
@@ -601,7 +594,7 @@ impl<'comments> Formatter<'comments> {
         header.append(" ").append(wrap_block(body)).group()
     }
 
-    fn statements<'a>(&mut self, statements: &'a [UntypedStatement]) -> Document<'a> {
+    fn statements<'a>(&mut self, statements: &'a Vec1<UntypedStatement>) -> Document<'a> {
         let count = statements.len();
         let mut documents = Vec::with_capacity(count * 2);
         for (i, statement) in statements.iter().enumerate() {
@@ -613,10 +606,10 @@ impl<'comments> Formatter<'comments> {
             }
             documents.push(self.statement(statement).group());
         }
-        if count > 1 {
-            documents.to_doc().force_break()
-        } else {
+        if count == 1 && statements.first().is_expression() {
             documents.to_doc()
+        } else {
+            documents.to_doc().force_break()
         }
     }
 
@@ -1511,10 +1504,8 @@ impl<'comments> Formatter<'comments> {
 
     fn negate_int<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            // Always nest repeated negation in a block to avoid confusion with
-            // the pre-decrement operator (which does not exist)
             UntypedExpr::BinOp { .. } | UntypedExpr::NegateInt { .. } => {
-                "- ".to_doc().append(wrap_block(self.expr(expr)))
+                "- ".to_doc().append(self.expr(expr))
             }
 
             _ => docvec!["-", self.expr(expr)],
@@ -1576,7 +1567,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn block<'a>(&mut self, statements: &'a [UntypedStatement]) -> Document<'a> {
+    fn block<'a>(&mut self, statements: &'a Vec1<UntypedStatement>) -> Document<'a> {
         docvec![
             "{",
             docvec![break_("", " "), self.statements(statements)].nest(INDENT),
