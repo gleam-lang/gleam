@@ -24,8 +24,7 @@ pub enum TypedExpr {
     },
 
     Block {
-        location: SrcSpan,
-        expressions: Vec<Self>,
+        statements: Vec1<TypedStatement>,
     },
 
     /// A chain of pipe expressions.
@@ -35,7 +34,8 @@ pub enum TypedExpr {
     /// locations when showing it in error messages, etc.
     Pipeline {
         location: SrcSpan,
-        expressions: Vec<Self>,
+        assignments: Vec<TypedAssignment>,
+        finally: Box<Self>,
     },
 
     Var {
@@ -73,14 +73,6 @@ pub enum TypedExpr {
         name: BinOp,
         left: Box<Self>,
         right: Box<Self>,
-    },
-
-    Assignment {
-        location: SrcSpan,
-        typ: Arc<Type>,
-        value: Box<Self>,
-        pattern: Pattern<Arc<Type>>,
-        kind: AssignmentKind,
     },
 
     Case {
@@ -172,8 +164,17 @@ impl TypedExpr {
             | Self::String { .. }
             | Self::ModuleSelect { .. } => Some(self.into()),
 
-            Self::Pipeline { expressions, .. } | Self::Block { expressions, .. } => {
-                expressions.iter().find_map(|e| e.find_node(byte_index))
+            Self::Pipeline {
+                assignments,
+                finally,
+                ..
+            } => assignments
+                .iter()
+                .find_map(|e| e.find_node(byte_index))
+                .or_else(|| finally.find_node(byte_index)),
+
+            Self::Block { statements, .. } => {
+                statements.iter().find_map(|e| e.find_node(byte_index))
             }
 
             Self::Tuple {
@@ -205,10 +206,6 @@ impl TypedExpr {
             Self::BinOp { left, right, .. } => left
                 .find_node(byte_index)
                 .or_else(|| right.find_node(byte_index)),
-
-            Self::Assignment { pattern, value, .. } => pattern
-                .find_node(byte_index)
-                .or_else(|| value.find_node(byte_index)),
 
             Self::Case {
                 subjects, clauses, ..
@@ -270,14 +267,18 @@ impl TypedExpr {
             | Self::String { location, .. }
             | Self::NegateBool { location, .. }
             | Self::NegateInt { location, .. }
-            | Self::Block { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
-            | Self::Assignment { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
             | Self::RecordUpdate { location, .. } => *location,
+
+            Self::Block { statements } => {
+                let start = statements.first().location().start;
+                let end = statements.last().location().end;
+                SrcSpan::new(start, end)
+            }
         }
     }
 
@@ -299,26 +300,12 @@ impl TypedExpr {
             | Self::NegateInt { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
-            | Self::Assignment { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
             | Self::RecordUpdate { location, .. } => *location,
-
-            Self::Block {
-                expressions,
-                location,
-                ..
-            } => expressions
-                .last()
-                .map(TypedExpr::location)
-                .unwrap_or(*location),
+            Self::Block { statements, .. } => statements.last().location(),
         }
-    }
-
-    /// Returns `true` if the typed expr is [`Assignment`].
-    pub fn is_assignment(&self) -> bool {
-        matches!(self, Self::Assignment { .. })
     }
 
     pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
@@ -339,7 +326,6 @@ impl TypedExpr {
             | TypedExpr::Block { .. }
             | TypedExpr::Pipeline { .. }
             | TypedExpr::BitString { .. }
-            | TypedExpr::Assignment { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::RecordAccess { .. } => None,
 
@@ -380,14 +366,11 @@ impl TypedExpr {
             | Self::String { typ, .. }
             | Self::BitString { typ, .. }
             | Self::TupleIndex { typ, .. }
-            | Self::Assignment { typ, .. }
             | Self::ModuleSelect { typ, .. }
             | Self::RecordAccess { typ, .. }
             | Self::RecordUpdate { typ, .. } => typ.clone(),
-            Self::Pipeline { expressions, .. } | Self::Block { expressions, .. } => expressions
-                .last()
-                .map(TypedExpr::type_)
-                .unwrap_or_else(type_::nil),
+            Self::Pipeline { finally, .. } => finally.type_(),
+            Self::Block { statements, .. } => statements.last().type_(),
         }
     }
 
@@ -425,7 +408,6 @@ impl TypedExpr {
             | TypedExpr::List { .. }
             | TypedExpr::Call { .. }
             | TypedExpr::BinOp { .. }
-            | TypedExpr::Assignment { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
@@ -437,6 +419,14 @@ impl TypedExpr {
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. } => None,
         }
+    }
+
+    /// Returns `true` if the typed expr is [`Case`].
+    ///
+    /// [`Case`]: TypedExpr::Case
+    #[must_use]
+    pub fn is_case(&self) -> bool {
+        matches!(self, Self::Case { .. })
     }
 }
 

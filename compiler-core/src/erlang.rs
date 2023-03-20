@@ -437,7 +437,7 @@ fn mod_fun<'a>(
         .append(" ->")
         .append(
             line()
-                .append(statements(body, &mut env))
+                .append(statement_sequence(body, &mut env))
                 .nest(INDENT)
                 .group(),
         )
@@ -600,11 +600,6 @@ fn const_segment<'a>(
     bit_string_segment(document, options, size, unit, true, env)
 }
 
-fn statements<'a>(statement: &'a [TypedStatement], env: &mut Env<'a>) -> Document<'a> {
-    // TODO: it
-    todo!("statement")
-}
-
 fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'a> {
     // TODO: it
     todo!("statement")
@@ -735,18 +730,18 @@ where
     document
 }
 
-fn block<'a>(expressions: &'a [TypedExpr], env: &mut Env<'a>) -> Document<'a> {
+fn block<'a>(statements: &'a [TypedStatement], env: &mut Env<'a>) -> Document<'a> {
     let vars = env.current_scope_vars.clone();
-    let document = sequence(expressions, env);
+    let document = statement_sequence(statements, env);
     env.current_scope_vars = vars;
     document
 }
 
-fn sequence<'a>(expressions: &'a [TypedExpr], env: &mut Env<'a>) -> Document<'a> {
-    let count = expressions.len();
+fn statement_sequence<'a>(statements: &'a [TypedStatement], env: &mut Env<'a>) -> Document<'a> {
+    let count = statements.len();
     let mut documents = Vec::with_capacity(count * 3);
-    for (i, expression) in expressions.iter().enumerate() {
-        documents.push(expr(expression, env).group());
+    for (i, expression) in statements.iter().enumerate() {
+        documents.push(statement(expression, env).group());
 
         if i + 1 < count {
             // This isn't the final expression so add the delimeters
@@ -1385,7 +1380,7 @@ fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Documen
 
 fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
     match expression {
-        TypedExpr::Pipeline { .. } | TypedExpr::Block { .. } | TypedExpr::Assignment { .. } => true,
+        TypedExpr::Pipeline { .. } | TypedExpr::Block { .. } => true,
         TypedExpr::Int { .. }
         | TypedExpr::Float { .. }
         | TypedExpr::String { .. }
@@ -1473,9 +1468,14 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Int { value, .. } => int(value),
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
-        TypedExpr::Pipeline { expressions, .. } | TypedExpr::Block { expressions, .. } => {
-            block(expressions, env)
-        }
+
+        TypedExpr::Pipeline {
+            assignments,
+            finally,
+            ..
+        } => todo!(),
+
+        TypedExpr::Block { statements, .. } => block(statements, env),
 
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index, env),
 
@@ -1530,20 +1530,6 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::RecordUpdate { spread, args, .. } => record_update(spread, args, env),
 
-        TypedExpr::Assignment {
-            value,
-            pattern,
-            kind: AssignmentKind::Assert,
-            ..
-        } => assert(value, pattern, env),
-
-        TypedExpr::Assignment {
-            value,
-            pattern,
-            kind: AssignmentKind::Let,
-            ..
-        } => let_(value, pattern, env),
-
         TypedExpr::Case {
             subjects, clauses, ..
         } => case(subjects, clauses, env),
@@ -1596,7 +1582,11 @@ fn fun<'a>(args: &'a [TypedArg], body: &'a [TypedStatement], env: &mut Env<'a>) 
     let doc = "fun"
         .to_doc()
         .append(fun_args(args, env).append(" ->"))
-        .append(break_("", " ").append(statements(body, env)).nest(INDENT))
+        .append(
+            break_("", " ")
+                .append(statement_sequence(body, env))
+                .nest(INDENT),
+        )
         .append(break_("", " "))
         .append("end")
         .group();

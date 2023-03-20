@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::{AssignmentKind, UntypedExpr, PIPE_VARIABLE};
+use crate::ast::{Assignment, AssignmentKind, TypedAssignment, UntypedExpr, PIPE_VARIABLE};
 use vec1::Vec1;
 
 #[derive(Debug)]
@@ -8,7 +8,7 @@ pub(crate) struct PipeTyper<'a, 'b, 'c> {
     argument_type: Arc<Type>,
     argument_location: SrcSpan,
     location: SrcSpan,
-    expressions: Vec<TypedExpr>,
+    assignments: Vec<TypedAssignment>,
     expr_typer: &'a mut ExprTyper<'b, 'c>,
 }
 
@@ -35,7 +35,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 start: first.location().start,
                 end: *end,
             },
-            expressions: Vec::with_capacity(size),
+            assignments: Vec::with_capacity(size),
         };
         // No need to update self.argument_* as we set it above
         typer.push_assignment_no_update(first);
@@ -47,24 +47,26 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         mut self,
         expressions: impl IntoIterator<Item = UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
-        let result = self.infer_each_expression(expressions);
+        let finally = self.infer_each_expression(expressions);
 
         // Clean-up the pipe variables inserted so they cannot be used outside this pipeline
         let _ = self.expr_typer.environment.scope.remove(PIPE_VARIABLE);
 
         // Return any errors after clean-up
-        result?;
+        let finally = finally?;
 
         Ok(TypedExpr::Pipeline {
-            expressions: self.expressions,
+            assignments: self.assignments,
             location: self.location,
+            finally: Box::new(finally),
         })
     }
 
     fn infer_each_expression(
         &mut self,
         expressions: impl IntoIterator<Item = UntypedExpr>,
-    ) -> Result<(), Error> {
+    ) -> Result<TypedExpr, Error> {
+        let mut finally = None;
         for (i, call) in expressions.into_iter().enumerate() {
             let call = match call {
                 // left |> right(..args)
@@ -90,12 +92,12 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 call => self.infer_apply_pipe(call)?,
             };
             if i + 2 == self.size {
-                self.expressions.push(call);
+                let finally = Some(call);
             } else {
                 self.push_assignment(call);
             }
         }
-        Ok(())
+        Ok(finally.expect("Empty pipeline in typer"))
     }
 
     /// Create a call argument that can be used to refer to the value on the
@@ -165,9 +167,9 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             expression.type_(),
         );
         // Add the assignment to the AST
-        let assignment = TypedExpr::Assignment {
+        let assignment = Assignment {
             location,
-            typ: expression.type_(),
+            annotation: None,
             kind: AssignmentKind::Let,
             pattern: Pattern::Var {
                 location,
@@ -176,7 +178,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             },
             value: Box::new(expression),
         };
-        self.expressions.push(assignment);
+        self.assignments.push(assignment);
     }
 
     /// Attempt to infer a |> b(..c) as b(..c)(a)

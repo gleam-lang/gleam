@@ -616,13 +616,15 @@ impl<'comments> Formatter<'comments> {
         documents.to_doc().force_break()
     }
 
-    fn assignment<'a>(
-        &mut self,
-        pattern: &'a UntypedPattern,
-        value: &'a UntypedExpr,
-        kind: AssignmentKind,
-        annotation: &'a Option<TypeAst>,
-    ) -> Document<'a> {
+    fn assignment<'a>(&mut self, assignment: &'a UntypedAssignment) -> Document<'a> {
+        let Assignment {
+            pattern,
+            value,
+            kind,
+            annotation,
+            ..
+        } = assignment;
+
         let _ = self.pop_empty_lines(pattern.location().end);
 
         let keyword = match kind {
@@ -1574,7 +1576,7 @@ impl<'comments> Formatter<'comments> {
     fn statement<'a>(&mut self, statement: &'a Statement<(), UntypedExpr>) -> Document<'a> {
         match statement {
             Statement::Expression(expression) => self.expr(expression),
-            Statement::Assignment(assignment) => todo!(),
+            Statement::Assignment(assignment) => self.assignment(assignment),
             Statement::Use(use_) => todo!(),
         }
     }
