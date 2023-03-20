@@ -17,9 +17,5 @@ main() ->
     begin
         _pipe = 1,
         add(_pipe)
-    end(
-        fun() ->
-            1
-        end
-    ).
+    end(fun() -> 1 end).
 
