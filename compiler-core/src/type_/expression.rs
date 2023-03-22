@@ -84,7 +84,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location, value, ..
             } => Ok(self.infer_int(value, location)),
 
-            UntypedExpr::Block { statements } => self.infer_block(statements),
+            UntypedExpr::Block {
+                statements,
+                location,
+            } => self.infer_block(statements, location),
 
             UntypedExpr::Tuple {
                 location, elems, ..
@@ -2068,10 +2071,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.environment.check_exhaustiveness(patterns, value_typ)
     }
 
-    fn infer_block(&mut self, statements: Vec1<UntypedStatement>) -> Result<TypedExpr, Error> {
+    fn infer_block(
+        &mut self,
+        statements: Vec1<UntypedStatement>,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
         self.in_new_scope(|typer| {
             let statements = typer.infer_statements(statements)?;
-            Ok(TypedExpr::Block { statements })
+            Ok(TypedExpr::Block {
+                statements,
+                location,
+            })
         })
     }
 }

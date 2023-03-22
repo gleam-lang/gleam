@@ -1076,7 +1076,7 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
 
 fn clause_consequence<'a>(consequence: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     match consequence {
-        TypedExpr::Block { statements } => statement_sequence(statements, env),
+        TypedExpr::Block { statements, .. } => statement_sequence(statements, env),
         _ => expr(consequence, env),
     }
 }

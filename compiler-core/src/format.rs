@@ -595,15 +595,17 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn statements<'a>(&mut self, statements: &'a Vec1<UntypedStatement>) -> Document<'a> {
+        let mut previous_position = 0;
         let count = statements.len();
         let mut documents = Vec::with_capacity(count * 2);
         for (i, statement) in statements.iter().enumerate() {
-            let preceeding_newline = self.pop_empty_lines(statement.start_byte_index());
+            let preceeding_newline = self.pop_empty_lines(previous_position + 1);
             if i != 0 && preceeding_newline {
                 documents.push(lines(2));
             } else if i != 0 {
                 documents.push(lines(1));
             }
+            previous_position = statement.location().end;
             documents.push(self.statement(statement).group());
         }
         if count == 1 && statements.first().is_expression() {
@@ -1228,7 +1230,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::Case { .. } => line().append(self.expr(expr)).nest(INDENT),
 
-            UntypedExpr::Block { statements } => {
+            UntypedExpr::Block { statements, .. } => {
                 docvec![
                     " {",
                     docvec![line(), self.statements(statements)].nest(INDENT),
