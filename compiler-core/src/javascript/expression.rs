@@ -303,7 +303,8 @@ impl<'module> Generator<'module> {
             TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {
                 Ok(docvec!("(", self.expression(expression)?, ")"))
             }
-            TypedExpr::Case { .. } | TypedExpr::Pipeline { .. } => self
+
+            TypedExpr::Panic { .. } | TypedExpr::Case { .. } | TypedExpr::Pipeline { .. } => self
                 .immediately_involked_function_expression(expression, |gen, expr| {
                     gen.expression(expr)
                 }),

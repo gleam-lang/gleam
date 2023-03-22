@@ -156,3 +156,21 @@ fn negation_block() {
 }"
     );
 }
+
+#[test]
+fn binop_panic_right() {
+    assert_js!(
+        "pub fn negate(x) {
+    x && panic
+}"
+    );
+}
+
+#[test]
+fn binop_panic_left() {
+    assert_js!(
+        "pub fn negate(x) {
+    panic && x
+}"
+    );
+}
