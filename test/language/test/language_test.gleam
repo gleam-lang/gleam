@@ -1337,9 +1337,9 @@ fn bool_negation_tests() {
     |> example(fn() { assert_equal(True, !!True) }),
     // This would crash if the right hand side evaluated
     "!True && assert False = True"
-    |> example(fn() { assert_equal(False, !True && let assert False = True) }),
+    |> example(fn() { assert_equal(False, !True && panic) }),
     "!False || assert False = True"
-    |> example(fn() { assert_equal(True, !False || let assert False = True) }),
+    |> example(fn() { assert_equal(True, !False || panic) }),
   ]
 }
 
