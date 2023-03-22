@@ -1,11 +1,15 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 409
+assertion_line: 388
 expression: "{ 1 2 }"
 ---
 [
     Expression(
         Block {
+            location: SrcSpan {
+                start: 0,
+                end: 7,
+            },
             statements: [
                 Expression(
                     Int {

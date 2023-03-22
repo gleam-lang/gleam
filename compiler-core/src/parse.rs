@@ -832,9 +832,13 @@ where
     fn parse_block(&mut self, start: u32) -> Result<UntypedExpr, ParseError> {
         let body = self.parse_statement_seq()?;
         let (_, end) = self.expect_one(&Token::RightBrace)?;
+        let location = SrcSpan { start, end };
         match body {
             None => parse_error(ParseErrorType::NoExpression, SrcSpan { start, end }),
-            Some((statements, _)) => Ok(UntypedExpr::Block { statements }),
+            Some((statements, _)) => Ok(UntypedExpr::Block {
+                statements,
+                location,
+            }),
         }
     }
 

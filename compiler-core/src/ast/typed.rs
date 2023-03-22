@@ -24,6 +24,7 @@ pub enum TypedExpr {
     },
 
     Block {
+        location: SrcSpan,
         statements: Vec1<TypedStatement>,
     },
 
@@ -264,6 +265,7 @@ impl TypedExpr {
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::Panic { location, .. }
+            | Self::Block { location, .. }
             | Self::String { location, .. }
             | Self::NegateBool { location, .. }
             | Self::NegateInt { location, .. }
@@ -273,12 +275,6 @@ impl TypedExpr {
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
             | Self::RecordUpdate { location, .. } => *location,
-
-            Self::Block { statements } => {
-                let start = statements.first().location().start;
-                let end = statements.last().location().end;
-                SrcSpan::new(start, end)
-            }
         }
     }
 

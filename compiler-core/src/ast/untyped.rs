@@ -20,6 +20,7 @@ pub enum UntypedExpr {
     },
 
     Block {
+        location: SrcSpan,
         statements: Vec1<Statement<(), Self>>,
     },
 
