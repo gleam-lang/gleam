@@ -192,3 +192,21 @@ fn binop_todo_left() {
 }"
     );
 }
+
+#[test]
+fn negate_panic() {
+    assert_js!(
+        "pub fn negate(x) {
+  !panic
+}"
+    );
+}
+
+#[test]
+fn negate_todo() {
+    assert_js!(
+        "pub fn negate(x) {
+  !todo
+}"
+    );
+}
