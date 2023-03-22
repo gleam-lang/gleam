@@ -1,21 +1,21 @@
 .phony: build
-build: clean erlang javascript
+build: clean erlang nodejs deno
 
 .phony: clean
 clean:
-	@rm -rf target-*
+	rm -rf build
 
 .phony: erlang
 erlang:
 	@echo test/language on Erlang
-	@cargo run --quiet -- test --target erlang
+	cargo run --quiet -- test --target erlang
 
-.phony: javascript
-javascript:
+.phony: nodejs
+nodejs:
 	@echo test/language on JavaScript with Node
-	@cargo run --quiet -- test --target javascript --runtime nodejs
+	cargo run --quiet -- test --target javascript --runtime nodejs
 
 .phony: deno
 deno:
 	@echo test/language on JavaScript with Deno
-	@cargo run --quiet -- test --target javascript --runtime deno
+	cargo run --quiet -- test --target javascript --runtime deno
