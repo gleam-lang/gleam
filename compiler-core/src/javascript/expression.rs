@@ -425,6 +425,13 @@ impl<'module> Generator<'module> {
         Ok(documents.to_doc().force_break())
     }
 
+    fn expression_flattening_blocks<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+        match expression {
+            TypedExpr::Block { statements, .. } => self.statements(statements),
+            _ => self.expression(expression),
+        }
+    }
+
     fn block<'a>(&mut self, statements: &'a Vec1<TypedStatement>) -> Output<'a> {
         if statements.len() == 1 {
             match statements.first() {
@@ -562,7 +569,9 @@ impl<'module> Generator<'module> {
             for multipatterns in multipatterns {
                 let scope = gen.expression_generator.current_scope_vars.clone();
                 let mut compiled = gen.generate(&subjects, multipatterns, clause.guard.as_ref())?;
-                let consequence = gen.expression_generator.expression(&clause.then)?;
+                let consequence = gen
+                    .expression_generator
+                    .expression_flattening_blocks(&clause.then)?;
 
                 // We've seen one more clause
                 clause_number += 1;
