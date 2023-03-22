@@ -10,6 +10,8 @@
 - The language server now also shows documentation on hover for expressions.
 - The language server now shows types and documentation on hover for patterns.
 - Added support for negation of integers with the new `-` unary operator.
+- Variable assignments are now only permitted within a function or a block, not
+  anywhere that an expression is permitted.
 - The deprecated `try` expression has been removed.
 - The deprecated `assert ... = ...` syntax has been removed.
 - Semicolons are no longer whitespace. An error will be emitted if one is
