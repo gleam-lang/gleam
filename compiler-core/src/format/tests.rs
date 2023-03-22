@@ -4,6 +4,7 @@ use pretty_assertions::assert_eq;
 
 mod bit_string;
 mod record_update;
+mod tuple;
 mod use_;
 
 #[macro_export]
