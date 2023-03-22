@@ -1896,3 +1896,14 @@ fn permit_holes_in_fn_args_and_returns() {
         vec![("run", "fn(List(a)) -> List(b)")],
     );
 }
+
+// Rattard's parser issue
+#[test]
+fn block_maths() {
+    assert_module_infer!(
+        "pub fn do(max, min) {
+  { max -. min } /. { max +. min }
+}",
+        vec![("do", "fn(Float, Float) -> Float")],
+    );
+}
