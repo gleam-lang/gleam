@@ -393,3 +393,14 @@ fn block_of_two() {
 fn nested_block() {
     assert_parse!(r#"{ 1 { 1.0 2.0 } 3 }"#);
 }
+
+// https://github.com/gleam-lang/gleam/issues/1831
+#[test]
+fn argument_scope() {
+    assert_error!(
+        "
+1 + let a = 5
+a
+"
+    );
+}
