@@ -287,7 +287,10 @@ impl<'module> Generator<'module> {
     /// required due to being a JS statement
     pub fn wrap_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::Todo { .. } | TypedExpr::Case { .. } | TypedExpr::Pipeline { .. } => self
+            TypedExpr::Panic { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::Pipeline { .. } => self
                 .immediately_involked_function_expression(expression, |gen, expr| {
                     gen.expression(expr)
                 }),
@@ -304,14 +307,7 @@ impl<'module> Generator<'module> {
                 Ok(docvec!("(", self.expression(expression)?, ")"))
             }
 
-            TypedExpr::Todo { .. }
-            | TypedExpr::Panic { .. }
-            | TypedExpr::Case { .. }
-            | TypedExpr::Pipeline { .. } => self
-                .immediately_involked_function_expression(expression, |gen, expr| {
-                    gen.expression(expr)
-                }),
-            _ => self.expression(expression),
+            _ => self.wrap_expression(expression),
         }
     }
 
