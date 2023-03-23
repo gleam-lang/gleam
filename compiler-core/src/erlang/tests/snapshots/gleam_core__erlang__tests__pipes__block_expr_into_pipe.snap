@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-assertion_line: 23
+assertion_line: 26
 expression: "fn id(a) { a }\npub fn main() {\n  {\n    let x = 1\n    x\n  }\n  |> id\n}"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/0]).

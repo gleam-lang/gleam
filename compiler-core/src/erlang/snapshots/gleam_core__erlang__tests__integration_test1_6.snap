@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 162
+assertion_line: 163
 expression: "pub fn and(x, y) { x && y }\npub fn or(x, y) { x || y }\npub fn remainder(x, y) { x % y }\npub fn fdiv(x, y) { x /. y }\n            "
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export(['and'/2, 'or'/2, remainder/2, fdiv/2]).

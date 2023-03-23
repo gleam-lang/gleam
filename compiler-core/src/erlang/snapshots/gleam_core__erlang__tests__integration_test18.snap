@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 261
+assertion_line: 262
 expression: "pub fn run() { case 1, 2 { a, b -> a } }"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([run/0]).

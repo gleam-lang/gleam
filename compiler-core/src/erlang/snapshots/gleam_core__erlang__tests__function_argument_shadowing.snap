@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 536
+assertion_line: 544
 expression: "pub fn main(a) {\n  Box\n}\n\npub type Box {\n  Box(Int)\n}\n"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/1]).

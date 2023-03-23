@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 133
+assertion_line: 134
 expression: "pub type Money { Pound(Int) }\n                    fn pound(x) { Pound(x) }"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export_type([money/0]).

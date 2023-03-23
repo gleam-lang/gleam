@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 489
+assertion_line: 497
 expression: "pub fn negate(x) {\n  !{\n    123\n    x\n  }\n}"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([negate/1]).

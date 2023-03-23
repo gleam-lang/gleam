@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 321
+assertion_line: 322
 expression: "\npub fn main(args) {\n  case args {\n    _ -> {\n      let a = 1\n      a\n    }\n  }\n  let a = 2\n  a\n}\n"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/1]).

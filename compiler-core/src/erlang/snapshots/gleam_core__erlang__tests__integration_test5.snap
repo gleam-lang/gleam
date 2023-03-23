@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 182
+assertion_line: 183
 expression: "pub fn tail(list) { case list { [x, ..] -> x } }"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([tail/1]).

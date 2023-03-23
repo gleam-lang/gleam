@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 399
+assertion_line: 403
 expression: "\nfn id(x) {\n  x\n}\n\npub fn main() {\n  id(id)\n}\n"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/0]).

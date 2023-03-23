@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/use_.rs
 assertion_line: 5
 expression: "\npub fn main() {\n  use <- pair()\n  123\n}\n\nfn pair(f) {\n  let x = f()\n  #(x, x)\n}\n"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/0]).

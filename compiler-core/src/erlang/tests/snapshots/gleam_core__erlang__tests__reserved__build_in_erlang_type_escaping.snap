@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/reserved.rs
 assertion_line: 5
 expression: pub external type Map
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export_type([map_/0]).

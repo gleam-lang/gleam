@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 467
+assertion_line: 475
 expression: "fn id(x) {\n  x\n}\n        \npub fn bool_expr(x, y) {\n  y || x |> id \n}"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([bool_expr/2]).

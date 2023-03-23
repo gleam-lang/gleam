@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/pipes.rs
 assertion_line: 6
 expression: "\npub fn apply(f: fn(a) -> b, a: a) { a |> f }\n"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([apply/2]).

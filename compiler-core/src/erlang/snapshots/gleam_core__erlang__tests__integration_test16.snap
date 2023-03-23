@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 242
+assertion_line: 243
 expression: "fn go(x xx, y yy) { xx }\npub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([x/0]).

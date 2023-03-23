@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/strings.rs
 assertion_line: 72
 expression: "\npub fn go(x) {\n  x <> \"1\"\n}\n"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([go/1]).
