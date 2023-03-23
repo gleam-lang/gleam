@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 379
+assertion_line: 371
 expression: "\npub fn main() {\n    let t = #(fn(x) { x })\n\n    t.0(5)\n}\n"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/0]).

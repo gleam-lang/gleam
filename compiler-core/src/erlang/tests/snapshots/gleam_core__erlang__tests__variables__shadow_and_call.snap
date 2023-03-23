@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/variables.rs
 assertion_line: 34
 expression: "\npub fn main(x) {\n  fn(x) { x }(x)\n}\n"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/1]).

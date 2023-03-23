@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
 assertion_line: 144
-expression: "\npub fn main(x) {\n  assert \"m-\" <> rest = x\n  rest\n}\n"
+expression: "\npub fn main(x) {\n  let assert \"m-\" <> rest = x\n  rest\n}\n"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/1]).
@@ -16,7 +16,7 @@ main(X) ->
             erlang:error(#{gleam_error => assert,
                         message => <<"Assertion pattern match failed"/utf8>>,
                         value => _assert_fail,
-                        module => <<"the_app"/utf8>>,
+                        module => <<"my/mod"/utf8>>,
                         function => <<"main"/utf8>>,
                         line => 3})
     end,

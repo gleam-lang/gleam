@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/bit_strings.rs
 assertion_line: 98
 expression: "\npub fn bitstring_discard(x) -> Bool {\n case x {\n  <<_discardme:utf8, rest:binary>> -> True\n   _ -> False\n }\n}\n                    "
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([bitstring_discard/1]).

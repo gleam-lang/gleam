@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 449
+assertion_line: 453
 expression: "pub type X { Div }"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export_type([x/0]).

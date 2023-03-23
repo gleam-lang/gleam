@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/panic.rs
 assertion_line: 16
 expression: "\npub fn main(){\n  \"lets\"\n  |> panic\n}\n    "
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/0]).
@@ -13,7 +13,7 @@ main() ->
     _pipe = <<"lets"/utf8>>,
     erlang:error(#{gleam_error => panic,
             message => <<"panic expression evaluated"/utf8>>,
-            module => <<"the_app"/utf8>>,
+            module => <<"my/mod"/utf8>>,
             function => <<"main"/utf8>>,
             line => 4})(_pipe).
 

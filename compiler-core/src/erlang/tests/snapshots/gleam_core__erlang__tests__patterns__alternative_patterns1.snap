@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/patterns.rs
 assertion_line: 24
 expression: "\npub fn test() {\n  case Ok(1) {\n    Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name\n  }\n}"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([test/0]).

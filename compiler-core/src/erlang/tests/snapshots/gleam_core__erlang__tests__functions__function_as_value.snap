@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/functions.rs
 assertion_line: 5
 expression: "\nfn other() {\n  Nil\n}\n\npub fn main() {\n  other\n}\n"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/0]).

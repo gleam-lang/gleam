@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 154
+assertion_line: 155
 expression: "fn add(x, y) { x + y }\n                    pub fn go() { 1 |> add(_, 1) |> add(2, _) |> add(_, 3) }"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([go/0]).

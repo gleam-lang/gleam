@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 114
+assertion_line: 106
 expression: "pub fn go() {\n    let fifteen = 0xF\n    let nine = 0o11\n    let ten = 0b1010\n  fifteen\n}"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([go/0]).

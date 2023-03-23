@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 233
+assertion_line: 234
 expression: "pub type State{ Start(Int) End(Int) }\n            pub fn build(constructor : fn(Int) -> a) -> a { constructor(1) }\n            pub fn main() { build(End) }"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([build/1, main/0]).

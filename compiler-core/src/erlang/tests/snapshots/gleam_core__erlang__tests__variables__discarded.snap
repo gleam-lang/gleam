@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/variables.rs
 assertion_line: 58
 expression: "pub fn go() {\n  let _r = 1\n  let _r = 2\n  Nil\n}"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([go/0]).

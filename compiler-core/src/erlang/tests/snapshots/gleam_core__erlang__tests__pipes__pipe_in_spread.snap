@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-assertion_line: 71
+assertion_line: 74
 expression: "pub type X {\n  X(a: Int, b: Int)\n}\n\nfn id(x) {\n  x\n}\n        \npub fn main(x) {\n  X(..x, a: 1 |> id)\n}"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/1]).

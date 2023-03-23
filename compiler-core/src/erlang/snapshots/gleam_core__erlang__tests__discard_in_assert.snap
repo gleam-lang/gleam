@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 456
-expression: "pub fn x(y) {\n  assert Ok(_) = y\n  1\n}"
+assertion_line: 464
+expression: "pub fn x(y) {\n  let assert Ok(_) = y\n  1\n}"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([x/1]).
@@ -16,7 +16,7 @@ x(Y) ->
             erlang:error(#{gleam_error => assert,
                         message => <<"Assertion pattern match failed"/utf8>>,
                         value => _assert_fail,
-                        module => <<"the_app"/utf8>>,
+                        module => <<"my/mod"/utf8>>,
                         function => <<"x"/utf8>>,
                         line => 2})
     end,

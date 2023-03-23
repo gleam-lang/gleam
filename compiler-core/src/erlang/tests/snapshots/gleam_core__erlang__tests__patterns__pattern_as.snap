@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
-assertion_line: 59
+assertion_line: 68
 expression: "pub fn a(x) {\n  case x {\n    Ok(1 as y) -> 1\n    _ -> 0\n  }\n}"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([a/1]).

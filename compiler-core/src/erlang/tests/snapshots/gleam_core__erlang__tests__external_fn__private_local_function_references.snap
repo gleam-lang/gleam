@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/external_fn.rs
 assertion_line: 38
 expression: "external fn go(x: Int, y: Int) -> Int = \"m\" \"f\"\npub fn x() { go }"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([x/0]).

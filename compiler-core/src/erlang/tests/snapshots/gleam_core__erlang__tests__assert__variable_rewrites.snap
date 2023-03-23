@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests/assert.rs
 assertion_line: 39
-expression: "pub fn go() {\n  assert Ok(y) = Ok(1)\n  assert Ok(y) = Ok(1)\n  y\n}"
+expression: "pub fn go() {\n  let assert Ok(y) = Ok(1)\n  let assert Ok(y) = Ok(1)\n  y\n}"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([go/0]).
@@ -17,7 +17,7 @@ go() ->
             erlang:error(#{gleam_error => assert,
                         message => <<"Assertion pattern match failed"/utf8>>,
                         value => _assert_fail,
-                        module => <<"the_app"/utf8>>,
+                        module => <<"my/mod"/utf8>>,
                         function => <<"go"/utf8>>,
                         line => 2})
     end,
@@ -28,7 +28,7 @@ go() ->
             erlang:error(#{gleam_error => assert,
                         message => <<"Assertion pattern match failed"/utf8>>,
                         value => _assert_fail@1,
-                        module => <<"the_app"/utf8>>,
+                        module => <<"my/mod"/utf8>>,
                         function => <<"go"/utf8>>,
                         line => 3})
     end,

@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/guards.rs
 assertion_line: 303
 expression: "\npub fn main() {\n  case 0.1, 1.0 {\n    x, y if x <. y -> 1\n    _, _ -> 0\n  }\n}\n"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/0]).

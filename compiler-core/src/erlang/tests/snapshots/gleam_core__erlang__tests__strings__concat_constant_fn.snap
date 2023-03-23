@@ -3,7 +3,7 @@ source: compiler-core/src/erlang/tests/strings.rs
 assertion_line: 112
 expression: "\nconst cs = s\n\nfn s() {\n  \"s\"\n}\n\npub fn go() {\n  cs() <> cs()\n}\n"
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([go/0]).

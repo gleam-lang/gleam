@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 173
+assertion_line: 174
 expression: "pub fn second(list) { case list { [x, y] -> y z -> 1 } }\npub fn tail(list) { case list { [x, ..xs] -> xs z -> list } }\n            "
 ---
--module(the_app).
+-module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
 -export([second/1, tail/1]).
