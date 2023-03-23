@@ -1,4 +1,3 @@
-use super::*;
 use crate::{
     assert_error, assert_module_error, assert_module_syntax_error, assert_with_module_error,
 };
