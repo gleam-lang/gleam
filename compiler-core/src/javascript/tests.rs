@@ -1,3 +1,11 @@
+use crate::{
+    build::{Origin, Target},
+    javascript::*,
+    uid::UniqueIdGenerator,
+    warning::TypeWarningEmitter,
+};
+use std::path::Path;
+
 mod assignments;
 mod bit_strings;
 mod blocks;
@@ -27,138 +35,24 @@ pub static CURRENT_PACKAGE: &str = "thepackage";
 #[macro_export]
 macro_rules! assert_js {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
-        use std::path::Path;
-        use $crate::{javascript::*, uid::UniqueIdGenerator};
-        let mut modules = im::HashMap::new();
-        let ids = UniqueIdGenerator::new();
-        // DUPE: preludeinsertion
-        // TODO: Currently we do this here and also in the tests. It would be better
-        // to have one place where we create all this required state for use in each
-        // place.
-        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
-        let (mut ast, _) = $crate::parse::parse_module($dep_src).expect("dep syntax error");
-        ast.name = $dep_name.into();
-        let dep = $crate::analyse::infer_module(
-            $crate::build::Target::JavaScript,
-            &ids,
-            ast,
-            $crate::build::Origin::Src,
-            &$dep_package.into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let _ = modules.insert($dep_name.into(), dep.type_info);
-        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = "my/mod".into();
-        let ast = $crate::analyse::infer_module(
-            $crate::build::Target::JavaScript,
-            &ids,
-            ast,
-            $crate::build::Origin::Src,
-            &CURRENT_PACKAGE.into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let line_numbers = LineNumbers::new($src);
-        let output = module(&ast, &line_numbers, Path::new(""), &"".into()).unwrap();
+        let output =
+            $crate::javascript::tests::compile_js($src, Some(($dep_package, $dep_name, $dep_src)));
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $js:expr $(,)?) => {{
-        use std::path::Path;
-        let mut modules = im::HashMap::new();
-        let ids = UniqueIdGenerator::new();
-        // DUPE: preludeinsertion
-        // TODO: Currently we do this here and also in the tests. It would be better
-        // to have one place where we create all this required state for use in each
-        // place.
-        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
-        let (mut ast, _) = $crate::parse::parse_module($dep_src).expect("dep syntax error");
-        ast.name = $dep_name.into();
-        let dep = $crate::analyse::infer_module(
-            $crate::build::Target::JavaScript,
-            &ids,
-            ast,
-            $crate::build::Origin::Src,
-            &$dep_package.into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let _ = modules.insert($dep_name.into("/"), dep.type_info);
-        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = "my/mod".into();
-        let ast = $crate::analyse::infer_module(
-            $crate::build::Target::JavaScript,
-            &ids,
-            ast,
-            $crate::build::Origin::Src,
-            &CURRENT_PACKAGE.into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let mut output = String::new();
-        let line_numbers = LineNumbers::new($src);
-        module(&ast, &line_numbers, Path::new(""), "", &mut output).unwrap();
+        let output =
+            $crate::javascript::tests::compile_js($src, Some(($dep_package, $dep_name, $dep_src)));
         assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 
     ($src:expr $(,)?) => {{
-        use std::path::Path;
-        use $crate::{javascript::*, uid::UniqueIdGenerator};
-        let mut modules = im::HashMap::new();
-        let ids = UniqueIdGenerator::new();
-        // DUPE: preludeinsertion
-        // TODO: Currently we do this here and also in the tests. It would be better
-        // to have one place where we create all this required state for use in each
-        // place.
-        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
-
-        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = "my/mod".into();
-        let ast = $crate::analyse::infer_module(
-            $crate::build::Target::JavaScript,
-            &ids,
-            ast,
-            $crate::build::Origin::Src,
-            &"thepackage".into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let line_numbers = LineNumbers::new($src);
-        let output = module(&ast, &line_numbers, Path::new(""), &"".into()).unwrap();
+        let output = $crate::javascript::tests::compile_js($src, None);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
     ($src:expr, $js:expr $(,)?) => {{
-        use std::path::Path;
-        use $crate::{javascript::*, uid::UniqueIdGenerator};
-        let mut modules = im::HashMap::new();
-        let ids = UniqueIdGenerator::new();
-        // DUPE: preludeinsertion
-        // TODO: Currently we do this here and also in the tests. It would be better
-        // to have one place where we create all this required state for use in each
-        // place.
-        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
-
-        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = "my/mod".into();
-        let ast = $crate::analyse::infer_module(
-            $crate::build::Target::JavaScript,
-            &ids,
-            ast,
-            $crate::build::Origin::Src,
-            &"thepackage".into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let line_numbers = LineNumbers::new($src);
-        let output = module(&ast, &line_numbers, Path::new(""), &"".into()).unwrap();
+        let output = $crate::javascript::tests::compile_js($src, None);
         assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 }
@@ -166,135 +60,63 @@ macro_rules! assert_js {
 #[macro_export]
 macro_rules! assert_ts_def {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
-        use std::path::Path;
-        use $crate::{javascript::*, uid::UniqueIdGenerator};
-        let mut modules = im::HashMap::new();
-        let ids = UniqueIdGenerator::new();
-        // DUPE: preludeinsertion
-        // TODO: Currently we do this here and also in the tests. It would be better
-        // to have one place where we create all this required state for use in each
-        // place.
-        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
-        let (mut ast, _) = $crate::parse::parse_module($dep_src).expect("dep syntax error");
-        ast.name = $dep_name.into();
-        let dep = $crate::analyse::infer_module(
-            $crate::build::Target::JavaScript,
-            &ids,
-            ast,
-            $crate::build::Origin::Src,
-            &$dep_package.into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let _ = modules.insert($dep_name.into(), dep.type_info);
-        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = "my/mod".into();
-        let ast = $crate::analyse::infer_module(
-            $crate::build::Target::JavaScript,
-            &ids,
-            ast,
-            $crate::build::Origin::Src,
-            &CURRENT_PACKAGE.into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let output = ts_declaration(&ast, Path::new(""), &"".into()).unwrap();
+        let output =
+            $crate::javascript::tests::compile_ts($src, Some(($dep_package, $dep_name, $dep_src)));
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    }};
-
-    (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $js:expr $(,)?) => {{
-        use std::path::Path;
-        let mut modules = im::HashMap::new();
-        let ids = UniqueIdGenerator::new();
-        // DUPE: preludeinsertion
-        // TODO: Currently we do this here and also in the tests. It would be better
-        // to have one place where we create all this required state for use in each
-        // place.
-        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
-        let (mut ast, _) = $crate::parse::parse_module($dep_src).expect("dep syntax error");
-        ast.name = $dep_name.into();
-        let dep = $crate::analyse::infer_module(
-            $crate::build::Target::JavaScript,
-            &ids,
-            ast,
-            $crate::build::Origin::Src,
-            &$dep_package.into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let _ = modules.insert($dep_name.into("/"), dep.type_info);
-        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = "my/mod".into();
-        let ast = $crate::analyse::infer_module(
-            $crate::build::Target::JavaScript,
-            &ids,
-            ast,
-            $crate::build::Origin::Src,
-            &CURRENT_PACKAGE.into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let mut output = String::new();
-        ts_declaration(&ast, Path::new(""), "", &mut output).unwrap();
-        assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 
     ($src:expr $(,)?) => {{
-        use std::path::Path;
-        use $crate::{javascript::*, uid::UniqueIdGenerator};
-        let mut modules = im::HashMap::new();
-        let ids = UniqueIdGenerator::new();
-        // DUPE: preludeinsertion
-        // TODO: Currently we do this here and also in the tests. It would be better
-        // to have one place where we create all this required state for use in each
-        // place.
-        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
-
-        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = "my/mod".into();
-        let ast = $crate::analyse::infer_module(
-            $crate::build::Target::JavaScript,
-            &ids,
-            ast,
-            $crate::build::Origin::Src,
-            &"thepackage".into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let output = ts_declaration(&ast, Path::new(""), &"".into()).unwrap();
+        let output = $crate::javascript::tests::compile_ts($src, None);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
+}
 
-    ($src:expr, $js:expr $(,)?) => {{
-        use std::path::Path;
-        use $crate::{javascript::*, uid::UniqueIdGenerator};
-        let mut modules = im::HashMap::new();
-        let ids = UniqueIdGenerator::new();
-        // DUPE: preludeinsertion
-        // TODO: Currently we do this here and also in the tests. It would be better
-        // to have one place where we create all this required state for use in each
-        // place.
-        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
+pub fn compile(src: &str, dep: Option<(&str, &str, &str)>) -> TypedModule {
+    let mut modules = im::HashMap::new();
+    let ids = UniqueIdGenerator::new();
+    // DUPE: preludeinsertion
+    // TODO: Currently we do this here and also in the tests. It would be better
+    // to have one place where we create all this required state for use in each
+    // place.
+    let _ = modules.insert("gleam".into(), crate::type_::build_prelude(&ids));
 
-        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = "my/mod".into();
-        let ast = $crate::analyse::infer_module(
-            $crate::build::Target::JavaScript,
+    if let Some((dep_package, dep_name, dep_src)) = dep {
+        let (mut ast, _) = crate::parse::parse_module(dep_src).expect("dep syntax error");
+        ast.name = dep_name.into();
+        let dep = crate::analyse::infer_module(
+            Target::JavaScript,
             &ids,
             ast,
-            $crate::build::Origin::Src,
-            &"thepackage".into(),
+            Origin::Src,
+            &dep_package.into(),
             &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
+            &TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
-        let mut output = String::new();
-        ts_declaration(&ast, Path::new(""), "", &mut output).unwrap();
-        assert_eq!(($src, output), ($src, $js.to_string()));
-    }};
+        let _ = modules.insert(dep_name.into(), dep.type_info);
+    }
+
+    let (mut ast, _) = crate::parse::parse_module(src).expect("syntax error");
+    ast.name = "my/mod".into();
+    crate::analyse::infer_module(
+        Target::JavaScript,
+        &ids,
+        ast,
+        Origin::Src,
+        &"thepackage".into(),
+        &modules,
+        &TypeWarningEmitter::null(),
+    )
+    .expect("should successfully infer")
+}
+
+pub fn compile_js(src: &str, dep: Option<(&str, &str, &str)>) -> String {
+    let ast = compile(src, dep);
+    let line_numbers = LineNumbers::new(&src);
+    module(&ast, &line_numbers, Path::new(""), &"".into()).unwrap()
+}
+
+pub fn compile_ts(src: &str, dep: Option<(&str, &str, &str)>) -> String {
+    let ast = compile(src, dep);
+    ts_declaration(&ast, Path::new(""), &src.into()).unwrap()
 }

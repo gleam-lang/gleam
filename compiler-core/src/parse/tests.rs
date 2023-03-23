@@ -10,13 +10,7 @@ macro_rules! assert_error {
         assert_eq!(($src, $error), ($src, result),);
     };
     ($src:expr) => {
-        let result = crate::parse::parse_statement_sequence($src).expect_err("should not parse");
-        let error = crate::error::Error::Parse {
-            src: $src.into(),
-            path: PathBuf::from("/src/parse/error.gleam"),
-            error: result,
-        };
-        let result = error.pretty_string();
+        let result = $crate::parse::tests::expect_error($src);
         insta::assert_snapshot!(insta::internals::AutoName, result, $src);
     };
 }
@@ -26,6 +20,16 @@ macro_rules! assert_parse {
         let result = crate::parse::parse_statement_sequence($src).expect("should parse");
         insta::assert_snapshot!(insta::internals::AutoName, &format!("{:#?}", result), $src);
     };
+}
+
+pub fn expect_error(src: &str) -> String {
+    let result = crate::parse::parse_statement_sequence(src).expect_err("should not parse");
+    let error = crate::error::Error::Parse {
+        src: src.into(),
+        path: PathBuf::from("/src/parse/error.gleam"),
+        error: result,
+    };
+    error.pretty_string()
 }
 
 #[test]
