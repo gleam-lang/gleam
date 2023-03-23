@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    ast::{TypedModule, UntypedExpr, UntypedModule},
+    ast::{TypedModule, TypedStatement, UntypedExpr, UntypedModule},
     build::{Origin, Target},
     error::Error,
     type_::{build_prelude, pretty::Printer},
@@ -8,6 +8,8 @@ use crate::{
     warning::TypeWarningEmitter,
 };
 use itertools::Itertools;
+use std::path::PathBuf;
+use vec1::Vec1;
 
 mod assert;
 mod assignments;
@@ -19,8 +21,6 @@ mod statement_if;
 mod use_;
 mod warnings;
 
-use std::path::PathBuf;
-
 #[macro_export]
 macro_rules! assert_infer {
     ($src:expr, $typ:expr $(,)?) => {
@@ -29,32 +29,10 @@ macro_rules! assert_infer {
     };
 }
 
-fn infer(src: &str) -> String {
-    let mut printer = crate::type_::pretty::Printer::new();
-    let ast = crate::parse::parse_statement_sequence(src).expect("syntax error");
-
-    let mut modules = im::HashMap::new();
-    let ids = UniqueIdGenerator::new();
-    // DUPE: preludeinsertion
-    // TODO: Currently we do this here and also in the tests. It would be better
-    // to have one place where we create all this required state for use in each
-    // place.
-    let _ = modules.insert("gleam".into(), build_prelude(&ids));
-    let result = crate::type_::ExprTyper::new(&mut crate::type_::Environment::new(
-        ids,
-        "themodule",
-        &modules,
-        &crate::warning::TypeWarningEmitter::null(),
-    ))
-    .infer_statements(ast)
-    .expect("should successfully infer");
-    printer.pretty_print(result.last().type_().as_ref(), 0)
-}
-
 #[macro_export]
 macro_rules! assert_infer_with_module {
     (($name:expr, $module_src:literal), $src:expr, $module:expr $(,)?) => {
-        let constructors = $crate::type_::tests::infer_module($src, Some(($name, $module_src)));
+        let constructors = $crate::type_::tests::infer_module($src, vec![($name, $module_src)]);
         let expected = $crate::type_::tests::stringify_tuple_strs($module);
         assert_eq!(($src, constructors), ($src, expected));
     };
@@ -63,117 +41,18 @@ macro_rules! assert_infer_with_module {
 #[macro_export]
 macro_rules! assert_module_infer {
     ($src:expr, $module:expr $(,)?) => {{
-        let constructors = $crate::type_::tests::infer_module($src, None);
+        let constructors = $crate::type_::tests::infer_module($src, vec![]);
         let expected = $crate::type_::tests::stringify_tuple_strs($module);
         assert_eq!(($src, constructors), ($src, expected));
     }};
 }
 
-pub fn stringify_tuple_strs(module: Vec<(&str, &str)>) -> Vec<(SmolStr, String)> {
-    module
-        .into_iter()
-        .map(|(k, v)| (k.into(), v.into()))
-        .collect()
-}
-
-pub fn infer_module(src: &str, dep: Option<(&str, &str)>) -> Vec<(SmolStr, String)> {
-    let ast = compile_module(src, dep).expect("should successfully infer");
-    ast.type_info
-        .values
-        .iter()
-        .map(|(k, v)| {
-            let mut printer = Printer::new();
-            (k.clone(), printer.pretty_print(&v.type_, 0))
-        })
-        .sorted()
-        .collect()
-}
-
-pub fn compile_module(
-    src: &str,
-    dep: Option<(&str, &str)>,
-) -> Result<TypedModule, crate::type_::Error> {
-    let ids = UniqueIdGenerator::new();
-    let mut modules = im::HashMap::new();
-
-    // DUPE: preludeinsertion
-    // TODO: Currently we do this here and also in the tests. It would be better
-    // to have one place where we create all this required state for use in each
-    // place.
-    let _ = modules.insert("gleam".into(), build_prelude(&ids));
-
-    if let Some((name, module_src)) = dep {
-        let (mut ast, _) = crate::parse::parse_module(module_src).expect("syntax error");
-        ast.name = name.into();
-        let module = crate::analyse::infer_module(
-            crate::build::Target::Erlang,
-            &ids,
-            ast,
-            Origin::Src,
-            &"thepackage".into(),
-            &modules,
-            &crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let _ = modules.insert(name.into(), module.type_info);
-    }
-
-    let (ast, _) = crate::parse::parse_module(src).expect("syntax error");
-    crate::analyse::infer_module(
-        crate::build::Target::Erlang,
-        &ids,
-        ast,
-        Origin::Src,
-        &"thepackage".into(),
-        &modules,
-        &TypeWarningEmitter::null(),
-    )
-}
-
-pub fn module_error(src: &str) -> String {
-    let (mut ast, _) = crate::parse::parse_module(src).expect("syntax error");
-    ast.name = "my_module".into();
-    let mut modules = im::HashMap::new();
-    let ids = UniqueIdGenerator::new();
-    // DUPE: preludeinsertion
-    // TODO: Currently we do this here and also in the tests. It would be better
-    // to have one place where we create all this required state for use in each
-    // place.
-    let _ = modules.insert("gleam".into(), build_prelude(&ids));
-    let error = crate::analyse::infer_module(
-        Target::Erlang,
-        &ids,
-        ast,
-        Origin::Src,
-        &"thepackage".into(),
-        &modules,
-        &TypeWarningEmitter::null(),
-    )
-    .expect_err("should infer an error");
-    let error = Error::Type {
-        src: src.into(),
-        path: PathBuf::from("/src/one/two.gleam"),
-        error,
-    };
-    error.pretty_string()
-}
-
 #[macro_export]
 macro_rules! assert_module_error {
     ($src:expr) => {
-        let output = $crate::type_::tests::module_error($src);
+        let output = $crate::type_::tests::module_error($src, vec![]);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
-}
-
-pub fn syntax_error(src: &str) -> String {
-    let error = crate::parse::parse_module(src).expect_err("should trigger an error when parsing");
-    let error = Error::Parse {
-        src: src.into(),
-        path: PathBuf::from("/src/one/two.gleam"),
-        error,
-    };
-    error.pretty_string()
 }
 
 #[macro_export]
@@ -187,46 +66,17 @@ macro_rules! assert_module_syntax_error {
 #[macro_export]
 macro_rules! assert_error {
     ($src:expr, $error:expr $(,)?) => {
-        let ast = $crate::parse::parse_statement_sequence($src).expect("syntax error");
-        let ids = $crate::uid::UniqueIdGenerator::new();
-        let mut modules = im::HashMap::new();
-        // DUPE: preludeinsertion
-        // TODO: Currently we do this here and also in the tests. It would be better
-        // to have one place where we create all this required state for use in each
-        // place.
-        let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        let result = ExprTyper::new(&mut Environment::new(
-            ids,
-            "somemod",
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        ))
-        .infer_statements(ast)
-        .expect_err("should infer an error");
+        let result = $crate::type_::tests::compile_statement_sequence($src)
+            .expect_err("should infer an error");
         assert_eq!(($src, sort_options($error)), ($src, sort_options(result)),);
     };
 
     ($src:expr) => {
-        use std::path::PathBuf;
-        let ast = $crate::parse::parse_statement_sequence($src).expect("syntax error");
-        let ids = $crate::uid::UniqueIdGenerator::new();
-        let mut modules = im::HashMap::new();
-        // DUPE: preludeinsertion
-        // TODO: Currently we do this here and also in the tests. It would be better
-        // to have one place where we create all this required state for use in each
-        // place.
-        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
-        let error = $crate::type_::ExprTyper::new(&mut $crate::type_::Environment::new(
-            ids,
-            "somemod",
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        ))
-        .infer_statements(ast)
-        .expect_err("should infer an error");
+        let error = $crate::type_::tests::compile_statement_sequence($src)
+            .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
             src: $src.into(),
-            path: PathBuf::from("/src/one/two.gleam"),
+            path: std::path::PathBuf::from("/src/one/two.gleam"),
             error,
         };
         let output = error.pretty_string();
@@ -237,104 +87,19 @@ macro_rules! assert_error {
 #[macro_export]
 macro_rules! assert_with_module_error {
     (($name:expr, $module_src:literal), $src:expr $(,)?) => {
-        let ids = $crate::uid::UniqueIdGenerator::new();
-        let mut modules = im::HashMap::new();
-        // DUPE: preludeinsertion
-        // TODO: Currently we do this here and also in the tests. It would be better
-        // to have one place where we create all this required state for use in each
-        // place.
-        let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        // Repeatedly create importable modules for each one given
-        let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
-        ast.name = $name.into();
-        let module = $crate::analyse::infer_module(
-            $crate::build::Target::Erlang,
-            &ids,
-            ast,
-            Origin::Src,
-            &"thepackage".into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let _ = modules.insert($name.into(), module.type_info);
-
-        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = "my_module".into();
-        let error = $crate::analyse::infer_module(
-            $crate::build::Target::Erlang,
-            &ids,
-            ast,
-            Origin::Src,
-            &"thepackage".into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect_err("should infer an error");
-        let error = $crate::error::Error::Type {
-            src: $src.into(),
-            path: PathBuf::from("/src/one/two.gleam"),
-            error,
-        };
-        let output = error.pretty_string();
+        let output = $crate::type_::tests::module_error($src, vec![($name, $module_src)]);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
-    (($name:expr, $module_src:literal),($name2:expr, $module_src2:literal), $src:expr $(,)?) => {
-        let ids = $crate::uid::UniqueIdGenerator::new();
-        let mut modules = im::HashMap::new();
-        // DUPE: preludeinsertion
-        // TODO: Currently we do this here and also in the tests. It would be better
-        // to have one place where we create all this required state for use in each
-        // place.
-        let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        // Repeatedly create importable modules for each one given
-        let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
-        ast.name = $name.into();
-        let module = $crate::analyse::infer_module(
-            $crate::build::Target::Erlang,
-            &ids,
-            ast,
-            Origin::Src,
-            &"thepackage".into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let _ = modules.insert($name.into(), module.type_info);
-
-        let (mut ast2, _) = $crate::parse::parse_module($module_src2).expect("syntax error");
-        ast2.name = $name2.into();
-        let module = $crate::analyse::infer_module(
-            $crate::build::Target::Erlang,
-            &ids,
-            ast2,
-            Origin::Src,
-            &"thepackage".into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect("should successfully infer");
-        let _ = modules.insert($name2.into(), module.type_info);
-
-        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = "my_module".into();
-        let error = $crate::analyse::infer_module(
-            $crate::build::Target::Erlang,
-            &ids,
-            ast,
-            Origin::Src,
-            &"thepackage".into(),
-            &modules,
-            &$crate::warning::TypeWarningEmitter::null(),
-        )
-        .expect_err("should infer an error");
-        let error = $crate::error::Error::Type {
-            src: $src.into(),
-            path: PathBuf::from("/src/one/two.gleam"),
-            error,
-        };
-        let output = error.pretty_string();
+    (
+        ($name:expr, $module_src:literal),
+        ($name2:expr, $module_src2:literal),
+        $src:expr $(,)?
+    ) => {
+        let output = $crate::type_::tests::module_error(
+            $src,
+            vec![($name, $module_src), ($name2, $module_src2)],
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -565,6 +330,111 @@ macro_rules! assert_no_warnings {
         }).collect::<Vec<_>>();
         assert_eq!(expected, warnings);
     };
+}
+
+fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::type_::Error> {
+    let ast = crate::parse::parse_statement_sequence(src).expect("syntax error");
+    let mut modules = im::HashMap::new();
+    let ids = UniqueIdGenerator::new();
+    // DUPE: preludeinsertion
+    // TODO: Currently we do this here and also in the tests. It would be better
+    // to have one place where we create all this required state for use in each
+    // place.
+    let _ = modules.insert("gleam".into(), build_prelude(&ids));
+    crate::type_::ExprTyper::new(&mut crate::type_::Environment::new(
+        ids,
+        "themodule",
+        &modules,
+        &crate::warning::TypeWarningEmitter::null(),
+    ))
+    .infer_statements(ast)
+}
+
+fn infer(src: &str) -> String {
+    let mut printer = crate::type_::pretty::Printer::new();
+    let result = compile_statement_sequence(src).expect("should successfully infer");
+    printer.pretty_print(result.last().type_().as_ref(), 0)
+}
+
+pub fn stringify_tuple_strs(module: Vec<(&str, &str)>) -> Vec<(SmolStr, String)> {
+    module
+        .into_iter()
+        .map(|(k, v)| (k.into(), v.into()))
+        .collect()
+}
+
+pub fn infer_module(src: &str, dep: Vec<(&str, &str)>) -> Vec<(SmolStr, String)> {
+    let ast = compile_module(src, dep).expect("should successfully infer");
+    ast.type_info
+        .values
+        .iter()
+        .map(|(k, v)| {
+            let mut printer = Printer::new();
+            (k.clone(), printer.pretty_print(&v.type_, 0))
+        })
+        .sorted()
+        .collect()
+}
+
+pub fn compile_module(
+    src: &str,
+    dep: Vec<(&str, &str)>,
+) -> Result<TypedModule, crate::type_::Error> {
+    let ids = UniqueIdGenerator::new();
+    let mut modules = im::HashMap::new();
+
+    // DUPE: preludeinsertion
+    // TODO: Currently we do this here and also in the tests. It would be better
+    // to have one place where we create all this required state for use in each
+    // place.
+    let _ = modules.insert("gleam".into(), build_prelude(&ids));
+
+    for (name, module_src) in dep {
+        let (mut ast, _) = crate::parse::parse_module(module_src).expect("syntax error");
+        ast.name = name.into();
+        let module = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
+            &ids,
+            ast,
+            Origin::Src,
+            &"thepackage".into(),
+            &modules,
+            &crate::warning::TypeWarningEmitter::null(),
+        )
+        .expect("should successfully infer");
+        let _ = modules.insert(name.into(), module.type_info);
+    }
+
+    let (ast, _) = crate::parse::parse_module(src).expect("syntax error");
+    crate::analyse::infer_module(
+        crate::build::Target::Erlang,
+        &ids,
+        ast,
+        Origin::Src,
+        &"thepackage".into(),
+        &modules,
+        &TypeWarningEmitter::null(),
+    )
+}
+
+pub fn module_error(src: &str, deps: Vec<(&str, &str)>) -> String {
+    let error = compile_module(src, deps).expect_err("should infer an error");
+    let error = Error::Type {
+        src: src.into(),
+        path: PathBuf::from("/src/one/two.gleam"),
+        error,
+    };
+    error.pretty_string()
+}
+
+pub fn syntax_error(src: &str) -> String {
+    let error = crate::parse::parse_module(src).expect_err("should trigger an error when parsing");
+    let error = Error::Parse {
+        src: src.into(),
+        path: PathBuf::from("/src/one/two.gleam"),
+        error,
+    };
+    error.pretty_string()
 }
 
 #[test]
