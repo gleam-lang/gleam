@@ -54,13 +54,13 @@ impl LanguageServerTestIO {
         Arc::try_unwrap(self.actions).unwrap().into_inner().unwrap()
     }
 
-    pub fn src_module(&mut self, name: &str, code: &str) {
+    pub fn src_module(&self, name: &str, code: &str) {
         let src_dir = self.paths.src_directory();
         let path = src_dir.join(name).with_extension(".gleam");
         self.io.write(&path, code).unwrap()
     }
 
-    pub fn test_module(&mut self, name: &str, code: &str) {
+    pub fn test_module(&self, name: &str, code: &str) {
         let test_dir = self.paths.test_directory();
         let path = test_dir.join(name).with_extension(".gleam");
         self.io.write(&path, code).unwrap()
