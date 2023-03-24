@@ -10,14 +10,21 @@ const CREATE_COMPILING_TOKEN: &str = "create-compiling-gleam";
 const DOWNLOADING_TOKEN: &str = "downloading-dependencies";
 const CREATE_DOWNLOADING_TOKEN: &str = "create-downloading-dependencies";
 
+pub trait ProgressReporter {
+    fn compilation_started(&self);
+    fn compilation_finished(&self);
+    fn dependency_downloading_started(&self);
+    fn dependency_downloading_finished(&self);
+}
+
 // Used to publish progress notifications to the client without waiting for
 // the usual request-response loop of the language server.
 #[derive(Debug, Clone)]
-pub struct ProgressReporter<'a> {
+pub struct ConnectionProgressReporter<'a> {
     connection: DebugIgnore<&'a lsp_server::Connection>,
 }
 
-impl<'a> ProgressReporter<'a> {
+impl<'a> ConnectionProgressReporter<'a> {
     pub fn new(
         connection: &'a lsp_server::Connection,
         // We don't actually need these but we take them anyway to ensure that
@@ -33,24 +40,6 @@ impl<'a> ProgressReporter<'a> {
         }
     }
 
-    pub fn compilation_started(&self) {
-        let title = "Compiling Gleam";
-        self.send_notification(COMPILING_TOKEN, begin_message(title));
-    }
-
-    pub fn compilation_finished(&self) {
-        self.send_notification(COMPILING_TOKEN, end_message());
-    }
-
-    pub fn dependency_downloading_started(&self) {
-        let title = "Downloading Gleam dependencies";
-        self.send_notification(DOWNLOADING_TOKEN, begin_message(title));
-    }
-
-    pub fn dependency_downloading_finished(&self) {
-        self.send_notification(DOWNLOADING_TOKEN, end_message());
-    }
-
     fn send_notification(&self, token: &str, work_done: WorkDoneProgress) {
         let params = ProgressParams {
             token: NumberOrString::String(token.to_string()),
@@ -64,6 +53,26 @@ impl<'a> ProgressReporter<'a> {
             .sender
             .send(lsp_server::Message::Notification(notification))
             .expect("send_work_done_notification send")
+    }
+}
+
+impl<'a> ProgressReporter for ConnectionProgressReporter<'a> {
+    fn compilation_started(&self) {
+        let title = "Compiling Gleam";
+        self.send_notification(COMPILING_TOKEN, begin_message(title));
+    }
+
+    fn compilation_finished(&self) {
+        self.send_notification(COMPILING_TOKEN, end_message());
+    }
+
+    fn dependency_downloading_started(&self) {
+        let title = "Downloading Gleam dependencies";
+        self.send_notification(DOWNLOADING_TOKEN, begin_message(title));
+    }
+
+    fn dependency_downloading_finished(&self) {
+        self.send_notification(DOWNLOADING_TOKEN, end_message());
     }
 }
 

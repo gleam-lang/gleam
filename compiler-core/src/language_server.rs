@@ -6,6 +6,9 @@ mod progress;
 mod router;
 mod server;
 
+#[cfg(test)]
+mod tests;
+
 pub use server::LanguageServer;
 
 use crate::{

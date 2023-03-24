@@ -24,7 +24,7 @@ pub struct Response<T> {
 }
 
 #[derive(Debug)]
-pub struct LanguageServerEngine<'a, IO> {
+pub struct LanguageServerEngine<IO, Reporter> {
     paths: ProjectPaths,
 
     /// A compiler for the project that supports repeat compilation of the root
@@ -37,21 +37,24 @@ pub struct LanguageServerEngine<'a, IO> {
 
     // Used to publish progress notifications to the client without waiting for
     // the usual request-response loop.
-    progress_reporter: ProgressReporter<'a>,
+    progress_reporter: Reporter,
 }
 
-impl<'a, IO> LanguageServerEngine<'a, IO>
+impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
 where
+    // IO to be supplied from outside of gleam-core
     IO: FileSystemReader
         + FileSystemWriter
         + CommandExecutor
         + DownloadDependencies
         + MakeLocker
         + Clone,
+    // IO to be supplied from inside of gleam-core
+    Reporter: ProgressReporter + Clone + 'a,
 {
     pub fn new(
         config: PackageConfig,
-        progress_reporter: ProgressReporter<'a>,
+        progress_reporter: Reporter,
         io: FileSystemProxy<IO>,
         paths: ProjectPaths,
     ) -> Result<Self> {

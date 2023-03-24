@@ -21,22 +21,25 @@ use std::{
 /// file using the nearest parent `gleam.toml` file.
 ///
 #[derive(Debug)]
-pub struct Router<'a, IO> {
+pub struct Router<IO, Reporter> {
     io: FileSystemProxy<IO>,
-    engines: HashMap<PathBuf, LanguageServerEngine<'a, IO>>,
-    progress_reporter: ProgressReporter<'a>,
+    engines: HashMap<PathBuf, LanguageServerEngine<IO, Reporter>>,
+    progress_reporter: Reporter,
 }
 
-impl<'a, IO> Router<'a, IO>
+impl<'a, IO, Reporter> Router<IO, Reporter>
 where
+    // IO to be supplied from outside of gleam-core
     IO: FileSystemReader
         + FileSystemWriter
         + CommandExecutor
         + DownloadDependencies
         + MakeLocker
         + Clone,
+    // IO to be supplied from inside of gleam-core
+    Reporter: ProgressReporter + Clone + 'a,
 {
-    pub fn new(progress_reporter: ProgressReporter<'a>, io: FileSystemProxy<IO>) -> Self {
+    pub fn new(progress_reporter: Reporter, io: FileSystemProxy<IO>) -> Self {
         Self {
             io,
             engines: HashMap::new(),
@@ -47,7 +50,7 @@ where
     pub fn engine_for_path(
         &mut self,
         path: &Path,
-    ) -> Result<Option<&mut LanguageServerEngine<'a, IO>>> {
+    ) -> Result<Option<&mut LanguageServerEngine<IO, Reporter>>> {
         let path = match find_gleam_project_parent(&self.io, path) {
             Some(x) => x,
             None => return Ok(None),
