@@ -38,6 +38,10 @@ impl ProjectPaths {
         self.root.join("src")
     }
 
+    pub fn test_directory(&self) -> PathBuf {
+        self.root.join("test")
+    }
+
     pub fn build_directory(&self) -> PathBuf {
         self.root.join("build")
     }

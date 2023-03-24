@@ -1,3 +1,5 @@
+mod compilation;
+
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -31,16 +33,37 @@ enum Action {
     UnlockBuild,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 struct LanguageServerTestIO {
     io: InMemoryFileSystem,
+    paths: ProjectPaths,
     actions: Arc<Mutex<Vec<Action>>>,
 }
 
 impl LanguageServerTestIO {
+    fn new() -> Self {
+        Self {
+            io: Default::default(),
+            actions: Default::default(),
+            paths: ProjectPaths::at_filesystem_root(),
+        }
+    }
+
     /// Panics if there are other references to the actions.
     pub fn into_actions(self) -> Vec<Action> {
         Arc::try_unwrap(self.actions).unwrap().into_inner().unwrap()
+    }
+
+    pub fn src_module(&mut self, name: &str, code: &str) {
+        let src_dir = self.paths.src_directory();
+        let path = src_dir.join(name).with_extension(".gleam");
+        self.io.write(&path, code).unwrap()
+    }
+
+    pub fn test_module(&mut self, name: &str, code: &str) {
+        let test_dir = self.paths.test_directory();
+        let path = test_dir.join(name).with_extension(".gleam");
+        self.io.write(&path, code).unwrap()
     }
 
     fn record(&self, action: Action) {
@@ -209,55 +232,11 @@ impl ProgressReporter for LanguageServerTestIO {
 fn setup_engine(
     io: &LanguageServerTestIO,
 ) -> LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO> {
-    let config = PackageConfig::default();
-    let paths = ProjectPaths::at_filesystem_root();
-    LanguageServerEngine::new(config, io.clone(), FileSystemProxy::new(io.clone()), paths).unwrap()
-}
-
-#[test]
-fn start_your_engines() {
-    let io = LanguageServerTestIO::default();
-    let engine = setup_engine(&io);
-    drop(engine);
-    let actions = io.into_actions();
-    assert_eq!(
-        actions,
-        vec![
-            Action::DependencyDownloadingStarted,
-            Action::DownloadDependencies,
-            Action::DependencyDownloadingFinished,
-            Action::LockBuild,
-            Action::UnlockBuild,
-        ]
+    LanguageServerEngine::new(
+        PackageConfig::default(),
+        io.clone(),
+        FileSystemProxy::new(io.clone()),
+        io.paths.clone(),
     )
-}
-
-#[test]
-fn compile_please() {
-    let io = LanguageServerTestIO::default();
-    let mut engine = setup_engine(&io);
-
-    let response = engine.compile_please();
-    assert!(response.result.is_ok());
-    assert!(response.warnings.is_empty());
-    assert!(response.compiled_modules.is_empty());
-
-    drop(engine);
-    let actions = io.into_actions();
-    assert_eq!(
-        actions,
-        vec![
-            // new
-            Action::DependencyDownloadingStarted,
-            Action::DownloadDependencies,
-            Action::DependencyDownloadingFinished,
-            Action::LockBuild,
-            Action::UnlockBuild,
-            // compile_please
-            Action::CompilationStarted,
-            Action::LockBuild,
-            Action::UnlockBuild,
-            Action::CompilationFinished,
-        ]
-    )
+    .unwrap()
 }
