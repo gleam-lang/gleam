@@ -5,7 +5,6 @@ use crate::{
         engine::{self, LanguageServerEngine},
         feedback::{Feedback, FeedbackBookKeeper},
         files::FileSystemProxy,
-        progress::ProgressReporter,
         router::Router,
         src_span_to_lsp_range, DownloadDependencies, MakeLocker,
     },
@@ -27,6 +26,8 @@ use lsp_types::{
 use serde_json::Value as Json;
 use std::{collections::HashMap, path::PathBuf};
 
+use super::progress::ConnectionProgressReporter;
+
 /// This class is responsible for handling the language server protocol and
 /// delegating the work to the engine.
 ///
@@ -42,7 +43,7 @@ pub struct LanguageServer<'a, IO> {
     initialise_params: InitializeParams,
     connection: DebugIgnore<&'a lsp_server::Connection>,
     feedback: FeedbackBookKeeper,
-    router: Router<'a, IO>,
+    router: Router<IO, ConnectionProgressReporter<'a>>,
     io: FileSystemProxy<IO>,
 }
 
@@ -57,7 +58,7 @@ where
 {
     pub fn new(connection: &'a lsp_server::Connection, io: IO) -> Result<Self> {
         let initialise_params = initialisation_handshake(connection);
-        let reporter = ProgressReporter::new(connection, &initialise_params);
+        let reporter = ConnectionProgressReporter::new(connection, &initialise_params);
         let io = FileSystemProxy::new(io);
         let router = Router::new(reporter, io.clone());
         Ok(Self {
@@ -277,7 +278,9 @@ where
     fn respond_with_engine<T>(
         &mut self,
         path: PathBuf,
-        handler: impl FnOnce(&mut LanguageServerEngine<'a, IO>) -> engine::Response<T>,
+        handler: impl FnOnce(
+            &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
+        ) -> engine::Response<T>,
     ) -> (Json, Feedback)
     where
         T: serde::Serialize,
@@ -312,7 +315,9 @@ where
     fn notified_with_engine(
         &mut self,
         path: PathBuf,
-        handler: impl FnOnce(&mut LanguageServerEngine<'a, IO>) -> engine::Response<()>,
+        handler: impl FnOnce(
+            &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
+        ) -> engine::Response<()>,
     ) -> Feedback {
         self.respond_with_engine(path, handler).1
     }
