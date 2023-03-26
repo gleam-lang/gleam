@@ -95,3 +95,14 @@ pub fn main() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2090
+#[test]
+fn tf_type_name_usage() {
+    assert_ts_def!(
+        r#"
+pub external type TESTitem
+pub external fn one(TESTitem) -> TESTitem = "" "one"
+"#
+    );
+}

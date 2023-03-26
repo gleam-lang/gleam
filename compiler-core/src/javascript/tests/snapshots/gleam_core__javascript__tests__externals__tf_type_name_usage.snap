@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/externals.rs
+assertion_line: 102
+expression: "\npub external type TESTitem\npub external fn one(TESTitem) -> TESTitem = \"\" \"one\"\n"
+---
+export type TESTitem$ = any;
+
+export function one(x0: TESTitem$): TESTitem$;
+

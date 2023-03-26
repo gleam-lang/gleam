@@ -738,7 +738,7 @@ impl<'a> TypeScriptGenerator<'a> {
         module: &str,
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
-        let name = format!("{}$", ts_safe_type_name(name.to_upper_camel_case()));
+        let name = format!("{}$", ts_safe_type_name(name.to_string()));
         let name = match module == self.module.name {
             true => Document::String(name),
             false => {
