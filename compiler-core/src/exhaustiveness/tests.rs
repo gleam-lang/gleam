@@ -24,7 +24,13 @@ fn variant(typ: TypeId, index: usize, args: Vec<Pattern>) -> Pattern {
 }
 
 fn pair(typ1: TypeId, typ2: TypeId, pat1: Pattern, pat2: Pattern) -> Pattern {
-    Pattern::Constructor(Constructor::Pair(typ1, typ2), vec![pat1, pat2])
+    Pattern::Constructor(Constructor::Tuple(vec![typ1, typ2]), vec![pat1, pat2])
+}
+
+fn tuple(args: Vec<(Pattern, TypeId)>) -> Pattern {
+    let types = args.iter().map(|(_, t)| *t).collect();
+    let patterns = args.into_iter().map(|(p, _)| p).collect();
+    Pattern::Constructor(Constructor::Tuple(types), patterns)
 }
 
 fn int(val: i64) -> Pattern {
@@ -321,7 +327,7 @@ fn test_compile_exhaustive_int_pattern() {
 fn test_compile_nonexhaustive_nested_int_pattern() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
-    let tup_type = new_type(&mut compiler, Type::Pair(int_type, int_type));
+    let tup_type = new_type(&mut compiler, Type::Tuple(vec![int_type, int_type]));
     let input = compiler.new_variable(tup_type);
     let result = compile(
         compiler,
@@ -334,7 +340,7 @@ fn test_compile_nonexhaustive_nested_int_pattern() {
         Decision::Switch(
             input,
             vec![Case::new(
-                Constructor::Pair(int_type, int_type),
+                Constructor::Tuple(vec![int_type, int_type]),
                 vec![var(1, int_type), var(2, int_type),],
                 Decision::Switch(
                     var(1, int_type),
@@ -353,10 +359,26 @@ fn test_compile_nonexhaustive_nested_int_pattern() {
 }
 
 #[test]
+fn test_compile_exhaustive_empty_tuple_pattern() {
+    let mut compiler = Compiler::new();
+    let tup_type = new_type(&mut compiler, Type::Tuple(vec![]));
+    let input = compiler.new_variable(tup_type);
+    let result = compile(compiler, input, vec![(tuple(vec![]), rhs(1))]);
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![Case::new(Constructor::Tuple(vec![]), vec![], success(1))],
+            None
+        )
+    );
+}
+
+#[test]
 fn test_compile_exhaustive_nested_int_pattern() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
-    let tup_type = new_type(&mut compiler, Type::Pair(int_type, int_type));
+    let tup_type = new_type(&mut compiler, Type::Tuple(vec![int_type, int_type]));
     let input = compiler.new_variable(tup_type);
     let result = compile(
         compiler,
@@ -372,7 +394,7 @@ fn test_compile_exhaustive_nested_int_pattern() {
         Decision::Switch(
             input,
             vec![Case::new(
-                Constructor::Pair(int_type, int_type),
+                Constructor::Tuple(vec![int_type, int_type]),
                 vec![var(1, int_type), var(2, int_type)],
                 Decision::Switch(
                     var(2, int_type),
@@ -694,7 +716,7 @@ fn test_compile_exhaustive_option_type_with_binding() {
 fn test_compile_nonexhaustive_pair_in_option_pattern() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
-    let tup_type = new_type(&mut compiler, Type::Pair(int_type, int_type));
+    let tup_type = new_type(&mut compiler, Type::Tuple(vec![int_type, int_type]));
     let option_type = new_type(
         &mut compiler,
         Type::Enum(vec![
@@ -727,7 +749,7 @@ fn test_compile_nonexhaustive_pair_in_option_pattern() {
                     Decision::Switch(
                         var(1, tup_type),
                         vec![Case::new(
-                            Constructor::Pair(int_type, int_type),
+                            Constructor::Tuple(vec![int_type, int_type]),
                             vec![var(2, int_type), var(3, int_type),],
                             Decision::Switch(
                                 var(2, int_type),
@@ -1071,7 +1093,7 @@ fn test_exhaustive_option_with_guard() {
 fn test_compile_exhaustive_nested_int_with_guard() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
-    let tup_type = new_type(&mut compiler, Type::Pair(int_type, int_type));
+    let tup_type = new_type(&mut compiler, Type::Tuple(vec![int_type, int_type]));
     let input = compiler.new_variable(tup_type);
     let result = compiler.compile(vec![
         Row::new(
@@ -1099,7 +1121,7 @@ fn test_compile_exhaustive_nested_int_with_guard() {
         Decision::Switch(
             input,
             vec![Case::new(
-                Constructor::Pair(int_type, int_type),
+                Constructor::Tuple(vec![int_type, int_type]),
                 vec![var(1, int_type), var(2, int_type)],
                 Decision::Switch(
                     var(2, int_type),

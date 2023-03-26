@@ -236,7 +236,7 @@ pub enum Constructor {
     True,
     False,
     Int(i64),
-    Pair(TypeId, TypeId),
+    Tuple(Vec<TypeId>),
     Variant(TypeId, usize),
 }
 
@@ -244,7 +244,7 @@ impl Constructor {
     /// Returns the index of this constructor relative to its type.
     fn index(&self) -> usize {
         match self {
-            Constructor::False | Constructor::Int(_) | Constructor::Pair(_, _) => 0,
+            Constructor::False | Constructor::Int(_) | Constructor::Tuple(_) => 0,
             Constructor::True => 1,
             Constructor::Variant(_, index) => *index,
         }
@@ -279,7 +279,7 @@ impl Pattern {
 pub enum Type {
     Int,
     Boolean,
-    Pair(TypeId, TypeId),
+    Tuple(Vec<TypeId>),
     Enum(Vec<(SmolStr, Vec<TypeId>)>),
 }
 
@@ -532,7 +532,7 @@ impl Match {
                             let name = "_".into();
                             terms.push(Term::new(*var, name, Vec::new()));
                         }
-                        Constructor::Pair(_, _) => {
+                        Constructor::Tuple(_) => {
                             let args = case.arguments.clone();
                             terms.push(Term::new(*var, "#".into(), args));
                         }
@@ -633,12 +633,9 @@ impl Compiler {
                     None,
                 )
             }
-            Type::Pair(typ1, typ2) => {
-                let cases = vec![(
-                    Constructor::Pair(typ1, typ2),
-                    self.new_variables(&[typ1, typ2]),
-                    Vec::new(),
-                )];
+            Type::Tuple(types) => {
+                let variables = self.new_variables(&types);
+                let cases = vec![(Constructor::Tuple(types), variables, Vec::new())];
 
                 Decision::Switch(
                     branch_var,
