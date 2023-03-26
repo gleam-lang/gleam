@@ -1,3 +1,6 @@
+// TODO: remove
+#![allow(unused)]
+
 //! An implementation of the algorithm described at
 //! https://julesjacobs.com/notes/patternmatching/patternmatching.pdf.
 //!
@@ -21,7 +24,7 @@
 //! called "match arms"), and the columns the patterns to test. Consider this match
 //! expression (I'm using Rust syntax here):
 //!
-//! ```rust
+//! ```text
 //! match some_number {
 //!     10 => foo,
 //!     20 => bar,
@@ -39,7 +42,7 @@
 //! instead each column explicitly specifies what it tests against. This means the
 //! above match expression is internally represented as follows:
 //!
-//! ```rust
+//! ```text
 //! match {
 //!     some_number is 10 => foo,
 //!     some_number is 20 => bar,
@@ -55,7 +58,7 @@
 //! transform this expression:
 //!
 //!
-//! ```rust
+//! ```text
 //! match {
 //!     some_number is 10 => foo,
 //!     some_number is num => bar
@@ -64,7 +67,7 @@
 //!
 //! Into this:
 //!
-//! ```rust
+//! ```text
 //! match {
 //!     some_number is 10 => foo,
 //!     // I'm using "∅" here to signal a row without any columns.
@@ -177,7 +180,7 @@
 //! input row. If the input pattern is any other pattern, the function just returns
 //! an array of the input pattern and row:
 //!
-//! ```rust
+//! ```text
 //! fn flatten_or(pattern: Pattern, row: Row) -> Vec<(Pattern, Row)> {
 //!     if let Pattern::Or(args) = pattern {
 //!         args.into_iter().map(|p| (p, row.clone())).collect()
@@ -190,7 +193,7 @@
 //! When removing the branch column from a row you then use this function, instead
 //! of acting upon a column's pattern directly:
 //!
-//! ```rust
+//! ```text
 //! if let Some(col) = row.remove_column(&branch_var) {
 //!     for (pat, row) in flatten_or(col.pattern, row) {
 //!         ...
@@ -361,7 +364,9 @@ pub struct Case {
     /// At runtime these would be populated with the values a pattern is matched
     /// against. For example, this pattern:
     ///
-    ///     case (10, 20, foo) -> ...
+    /// ```text
+    /// case (10, 20, foo) -> ...
+    /// ```
     ///
     /// Would result in three arguments, assigned the values `10`, `20` and
     /// `foo`.
@@ -511,7 +516,7 @@ impl Match {
                 // you're reading this and happen to know of a way, please
                 // submit a merge request :)
                 for (index, step) in terms.iter().enumerate() {
-                    mapping.insert(&step.variable, index);
+                    _ = mapping.insert(&step.variable, index);
                 }
 
                 let name = terms
@@ -519,10 +524,10 @@ impl Match {
                     .map(|term| term.pattern_name(terms, &mapping))
                     .unwrap_or_else(|| "_".to_string());
 
-                missing.insert(name);
+                _ = missing.insert(name);
             }
             Decision::Guard(_, _, fallback) => {
-                self.add_missing_patterns(&*fallback, terms, missing);
+                self.add_missing_patterns(fallback, terms, missing);
             }
             Decision::Switch(var, cases, fallback) => {
                 for case in cases {
@@ -560,11 +565,11 @@ impl Match {
                     }
 
                     self.add_missing_patterns(&case.body, terms, missing);
-                    terms.pop();
+                    _ = terms.pop();
                 }
 
                 if let Some(node) = fallback {
-                    self.add_missing_patterns(&*node, terms, missing);
+                    self.add_missing_patterns(node, terms, missing);
                 }
             }
         }
@@ -709,7 +714,7 @@ impl Compiler {
                         continue;
                     }
 
-                    tested.insert(key, raw_cases.len());
+                    _ = tested.insert(key, raw_cases.len());
                     raw_cases.push((cons, Vec::new(), vec![row]));
                 }
             } else {
@@ -791,14 +796,18 @@ impl Compiler {
     ///
     /// This turns cases like this:
     ///
-    ///     case foo -> print(foo)
+    /// ```text
+    /// case foo -> print(foo)
+    /// ```
     ///
     /// Into this:
     ///
-    ///     case -> {
-    ///       let foo = it
-    ///       print(foo)
-    ///     }
+    /// ```text
+    /// case -> {
+    ///     let foo = it
+    ///     print(foo)
+    /// }
+    /// ```
     ///
     /// Where `it` is a variable holding the value `case foo` is compared
     /// against, and the case/row has no patterns (i.e. always matches).
@@ -878,7 +887,6 @@ impl Compiler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use similar_asserts::assert_eq;
 
     fn new_type(compiler: &mut Compiler, typ: Type) -> TypeId {
         let id = compiler.types.len();
