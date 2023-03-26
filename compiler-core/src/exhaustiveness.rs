@@ -203,14 +203,6 @@
 //! }
 //! ```
 //!
-//! ## Range patterns
-//!
-//! Range patterns are handled using a `Range` constructor
-//! (`Constructor::Range(start, stop)`), produced when matching against integer
-//! types only (meaning we only support integer ranges). Just like regular integers
-//! we assume ranges are of infinite length, so a variable pattern is needed to make
-//! the match exhaustive.
-//!
 //! ## Guards
 //!
 //! Guards are supported as follows: each `Row` has a guard field, storing a
@@ -247,17 +239,13 @@ pub enum Constructor {
     Int(i64),
     Pair(TypeId, TypeId),
     Variant(TypeId, usize),
-    Range(i64, i64),
 }
 
 impl Constructor {
     /// Returns the index of this constructor relative to its type.
     fn index(&self) -> usize {
         match self {
-            Constructor::False
-            | Constructor::Int(_)
-            | Constructor::Pair(_, _)
-            | Constructor::Range(_, _) => 0,
+            Constructor::False | Constructor::Int(_) | Constructor::Pair(_, _) => 0,
             Constructor::True => 1,
             Constructor::Variant(_, index) => *index,
         }
@@ -272,7 +260,6 @@ pub enum Pattern {
     Int(i64),
     Variable(String),
     Or(Vec<Pattern>),
-    Range(i64, i64),
 }
 
 impl Pattern {
@@ -545,7 +532,7 @@ impl Match {
 
                             terms.push(Term::new(*var, name, Vec::new()));
                         }
-                        Constructor::Int(_) | Constructor::Range(_, _) => {
+                        Constructor::Int(_) => {
                             let name = "_".to_string();
 
                             terms.push(Term::new(*var, name, Vec::new()));
@@ -688,10 +675,10 @@ impl Compiler {
         }
     }
 
-    /// Compiles the cases and fallback cases for integer and range patterns.
+    /// Compiles the cases and fallback cases for integer patterns.
     ///
     /// Integers have an infinite number of constructors, so we specialise the
-    /// compilation of integer and range patterns.
+    /// compilation of integer patterns.
     fn compile_int_cases(
         &mut self,
         rows: Vec<Row>,
@@ -706,9 +693,6 @@ impl Compiler {
                 for (pat, row) in col.pattern.flatten_or(row) {
                     let (key, cons) = match pat {
                         Pattern::Int(val) => ((val, val), Constructor::Int(val)),
-                        Pattern::Range(start, stop) => {
-                            ((start, stop), Constructor::Range(start, stop))
-                        }
                         _ => unreachable!(),
                     };
 

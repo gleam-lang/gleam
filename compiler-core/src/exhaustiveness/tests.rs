@@ -805,23 +805,6 @@ fn test_compile_or_int_pattern() {
 }
 
 #[test]
-fn test_range_pattern() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(int_type);
-    let result = compile(compiler, input, vec![(Pattern::Range(1, 10), rhs(1))]);
-
-    assert_eq!(
-        result.tree,
-        Decision::Switch(
-            input,
-            vec![Case::new(Constructor::Range(1, 10), Vec::new(), success(1))],
-            Some(Box::new(failure()))
-        )
-    );
-}
-
-#[test]
 fn test_nonexhaustive_guard() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
