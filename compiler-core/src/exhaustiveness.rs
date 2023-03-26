@@ -844,7 +844,7 @@ impl Compiler {
             .iter()
             .map(|col| col.variable)
             .max_by_key(|var| counts[var])
-            .unwrap()
+            .expect("Row must have at least one column")
     }
 
     /// Returns a new variable to use in the decision tree.
