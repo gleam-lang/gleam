@@ -349,7 +349,7 @@ fn test_compile_nonexhaustive_nested_int_pattern() {
             None
         )
     );
-    assert_eq!(result.missing_patterns(), vec![SmolStr::new("(_, _)")]);
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("#(_, _)")]);
 }
 
 #[test]
@@ -749,7 +749,7 @@ fn test_compile_nonexhaustive_pair_in_option_pattern() {
     );
     assert_eq!(
         result.missing_patterns(),
-        vec![SmolStr::new("None"), SmolStr::new("Some((_, _))")]
+        vec![SmolStr::new("None"), SmolStr::new("Some(#(_, _))")]
     );
 }
 

@@ -459,7 +459,6 @@ impl Term {
                 })
                 .collect::<Vec<_>>()
                 .join(", ");
-
             format!("{}({})", self.name, args).into()
         }
     }
@@ -523,23 +522,19 @@ impl Match {
                     match &case.constructor {
                         Constructor::True => {
                             let name = "true".into();
-
                             terms.push(Term::new(*var, name, Vec::new()));
                         }
                         Constructor::False => {
                             let name = "false".into();
-
                             terms.push(Term::new(*var, name, Vec::new()));
                         }
                         Constructor::Int(_) => {
                             let name = "_".into();
-
                             terms.push(Term::new(*var, name, Vec::new()));
                         }
                         Constructor::Pair(_, _) => {
                             let args = case.arguments.clone();
-
-                            terms.push(Term::new(*var, "".into(), args));
+                            terms.push(Term::new(*var, "#".into(), args));
                         }
                         Constructor::Variant(typ, idx) => {
                             let args = case.arguments.clone();
@@ -548,7 +543,6 @@ impl Match {
                             } else {
                                 unreachable!()
                             };
-
                             terms.push(Term::new(*var, name, args));
                         }
                     }
