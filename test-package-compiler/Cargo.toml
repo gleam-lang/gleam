@@ -1,6 +1,6 @@
 [package]
 name = "test-package-compiler"
-version = "0.28.0-rc1"
+version = "0.28.0-dev"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
