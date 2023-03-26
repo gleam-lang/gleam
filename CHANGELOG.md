@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.28.0-rc1 - 2023-03-26
 
 - The language server now analyzes files on edit rather than on save, providing
   feedback faster.
