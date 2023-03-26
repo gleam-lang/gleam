@@ -29,6 +29,8 @@
 - Autocompletion of module imports was removed due to a buggy implementation.
 - Fixed a bug where the formatter would incorrectly remove `{ ... }` from bit
   string segment value expressions.
+- Fixed a bug where TypeScript type definitions files could include incorrect
+  type names.
 - Fixed a bug where the compiler used VSCode specific behaviour in the language
   server which was incompatible with Helix.
 - Fixed a bug where string concatenation patterns on strings with escape
