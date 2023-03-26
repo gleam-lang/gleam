@@ -16,7 +16,7 @@ fn ff() -> Pattern {
 }
 
 fn bind(name: &str) -> Pattern {
-    Pattern::Variable(name.to_string())
+    Pattern::Variable(name.into())
 }
 
 fn variant(typ: TypeId, index: usize, args: Vec<Pattern>) -> Pattern {
@@ -31,10 +31,10 @@ fn int(val: i64) -> Pattern {
     Pattern::Int(val)
 }
 
-fn rhs(value: usize) -> Body {
+fn rhs(value: u16) -> Body {
     Body {
         bindings: Vec::new(),
-        value,
+        clause_index: value,
     }
 }
 
@@ -55,20 +55,17 @@ fn failure() -> Decision {
     Decision::Failure
 }
 
-fn success(value: usize) -> Decision {
+fn success(value: u16) -> Decision {
     Decision::Success(Body {
         bindings: Vec::new(),
-        value,
+        clause_index: value,
     })
 }
 
-fn success_with_bindings(bindings: Vec<(&str, Variable)>, value: usize) -> Decision {
+fn success_with_bindings(bindings: Vec<(&str, Variable)>, value: u16) -> Decision {
     Decision::Success(Body {
-        bindings: bindings
-            .into_iter()
-            .map(|(n, v)| (n.to_string(), v))
-            .collect(),
-        value,
+        bindings: bindings.into_iter().map(|(n, v)| (n.into(), v)).collect(),
+        clause_index: value,
     })
 }
 
@@ -87,7 +84,7 @@ fn test_move_variable_patterns() {
         guard: None,
         body: Body {
             bindings: Vec::new(),
-            value: 42,
+            clause_index: 42,
         },
     });
 
@@ -97,8 +94,8 @@ fn test_move_variable_patterns() {
             columns: vec![Column::new(var1, Pattern::Constructor(cons, Vec::new()))],
             guard: None,
             body: Body {
-                bindings: vec![("a".to_string(), var2)],
-                value: 42
+                bindings: vec![("a".into(), var2)],
+                clause_index: 42
             }
         }
     );
@@ -114,7 +111,7 @@ fn test_move_variable_patterns_without_constructor_pattern() {
         guard: None,
         body: Body {
             bindings: Vec::new(),
-            value: 42,
+            clause_index: 42,
         },
     });
 
@@ -124,8 +121,8 @@ fn test_move_variable_patterns_without_constructor_pattern() {
             columns: Vec::new(),
             guard: None,
             body: Body {
-                bindings: vec![("a".to_string(), var1)],
-                value: 42
+                bindings: vec![("a".into(), var1)],
+                clause_index: 42
             }
         }
     );
@@ -193,7 +190,7 @@ fn test_compile_nonexhaustive_pattern() {
         )
     );
     assert!(result.diagnostics.missing);
-    assert_eq!(result.missing_patterns(), vec!["false".to_string()]);
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("false")]);
 }
 
 #[test]
@@ -293,7 +290,7 @@ fn test_compile_nonexhaustive_int_pattern() {
             Some(Box::new(failure()))
         )
     );
-    assert_eq!(result.missing_patterns(), vec!["_".to_string()]);
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("_")]);
 }
 
 #[test]
@@ -352,7 +349,7 @@ fn test_compile_nonexhaustive_nested_int_pattern() {
             None
         )
     );
-    assert_eq!(result.missing_patterns(), vec!["(_, _)".to_string()]);
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("(_, _)")]);
 }
 
 #[test]
@@ -409,8 +406,8 @@ fn test_compile_nonexhaustive_option_type() {
     let option_type = new_type(
         &mut compiler,
         Type::Enum(vec![
-            ("Some".to_string(), vec![int_type]),
-            ("None".to_string(), Vec::new()),
+            ("Some".into(), vec![int_type]),
+            ("None".into(), Vec::new()),
         ]),
     );
     let input = compiler.new_variable(option_type);
@@ -441,7 +438,7 @@ fn test_compile_nonexhaustive_option_type() {
     );
     assert_eq!(
         result.missing_patterns(),
-        vec!["None".to_string(), "Some(_)".to_string()]
+        vec![SmolStr::new("None"), SmolStr::new("Some(_)")]
     );
 }
 
@@ -452,8 +449,8 @@ fn test_compile_nonexhaustive_option_type_with_multiple_arguments() {
     let option_type = new_type(
         &mut compiler,
         Type::Enum(vec![
-            ("Some".to_string(), vec![int_type, int_type]),
-            ("None".to_string(), Vec::new()),
+            ("Some".into(), vec![int_type, int_type]),
+            ("None".into(), Vec::new()),
         ]),
     );
     let input = compiler.new_variable(option_type);
@@ -495,7 +492,7 @@ fn test_compile_nonexhaustive_option_type_with_multiple_arguments() {
     );
     assert_eq!(
         result.missing_patterns(),
-        vec!["None".to_string(), "Some(_, _)".to_string(),]
+        vec![SmolStr::new("None"), SmolStr::new("Some(_, _)")]
     );
 }
 
@@ -506,8 +503,8 @@ fn test_compile_exhaustive_option_type() {
     let option_type = new_type(
         &mut compiler,
         Type::Enum(vec![
-            ("Some".to_string(), vec![int_type]),
-            ("None".to_string(), Vec::new()),
+            ("Some".into(), vec![int_type]),
+            ("None".into(), Vec::new()),
         ]),
     );
     let input = compiler.new_variable(option_type);
@@ -552,8 +549,8 @@ fn test_compile_redundant_option_type_with_bool() {
     let option_type = new_type(
         &mut compiler,
         Type::Enum(vec![
-            ("Some".to_string(), vec![bool_type]),
-            ("None".to_string(), Vec::new()),
+            ("Some".into(), vec![bool_type]),
+            ("None".into(), Vec::new()),
         ]),
     );
     let input = compiler.new_variable(option_type);
@@ -605,8 +602,8 @@ fn test_compile_redundant_option_type_with_int() {
     let option_type = new_type(
         &mut compiler,
         Type::Enum(vec![
-            ("Some".to_string(), vec![int_type]),
-            ("None".to_string(), Vec::new()),
+            ("Some".into(), vec![int_type]),
+            ("None".into(), Vec::new()),
         ]),
     );
     let input = compiler.new_variable(option_type);
@@ -654,8 +651,8 @@ fn test_compile_exhaustive_option_type_with_binding() {
     let option_type = new_type(
         &mut compiler,
         Type::Enum(vec![
-            ("Some".to_string(), vec![int_type]),
-            ("None".to_string(), Vec::new()),
+            ("Some".into(), vec![int_type]),
+            ("None".into(), Vec::new()),
         ]),
     );
     let input = compiler.new_variable(option_type);
@@ -701,8 +698,8 @@ fn test_compile_nonexhaustive_pair_in_option_pattern() {
     let option_type = new_type(
         &mut compiler,
         Type::Enum(vec![
-            ("Some".to_string(), vec![tup_type]),
-            ("None".to_string(), Vec::new()),
+            ("Some".into(), vec![tup_type]),
+            ("None".into(), Vec::new()),
         ]),
     );
     let input = compiler.new_variable(option_type);
@@ -752,7 +749,7 @@ fn test_compile_nonexhaustive_pair_in_option_pattern() {
     );
     assert_eq!(
         result.missing_patterns(),
-        vec!["None".to_string(), "Some((_, _))".to_string()]
+        vec![SmolStr::new("None"), SmolStr::new("Some((_, _))")]
     );
 }
 
@@ -829,7 +826,7 @@ fn test_nonexhaustive_guard() {
         )
     );
 
-    assert_eq!(result.missing_patterns(), vec!["_".to_string()]);
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("_")]);
 }
 
 #[test]
@@ -839,8 +836,8 @@ fn test_nonexhaustive_option_with_two_rows_and_guard() {
     let option_type = new_type(
         &mut compiler,
         Type::Enum(vec![
-            ("Some".to_string(), vec![int_type]),
-            ("None".to_string(), Vec::new()),
+            ("Some".into(), vec![int_type]),
+            ("None".into(), Vec::new()),
         ]),
     );
     let input = compiler.new_variable(option_type);
@@ -888,7 +885,7 @@ fn test_nonexhaustive_option_with_two_rows_and_guard() {
         )
     );
 
-    assert_eq!(result.missing_patterns(), vec!["None".to_string()]);
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("None")]);
 }
 
 #[test]
@@ -1023,8 +1020,8 @@ fn test_exhaustive_option_with_guard() {
     let option_type = new_type(
         &mut compiler,
         Type::Enum(vec![
-            ("Some".to_string(), vec![int_type]),
-            ("None".to_string(), Vec::new()),
+            ("Some".into(), vec![int_type]),
+            ("None".into(), Vec::new()),
         ]),
     );
     let input = compiler.new_variable(option_type);
@@ -1057,8 +1054,8 @@ fn test_exhaustive_option_with_guard() {
                     Decision::Guard(
                         42,
                         Body {
-                            bindings: vec![("a".to_string(), var(1, int_type))],
-                            value: 2
+                            bindings: vec![("a".into(), var(1, int_type))],
+                            clause_index: 2
                         },
                         Box::new(success_with_bindings(vec![("a", var(1, int_type))], 3))
                     )

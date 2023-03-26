@@ -216,19 +216,18 @@ mod tests;
 
 use std::collections::{HashMap, HashSet};
 
+use smol_str::SmolStr;
+
 /// The body of code to evaluate in case of a match.
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Body {
     /// Any variables to bind before running the code.
     ///
     /// The tuples are in the form `(name, source)` (i.e `bla = source`).
-    bindings: Vec<(String, Variable)>,
+    bindings: Vec<(SmolStr, Variable)>,
 
-    /// The "code" to run in case of a match.
-    ///
-    /// We just use an integer for the sake of simplicity, but normally this
-    /// would be an AST node, or perhaps an index to an array of AST nodes.
-    value: usize,
+    /// The index of the clause in the case expression that should be run.
+    clause_index: u16,
 }
 
 /// A type constructor.
@@ -258,7 +257,7 @@ pub enum Pattern {
     /// A pattern such as `Some(42)`.
     Constructor(Constructor, Vec<Pattern>),
     Int(i64),
-    Variable(String),
+    Variable(SmolStr),
     Or(Vec<Pattern>),
 }
 
@@ -281,7 +280,7 @@ pub enum Type {
     Int,
     Boolean,
     Pair(TypeId, TypeId),
-    Enum(Vec<(String, Vec<TypeId>)>),
+    Enum(Vec<(SmolStr, Vec<TypeId>)>),
 }
 
 /// A unique ID to a type.
@@ -417,7 +416,7 @@ pub struct Diagnostics {
     ///
     /// If a right-hand side isn't in this list it means its pattern is
     /// redundant.
-    reachable: Vec<usize>,
+    reachable: Vec<u16>,
 }
 
 /// The result of compiling a pattern match expression.
@@ -432,12 +431,12 @@ pub struct Match {
 #[derive(Debug)]
 struct Term {
     variable: Variable,
-    name: String,
+    name: SmolStr,
     arguments: Vec<Variable>,
 }
 
 impl Term {
-    fn new(variable: Variable, name: String, arguments: Vec<Variable>) -> Self {
+    fn new(variable: Variable, name: SmolStr, arguments: Vec<Variable>) -> Self {
         Self {
             variable,
             name,
@@ -445,9 +444,9 @@ impl Term {
         }
     }
 
-    fn pattern_name(&self, terms: &[Term], mapping: &HashMap<&Variable, usize>) -> String {
+    fn pattern_name(&self, terms: &[Term], mapping: &HashMap<&Variable, usize>) -> SmolStr {
         if self.arguments.is_empty() {
-            self.name.to_string()
+            self.name.clone()
         } else {
             let args = self
                 .arguments
@@ -456,25 +455,25 @@ impl Term {
                     mapping
                         .get(arg)
                         .map(|&idx| terms[idx].pattern_name(terms, mapping))
-                        .unwrap_or_else(|| "_".to_string())
+                        .unwrap_or_else(|| "_".into())
                 })
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            format!("{}({})", self.name, args)
+            format!("{}({})", self.name, args).into()
         }
     }
 }
 
 impl Match {
     /// Returns a list of patterns not covered by the match expression.
-    pub fn missing_patterns(&self) -> Vec<String> {
+    pub fn missing_patterns(&self) -> Vec<SmolStr> {
         let mut names = HashSet::new();
         let mut steps = Vec::new();
 
         self.add_missing_patterns(&self.tree, &mut steps, &mut names);
 
-        let mut missing: Vec<String> = names.into_iter().collect();
+        let mut missing: Vec<SmolStr> = names.into_iter().collect();
 
         // Sorting isn't necessary, but it makes it a bit easier to write tests.
         missing.sort();
@@ -485,7 +484,7 @@ impl Match {
         &self,
         node: &Decision,
         terms: &mut Vec<Term>,
-        missing: &mut HashSet<String>,
+        missing: &mut HashSet<SmolStr>,
     ) {
         match node {
             Decision::Success(_) => {}
@@ -512,7 +511,7 @@ impl Match {
                 let name = terms
                     .first()
                     .map(|term| term.pattern_name(terms, &mapping))
-                    .unwrap_or_else(|| "_".to_string());
+                    .unwrap_or_else(|| "_".into());
 
                 _ = missing.insert(name);
             }
@@ -523,24 +522,24 @@ impl Match {
                 for case in cases {
                     match &case.constructor {
                         Constructor::True => {
-                            let name = "true".to_string();
+                            let name = "true".into();
 
                             terms.push(Term::new(*var, name, Vec::new()));
                         }
                         Constructor::False => {
-                            let name = "false".to_string();
+                            let name = "false".into();
 
                             terms.push(Term::new(*var, name, Vec::new()));
                         }
                         Constructor::Int(_) => {
-                            let name = "_".to_string();
+                            let name = "_".into();
 
                             terms.push(Term::new(*var, name, Vec::new()));
                         }
                         Constructor::Pair(_, _) => {
                             let args = case.arguments.clone();
 
-                            terms.push(Term::new(*var, String::new(), args));
+                            terms.push(Term::new(*var, "".into(), args));
                         }
                         Constructor::Variant(typ, idx) => {
                             let args = case.arguments.clone();
@@ -611,7 +610,7 @@ impl Compiler {
         if rows.first().map_or(false, |c| c.columns.is_empty()) {
             let row = rows.remove(0);
 
-            self.diagnostics.reachable.push(row.body.value);
+            self.diagnostics.reachable.push(row.body.clause_index);
 
             return if let Some(guard) = row.guard {
                 Decision::Guard(guard, row.body, Box::new(self.compile_rows(rows)))
@@ -818,7 +817,7 @@ impl Compiler {
             guard: row.guard,
             body: Body {
                 bindings,
-                value: row.body.value,
+                clause_index: row.body.clause_index,
             },
         }
     }
