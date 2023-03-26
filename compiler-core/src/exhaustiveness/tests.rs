@@ -19,6 +19,10 @@ fn bind(name: &str) -> Pattern {
     Pattern::Variable(name.into())
 }
 
+fn discard() -> Pattern {
+    Pattern::Discard
+}
+
 fn variant(typ: TypeId, index: usize, args: Vec<Pattern>) -> Pattern {
     Pattern::Constructor(Constructor::Variant(typ, index), args)
 }
@@ -82,7 +86,7 @@ fn test_move_variable_patterns() {
     let var1 = compiler.new_variable(typ);
     let var2 = compiler.new_variable(typ);
     let cons = Constructor::True;
-    let case = compiler.move_variable_patterns(Row {
+    let case = compiler.move_unconditional_patterns(Row {
         columns: vec![
             Column::new(var2, bind("a")),
             Column::new(var1, Pattern::Constructor(cons.clone(), Vec::new())),
@@ -112,7 +116,7 @@ fn test_move_variable_patterns_without_constructor_pattern() {
     let mut compiler = Compiler::new();
     let typ = new_type(&mut compiler, Type::Boolean);
     let var1 = compiler.new_variable(typ);
-    let case = compiler.move_variable_patterns(Row {
+    let case = compiler.move_unconditional_patterns(Row {
         columns: vec![Column::new(var1, bind("a"))],
         guard: None,
         body: Body {
@@ -369,6 +373,41 @@ fn test_compile_exhaustive_empty_tuple_pattern() {
         Decision::Switch(
             input,
             vec![Case::new(Constructor::Tuple(vec![]), vec![], success(1))],
+            None
+        )
+    );
+}
+
+#[test]
+fn test_compile_exhaustive_three_tuple_pattern() {
+    let mut compiler = Compiler::new();
+    let int_type = new_type(&mut compiler, Type::Int);
+    let tup_type = new_type(
+        &mut compiler,
+        Type::Tuple(vec![int_type, int_type, int_type]),
+    );
+    let input = compiler.new_variable(tup_type);
+    let result = compile(
+        compiler,
+        input,
+        vec![(
+            tuple(vec![
+                (discard(), int_type),
+                (discard(), int_type),
+                (discard(), int_type),
+            ]),
+            rhs(1),
+        )],
+    );
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![Case::new(
+                Constructor::Tuple(vec![int_type, int_type, int_type]),
+                vec![var(1, int_type), var(2, int_type), var(3, int_type),],
+                success(1)
+            )],
             None
         )
     );

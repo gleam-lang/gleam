@@ -26,13 +26,13 @@
 //!
 //! ```text
 //! match some_number {
-//!     10 => foo,
+//!     10 => one,
 //!     20 => bar,
 //!     30 => baz
 //! }
 //! ```
 //!
-//! Here `10 -> foo`, `20 -> bar` and `30 -> baz` are the rows, and `10`, `20` and
+//! Here `10 -> one`, `20 -> bar` and `30 -> baz` are the rows, and `10`, `20` and
 //! `30` are the columns for each row. User provided match expressions only support
 //! single columns (OR patterns are just turned into separate rows), but internally
 //! the compiler supports multiple columns.
@@ -44,7 +44,7 @@
 //!
 //! ```text
 //! match {
-//!     some_number is 10 => foo,
+//!     some_number is 10 => one,
 //!     some_number is 20 => bar,
 //!     some_number is 30 => baz
 //! }
@@ -60,7 +60,7 @@
 //!
 //! ```text
 //! match {
-//!     some_number is 10 => foo,
+//!     some_number is 10 => one,
 //!     some_number is num => bar
 //! }
 //! ```
@@ -69,7 +69,7 @@
 //!
 //! ```text
 //! match {
-//!     some_number is 10 => foo,
+//!     some_number is 10 => one,
 //!     // I'm using "∅" here to signal a row without any columns.
 //!     ∅ => {
 //!         let num = some_number;
@@ -258,15 +258,27 @@ pub enum Pattern {
     Constructor(Constructor, Vec<Pattern>),
     Int(i64),
     Variable(SmolStr),
+    Discard,
     Or(Vec<Pattern>),
 }
 
 impl Pattern {
     fn flatten_or(self, row: Row) -> Vec<(Pattern, Row)> {
-        if let Pattern::Or(args) = self {
-            args.into_iter().map(|p| (p, row.clone())).collect()
-        } else {
-            vec![(self, row)]
+        match self {
+            Pattern::Or(args) => args.into_iter().map(|p| (p, row.clone())).collect(),
+
+            Pattern::Constructor(_, _)
+            | Pattern::Int(_)
+            | Pattern::Variable(_)
+            | Pattern::Discard => vec![(self, row)],
+        }
+    }
+
+    /// Returns true if this pattern always matches no matter what the value is.
+    fn is_unconditional(&self) -> bool {
+        match self {
+            Pattern::Variable(_) | Pattern::Discard => true,
+            Pattern::Constructor(_, _) | Pattern::Int(_) | Pattern::Or(_) => false,
         }
     }
 }
@@ -354,11 +366,11 @@ pub struct Case {
     /// against. For example, this pattern:
     ///
     /// ```text
-    /// case (10, 20, foo) -> ...
+    /// case (10, 20, one) -> ...
     /// ```
     ///
     /// Would result in three arguments, assigned the values `10`, `20` and
-    /// `foo`.
+    /// `one`.
     ///
     /// In a real compiler you'd assign these variables in your IR first, then
     /// generate the code for the sub tree.
@@ -595,7 +607,7 @@ impl Compiler {
 
         let mut rows = rows
             .into_iter()
-            .map(|row| self.move_variable_patterns(row))
+            .map(|row| self.move_unconditional_patterns(row))
             .collect::<Vec<_>>();
 
         // There may be multiple rows, but if the first one has no patterns
@@ -774,21 +786,25 @@ impl Compiler {
     /// This turns cases like this:
     ///
     /// ```text
-    /// case foo -> print(foo)
+    /// case one -> print(one)
+    /// case _ -> print("nothing")
     /// ```
     ///
     /// Into this:
     ///
     /// ```text
     /// case -> {
-    ///     let foo = it
-    ///     print(foo)
+    ///     let one = it
+    ///     print(one)
+    /// }
+    /// case -> {
+    ///     print("nothing")
     /// }
     /// ```
     ///
-    /// Where `it` is a variable holding the value `case foo` is compared
+    /// Where `it` is a variable holding the value `case one` is compared
     /// against, and the case/row has no patterns (i.e. always matches).
-    fn move_variable_patterns(&self, row: Row) -> Row {
+    fn move_unconditional_patterns(&self, row: Row) -> Row {
         let mut bindings = row.body.bindings;
 
         for col in &row.columns {
@@ -800,7 +816,7 @@ impl Compiler {
         let columns = row
             .columns
             .into_iter()
-            .filter(|col| !matches!(col.pattern, Pattern::Variable(_)))
+            .filter(|col| !col.pattern.is_unconditional())
             .collect();
 
         Row {
