@@ -82,6 +82,7 @@ pub mod warning;
 
 mod call_graph;
 mod dep_tree;
+mod exhaustiveness;
 pub(crate) mod graph;
 
 pub use error::{Error, Result};
