@@ -45,6 +45,10 @@ fn tuple(args: Vec<(Pattern, TypeId)>) -> Pattern {
     }
 }
 
+fn string(val: &str) -> Pattern {
+    Pattern::String { value: val.into() }
+}
+
 fn int(val: &str) -> Pattern {
     Pattern::Int { value: val.into() }
 }
@@ -1354,6 +1358,67 @@ fn assign_pattern() {
                 vec![("it", var(0, typ))],
                 2
             )))
+        )
+    );
+}
+
+#[test]
+fn compile_nonexhaustive_string_pattern() {
+    let mut compiler = Compiler::new();
+    let int_type = new_type(&mut compiler, Type::String);
+    let input = compiler.new_variable(int_type);
+    let result = compile(
+        compiler,
+        input,
+        vec![(string("Hello"), rhs(1)), (string("Goodbye"), rhs(2))],
+    );
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::String("Hello".into()), Vec::new(), success(1)),
+                Case::new(
+                    Constructor::String("Goodbye".into()),
+                    Vec::new(),
+                    success(2)
+                ),
+            ],
+            Some(Box::new(failure()))
+        )
+    );
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("_")]);
+}
+
+#[test]
+fn compile_exhaustive_string_pattern() {
+    let mut compiler = Compiler::new();
+    let int_type = new_type(&mut compiler, Type::String);
+    let input = compiler.new_variable(int_type);
+    let result = compile(
+        compiler,
+        input,
+        vec![
+            (string("Hello"), rhs(1)),
+            (string("Goodbye"), rhs(2)),
+            (bind("a"), rhs(3)),
+        ],
+    );
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::String("Hello".into()), Vec::new(), success(1)),
+                Case::new(
+                    Constructor::String("Goodbye".into()),
+                    Vec::new(),
+                    success(2)
+                ),
+            ],
+            Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
         )
     );
 }

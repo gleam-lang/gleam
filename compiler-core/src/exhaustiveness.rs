@@ -237,31 +237,30 @@ pub enum Constructor {
     Float(SmolStr),
     Tuple(Vec<TypeId>),
     Variant(TypeId, usize),
+    String(SmolStr),
 }
 
 impl Constructor {
     /// Returns the index of this constructor relative to its type.
     fn index(&self) -> usize {
         match self {
-            Constructor::Float(_) | Constructor::Int(_) | Constructor::Tuple(_) => 0,
+            Constructor::String(_)
+            | Constructor::Float(_)
+            | Constructor::Int(_)
+            | Constructor::Tuple(_) => 0,
+
             Constructor::Variant(_, index) => *index,
         }
     }
 }
 
-// Int { value: SmolStr, },
 // Var { name: SmolStr, type_: Type, },
+// Int { value: SmolStr, },
 // Float { value: SmolStr, },
+// String { value: SmolStr, },
 // Assign { name: SmolStr, pattern: Box<Self>, },
 // Discard { name: SmolStr, type_: Type, },
-
-// String { value: SmolStr, },
-// VarUsage { name: SmolStr, type_: Type, },
-// List {
-//     elements: Vec<Self>,
-//     tail: Option<Box<Self>>,
-//     type_: Type,
-// },
+// Tuple { elems: Vec<Self>, },
 // Constructor {
 //     location: SrcSpan,
 //     name: SmolStr,
@@ -271,7 +270,13 @@ impl Constructor {
 //     with_spread: bool,
 //     type_: Type,
 // },
-// Tuple { elems: Vec<Self>, },
+
+// VarUsage { name: SmolStr, type_: Type, },
+// List {
+//     elements: Vec<Self>,
+//     tail: Option<Box<Self>>,
+//     type_: Type,
+// },
 // BitString { segments: Vec<BitStringSegment<Self, Type>>, },
 // Concatenate { left_side_string: SmolStr, right_side_assignment: AssignName, },
 
@@ -284,6 +289,9 @@ pub enum Pattern {
         value: SmolStr,
     },
     Float {
+        value: SmolStr,
+    },
+    String {
         value: SmolStr,
     },
     Assign {
@@ -307,13 +315,14 @@ impl Pattern {
         match self {
             Pattern::Or(args) => args.into_iter().map(|p| (p, row.clone())).collect(),
 
-            Pattern::Constructor { .. }
-            | Pattern::Assign { .. }
+            Pattern::Int { .. }
             | Pattern::Tuple { .. }
-            | Pattern::Int { .. }
             | Pattern::Float { .. }
+            | Pattern::Assign { .. }
+            | Pattern::String { .. }
             | Pattern::Discard
-            | Pattern::Variable { .. } => vec![(self, row)],
+            | Pattern::Variable { .. }
+            | Pattern::Constructor { .. } => vec![(self, row)],
         }
     }
 }
@@ -328,6 +337,7 @@ pub enum Type {
     Float,
     Tuple(Vec<TypeId>),
     Enum(Vec<(SmolStr, Vec<TypeId>)>),
+    String,
 }
 
 /// A unique ID to a type.
@@ -567,6 +577,10 @@ impl Match {
             Decision::Switch(var, cases, fallback) => {
                 for case in cases {
                     match &case.constructor {
+                        Constructor::String(_) => {
+                            let name = "_".into();
+                            terms.push(Term::new(*var, name, Vec::new()));
+                        }
                         Constructor::Int(_) => {
                             let name = "_".into();
                             terms.push(Term::new(*var, name, Vec::new()));
@@ -657,8 +671,8 @@ impl Compiler {
         let branch_var = self.branch_variable(&rows[0], &rows);
 
         match self.variable_type(branch_var).clone() {
-            Type::Float | Type::Int => {
-                let (cases, fallback) = self.compile_number_cases(rows, branch_var);
+            Type::String | Type::Float | Type::Int => {
+                let (cases, fallback) = self.compile_infinite_cases(rows, branch_var);
                 Decision::Switch(branch_var, cases, Some(fallback))
             }
 
@@ -687,11 +701,9 @@ impl Compiler {
         }
     }
 
-    /// Compiles the cases and fallback cases for int and float patterns.
-    ///
-    /// Ints and floats have an infinite number of constructors, so we
-    /// specialise the compilation of their patterns.
-    fn compile_number_cases(
+    /// String, ints and floats have an infinite number of constructors, so we
+    /// specialise the compilation of their patterns with this function.
+    fn compile_infinite_cases(
         &mut self,
         rows: Vec<Row>,
         branch_var: Variable,
@@ -709,6 +721,9 @@ impl Compiler {
                         }
                         Pattern::Float { value: val } => {
                             ((val.clone(), val.clone()), Constructor::Float(val))
+                        }
+                        Pattern::String { value: val } => {
+                            ((val.clone(), val.clone()), Constructor::String(val))
                         }
 
                         Pattern::Constructor { .. }
@@ -855,6 +870,7 @@ impl Compiler {
                 | Pattern::Int { .. }
                 | Pattern::Float { .. }
                 | Pattern::Tuple { .. }
+                | Pattern::String { .. }
                 | Pattern::Constructor { .. } => {
                     next = iterator.next();
                     columns.push(column);
