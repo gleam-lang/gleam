@@ -236,6 +236,7 @@ pub enum Constructor {
     True,
     False,
     Int(SmolStr),
+    Float(SmolStr),
     Tuple(Vec<TypeId>),
     Variant(TypeId, usize),
 }
@@ -244,7 +245,10 @@ impl Constructor {
     /// Returns the index of this constructor relative to its type.
     fn index(&self) -> usize {
         match self {
-            Constructor::False | Constructor::Int(_) | Constructor::Tuple(_) => 0,
+            Constructor::False
+            | Constructor::Float(_)
+            | Constructor::Int(_)
+            | Constructor::Tuple(_) => 0,
             Constructor::True => 1,
             Constructor::Variant(_, index) => *index,
         }
@@ -256,6 +260,7 @@ impl Constructor {
 pub enum Pattern {
     /// A pattern such as `Some(42)`.
     Constructor(Constructor, Vec<Pattern>),
+    Float(SmolStr),
     Int(SmolStr),
     Variable(SmolStr),
     Discard,
@@ -269,8 +274,9 @@ impl Pattern {
 
             Pattern::Constructor(_, _)
             | Pattern::Int(_)
-            | Pattern::Variable(_)
-            | Pattern::Discard => vec![(self, row)],
+            | Pattern::Float(_)
+            | Pattern::Discard
+            | Pattern::Variable(_) => vec![(self, row)],
         }
     }
 
@@ -278,7 +284,9 @@ impl Pattern {
     fn is_unconditional(&self) -> bool {
         match self {
             Pattern::Variable(_) | Pattern::Discard => true,
-            Pattern::Constructor(_, _) | Pattern::Int(_) | Pattern::Or(_) => false,
+            Pattern::Constructor(_, _) | Pattern::Float(_) | Pattern::Int(_) | Pattern::Or(_) => {
+                false
+            }
         }
     }
 }
@@ -290,6 +298,7 @@ impl Pattern {
 #[derive(Clone)]
 pub enum Type {
     Int,
+    Float,
     Boolean,
     Tuple(Vec<TypeId>),
     Enum(Vec<(SmolStr, Vec<TypeId>)>),
@@ -544,6 +553,10 @@ impl Match {
                             let name = "_".into();
                             terms.push(Term::new(*var, name, Vec::new()));
                         }
+                        Constructor::Float(_) => {
+                            let name = "_".into();
+                            terms.push(Term::new(*var, name, Vec::new()));
+                        }
                         Constructor::Tuple(_) => {
                             let args = case.arguments.clone();
                             terms.push(Term::new(*var, "#".into(), args));
@@ -628,46 +641,36 @@ impl Compiler {
         let branch_var = self.branch_variable(&rows[0], &rows);
 
         match self.variable_type(branch_var).clone() {
-            Type::Int => {
-                let (cases, fallback) = self.compile_int_cases(rows, branch_var);
-
+            Type::Float | Type::Int => {
+                let (cases, fallback) = self.compile_number_cases(rows, branch_var);
                 Decision::Switch(branch_var, cases, Some(fallback))
             }
+
             Type::Boolean => {
                 let cases = vec![
                     (Constructor::False, Vec::new(), Vec::new()),
                     (Constructor::True, Vec::new(), Vec::new()),
                 ];
-
-                Decision::Switch(
-                    branch_var,
-                    self.compile_constructor_cases(rows, branch_var, cases),
-                    None,
-                )
+                let cases = self.compile_constructor_cases(rows, branch_var, cases);
+                Decision::Switch(branch_var, cases, None)
             }
+
             Type::Tuple(types) => {
                 let variables = self.new_variables(&types);
                 let cases = vec![(Constructor::Tuple(types), variables, Vec::new())];
-
-                Decision::Switch(
-                    branch_var,
-                    self.compile_constructor_cases(rows, branch_var, cases),
-                    None,
-                )
+                let cases = self.compile_constructor_cases(rows, branch_var, cases);
+                Decision::Switch(branch_var, cases, None)
             }
+
             Type::Enum(variants) => {
                 let cases = variants
                     .iter()
                     .enumerate()
                     .map(|(idx, (_, args))| {
-                        (
-                            Constructor::Variant(branch_var.type_id, idx),
-                            self.new_variables(args),
-                            Vec::new(),
-                        )
+                        let variant = Constructor::Variant(branch_var.type_id, idx);
+                        (variant, self.new_variables(args), Vec::new())
                     })
                     .collect();
-
                 Decision::Switch(
                     branch_var,
                     self.compile_constructor_cases(rows, branch_var, cases),
@@ -677,11 +680,11 @@ impl Compiler {
         }
     }
 
-    /// Compiles the cases and fallback cases for integer patterns.
+    /// Compiles the cases and fallback cases for int and float patterns.
     ///
-    /// Integers have an infinite number of constructors, so we specialise the
-    /// compilation of integer patterns.
-    fn compile_int_cases(
+    /// Ints and floats have an infinite number of constructors, so we
+    /// specialise the compilation of their patterns.
+    fn compile_number_cases(
         &mut self,
         rows: Vec<Row>,
         branch_var: Variable,
@@ -695,7 +698,13 @@ impl Compiler {
                 for (pat, row) in col.pattern.flatten_or(row) {
                     let (key, cons) = match pat {
                         Pattern::Int(val) => ((val.clone(), val.clone()), Constructor::Int(val)),
-                        _ => unreachable!(),
+                        Pattern::Float(val) => {
+                            ((val.clone(), val.clone()), Constructor::Float(val))
+                        }
+                        Pattern::Constructor(_, _)
+                        | Pattern::Variable(_)
+                        | Pattern::Discard
+                        | Pattern::Or(_) => unreachable!(),
                     };
 
                     if let Some(index) = tested.get(&key) {

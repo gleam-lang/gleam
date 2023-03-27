@@ -41,6 +41,10 @@ fn int(val: &str) -> Pattern {
     Pattern::Int(val.into())
 }
 
+fn float(val: &str) -> Pattern {
+    Pattern::Float(val.into())
+}
+
 fn rhs(value: u16) -> Body {
     Body {
         bindings: Vec::new(),
@@ -282,6 +286,59 @@ fn test_compile_variable_pattern() {
                 Case::new(Constructor::True, Vec::new(), success(1)),
             ],
             None
+        )
+    );
+}
+
+#[test]
+fn test_compile_nonexhaustive_float_pattern() {
+    let mut compiler = Compiler::new();
+    let float_type = new_type(&mut compiler, Type::Float);
+    let input = compiler.new_variable(float_type);
+    let result = compile(
+        compiler,
+        input,
+        vec![(float("4.0"), rhs(1)), (float("5.3"), rhs(2))],
+    );
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::Float("4.0".into()), Vec::new(), success(1)),
+                Case::new(Constructor::Float("5.3".into()), Vec::new(), success(2)),
+            ],
+            Some(Box::new(failure()))
+        )
+    );
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("_")]);
+}
+
+#[test]
+fn test_compile_exhaustive_float_pattern() {
+    let mut compiler = Compiler::new();
+    let float_type = new_type(&mut compiler, Type::Float);
+    let input = compiler.new_variable(float_type);
+    let result = compile(
+        compiler,
+        input,
+        vec![
+            (float("4.0"), rhs(1)),
+            (float("5.1"), rhs(2)),
+            (bind("a"), rhs(3)),
+        ],
+    );
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::Float("4.0".into()), Vec::new(), success(1)),
+                Case::new(Constructor::Float("5.1".into()), Vec::new(), success(2)),
+            ],
+            Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
         )
     );
 }
