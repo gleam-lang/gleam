@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed a bug where single statement blocks inside binary operators could
+  generate invalid JavaScript.
 - Fixed a bug where the formatter could incorrectly place comments.
 - Fixed a bug where the language server would show outdated diagnostics when a
   file with an error reverts to the previous valid version, causing the compiler
