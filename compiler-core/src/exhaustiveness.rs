@@ -233,8 +233,6 @@ pub struct Body {
 /// A type constructor.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Constructor {
-    True,
-    False,
     Int(SmolStr),
     Float(SmolStr),
     Tuple(Vec<TypeId>),
@@ -245,11 +243,7 @@ impl Constructor {
     /// Returns the index of this constructor relative to its type.
     fn index(&self) -> usize {
         match self {
-            Constructor::False
-            | Constructor::Float(_)
-            | Constructor::Int(_)
-            | Constructor::Tuple(_) => 0,
-            Constructor::True => 1,
+            Constructor::Float(_) | Constructor::Int(_) | Constructor::Tuple(_) => 0,
             Constructor::Variant(_, index) => *index,
         }
     }
@@ -299,7 +293,6 @@ impl Pattern {
 pub enum Type {
     Int,
     Float,
-    Boolean,
     Tuple(Vec<TypeId>),
     Enum(Vec<(SmolStr, Vec<TypeId>)>),
 }
@@ -541,14 +534,6 @@ impl Match {
             Decision::Switch(var, cases, fallback) => {
                 for case in cases {
                     match &case.constructor {
-                        Constructor::True => {
-                            let name = "true".into();
-                            terms.push(Term::new(*var, name, Vec::new()));
-                        }
-                        Constructor::False => {
-                            let name = "false".into();
-                            terms.push(Term::new(*var, name, Vec::new()));
-                        }
                         Constructor::Int(_) => {
                             let name = "_".into();
                             terms.push(Term::new(*var, name, Vec::new()));
@@ -646,15 +631,6 @@ impl Compiler {
                 Decision::Switch(branch_var, cases, Some(fallback))
             }
 
-            Type::Boolean => {
-                let cases = vec![
-                    (Constructor::False, Vec::new(), Vec::new()),
-                    (Constructor::True, Vec::new(), Vec::new()),
-                ];
-                let cases = self.compile_constructor_cases(rows, branch_var, cases);
-                Decision::Switch(branch_var, cases, None)
-            }
-
             Type::Tuple(types) => {
                 let variables = self.new_variables(&types);
                 let cases = vec![(Constructor::Tuple(types), variables, Vec::new())];
@@ -704,7 +680,7 @@ impl Compiler {
                         Pattern::Constructor(_, _)
                         | Pattern::Variable(_)
                         | Pattern::Discard
-                        | Pattern::Or(_) => unreachable!(),
+                        | Pattern::Or(_) => panic!("Pattern {:?} is not valid within OR", pat),
                     };
 
                     if let Some(index) = tested.get(&key) {
