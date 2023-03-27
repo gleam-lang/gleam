@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.28.0-rc2 - 2023-03-27
 
 - Fixed a bug where single statement blocks inside binary operators could
   generate invalid JavaScript.
