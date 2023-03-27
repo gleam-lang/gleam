@@ -3,6 +3,9 @@
 ## Unreleased
 
 - Fixed a bug where the formatter could incorrectly place comments.
+- Fixed a bug where the language server would show outdated diagnostics when a
+  file with an error reverts to the previous valid version, causing the compiler
+  to use the cached version of the file.
 
 ## v0.28.0-rc1 - 2023-03-26
 
