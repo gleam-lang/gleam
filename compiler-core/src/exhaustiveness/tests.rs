@@ -11,6 +11,13 @@ fn bind(name: &str) -> Pattern {
     Pattern::Variable { value: name.into() }
 }
 
+fn assign(name: &str, pattern: Pattern) -> Pattern {
+    Pattern::Assign {
+        name: name.into(),
+        pattern: Box::new(pattern),
+    }
+}
+
 fn discard() -> Pattern {
     Pattern::Discard
 }
@@ -85,7 +92,7 @@ fn success_with_bindings(bindings: Vec<(&str, Variable)>, value: u16) -> Decisio
 }
 
 #[test]
-fn test_move_variable_patterns() {
+fn move_variable_patterns() {
     let mut compiler = Compiler::new();
     let typ = new_type(&mut compiler, Type::Int);
     let var1 = compiler.new_variable(typ);
@@ -129,7 +136,7 @@ fn test_move_variable_patterns() {
 }
 
 #[test]
-fn test_move_variable_patterns_without_constructor_pattern() {
+fn move_variable_patterns_without_constructor_pattern() {
     let mut compiler = Compiler::new();
     let typ = new_type(&mut compiler, Type::Int);
     let var1 = compiler.new_variable(typ);
@@ -156,7 +163,7 @@ fn test_move_variable_patterns_without_constructor_pattern() {
 }
 
 #[test]
-fn test_branch_variable() {
+fn branch_variable() {
     let mut compiler = Compiler::new();
     let typ = new_type(&mut compiler, Type::Int);
     let var1 = compiler.new_variable(typ);
@@ -183,7 +190,7 @@ fn test_branch_variable() {
 }
 
 #[test]
-fn test_compile_simple_pattern() {
+fn compile_simple_pattern() {
     let mut compiler = Compiler::new();
     let typ = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(typ);
@@ -208,7 +215,7 @@ fn test_compile_simple_pattern() {
 }
 
 #[test]
-fn test_compile_nonexhaustive_pattern() {
+fn compile_nonexhaustive_pattern() {
     let mut compiler = Compiler::new();
     let typ = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(typ);
@@ -231,7 +238,7 @@ fn test_compile_nonexhaustive_pattern() {
 }
 
 #[test]
-fn test_compile_redundant_pattern() {
+fn compile_redundant_pattern() {
     let mut compiler = Compiler::new();
     let typ = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(typ);
@@ -257,7 +264,7 @@ fn test_compile_redundant_pattern() {
 }
 
 #[test]
-fn test_compile_redundant_int() {
+fn compile_redundant_int() {
     let mut compiler = Compiler::new();
     let typ = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(typ);
@@ -287,7 +294,7 @@ fn test_compile_redundant_int() {
 }
 
 #[test]
-fn test_compile_variable_pattern() {
+fn compile_variable_pattern() {
     let mut compiler = Compiler::new();
     let typ = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(typ);
@@ -312,7 +319,7 @@ fn test_compile_variable_pattern() {
 }
 
 #[test]
-fn test_compile_nonexhaustive_float_pattern() {
+fn compile_nonexhaustive_float_pattern() {
     let mut compiler = Compiler::new();
     let float_type = new_type(&mut compiler, Type::Float);
     let input = compiler.new_variable(float_type);
@@ -337,7 +344,7 @@ fn test_compile_nonexhaustive_float_pattern() {
 }
 
 #[test]
-fn test_compile_exhaustive_float_pattern() {
+fn compile_exhaustive_float_pattern() {
     let mut compiler = Compiler::new();
     let float_type = new_type(&mut compiler, Type::Float);
     let input = compiler.new_variable(float_type);
@@ -365,7 +372,7 @@ fn test_compile_exhaustive_float_pattern() {
 }
 
 #[test]
-fn test_compile_nonexhaustive_int_pattern() {
+fn compile_nonexhaustive_int_pattern() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(int_type);
@@ -390,7 +397,7 @@ fn test_compile_nonexhaustive_int_pattern() {
 }
 
 #[test]
-fn test_compile_exhaustive_int_pattern() {
+fn compile_exhaustive_int_pattern() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(int_type);
@@ -414,7 +421,7 @@ fn test_compile_exhaustive_int_pattern() {
 }
 
 #[test]
-fn test_compile_nonexhaustive_nested_int_pattern() {
+fn compile_nonexhaustive_nested_int_pattern() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let tup_type = new_type(&mut compiler, Type::Tuple(vec![int_type, int_type]));
@@ -449,7 +456,7 @@ fn test_compile_nonexhaustive_nested_int_pattern() {
 }
 
 #[test]
-fn test_compile_exhaustive_empty_tuple_pattern() {
+fn compile_exhaustive_empty_tuple_pattern() {
     let mut compiler = Compiler::new();
     let tup_type = new_type(&mut compiler, Type::Tuple(vec![]));
     let input = compiler.new_variable(tup_type);
@@ -465,7 +472,7 @@ fn test_compile_exhaustive_empty_tuple_pattern() {
 }
 
 #[test]
-fn test_compile_exhaustive_three_tuple_pattern() {
+fn compile_exhaustive_three_tuple_pattern() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let tup_type = new_type(
@@ -500,7 +507,7 @@ fn test_compile_exhaustive_three_tuple_pattern() {
 }
 
 #[test]
-fn test_compile_exhaustive_nested_int_pattern() {
+fn compile_exhaustive_nested_int_pattern() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let tup_type = new_type(&mut compiler, Type::Tuple(vec![int_type, int_type]));
@@ -551,7 +558,7 @@ fn test_compile_exhaustive_nested_int_pattern() {
 }
 
 #[test]
-fn test_compile_nonexhaustive_option_type() {
+fn compile_nonexhaustive_option_type() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let option_type = new_type(
@@ -601,7 +608,7 @@ fn test_compile_nonexhaustive_option_type() {
 }
 
 #[test]
-fn test_compile_nonexhaustive_option_type_with_multiple_arguments() {
+fn compile_nonexhaustive_option_type_with_multiple_arguments() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let option_type = new_type(
@@ -666,7 +673,7 @@ fn test_compile_nonexhaustive_option_type_with_multiple_arguments() {
 }
 
 // #[test]
-// fn test_compile_exhaustive_option_type() {
+// fn compile_exhaustive_option_type() {
 //     let mut compiler = Compiler::new();
 //     let int_type = new_type(&mut compiler, Type::Int);
 //     let option_type = new_type(
@@ -719,7 +726,7 @@ fn test_compile_nonexhaustive_option_type_with_multiple_arguments() {
 // }
 
 #[test]
-fn test_compile_redundant_option_type_with_bool() {
+fn compile_redundant_option_type_with_bool() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let option_type = new_type(
@@ -772,7 +779,7 @@ fn test_compile_redundant_option_type_with_bool() {
 }
 
 #[test]
-fn test_compile_redundant_option_type_with_int() {
+fn compile_redundant_option_type_with_int() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let option_type = new_type(
@@ -831,7 +838,7 @@ fn test_compile_redundant_option_type_with_int() {
 }
 
 #[test]
-fn test_compile_exhaustive_option_type_with_binding() {
+fn compile_exhaustive_option_type_with_binding() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let option_type = new_type(
@@ -884,7 +891,7 @@ fn test_compile_exhaustive_option_type_with_binding() {
 }
 
 #[test]
-fn test_compile_nonexhaustive_pair_in_option_pattern() {
+fn compile_nonexhaustive_pair_in_option_pattern() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let tup_type = new_type(&mut compiler, Type::Tuple(vec![int_type, int_type]));
@@ -947,7 +954,7 @@ fn test_compile_nonexhaustive_pair_in_option_pattern() {
 }
 
 #[test]
-fn test_compile_or_pattern() {
+fn compile_or_pattern() {
     let mut compiler = Compiler::new();
     let bool_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(bool_type);
@@ -972,7 +979,7 @@ fn test_compile_or_pattern() {
 }
 
 #[test]
-fn test_compile_or_int_pattern() {
+fn compile_or_int_pattern() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(int_type);
@@ -996,7 +1003,7 @@ fn test_compile_or_int_pattern() {
 }
 
 #[test]
-fn test_nonexhaustive_guard() {
+fn nonexhaustive_guard() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(int_type);
@@ -1024,7 +1031,7 @@ fn test_nonexhaustive_guard() {
 }
 
 #[test]
-fn test_nonexhaustive_option_with_two_rows_and_guard() {
+fn nonexhaustive_option_with_two_rows_and_guard() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let option_type = new_type(
@@ -1083,7 +1090,7 @@ fn test_nonexhaustive_option_with_two_rows_and_guard() {
 }
 
 #[test]
-fn test_exhaustive_guard() {
+fn exhaustive_guard() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(int_type);
@@ -1111,7 +1118,7 @@ fn test_exhaustive_guard() {
 }
 
 #[test]
-fn test_exhaustive_guard_with_bool() {
+fn exhaustive_guard_with_bool() {
     let mut compiler = Compiler::new();
     let bool_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(bool_type);
@@ -1139,7 +1146,7 @@ fn test_exhaustive_guard_with_bool() {
 }
 
 #[test]
-fn test_exhaustive_guard_with_int() {
+fn exhaustive_guard_with_int() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(int_type);
@@ -1171,7 +1178,7 @@ fn test_exhaustive_guard_with_int() {
 }
 
 #[test]
-fn test_exhaustive_guard_with_same_int() {
+fn exhaustive_guard_with_same_int() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(int_type);
@@ -1201,7 +1208,7 @@ fn test_exhaustive_guard_with_same_int() {
 }
 
 #[test]
-fn test_exhaustive_option_with_guard() {
+fn exhaustive_option_with_guard() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let option_type = new_type(
@@ -1255,7 +1262,7 @@ fn test_exhaustive_option_with_guard() {
 }
 
 #[test]
-fn test_compile_exhaustive_nested_int_with_guard() {
+fn compile_exhaustive_nested_int_with_guard() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let tup_type = new_type(&mut compiler, Type::Tuple(vec![int_type, int_type]));
@@ -1319,6 +1326,34 @@ fn test_compile_exhaustive_nested_int_with_guard() {
                 )
             )],
             None
+        )
+    );
+}
+
+#[test]
+fn assign_pattern() {
+    let mut compiler = Compiler::new();
+    let typ = new_type(&mut compiler, Type::Int);
+    let input = compiler.new_variable(typ);
+    let result = compile(
+        compiler,
+        input,
+        vec![(int("1"), rhs(1)), (assign("it", discard()), rhs(2))],
+    );
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![Case::new(
+                Constructor::Int("1".into()),
+                Vec::new(),
+                success(1)
+            )],
+            Some(Box::new(success_with_bindings(
+                vec![("it", var(0, typ))],
+                2
+            )))
         )
     );
 }

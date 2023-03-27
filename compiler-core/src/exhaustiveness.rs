@@ -249,14 +249,14 @@ impl Constructor {
     }
 }
 
-// Discard { name: SmolStr, type_: Type, },
 // Int { value: SmolStr, },
+// Var { name: SmolStr, type_: Type, },
 // Float { value: SmolStr, },
+// Assign { name: SmolStr, pattern: Box<Self>, },
+// Discard { name: SmolStr, type_: Type, },
 
 // String { value: SmolStr, },
-// Var { name: SmolStr, type_: Type, },
 // VarUsage { name: SmolStr, type_: Type, },
-// Assign { name: SmolStr, pattern: Box<Self>, },
 // List {
 //     elements: Vec<Self>,
 //     tail: Option<Box<Self>>,
@@ -286,6 +286,10 @@ pub enum Pattern {
     Float {
         value: SmolStr,
     },
+    Assign {
+        name: SmolStr,
+        pattern: Box<Pattern>,
+    },
     Variable {
         value: SmolStr,
     },
@@ -303,31 +307,13 @@ impl Pattern {
         match self {
             Pattern::Or(args) => args.into_iter().map(|p| (p, row.clone())).collect(),
 
-            Pattern::Constructor {
-                constructor: _,
-                arguments: _,
-            }
-            | Pattern::Tuple { elements: _ }
-            | Pattern::Int { value: _ }
-            | Pattern::Float { value: _ }
+            Pattern::Constructor { .. }
+            | Pattern::Assign { .. }
+            | Pattern::Tuple { .. }
+            | Pattern::Int { .. }
+            | Pattern::Float { .. }
             | Pattern::Discard
-            | Pattern::Variable { value: _ } => vec![(self, row)],
-        }
-    }
-
-    /// Returns true if this pattern always matches no matter what the value is.
-    fn is_unconditional(&self) -> bool {
-        match self {
-            Pattern::Variable { value: _ } | Pattern::Discard => true,
-
-            Pattern::Tuple { elements: _ }
-            | Pattern::Constructor {
-                constructor: _,
-                arguments: _,
-            }
-            | Pattern::Float { value: _ }
-            | Pattern::Int { value: _ }
-            | Pattern::Or(_) => false,
+            | Pattern::Variable { .. } => vec![(self, row)],
         }
     }
 }
@@ -646,7 +632,6 @@ impl Compiler {
     fn compile_rows(&mut self, rows: Vec<Row>) -> Decision {
         if rows.is_empty() {
             self.diagnostics.missing = true;
-
             return Decision::Failure;
         }
 
@@ -660,7 +645,6 @@ impl Compiler {
         // always matches.
         if rows.first().map_or(false, |c| c.columns.is_empty()) {
             let row = rows.remove(0);
-
             self.diagnostics.reachable.push(row.body.clause_index);
 
             return if let Some(guard) = row.guard {
@@ -726,14 +710,13 @@ impl Compiler {
                         Pattern::Float { value: val } => {
                             ((val.clone(), val.clone()), Constructor::Float(val))
                         }
-                        Pattern::Constructor {
-                            constructor: _,
-                            arguments: _,
-                        }
-                        | Pattern::Tuple { elements: _ }
-                        | Pattern::Variable { value: _ }
+
+                        Pattern::Constructor { .. }
+                        | Pattern::Assign { .. }
+                        | Pattern::Tuple { .. }
+                        | Pattern::Variable { .. }
                         | Pattern::Discard
-                        | Pattern::Or(_) => panic!("Pattern {:?} is not valid within OR", pat),
+                        | Pattern::Or(_) => panic!("Unexpected pattern {:?}", pat),
                     };
 
                     if let Some(index) = tested.get(&key) {
@@ -848,18 +831,36 @@ impl Compiler {
     /// against, and the case/row has no patterns (i.e. always matches).
     fn move_unconditional_patterns(&self, row: Row) -> Row {
         let mut bindings = row.body.bindings;
+        let mut columns = Vec::new();
+        let mut iterator = row.columns.into_iter();
+        let mut next = iterator.next();
 
-        for col in &row.columns {
-            if let Pattern::Variable { value: bind } = &col.pattern {
-                bindings.push((bind.clone(), col.variable));
+        while let Some(column) = next {
+            match column.pattern {
+                Pattern::Discard => {
+                    next = iterator.next();
+                }
+
+                Pattern::Variable { value: bind } => {
+                    next = iterator.next();
+                    bindings.push((bind.clone(), column.variable));
+                }
+
+                Pattern::Assign { name, pattern } => {
+                    next = Some(Column::new(column.variable, *pattern));
+                    bindings.push((name.clone(), column.variable));
+                }
+
+                Pattern::Or(_)
+                | Pattern::Int { .. }
+                | Pattern::Float { .. }
+                | Pattern::Tuple { .. }
+                | Pattern::Constructor { .. } => {
+                    next = iterator.next();
+                    columns.push(column);
+                }
             }
         }
-
-        let columns = row
-            .columns
-            .into_iter()
-            .filter(|col| !col.pattern.is_unconditional())
-            .collect();
 
         Row {
             columns,
