@@ -616,6 +616,7 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn assignment<'a>(&mut self, assignment: &'a UntypedAssignment) -> Document<'a> {
+        let comments = self.pop_comments(assignment.location.start);
         let Assignment {
             pattern,
             value,
@@ -637,11 +638,12 @@ impl<'comments> Formatter<'comments> {
             .as_ref()
             .map(|a| ": ".to_doc().append(self.type_ast(a)));
 
-        keyword
+        let doc = keyword
             .to_doc()
             .append(pattern.append(annotation).group())
             .append(" =")
-            .append(self.assigned_value(value))
+            .append(self.assigned_value(value));
+        commented(doc, comments)
     }
 
     fn expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {

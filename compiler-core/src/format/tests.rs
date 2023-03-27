@@ -2,6 +2,7 @@ use super::*;
 
 use pretty_assertions::assert_eq;
 
+mod asignments;
 mod bit_string;
 mod record_update;
 mod tuple;
