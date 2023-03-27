@@ -235,7 +235,7 @@ pub struct Body {
 pub enum Constructor {
     True,
     False,
-    Int(i64),
+    Int(SmolStr),
     Tuple(Vec<TypeId>),
     Variant(TypeId, usize),
 }
@@ -256,7 +256,7 @@ impl Constructor {
 pub enum Pattern {
     /// A pattern such as `Some(42)`.
     Constructor(Constructor, Vec<Pattern>),
-    Int(i64),
+    Int(SmolStr),
     Variable(SmolStr),
     Discard,
     Or(Vec<Pattern>),
@@ -688,13 +688,13 @@ impl Compiler {
     ) -> (Vec<Case>, Box<Decision>) {
         let mut raw_cases: Vec<(Constructor, Vec<Variable>, Vec<Row>)> = Vec::new();
         let mut fallback_rows = Vec::new();
-        let mut tested: HashMap<(i64, i64), usize> = HashMap::new();
+        let mut tested: HashMap<(SmolStr, SmolStr), usize> = HashMap::new();
 
         for mut row in rows {
             if let Some(col) = row.remove_column(&branch_var) {
                 for (pat, row) in col.pattern.flatten_or(row) {
                     let (key, cons) = match pat {
-                        Pattern::Int(val) => ((val, val), Constructor::Int(val)),
+                        Pattern::Int(val) => ((val.clone(), val.clone()), Constructor::Int(val)),
                         _ => unreachable!(),
                     };
 

@@ -37,8 +37,8 @@ fn tuple(args: Vec<(Pattern, TypeId)>) -> Pattern {
     Pattern::Constructor(Constructor::Tuple(types), patterns)
 }
 
-fn int(val: i64) -> Pattern {
-    Pattern::Int(val)
+fn int(val: &str) -> Pattern {
+    Pattern::Int(val.into())
 }
 
 fn rhs(value: u16) -> Body {
@@ -147,13 +147,17 @@ fn test_branch_variable() {
     let rows = vec![
         Row::new(
             vec![
-                Column::new(var1, Pattern::Int(42)),
-                Column::new(var2, Pattern::Int(50)),
+                Column::new(var1, Pattern::Int("42".into())),
+                Column::new(var2, Pattern::Int("50".into())),
             ],
             None,
             rhs(1),
         ),
-        Row::new(vec![Column::new(var2, Pattern::Int(4))], None, rhs(2)),
+        Row::new(
+            vec![Column::new(var2, Pattern::Int("42".into()))],
+            None,
+            rhs(2),
+        ),
     ];
 
     let branch = compiler.branch_variable(&rows[0], &rows);
@@ -237,9 +241,9 @@ fn test_compile_redundant_int() {
         compiler,
         input,
         vec![
-            (int(1), rhs(1)),
-            (int(1), rhs(2)),
-            (int(2), rhs(3)),
+            (int("1"), rhs(1)),
+            (int("1"), rhs(2)),
+            (int("2"), rhs(3)),
             (bind("a"), rhs(4)),
         ],
     );
@@ -249,8 +253,8 @@ fn test_compile_redundant_int() {
         Decision::Switch(
             input,
             vec![
-                Case::new(Constructor::Int(1), Vec::new(), success(1)),
-                Case::new(Constructor::Int(2), Vec::new(), success(3)),
+                Case::new(Constructor::Int("1".into()), Vec::new(), success(1)),
+                Case::new(Constructor::Int("2".into()), Vec::new(), success(3)),
             ],
             Some(Box::new(success_with_bindings(vec![("a", input)], 4)))
         )
@@ -287,15 +291,19 @@ fn test_compile_nonexhaustive_int_pattern() {
     let mut compiler = Compiler::new();
     let int_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(int_type);
-    let result = compile(compiler, input, vec![(int(4), rhs(1)), (int(5), rhs(2))]);
+    let result = compile(
+        compiler,
+        input,
+        vec![(int("4"), rhs(1)), (int("5"), rhs(2))],
+    );
 
     assert_eq!(
         result.tree,
         Decision::Switch(
             input,
             vec![
-                Case::new(Constructor::Int(4), Vec::new(), success(1)),
-                Case::new(Constructor::Int(5), Vec::new(), success(2)),
+                Case::new(Constructor::Int("4".into()), Vec::new(), success(1)),
+                Case::new(Constructor::Int("5".into()), Vec::new(), success(2)),
             ],
             Some(Box::new(failure()))
         )
@@ -311,7 +319,7 @@ fn test_compile_exhaustive_int_pattern() {
     let result = compile(
         compiler,
         input,
-        vec![(int(4), rhs(1)), (int(5), rhs(2)), (bind("a"), rhs(3))],
+        vec![(int("4"), rhs(1)), (int("5"), rhs(2)), (bind("a"), rhs(3))],
     );
 
     assert_eq!(
@@ -319,8 +327,8 @@ fn test_compile_exhaustive_int_pattern() {
         Decision::Switch(
             input,
             vec![
-                Case::new(Constructor::Int(4), Vec::new(), success(1)),
-                Case::new(Constructor::Int(5), Vec::new(), success(2)),
+                Case::new(Constructor::Int("4".into()), Vec::new(), success(1)),
+                Case::new(Constructor::Int("5".into()), Vec::new(), success(2)),
             ],
             Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
         )
@@ -336,7 +344,7 @@ fn test_compile_nonexhaustive_nested_int_pattern() {
     let result = compile(
         compiler,
         input,
-        vec![(pair(int_type, int_type, int(4), bind("a")), rhs(1))],
+        vec![(pair(int_type, int_type, int("4"), bind("a")), rhs(1))],
     );
 
     assert_eq!(
@@ -349,7 +357,7 @@ fn test_compile_nonexhaustive_nested_int_pattern() {
                 Decision::Switch(
                     var(1, int_type),
                     vec![Case::new(
-                        Constructor::Int(4),
+                        Constructor::Int("4".into()),
                         Vec::new(),
                         success_with_bindings(vec![("a", var(2, int_type))], 1)
                     )],
@@ -423,7 +431,7 @@ fn test_compile_exhaustive_nested_int_pattern() {
         compiler,
         input,
         vec![
-            (pair(int_type, int_type, int(4), int(5)), rhs(1)),
+            (pair(int_type, int_type, int("4"), int("5")), rhs(1)),
             (pair(int_type, int_type, bind("a"), bind("b")), rhs(2)),
         ],
     );
@@ -438,11 +446,15 @@ fn test_compile_exhaustive_nested_int_pattern() {
                 Decision::Switch(
                     var(2, int_type),
                     vec![Case::new(
-                        Constructor::Int(5),
+                        Constructor::Int("5".into()),
                         Vec::new(),
                         Decision::Switch(
                             var(1, int_type),
-                            vec![Case::new(Constructor::Int(4), Vec::new(), success(1))],
+                            vec![Case::new(
+                                Constructor::Int("4".into()),
+                                Vec::new(),
+                                success(1)
+                            )],
                             Some(Box::new(success_with_bindings(
                                 vec![("a", var(1, int_type)), ("b", var(2, int_type))],
                                 2
@@ -475,7 +487,10 @@ fn test_compile_nonexhaustive_option_type() {
     let result = compile(
         compiler,
         input,
-        vec![(variant(option_type, 0, vec![Pattern::Int(4)]), rhs(1))],
+        vec![(
+            variant(option_type, 0, vec![Pattern::Int("4".into())]),
+            rhs(1),
+        )],
     );
 
     assert_eq!(
@@ -488,7 +503,11 @@ fn test_compile_nonexhaustive_option_type() {
                     vec![var(1, int_type)],
                     Decision::Switch(
                         var(1, int_type),
-                        vec![Case::new(Constructor::Int(4), Vec::new(), success(1))],
+                        vec![Case::new(
+                            Constructor::Int("4".into()),
+                            Vec::new(),
+                            success(1)
+                        )],
                         Some(Box::new(failure()))
                     )
                 ),
@@ -519,7 +538,11 @@ fn test_compile_nonexhaustive_option_type_with_multiple_arguments() {
         compiler,
         input,
         vec![(
-            variant(option_type, 0, vec![Pattern::Int(4), Pattern::Int(5)]),
+            variant(
+                option_type,
+                0,
+                vec![Pattern::Int("4".into()), Pattern::Int("5".into())],
+            ),
             rhs(1),
         )],
     );
@@ -535,11 +558,15 @@ fn test_compile_nonexhaustive_option_type_with_multiple_arguments() {
                     Decision::Switch(
                         var(2, int_type),
                         vec![Case::new(
-                            Constructor::Int(5),
+                            Constructor::Int("5".into()),
                             Vec::new(),
                             Decision::Switch(
                                 var(1, int_type),
-                                vec![Case::new(Constructor::Int(4), Vec::new(), success(1))],
+                                vec![Case::new(
+                                    Constructor::Int("4".into()),
+                                    Vec::new(),
+                                    success(1)
+                                )],
                                 Some(Box::new(failure()))
                             )
                         )],
@@ -573,7 +600,10 @@ fn test_compile_exhaustive_option_type() {
         compiler,
         input,
         vec![
-            (variant(option_type, 0, vec![Pattern::Int(4)]), rhs(1)),
+            (
+                variant(option_type, 0, vec![Pattern::Int("4".into())]),
+                rhs(1),
+            ),
             (variant(option_type, 0, vec![bind("a")]), rhs(2)),
             (variant(option_type, 1, Vec::new()), rhs(3)),
         ],
@@ -589,7 +619,11 @@ fn test_compile_exhaustive_option_type() {
                     vec![var(1, int_type)],
                     Decision::Switch(
                         var(1, int_type),
-                        vec![Case::new(Constructor::Int(4), Vec::new(), success(1))],
+                        vec![Case::new(
+                            Constructor::Int("4".into()),
+                            Vec::new(),
+                            success(1)
+                        )],
                         Some(Box::new(success_with_bindings(
                             vec![("a", var(1, int_type))],
                             2
@@ -672,8 +706,14 @@ fn test_compile_redundant_option_type_with_int() {
         compiler,
         input,
         vec![
-            (variant(option_type, 0, vec![Pattern::Int(4)]), rhs(1)),
-            (variant(option_type, 0, vec![Pattern::Int(4)]), rhs(10)),
+            (
+                variant(option_type, 0, vec![Pattern::Int("4".into())]),
+                rhs(1),
+            ),
+            (
+                variant(option_type, 0, vec![Pattern::Int("4".into())]),
+                rhs(10),
+            ),
             (variant(option_type, 0, vec![bind("a")]), rhs(2)),
             (variant(option_type, 1, Vec::new()), rhs(3)),
         ],
@@ -689,7 +729,11 @@ fn test_compile_redundant_option_type_with_int() {
                     vec![var(1, int_type)],
                     Decision::Switch(
                         var(1, int_type),
-                        vec![Case::new(Constructor::Int(4), Vec::new(), success(1)),],
+                        vec![Case::new(
+                            Constructor::Int("4".into()),
+                            Vec::new(),
+                            success(1)
+                        ),],
                         Some(Box::new(success_with_bindings(
                             vec![("a", var(1, int_type))],
                             2
@@ -721,7 +765,10 @@ fn test_compile_exhaustive_option_type_with_binding() {
         compiler,
         input,
         vec![
-            (variant(option_type, 0, vec![Pattern::Int(4)]), rhs(1)),
+            (
+                variant(option_type, 0, vec![Pattern::Int("4".into())]),
+                rhs(1),
+            ),
             (bind("a"), rhs(2)),
         ],
     );
@@ -736,7 +783,11 @@ fn test_compile_exhaustive_option_type_with_binding() {
                     vec![var(1, int_type)],
                     Decision::Switch(
                         var(1, int_type),
-                        vec![Case::new(Constructor::Int(4), Vec::new(), success(1))],
+                        vec![Case::new(
+                            Constructor::Int("4".into()),
+                            Vec::new(),
+                            success(1)
+                        )],
                         Some(Box::new(success_with_bindings(vec![("a", input)], 2)))
                     )
                 ),
@@ -771,7 +822,7 @@ fn test_compile_nonexhaustive_pair_in_option_pattern() {
             variant(
                 option_type,
                 0,
-                vec![pair(int_type, int_type, int(4), bind("a"))],
+                vec![pair(int_type, int_type, int("4"), bind("a"))],
             ),
             rhs(1),
         )],
@@ -793,7 +844,7 @@ fn test_compile_nonexhaustive_pair_in_option_pattern() {
                             Decision::Switch(
                                 var(2, int_type),
                                 vec![Case::new(
-                                    Constructor::Int(4),
+                                    Constructor::Int("4".into()),
                                     Vec::new(),
                                     success_with_bindings(vec![("a", var(3, int_type))], 1)
                                 )],
@@ -846,7 +897,7 @@ fn test_compile_or_int_pattern() {
     let result = compile(
         compiler,
         input,
-        vec![(Pattern::Or(vec![int(4), int(5)]), rhs(1))],
+        vec![(Pattern::Or(vec![int("4"), int("5")]), rhs(1))],
     );
 
     assert_eq!(
@@ -854,8 +905,8 @@ fn test_compile_or_int_pattern() {
         Decision::Switch(
             input,
             vec![
-                Case::new(Constructor::Int(4), Vec::new(), success(1)),
-                Case::new(Constructor::Int(5), Vec::new(), success(1)),
+                Case::new(Constructor::Int("4".into()), Vec::new(), success(1)),
+                Case::new(Constructor::Int("5".into()), Vec::new(), success(1)),
             ],
             Some(Box::new(failure()))
         )
@@ -869,7 +920,7 @@ fn test_nonexhaustive_guard() {
     let input = compiler.new_variable(int_type);
 
     let result = compiler.compile(vec![Row::new(
-        vec![Column::new(input, int(4))],
+        vec![Column::new(input, int("4"))],
         Some(42),
         rhs(1),
     )]);
@@ -879,7 +930,7 @@ fn test_nonexhaustive_guard() {
         Decision::Switch(
             input,
             vec![Case::new(
-                Constructor::Int(4),
+                Constructor::Int("4".into()),
                 Vec::new(),
                 Decision::Guard(42, rhs(1), Box::new(failure()))
             )],
@@ -904,7 +955,7 @@ fn test_nonexhaustive_option_with_two_rows_and_guard() {
     let input = compiler.new_variable(option_type);
     let result = compiler.compile(vec![
         Row::new(
-            vec![Column::new(input, variant(option_type, 0, vec![int(4)]))],
+            vec![Column::new(input, variant(option_type, 0, vec![int("4")]))],
             Some(42),
             rhs(1),
         ),
@@ -926,7 +977,7 @@ fn test_nonexhaustive_option_with_two_rows_and_guard() {
                     Decision::Switch(
                         var(1, int_type),
                         vec![Case::new(
-                            Constructor::Int(4),
+                            Constructor::Int("4".into()),
                             Vec::new(),
                             Decision::Guard(
                                 42,
@@ -955,7 +1006,7 @@ fn test_exhaustive_guard() {
     let int_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(int_type);
     let result = compiler.compile(vec![
-        Row::new(vec![Column::new(input, int(4))], Some(42), rhs(1)),
+        Row::new(vec![Column::new(input, int("4"))], Some(42), rhs(1)),
         Row::new(vec![Column::new(input, bind("a"))], None, rhs(2)),
     ]);
 
@@ -964,7 +1015,7 @@ fn test_exhaustive_guard() {
         Decision::Switch(
             input,
             vec![Case::new(
-                Constructor::Int(4),
+                Constructor::Int("4".into()),
                 Vec::new(),
                 Decision::Guard(
                     42,
@@ -1018,8 +1069,8 @@ fn test_exhaustive_guard_with_int() {
     let int_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(int_type);
     let result = compiler.compile(vec![
-        Row::new(vec![Column::new(input, int(1))], Some(42), rhs(1)),
-        Row::new(vec![Column::new(input, int(2))], None, rhs(2)),
+        Row::new(vec![Column::new(input, int("1"))], Some(42), rhs(1)),
+        Row::new(vec![Column::new(input, int("2"))], None, rhs(2)),
         Row::new(vec![Column::new(input, bind("b"))], None, rhs(3)),
     ]);
 
@@ -1029,7 +1080,7 @@ fn test_exhaustive_guard_with_int() {
             input,
             vec![
                 Case::new(
-                    Constructor::Int(1),
+                    Constructor::Int("1".into()),
                     Vec::new(),
                     Decision::Guard(
                         42,
@@ -1037,7 +1088,7 @@ fn test_exhaustive_guard_with_int() {
                         Box::new(success_with_bindings(vec![("b", input)], 3))
                     )
                 ),
-                Case::new(Constructor::Int(2), Vec::new(), success(2))
+                Case::new(Constructor::Int("2".into()), Vec::new(), success(2))
             ],
             Some(Box::new(success_with_bindings(vec![("b", input)], 3)))
         )
@@ -1050,9 +1101,9 @@ fn test_exhaustive_guard_with_same_int() {
     let int_type = new_type(&mut compiler, Type::Int);
     let input = compiler.new_variable(int_type);
     let result = compiler.compile(vec![
-        Row::new(vec![Column::new(input, int(1))], Some(10), rhs(1)),
-        Row::new(vec![Column::new(input, int(1))], Some(20), rhs(2)),
-        Row::new(vec![Column::new(input, int(1))], None, rhs(3)),
+        Row::new(vec![Column::new(input, int("1"))], Some(10), rhs(1)),
+        Row::new(vec![Column::new(input, int("1"))], Some(20), rhs(2)),
+        Row::new(vec![Column::new(input, int("1"))], None, rhs(3)),
         Row::new(vec![Column::new(input, bind("b"))], None, rhs(4)),
     ]);
 
@@ -1061,7 +1112,7 @@ fn test_exhaustive_guard_with_same_int() {
         Decision::Switch(
             input,
             vec![Case::new(
-                Constructor::Int(1),
+                Constructor::Int("1".into()),
                 Vec::new(),
                 Decision::Guard(
                     10,
@@ -1136,12 +1187,18 @@ fn test_compile_exhaustive_nested_int_with_guard() {
     let input = compiler.new_variable(tup_type);
     let result = compiler.compile(vec![
         Row::new(
-            vec![Column::new(input, pair(int_type, int_type, int(4), int(5)))],
+            vec![Column::new(
+                input,
+                pair(int_type, int_type, int("4"), int("5")),
+            )],
             Some(42),
             rhs(1),
         ),
         Row::new(
-            vec![Column::new(input, pair(int_type, int_type, int(4), int(5)))],
+            vec![Column::new(
+                input,
+                pair(int_type, int_type, int("4"), int("5")),
+            )],
             None,
             rhs(2),
         ),
@@ -1165,12 +1222,12 @@ fn test_compile_exhaustive_nested_int_with_guard() {
                 Decision::Switch(
                     var(2, int_type),
                     vec![Case::new(
-                        Constructor::Int(5),
+                        Constructor::Int("5".into()),
                         Vec::new(),
                         Decision::Switch(
                             var(1, int_type),
                             vec![Case::new(
-                                Constructor::Int(4),
+                                Constructor::Int("4".into()),
                                 Vec::new(),
                                 Decision::Guard(42, rhs(1), Box::new(success(2)),)
                             )],
