@@ -55,3 +55,20 @@ fn go() {
 "#,
     );
 }
+
+#[test]
+fn concat_blocks() {
+    assert_js!(
+        r#"
+fn main(f, a, b) {
+  {
+    a
+    |> f
+  } <> {
+    b
+    |> f
+  }
+}
+"#,
+    );
+}

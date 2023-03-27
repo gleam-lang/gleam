@@ -301,7 +301,7 @@ impl<'module> Generator<'module> {
     /// Wrap an expression in an immediately involked function expression if
     /// required due to being a JS statement, or in parens if required due to
     /// being an operator
-    pub fn binop_child_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+    pub fn child_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
             TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {
                 Ok(docvec!("(", self.expression(expression)?, ")"))
@@ -435,15 +435,11 @@ impl<'module> Generator<'module> {
     fn block<'a>(&mut self, statements: &'a Vec1<TypedStatement>) -> Output<'a> {
         if statements.len() == 1 {
             match statements.first() {
-                Statement::Expression(expression) => {
-                    Ok(docvec!['(', self.expression(expression)?, ')'])
-                }
+                Statement::Expression(expression) => self.child_expression(expression),
 
-                Statement::Assignment(assignment) => Ok(docvec![
-                    '(',
-                    self.expression(assignment.value.as_ref())?,
-                    ')'
-                ]),
+                Statement::Assignment(assignment) => {
+                    self.child_expression(assignment.value.as_ref())
+                }
 
                 Statement::Use(_) => {
                     unreachable!("use statements must not be present for JavaScript generation")
@@ -913,8 +909,8 @@ impl<'module> Generator<'module> {
     ) -> Output<'a> {
         // If it is a simple scalar type then we can use JS' reference identity
         if is_js_scalar(left.type_()) {
-            let left_doc = self.not_in_tail_position(|gen| gen.binop_child_expression(left))?;
-            let right_doc = self.not_in_tail_position(|gen| gen.binop_child_expression(right))?;
+            let left_doc = self.not_in_tail_position(|gen| gen.child_expression(left))?;
+            let right_doc = self.not_in_tail_position(|gen| gen.child_expression(right))?;
             let operator = if should_be_equal { " === " } else { " !== " };
             return Ok(docvec!(left_doc, operator, right_doc));
         }
@@ -949,8 +945,8 @@ impl<'module> Generator<'module> {
         right: &'a TypedExpr,
         op: &'a str,
     ) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.binop_child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.binop_child_expression(right))?;
+        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
         Ok(docvec!(left, " ", op, " ", right))
     }
 
