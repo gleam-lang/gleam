@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where the formatter could incorrectly place comments.
+
 ## v0.28.0-rc1 - 2023-03-26
 
 - The language server now analyzes files on edit rather than on save, providing
