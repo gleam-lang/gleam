@@ -249,16 +249,53 @@ impl Constructor {
     }
 }
 
+// Discard { name: SmolStr, type_: Type, },
+// Int { value: SmolStr, },
+// Float { value: SmolStr, },
+
+// String { value: SmolStr, },
+// Var { name: SmolStr, type_: Type, },
+// VarUsage { name: SmolStr, type_: Type, },
+// Assign { name: SmolStr, pattern: Box<Self>, },
+// List {
+//     elements: Vec<Self>,
+//     tail: Option<Box<Self>>,
+//     type_: Type,
+// },
+// Constructor {
+//     location: SrcSpan,
+//     name: SmolStr,
+//     arguments: Vec<CallArg<Self>>,
+//     module: Option<SmolStr>,
+//     constructor: Inferred<PatternConstructor>,
+//     with_spread: bool,
+//     type_: Type,
+// },
+// Tuple { elems: Vec<Self>, },
+// BitString { segments: Vec<BitStringSegment<Self, Type>>, },
+// Concatenate { left_side_string: SmolStr, right_side_assignment: AssignName, },
+
 /// A user defined pattern such as `Some((x, 10))`.
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Pattern {
-    /// A pattern such as `Some(42)`.
-    Constructor(Constructor, Vec<Pattern>),
-    Float(SmolStr),
-    Int(SmolStr),
-    Variable(SmolStr),
     Discard,
     Or(Vec<Pattern>),
+    Int {
+        value: SmolStr,
+    },
+    Float {
+        value: SmolStr,
+    },
+    Variable {
+        value: SmolStr,
+    },
+    Tuple {
+        elements: Vec<Pattern>,
+    },
+    Constructor {
+        constructor: Constructor,
+        arguments: Vec<Pattern>,
+    },
 }
 
 impl Pattern {
@@ -266,21 +303,31 @@ impl Pattern {
         match self {
             Pattern::Or(args) => args.into_iter().map(|p| (p, row.clone())).collect(),
 
-            Pattern::Constructor(_, _)
-            | Pattern::Int(_)
-            | Pattern::Float(_)
+            Pattern::Constructor {
+                constructor: _,
+                arguments: _,
+            }
+            | Pattern::Tuple { elements: _ }
+            | Pattern::Int { value: _ }
+            | Pattern::Float { value: _ }
             | Pattern::Discard
-            | Pattern::Variable(_) => vec![(self, row)],
+            | Pattern::Variable { value: _ } => vec![(self, row)],
         }
     }
 
     /// Returns true if this pattern always matches no matter what the value is.
     fn is_unconditional(&self) -> bool {
         match self {
-            Pattern::Variable(_) | Pattern::Discard => true,
-            Pattern::Constructor(_, _) | Pattern::Float(_) | Pattern::Int(_) | Pattern::Or(_) => {
-                false
+            Pattern::Variable { value: _ } | Pattern::Discard => true,
+
+            Pattern::Tuple { elements: _ }
+            | Pattern::Constructor {
+                constructor: _,
+                arguments: _,
             }
+            | Pattern::Float { value: _ }
+            | Pattern::Int { value: _ }
+            | Pattern::Or(_) => false,
         }
     }
 }
@@ -673,12 +720,18 @@ impl Compiler {
             if let Some(col) = row.remove_column(&branch_var) {
                 for (pat, row) in col.pattern.flatten_or(row) {
                     let (key, cons) = match pat {
-                        Pattern::Int(val) => ((val.clone(), val.clone()), Constructor::Int(val)),
-                        Pattern::Float(val) => {
+                        Pattern::Int { value: val } => {
+                            ((val.clone(), val.clone()), Constructor::Int(val))
+                        }
+                        Pattern::Float { value: val } => {
                             ((val.clone(), val.clone()), Constructor::Float(val))
                         }
-                        Pattern::Constructor(_, _)
-                        | Pattern::Variable(_)
+                        Pattern::Constructor {
+                            constructor: _,
+                            arguments: _,
+                        }
+                        | Pattern::Tuple { elements: _ }
+                        | Pattern::Variable { value: _ }
                         | Pattern::Discard
                         | Pattern::Or(_) => panic!("Pattern {:?} is not valid within OR", pat),
                     };
@@ -741,7 +794,11 @@ impl Compiler {
         for mut row in rows {
             if let Some(col) = row.remove_column(&branch_var) {
                 for (pat, row) in col.pattern.flatten_or(row) {
-                    if let Pattern::Constructor(cons, args) = pat {
+                    if let Pattern::Constructor {
+                        constructor: cons,
+                        arguments: args,
+                    } = pat
+                    {
                         let idx = cons.index();
                         let mut cols = row.columns;
 
@@ -793,7 +850,7 @@ impl Compiler {
         let mut bindings = row.body.bindings;
 
         for col in &row.columns {
-            if let Pattern::Variable(bind) = &col.pattern {
+            if let Pattern::Variable { value: bind } = &col.pattern {
                 bindings.push((bind.clone(), col.variable));
             }
         }

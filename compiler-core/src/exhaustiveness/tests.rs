@@ -8,7 +8,7 @@ fn new_type(compiler: &mut Compiler, typ: Type) -> TypeId {
 }
 
 fn bind(name: &str) -> Pattern {
-    Pattern::Variable(name.into())
+    Pattern::Variable { value: name.into() }
 }
 
 fn discard() -> Pattern {
@@ -16,25 +16,34 @@ fn discard() -> Pattern {
 }
 
 fn variant(typ: TypeId, index: usize, args: Vec<Pattern>) -> Pattern {
-    Pattern::Constructor(Constructor::Variant(typ, index), args)
+    Pattern::Constructor {
+        constructor: Constructor::Variant(typ, index),
+        arguments: args,
+    }
 }
 
 fn pair(typ1: TypeId, typ2: TypeId, pat1: Pattern, pat2: Pattern) -> Pattern {
-    Pattern::Constructor(Constructor::Tuple(vec![typ1, typ2]), vec![pat1, pat2])
+    Pattern::Constructor {
+        constructor: Constructor::Tuple(vec![typ1, typ2]),
+        arguments: vec![pat1, pat2],
+    }
 }
 
 fn tuple(args: Vec<(Pattern, TypeId)>) -> Pattern {
     let types = args.iter().map(|(_, t)| *t).collect();
     let patterns = args.into_iter().map(|(p, _)| p).collect();
-    Pattern::Constructor(Constructor::Tuple(types), patterns)
+    Pattern::Constructor {
+        constructor: Constructor::Tuple(types),
+        arguments: patterns,
+    }
 }
 
 fn int(val: &str) -> Pattern {
-    Pattern::Int(val.into())
+    Pattern::Int { value: val.into() }
 }
 
 fn float(val: &str) -> Pattern {
-    Pattern::Float(val.into())
+    Pattern::Float { value: val.into() }
 }
 
 fn rhs(value: u16) -> Body {
@@ -85,7 +94,13 @@ fn test_move_variable_patterns() {
     let case = compiler.move_unconditional_patterns(Row {
         columns: vec![
             Column::new(var2, bind("a")),
-            Column::new(var1, Pattern::Constructor(cons.clone(), Vec::new())),
+            Column::new(
+                var1,
+                Pattern::Constructor {
+                    constructor: cons.clone(),
+                    arguments: Vec::new(),
+                },
+            ),
         ],
         guard: None,
         body: Body {
@@ -97,7 +112,13 @@ fn test_move_variable_patterns() {
     assert_eq!(
         case,
         Row {
-            columns: vec![Column::new(var1, Pattern::Constructor(cons, Vec::new()))],
+            columns: vec![Column::new(
+                var1,
+                Pattern::Constructor {
+                    constructor: cons,
+                    arguments: Vec::new()
+                }
+            )],
             guard: None,
             body: Body {
                 bindings: vec![("a".into(), var2)],
@@ -143,14 +164,14 @@ fn test_branch_variable() {
     let rows = vec![
         Row::new(
             vec![
-                Column::new(var1, Pattern::Int("42".into())),
-                Column::new(var2, Pattern::Int("50".into())),
+                Column::new(var1, Pattern::Int { value: "42".into() }),
+                Column::new(var2, Pattern::Int { value: "50".into() }),
             ],
             None,
             rhs(1),
         ),
         Row::new(
-            vec![Column::new(var2, Pattern::Int("42".into()))],
+            vec![Column::new(var2, Pattern::Int { value: "42".into() })],
             None,
             rhs(2),
         ),
@@ -545,7 +566,7 @@ fn test_compile_nonexhaustive_option_type() {
         compiler,
         input,
         vec![(
-            variant(option_type, 0, vec![Pattern::Int("4".into())]),
+            variant(option_type, 0, vec![Pattern::Int { value: "4".into() }]),
             rhs(1),
         )],
     );
@@ -598,7 +619,10 @@ fn test_compile_nonexhaustive_option_type_with_multiple_arguments() {
             variant(
                 option_type,
                 0,
-                vec![Pattern::Int("4".into()), Pattern::Int("5".into())],
+                vec![
+                    Pattern::Int { value: "4".into() },
+                    Pattern::Int { value: "5".into() },
+                ],
             ),
             rhs(1),
         )],
@@ -764,11 +788,11 @@ fn test_compile_redundant_option_type_with_int() {
         input,
         vec![
             (
-                variant(option_type, 0, vec![Pattern::Int("4".into())]),
+                variant(option_type, 0, vec![Pattern::Int { value: "4".into() }]),
                 rhs(1),
             ),
             (
-                variant(option_type, 0, vec![Pattern::Int("4".into())]),
+                variant(option_type, 0, vec![Pattern::Int { value: "4".into() }]),
                 rhs(10),
             ),
             (variant(option_type, 0, vec![bind("a")]), rhs(2)),
@@ -823,7 +847,7 @@ fn test_compile_exhaustive_option_type_with_binding() {
         input,
         vec![
             (
-                variant(option_type, 0, vec![Pattern::Int("4".into())]),
+                variant(option_type, 0, vec![Pattern::Int { value: "4".into() }]),
                 rhs(1),
             ),
             (bind("a"), rhs(2)),
