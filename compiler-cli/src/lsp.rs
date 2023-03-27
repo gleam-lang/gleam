@@ -1,7 +1,3 @@
-// This module is a prototype-y mess. It has lots of TODO comments in it. Let's
-// resolve them all, inject all the IO, wrap a bunch of tests around it, and
-// move it into the `gleam_core` package.
-
 use crate::{build_lock::BuildLock, fs::ProjectIO};
 use gleam_core::{
     build::{Mode, NullTelemetry, Target},

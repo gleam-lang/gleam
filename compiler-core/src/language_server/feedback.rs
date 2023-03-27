@@ -42,7 +42,8 @@ impl Feedback {
 ///
 #[derive(Debug, Default)]
 pub struct FeedbackBookKeeper {
-    files_with_diagnostics: HashSet<PathBuf>,
+    files_with_warnings: HashSet<PathBuf>,
+    files_with_errors: HashSet<PathBuf>,
 }
 
 impl FeedbackBookKeeper {
@@ -60,10 +61,21 @@ impl FeedbackBookKeeper {
         // longer valid so we set an empty vector of diagnostics for the files
         // to erase their diagnostics.
         for path in compiled {
-            let has_existing_diagnostics = self.files_with_diagnostics.remove(&path);
+            let has_existing_diagnostics = self.files_with_warnings.remove(&path);
             if has_existing_diagnostics {
                 feedback.unset_existing_diagnostics(path);
             }
+        }
+
+        // Remove any error diagnostics as the project has compiled
+        // successfully. We don't limit this to files that have been compiled as
+        // a previous cached version could be used instead of a recompile.
+        //
+        // TODO: avoid clobbering warnings. They should be preserved rather than
+        // removed with the errors here. We will need to store the warnings and
+        // re-send them.
+        for path in self.files_with_errors.drain() {
+            feedback.unset_existing_diagnostics(path);
         }
 
         for warning in warnings {
@@ -90,7 +102,7 @@ impl FeedbackBookKeeper {
 
         match diagnostic.location.as_ref().map(|l| l.path.clone()) {
             Some(path) => {
-                _ = self.files_with_diagnostics.insert(path.clone());
+                _ = self.files_with_errors.insert(path.clone());
                 feedback.append_diagnostic(path, diagnostic);
             }
 
@@ -109,7 +121,7 @@ impl FeedbackBookKeeper {
     fn insert_warning(&mut self, feedback: &mut Feedback, warning: Warning) {
         let diagnostic = warning.to_diagnostic();
         if let Some(path) = diagnostic.location.as_ref().map(|l| l.path.clone()) {
-            _ = self.files_with_diagnostics.insert(path.clone());
+            _ = self.files_with_warnings.insert(path.clone());
             feedback.append_diagnostic(path, diagnostic);
         }
     }
@@ -153,15 +165,13 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: vec![
+                diagnostics: HashMap::from([
                     (
                         file1.clone(),
                         vec![warning1.to_diagnostic(), warning1.to_diagnostic(),]
                     ),
                     (file2.clone(), vec![warning2.to_diagnostic(),])
-                ]
-                .into_iter()
-                .collect(),
+                ]),
                 messages: vec![],
             },
             feedback
@@ -174,14 +184,12 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: vec![
+                diagnostics: HashMap::from([
                     // File 1 and 2 had diagnostics before so they have been unset
                     (file1, vec![]),
                     (file2, vec![]),
                     // File 3 had no diagnostics so does not need to to be unset
-                ]
-                .into_iter()
-                .collect(),
+                ]),
                 messages: vec![],
             },
             feedback
@@ -214,9 +222,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: vec![(file1, vec![warning1.to_diagnostic()])]
-                    .into_iter()
-                    .collect(),
+                diagnostics: HashMap::from([(file1, vec![warning1.to_diagnostic()])]),
                 messages: vec![locationless_error.to_diagnostic()],
             },
             feedback
@@ -253,12 +259,10 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: vec![
+                diagnostics: HashMap::from([
                     (file1, vec![warning1.to_diagnostic()]),
                     (file3.clone(), vec![error.to_diagnostic()]),
-                ]
-                .into_iter()
-                .collect(),
+                ]),
                 messages: vec![],
             },
             feedback
@@ -270,7 +274,60 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: vec![(file3, vec![]),].into_iter().collect(),
+                diagnostics: HashMap::from([(file3, vec![])]),
+                messages: vec![],
+            },
+            feedback
+        );
+    }
+
+    // https://github.com/gleam-lang/gleam/issues/2093
+    #[test]
+    fn successful_compilation_removes_error_diagnostic() {
+        // It is possible for a compile error to be fixed but the module that
+        // had the error to not actually be recompiled.
+        //
+        // 1. File is OK
+        // 2. File is edited to an invalid state
+        // 3. A compile error is emitted
+        // 4. File is edited back to the earlier valid state
+        // 5. File is not recompiled as the cache from step 1 is still valid
+        //
+        // Because of this the compiled files iterator does not contain the
+        // file, so we need to make sure that the error is removed through other
+        // means, such as tracking which files have errors and removing them all
+        // when a successful compilation occurs.
+
+        let mut book_keeper = FeedbackBookKeeper::default();
+        let file = PathBuf::from("src/file1.gleam");
+
+        let error = Error::Parse {
+            path: file.clone(),
+            src: "blah".into(),
+            error: ParseError {
+                error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+                location: SrcSpan::new(1, 4),
+            },
+        };
+
+        let feedback = book_keeper.build_with_error(error.clone(), vec![].into_iter(), vec![]);
+
+        assert_eq!(
+            Feedback {
+                diagnostics: HashMap::from([(file.clone(), vec![error.to_diagnostic()])]),
+                messages: vec![],
+            },
+            feedback
+        );
+
+        // The error diagnostic should be removed on a successful compilation,
+        // even though the file is not in the compiled files iterator.
+
+        let feedback = book_keeper.compiled(vec![].into_iter(), vec![]);
+
+        assert_eq!(
+            Feedback {
+                diagnostics: HashMap::from([(file, vec![])]),
                 messages: vec![],
             },
             feedback
