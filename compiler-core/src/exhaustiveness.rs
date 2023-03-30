@@ -214,9 +214,10 @@
 #[cfg(test)]
 mod tests;
 
+use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
 
-use smol_str::SmolStr;
+use crate::ast::AssignName;
 
 /// The body of code to evaluate in case of a match.
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -308,6 +309,11 @@ pub enum Pattern {
         constructor: Constructor,
         arguments: Vec<Pattern>,
     },
+    List {
+        elements: Vec<Pattern>,
+        // TODO: make this an assignname in the actual pattern AST
+        tail: Option<AssignName>,
+    },
 }
 
 impl Pattern {
@@ -316,6 +322,7 @@ impl Pattern {
             Pattern::Or(args) => args.into_iter().map(|p| (p, row.clone())).collect(),
 
             Pattern::Int { .. }
+            | Pattern::List { .. }
             | Pattern::Tuple { .. }
             | Pattern::Float { .. }
             | Pattern::Assign { .. }
@@ -335,9 +342,10 @@ impl Pattern {
 pub enum Type {
     Int,
     Float,
+    String,
+    List(TypeId),
     Tuple(Vec<TypeId>),
     Enum(Vec<(SmolStr, Vec<TypeId>)>),
-    String,
 }
 
 /// A unique ID to a type.
@@ -683,6 +691,11 @@ impl Compiler {
                 Decision::Switch(branch_var, cases, None)
             }
 
+            Type::List(type_) => {
+                // TODO: implement
+                todo!()
+            }
+
             Type::Enum(variants) => {
                 let cases = variants
                     .iter()
@@ -692,11 +705,8 @@ impl Compiler {
                         (variant, self.new_variables(args), Vec::new())
                     })
                     .collect();
-                Decision::Switch(
-                    branch_var,
-                    self.compile_constructor_cases(rows, branch_var, cases),
-                    None,
-                )
+                let cases = self.compile_constructor_cases(rows, branch_var, cases);
+                Decision::Switch(branch_var, cases, None)
             }
         }
     }
@@ -731,6 +741,7 @@ impl Compiler {
                         | Pattern::Tuple { .. }
                         | Pattern::Variable { .. }
                         | Pattern::Discard
+                        | Pattern::List { .. }
                         | Pattern::Or(_) => panic!("Unexpected pattern {:?}", pat),
                     };
 
@@ -773,8 +784,8 @@ impl Compiler {
     /// 3. We turn the resulting list of rows into a list of cases, then compile
     ///    those into decision (sub) trees.
     ///
-    /// If a row didn't include the branching variable, we simply copy that row
-    /// into the list of rows for every constructor to test.
+    /// If a row didn't include the branching variable, we copy that row into
+    /// the list of rows for every constructor to test.
     ///
     /// For this to work, the `cases` variable must be prepared such that it has
     /// a triple for every constructor we need to handle. For an ADT with 10
@@ -790,27 +801,43 @@ impl Compiler {
         mut cases: Vec<(Constructor, Vec<Variable>, Vec<Row>)>,
     ) -> Vec<Case> {
         for mut row in rows {
-            if let Some(col) = row.remove_column(&branch_var) {
-                for (pat, row) in col.pattern.flatten_or(row) {
-                    if let Pattern::Constructor {
-                        constructor: cons,
-                        arguments: args,
-                    } = pat
-                    {
-                        let idx = cons.index();
-                        let mut cols = row.columns;
+            let column = match row.remove_column(&branch_var) {
+                // This row had the branching variable, so we compile it below.
+                Some(column) => column,
 
-                        for (var, pat) in cases[idx].1.iter().zip(args.into_iter()) {
-                            cols.push(Column::new(*var, pat));
-                        }
-
-                        cases[idx].2.push(Row::new(cols, row.guard, row.body));
+                // This row didn't have the branching variable, meaning it does
+                // not match on this constructor. In this case we copy the row
+                // into each of the other cases.
+                None => {
+                    for (_, _, other_case_rows) in &mut cases {
+                        // TODO: remove this clone. It clones multiple patterns,
+                        // which is not cheap.
+                        other_case_rows.push(row.clone());
                     }
+                    continue;
                 }
-            } else {
-                for (_, _, rows) in &mut cases {
-                    rows.push(row.clone());
+            };
+
+            for (pat, row) in column.pattern.flatten_or(row) {
+                // We should only be able to reach constructors here for well
+                // typed code. Invalid patterns should have been caught by
+                // earlier analysis.
+                let (cons, args) = match pat {
+                    Pattern::Constructor {
+                        constructor,
+                        arguments,
+                    } => (constructor, arguments),
+                    _ => panic!("Unexpected pattern {:?}", pat),
+                };
+
+                let index = cons.index();
+                let mut columns = row.columns;
+
+                for (var, pattern) in cases[index].1.iter().zip(args.into_iter()) {
+                    columns.push(Column::new(*var, pattern));
                 }
+
+                cases[index].2.push(Row::new(columns, row.guard, row.body));
             }
         }
 
@@ -868,6 +895,7 @@ impl Compiler {
 
                 Pattern::Or(_)
                 | Pattern::Int { .. }
+                | Pattern::List { .. }
                 | Pattern::Float { .. }
                 | Pattern::Tuple { .. }
                 | Pattern::String { .. }

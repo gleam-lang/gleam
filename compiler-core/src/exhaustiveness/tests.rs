@@ -1,3 +1,5 @@
+use crate::ast::AssignName;
+
 use super::*;
 
 fn new_type(compiler: &mut Compiler, typ: Type) -> TypeId {
@@ -20,6 +22,10 @@ fn assign(name: &str, pattern: Pattern) -> Pattern {
 
 fn discard() -> Pattern {
     Pattern::Discard
+}
+
+fn list(elements: Vec<Pattern>, tail: Option<AssignName>) -> Pattern {
+    Pattern::List { elements, tail }
 }
 
 fn variant(typ: TypeId, index: usize, args: Vec<Pattern>) -> Pattern {
