@@ -37,16 +37,21 @@ pub enum Constructor {
     Tuple(Vec<TypeId>),
     Variant(TypeId, usize),
     String(SmolStr),
+    EmptyList,
+    List(TypeId),
 }
 
 impl Constructor {
     /// Returns the index of this constructor relative to its type.
     fn index(&self) -> usize {
         match self {
-            Constructor::String(_)
+            Constructor::Int(_)
             | Constructor::Float(_)
-            | Constructor::Int(_)
-            | Constructor::Tuple(_) => 0,
+            | Constructor::Tuple(_)
+            | Constructor::String(_) => 0,
+
+            Constructor::EmptyList => 0,
+            Constructor::List(_) => 1,
 
             Constructor::Variant(_, index) => *index,
         }
@@ -111,10 +116,10 @@ pub enum Pattern {
         arguments: Vec<PatternId>,
     },
     List {
-        elements: Vec<PatternId>,
-        // TODO: make this an assignname in the actual pattern AST
-        tail: Option<AssignName>,
+        first: PatternId,
+        rest: PatternId,
     },
+    EmptyList,
 }
 
 /// A representation of a type.
@@ -385,9 +390,17 @@ impl Match {
                             let args = case.arguments.clone();
                             terms.push(Term::new(*var, "#".into(), args));
                         }
-                        Constructor::Variant(typ, idx) => {
+                        Constructor::EmptyList => {
+                            let name = "[]".into();
+                            terms.push(Term::new(*var, name, Vec::new()));
+                        }
+                        Constructor::List(type_) => {
                             let args = case.arguments.clone();
-                            let name = if let Type::Enum(variants) = &self.types[typ.0] {
+                            terms.push(Term::new(*var, "[".into(), args));
+                        }
+                        Constructor::Variant(type_, idx) => {
+                            let args = case.arguments.clone();
+                            let name = if let Type::Enum(variants) = &self.types[type_.0] {
                                 variants[*idx].0.clone()
                             } else {
                                 unreachable!()
@@ -454,6 +467,7 @@ impl Compiler {
             | Pattern::String { .. }
             | Pattern::Discard
             | Pattern::Variable { .. }
+            | Pattern::EmptyList
             | Pattern::Constructor { .. } => vec![(id, row)],
         }
     }
@@ -499,8 +513,13 @@ impl Compiler {
             }
 
             Type::List(type_) => {
-                // TODO: implement
-                todo!()
+                let v = |i| Constructor::Variant(branch_var.type_id, i);
+                let cases = vec![
+                    (v(0), vec![], Vec::new()),
+                    (v(1), vec![self.new_variable(type_)], Vec::new()),
+                ];
+                let cases = self.compile_constructor_cases(rows, branch_var, cases);
+                Decision::Switch(branch_var, cases, None)
             }
 
             Type::Enum(variants) => {
@@ -548,6 +567,7 @@ impl Compiler {
                         | Pattern::Tuple { .. }
                         | Pattern::Variable { .. }
                         | Pattern::Discard
+                        | Pattern::EmptyList
                         | Pattern::List { .. }
                         | Pattern::Or { .. } => panic!("Unexpected pattern {:?}", pat),
                     };
@@ -626,6 +646,9 @@ impl Compiler {
             };
 
             for (pattern, row) in self.flatten_or(column.pattern, row) {
+                let empty_list_constructor = Constructor::EmptyList;
+                let empty_list_args = vec![];
+
                 // We should only be able to reach constructors here for well
                 // typed code. Invalid patterns should have been caught by
                 // earlier analysis.
@@ -634,7 +657,18 @@ impl Compiler {
                         constructor,
                         arguments,
                     } => (constructor, arguments),
-                    pattern => panic!("Unexpected pattern {:?}", pattern),
+
+                    Pattern::EmptyList => (&empty_list_constructor, &empty_list_args),
+                    Pattern::List { first, rest } => todo!(),
+
+                    pattern @ (Pattern::Discard
+                    | Pattern::Or { .. }
+                    | Pattern::Int { .. }
+                    | Pattern::Float { .. }
+                    | Pattern::String { .. }
+                    | Pattern::Assign { .. }
+                    | Pattern::Variable { .. }
+                    | Pattern::Tuple { .. }) => panic!("Unexpected pattern {:?}", pattern),
                 };
 
                 let index = cons.index();
@@ -706,6 +740,7 @@ impl Compiler {
                 | Pattern::Float { .. }
                 | Pattern::Tuple { .. }
                 | Pattern::String { .. }
+                | Pattern::EmptyList
                 | Pattern::Constructor { .. } => {
                     next = iterator.next();
                     columns.push(column);

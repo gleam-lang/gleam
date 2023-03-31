@@ -43,6 +43,14 @@ impl Setup {
         self.compiler.patterns.alloc(Pattern::Discard)
     }
 
+    fn empty_list(&mut self) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::EmptyList)
+    }
+
+    fn list(&mut self, first: PatternId, rest: PatternId) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::List { first, rest })
+    }
+
     fn variant(&mut self, typ: TypeId, index: usize, args: Vec<PatternId>) -> PatternId {
         self.compiler.patterns.alloc(Pattern::Constructor {
             constructor: Constructor::Variant(typ, index),
@@ -1397,6 +1405,35 @@ fn compile_exhaustive_string_pattern() {
                 ),
             ],
             Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
+        )
+    );
+}
+
+#[test]
+fn compile_exhaustive_list_pattern() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let list_type = setup.new_type(Type::List(int_type));
+    let input = setup.new_variable(list_type);
+    let rules = vec![(setup.empty_list(), rhs(1)), (setup.bind("a"), rhs(2))];
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::Variant(list_type, 0), Vec::new(), success(1)),
+                Case::new(
+                    Constructor::Variant(list_type, 1),
+                    vec![Variable {
+                        id: 1,
+                        type_id: int_type
+                    }],
+                    success_with_bindings(vec![("a", input)], 2)
+                ),
+            ],
+            None,
         )
     );
 }
