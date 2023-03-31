@@ -1,66 +1,105 @@
-use crate::ast::AssignName;
-
 use super::*;
+use crate::ast::AssignName;
+use id_arena::Arena;
 
-fn new_type(compiler: &mut Compiler, typ: Type) -> TypeId {
-    let id = compiler.types.len();
-
-    compiler.types.push(typ);
-    TypeId(id)
+#[derive(Debug)]
+struct Setup {
+    compiler: Compiler,
 }
 
-fn bind(name: &str) -> Pattern {
-    Pattern::Variable { value: name.into() }
-}
-
-fn assign(name: &str, pattern: Pattern) -> Pattern {
-    Pattern::Assign {
-        name: name.into(),
-        pattern: Box::new(pattern),
+impl Setup {
+    fn new() -> Self {
+        Self {
+            compiler: Compiler::new(Arena::new()),
+        }
     }
 }
 
-fn discard() -> Pattern {
-    Pattern::Discard
-}
-
-fn list(elements: Vec<Pattern>, tail: Option<AssignName>) -> Pattern {
-    Pattern::List { elements, tail }
-}
-
-fn variant(typ: TypeId, index: usize, args: Vec<Pattern>) -> Pattern {
-    Pattern::Constructor {
-        constructor: Constructor::Variant(typ, index),
-        arguments: args,
+impl Setup {
+    fn new_type(&mut self, typ: Type) -> TypeId {
+        let id = self.compiler.types.len();
+        self.compiler.types.push(typ);
+        TypeId(id)
     }
-}
 
-fn pair(typ1: TypeId, typ2: TypeId, pat1: Pattern, pat2: Pattern) -> Pattern {
-    Pattern::Constructor {
-        constructor: Constructor::Tuple(vec![typ1, typ2]),
-        arguments: vec![pat1, pat2],
+    fn new_variable(&mut self, type_id: TypeId) -> Variable {
+        self.compiler.new_variable(type_id)
     }
-}
 
-fn tuple(args: Vec<(Pattern, TypeId)>) -> Pattern {
-    let types = args.iter().map(|(_, t)| *t).collect();
-    let patterns = args.into_iter().map(|(p, _)| p).collect();
-    Pattern::Constructor {
-        constructor: Constructor::Tuple(types),
-        arguments: patterns,
+    fn bind(&mut self, name: &str) -> PatternId {
+        self.compiler
+            .patterns
+            .alloc(Pattern::Variable { value: name.into() })
     }
-}
 
-fn string(val: &str) -> Pattern {
-    Pattern::String { value: val.into() }
-}
+    fn assign(&mut self, name: &str, pattern: PatternId) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::Assign {
+            name: name.into(),
+            pattern,
+        })
+    }
 
-fn int(val: &str) -> Pattern {
-    Pattern::Int { value: val.into() }
-}
+    fn discard(&mut self) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::Discard)
+    }
 
-fn float(val: &str) -> Pattern {
-    Pattern::Float { value: val.into() }
+    fn variant(&mut self, typ: TypeId, index: usize, args: Vec<PatternId>) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::Constructor {
+            constructor: Constructor::Variant(typ, index),
+            arguments: args,
+        })
+    }
+
+    fn or(&mut self, left: PatternId, right: PatternId) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::Or { left, right })
+    }
+
+    fn pair(&mut self, typ1: TypeId, typ2: TypeId, pat1: PatternId, pat2: PatternId) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::Constructor {
+            constructor: Constructor::Tuple(vec![typ1, typ2]),
+            arguments: vec![pat1, pat2],
+        })
+    }
+
+    fn tuple(&mut self, args: Vec<(PatternId, TypeId)>) -> PatternId {
+        let types = args.iter().map(|(_, t)| *t).collect();
+        let patterns = args.into_iter().map(|(p, _)| p).collect();
+        self.compiler.patterns.alloc(Pattern::Constructor {
+            constructor: Constructor::Tuple(types),
+            arguments: patterns,
+        })
+    }
+
+    fn string(&mut self, val: &str) -> PatternId {
+        self.compiler
+            .patterns
+            .alloc(Pattern::String { value: val.into() })
+    }
+
+    fn int(&mut self, val: &str) -> PatternId {
+        self.compiler
+            .patterns
+            .alloc(Pattern::Int { value: val.into() })
+    }
+
+    fn float(&mut self, val: &str) -> PatternId {
+        self.compiler
+            .patterns
+            .alloc(Pattern::Float { value: val.into() })
+    }
+
+    fn var(&mut self, id: usize, type_id: TypeId) -> Variable {
+        Variable { id, type_id }
+    }
+
+    fn compile(self, input: Variable, rules: Vec<(PatternId, Body)>) -> Match {
+        let rows = rules
+            .into_iter()
+            .map(|(pat, body)| Row::new(vec![Column::new(input, pat)], None, body))
+            .collect();
+
+        self.compiler.compile(rows)
+    }
 }
 
 fn rhs(value: u16) -> Body {
@@ -68,19 +107,6 @@ fn rhs(value: u16) -> Body {
         bindings: Vec::new(),
         clause_index: value,
     }
-}
-
-fn var(id: usize, type_id: TypeId) -> Variable {
-    Variable { id, type_id }
-}
-
-fn compile(compiler: Compiler, input: Variable, rules: Vec<(Pattern, Body)>) -> Match {
-    let rows = rules
-        .into_iter()
-        .map(|(pat, body)| Row::new(vec![Column::new(input, pat)], None, body))
-        .collect();
-
-    compiler.compile(rows)
 }
 
 fn failure() -> Decision {
@@ -103,39 +129,32 @@ fn success_with_bindings(bindings: Vec<(&str, Variable)>, value: u16) -> Decisio
 
 #[test]
 fn move_variable_patterns() {
-    let mut compiler = Compiler::new();
-    let typ = new_type(&mut compiler, Type::Int);
-    let var1 = compiler.new_variable(typ);
-    let var2 = compiler.new_variable(typ);
+    let mut setup = Setup::new();
+    let typ = setup.new_type(Type::Int);
+    let var1 = setup.new_variable(typ);
+    let var2 = setup.new_variable(typ);
     let cons = Constructor::Int("42".into());
-    let case = compiler.move_unconditional_patterns(Row {
+    let constructor_pattern = setup.compiler.patterns.alloc(Pattern::Constructor {
+        constructor: cons.clone(),
+        arguments: Vec::new(),
+    });
+    let row = Row {
         columns: vec![
-            Column::new(var2, bind("a")),
-            Column::new(
-                var1,
-                Pattern::Constructor {
-                    constructor: cons.clone(),
-                    arguments: Vec::new(),
-                },
-            ),
+            Column::new(var2, setup.bind("a")),
+            Column::new(var1, constructor_pattern),
         ],
         guard: None,
         body: Body {
             bindings: Vec::new(),
             clause_index: 42,
         },
-    });
+    };
+    let case = setup.compiler.move_unconditional_patterns(row);
 
     assert_eq!(
         case,
         Row {
-            columns: vec![Column::new(
-                var1,
-                Pattern::Constructor {
-                    constructor: cons,
-                    arguments: Vec::new()
-                }
-            )],
+            columns: vec![Column::new(var1, constructor_pattern)],
             guard: None,
             body: Body {
                 bindings: vec![("a".into(), var2)],
@@ -147,17 +166,18 @@ fn move_variable_patterns() {
 
 #[test]
 fn move_variable_patterns_without_constructor_pattern() {
-    let mut compiler = Compiler::new();
-    let typ = new_type(&mut compiler, Type::Int);
-    let var1 = compiler.new_variable(typ);
-    let case = compiler.move_unconditional_patterns(Row {
-        columns: vec![Column::new(var1, bind("a"))],
+    let mut setup = Setup::new();
+    let typ = setup.new_type(Type::Int);
+    let var1 = setup.new_variable(typ);
+    let row = Row {
+        columns: vec![Column::new(var1, setup.bind("a"))],
         guard: None,
         body: Body {
             bindings: Vec::new(),
             clause_index: 42,
         },
-    });
+    };
+    let case = setup.compiler.move_unconditional_patterns(row);
 
     assert_eq!(
         case,
@@ -174,41 +194,34 @@ fn move_variable_patterns_without_constructor_pattern() {
 
 #[test]
 fn branch_variable() {
-    let mut compiler = Compiler::new();
-    let typ = new_type(&mut compiler, Type::Int);
-    let var1 = compiler.new_variable(typ);
-    let var2 = compiler.new_variable(typ);
+    let mut setup = Setup::new();
+    let typ = setup.new_type(Type::Int);
+    let var1 = setup.new_variable(typ);
+    let var2 = setup.new_variable(typ);
     let rows = vec![
         Row::new(
             vec![
-                Column::new(var1, Pattern::Int { value: "42".into() }),
-                Column::new(var2, Pattern::Int { value: "50".into() }),
+                Column::new(var1, setup.int("42")),
+                Column::new(var2, setup.int("51")),
             ],
             None,
             rhs(1),
         ),
-        Row::new(
-            vec![Column::new(var2, Pattern::Int { value: "42".into() })],
-            None,
-            rhs(2),
-        ),
+        Row::new(vec![Column::new(var2, setup.int("42"))], None, rhs(2)),
     ];
 
-    let branch = compiler.branch_variable(&rows[0], &rows);
+    let branch = setup.compiler.branch_variable(&rows[0], &rows);
 
     assert_eq!(branch, var2);
 }
 
 #[test]
 fn compile_simple_pattern() {
-    let mut compiler = Compiler::new();
-    let typ = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(typ);
-    let result = compile(
-        compiler,
-        input,
-        vec![(int("1"), rhs(1)), (discard(), rhs(2))],
-    );
+    let mut setup = Setup::new();
+    let typ = setup.new_type(Type::Int);
+    let input = setup.new_variable(typ);
+    let rules = vec![(setup.int("1"), rhs(1)), (setup.discard(), rhs(2))];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -226,10 +239,11 @@ fn compile_simple_pattern() {
 
 #[test]
 fn compile_nonexhaustive_pattern() {
-    let mut compiler = Compiler::new();
-    let typ = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(typ);
-    let result = compile(compiler, input, vec![(int("1"), rhs(1))]);
+    let mut setup = Setup::new();
+    let typ = setup.new_type(Type::Int);
+    let input = setup.new_variable(typ);
+    let rules = vec![(setup.int("1"), rhs(1))];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -249,14 +263,16 @@ fn compile_nonexhaustive_pattern() {
 
 #[test]
 fn compile_redundant_pattern() {
-    let mut compiler = Compiler::new();
-    let typ = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(typ);
-    let result = compile(
-        compiler,
-        input,
-        vec![(int("1"), rhs(1)), (bind("a"), rhs(2)), (int("1"), rhs(3))],
-    );
+    let mut setup = Setup::new();
+    let typ = setup.new_type(Type::Int);
+    let input = setup.new_variable(typ);
+    let rules = vec![
+        (setup.int("1"), rhs(1)),
+        (setup.bind("a"), rhs(2)),
+        (setup.int("1"), rhs(3)),
+    ];
+    let var = setup.var(0, typ);
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -267,7 +283,7 @@ fn compile_redundant_pattern() {
                 Vec::new(),
                 success(1)
             ),],
-            Some(Box::new(success_with_bindings(vec![("a", var(0, typ))], 2)))
+            Some(Box::new(success_with_bindings(vec![("a", var)], 2)))
         )
     );
     assert_eq!(result.diagnostics.reachable, vec![1, 2]);
@@ -275,19 +291,16 @@ fn compile_redundant_pattern() {
 
 #[test]
 fn compile_redundant_int() {
-    let mut compiler = Compiler::new();
-    let typ = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(typ);
-    let result = compile(
-        compiler,
-        input,
-        vec![
-            (int("1"), rhs(1)),
-            (int("1"), rhs(2)),
-            (int("2"), rhs(3)),
-            (bind("a"), rhs(4)),
-        ],
-    );
+    let mut setup = Setup::new();
+    let typ = setup.new_type(Type::Int);
+    let input = setup.new_variable(typ);
+    let rules = vec![
+        (setup.int("1"), rhs(1)),
+        (setup.int("1"), rhs(2)),
+        (setup.int("2"), rhs(3)),
+        (setup.bind("a"), rhs(4)),
+    ];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -305,14 +318,11 @@ fn compile_redundant_int() {
 
 #[test]
 fn compile_variable_pattern() {
-    let mut compiler = Compiler::new();
-    let typ = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(typ);
-    let result = compile(
-        compiler,
-        input,
-        vec![(int("1"), rhs(1)), (bind("a"), rhs(2))],
-    );
+    let mut setup = Setup::new();
+    let typ = setup.new_type(Type::Int);
+    let input = setup.new_variable(typ);
+    let rules = vec![(setup.int("1"), rhs(1)), (setup.bind("a"), rhs(2))];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -330,14 +340,11 @@ fn compile_variable_pattern() {
 
 #[test]
 fn compile_nonexhaustive_float_pattern() {
-    let mut compiler = Compiler::new();
-    let float_type = new_type(&mut compiler, Type::Float);
-    let input = compiler.new_variable(float_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![(float("4.0"), rhs(1)), (float("5.3"), rhs(2))],
-    );
+    let mut setup = Setup::new();
+    let float_type = setup.new_type(Type::Float);
+    let input = setup.new_variable(float_type);
+    let rules = vec![(setup.float("4.0"), rhs(1)), (setup.float("5.3"), rhs(2))];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -355,18 +362,15 @@ fn compile_nonexhaustive_float_pattern() {
 
 #[test]
 fn compile_exhaustive_float_pattern() {
-    let mut compiler = Compiler::new();
-    let float_type = new_type(&mut compiler, Type::Float);
-    let input = compiler.new_variable(float_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![
-            (float("4.0"), rhs(1)),
-            (float("5.1"), rhs(2)),
-            (bind("a"), rhs(3)),
-        ],
-    );
+    let mut setup = Setup::new();
+    let float_type = setup.new_type(Type::Float);
+    let input = setup.new_variable(float_type);
+    let rules = vec![
+        (setup.float("4.0"), rhs(1)),
+        (setup.float("5.1"), rhs(2)),
+        (setup.bind("a"), rhs(3)),
+    ];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -383,14 +387,11 @@ fn compile_exhaustive_float_pattern() {
 
 #[test]
 fn compile_nonexhaustive_int_pattern() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(int_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![(int("4"), rhs(1)), (int("5"), rhs(2))],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let input = setup.new_variable(int_type);
+    let rules = vec![(setup.int("4"), rhs(1)), (setup.int("5"), rhs(2))];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -408,14 +409,15 @@ fn compile_nonexhaustive_int_pattern() {
 
 #[test]
 fn compile_exhaustive_int_pattern() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(int_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![(int("4"), rhs(1)), (int("5"), rhs(2)), (bind("a"), rhs(3))],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let input = setup.new_variable(int_type);
+    let rules = vec![
+        (setup.int("4"), rhs(1)),
+        (setup.int("5"), rhs(2)),
+        (setup.bind("a"), rhs(3)),
+    ];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -432,15 +434,16 @@ fn compile_exhaustive_int_pattern() {
 
 #[test]
 fn compile_nonexhaustive_nested_int_pattern() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let tup_type = new_type(&mut compiler, Type::Tuple(vec![int_type, int_type]));
-    let input = compiler.new_variable(tup_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![(pair(int_type, int_type, int("4"), bind("a")), rhs(1))],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let tup_type = setup.new_type(Type::Tuple(vec![int_type, int_type]));
+    let input = setup.new_variable(tup_type);
+    let int_4 = setup.int("4");
+    let var_a = setup.bind("a");
+    let rules = vec![(setup.pair(int_type, int_type, int_4, var_a), rhs(1))];
+    let var_1 = setup.var(1, int_type);
+    let var_2 = setup.var(2, int_type);
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -448,13 +451,13 @@ fn compile_nonexhaustive_nested_int_pattern() {
             input,
             vec![Case::new(
                 Constructor::Tuple(vec![int_type, int_type]),
-                vec![var(1, int_type), var(2, int_type),],
+                vec![var_1, var_2],
                 Decision::Switch(
-                    var(1, int_type),
+                    var_1,
                     vec![Case::new(
                         Constructor::Int("4".into()),
                         Vec::new(),
-                        success_with_bindings(vec![("a", var(2, int_type))], 1)
+                        success_with_bindings(vec![("a", var_2)], 1)
                     )],
                     Some(Box::new(failure()))
                 )
@@ -467,10 +470,11 @@ fn compile_nonexhaustive_nested_int_pattern() {
 
 #[test]
 fn compile_exhaustive_empty_tuple_pattern() {
-    let mut compiler = Compiler::new();
-    let tup_type = new_type(&mut compiler, Type::Tuple(vec![]));
-    let input = compiler.new_variable(tup_type);
-    let result = compile(compiler, input, vec![(tuple(vec![]), rhs(1))]);
+    let mut setup = Setup::new();
+    let tup_type = setup.new_type(Type::Tuple(vec![]));
+    let input = setup.new_variable(tup_type);
+    let rules = vec![(setup.tuple(vec![]), rhs(1))];
+    let result = setup.compile(input, rules);
     assert_eq!(
         result.tree,
         Decision::Switch(
@@ -483,32 +487,30 @@ fn compile_exhaustive_empty_tuple_pattern() {
 
 #[test]
 fn compile_exhaustive_three_tuple_pattern() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let tup_type = new_type(
-        &mut compiler,
-        Type::Tuple(vec![int_type, int_type, int_type]),
-    );
-    let input = compiler.new_variable(tup_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![(
-            tuple(vec![
-                (discard(), int_type),
-                (discard(), int_type),
-                (discard(), int_type),
-            ]),
-            rhs(1),
-        )],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let tup_type = setup.new_type(Type::Tuple(vec![int_type, int_type, int_type]));
+    let input = setup.new_variable(tup_type);
+    let discard = setup.discard();
+    let var1 = setup.var(1, int_type);
+    let var2 = setup.var(2, int_type);
+    let var3 = setup.var(3, int_type);
+    let rules = vec![(
+        setup.tuple(vec![
+            (discard, int_type),
+            (discard, int_type),
+            (discard, int_type),
+        ]),
+        rhs(1),
+    )];
+    let result = setup.compile(input, rules);
     assert_eq!(
         result.tree,
         Decision::Switch(
             input,
             vec![Case::new(
                 Constructor::Tuple(vec![int_type, int_type, int_type]),
-                vec![var(1, int_type), var(2, int_type), var(3, int_type),],
+                vec![var1, var2, var3],
                 success(1)
             )],
             None
@@ -518,18 +520,21 @@ fn compile_exhaustive_three_tuple_pattern() {
 
 #[test]
 fn compile_exhaustive_nested_int_pattern() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let tup_type = new_type(&mut compiler, Type::Tuple(vec![int_type, int_type]));
-    let input = compiler.new_variable(tup_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![
-            (pair(int_type, int_type, int("4"), int("5")), rhs(1)),
-            (pair(int_type, int_type, bind("a"), bind("b")), rhs(2)),
-        ],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let tup_type = setup.new_type(Type::Tuple(vec![int_type, int_type]));
+    let input = setup.new_variable(tup_type);
+    let int4 = setup.int("4");
+    let int5 = setup.int("5");
+    let var_a = setup.bind("a");
+    let var_b = setup.bind("b");
+    let var1 = setup.var(1, int_type);
+    let var2 = setup.var(2, int_type);
+    let rules = vec![
+        (setup.pair(int_type, int_type, int4, int5), rhs(1)),
+        (setup.pair(int_type, int_type, var_a, var_b), rhs(2)),
+    ];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -537,27 +542,27 @@ fn compile_exhaustive_nested_int_pattern() {
             input,
             vec![Case::new(
                 Constructor::Tuple(vec![int_type, int_type]),
-                vec![var(1, int_type), var(2, int_type)],
+                vec![var1, var2],
                 Decision::Switch(
-                    var(2, int_type),
+                    var2,
                     vec![Case::new(
                         Constructor::Int("5".into()),
                         Vec::new(),
                         Decision::Switch(
-                            var(1, int_type),
+                            var1,
                             vec![Case::new(
                                 Constructor::Int("4".into()),
                                 Vec::new(),
                                 success(1)
                             )],
                             Some(Box::new(success_with_bindings(
-                                vec![("a", var(1, int_type)), ("b", var(2, int_type))],
+                                vec![("a", var1), ("b", var2)],
                                 2
                             )))
                         )
                     )],
                     Some(Box::new(success_with_bindings(
-                        vec![("a", var(1, int_type)), ("b", var(2, int_type))],
+                        vec![("a", var1), ("b", var2)],
                         2
                     )))
                 )
@@ -569,24 +574,17 @@ fn compile_exhaustive_nested_int_pattern() {
 
 #[test]
 fn compile_nonexhaustive_option_type() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let option_type = new_type(
-        &mut compiler,
-        Type::Enum(vec![
-            ("Some".into(), vec![int_type]),
-            ("None".into(), Vec::new()),
-        ]),
-    );
-    let input = compiler.new_variable(option_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![(
-            variant(option_type, 0, vec![Pattern::Int { value: "4".into() }]),
-            rhs(1),
-        )],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let option_type = setup.new_type(Type::Enum(vec![
+        ("Some".into(), vec![int_type]),
+        ("None".into(), Vec::new()),
+    ]));
+    let input = setup.new_variable(option_type);
+    let int = setup.int("4");
+    let rules = vec![(setup.variant(option_type, 0, vec![int]), rhs(1))];
+    let var1 = setup.var(1, int_type);
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -595,9 +593,9 @@ fn compile_nonexhaustive_option_type() {
             vec![
                 Case::new(
                     Constructor::Variant(option_type, 0),
-                    vec![var(1, int_type)],
+                    vec![var1],
                     Decision::Switch(
-                        var(1, int_type),
+                        var1,
                         vec![Case::new(
                             Constructor::Int("4".into()),
                             Vec::new(),
@@ -619,31 +617,19 @@ fn compile_nonexhaustive_option_type() {
 
 #[test]
 fn compile_nonexhaustive_option_type_with_multiple_arguments() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let option_type = new_type(
-        &mut compiler,
-        Type::Enum(vec![
-            ("Some".into(), vec![int_type, int_type]),
-            ("None".into(), Vec::new()),
-        ]),
-    );
-    let input = compiler.new_variable(option_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![(
-            variant(
-                option_type,
-                0,
-                vec![
-                    Pattern::Int { value: "4".into() },
-                    Pattern::Int { value: "5".into() },
-                ],
-            ),
-            rhs(1),
-        )],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let option_type = setup.new_type(Type::Enum(vec![
+        ("Some".into(), vec![int_type, int_type]),
+        ("None".into(), Vec::new()),
+    ]));
+    let int4 = setup.int("4");
+    let int5 = setup.int("5");
+    let var1 = setup.var(1, int_type);
+    let var2 = setup.var(2, int_type);
+    let input = setup.new_variable(option_type);
+    let rules = vec![(setup.variant(option_type, 0, vec![int4, int5]), rhs(1))];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -652,14 +638,14 @@ fn compile_nonexhaustive_option_type_with_multiple_arguments() {
             vec![
                 Case::new(
                     Constructor::Variant(option_type, 0),
-                    vec![var(1, int_type), var(2, int_type)],
+                    vec![var1, var2],
                     Decision::Switch(
-                        var(2, int_type),
+                        var2,
                         vec![Case::new(
                             Constructor::Int("5".into()),
                             Vec::new(),
                             Decision::Switch(
-                                var(1, int_type),
+                                var1,
                                 vec![Case::new(
                                     Constructor::Int("4".into()),
                                     Vec::new(),
@@ -684,26 +670,24 @@ fn compile_nonexhaustive_option_type_with_multiple_arguments() {
 
 // #[test]
 // fn compile_exhaustive_option_type() {
-//     let mut compiler = Compiler::new();
-//     let int_type = new_type(&mut compiler, Type::Int);
-//     let option_type = new_type(
-//         &mut compiler,
+//     let mut setup = Setup::new();
+//     let int_type = setup.new_type(Type::Int);
+//     let option_type = setup.new_type(
 //         Type::Enum(vec![
 //             ("Some".into(), vec![int_type]),
 //             ("None".into(), Vec::new()),
 //         ]),
 //     );
-//     let input = compiler.new_variable(option_type);
-//     let result = compile(
-//         compiler,
+//     let input = setup.new_variable(option_type);
+//     let result = setup.compile(
 //         input,
 //         vec![
 //             (
-//                 variant(option_type, 0, vec![Pattern::Int("4".into())]),
+//                 setup.variant(option_type, 0, vec![Pattern::Int("4".into())]),
 //                 rhs(1),
 //             ),
-//             (variant(option_type, 0, vec![bind("a")]), rhs(2)),
-//             (variant(option_type, 1, Vec::new()), rhs(3)),
+//             (setup.variant(option_type, 0, vec![setup.bind("a")]), rhs(2)),
+//             (setup.variant(option_type, 1, Vec::new()), rhs(3)),
 //         ],
 //     );
 
@@ -714,16 +698,16 @@ fn compile_nonexhaustive_option_type_with_multiple_arguments() {
 //             vec![
 //                 Case::new(
 //                     Constructor::Variant(option_type, 0),
-//                     vec![var(1, int_type)],
+//                     vec![setup.var(1, int_type)],
 //                     Decision::Switch(
-//                         var(1, int_type),
+//                         setup.var(1, int_type),
 //                         vec![Case::new(
 //                             Constructor::Int("4".into()),
 //                             Vec::new(),
 //                             success(1)
 //                         )],
 //                         Some(Box::new(success_with_bindings(
-//                             vec![("a", var(1, int_type))],
+//                             vec![("a", setup.var(1, int_type))],
 //                             2
 //                         )))
 //                     )
@@ -737,26 +721,23 @@ fn compile_nonexhaustive_option_type_with_multiple_arguments() {
 
 #[test]
 fn compile_redundant_option_type_with_bool() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let option_type = new_type(
-        &mut compiler,
-        Type::Enum(vec![
-            ("Some".into(), vec![int_type]),
-            ("None".into(), Vec::new()),
-        ]),
-    );
-    let input = compiler.new_variable(option_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![
-            (variant(option_type, 0, vec![int("1".into())]), rhs(1)),
-            (variant(option_type, 0, vec![int("1".into())]), rhs(10)),
-            (variant(option_type, 0, vec![bind("a")]), rhs(2)),
-            (variant(option_type, 1, Vec::new()), rhs(3)),
-        ],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let option_type = setup.new_type(Type::Enum(vec![
+        ("Some".into(), vec![int_type]),
+        ("None".into(), Vec::new()),
+    ]));
+    let int1 = setup.int("1");
+    let var_a = setup.bind("a");
+    let var1 = setup.var(1, int_type);
+    let input = setup.new_variable(option_type);
+    let rules = vec![
+        (setup.variant(option_type, 0, vec![int1]), rhs(1)),
+        (setup.variant(option_type, 0, vec![int1]), rhs(10)),
+        (setup.variant(option_type, 0, vec![var_a]), rhs(2)),
+        (setup.variant(option_type, 1, Vec::new()), rhs(3)),
+    ];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -765,18 +746,15 @@ fn compile_redundant_option_type_with_bool() {
             vec![
                 Case::new(
                     Constructor::Variant(option_type, 0),
-                    vec![var(1, int_type)],
+                    vec![var1],
                     Decision::Switch(
-                        var(1, int_type),
+                        var1,
                         vec![Case::new(
                             Constructor::Int("1".into()),
                             Vec::new(),
                             success(1)
                         )],
-                        Some(Box::new(success_with_bindings(
-                            vec![("a", var(1, int_type))],
-                            2
-                        )))
+                        Some(Box::new(success_with_bindings(vec![("a", var1)], 2)))
                     )
                 ),
                 Case::new(Constructor::Variant(option_type, 1), Vec::new(), success(3))
@@ -790,32 +768,23 @@ fn compile_redundant_option_type_with_bool() {
 
 #[test]
 fn compile_redundant_option_type_with_int() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let option_type = new_type(
-        &mut compiler,
-        Type::Enum(vec![
-            ("Some".into(), vec![int_type]),
-            ("None".into(), Vec::new()),
-        ]),
-    );
-    let input = compiler.new_variable(option_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![
-            (
-                variant(option_type, 0, vec![Pattern::Int { value: "4".into() }]),
-                rhs(1),
-            ),
-            (
-                variant(option_type, 0, vec![Pattern::Int { value: "4".into() }]),
-                rhs(10),
-            ),
-            (variant(option_type, 0, vec![bind("a")]), rhs(2)),
-            (variant(option_type, 1, Vec::new()), rhs(3)),
-        ],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let option_type = setup.new_type(Type::Enum(vec![
+        ("Some".into(), vec![int_type]),
+        ("None".into(), Vec::new()),
+    ]));
+    let input = setup.new_variable(option_type);
+    let int4 = setup.int("4");
+    let bind_a = setup.bind("a");
+    let var1 = setup.var(1, int_type);
+    let rules = vec![
+        (setup.variant(option_type, 0, vec![int4]), rhs(1)),
+        (setup.variant(option_type, 0, vec![int4]), rhs(10)),
+        (setup.variant(option_type, 0, vec![bind_a]), rhs(2)),
+        (setup.variant(option_type, 1, Vec::new()), rhs(3)),
+    ];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -824,18 +793,15 @@ fn compile_redundant_option_type_with_int() {
             vec![
                 Case::new(
                     Constructor::Variant(option_type, 0),
-                    vec![var(1, int_type)],
+                    vec![var1],
                     Decision::Switch(
-                        var(1, int_type),
+                        var1,
                         vec![Case::new(
                             Constructor::Int("4".into()),
                             Vec::new(),
                             success(1)
                         ),],
-                        Some(Box::new(success_with_bindings(
-                            vec![("a", var(1, int_type))],
-                            2
-                        )))
+                        Some(Box::new(success_with_bindings(vec![("a", var1)], 2)))
                     )
                 ),
                 Case::new(Constructor::Variant(option_type, 1), Vec::new(), success(3))
@@ -849,27 +815,21 @@ fn compile_redundant_option_type_with_int() {
 
 #[test]
 fn compile_exhaustive_option_type_with_binding() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let option_type = new_type(
-        &mut compiler,
-        Type::Enum(vec![
-            ("Some".into(), vec![int_type]),
-            ("None".into(), Vec::new()),
-        ]),
-    );
-    let input = compiler.new_variable(option_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![
-            (
-                variant(option_type, 0, vec![Pattern::Int { value: "4".into() }]),
-                rhs(1),
-            ),
-            (bind("a"), rhs(2)),
-        ],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let option_type = setup.new_type(Type::Enum(vec![
+        ("Some".into(), vec![int_type]),
+        ("None".into(), Vec::new()),
+    ]));
+    let input = setup.new_variable(option_type);
+    let int4 = setup.int("4");
+    let bind_a = setup.bind("a");
+    let var1 = setup.var(1, int_type);
+    let rules = vec![
+        (setup.variant(option_type, 0, vec![int4]), rhs(1)),
+        (bind_a, rhs(2)),
+    ];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -878,9 +838,9 @@ fn compile_exhaustive_option_type_with_binding() {
             vec![
                 Case::new(
                     Constructor::Variant(option_type, 0),
-                    vec![var(1, int_type)],
+                    vec![var1],
                     Decision::Switch(
-                        var(1, int_type),
+                        var1,
                         vec![Case::new(
                             Constructor::Int("4".into()),
                             Vec::new(),
@@ -902,29 +862,22 @@ fn compile_exhaustive_option_type_with_binding() {
 
 #[test]
 fn compile_nonexhaustive_pair_in_option_pattern() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let tup_type = new_type(&mut compiler, Type::Tuple(vec![int_type, int_type]));
-    let option_type = new_type(
-        &mut compiler,
-        Type::Enum(vec![
-            ("Some".into(), vec![tup_type]),
-            ("None".into(), Vec::new()),
-        ]),
-    );
-    let input = compiler.new_variable(option_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![(
-            variant(
-                option_type,
-                0,
-                vec![pair(int_type, int_type, int("4"), bind("a"))],
-            ),
-            rhs(1),
-        )],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let tup_type = setup.new_type(Type::Tuple(vec![int_type, int_type]));
+    let option_type = setup.new_type(Type::Enum(vec![
+        ("Some".into(), vec![tup_type]),
+        ("None".into(), Vec::new()),
+    ]));
+    let input = setup.new_variable(option_type);
+    let int_4 = setup.int("4");
+    let bind_a = setup.bind("a");
+    let pair = setup.pair(int_type, int_type, int_4, bind_a);
+    let rules = vec![(setup.variant(option_type, 0, vec![pair]), rhs(1))];
+    let var_1 = setup.var(1, tup_type);
+    let var_2 = setup.var(2, int_type);
+    let var_3 = setup.var(3, int_type);
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -933,18 +886,18 @@ fn compile_nonexhaustive_pair_in_option_pattern() {
             vec![
                 Case::new(
                     Constructor::Variant(option_type, 0),
-                    vec![var(1, tup_type)],
+                    vec![var_1],
                     Decision::Switch(
-                        var(1, tup_type),
+                        var_1,
                         vec![Case::new(
                             Constructor::Tuple(vec![int_type, int_type]),
-                            vec![var(2, int_type), var(3, int_type),],
+                            vec![var_2, var_3],
                             Decision::Switch(
-                                var(2, int_type),
+                                var_2,
                                 vec![Case::new(
                                     Constructor::Int("4".into()),
                                     Vec::new(),
-                                    success_with_bindings(vec![("a", var(3, int_type))], 1)
+                                    success_with_bindings(vec![("a", var_3)], 1)
                                 )],
                                 Some(Box::new(failure()))
                             )
@@ -965,20 +918,13 @@ fn compile_nonexhaustive_pair_in_option_pattern() {
 
 #[test]
 fn compile_or_pattern() {
-    let mut compiler = Compiler::new();
-    let bool_type = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(bool_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![(
-            Pattern::Or {
-                left: Box::new(int("1")),
-                right: Box::new(int("2")),
-            },
-            rhs(1),
-        )],
-    );
+    let mut setup = Setup::new();
+    let bool_type = setup.new_type(Type::Int);
+    let input = setup.new_variable(bool_type);
+    let int_1 = setup.int("1");
+    let int_2 = setup.int("2");
+    let rules = vec![(setup.or(int_1, int_2), rhs(1))];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -996,20 +942,13 @@ fn compile_or_pattern() {
 
 #[test]
 fn compile_or_int_pattern() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(int_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![(
-            Pattern::Or {
-                left: Box::new(int("4")),
-                right: Box::new(int("5")),
-            },
-            rhs(1),
-        )],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let input = setup.new_variable(int_type);
+    let int_4 = setup.int("4");
+    let int_5 = setup.int("5");
+    let rules = vec![(setup.or(int_4, int_5), rhs(1))];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -1026,15 +965,16 @@ fn compile_or_int_pattern() {
 
 #[test]
 fn nonexhaustive_guard() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(int_type);
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let input = setup.new_variable(int_type);
 
-    let result = compiler.compile(vec![Row::new(
-        vec![Column::new(input, int("4"))],
+    let rows = vec![Row::new(
+        vec![Column::new(input, setup.int("4"))],
         Some(42),
         rhs(1),
-    )]);
+    )];
+    let result = setup.compiler.compile(rows);
 
     assert_eq!(
         result.tree,
@@ -1054,28 +994,35 @@ fn nonexhaustive_guard() {
 
 #[test]
 fn nonexhaustive_option_with_two_rows_and_guard() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let option_type = new_type(
-        &mut compiler,
-        Type::Enum(vec![
-            ("Some".into(), vec![int_type]),
-            ("None".into(), Vec::new()),
-        ]),
-    );
-    let input = compiler.new_variable(option_type);
-    let result = compiler.compile(vec![
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let option_type = setup.new_type(Type::Enum(vec![
+        ("Some".into(), vec![int_type]),
+        ("None".into(), Vec::new()),
+    ]));
+    let int_4 = setup.int("4");
+    let bind_a = setup.bind("a");
+    let var_1 = setup.var(1, int_type);
+    let input = setup.new_variable(option_type);
+    let rows = vec![
         Row::new(
-            vec![Column::new(input, variant(option_type, 0, vec![int("4")]))],
+            vec![Column::new(
+                input,
+                setup.variant(option_type, 0, vec![int_4]),
+            )],
             Some(42),
             rhs(1),
         ),
         Row::new(
-            vec![Column::new(input, variant(option_type, 0, vec![bind("a")]))],
+            vec![Column::new(
+                input,
+                setup.variant(option_type, 0, vec![bind_a]),
+            )],
             None,
             rhs(2),
         ),
-    ]);
+    ];
+    let result = setup.compiler.compile(rows);
 
     assert_eq!(
         result.tree,
@@ -1084,22 +1031,19 @@ fn nonexhaustive_option_with_two_rows_and_guard() {
             vec![
                 Case::new(
                     Constructor::Variant(option_type, 0),
-                    vec![var(1, int_type)],
+                    vec![var_1],
                     Decision::Switch(
-                        var(1, int_type),
+                        var_1,
                         vec![Case::new(
                             Constructor::Int("4".into()),
                             Vec::new(),
                             Decision::Guard(
                                 42,
                                 rhs(1),
-                                Box::new(success_with_bindings(vec![("a", var(1, int_type))], 2)),
+                                Box::new(success_with_bindings(vec![("a", var_1)], 2)),
                             )
                         )],
-                        Some(Box::new(success_with_bindings(
-                            vec![("a", var(1, int_type))],
-                            2
-                        )))
+                        Some(Box::new(success_with_bindings(vec![("a", var_1)], 2)))
                     ),
                 ),
                 Case::new(Constructor::Variant(option_type, 1), Vec::new(), failure())
@@ -1113,13 +1057,14 @@ fn nonexhaustive_option_with_two_rows_and_guard() {
 
 #[test]
 fn exhaustive_guard() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(int_type);
-    let result = compiler.compile(vec![
-        Row::new(vec![Column::new(input, int("4"))], Some(42), rhs(1)),
-        Row::new(vec![Column::new(input, bind("a"))], None, rhs(2)),
-    ]);
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let input = setup.new_variable(int_type);
+    let rows = vec![
+        Row::new(vec![Column::new(input, setup.int("4"))], Some(42), rhs(1)),
+        Row::new(vec![Column::new(input, setup.bind("a"))], None, rhs(2)),
+    ];
+    let result = setup.compiler.compile(rows);
 
     assert_eq!(
         result.tree,
@@ -1141,13 +1086,14 @@ fn exhaustive_guard() {
 
 #[test]
 fn exhaustive_guard_with_bool() {
-    let mut compiler = Compiler::new();
-    let bool_type = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(bool_type);
-    let result = compiler.compile(vec![
-        Row::new(vec![Column::new(input, int("10"))], Some(42), rhs(1)),
-        Row::new(vec![Column::new(input, bind("a"))], None, rhs(2)),
-    ]);
+    let mut setup = Setup::new();
+    let bool_type = setup.new_type(Type::Int);
+    let input = setup.new_variable(bool_type);
+    let rows = vec![
+        Row::new(vec![Column::new(input, setup.int("10"))], Some(42), rhs(1)),
+        Row::new(vec![Column::new(input, setup.bind("a"))], None, rhs(2)),
+    ];
+    let result = setup.compiler.compile(rows);
 
     assert_eq!(
         result.tree,
@@ -1169,14 +1115,15 @@ fn exhaustive_guard_with_bool() {
 
 #[test]
 fn exhaustive_guard_with_int() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(int_type);
-    let result = compiler.compile(vec![
-        Row::new(vec![Column::new(input, int("1"))], Some(42), rhs(1)),
-        Row::new(vec![Column::new(input, int("2"))], None, rhs(2)),
-        Row::new(vec![Column::new(input, bind("b"))], None, rhs(3)),
-    ]);
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let input = setup.new_variable(int_type);
+    let rows = vec![
+        Row::new(vec![Column::new(input, setup.int("1"))], Some(42), rhs(1)),
+        Row::new(vec![Column::new(input, setup.int("2"))], None, rhs(2)),
+        Row::new(vec![Column::new(input, setup.bind("b"))], None, rhs(3)),
+    ];
+    let result = setup.compiler.compile(rows);
 
     assert_eq!(
         result.tree,
@@ -1201,15 +1148,16 @@ fn exhaustive_guard_with_int() {
 
 #[test]
 fn exhaustive_guard_with_same_int() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(int_type);
-    let result = compiler.compile(vec![
-        Row::new(vec![Column::new(input, int("1"))], Some(10), rhs(1)),
-        Row::new(vec![Column::new(input, int("1"))], Some(20), rhs(2)),
-        Row::new(vec![Column::new(input, int("1"))], None, rhs(3)),
-        Row::new(vec![Column::new(input, bind("b"))], None, rhs(4)),
-    ]);
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let input = setup.new_variable(int_type);
+    let rows = vec![
+        Row::new(vec![Column::new(input, setup.int("1"))], Some(10), rhs(1)),
+        Row::new(vec![Column::new(input, setup.int("1"))], Some(20), rhs(2)),
+        Row::new(vec![Column::new(input, setup.int("1"))], None, rhs(3)),
+        Row::new(vec![Column::new(input, setup.bind("b"))], None, rhs(4)),
+    ];
+    let result = setup.compiler.compile(rows);
 
     assert_eq!(
         result.tree,
@@ -1231,33 +1179,42 @@ fn exhaustive_guard_with_same_int() {
 
 #[test]
 fn exhaustive_option_with_guard() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let option_type = new_type(
-        &mut compiler,
-        Type::Enum(vec![
-            ("Some".into(), vec![int_type]),
-            ("None".into(), Vec::new()),
-        ]),
-    );
-    let input = compiler.new_variable(option_type);
-    let result = compiler.compile(vec![
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let option_type = setup.new_type(Type::Enum(vec![
+        ("Some".into(), vec![int_type]),
+        ("None".into(), Vec::new()),
+    ]));
+    let bind_a = setup.bind("a");
+    let input = setup.new_variable(option_type);
+    let var_1 = setup.var(1, int_type);
+    let rows = vec![
         Row::new(
-            vec![Column::new(input, variant(option_type, 1, Vec::new()))],
+            vec![Column::new(
+                input,
+                setup.variant(option_type, 1, Vec::new()),
+            )],
             None,
             rhs(1),
         ),
         Row::new(
-            vec![Column::new(input, variant(option_type, 0, vec![bind("a")]))],
+            vec![Column::new(
+                input,
+                setup.variant(option_type, 0, vec![bind_a]),
+            )],
             Some(42),
             rhs(2),
         ),
         Row::new(
-            vec![Column::new(input, variant(option_type, 0, vec![bind("a")]))],
+            vec![Column::new(
+                input,
+                setup.variant(option_type, 0, vec![bind_a]),
+            )],
             None,
             rhs(3),
         ),
-    ]);
+    ];
+    let result = setup.compiler.compile(rows);
 
     assert_eq!(
         result.tree,
@@ -1266,14 +1223,14 @@ fn exhaustive_option_with_guard() {
             vec![
                 Case::new(
                     Constructor::Variant(option_type, 0),
-                    vec![var(1, int_type)],
+                    vec![var_1],
                     Decision::Guard(
                         42,
                         Body {
-                            bindings: vec![("a".into(), var(1, int_type))],
+                            bindings: vec![("a".into(), var_1)],
                             clause_index: 2
                         },
-                        Box::new(success_with_bindings(vec![("a", var(1, int_type))], 3))
+                        Box::new(success_with_bindings(vec![("a", var_1)], 3))
                     )
                 ),
                 Case::new(Constructor::Variant(option_type, 1), Vec::new(), success(1)),
@@ -1285,15 +1242,21 @@ fn exhaustive_option_with_guard() {
 
 #[test]
 fn compile_exhaustive_nested_int_with_guard() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::Int);
-    let tup_type = new_type(&mut compiler, Type::Tuple(vec![int_type, int_type]));
-    let input = compiler.new_variable(tup_type);
-    let result = compiler.compile(vec![
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let tup_type = setup.new_type(Type::Tuple(vec![int_type, int_type]));
+    let input = setup.new_variable(tup_type);
+    let int_4 = setup.int("4");
+    let int_5 = setup.int("5");
+    let bind_a = setup.bind("a");
+    let bind_b = setup.bind("b");
+    let var_1 = setup.var(1, int_type);
+    let var_2 = setup.var(2, int_type);
+    let rows = vec![
         Row::new(
             vec![Column::new(
                 input,
-                pair(int_type, int_type, int("4"), int("5")),
+                setup.pair(int_type, int_type, int_4, int_5),
             )],
             Some(42),
             rhs(1),
@@ -1301,7 +1264,7 @@ fn compile_exhaustive_nested_int_with_guard() {
         Row::new(
             vec![Column::new(
                 input,
-                pair(int_type, int_type, int("4"), int("5")),
+                setup.pair(int_type, int_type, int_4, int_5),
             )],
             None,
             rhs(2),
@@ -1309,12 +1272,13 @@ fn compile_exhaustive_nested_int_with_guard() {
         Row::new(
             vec![Column::new(
                 input,
-                pair(int_type, int_type, bind("a"), bind("b")),
+                setup.pair(int_type, int_type, bind_a, bind_b),
             )],
             None,
             rhs(3),
         ),
-    ]);
+    ];
+    let result = setup.compiler.compile(rows);
 
     assert_eq!(
         result.tree,
@@ -1322,27 +1286,27 @@ fn compile_exhaustive_nested_int_with_guard() {
             input,
             vec![Case::new(
                 Constructor::Tuple(vec![int_type, int_type]),
-                vec![var(1, int_type), var(2, int_type)],
+                vec![var_1, var_2],
                 Decision::Switch(
-                    var(2, int_type),
+                    var_2,
                     vec![Case::new(
                         Constructor::Int("5".into()),
                         Vec::new(),
                         Decision::Switch(
-                            var(1, int_type),
+                            var_1,
                             vec![Case::new(
                                 Constructor::Int("4".into()),
                                 Vec::new(),
                                 Decision::Guard(42, rhs(1), Box::new(success(2)),)
                             )],
                             Some(Box::new(success_with_bindings(
-                                vec![("a", var(1, int_type)), ("b", var(2, int_type))],
+                                vec![("a", var_1), ("b", var_2)],
                                 3
                             )))
                         )
                     )],
                     Some(Box::new(success_with_bindings(
-                        vec![("a", var(1, int_type)), ("b", var(2, int_type))],
+                        vec![("a", var_1), ("b", var_2)],
                         3
                     )))
                 )
@@ -1354,14 +1318,16 @@ fn compile_exhaustive_nested_int_with_guard() {
 
 #[test]
 fn assign_pattern() {
-    let mut compiler = Compiler::new();
-    let typ = new_type(&mut compiler, Type::Int);
-    let input = compiler.new_variable(typ);
-    let result = compile(
-        compiler,
-        input,
-        vec![(int("1"), rhs(1)), (assign("it", discard()), rhs(2))],
-    );
+    let mut setup = Setup::new();
+    let typ = setup.new_type(Type::Int);
+    let input = setup.new_variable(typ);
+    let discard = setup.discard();
+    let rules = vec![
+        (setup.int("1"), rhs(1)),
+        (setup.assign("it", discard), rhs(2)),
+    ];
+    let var_0 = setup.var(0, typ);
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -1372,24 +1338,21 @@ fn assign_pattern() {
                 Vec::new(),
                 success(1)
             )],
-            Some(Box::new(success_with_bindings(
-                vec![("it", var(0, typ))],
-                2
-            )))
+            Some(Box::new(success_with_bindings(vec![("it", var_0)], 2)))
         )
     );
 }
 
 #[test]
 fn compile_nonexhaustive_string_pattern() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::String);
-    let input = compiler.new_variable(int_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![(string("Hello"), rhs(1)), (string("Goodbye"), rhs(2))],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::String);
+    let input = setup.new_variable(int_type);
+    let rules = vec![
+        (setup.string("Hello"), rhs(1)),
+        (setup.string("Goodbye"), rhs(2)),
+    ];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,
@@ -1411,18 +1374,15 @@ fn compile_nonexhaustive_string_pattern() {
 
 #[test]
 fn compile_exhaustive_string_pattern() {
-    let mut compiler = Compiler::new();
-    let int_type = new_type(&mut compiler, Type::String);
-    let input = compiler.new_variable(int_type);
-    let result = compile(
-        compiler,
-        input,
-        vec![
-            (string("Hello"), rhs(1)),
-            (string("Goodbye"), rhs(2)),
-            (bind("a"), rhs(3)),
-        ],
-    );
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::String);
+    let input = setup.new_variable(int_type);
+    let rules = vec![
+        (setup.string("Hello"), rhs(1)),
+        (setup.string("Goodbye"), rhs(2)),
+        (setup.bind("a"), rhs(3)),
+    ];
+    let result = setup.compile(input, rules);
 
     assert_eq!(
         result.tree,

@@ -79,6 +79,8 @@ lsp-server = "0.5"
 lsp-types = "0.92"
 # Pubgrub dependency resolution algorithm
 pubgrub = "0.2"
+# Memory arena using ids rather than references
+id-arena = "2.1"
 
 [build-dependencies]
 # Data (de)serialisation
