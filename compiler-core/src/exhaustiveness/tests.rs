@@ -971,7 +971,13 @@ fn compile_or_pattern() {
     let result = compile(
         compiler,
         input,
-        vec![(Pattern::Or(vec![int("1"), int("2")]), rhs(1))],
+        vec![(
+            Pattern::Or {
+                left: Box::new(int("1")),
+                right: Box::new(int("2")),
+            },
+            rhs(1),
+        )],
     );
 
     assert_eq!(
@@ -996,7 +1002,13 @@ fn compile_or_int_pattern() {
     let result = compile(
         compiler,
         input,
-        vec![(Pattern::Or(vec![int("4"), int("5")]), rhs(1))],
+        vec![(
+            Pattern::Or {
+                left: Box::new(int("4")),
+                right: Box::new(int("5")),
+            },
+            rhs(1),
+        )],
     );
 
     assert_eq!(

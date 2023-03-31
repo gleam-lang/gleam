@@ -285,7 +285,10 @@ impl Constructor {
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Pattern {
     Discard,
-    Or(Vec<Pattern>),
+    Or {
+        left: Box<Pattern>,
+        right: Box<Pattern>,
+    },
     Int {
         value: SmolStr,
     },
@@ -319,7 +322,7 @@ pub enum Pattern {
 impl Pattern {
     fn flatten_or(self, row: Row) -> Vec<(Pattern, Row)> {
         match self {
-            Pattern::Or(args) => args.into_iter().map(|p| (p, row.clone())).collect(),
+            Pattern::Or { left, right } => vec![(*left, row.clone()), (*right, row.clone())],
 
             Pattern::Int { .. }
             | Pattern::List { .. }
@@ -742,7 +745,7 @@ impl Compiler {
                         | Pattern::Variable { .. }
                         | Pattern::Discard
                         | Pattern::List { .. }
-                        | Pattern::Or(_) => panic!("Unexpected pattern {:?}", pat),
+                        | Pattern::Or { .. } => panic!("Unexpected pattern {:?}", pat),
                     };
 
                     if let Some(index) = tested.get(&key) {
@@ -893,7 +896,7 @@ impl Compiler {
                     bindings.push((name.clone(), column.variable));
                 }
 
-                Pattern::Or(_)
+                Pattern::Or { .. }
                 | Pattern::Int { .. }
                 | Pattern::List { .. }
                 | Pattern::Float { .. }
