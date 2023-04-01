@@ -12,6 +12,7 @@ mod tests;
 
 use crate::ast::AssignName;
 use id_arena::{Arena, Id};
+use itertools::Itertools;
 use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
 
@@ -37,8 +38,6 @@ pub enum Constructor {
     Tuple(Vec<TypeId>),
     Variant(TypeId, usize),
     String(SmolStr),
-    EmptyList,
-    List(TypeId),
 }
 
 impl Constructor {
@@ -50,37 +49,12 @@ impl Constructor {
             | Constructor::Tuple(_)
             | Constructor::String(_) => 0,
 
-            Constructor::EmptyList => 0,
-            Constructor::List(_) => 1,
-
             Constructor::Variant(_, index) => *index,
         }
     }
 }
 
-// Var { name: SmolStr, type_: Type, },
-// Int { value: SmolStr, },
-// Float { value: SmolStr, },
-// String { value: SmolStr, },
-// Assign { name: SmolStr, pattern: Box<Self>, },
-// Discard { name: SmolStr, type_: Type, },
-// Tuple { elems: Vec<Self>, },
-// Constructor {
-//     location: SrcSpan,
-//     name: SmolStr,
-//     arguments: Vec<CallArg<Self>>,
-//     module: Option<SmolStr>,
-//     constructor: Inferred<PatternConstructor>,
-//     with_spread: bool,
-//     type_: Type,
-// },
-
 // VarUsage { name: SmolStr, type_: Type, },
-// List {
-//     elements: Vec<Self>,
-//     tail: Option<Box<Self>>,
-//     type_: Type,
-// },
 // BitString { segments: Vec<BitStringSegment<Self, Type>>, },
 // Concatenate { left_side_string: SmolStr, right_side_assignment: AssignName, },
 
@@ -301,37 +275,91 @@ pub struct Match {
 /// Information about a single constructor/value (aka term) being tested, used
 /// to build a list of names of missing patterns.
 #[derive(Debug)]
-struct Term {
-    variable: Variable,
-    name: SmolStr,
-    arguments: Vec<Variable>,
+enum Term {
+    Variant {
+        variable: Variable,
+        name: SmolStr,
+        arguments: Vec<Variable>,
+    },
+    Infinite {
+        variable: Variable,
+    },
+    EmptyList {
+        variable: Variable,
+    },
+    List {
+        variable: Variable,
+        first: Variable,
+        rest: Variable,
+    },
 }
 
 impl Term {
-    fn new(variable: Variable, name: SmolStr, arguments: Vec<Variable>) -> Self {
-        Self {
-            variable,
-            name,
-            arguments,
+    fn variable(&self) -> Variable {
+        match self {
+            Term::Variant { variable, .. } => *variable,
+            Term::Infinite { variable } => *variable,
+            Term::EmptyList { variable } => *variable,
+            Term::List { variable, .. } => *variable,
         }
     }
 
-    fn pattern_name(&self, terms: &[Term], mapping: &HashMap<&Variable, usize>) -> SmolStr {
-        if self.arguments.is_empty() {
-            self.name.clone()
-        } else {
-            let args = self
-                .arguments
-                .iter()
-                .map(|arg| {
-                    mapping
-                        .get(arg)
-                        .map(|&idx| terms[idx].pattern_name(terms, mapping))
-                        .unwrap_or_else(|| "_".into())
-                })
-                .collect::<Vec<_>>()
-                .join(", ");
-            format!("{}({})", self.name, args).into()
+    fn pattern_string(&self, terms: &[Term], mapping: &HashMap<Variable, usize>) -> SmolStr {
+        match self {
+            Term::Variant {
+                variable,
+                name,
+                arguments,
+            } => {
+                if arguments.is_empty() {
+                    return name.clone();
+                }
+                let args = arguments
+                    .iter()
+                    .map(|arg| {
+                        mapping
+                            .get(arg)
+                            .map(|&idx| terms[idx].pattern_string(terms, mapping))
+                            .unwrap_or_else(|| "_".into())
+                    })
+                    .join(", ");
+                format!("{}({})", name, args).into()
+            }
+
+            Term::Infinite { variable } => "_".into(),
+
+            Term::EmptyList { variable } => "[]".into(),
+
+            Term::List { .. } => format!("[{}]", self.list_pattern_string(terms, mapping)).into(),
+        }
+    }
+
+    fn list_pattern_string(&self, terms: &[Term], mapping: &HashMap<Variable, usize>) -> SmolStr {
+        match self {
+            Term::Infinite { .. } | Term::Variant { .. } => "_".into(),
+
+            Term::EmptyList { .. } => "".into(),
+
+            Term::List {
+                variable,
+                first,
+                rest,
+            } => {
+                let first = mapping
+                    .get(first)
+                    .map(|&idx| terms[idx].list_pattern_string(terms, mapping))
+                    .unwrap_or_else(|| "_".into());
+                let rest = mapping
+                    .get(rest)
+                    .map(|&idx| terms[idx].list_pattern_string(terms, mapping))
+                    .unwrap_or_else(|| "_".into());
+
+                match rest.as_str() {
+                    "" => first,
+                    "_" => format!("{first}, ..").into(),
+                    _ => format!("{first}, {rest}").into(),
+                }
+            }
         }
     }
 }
@@ -377,12 +405,12 @@ impl Match {
                 // you're reading this and happen to know of a way, please
                 // submit a merge request :)
                 for (index, step) in terms.iter().enumerate() {
-                    _ = mapping.insert(&step.variable, index);
+                    _ = mapping.insert(step.variable(), index);
                 }
 
                 let name = terms
                     .first()
-                    .map(|term| term.pattern_name(terms, &mapping))
+                    .map(|term| term.pattern_string(terms, &mapping))
                     .unwrap_or_else(|| "_".into());
 
                 _ = missing.insert(name);
@@ -392,41 +420,34 @@ impl Match {
                 self.add_missing_patterns(fallback, terms, missing);
             }
 
-            Decision::Switch(var, cases, fallback) => {
+            Decision::Switch(variable, cases, fallback) => {
+                let variable = *variable;
                 for case in cases {
                     match &case.constructor {
-                        Constructor::String(_) => {
-                            let name = "_".into();
-                            terms.push(Term::new(*var, name, Vec::new()));
+                        Constructor::Int(_) | Constructor::Float(_) | Constructor::String(_) => {
+                            terms.push(Term::Infinite { variable });
                         }
-                        Constructor::Int(_) => {
-                            let name = "_".into();
-                            terms.push(Term::new(*var, name, Vec::new()));
-                        }
-                        Constructor::Float(_) => {
-                            let name = "_".into();
-                            terms.push(Term::new(*var, name, Vec::new()));
-                        }
+
                         Constructor::Tuple(_) => {
-                            let args = case.arguments.clone();
-                            terms.push(Term::new(*var, "#".into(), args));
+                            let arguments = case.arguments.clone();
+                            terms.push(Term::Variant {
+                                variable,
+                                name: "#".into(),
+                                arguments,
+                            });
                         }
-                        Constructor::EmptyList => {
-                            let name = "[]".into();
-                            terms.push(Term::new(*var, name, Vec::new()));
-                        }
-                        Constructor::List(type_) => {
-                            let args = case.arguments.clone();
-                            terms.push(Term::new(*var, "[".into(), args));
-                        }
+
                         Constructor::Variant(type_, idx) => {
-                            let args = case.arguments.clone();
                             let name = if let Type::Enum(variants) = &self.types[type_.0] {
                                 variants[*idx].0.clone()
                             } else {
                                 unreachable!()
                             };
-                            terms.push(Term::new(*var, name, args));
+                            terms.push(Term::Variant {
+                                variable,
+                                name,
+                                arguments: case.arguments.clone(),
+                            });
                         }
                     }
 
@@ -443,7 +464,21 @@ impl Match {
                 variable,
                 empty,
                 non_empty,
-            } => todo!(),
+            } => {
+                let variable = *variable;
+
+                terms.push(Term::EmptyList { variable });
+                self.add_missing_patterns(empty, terms, missing);
+                _ = terms.pop();
+
+                terms.push(Term::List {
+                    variable,
+                    first: non_empty.first,
+                    rest: non_empty.rest,
+                });
+                self.add_missing_patterns(&non_empty.decision, terms, missing);
+                _ = terms.pop();
+            }
         }
     }
 }

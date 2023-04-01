@@ -226,7 +226,7 @@ fn branch_variable() {
 }
 
 #[test]
-fn compile_simple_pattern() {
+fn simple_pattern() {
     let mut setup = Setup::new();
     let typ = setup.new_type(Type::Int);
     let input = setup.new_variable(typ);
@@ -248,7 +248,7 @@ fn compile_simple_pattern() {
 }
 
 #[test]
-fn compile_nonexhaustive_pattern() {
+fn nonexhaustive_pattern() {
     let mut setup = Setup::new();
     let typ = setup.new_type(Type::Int);
     let input = setup.new_variable(typ);
@@ -272,7 +272,7 @@ fn compile_nonexhaustive_pattern() {
 }
 
 #[test]
-fn compile_redundant_pattern() {
+fn redundant_pattern() {
     let mut setup = Setup::new();
     let typ = setup.new_type(Type::Int);
     let input = setup.new_variable(typ);
@@ -300,7 +300,7 @@ fn compile_redundant_pattern() {
 }
 
 #[test]
-fn compile_redundant_int() {
+fn redundant_int() {
     let mut setup = Setup::new();
     let typ = setup.new_type(Type::Int);
     let input = setup.new_variable(typ);
@@ -327,7 +327,7 @@ fn compile_redundant_int() {
 }
 
 #[test]
-fn compile_variable_pattern() {
+fn variable_pattern() {
     let mut setup = Setup::new();
     let typ = setup.new_type(Type::Int);
     let input = setup.new_variable(typ);
@@ -349,7 +349,7 @@ fn compile_variable_pattern() {
 }
 
 #[test]
-fn compile_nonexhaustive_float_pattern() {
+fn nonexhaustive_float_pattern() {
     let mut setup = Setup::new();
     let float_type = setup.new_type(Type::Float);
     let input = setup.new_variable(float_type);
@@ -371,7 +371,7 @@ fn compile_nonexhaustive_float_pattern() {
 }
 
 #[test]
-fn compile_exhaustive_float_pattern() {
+fn exhaustive_float_pattern() {
     let mut setup = Setup::new();
     let float_type = setup.new_type(Type::Float);
     let input = setup.new_variable(float_type);
@@ -396,7 +396,7 @@ fn compile_exhaustive_float_pattern() {
 }
 
 #[test]
-fn compile_nonexhaustive_int_pattern() {
+fn nonexhaustive_int_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let input = setup.new_variable(int_type);
@@ -418,7 +418,7 @@ fn compile_nonexhaustive_int_pattern() {
 }
 
 #[test]
-fn compile_exhaustive_int_pattern() {
+fn exhaustive_int_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let input = setup.new_variable(int_type);
@@ -443,7 +443,7 @@ fn compile_exhaustive_int_pattern() {
 }
 
 #[test]
-fn compile_nonexhaustive_nested_int_pattern() {
+fn nonexhaustive_nested_int_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let tup_type = setup.new_type(Type::Tuple(vec![int_type, int_type]));
@@ -479,7 +479,7 @@ fn compile_nonexhaustive_nested_int_pattern() {
 }
 
 #[test]
-fn compile_exhaustive_empty_tuple_pattern() {
+fn exhaustive_empty_tuple_pattern() {
     let mut setup = Setup::new();
     let tup_type = setup.new_type(Type::Tuple(vec![]));
     let input = setup.new_variable(tup_type);
@@ -496,7 +496,7 @@ fn compile_exhaustive_empty_tuple_pattern() {
 }
 
 #[test]
-fn compile_exhaustive_three_tuple_pattern() {
+fn exhaustive_three_tuple_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let tup_type = setup.new_type(Type::Tuple(vec![int_type, int_type, int_type]));
@@ -529,7 +529,7 @@ fn compile_exhaustive_three_tuple_pattern() {
 }
 
 #[test]
-fn compile_exhaustive_nested_int_pattern() {
+fn exhaustive_nested_int_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let tup_type = setup.new_type(Type::Tuple(vec![int_type, int_type]));
@@ -583,7 +583,7 @@ fn compile_exhaustive_nested_int_pattern() {
 }
 
 #[test]
-fn compile_nonexhaustive_option_type() {
+fn nonexhaustive_option_type() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let option_type = setup.new_type(Type::Enum(vec![
@@ -626,7 +626,7 @@ fn compile_nonexhaustive_option_type() {
 }
 
 #[test]
-fn compile_nonexhaustive_option_type_with_multiple_arguments() {
+fn nonexhaustive_option_type_with_multiple_arguments() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let option_type = setup.new_type(Type::Enum(vec![
@@ -679,7 +679,7 @@ fn compile_nonexhaustive_option_type_with_multiple_arguments() {
 }
 
 #[test]
-fn compile_exhaustive_option_type() {
+fn exhaustive_option_type() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let int_4 = setup.int("4");
@@ -723,7 +723,7 @@ fn compile_exhaustive_option_type() {
 }
 
 #[test]
-fn compile_redundant_option_type_with_bool() {
+fn redundant_option_type_with_bool() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let option_type = setup.new_type(Type::Enum(vec![
@@ -770,7 +770,7 @@ fn compile_redundant_option_type_with_bool() {
 }
 
 #[test]
-fn compile_redundant_option_type_with_int() {
+fn redundant_option_type_with_int() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let option_type = setup.new_type(Type::Enum(vec![
@@ -817,7 +817,7 @@ fn compile_redundant_option_type_with_int() {
 }
 
 #[test]
-fn compile_exhaustive_option_type_with_binding() {
+fn exhaustive_option_type_with_binding() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let option_type = setup.new_type(Type::Enum(vec![
@@ -864,7 +864,7 @@ fn compile_exhaustive_option_type_with_binding() {
 }
 
 #[test]
-fn compile_nonexhaustive_pair_in_option_pattern() {
+fn nonexhaustive_pair_in_option_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let tup_type = setup.new_type(Type::Tuple(vec![int_type, int_type]));
@@ -920,7 +920,7 @@ fn compile_nonexhaustive_pair_in_option_pattern() {
 }
 
 #[test]
-fn compile_or_pattern() {
+fn or_pattern() {
     let mut setup = Setup::new();
     let bool_type = setup.new_type(Type::Int);
     let input = setup.new_variable(bool_type);
@@ -944,7 +944,7 @@ fn compile_or_pattern() {
 }
 
 #[test]
-fn compile_or_int_pattern() {
+fn or_int_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let input = setup.new_variable(int_type);
@@ -1244,7 +1244,7 @@ fn exhaustive_option_with_guard() {
 }
 
 #[test]
-fn compile_exhaustive_nested_int_with_guard() {
+fn exhaustive_nested_int_with_guard() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let tup_type = setup.new_type(Type::Tuple(vec![int_type, int_type]));
@@ -1347,7 +1347,7 @@ fn assign_pattern() {
 }
 
 #[test]
-fn compile_nonexhaustive_string_pattern() {
+fn nonexhaustive_string_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::String);
     let input = setup.new_variable(int_type);
@@ -1376,7 +1376,7 @@ fn compile_nonexhaustive_string_pattern() {
 }
 
 #[test]
-fn compile_exhaustive_string_pattern() {
+fn exhaustive_string_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::String);
     let input = setup.new_variable(int_type);
@@ -1405,7 +1405,7 @@ fn compile_exhaustive_string_pattern() {
 }
 
 #[test]
-fn compile_exhaustive_list_pattern() {
+fn exhaustive_list_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let list_type = setup.new_type(Type::List(int_type));
@@ -1434,7 +1434,7 @@ fn compile_exhaustive_list_pattern() {
 }
 
 #[test]
-fn compile_exhaustive_custom_list_type_empty() {
+fn exhaustive_custom_list_empty() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let list_type = setup.new_type(Type::Int);
@@ -1468,7 +1468,7 @@ fn compile_exhaustive_custom_list_type_empty() {
     );
 }
 #[test]
-fn compile_exhaustive_list_just_empty_pattern() {
+fn exhaustive_list_just_empty_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let list_type = setup.new_type(Type::List(int_type));
@@ -1499,7 +1499,7 @@ fn compile_exhaustive_list_just_empty_pattern() {
 }
 
 #[test]
-fn compile_exhaustive_custom_list_type_non_empty() {
+fn exhaustive_custom_list_non_empty() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let list_type = setup.new_type(Type::Int);
@@ -1535,7 +1535,7 @@ fn compile_exhaustive_custom_list_type_non_empty() {
 }
 
 #[test]
-fn compile_exhaustive_list_type_non_empty() {
+fn exhaustive_list_non_empty() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let list_type = setup.new_type(Type::List(int_type));
@@ -1566,5 +1566,207 @@ fn compile_exhaustive_list_type_non_empty() {
                 decision: success(1)
             })
         }
+    );
+}
+
+#[test]
+fn nonexhaustive_list_empty() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let list_type = setup.new_type(Type::List(int_type));
+    let discard = setup.discard();
+    let var_1 = setup.var(1, int_type);
+    let var_2 = setup.var(2, list_type);
+    let rules = vec![(setup.list(list_type, discard, discard), rhs(1))];
+    let input = setup.new_variable(list_type);
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::List {
+            variable: input,
+            empty: Box::new(failure()),
+            non_empty: Box::new(NonEmptyListDecision {
+                first: Variable {
+                    id: 1,
+                    type_id: int_type
+                },
+                rest: Variable {
+                    id: 2,
+                    type_id: list_type
+                },
+                decision: success(1)
+            })
+        }
+    );
+    assert!(result.diagnostics.missing);
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("[]")]);
+}
+
+#[test]
+fn nonexhaustive_list_at_least_one() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let list_type = setup.new_type(Type::List(int_type));
+    let discard = setup.discard();
+    let var_1 = setup.var(1, int_type);
+    let var_2 = setup.var(2, list_type);
+    let rules = vec![(setup.empty_list(), rhs(1))];
+    let input = setup.new_variable(list_type);
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::List {
+            variable: input,
+            empty: Box::new(success(1)),
+            non_empty: Box::new(NonEmptyListDecision {
+                first: Variable {
+                    id: 1,
+                    type_id: int_type
+                },
+                rest: Variable {
+                    id: 2,
+                    type_id: list_type
+                },
+                decision: failure()
+            })
+        }
+    );
+    assert!(result.diagnostics.missing);
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("[_, ..]")]);
+}
+
+#[test]
+fn nonexhaustive_list_exactly_one() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let list_type = setup.new_type(Type::List(int_type));
+    let discard = setup.discard();
+    let var_1 = setup.var(1, int_type);
+    let var_2 = setup.var(2, list_type);
+    let empty_pattern = setup.empty_list();
+    let at_least_one_pattern = setup.list(list_type, discard, discard);
+    let rules = vec![
+        (empty_pattern, rhs(1)),
+        (setup.list(list_type, discard, at_least_one_pattern), rhs(2)),
+    ];
+    let input = setup.new_variable(list_type);
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::List {
+            variable: input,
+            empty: Box::new(success(1)),
+            non_empty: Box::new(NonEmptyListDecision {
+                first: Variable {
+                    id: 1,
+                    type_id: int_type
+                },
+                rest: Variable {
+                    id: 2,
+                    type_id: list_type
+                },
+                decision: Decision::List {
+                    variable: Variable {
+                        id: 2,
+                        type_id: list_type
+                    },
+                    empty: Box::new(failure()),
+                    non_empty: Box::new(NonEmptyListDecision {
+                        first: Variable {
+                            id: 3,
+                            type_id: int_type
+                        },
+                        rest: Variable {
+                            id: 4,
+                            type_id: list_type
+                        },
+                        decision: success(2)
+                    })
+                }
+            })
+        }
+    );
+    assert!(result.diagnostics.missing);
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("[_]")]);
+}
+
+#[test]
+fn nonexhaustive_list_at_least_two() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let list_type = setup.new_type(Type::List(int_type));
+    let discard = setup.discard();
+    let var_1 = setup.var(1, int_type);
+    let var_2 = setup.var(2, list_type);
+    let empty_pattern = setup.empty_list();
+    let one_pattern = setup.list(list_type, discard, empty_pattern);
+    let two_pattern = setup.list(list_type, discard, one_pattern);
+    let rules = vec![
+        (empty_pattern, rhs(1)),
+        (one_pattern, rhs(2)),
+        (two_pattern, rhs(3)),
+    ];
+    let input = setup.new_variable(list_type);
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::List {
+            variable: input,
+            empty: Box::new(success(1)),
+            non_empty: Box::new(NonEmptyListDecision {
+                first: Variable {
+                    id: 1,
+                    type_id: int_type
+                },
+                rest: Variable {
+                    id: 2,
+                    type_id: list_type
+                },
+                decision: Decision::List {
+                    variable: Variable {
+                        id: 2,
+                        type_id: list_type
+                    },
+                    empty: Box::new(success(2)),
+                    non_empty: Box::new(NonEmptyListDecision {
+                        first: Variable {
+                            id: 3,
+                            type_id: int_type
+                        },
+                        rest: Variable {
+                            id: 4,
+                            type_id: list_type
+                        },
+                        decision: Decision::List {
+                            variable: Variable {
+                                id: 4,
+                                type_id: list_type
+                            },
+                            empty: Box::new(success(3)),
+                            non_empty: Box::new(NonEmptyListDecision {
+                                first: Variable {
+                                    id: 5,
+                                    type_id: int_type
+                                },
+                                rest: Variable {
+                                    id: 6,
+                                    type_id: list_type
+                                },
+                                decision: failure()
+                            })
+                        }
+                    })
+                }
+            })
+        }
+    );
+    assert!(result.diagnostics.missing);
+    assert_eq!(
+        result.missing_patterns(),
+        vec![SmolStr::new("[_, _, _, ..]")]
     );
 }
