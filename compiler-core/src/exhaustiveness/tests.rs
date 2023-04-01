@@ -1415,27 +1415,21 @@ fn compile_exhaustive_list_pattern() {
 
     assert_eq!(
         result.tree,
-        Decision::Switch(
-            input,
-            vec![
-                Case::new(Constructor::EmptyList, Vec::new(), success(1)),
-                Case::new(
-                    Constructor::List(int_type),
-                    vec![
-                        Variable {
-                            id: 1,
-                            type_id: int_type
-                        },
-                        Variable {
-                            id: 2,
-                            type_id: list_type
-                        }
-                    ],
-                    success_with_bindings(vec![("a", input)], 2)
-                ),
-            ],
-            None,
-        )
+        Decision::List {
+            variable: input,
+            empty: Box::new(success(1)),
+            non_empty: Box::new(NonEmptyListDecision {
+                first: Variable {
+                    id: 1,
+                    type_id: int_type
+                },
+                rest: Variable {
+                    id: 2,
+                    type_id: list_type
+                },
+                decision: success_with_bindings(vec![("a", input)], 2)
+            })
+        }
     );
 }
 
@@ -1486,18 +1480,21 @@ fn compile_exhaustive_list_just_empty_pattern() {
 
     assert_eq!(
         result.tree,
-        Decision::Switch(
-            input,
-            vec![
-                Case::new(Constructor::EmptyList, vec![], success(1)),
-                Case::new(
-                    Constructor::List(int_type),
-                    vec![var_1, var_2],
-                    success_with_bindings(vec![], 2),
-                ),
-            ],
-            None
-        )
+        Decision::List {
+            variable: input,
+            empty: Box::new(success(1)),
+            non_empty: Box::new(NonEmptyListDecision {
+                first: Variable {
+                    id: 1,
+                    type_id: int_type
+                },
+                rest: Variable {
+                    id: 2,
+                    type_id: list_type
+                },
+                decision: success(2)
+            })
+        }
     );
 }
 
@@ -1546,7 +1543,7 @@ fn compile_exhaustive_list_type_non_empty() {
     let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type);
     let rules = vec![
-        (setup.variant(list_type, 1, vec![discard, discard]), rhs(1)),
+        (setup.list(list_type, discard, discard), rhs(1)),
         (discard, rhs(2)),
     ];
     let input = setup.new_variable(list_type);
@@ -1554,13 +1551,20 @@ fn compile_exhaustive_list_type_non_empty() {
 
     assert_eq!(
         result.tree,
-        Decision::Switch(
-            input,
-            vec![
-                Case::new(Constructor::EmptyList, vec![], success(2)),
-                Case::new(Constructor::List(int_type), vec![var_1, var_2], success(1)),
-            ],
-            None
-        )
+        Decision::List {
+            variable: input,
+            empty: Box::new(success(2)),
+            non_empty: Box::new(NonEmptyListDecision {
+                first: Variable {
+                    id: 1,
+                    type_id: int_type
+                },
+                rest: Variable {
+                    id: 2,
+                    type_id: list_type
+                },
+                decision: success(1)
+            })
+        }
     );
 }

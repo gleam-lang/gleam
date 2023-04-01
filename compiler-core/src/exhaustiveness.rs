@@ -259,6 +259,23 @@ pub enum Decision {
     /// 2. The cases to test against this variable.
     /// 3. A fallback decision to take, in case none of the cases matched.
     Switch(Variable, Vec<Case>, Option<Box<Decision>>),
+
+    /// Checks if a list is empty or non-empty.
+    List {
+        /// The variable to test.
+        variable: Variable,
+        /// The decision to take if the list is empty.
+        empty: Box<Decision>,
+        /// The decision to take if the list is non-empty.
+        non_empty: Box<NonEmptyListDecision>,
+    },
+}
+
+#[derive(Eq, PartialEq, Debug)]
+pub struct NonEmptyListDecision {
+    first: Variable,
+    rest: Variable,
+    decision: Decision,
 }
 
 /// A type for storing diagnostics produced by the decision tree compiler.
@@ -342,6 +359,7 @@ impl Match {
     ) {
         match node {
             Decision::Success(_) => {}
+
             Decision::Failure => {
                 let mut mapping = HashMap::new();
 
@@ -369,9 +387,11 @@ impl Match {
 
                 _ = missing.insert(name);
             }
+
             Decision::Guard(_, _, fallback) => {
                 self.add_missing_patterns(fallback, terms, missing);
             }
+
             Decision::Switch(var, cases, fallback) => {
                 for case in cases {
                     match &case.constructor {
@@ -418,6 +438,12 @@ impl Match {
                     self.add_missing_patterns(node, terms, missing);
                 }
             }
+
+            Decision::List {
+                variable,
+                empty,
+                non_empty,
+            } => todo!(),
         }
     }
 }
@@ -513,16 +539,7 @@ impl Compiler {
                 Decision::Switch(branch_var, cases, None)
             }
 
-            Type::List(elem) => {
-                let mut v = |t| self.new_variable(t);
-                let list = branch_var.type_id;
-                let cases = vec![
-                    (Constructor::EmptyList, vec![], Vec::new()),
-                    (Constructor::List(elem), vec![v(elem), v(list)], Vec::new()),
-                ];
-                let cases = self.compile_constructor_cases(rows, branch_var, cases);
-                Decision::Switch(branch_var, cases, None)
-            }
+            Type::List(elem) => self.compile_list_cases(rows, branch_var, elem),
 
             Type::Enum(variants) => {
                 let cases = variants
@@ -655,19 +672,16 @@ impl Compiler {
                         arguments,
                     } => (constructor.clone(), arguments.clone()),
 
-                    Pattern::EmptyList => (Constructor::EmptyList, vec![]),
-                    Pattern::List { first, rest, .. } => {
-                        (Constructor::List(branch_var.type_id), vec![*first, *rest])
-                    }
-
-                    pattern @ (Pattern::Discard
-                    | Pattern::Or { .. }
+                    pattern @ (Pattern::Or { .. }
                     | Pattern::Int { .. }
+                    | Pattern::List { .. }
                     | Pattern::Float { .. }
+                    | Pattern::Tuple { .. }
                     | Pattern::String { .. }
                     | Pattern::Assign { .. }
+                    | Pattern::Discard
                     | Pattern::Variable { .. }
-                    | Pattern::Tuple { .. }) => panic!("Unexpected pattern {:?}", pattern),
+                    | Pattern::EmptyList) => panic!("Unexpected pattern {:?}", pattern),
                 };
 
                 let index = cons.index();
@@ -685,6 +699,75 @@ impl Compiler {
             .into_iter()
             .map(|(cons, vars, rows)| Case::new(cons, vars, self.compile_rows(rows)))
             .collect()
+    }
+
+    fn compile_list_cases(
+        &mut self,
+        rows: Vec<Row>,
+        branch_var: Variable,
+        element_type: TypeId,
+    ) -> Decision {
+        let mut empty_rows = vec![];
+        let mut non_empty_rows = vec![];
+        let first_var = self.new_variable(element_type);
+        let rest_var = self.new_variable(branch_var.type_id);
+
+        for mut row in rows {
+            let column = match row.remove_column(&branch_var) {
+                // This row had the branching variable, so we compile it below.
+                Some(column) => column,
+
+                // This row didn't have the branching variable, meaning it does
+                // not match on this constructor. In this case we copy the row
+                // into each of the other cases.
+                None => {
+                    empty_rows.push(row.clone());
+                    non_empty_rows.push(row.clone());
+                    continue;
+                }
+            };
+
+            for (pattern, row) in self.flatten_or(column.pattern, row) {
+                let mut columns = row.columns;
+
+                // We should only be able to reach list patterns here for well
+                // typed code. Invalid patterns should have been caught by
+                // earlier analysis.
+                match self.pattern(pattern) {
+                    Pattern::EmptyList => {
+                        empty_rows.push(Row::new(columns, row.guard, row.body));
+                    }
+
+                    Pattern::List { first, rest, .. } => {
+                        columns.push(Column::new(first_var, *first));
+                        columns.push(Column::new(rest_var, *rest));
+                        non_empty_rows.push(Row::new(columns, row.guard, row.body));
+                    }
+
+                    pattern @ (Pattern::Or { .. }
+                    | Pattern::Int { .. }
+                    | Pattern::Float { .. }
+                    | Pattern::Tuple { .. }
+                    | Pattern::String { .. }
+                    | Pattern::Discard
+                    | Pattern::Assign { .. }
+                    | Pattern::Variable { .. }
+                    | Pattern::Constructor { .. }) => {
+                        panic!("Unexpected non-list pattern {:?}", pattern)
+                    }
+                };
+            }
+        }
+
+        Decision::List {
+            variable: branch_var,
+            empty: Box::new(self.compile_rows(empty_rows)),
+            non_empty: Box::new(NonEmptyListDecision {
+                first: first_var,
+                rest: rest_var,
+                decision: self.compile_rows(non_empty_rows),
+            }),
+        }
     }
 
     /// Moves variable-only patterns/tests into the right-hand side/body of a
