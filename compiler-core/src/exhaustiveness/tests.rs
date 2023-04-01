@@ -47,8 +47,10 @@ impl Setup {
         self.compiler.patterns.alloc(Pattern::EmptyList)
     }
 
-    fn list(&mut self, first: PatternId, rest: PatternId) -> PatternId {
-        self.compiler.patterns.alloc(Pattern::List { first, rest })
+    fn list(&mut self, type_: TypeId, first: PatternId, rest: PatternId) -> PatternId {
+        self.compiler
+            .patterns
+            .alloc(Pattern::List { type_, first, rest })
     }
 
     fn variant(&mut self, typ: TypeId, index: usize, args: Vec<PatternId>) -> PatternId {
@@ -676,56 +678,49 @@ fn compile_nonexhaustive_option_type_with_multiple_arguments() {
     );
 }
 
-// #[test]
-// fn compile_exhaustive_option_type() {
-//     let mut setup = Setup::new();
-//     let int_type = setup.new_type(Type::Int);
-//     let option_type = setup.new_type(
-//         Type::Enum(vec![
-//             ("Some".into(), vec![int_type]),
-//             ("None".into(), Vec::new()),
-//         ]),
-//     );
-//     let input = setup.new_variable(option_type);
-//     let result = setup.compile(
-//         input,
-//         vec![
-//             (
-//                 setup.variant(option_type, 0, vec![Pattern::Int("4".into())]),
-//                 rhs(1),
-//             ),
-//             (setup.variant(option_type, 0, vec![setup.bind("a")]), rhs(2)),
-//             (setup.variant(option_type, 1, Vec::new()), rhs(3)),
-//         ],
-//     );
+#[test]
+fn compile_exhaustive_option_type() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let int_4 = setup.int("4");
+    let bind_a = setup.bind("a");
+    let option_type = setup.new_type(Type::Enum(vec![
+        ("Some".into(), vec![int_type]),
+        ("None".into(), Vec::new()),
+    ]));
+    let var_1 = setup.var(1, int_type);
+    let input = setup.new_variable(option_type);
+    let rules = vec![
+        (setup.variant(option_type, 0, vec![int_4]), rhs(1)),
+        (setup.variant(option_type, 0, vec![bind_a]), rhs(2)),
+        (setup.variant(option_type, 1, Vec::new()), rhs(3)),
+    ];
+    let result = setup.compile(input, rules);
 
-//     assert_eq!(
-//         result.tree,
-//         Decision::Switch(
-//             input,
-//             vec![
-//                 Case::new(
-//                     Constructor::Variant(option_type, 0),
-//                     vec![setup.var(1, int_type)],
-//                     Decision::Switch(
-//                         setup.var(1, int_type),
-//                         vec![Case::new(
-//                             Constructor::Int("4".into()),
-//                             Vec::new(),
-//                             success(1)
-//                         )],
-//                         Some(Box::new(success_with_bindings(
-//                             vec![("a", setup.var(1, int_type))],
-//                             2
-//                         )))
-//                     )
-//                 ),
-//                 Case::new(Constructor::Variant(option_type, 1), Vec::new(), success(3))
-//             ],
-//             None
-//         )
-//     );
-// }
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(
+                    Constructor::Variant(option_type, 0),
+                    vec![var_1],
+                    Decision::Switch(
+                        var_1,
+                        vec![Case::new(
+                            Constructor::Int("4".into()),
+                            Vec::new(),
+                            success(1)
+                        )],
+                        Some(Box::new(success_with_bindings(vec![("a", var_1)], 2)))
+                    )
+                ),
+                Case::new(Constructor::Variant(option_type, 1), Vec::new(), success(3))
+            ],
+            None
+        )
+    );
+}
 
 #[test]
 fn compile_redundant_option_type_with_bool() {
@@ -1423,17 +1418,149 @@ fn compile_exhaustive_list_pattern() {
         Decision::Switch(
             input,
             vec![
-                Case::new(Constructor::Variant(list_type, 0), Vec::new(), success(1)),
+                Case::new(Constructor::EmptyList, Vec::new(), success(1)),
                 Case::new(
-                    Constructor::Variant(list_type, 1),
-                    vec![Variable {
-                        id: 1,
-                        type_id: int_type
-                    }],
+                    Constructor::List(int_type),
+                    vec![
+                        Variable {
+                            id: 1,
+                            type_id: int_type
+                        },
+                        Variable {
+                            id: 2,
+                            type_id: list_type
+                        }
+                    ],
                     success_with_bindings(vec![("a", input)], 2)
                 ),
             ],
             None,
+        )
+    );
+}
+
+#[test]
+fn compile_exhaustive_custom_list_type_empty() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let list_type = setup.new_type(Type::Int);
+    let var_1 = setup.var(1, int_type);
+    let var_2 = setup.var(2, list_type);
+    setup.compiler.types[list_type.0] = Type::Enum(vec![
+        ("Empty".into(), Vec::new()),
+        ("NonEmpty".into(), vec![int_type, list_type]),
+    ]);
+    let input = setup.new_variable(list_type);
+    let rules = vec![
+        (setup.variant(list_type, 0, vec![]), rhs(1)),
+        (setup.discard(), rhs(2)),
+    ];
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::Variant(list_type, 0), vec![], success(1)),
+                Case::new(
+                    Constructor::Variant(list_type, 1),
+                    vec![var_1, var_2],
+                    success_with_bindings(vec![], 2),
+                ),
+            ],
+            None
+        )
+    );
+}
+#[test]
+fn compile_exhaustive_list_just_empty_pattern() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let list_type = setup.new_type(Type::List(int_type));
+    let var_1 = setup.var(1, int_type);
+    let var_2 = setup.var(2, list_type);
+    let input = setup.new_variable(list_type);
+    let rules = vec![(setup.empty_list(), rhs(1)), (setup.discard(), rhs(2))];
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::EmptyList, vec![], success(1)),
+                Case::new(
+                    Constructor::List(int_type),
+                    vec![var_1, var_2],
+                    success_with_bindings(vec![], 2),
+                ),
+            ],
+            None
+        )
+    );
+}
+
+#[test]
+fn compile_exhaustive_custom_list_type_non_empty() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let list_type = setup.new_type(Type::Int);
+    let discard = setup.discard();
+    let var_1 = setup.var(1, int_type);
+    let var_2 = setup.var(2, list_type);
+    setup.compiler.types[list_type.0] = Type::Enum(vec![
+        ("Empty".into(), Vec::new()),
+        ("NonEmpty".into(), vec![int_type, list_type]),
+    ]);
+    let rules = vec![
+        (setup.variant(list_type, 1, vec![discard, discard]), rhs(1)),
+        (discard, rhs(2)),
+    ];
+    let input = setup.new_variable(list_type);
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::Variant(list_type, 0), vec![], success(2)),
+                Case::new(
+                    Constructor::Variant(list_type, 1),
+                    vec![var_1, var_2],
+                    success(1),
+                ),
+            ],
+            None
+        )
+    );
+}
+
+#[test]
+fn compile_exhaustive_list_type_non_empty() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::Int);
+    let list_type = setup.new_type(Type::List(int_type));
+    let discard = setup.discard();
+    let var_1 = setup.var(1, int_type);
+    let var_2 = setup.var(2, list_type);
+    let rules = vec![
+        (setup.variant(list_type, 1, vec![discard, discard]), rhs(1)),
+        (discard, rhs(2)),
+    ];
+    let input = setup.new_variable(list_type);
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::EmptyList, vec![], success(2)),
+                Case::new(Constructor::List(int_type), vec![var_1, var_2], success(1)),
+            ],
+            None
         )
     );
 }

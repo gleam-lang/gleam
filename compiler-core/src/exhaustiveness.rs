@@ -116,6 +116,7 @@ pub enum Pattern {
         arguments: Vec<PatternId>,
     },
     List {
+        type_: TypeId,
         first: PatternId,
         rest: PatternId,
     },
@@ -512,11 +513,12 @@ impl Compiler {
                 Decision::Switch(branch_var, cases, None)
             }
 
-            Type::List(type_) => {
-                let v = |i| Constructor::Variant(branch_var.type_id, i);
+            Type::List(elem) => {
+                let mut v = |t| self.new_variable(t);
+                let list = branch_var.type_id;
                 let cases = vec![
-                    (v(0), vec![], Vec::new()),
-                    (v(1), vec![self.new_variable(type_)], Vec::new()),
+                    (Constructor::EmptyList, vec![], Vec::new()),
+                    (Constructor::List(elem), vec![v(elem), v(list)], Vec::new()),
                 ];
                 let cases = self.compile_constructor_cases(rows, branch_var, cases);
                 Decision::Switch(branch_var, cases, None)
@@ -562,14 +564,14 @@ impl Compiler {
                             ((val.clone(), val.clone()), Constructor::String(val.clone()))
                         }
 
-                        Pattern::Constructor { .. }
+                        pattern @ (Pattern::Constructor { .. }
                         | Pattern::Assign { .. }
                         | Pattern::Tuple { .. }
                         | Pattern::Variable { .. }
                         | Pattern::Discard
                         | Pattern::EmptyList
                         | Pattern::List { .. }
-                        | Pattern::Or { .. } => panic!("Unexpected pattern {:?}", pat),
+                        | Pattern::Or { .. }) => panic!("Unexpected pattern {:?}", pattern),
                     };
 
                     if let Some(index) = tested.get(&key) {
@@ -637,8 +639,6 @@ impl Compiler {
                 // into each of the other cases.
                 None => {
                     for (_, _, other_case_rows) in &mut cases {
-                        // TODO: remove this clone. It clones multiple patterns,
-                        // which is not cheap.
                         other_case_rows.push(row.clone());
                     }
                     continue;
@@ -646,9 +646,6 @@ impl Compiler {
             };
 
             for (pattern, row) in self.flatten_or(column.pattern, row) {
-                let empty_list_constructor = Constructor::EmptyList;
-                let empty_list_args = vec![];
-
                 // We should only be able to reach constructors here for well
                 // typed code. Invalid patterns should have been caught by
                 // earlier analysis.
@@ -656,10 +653,12 @@ impl Compiler {
                     Pattern::Constructor {
                         constructor,
                         arguments,
-                    } => (constructor, arguments),
+                    } => (constructor.clone(), arguments.clone()),
 
-                    Pattern::EmptyList => (&empty_list_constructor, &empty_list_args),
-                    Pattern::List { first, rest } => todo!(),
+                    Pattern::EmptyList => (Constructor::EmptyList, vec![]),
+                    Pattern::List { first, rest, .. } => {
+                        (Constructor::List(branch_var.type_id), vec![*first, *rest])
+                    }
 
                     pattern @ (Pattern::Discard
                     | Pattern::Or { .. }
@@ -675,7 +674,7 @@ impl Compiler {
                 let mut columns = row.columns;
 
                 for (var, pattern) in cases[index].1.iter().zip(args.into_iter()) {
-                    columns.push(Column::new(*var, *pattern));
+                    columns.push(Column::new(*var, pattern));
                 }
 
                 cases[index].2.push(Row::new(columns, row.guard, row.body));
