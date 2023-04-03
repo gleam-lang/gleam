@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.28.0 - 2023-04-03
 
 - New projects now require `gleam_stdlib` v0.28.
 
