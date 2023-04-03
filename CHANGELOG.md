@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New projects now require `gleam_stdlib` v0.28.
+
 ## v0.28.0-rc3 - 2023-03-31
 
 - Fixed a bug where source links would be incorrect in HTML documentation.
