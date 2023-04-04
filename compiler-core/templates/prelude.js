@@ -181,17 +181,18 @@ export function toBitString(segments) {
 }
 
 // Derived from this answer https://stackoverflow.com/questions/8482309/converting-javascript-integer-to-byte-array-and-back
-export function sizedInt(value, size) {
+export function sizedInt(int, size) {
+  let value = int;
   if (size < 0) {
     return new Uint8Array();
   }
   if (size % 8 != 0) {
     throw "Needs to be a byte size" + size;
   }
-  var byteArray = new Uint8Array(size / 8);
+  const byteArray = new Uint8Array(size / 8);
 
-  for (var index = 0; index < byteArray.length; index++) {
-    var byte = value & 0xff;
+  for (let index = 0; index < byteArray.length; index++) {
+    const byte = value & 0xff;
     byteArray[index] = byte;
     value = (value - byte) / 256;
   }
@@ -200,11 +201,10 @@ export function sizedInt(value, size) {
 
 export function byteArrayToInt(byteArray) {
   byteArray = byteArray.reverse();
-  var value = 0;
-  for (var i = byteArray.length - 1; i >= 0; i--) {
+  let value = 0;
+  for (let i = byteArray.length - 1; i >= 0; i--) {
     value = value * 256 + byteArray[i];
   }
-
   return value;
 }
 
@@ -321,11 +321,11 @@ export function isEqual(x, y) {
       try {
         if (a.equals(b)) continue;
         else return false;
-      } catch { }
+      } catch {}
     }
 
     let [keys, get] = getters(a);
-    for (const k of keys(a)) {
+    for (let k of keys(a)) {
       values.push(get(a, k), get(b, k));
     }
   }
@@ -395,7 +395,7 @@ export function remainderInt(a, b) {
 }
 
 export function divideInt(a, b) {
-  return Math.trunc(divideFloat(a, b))
+  return Math.trunc(divideFloat(a, b));
 }
 
 export function divideFloat(a, b) {
