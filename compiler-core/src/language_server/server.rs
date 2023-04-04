@@ -295,7 +295,7 @@ where
                 let modules = compiled_modules.into_iter();
                 match result {
                     Ok(value) => {
-                        let feedback = self.feedback.compiled(modules, warnings);
+                        let feedback = self.feedback.response(modules, warnings);
                         let json = serde_json::to_value(value).expect("response to json");
                         (json, feedback)
                     }

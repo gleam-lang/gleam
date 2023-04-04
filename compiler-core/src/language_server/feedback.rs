@@ -50,32 +50,37 @@ impl FeedbackBookKeeper {
     /// Send diagnostics for any warnings and remove any diagnostics for files
     /// that have compiled without warnings.
     ///
-    pub fn compiled(
+    pub fn response(
         &mut self,
         compiled: impl Iterator<Item = PathBuf>,
         warnings: Vec<Warning>,
     ) -> Feedback {
+        let mut any_compiled = false;
         let mut feedback = Feedback::default();
 
         // Any existing diagnostics for files that have been compiled are no
         // longer valid so we set an empty vector of diagnostics for the files
         // to erase their diagnostics.
         for path in compiled {
+            any_compiled = true;
             let has_existing_diagnostics = self.files_with_warnings.remove(&path);
             if has_existing_diagnostics {
                 feedback.unset_existing_diagnostics(path);
             }
         }
 
-        // Remove any error diagnostics as the project has compiled
-        // successfully. We don't limit this to files that have been compiled as
-        // a previous cached version could be used instead of a recompile.
-        //
-        // TODO: avoid clobbering warnings. They should be preserved rather than
-        // removed with the errors here. We will need to store the warnings and
-        // re-send them.
-        for path in self.files_with_errors.drain() {
-            feedback.unset_existing_diagnostics(path);
+        // If any have been compiled and there is no error (which there is not
+        // in this function) then it means that compilation has succeeded, so
+        // there should be no error diagnostics.
+        // We don't limit this to files that have been compiled as a previous
+        // cached version could be used instead of a recompile.
+        if any_compiled {
+            // TODO: avoid clobbering warnings. They should be preserved rather than
+            // removed with the errors here. We will need to store the warnings and
+            // re-send them.
+            for path in self.files_with_errors.drain() {
+                feedback.unset_existing_diagnostics(path);
+            }
         }
 
         for warning in warnings {
@@ -98,7 +103,7 @@ impl FeedbackBookKeeper {
         warnings: Vec<Warning>,
     ) -> Feedback {
         let diagnostic = error.to_diagnostic();
-        let mut feedback = self.compiled(compiled, warnings);
+        let mut feedback = self.response(compiled, warnings);
 
         match diagnostic.location.as_ref().map(|l| l.path.clone()) {
             Some(path) => {
@@ -158,7 +163,7 @@ mod tests {
             },
         };
 
-        let feedback = book_keeper.compiled(
+        let feedback = book_keeper.response(
             vec![file1.clone()].into_iter(),
             vec![warning1.clone(), warning1.clone(), warning2.clone()],
         );
@@ -177,7 +182,7 @@ mod tests {
             feedback
         );
 
-        let feedback = book_keeper.compiled(
+        let feedback = book_keeper.response(
             vec![file1.clone(), file2.clone(), file3].into_iter(),
             vec![],
         );
@@ -270,7 +275,7 @@ mod tests {
 
         // The error diagnostic should be removed if the file compiles later.
 
-        let feedback = book_keeper.compiled(vec![file3.clone()].into_iter(), vec![]);
+        let feedback = book_keeper.response(vec![file3.clone()].into_iter(), vec![]);
 
         assert_eq!(
             Feedback {
@@ -323,7 +328,7 @@ mod tests {
         // The error diagnostic should be removed on a successful compilation,
         // even though the file is not in the compiled files iterator.
 
-        let feedback = book_keeper.compiled(vec![].into_iter(), vec![]);
+        let feedback = book_keeper.response(vec![].into_iter(), vec![]);
 
         assert_eq!(
             Feedback {
