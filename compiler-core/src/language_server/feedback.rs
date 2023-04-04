@@ -74,7 +74,7 @@ impl FeedbackBookKeeper {
         // there should be no error diagnostics.
         // We don't limit this to files that have been compiled as a previous
         // cached version could be used instead of a recompile.
-        if dbg!(any_compiled) {
+        if any_compiled {
             // TODO: avoid clobbering warnings. They should be preserved rather than
             // removed with the errors here. We will need to store the warnings and
             // re-send them.
