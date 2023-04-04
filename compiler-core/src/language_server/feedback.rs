@@ -74,7 +74,7 @@ impl FeedbackBookKeeper {
         // there should be no error diagnostics.
         // We don't limit this to files that have been compiled as a previous
         // cached version could be used instead of a recompile.
-        if any_compiled {
+        if dbg!(any_compiled) {
             // TODO: avoid clobbering warnings. They should be preserved rather than
             // removed with the errors here. We will need to store the warnings and
             // re-send them.
@@ -304,10 +304,11 @@ mod tests {
         // when a successful compilation occurs.
 
         let mut book_keeper = FeedbackBookKeeper::default();
-        let file = PathBuf::from("src/file1.gleam");
+        let file1 = PathBuf::from("src/file1.gleam");
+        let file2 = PathBuf::from("src/file2.gleam");
 
         let error = Error::Parse {
-            path: file.clone(),
+            path: file1.clone(),
             src: "blah".into(),
             error: ParseError {
                 error: ParseErrorType::ConcatPatternVariableLeftHandSide,
@@ -319,7 +320,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: HashMap::from([(file.clone(), vec![error.to_diagnostic()])]),
+                diagnostics: HashMap::from([(file1.clone(), vec![error.to_diagnostic()])]),
                 messages: vec![],
             },
             feedback
@@ -328,11 +329,50 @@ mod tests {
         // The error diagnostic should be removed on a successful compilation,
         // even though the file is not in the compiled files iterator.
 
+        let feedback = book_keeper.response(vec![file2].into_iter(), vec![]);
+
+        assert_eq!(
+            Feedback {
+                diagnostics: HashMap::from([(file1, vec![])]),
+                messages: vec![],
+            },
+            feedback
+        );
+    }
+
+    // https://github.com/gleam-lang/gleam/issues/2105
+    #[test]
+    fn successful_non_compilation_does_not_remove_error_diagnostic() {
+        let mut book_keeper = FeedbackBookKeeper::default();
+        let file1 = PathBuf::from("src/file1.gleam");
+
+        let error = Error::Parse {
+            path: file1.clone(),
+            src: "blah".into(),
+            error: ParseError {
+                error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+                location: SrcSpan::new(1, 4),
+            },
+        };
+
+        let feedback = book_keeper.build_with_error(error.clone(), vec![].into_iter(), vec![]);
+
+        assert_eq!(
+            Feedback {
+                diagnostics: HashMap::from([(file1.clone(), vec![error.to_diagnostic()])]),
+                messages: vec![],
+            },
+            feedback
+        );
+
+        // The error diagnostic should not be removed, nothing has been
+        // successfully compiled.
+
         let feedback = book_keeper.response(vec![].into_iter(), vec![]);
 
         assert_eq!(
             Feedback {
-                diagnostics: HashMap::from([(file, vec![])]),
+                diagnostics: HashMap::new(),
                 messages: vec![],
             },
             feedback
