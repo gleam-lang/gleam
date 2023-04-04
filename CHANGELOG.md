@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where the language server would unset error diagnostics when
+  displaying information on hover.
+
 ## v0.28.0 - 2023-04-03
 
 - New projects now require `gleam_stdlib` v0.28.
