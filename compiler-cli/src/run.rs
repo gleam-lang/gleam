@@ -10,7 +10,6 @@ use gleam_core::{
 use smol_str::SmolStr;
 
 use crate::fs::ProjectIO;
-use crate::module;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
@@ -29,9 +28,11 @@ pub fn command(
     let paths = crate::project_paths_at_current_directory();
     // Validate the module to make sure it is a gleam module path and get the config.
     let config = match &module {
-        Some(mod_path) if !module::is_gleam_module(mod_path) => Err(Error::InvalidModuleName {
-            module: mod_path.to_owned(),
-        }),
+        Some(mod_path) if !crate::module::is_gleam_module(mod_path) => {
+            Err(Error::InvalidModuleName {
+                module: mod_path.to_owned(),
+            })
+        }
         Some(mod_path) => crate::config::module_config(mod_path, &paths),
         _ => crate::config::root_config(),
     }?;
