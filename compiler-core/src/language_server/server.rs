@@ -42,7 +42,7 @@ use super::progress::ConnectionProgressReporter;
 pub struct LanguageServer<'a, IO> {
     initialise_params: InitializeParams,
     connection: DebugIgnore<&'a lsp_server::Connection>,
-    feedback: FeedbackBookKeeper,
+    outside_of_project_feedback: FeedbackBookKeeper,
     router: Router<IO, ConnectionProgressReporter<'a>>,
     io: FileSystemProxy<IO>,
 }
@@ -64,7 +64,7 @@ where
         Ok(Self {
             connection: connection.into(),
             initialise_params,
-            feedback: FeedbackBookKeeper::default(),
+            outside_of_project_feedback: FeedbackBookKeeper::default(),
             router,
             io,
         })
@@ -275,32 +275,33 @@ where
         }
     }
 
-    fn respond_with_engine<T>(
+    fn respond_with_engine<T, Handler>(
         &mut self,
         path: PathBuf,
-        handler: impl FnOnce(
-            &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
-        ) -> engine::Response<T>,
+        handler: Handler,
     ) -> (Json, Feedback)
     where
         T: serde::Serialize,
+        Handler: FnOnce(
+            &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
+        ) -> engine::Response<T>,
     {
-        match self.router.engine_for_path(&path) {
-            Ok(Some(engine)) => {
+        match self.router.project_for_path(&path) {
+            Ok(Some(project)) => {
                 let engine::Response {
                     result,
                     warnings,
                     compiled_modules,
-                } = handler(engine);
+                } = handler(&mut project.engine);
                 let modules = compiled_modules.into_iter();
                 match result {
                     Ok(value) => {
-                        let feedback = self.feedback.response(modules, warnings);
+                        let feedback = project.feedback.response(modules, warnings);
                         let json = serde_json::to_value(value).expect("response to json");
                         (json, feedback)
                     }
                     Err(e) => {
-                        let feedback = self.feedback.build_with_error(e, modules, warnings);
+                        let feedback = project.feedback.build_with_error(e, modules, warnings);
                         (Json::Null, feedback)
                     }
                 }
@@ -308,7 +309,7 @@ where
 
             Ok(None) => (Json::Null, Feedback::default()),
 
-            Err(error) => (Json::Null, self.feedback.error(error)),
+            Err(error) => (Json::Null, self.outside_of_project_feedback.error(error)),
         }
     }
 
@@ -325,14 +326,21 @@ where
     fn format(&mut self, params: lsp::DocumentFormattingParams) -> (Json, Feedback) {
         let path = path(&params.text_document.uri);
         let mut new_text = String::new();
+        let mut error_response = |error| {
+            let feedback = match self.router.project_for_path(&path) {
+                Ok(Some(project)) => project.feedback.error(error),
+                Ok(None) | Err(_) => self.outside_of_project_feedback.error(error),
+            };
+            (Json::Null, feedback)
+        };
 
         let src = match self.io.read(&path) {
             Ok(src) => src.into(),
-            Err(error) => return (Json::Null, self.feedback.error(error)),
+            Err(error) => return error_response(error),
         };
 
         if let Err(error) = crate::format::pretty(&mut new_text, &src, &path) {
-            return (Json::Null, self.feedback.error(error));
+            return error_response(error);
         }
 
         let line_count = src.lines().count() as u32;
@@ -366,7 +374,7 @@ where
     fn text_document_did_open(&mut self, params: lsp::DidOpenTextDocumentParams) -> Feedback {
         let path = path(&params.text_document.uri);
         if let Err(error) = self.io.write_mem_cache(&path, &params.text_document.text) {
-            return self.feedback.error(error);
+            return self.outside_of_project_feedback.error(error);
         }
 
         self.notified_with_engine(path, |engine| engine.compile_please())
@@ -377,7 +385,7 @@ where
 
         // The file is in sync with the file system, discard our cache of the changes
         if let Err(error) = self.io.delete_mem_cache(&path) {
-            return self.feedback.error(error);
+            return self.outside_of_project_feedback.error(error);
         }
 
         // The files on disc have changed, so compile the project with the new changes
@@ -389,7 +397,7 @@ where
 
         // The file is in sync with the file system, discard our cache of the changes
         if let Err(error) = self.io.delete_mem_cache(&path) {
-            return self.feedback.error(error);
+            return self.outside_of_project_feedback.error(error);
         }
 
         Feedback::default()
@@ -406,7 +414,7 @@ where
         };
 
         if let Err(error) = self.io.write_mem_cache(&path, changes.text.as_str()) {
-            return self.feedback.error(error);
+            return self.outside_of_project_feedback.error(error);
         }
 
         // The files on disc have changed, so compile the project with the new changes

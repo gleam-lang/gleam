@@ -13,6 +13,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use super::feedback::FeedbackBookKeeper;
+
 /// The language server instance serves a langauge client, typically a text
 /// editor. The editor could have multiple Gleam projects open at once, so run
 /// an instance of the language server engine for each project.
@@ -23,7 +25,7 @@ use std::{
 #[derive(Debug)]
 pub struct Router<IO, Reporter> {
     io: FileSystemProxy<IO>,
-    engines: HashMap<PathBuf, LanguageServerEngine<IO, Reporter>>,
+    engines: HashMap<PathBuf, Project<IO, Reporter>>,
     progress_reporter: Reporter,
 }
 
@@ -47,10 +49,7 @@ where
         }
     }
 
-    pub fn engine_for_path(
-        &mut self,
-        path: &Path,
-    ) -> Result<Option<&mut LanguageServerEngine<IO, Reporter>>> {
+    pub fn project_for_path(&mut self, path: &Path) -> Result<Option<&mut Project<IO, Reporter>>> {
         let path = match find_gleam_project_parent(&self.io, path) {
             Some(x) => x,
             None => return Ok(None),
@@ -78,7 +77,11 @@ where
             self.io.clone(),
             paths,
         )?;
-        Ok(Some(entry.insert(engine)))
+        let project = Project {
+            engine,
+            feedback: FeedbackBookKeeper::default(),
+        };
+        Ok(Some(entry.insert(project)))
     }
 
     pub fn delete_engine_for_path(&mut self, path: &Path) {
@@ -101,6 +104,12 @@ where
         }
     }
     None
+}
+
+#[derive(Debug)]
+pub struct Project<A, B> {
+    pub engine: LanguageServerEngine<A, B>,
+    pub feedback: FeedbackBookKeeper,
 }
 
 #[cfg(test)]
