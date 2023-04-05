@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed a bug where the languag server would unset too many error diagnostics
+  when multiple projects are open, more than one have errors, and one of them is
+  successfully compiled.
 - Fixed a bug where the language server would unset error diagnostics when
   displaying information on hover.
 
