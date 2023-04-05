@@ -38,6 +38,7 @@ pub enum Constructor {
     Tuple(Vec<TypeId>),
     Variant(TypeId, usize),
     String(SmolStr),
+    BitString(SmolStr),
 }
 
 impl Constructor {
@@ -47,7 +48,8 @@ impl Constructor {
             Constructor::Int(_)
             | Constructor::Float(_)
             | Constructor::Tuple(_)
-            | Constructor::String(_) => 0,
+            | Constructor::String(_)
+            | Constructor::BitString(_) => 0,
 
             Constructor::Variant(_, index) => *index,
         }
@@ -55,7 +57,6 @@ impl Constructor {
 }
 
 // VarUsage { name: SmolStr, type_: Type, },
-// BitString { segments: Vec<BitStringSegment<Self, Type>>, },
 // Concatenate { left_side_string: SmolStr, right_side_assignment: AssignName, },
 
 /// A user defined pattern such as `Some((x, 10))`.
@@ -95,6 +96,11 @@ pub enum Pattern {
         rest: PatternId,
     },
     EmptyList,
+    // TODO: Compile the matching within the bit strings
+    BitString {
+        // TODO: this is incorrect
+        value: SmolStr,
+    },
 }
 
 /// A representation of a type.
@@ -106,6 +112,7 @@ pub enum Type {
     Int,
     Float,
     String,
+    BitString,
     List(TypeId),
     Tuple(Vec<TypeId>),
     Enum(Vec<(SmolStr, Vec<TypeId>)>),
@@ -424,7 +431,10 @@ impl Match {
                 let variable = *variable;
                 for case in cases {
                     match &case.constructor {
-                        Constructor::Int(_) | Constructor::Float(_) | Constructor::String(_) => {
+                        Constructor::Int(_)
+                        | Constructor::Float(_)
+                        | Constructor::String(_)
+                        | Constructor::BitString(_) => {
                             terms.push(Term::Infinite { variable });
                         }
 
@@ -530,6 +540,7 @@ impl Compiler {
             | Pattern::Discard
             | Pattern::Variable { .. }
             | Pattern::EmptyList
+            | Pattern::BitString { .. }
             | Pattern::Constructor { .. } => vec![(id, row)],
         }
     }
@@ -562,7 +573,7 @@ impl Compiler {
         let branch_var = self.branch_variable(&rows[0], &rows);
 
         match self.variable_type(branch_var).clone() {
-            Type::String | Type::Float | Type::Int => {
+            Type::BitString | Type::String | Type::Float | Type::Int => {
                 let (cases, fallback) = self.compile_infinite_cases(rows, branch_var);
                 Decision::Switch(branch_var, cases, Some(fallback))
             }
@@ -606,15 +617,22 @@ impl Compiler {
             if let Some(col) = row.remove_column(&branch_var) {
                 for (pat, row) in self.flatten_or(col.pattern, row) {
                     let (key, cons) = match self.pattern(pat) {
-                        Pattern::Int { value: val } => {
-                            ((val.clone(), val.clone()), Constructor::Int(val.clone()))
-                        }
-                        Pattern::Float { value: val } => {
-                            ((val.clone(), val.clone()), Constructor::Float(val.clone()))
-                        }
-                        Pattern::String { value: val } => {
-                            ((val.clone(), val.clone()), Constructor::String(val.clone()))
-                        }
+                        Pattern::Int { value } => (
+                            (value.clone(), value.clone()),
+                            Constructor::Int(value.clone()),
+                        ),
+                        Pattern::Float { value } => (
+                            (value.clone(), value.clone()),
+                            Constructor::Float(value.clone()),
+                        ),
+                        Pattern::String { value } => (
+                            (value.clone(), value.clone()),
+                            Constructor::String(value.clone()),
+                        ),
+                        Pattern::BitString { value } => (
+                            (value.clone(), value.clone()),
+                            Constructor::BitString(value.clone()),
+                        ),
 
                         pattern @ (Pattern::Constructor { .. }
                         | Pattern::Assign { .. }
@@ -716,6 +734,7 @@ impl Compiler {
                     | Pattern::Assign { .. }
                     | Pattern::Discard
                     | Pattern::Variable { .. }
+                    | Pattern::BitString { .. }
                     | Pattern::EmptyList) => panic!("Unexpected pattern {:?}", pattern),
                 };
 
@@ -787,6 +806,7 @@ impl Compiler {
                     | Pattern::Discard
                     | Pattern::Assign { .. }
                     | Pattern::Variable { .. }
+                    | Pattern::BitString { .. }
                     | Pattern::Constructor { .. }) => {
                         panic!("Unexpected non-list pattern {:?}", pattern)
                     }
@@ -858,6 +878,7 @@ impl Compiler {
                 | Pattern::Tuple { .. }
                 | Pattern::String { .. }
                 | Pattern::EmptyList
+                | Pattern::BitString { .. }
                 | Pattern::Constructor { .. } => {
                     next = iterator.next();
                     columns.push(column);

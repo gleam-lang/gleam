@@ -80,22 +80,28 @@ impl Setup {
         })
     }
 
-    fn string(&mut self, val: &str) -> PatternId {
-        self.compiler
-            .patterns
-            .alloc(Pattern::String { value: val.into() })
+    fn string(&mut self, value: &str) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::String {
+            value: value.into(),
+        })
     }
 
-    fn int(&mut self, val: &str) -> PatternId {
-        self.compiler
-            .patterns
-            .alloc(Pattern::Int { value: val.into() })
+    fn bit_string(&mut self, value: &str) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::BitString {
+            value: value.into(),
+        })
     }
 
-    fn float(&mut self, val: &str) -> PatternId {
-        self.compiler
-            .patterns
-            .alloc(Pattern::Float { value: val.into() })
+    fn int(&mut self, value: &str) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::Int {
+            value: value.into(),
+        })
+    }
+
+    fn float(&mut self, value: &str) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::Float {
+            value: value.into(),
+        })
     }
 
     fn var(&mut self, id: usize, type_id: TypeId) -> Variable {
@@ -1398,6 +1404,56 @@ fn exhaustive_string_pattern() {
                     Vec::new(),
                     success(2)
                 ),
+            ],
+            Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
+        )
+    );
+}
+
+#[test]
+fn nonexhaustive_bit_string_pattern() {
+    let mut setup = Setup::new();
+    let bit_string_type = setup.new_type(Type::BitString);
+    let input = setup.new_variable(bit_string_type);
+    let rules = vec![
+        (setup.bit_string("1"), rhs(1)),
+        (setup.bit_string("2"), rhs(2)),
+    ];
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::BitString("1".into()), Vec::new(), success(1)),
+                Case::new(Constructor::BitString("2".into()), Vec::new(), success(2)),
+            ],
+            Some(Box::new(failure()))
+        )
+    );
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("_")]);
+}
+
+#[test]
+fn exhaustive_bit_string_pattern() {
+    let mut setup = Setup::new();
+    let bit_string_type = setup.new_type(Type::BitString);
+    let input = setup.new_variable(bit_string_type);
+    let rules = vec![
+        (setup.bit_string("1"), rhs(1)),
+        (setup.bit_string("2"), rhs(2)),
+        (setup.bind("a"), rhs(3)),
+    ];
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::BitString("1".into()), Vec::new(), success(1)),
+                Case::new(Constructor::BitString("2".into()), Vec::new(), success(2)),
             ],
             Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
         )
