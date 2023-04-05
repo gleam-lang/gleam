@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.28.1 - 2023-04-05
 
 - Fixed a bug where the languag server would unset too many error diagnostics
   when multiple projects are open, more than one have errors, and one of them is
