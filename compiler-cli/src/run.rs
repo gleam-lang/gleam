@@ -7,10 +7,10 @@ use gleam_core::{
     io::{CommandExecutor, Stdio},
     paths::ProjectPaths,
 };
-use lazy_static::lazy_static;
 use smol_str::SmolStr;
 
 use crate::fs::ProjectIO;
+use crate::module;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
@@ -27,15 +27,14 @@ pub fn command(
     which: Which,
 ) -> Result<(), Error> {
     let paths = crate::project_paths_at_current_directory();
-    // Validate the module to make sure it is a gleam module path
-    match &module {
-        Some(module_name) if !is_gleam_module(module_name) => Err(Error::InvalidModuleName {
-            module: module_name.to_owned(),
+    // Validate the module to make sure it is a gleam module path and get the config.
+    let config = match &module {
+        Some(mod_path) if !module::is_gleam_module(mod_path) => Err(Error::InvalidModuleName {
+            module: mod_path.to_owned(),
         }),
-        _ => Ok(()),
+        Some(mod_path) => crate::config::module_config(mod_path, &paths),
+        _ => crate::config::root_config(),
     }?;
-
-    let config = crate::config::root_config()?;
 
     // Determine which module to run
     let module = module.unwrap_or(match which {
@@ -79,20 +78,6 @@ pub fn command(
     }?;
 
     std::process::exit(status);
-}
-
-fn is_gleam_module(module: &str) -> bool {
-    use regex::Regex;
-    lazy_static! {
-        static ref RE: Regex = Regex::new(&format!(
-            "^({module}{slash})*{module}$",
-            module = "[a-z][_a-z0-9]*",
-            slash = "/",
-        ))
-        .expect("is_gleam_module() RE regex");
-    }
-
-    RE.is_match(module)
 }
 
 fn run_erlang(
@@ -241,27 +226,5 @@ fn add_deno_flag(args: &mut Vec<String>, flag: &str, flags: &DenoFlag) {
                 args.push(format!("{}={}", flag.to_owned(), allow.join(",")));
             }
         }
-    }
-}
-
-#[test]
-fn invalid_module_names() {
-    for mod_name in [
-        "",
-        "/mod/name",
-        "/mod/name/",
-        "mod/name/",
-        "/mod/",
-        "mod/",
-        "common-invalid-character",
-    ] {
-        assert!(!is_gleam_module(mod_name));
-    }
-}
-
-#[test]
-fn valid_module_names() {
-    for mod_name in ["valid", "valid/name", "valid/mod/name"] {
-        assert!(is_gleam_module(mod_name));
     }
 }
