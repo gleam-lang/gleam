@@ -17,6 +17,7 @@ use crate::{
 };
 use itertools::Itertools;
 use smol_str::SmolStr;
+use crate::type_::PRELUDE_MODULE_NAME;
 
 use self::import::{Imports, Member};
 
@@ -147,7 +148,7 @@ impl<'a> Generator<'a> {
         name: &'static str,
         alias: Option<&'static str>,
     ) {
-        let path = self.import_path(&self.module.type_info.package, "gleam");
+        let path = self.import_path(&self.module.type_info.package, PRELUDE_MODULE_NAME);
         let member = Member {
             name: name.to_doc(),
             alias: alias.map(|a| a.to_doc()),

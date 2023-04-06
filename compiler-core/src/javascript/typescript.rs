@@ -27,6 +27,7 @@ use crate::{
     pretty::{break_, Document, Documentable},
     type_::{Type, TypeVar},
 };
+use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 
 use super::{concat, import::Imports, line, lines, wrap_args, Output, INDENT};
 
@@ -213,7 +214,7 @@ impl<'a> TypeScriptGenerator<'a> {
         // Put it all together
 
         if self.prelude_used() {
-            let path = self.import_path(&self.module.type_info.package, "gleam");
+            let path = self.import_path(&self.module.type_info.package, PRELUDE_MODULE_NAME);
             imports.register_module(path, ["_".into()], []);
         }
 
@@ -629,7 +630,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
             Type::App {
                 name, module, args, ..
-            } if module.is_empty() => self.print_prelude_type(name, args, generic_usages),
+            } if is_prelude_module(module) => self.print_prelude_type(name, args, generic_usages),
 
             Type::App {
                 name, args, module, ..
@@ -647,7 +648,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
             Type::App {
                 name, module, args, ..
-            } if module.is_empty() => self.print_prelude_type(name, args, None),
+            } if is_prelude_module(module) => self.print_prelude_type(name, args, None),
 
             Type::App {
                 name, args, module, ..

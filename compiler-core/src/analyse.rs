@@ -379,7 +379,7 @@ pub fn register_import(
 }
 
 fn validate_module_name(name: &SmolStr) -> Result<(), Error> {
-    if name == "gleam" {
+    if name == PRELUDE_MODULE_NAME {
         return Err(Error::ReservedModuleName { name: name.clone() });
     };
     for segment in name.split('/') {
