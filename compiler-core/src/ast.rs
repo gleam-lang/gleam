@@ -1643,3 +1643,10 @@ impl TypedAssignment {
         self.value.type_()
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UseAssignment {
+    pub location: SrcSpan,
+    pub pattern: UntypedPattern,
+    pub annotation: Option<TypeAst>,
+}

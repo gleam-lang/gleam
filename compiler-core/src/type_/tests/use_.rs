@@ -1,4 +1,4 @@
-use crate::{assert_error, assert_infer, assert_module_infer, assert_warning};
+use crate::{assert_error, assert_infer, assert_module_error, assert_module_infer, assert_warning};
 
 #[test]
 fn arity_1() {
@@ -217,5 +217,46 @@ fn apply(arg, fun) {
 }
 "#,
         vec![("main", "fn() -> Int")],
+    );
+}
+
+#[test]
+fn typed_pattern() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+  use Box(x): Box(Int), Box(y), Box(z) <- apply(Box(1))
+  x + y + z
+}
+
+type Box(a) {
+  Box(a)
+}
+
+fn apply(arg, fun) {
+  fun(arg, arg, arg)
+}
+"#,
+        vec![("main", "fn() -> Int")],
+    );
+}
+
+#[test]
+fn typed_pattern_wrong_type() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  use Box(x): Box(Bool), Box(y), Box(z) <- apply(Box(1))
+  x + y + z
+}
+
+type Box(a) {
+  Box(a)
+}
+
+fn apply(arg, fun) {
+  fun(arg, arg, arg)
+}
+"#
     );
 }

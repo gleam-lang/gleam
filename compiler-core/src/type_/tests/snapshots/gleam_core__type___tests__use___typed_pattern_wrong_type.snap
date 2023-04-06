@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+expression: "\npub fn main() {\n  use Box(x): Box(Bool), Box(y), Box(z) <- apply(Box(1))\n  x + y + z\n}\n\ntype Box(a) {\n  Box(a)\n}\n\nfn apply(arg, fun) {\n  fun(arg, arg, arg)\n}\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:7
+  │
+3 │   use Box(x): Box(Bool), Box(y), Box(z) <- apply(Box(1))
+  │       ^^^^^^^^^^^^^^^^^
+
+Expected type:
+
+    Box(Bool)
+
+Found type:
+
+    Box(Int)
+
