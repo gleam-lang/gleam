@@ -43,12 +43,14 @@ pub fn command(
         Which::Test => format!("{}_test", &config.name),
     });
 
+    let target = target.unwrap_or(config.target);
+
     // Build project so we have bytecode to run
     let built = crate::build::main(Options {
         warnings_as_errors: false,
         codegen: Codegen::All,
         mode: Mode::Dev,
-        target,
+        target: Some(target),
     })?;
 
     // A module can not be run if it does not exist or does not have a public main function.
@@ -60,7 +62,7 @@ pub fn command(
     crate::cli::print_running(&format!("{module}.main"));
 
     // Run the command
-    let status = match target.unwrap_or(config.target) {
+    let status = match target {
         Target::Erlang => match runtime {
             Some(r) => Err(Error::InvalidRuntime {
                 target: Target::Erlang,
