@@ -102,8 +102,8 @@ impl<'a> CallGraphBuilder<'a> {
             }
             Statement::Use(use_) => {
                 self.expression(&use_.call);
-                for pattern in &use_.assignments {
-                    self.pattern(pattern);
+                for assignment in &use_.assignments {
+                    self.pattern(&assignment.pattern);
                 }
             }
         };

@@ -1536,7 +1536,15 @@ impl<'comments> Formatter<'comments> {
         if use_.assignments.is_empty() {
             docvec!["use <-", call]
         } else {
-            let assignments = use_.assignments.iter().map(|pattern| self.pattern(pattern));
+            let assignments = use_.assignments.iter().map(|use_assignment| {
+                let pattern = self.pattern(&use_assignment.pattern);
+                let annotation = use_assignment
+                    .annotation
+                    .as_ref()
+                    .map(|a| ": ".to_doc().append(self.type_ast(a)));
+
+                pattern.append(annotation).group()
+            });
             let assignments = Itertools::intersperse(assignments, break_(",", ", "));
             let left = ["use".to_doc(), break_("", " ")]
                 .into_iter()

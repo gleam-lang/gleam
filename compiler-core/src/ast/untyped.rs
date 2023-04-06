@@ -187,5 +187,5 @@ impl HasLocation for UntypedExpr {
 pub struct Use {
     pub location: SrcSpan,
     pub call: Box<UntypedExpr>,
-    pub assignments: Vec<UntypedPattern>,
+    pub assignments: Vec<UseAssignment>,
 }

@@ -10,7 +10,7 @@ use crate::{
         TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
         TypedExpr, TypedMultiPattern, TypedStatement, UntypedArg, UntypedAssignment, UntypedClause,
         UntypedClauseGuard, UntypedConstant, UntypedConstantBitStringSegment, UntypedExpr,
-        UntypedExprBitStringSegment, UntypedMultiPattern, UntypedPattern, UntypedStatement, Use,
+        UntypedExprBitStringSegment, UntypedMultiPattern, UntypedStatement, Use, UseAssignment,
         USE_ASSIGNMENT_VARIABLE,
     },
 };
@@ -2137,27 +2137,30 @@ struct UseAssignments {
 }
 
 impl UseAssignments {
-    fn from_use_expression(patterns: Vec<UntypedPattern>) -> UseAssignments {
+    fn from_use_expression(sugar_assignments: Vec<UseAssignment>) -> UseAssignments {
         let mut assignments = UseAssignments::default();
 
-        for (index, pattern) in patterns.into_iter().enumerate() {
+        for (index, assignment) in sugar_assignments.into_iter().enumerate() {
+            let UseAssignment {
+                location,
+                pattern,
+                annotation,
+            } = assignment;
             match pattern {
                 // For discards we add a discard function arguments.
-                Pattern::Discard { name, location, .. } => {
-                    assignments.function_arguments.push(Arg {
-                        location,
-                        names: ArgNames::Discard { name },
-                        annotation: None,
-                        type_: (),
-                    })
-                }
+                Pattern::Discard { name, .. } => assignments.function_arguments.push(Arg {
+                    location,
+                    names: ArgNames::Discard { name },
+                    annotation: None,
+                    type_: (),
+                }),
 
                 // For simple patterns of a single variable we add a regular
                 // function argument.
-                Pattern::Var { location, name, .. } => assignments.function_arguments.push(Arg {
+                Pattern::Var { name, .. } => assignments.function_arguments.push(Arg {
                     location,
+                    annotation,
                     names: ArgNames::Named { name },
-                    annotation: None,
                     type_: (),
                 }),
 
@@ -2174,7 +2177,6 @@ impl UseAssignments {
                 | Pattern::BitString { .. }
                 | Pattern::Concatenate { .. }) => {
                     let name: SmolStr = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
-                    let location = pattern.location();
                     assignments.function_arguments.push(Arg {
                         location,
                         names: ArgNames::Named { name: name.clone() },
@@ -2184,8 +2186,8 @@ impl UseAssignments {
                     let assignment = Assignment {
                         location,
                         pattern,
+                        annotation,
                         kind: AssignmentKind::Let,
-                        annotation: None,
                         value: Box::new(UntypedExpr::Var { location, name }),
                     };
                     assignments

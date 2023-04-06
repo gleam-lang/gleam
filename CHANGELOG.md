@@ -4,6 +4,7 @@
 
 - Fixed a bug where the language server would unset error diagnostics when
   displaying information on hover.
+- Added support for type annotations in use statements.
 
 ## v0.28.0 - 2023-04-03
 

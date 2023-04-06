@@ -63,7 +63,7 @@ use crate::ast::{
     Statement, TargetGroup, TodoKind, TypeAlias, TypeAst, UnqualifiedImport, UntypedArg,
     UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExternalFnArg,
     UntypedModule, UntypedModuleStatement, UntypedPattern, UntypedRecordUpdateArg,
-    UntypedStatement, Use, CAPTURE_VARIABLE,
+    UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -728,7 +728,7 @@ where
         let assignments = if let Some((_, Token::LArrow, _)) = self.tok0 {
             vec![]
         } else {
-            Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?
+            Parser::series_of(self, &Parser::parse_use_assignment, Some(&Token::Comma))?
         };
 
         _ = self.expect_one(&Token::LArrow)?;
@@ -738,6 +738,27 @@ where
             location: SrcSpan::new(start, call.location().end),
             assignments,
             call: Box::new(call),
+        }))
+    }
+
+    fn parse_use_assignment(&mut self) -> Result<Option<UseAssignment>, ParseError> {
+        let start = self.tok0.as_ref().map(|t| t.0).unwrap_or(0);
+
+        let pattern = self.parse_pattern()?.ok_or_else(|| ParseError {
+            error: ParseErrorType::ExpectedPattern,
+            location: SrcSpan { start, end: start },
+        })?;
+
+        let annotation = self.parse_type_annotation(&Token::Colon, false)?;
+        let end = match annotation {
+            Some(ref a) => a.location().end,
+            None => pattern.location().end,
+        };
+
+        Ok(Some(UseAssignment {
+            location: SrcSpan { start, end },
+            pattern,
+            annotation,
         }))
     }
 
