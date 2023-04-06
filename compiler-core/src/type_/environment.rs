@@ -59,7 +59,7 @@ impl<'a> Environment<'a> {
         warnings: &'a TypeWarningEmitter,
     ) -> Self {
         let prelude = importable_modules
-            .get("gleam")
+            .get(PRELUDE_MODULE_NAME)
             .expect("Unable to find prelude in importable modules");
         Self {
             previous_id: ids.next(),
@@ -223,7 +223,7 @@ impl<'a> Environment<'a> {
         let location = info.origin;
         match self.module_types.insert(type_name, info) {
             None => Ok(()),
-            Some(prelude_type) if prelude_type.module.is_empty() => Ok(()),
+            Some(prelude_type) if is_prelude_module(&prelude_type.module) => Ok(()),
             Some(previous) => Err(Error::DuplicateTypeName {
                 name,
                 location,

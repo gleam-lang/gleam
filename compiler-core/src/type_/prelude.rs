@@ -5,6 +5,7 @@ use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 use super::{
     ModuleInterface, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant,
 };
+use smol_str::SmolStr;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 const BIT_STRING: &str = "BitString";
@@ -17,7 +18,11 @@ const RESULT: &str = "Result";
 const STRING: &str = "String";
 const UTF_CODEPOINT: &str = "UtfCodepoint";
 
-// TODO: use "gleam" as the prelude module name, not ""
+pub const PRELUDE_MODULE_NAME: &str = "gleam";
+
+pub fn is_prelude_module(module: &SmolStr) -> bool {
+    module == PRELUDE_MODULE_NAME
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum PreludeType {
@@ -52,7 +57,7 @@ pub fn int() -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
         name: INT.into(),
-        module: "".into(),
+        module: PRELUDE_MODULE_NAME.into(),
         args: vec![],
     })
 }
@@ -62,7 +67,7 @@ pub fn float() -> Arc<Type> {
         args: vec![],
         public: true,
         name: FLOAT.into(),
-        module: "".into(),
+        module: PRELUDE_MODULE_NAME.into(),
     })
 }
 
@@ -71,7 +76,7 @@ pub fn bool() -> Arc<Type> {
         args: vec![],
         public: true,
         name: BOOL.into(),
-        module: "".into(),
+        module: PRELUDE_MODULE_NAME.into(),
     })
 }
 
@@ -80,7 +85,7 @@ pub fn string() -> Arc<Type> {
         args: vec![],
         public: true,
         name: STRING.into(),
-        module: "".into(),
+        module: PRELUDE_MODULE_NAME.into(),
     })
 }
 
@@ -89,7 +94,7 @@ pub fn nil() -> Arc<Type> {
         args: vec![],
         public: true,
         name: NIL.into(),
-        module: "".into(),
+        module: PRELUDE_MODULE_NAME.into(),
     })
 }
 
@@ -97,7 +102,7 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
         name: LIST.into(),
-        module: "".into(),
+        module: PRELUDE_MODULE_NAME.into(),
         args: vec![t],
     })
 }
@@ -106,7 +111,7 @@ pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
         name: RESULT.into(),
-        module: "".into(),
+        module: PRELUDE_MODULE_NAME.into(),
         args: vec![a, e],
     })
 }
@@ -124,7 +129,7 @@ pub fn bit_string() -> Arc<Type> {
         args: vec![],
         public: true,
         name: BIT_STRING.into(),
-        module: "".into(),
+        module: PRELUDE_MODULE_NAME.into(),
     })
 }
 
@@ -133,7 +138,7 @@ pub fn utf_codepoint() -> Arc<Type> {
         args: vec![],
         public: true,
         name: UTF_CODEPOINT.into(),
-        module: "".into(),
+        module: PRELUDE_MODULE_NAME.into(),
     })
 }
 
@@ -164,7 +169,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
     };
 
     let mut prelude = ModuleInterface {
-        name: "gleam".into(),
+        name: PRELUDE_MODULE_NAME.into(),
         package: "".into(),
         origin: Origin::Src,
         types: HashMap::new(),
@@ -182,7 +187,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         origin: Default::default(),
                         parameters: vec![],
                         typ: bit_string(),
-                        module: "".into(),
+                        module: PRELUDE_MODULE_NAME.into(),
                         public: true,
                     },
                 );
@@ -197,7 +202,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     value(
                         ValueConstructorVariant::Record {
                             documentation: None,
-                            module: "".into(),
+                            module: PRELUDE_MODULE_NAME.into(),
                             name: "True".into(),
                             field_map: None,
                             arity: 0,
@@ -212,7 +217,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     value(
                         ValueConstructorVariant::Record {
                             documentation: None,
-                            module: "".into(),
+                            module: PRELUDE_MODULE_NAME.into(),
                             name: "False".into(),
                             field_map: None,
                             arity: 0,
@@ -228,7 +233,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         origin: Default::default(),
                         parameters: vec![],
                         typ: bool(),
-                        module: "".into(),
+                        module: PRELUDE_MODULE_NAME.into(),
                         public: true,
                     },
                 );
@@ -241,7 +246,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         origin: Default::default(),
                         parameters: vec![],
                         typ: float(),
-                        module: "".into(),
+                        module: PRELUDE_MODULE_NAME.into(),
                         public: true,
                     },
                 );
@@ -254,7 +259,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         parameters: vec![],
                         typ: int(),
                         origin: Default::default(),
-                        module: "".into(),
+                        module: PRELUDE_MODULE_NAME.into(),
                         public: true,
                     },
                 );
@@ -268,7 +273,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         origin: Default::default(),
                         parameters: vec![list_parameter.clone()],
                         typ: list(list_parameter),
-                        module: "".into(),
+                        module: PRELUDE_MODULE_NAME.into(),
                         public: true,
                     },
                 );
@@ -280,7 +285,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     value(
                         ValueConstructorVariant::Record {
                             documentation: None,
-                            module: "".into(),
+                            module: PRELUDE_MODULE_NAME.into(),
                             name: NIL.into(),
                             arity: 0,
                             field_map: None,
@@ -296,7 +301,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         origin: Default::default(),
                         parameters: vec![],
                         typ: nil(),
-                        module: "".into(),
+                        module: PRELUDE_MODULE_NAME.into(),
                         public: true,
                     },
                 );
@@ -311,7 +316,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         origin: Default::default(),
                         parameters: vec![result_value.clone(), result_error.clone()],
                         typ: result(result_value, result_error),
-                        module: "".into(),
+                        module: PRELUDE_MODULE_NAME.into(),
                         public: true,
                     },
                 );
@@ -325,7 +330,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     value(
                         ValueConstructorVariant::Record {
                             documentation: None,
-                            module: "".into(),
+                            module: PRELUDE_MODULE_NAME.into(),
                             name: "Ok".into(),
                             field_map: None,
                             arity: 1,
@@ -342,7 +347,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     value(
                         ValueConstructorVariant::Record {
                             documentation: None,
-                            module: "".into(),
+                            module: PRELUDE_MODULE_NAME.into(),
                             name: "Error".into(),
                             field_map: None,
                             arity: 1,
@@ -361,7 +366,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         origin: Default::default(),
                         parameters: vec![],
                         typ: string(),
-                        module: "".into(),
+                        module: PRELUDE_MODULE_NAME.into(),
                         public: true,
                     },
                 );
@@ -374,7 +379,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         origin: Default::default(),
                         parameters: vec![],
                         typ: utf_codepoint(),
-                        module: "".into(),
+                        module: PRELUDE_MODULE_NAME.into(),
                         public: true,
                     },
                 );

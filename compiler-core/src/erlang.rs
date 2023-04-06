@@ -26,6 +26,7 @@ use pattern::pattern;
 use smol_str::SmolStr;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
+use crate::type_::is_prelude_module;
 
 const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;
@@ -1928,7 +1929,7 @@ impl<'a> TypePrinter<'a> {
 
             Type::App {
                 name, module, args, ..
-            } if module.is_empty() => self.print_prelude_type(name, args),
+            } if is_prelude_module(module) => self.print_prelude_type(name, args),
 
             Type::App {
                 name, module, args, ..

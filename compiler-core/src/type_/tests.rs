@@ -175,7 +175,7 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = modules.insert("gleam".into(), build_prelude(&ids));
+    let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     crate::type_::ExprTyper::new(&mut crate::type_::Environment::new(
         ids,
         "themodule",
@@ -231,7 +231,7 @@ pub fn compile_module(
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = modules.insert("gleam".into(), build_prelude(&ids));
+    let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
 
     for (name, module_src) in dep {
         let (mut ast, _) = crate::parse::parse_module(module_src).expect("syntax error");
@@ -427,7 +427,7 @@ fn infer_module_type_retention_test() {
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = modules.insert("gleam".into(), build_prelude(&ids));
+    let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let module = crate::analyse::infer_module(
         Target::Erlang,
         &ids,

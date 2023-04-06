@@ -25,6 +25,7 @@ use std::{
     collections::HashSet,
     path::{Path, PathBuf},
 };
+use crate::type_::PRELUDE_MODULE_NAME;
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration};
 
@@ -375,7 +376,7 @@ fn analyse(
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = module_types.insert("gleam".into(), type_::build_prelude(ids));
+    let _ = module_types.insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(ids));
 
     for UncompiledModule {
         name,

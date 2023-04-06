@@ -159,11 +159,7 @@ impl Printer {
 
 fn qualify_type_name(module: &str, type_name: &str) -> Document<'static> {
     let type_name = Document::String(type_name.to_string());
-    if module.is_empty() {
-        docvec!["gleam.", type_name]
-    } else {
-        docvec![Document::String(module.to_string()), ".", type_name]
-    }
+    docvec![Document::String(module.to_string()), ".", type_name]
 }
 
 #[test]
