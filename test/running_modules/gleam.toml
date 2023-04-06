@@ -5,6 +5,7 @@ description = "A Gleam project"
 [dependencies]
 gleam_stdlib = "~> 0.27"
 gleeunit = "~> 0.10"
+rad = "== 0.2.2"
 
 [javascript.deno]
 allow_read = true
