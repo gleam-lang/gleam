@@ -55,3 +55,6 @@ should_fail run --module module/no_main_function
 
 # Main function with wrong arity
 should_fail run --module module/wrong_arity
+
+# try running rad, which will crash if target is erlang
+should_succeed run --module rad
