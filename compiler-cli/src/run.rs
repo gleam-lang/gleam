@@ -26,16 +26,24 @@ pub fn command(
     which: Which,
 ) -> Result<(), Error> {
     let paths = crate::project_paths_at_current_directory();
-    // Validate the module to make sure it is a gleam module path and get the config.
-    let config = match &module {
-        Some(mod_path) if !crate::module::is_gleam_module(mod_path) => {
-            Err(Error::InvalidModuleName {
+
+    // Validate the module path
+    if let Some(mod_path) = &module {
+        if !crate::module::is_gleam_module(mod_path) {
+            return Err(Error::InvalidModuleName {
                 module: mod_path.to_owned(),
-            })
+            });
         }
+    };
+
+    // Get the config
+    let config = match &module {
         Some(mod_path) => crate::config::module_config(mod_path, &paths),
         _ => crate::config::root_config(),
     }?;
+
+    // Download dependencies
+    let manifest = crate::build::download_dependencies()?;
 
     // Determine which module to run
     let module = module.unwrap_or(match which {
@@ -46,12 +54,15 @@ pub fn command(
     let target = target.unwrap_or(config.target);
 
     // Build project so we have bytecode to run
-    let built = crate::build::main(Options {
-        warnings_as_errors: false,
-        codegen: Codegen::All,
-        mode: Mode::Dev,
-        target: Some(target),
-    })?;
+    let built = crate::build::main(
+        Options {
+            warnings_as_errors: false,
+            codegen: Codegen::All,
+            mode: Mode::Dev,
+            target: Some(target),
+        },
+        Some(manifest),
+    )?;
 
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = built.get_main_function(&SmolStr::from(module.to_owned()))?;

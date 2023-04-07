@@ -28,12 +28,15 @@ pub(crate) fn erlang_shipment() -> Result<()> {
     crate::fs::delete_dir(&out)?;
 
     // Build project in production mode
-    let built = crate::build::main(Options {
-        warnings_as_errors: false,
-        codegen: Codegen::All,
-        mode,
-        target: Some(target),
-    })?;
+    let built = crate::build::main(
+        Options {
+            warnings_as_errors: false,
+            codegen: Codegen::All,
+            mode,
+            target: Some(target),
+        },
+        None,
+    )?;
 
     for entry in crate::fs::read_dir(&build)?.filter_map(Result::ok) {
         let path = entry.path();

@@ -446,22 +446,28 @@ fn main() {
 }
 
 fn command_check() -> Result<(), Error> {
-    let _ = build::main(Options {
-        warnings_as_errors: false,
-        codegen: Codegen::DepsOnly,
-        mode: Mode::Dev,
-        target: None,
-    })?;
+    let _ = build::main(
+        Options {
+            warnings_as_errors: false,
+            codegen: Codegen::DepsOnly,
+            mode: Mode::Dev,
+            target: None,
+        },
+        None,
+    )?;
     Ok(())
 }
 
 fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<(), Error> {
-    let _ = build::main(Options {
-        warnings_as_errors,
-        codegen: Codegen::All,
-        mode: Mode::Dev,
-        target,
-    })?;
+    let _ = build::main(
+        Options {
+            warnings_as_errors,
+            codegen: Codegen::All,
+            mode: Mode::Dev,
+            target,
+        },
+        None,
+    )?;
     Ok(())
 }
 
