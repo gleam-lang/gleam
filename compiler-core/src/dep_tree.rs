@@ -1,17 +1,9 @@
 use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
 use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
-use std::hash::Hash;
 
 #[cfg(test)]
 use pretty_assertions::assert_eq;
-
-#[derive(Debug, Default)]
-pub struct DependencyTree<T> {
-    graph: petgraph::Graph<T, ()>,
-    indexes: HashMap<T, NodeIndex>,
-    values: HashMap<NodeIndex, T>,
-}
 
 /// Take a sequence of values and their deps, and return the values in
 /// order so that deps come before the dependants.
@@ -58,7 +50,7 @@ fn import_cycle(
 ) -> Vec<SmolStr> {
     let origin = cycle.node_id();
     let mut path = vec![];
-    let _ = find_cycle(origin, origin, &graph, &mut path, &mut HashSet::new());
+    let _ = find_cycle(origin, origin, graph, &mut path, &mut HashSet::new());
     path.iter()
         .map(|index| {
             values

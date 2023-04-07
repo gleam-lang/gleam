@@ -2,7 +2,6 @@ use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
-        dep_tree,
         module_loader::SourceFingerprint,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader},
@@ -10,7 +9,7 @@ use crate::{
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
-    error,
+    dep_tree, error,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     metadata::ModuleEncoder,
     parse::extra::ModuleExtra,

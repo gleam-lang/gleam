@@ -78,6 +78,7 @@ pub mod version;
 pub mod warning;
 
 mod call_graph;
+mod dep_tree;
 pub(crate) mod graph;
 
 pub use error::{Error, Result};
