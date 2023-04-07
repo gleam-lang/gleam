@@ -1,10 +1,11 @@
 use crate::{
     build::{
-        dep_tree, package_compiler, package_compiler::PackageCompiler, project_compiler,
+        package_compiler, package_compiler::PackageCompiler, project_compiler,
         telemetry::Telemetry, Mode, Module, Origin, Package, Target,
     },
     codegen::{self, ErlangApp},
     config::PackageConfig,
+    dep_tree,
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     manifest::ManifestPackage,

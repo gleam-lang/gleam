@@ -13,8 +13,9 @@ use itertools::Itertools;
 use smol_str::SmolStr;
 
 use crate::{
-    build::{dep_tree, module_loader::ModuleLoader, package_compiler::module_name, Module, Origin},
+    build::{module_loader::ModuleLoader, package_compiler::module_name, Module, Origin},
     config::PackageConfig,
+    dep_tree,
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     metadata, type_,
