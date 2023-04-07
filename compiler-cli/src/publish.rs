@@ -130,12 +130,15 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
     fs::delete_dir(&paths.build_directory_for_target(Mode::Prod, Target::Erlang))?;
 
     // Build the project to check that it is valid
-    let built = build::main(Options {
-        warnings_as_errors: false,
-        mode: Mode::Prod,
-        target: Some(Target::Erlang),
-        codegen: Codegen::All,
-    })?;
+    let built = build::main(
+        Options {
+            warnings_as_errors: false,
+            mode: Mode::Prod,
+            target: Some(Target::Erlang),
+            codegen: Codegen::All,
+        },
+        None,
+    )?;
 
     let generated_files = generated_files(paths, &built.root_package)?;
     let src_files = project_files()?;

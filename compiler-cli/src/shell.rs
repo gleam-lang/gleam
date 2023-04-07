@@ -8,12 +8,15 @@ pub fn command() -> Result<(), Error> {
     let paths = crate::project_paths_at_current_directory();
 
     // Build project
-    let _ = crate::build::main(Options {
-        warnings_as_errors: false,
-        codegen: Codegen::All,
-        mode: Mode::Dev,
-        target: Some(Target::Erlang),
-    })?;
+    let _ = crate::build::main(
+        Options {
+            warnings_as_errors: false,
+            codegen: Codegen::All,
+            mode: Mode::Dev,
+            target: Some(Target::Erlang),
+        },
+        None,
+    )?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
