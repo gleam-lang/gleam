@@ -560,7 +560,7 @@ impl<'a> Environment<'a> {
                         match pattern {
                             // If the pattern is a Discard or Var, all constructors are covered by it
                             Pattern::Discard { .. } => return Ok(()),
-                            Pattern::Var { .. } => return Ok(()),
+                            Pattern::Variable { .. } => return Ok(()),
 
                             // If the pattern is a constructor, remove it from unmatched patterns
                             Pattern::Constructor {

@@ -29,7 +29,7 @@ impl Setup {
     fn bind(&mut self, name: &str) -> PatternId {
         self.compiler
             .patterns
-            .alloc(Pattern::Variable { value: name.into() })
+            .alloc(Pattern::Variable { name: name.into() })
     }
 
     fn assign(&mut self, name: &str, pattern: PatternId) -> PatternId {
@@ -83,6 +83,20 @@ impl Setup {
     fn string(&mut self, value: &str) -> PatternId {
         self.compiler.patterns.alloc(Pattern::String {
             value: value.into(),
+        })
+    }
+
+    fn string_prefix_discard(&mut self, prefix: &str) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::StringPrefix {
+            prefix: prefix.into(),
+            rest: AssignName::Discard("_".into()),
+        })
+    }
+
+    fn string_prefix_bind(&mut self, prefix: &str, rest: &str) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::StringPrefix {
+            prefix: prefix.into(),
+            rest: AssignName::Variable(rest.into()),
         })
     }
 
@@ -225,7 +239,7 @@ fn branch_mode_int() {
         ),
         Row::new(vec![Column::new(var2, setup.int("42"))], None, rhs(2)),
     ];
-    let branch = setup.compiler.branch_mode(&rows[0], &rows);
+    let branch = setup.compiler.branch_mode(&rows);
     assert_eq!(branch, BranchMode::Infinite { variable: var2 });
 }
 
@@ -246,7 +260,7 @@ fn branch_mode_string() {
             rhs(1),
         ),
     ];
-    let branch = setup.compiler.branch_mode(&rows[0], &rows);
+    let branch = setup.compiler.branch_mode(&rows);
     assert_eq!(branch, BranchMode::Infinite { variable: var2 });
 }
 
@@ -267,7 +281,7 @@ fn branch_mode_float() {
         ),
         Row::new(vec![Column::new(var2, setup.float("42"))], None, rhs(2)),
     ];
-    let branch = setup.compiler.branch_mode(&rows[0], &rows);
+    let branch = setup.compiler.branch_mode(&rows);
     assert_eq!(branch, BranchMode::Infinite { variable: var2 });
 }
 
@@ -292,7 +306,7 @@ fn branch_mode_bitstring() {
             rhs(2),
         ),
     ];
-    let branch = setup.compiler.branch_mode(&rows[0], &rows);
+    let branch = setup.compiler.branch_mode(&rows);
     assert_eq!(branch, BranchMode::Infinite { variable: var2 });
 }
 
@@ -324,7 +338,7 @@ fn branch_mode_tuple() {
             rhs(2),
         ),
     ];
-    let branch = setup.compiler.branch_mode(&rows[0], &rows);
+    let branch = setup.compiler.branch_mode(&rows);
     assert_eq!(
         branch,
         BranchMode::Tuple {
@@ -1927,5 +1941,93 @@ fn nonexhaustive_list_at_least_two() {
     assert_eq!(
         result.missing_patterns(),
         vec![SmolStr::new("[_, _, _, ..]")]
+    );
+}
+
+#[test]
+fn nonexhaustive_string_prefix_discard_pattern() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::String);
+    let input = setup.new_variable(int_type);
+    let rules = vec![
+        (setup.string_prefix_discard("Hello"), rhs(1)),
+        (setup.string_prefix_discard("Goodbye"), rhs(2)),
+    ];
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::StringPrefix, Vec::new(), success(1)),
+                Case::new(Constructor::StringPrefix, Vec::new(), success(2)),
+            ],
+            Some(Box::new(failure()))
+        )
+    );
+    assert_eq!(result.missing_patterns(), vec![SmolStr::new("_")]);
+}
+
+#[test]
+fn exhaustive_string_prefix_discard_pattern() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::String);
+    let input = setup.new_variable(int_type);
+    let rules = vec![
+        (setup.string_prefix_discard("Hello"), rhs(1)),
+        (setup.string("Goodbye"), rhs(2)),
+        (setup.bind("a"), rhs(3)),
+    ];
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(Constructor::StringPrefix, Vec::new(), success(1)),
+                Case::new(
+                    Constructor::String("Goodbye".into()),
+                    Vec::new(),
+                    success(2)
+                ),
+            ],
+            Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
+        )
+    );
+}
+
+#[test]
+fn exhaustive_string_prefix_bind_pattern() {
+    let mut setup = Setup::new();
+    let int_type = setup.new_type(Type::String);
+    let input = setup.new_variable(int_type);
+    let var_1 = setup.var(0, int_type);
+    let rules = vec![
+        (setup.string_prefix_bind("Hello", "a"), rhs(1)),
+        (setup.string("Goodbye"), rhs(2)),
+        (setup.bind("a"), rhs(3)),
+    ];
+    let result = setup.compile(input, rules);
+
+    assert_eq!(
+        result.tree,
+        Decision::Switch(
+            input,
+            vec![
+                Case::new(
+                    Constructor::StringPrefix,
+                    Vec::new(),
+                    success_with_bindings(vec![("a", var_1)], 1)
+                ),
+                Case::new(
+                    Constructor::String("Goodbye".into()),
+                    Vec::new(),
+                    success(2)
+                ),
+            ],
+            Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
+        )
     );
 }

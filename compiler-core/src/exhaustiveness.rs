@@ -36,9 +36,12 @@ pub enum Constructor {
     Int(SmolStr),
     Float(SmolStr),
     Tuple(Vec<TypeId>),
-    Variant(TypeId, usize),
     String(SmolStr),
+    Variant(TypeId, usize),
+    // TODO: Generate a decision tree for this
     BitString,
+    // TODO: Generate a decision tree for this
+    StringPrefix,
 }
 
 impl Constructor {
@@ -49,15 +52,13 @@ impl Constructor {
             | Constructor::Float(_)
             | Constructor::Tuple(_)
             | Constructor::String(_)
-            | Constructor::BitString => 0,
+            | Constructor::BitString
+            | Constructor::StringPrefix => 0,
 
             Constructor::Variant(_, index) => *index,
         }
     }
 }
-
-// VarUsage { name: SmolStr, type_: Type, },
-// Concatenate { left_side_string: SmolStr, right_side_assignment: AssignName, },
 
 /// A user defined pattern such as `Some((x, 10))`.
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -76,12 +77,16 @@ pub enum Pattern {
     String {
         value: SmolStr,
     },
+    StringPrefix {
+        prefix: SmolStr,
+        rest: AssignName,
+    },
     Assign {
         name: SmolStr,
         pattern: PatternId,
     },
     Variable {
-        value: SmolStr,
+        name: SmolStr,
     },
     Tuple {
         elements: Vec<PatternId>,
@@ -433,7 +438,8 @@ impl Match {
                         Constructor::Int(_)
                         | Constructor::Float(_)
                         | Constructor::String(_)
-                        | Constructor::BitString => {
+                        | Constructor::BitString
+                        | Constructor::StringPrefix => {
                             terms.push(Term::Infinite { variable });
                         }
 
@@ -540,7 +546,8 @@ impl Compiler {
             | Pattern::Variable { .. }
             | Pattern::EmptyList
             | Pattern::BitString { .. }
-            | Pattern::Constructor { .. } => vec![(id, row)],
+            | Pattern::Constructor { .. }
+            | Pattern::StringPrefix { .. } => vec![(id, row)],
         }
     }
 
@@ -558,20 +565,18 @@ impl Compiler {
         // There may be multiple rows, but if the first one has no patterns
         // those extra rows are redundant, as a row without columns/patterns
         // always matches.
-        if rows.first().map_or(false, |c| c.columns.is_empty()) {
+        let first_row_always_matches = rows.first().map(|c| c.columns.is_empty()).unwrap_or(false);
+        if first_row_always_matches {
             let row = rows.remove(0);
             self.diagnostics.reachable.push(row.body.clause_index);
 
-            return if let Some(guard) = row.guard {
-                Decision::Guard(guard, row.body, Box::new(self.compile_rows(rows)))
-            } else {
-                Decision::Success(row.body)
+            return match row.guard {
+                Some(guard) => Decision::Guard(guard, row.body, Box::new(self.compile_rows(rows))),
+                None => Decision::Success(row.body),
             };
         }
 
-        let branch_mode = self.branch_mode(&rows[0], &rows);
-
-        match branch_mode {
+        match self.branch_mode(&rows) {
             BranchMode::Infinite { variable } => {
                 let (cases, fallback) = self.compile_infinite_cases(rows, variable);
                 Decision::Switch(variable, cases, Some(fallback))
@@ -613,7 +618,13 @@ impl Compiler {
     ) -> (Vec<Case>, Box<Decision>) {
         let mut raw_cases: Vec<(Constructor, Vec<Variable>, Vec<Row>)> = Vec::new();
         let mut fallback_rows = Vec::new();
-        let mut tested: HashMap<SmolStr, usize> = HashMap::new();
+        let mut tested: HashMap<TestKey, usize> = HashMap::new();
+
+        #[derive(Debug, PartialEq, Eq, Hash)]
+        enum TestKey {
+            Prefix(SmolStr),
+            Exact(SmolStr),
+        }
 
         for mut row in rows {
             let col = match row.remove_column(&branch_var) {
@@ -627,13 +638,39 @@ impl Compiler {
                 Some(col) => col,
             };
 
-            for (pat, row) in self.flatten_or(col.pattern, row) {
-                let (key, cons) = match self.pattern(pat) {
-                    Pattern::Int { value } => (value.clone(), Constructor::Int(value.clone())),
-                    Pattern::Float { value } => (value.clone(), Constructor::Float(value.clone())),
-                    Pattern::BitString { value } => (value.clone(), Constructor::BitString),
-                    Pattern::String { value } => {
-                        (value.clone(), Constructor::String(value.clone()))
+            for (pattern, mut row) in self.flatten_or(col.pattern, row) {
+                let (key, constructor) = match self.pattern(pattern) {
+                    Pattern::Int { value } => (
+                        TestKey::Exact(value.clone()),
+                        Constructor::Int(value.clone()),
+                    ),
+
+                    Pattern::Float { value } => (
+                        TestKey::Exact(value.clone()),
+                        Constructor::Float(value.clone()),
+                    ),
+
+                    Pattern::BitString { value } => {
+                        (TestKey::Exact(value.clone()), Constructor::BitString)
+                    }
+
+                    Pattern::String { value } => (
+                        TestKey::Exact(value.clone()),
+                        Constructor::String(value.clone()),
+                    ),
+
+                    Pattern::StringPrefix { prefix, rest } => {
+                        let prefix = prefix.clone();
+                        match rest {
+                            AssignName::Discard(_) => (),
+                            AssignName::Variable(name) => {
+                                let name = name.clone();
+                                let variable = Pattern::Variable { name: name.clone() };
+                                let pattern = self.patterns.alloc(variable);
+                                row.columns.push(Column::new(branch_var, pattern));
+                            }
+                        };
+                        (TestKey::Prefix(prefix.clone()), Constructor::StringPrefix)
                     }
 
                     pattern @ (Pattern::Constructor { .. }
@@ -646,15 +683,18 @@ impl Compiler {
                     | Pattern::Or { .. }) => panic!("Unexpected pattern {:?}", pattern),
                 };
 
-                // This tag has already been tested, so this is a redundant test.
-                // Add the row to the previous test rather than duplicating it.
-                if let Some(index) = tested.get(&key) {
-                    raw_cases[*index].2.push(row);
-                    continue; // Do not insert a new test
+                match tested.get(&key) {
+                    // This value has already been tested, so this is a redundant test.
+                    // Add the row to the previous test rather than duplicating it.
+                    Some(index) => {
+                        raw_cases[*index].2.push(row);
+                    }
+                    // This is the first time testing the tag, so we add a case for it.
+                    None => {
+                        _ = tested.insert(key, raw_cases.len());
+                        raw_cases.push((constructor, Vec::new(), vec![row]));
+                    }
                 }
-
-                _ = tested.insert(key, raw_cases.len());
-                raw_cases.push((cons, Vec::new(), vec![row]));
             }
         }
 
@@ -736,7 +776,8 @@ impl Compiler {
                     | Pattern::Discard
                     | Pattern::Variable { .. }
                     | Pattern::BitString { .. }
-                    | Pattern::EmptyList) => panic!("Unexpected pattern {:?}", pattern),
+                    | Pattern::EmptyList
+                    | Pattern::StringPrefix { .. }) => panic!("Unexpected pattern {:?}", pattern),
                 };
 
                 let index = cons.index();
@@ -808,7 +849,8 @@ impl Compiler {
                     | Pattern::Assign { .. }
                     | Pattern::Variable { .. }
                     | Pattern::BitString { .. }
-                    | Pattern::Constructor { .. }) => {
+                    | Pattern::Constructor { .. }
+                    | Pattern::StringPrefix { .. }) => {
                         panic!("Unexpected non-list pattern {:?}", pattern)
                     }
                 };
@@ -862,7 +904,7 @@ impl Compiler {
                     next = iterator.next();
                 }
 
-                Pattern::Variable { value: bind } => {
+                Pattern::Variable { name: bind } => {
                     next = iterator.next();
                     bindings.push((bind.clone(), column.variable));
                 }
@@ -880,7 +922,8 @@ impl Compiler {
                 | Pattern::String { .. }
                 | Pattern::EmptyList
                 | Pattern::BitString { .. }
-                | Pattern::Constructor { .. } => {
+                | Pattern::Constructor { .. }
+                | Pattern::StringPrefix { .. } => {
                     next = iterator.next();
                     columns.push(column);
                 }
@@ -899,21 +942,28 @@ impl Compiler {
 
     /// Given a row, returns the kind of branch that is referred to the
     /// most across all rows.
-    fn branch_mode(&self, row: &Row, rows: &[Row]) -> BranchMode {
+    ///
+    /// # Panics
+    ///
+    /// Panics if there or no rows, or if the first row has no columns.
+    ///
+    fn branch_mode(&self, all_rows: &[Row]) -> BranchMode {
         let mut counts = HashMap::new();
 
-        for row in rows {
+        for row in all_rows {
             for col in &row.columns {
                 *counts.entry(&col.variable).or_insert(0_usize) += 1
             }
         }
 
-        let variable = row
+        let variable = all_rows
+            .first()
+            .expect("Must have at least one row")
             .columns
             .iter()
             .map(|col| col.variable)
             .max_by_key(|var| counts[var])
-            .expect("Row must have at least one column");
+            .expect("The first row must have at least one column");
 
         match self.variable_type(variable) {
             Type::BitString | Type::String | Type::Float | Type::Int => {

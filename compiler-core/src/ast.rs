@@ -1075,7 +1075,7 @@ pub enum Pattern<Type> {
 
     /// The creation of a variable.
     /// e.g. `assert [this_is_a_var, .._] = x`
-    Var {
+    Variable {
         location: SrcSpan,
         name: SmolStr,
         type_: Type,
@@ -1135,7 +1135,7 @@ pub enum Pattern<Type> {
     },
 
     // "prefix" <> variable
-    Concatenate {
+    StringPrefix {
         location: SrcSpan,
         left_location: SrcSpan,
         right_location: SrcSpan,
@@ -1184,7 +1184,7 @@ impl<A> Pattern<A> {
         match self {
             Pattern::Assign { pattern, .. } => pattern.location(),
             Pattern::Int { location, .. }
-            | Pattern::Var { location, .. }
+            | Pattern::Variable { location, .. }
             | Pattern::VarUsage { location, .. }
             | Pattern::List { location, .. }
             | Pattern::Float { location, .. }
@@ -1192,7 +1192,7 @@ impl<A> Pattern<A> {
             | Pattern::String { location, .. }
             | Pattern::Tuple { location, .. }
             | Pattern::Constructor { location, .. }
-            | Pattern::Concatenate { location, .. }
+            | Pattern::StringPrefix { location, .. }
             | Pattern::BitString { location, .. } => *location,
         }
     }
@@ -1211,14 +1211,14 @@ impl TypedPattern {
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::Var { .. }
+            | Pattern::Variable { .. }
             | Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::List { .. }
             | Pattern::Tuple { .. }
             | Pattern::BitString { .. }
-            | Pattern::Concatenate { .. } => None,
+            | Pattern::StringPrefix { .. } => None,
 
             Pattern::Constructor { constructor, .. } => constructor.definition_location(),
         }
@@ -1229,14 +1229,14 @@ impl TypedPattern {
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::Var { .. }
+            | Pattern::Variable { .. }
             | Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::List { .. }
             | Pattern::Tuple { .. }
             | Pattern::BitString { .. }
-            | Pattern::Concatenate { .. } => None,
+            | Pattern::StringPrefix { .. } => None,
 
             Pattern::Constructor { constructor, .. } => constructor.get_documentation(),
         }
@@ -1248,9 +1248,9 @@ impl TypedPattern {
             Pattern::Float { .. } => type_::float(),
             Pattern::String { .. } => type_::string(),
             Pattern::BitString { .. } => type_::bit_string(),
-            Pattern::Concatenate { .. } => type_::string(),
+            Pattern::StringPrefix { .. } => type_::string(),
 
-            Pattern::Var { type_, .. }
+            Pattern::Variable { type_, .. }
             | Pattern::List { type_, .. }
             | Pattern::VarUsage { type_, .. }
             | Pattern::Constructor { type_, .. } => type_.clone(),
@@ -1272,12 +1272,12 @@ impl TypedPattern {
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::Var { .. }
+            | Pattern::Variable { .. }
             | Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::BitString { .. }
-            | Pattern::Concatenate { .. } => Some(Located::Pattern(self)),
+            | Pattern::StringPrefix { .. } => Some(Located::Pattern(self)),
 
             Pattern::Constructor { arguments, .. } => {
                 arguments.iter().find_map(|arg| arg.find_node(byte_index))

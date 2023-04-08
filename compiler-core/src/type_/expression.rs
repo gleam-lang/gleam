@@ -2266,7 +2266,7 @@ impl UseAssignments {
 
                 // For simple patterns of a single variable we add a regular
                 // function argument.
-                Pattern::Var { name, .. } => assignments.function_arguments.push(Arg {
+                Pattern::Variable { name, .. } => assignments.function_arguments.push(Arg {
                     location,
                     annotation,
                     names: ArgNames::Named { name },
@@ -2284,7 +2284,7 @@ impl UseAssignments {
                 | Pattern::Constructor { .. }
                 | Pattern::Tuple { .. }
                 | Pattern::BitString { .. }
-                | Pattern::Concatenate { .. }) => {
+                | Pattern::StringPrefix { .. }) => {
                     let name: SmolStr = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
                     assignments.function_arguments.push(Arg {
                         location,

@@ -308,7 +308,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
             Pattern::Discard { .. } => Ok(()),
 
-            Pattern::Var { name, .. } => {
+            Pattern::Variable { name, .. } => {
                 self.push_assignment(subject.clone(), name);
                 Ok(())
             }
@@ -380,7 +380,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 panic!("JavaScript generation performed with uninferred pattern constructor");
             }
 
-            Pattern::Concatenate {
+            Pattern::StringPrefix {
                 left_side_string,
                 right_side_assignment,
                 ..

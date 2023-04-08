@@ -478,7 +478,7 @@ impl<'module> Generator<'module> {
     fn assignment<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
         // If it is a simple assignment to a variable we can generate a normal
         // JS assignment
-        if let TypedPattern::Var { name, .. } = pattern {
+        if let TypedPattern::Variable { name, .. } = pattern {
             // Subject must be rendered before the variable for variable numbering
             let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
             let js_name = self.next_local_var(name);

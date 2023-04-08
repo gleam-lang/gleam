@@ -182,7 +182,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         let typ = {
             match value.deref() {
-                Pattern::Var { .. } if segment_type == string() => {
+                Pattern::Variable { .. } if segment_type == string() => {
                     Err(Error::BitStringSegmentError {
                         error: bit_string::ErrorType::VariableUtfSegmentInPattern,
                         location,
@@ -217,10 +217,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 location,
             }),
 
-            Pattern::Var { name, location, .. } => {
+            Pattern::Variable { name, location, .. } => {
                 self.insert_variable(&name, type_.clone(), location)
                     .map_err(|e| convert_unify_error(e, location))?;
-                Ok(Pattern::Var {
+                Ok(Pattern::Variable {
                     type_,
                     name,
                     location,
@@ -250,7 +250,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 })
             }
 
-            Pattern::Concatenate {
+            Pattern::StringPrefix {
                 location,
                 left_location,
                 right_location,
@@ -266,7 +266,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         .map_err(|e| convert_unify_error(e, location))?;
                 };
 
-                Ok(Pattern::Concatenate {
+                Ok(Pattern::StringPrefix {
                     location,
                     left_location,
                     right_location,

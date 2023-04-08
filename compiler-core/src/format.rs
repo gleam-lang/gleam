@@ -1329,7 +1329,7 @@ impl<'comments> Formatter<'comments> {
 
             Pattern::String { value, .. } => self.string(value),
 
-            Pattern::Var { name, .. } => name.to_doc(),
+            Pattern::Variable { name, .. } => name.to_doc(),
 
             Pattern::VarUsage { name, .. } => name.to_doc(),
 
@@ -1361,7 +1361,7 @@ impl<'comments> Formatter<'comments> {
                 false,
             ),
 
-            Pattern::Concatenate {
+            Pattern::StringPrefix {
                 left_side_string: left,
                 right_side_assignment: right,
                 ..

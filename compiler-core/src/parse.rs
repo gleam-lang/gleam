@@ -971,7 +971,7 @@ where
                                 SrcSpan { start, end },
                             )
                         }
-                        _ => Pattern::Var {
+                        _ => Pattern::Variable {
                             location: SrcSpan { start, end },
                             name,
                             type_: (),
@@ -1010,7 +1010,7 @@ where
                     let _ = self.next_tok();
                     let (r_start, right, r_end) = self.expect_assign_name()?;
 
-                    Pattern::Concatenate {
+                    Pattern::StringPrefix {
                         location: SrcSpan {
                             start: location.start,
                             end: r_end,
@@ -1096,7 +1096,9 @@ where
                 let (end, rsqb_e) = self.expect_one(&Token::RightSquare)?;
                 let tail = match tail {
                     // There is a tail and it has a Pattern::Var or Pattern::Discard
-                    Some(Some(pat @ (Pattern::Var { .. } | Pattern::Discard { .. }))) => Some(pat),
+                    Some(Some(pat @ (Pattern::Variable { .. } | Pattern::Discard { .. }))) => {
+                        Some(pat)
+                    }
                     // There is a tail and but it has no content, implicit discard
                     Some(Some(pat)) => {
                         return parse_error(ParseErrorType::InvalidTailPattern, pat.location())

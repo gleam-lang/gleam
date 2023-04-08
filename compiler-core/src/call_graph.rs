@@ -233,16 +233,16 @@ impl<'a> CallGraphBuilder<'a> {
             | Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::Concatenate {
+            | Pattern::StringPrefix {
                 right_side_assignment: AssignName::Discard(_),
                 ..
             } => (),
 
-            Pattern::Concatenate {
+            Pattern::StringPrefix {
                 right_side_assignment: AssignName::Variable(name),
                 ..
             }
-            | Pattern::Var { name, .. } => {
+            | Pattern::Variable { name, .. } => {
                 self.define(name);
             }
 
