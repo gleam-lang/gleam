@@ -15,13 +15,6 @@ pub fn is_gleam_module(module: &str) -> bool {
     RE.is_match(module)
 }
 
-/// Get the root for a module.
-pub fn root_module(module_path: &str) -> &str {
-    module_path
-        .get(0..module_path.find('/').unwrap_or(module_path.len()))
-        .expect("Location of / can never be bigger than the string length.")
-}
-
 #[test]
 fn invalid_module_names() {
     for mod_name in [
@@ -42,10 +35,4 @@ fn valid_module_names() {
     for mod_name in ["valid", "valid/name", "valid/mod/name"] {
         assert!(is_gleam_module(mod_name));
     }
-}
-
-#[test]
-fn test_root_module() {
-    assert_eq!(root_module("foo"), "foo");
-    assert_eq!(root_module("foo/bar"), "foo");
 }
