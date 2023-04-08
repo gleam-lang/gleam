@@ -39,19 +39,21 @@ pub fn command(
     // Download dependencies
     let manifest = crate::build::download_dependencies()?;
 
-    // Get the config
-    let config = match &module {
+    // Get the config for the module that is being run to check the target.
+    let mod_config = match &module {
         Some(mod_path) => crate::config::module_config(mod_path, &paths),
         _ => crate::config::root_config(),
     }?;
+    // The root config is required to run the project.
+    let root_config = crate::config::root_config()?;
 
     // Determine which module to run
     let module = module.unwrap_or(match which {
-        Which::Src => config.name.to_string(),
-        Which::Test => format!("{}_test", &config.name),
+        Which::Src => root_config.name.to_string(),
+        Which::Test => format!("{}_test", &root_config.name),
     });
 
-    let target = target.unwrap_or(config.target);
+    let target = target.unwrap_or(mod_config.target);
 
     // Build project so we have bytecode to run
     let built = crate::build::main(
@@ -79,12 +81,16 @@ pub fn command(
                 target: Target::Erlang,
                 invalid_runtime: r,
             }),
-            _ => run_erlang(&paths, &config.name, &module, arguments),
+            _ => run_erlang(&paths, &root_config.name, &module, arguments),
         },
-        Target::JavaScript => match runtime.unwrap_or(config.javascript.runtime) {
-            Runtime::Deno => {
-                run_javascript_deno(&paths, &config, &main_function.package, &module, arguments)
-            }
+        Target::JavaScript => match runtime.unwrap_or(root_config.javascript.runtime) {
+            Runtime::Deno => run_javascript_deno(
+                &paths,
+                &root_config,
+                &main_function.package,
+                &module,
+                arguments,
+            ),
             Runtime::NodeJs => {
                 run_javascript_node(&paths, &main_function.package, &module, arguments)
             }
