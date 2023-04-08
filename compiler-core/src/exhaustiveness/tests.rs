@@ -209,7 +209,7 @@ fn move_variable_patterns_without_constructor_pattern() {
 }
 
 #[test]
-fn branch_variable() {
+fn branch_mode_int() {
     let mut setup = Setup::new();
     let typ = setup.new_type(Type::Int);
     let var1 = setup.new_variable(typ);
@@ -225,10 +225,113 @@ fn branch_variable() {
         ),
         Row::new(vec![Column::new(var2, setup.int("42"))], None, rhs(2)),
     ];
+    let branch = setup.compiler.branch_mode(&rows[0], &rows);
+    assert_eq!(branch, BranchMode::Infinite { variable: var2 });
+}
 
-    let branch = setup.compiler.branch_variable(&rows[0], &rows);
+#[test]
+fn branch_mode_string() {
+    let mut setup = Setup::new();
+    let typ = setup.new_type(Type::String);
+    let var1 = setup.new_variable(typ);
+    let var2 = setup.new_variable(typ);
+    let rows = vec![
+        Row::new(vec![Column::new(var2, setup.string("42"))], None, rhs(2)),
+        Row::new(
+            vec![
+                Column::new(var1, setup.string("42")),
+                Column::new(var2, setup.string("51")),
+            ],
+            None,
+            rhs(1),
+        ),
+    ];
+    let branch = setup.compiler.branch_mode(&rows[0], &rows);
+    assert_eq!(branch, BranchMode::Infinite { variable: var2 });
+}
 
-    assert_eq!(branch, var2);
+#[test]
+fn branch_mode_float() {
+    let mut setup = Setup::new();
+    let typ = setup.new_type(Type::Float);
+    let var1 = setup.new_variable(typ);
+    let var2 = setup.new_variable(typ);
+    let rows = vec![
+        Row::new(
+            vec![
+                Column::new(var1, setup.float("42")),
+                Column::new(var2, setup.float("51")),
+            ],
+            None,
+            rhs(1),
+        ),
+        Row::new(vec![Column::new(var2, setup.float("42"))], None, rhs(2)),
+    ];
+    let branch = setup.compiler.branch_mode(&rows[0], &rows);
+    assert_eq!(branch, BranchMode::Infinite { variable: var2 });
+}
+
+#[test]
+fn branch_mode_bitstring() {
+    let mut setup = Setup::new();
+    let typ = setup.new_type(Type::BitString);
+    let var1 = setup.new_variable(typ);
+    let var2 = setup.new_variable(typ);
+    let rows = vec![
+        Row::new(
+            vec![
+                Column::new(var1, setup.bit_string("42")),
+                Column::new(var2, setup.bit_string("51")),
+            ],
+            None,
+            rhs(1),
+        ),
+        Row::new(
+            vec![Column::new(var2, setup.bit_string("42"))],
+            None,
+            rhs(2),
+        ),
+    ];
+    let branch = setup.compiler.branch_mode(&rows[0], &rows);
+    assert_eq!(branch, BranchMode::Infinite { variable: var2 });
+}
+
+#[test]
+fn branch_mode_tuple() {
+    let mut setup = Setup::new();
+    let int = setup.new_type(Type::Int);
+    let type_ = setup.new_type(Type::Tuple(vec![int, int]));
+    let var1 = setup.new_variable(type_);
+    let var2 = setup.new_variable(type_);
+    let int_0 = setup.int("0");
+    let int_1 = setup.int("1");
+    let int_2 = setup.int("2");
+    let rows = vec![
+        Row::new(
+            vec![
+                Column::new(var1, setup.tuple(vec![(int_0, int), (int_1, int)])),
+                Column::new(var1, setup.tuple(vec![(int_1, int), (int_2, int)])),
+            ],
+            None,
+            rhs(1),
+        ),
+        Row::new(
+            vec![Column::new(
+                var2,
+                setup.tuple(vec![(int_0, int), (int_2, int)]),
+            )],
+            None,
+            rhs(2),
+        ),
+    ];
+    let branch = setup.compiler.branch_mode(&rows[0], &rows);
+    assert_eq!(
+        branch,
+        BranchMode::Tuple {
+            variable: var1,
+            types: vec![int, int]
+        }
+    );
 }
 
 #[test]
@@ -592,7 +695,7 @@ fn exhaustive_nested_int_pattern() {
 fn nonexhaustive_option_type() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Enum(vec![
+    let option_type = setup.new_type(Type::Variants(vec![
         ("Some".into(), vec![int_type]),
         ("None".into(), Vec::new()),
     ]));
@@ -635,7 +738,7 @@ fn nonexhaustive_option_type() {
 fn nonexhaustive_option_type_with_multiple_arguments() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Enum(vec![
+    let option_type = setup.new_type(Type::Variants(vec![
         ("Some".into(), vec![int_type, int_type]),
         ("None".into(), Vec::new()),
     ]));
@@ -690,7 +793,7 @@ fn exhaustive_option_type() {
     let int_type = setup.new_type(Type::Int);
     let int_4 = setup.int("4");
     let bind_a = setup.bind("a");
-    let option_type = setup.new_type(Type::Enum(vec![
+    let option_type = setup.new_type(Type::Variants(vec![
         ("Some".into(), vec![int_type]),
         ("None".into(), Vec::new()),
     ]));
@@ -732,7 +835,7 @@ fn exhaustive_option_type() {
 fn redundant_option_type_with_bool() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Enum(vec![
+    let option_type = setup.new_type(Type::Variants(vec![
         ("Some".into(), vec![int_type]),
         ("None".into(), Vec::new()),
     ]));
@@ -779,7 +882,7 @@ fn redundant_option_type_with_bool() {
 fn redundant_option_type_with_int() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Enum(vec![
+    let option_type = setup.new_type(Type::Variants(vec![
         ("Some".into(), vec![int_type]),
         ("None".into(), Vec::new()),
     ]));
@@ -826,7 +929,7 @@ fn redundant_option_type_with_int() {
 fn exhaustive_option_type_with_binding() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Enum(vec![
+    let option_type = setup.new_type(Type::Variants(vec![
         ("Some".into(), vec![int_type]),
         ("None".into(), Vec::new()),
     ]));
@@ -874,7 +977,7 @@ fn nonexhaustive_pair_in_option_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let tup_type = setup.new_type(Type::Tuple(vec![int_type, int_type]));
-    let option_type = setup.new_type(Type::Enum(vec![
+    let option_type = setup.new_type(Type::Variants(vec![
         ("Some".into(), vec![tup_type]),
         ("None".into(), Vec::new()),
     ]));
@@ -1005,7 +1108,7 @@ fn nonexhaustive_guard() {
 fn nonexhaustive_option_with_two_rows_and_guard() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Enum(vec![
+    let option_type = setup.new_type(Type::Variants(vec![
         ("Some".into(), vec![int_type]),
         ("None".into(), Vec::new()),
     ]));
@@ -1190,7 +1293,7 @@ fn exhaustive_guard_with_same_int() {
 fn exhaustive_option_with_guard() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Enum(vec![
+    let option_type = setup.new_type(Type::Variants(vec![
         ("Some".into(), vec![int_type]),
         ("None".into(), Vec::new()),
     ]));
@@ -1426,8 +1529,8 @@ fn nonexhaustive_bit_string_pattern() {
         Decision::Switch(
             input,
             vec![
-                Case::new(Constructor::BitString("1".into()), Vec::new(), success(1)),
-                Case::new(Constructor::BitString("2".into()), Vec::new(), success(2)),
+                Case::new(Constructor::BitString, Vec::new(), success(1)),
+                Case::new(Constructor::BitString, Vec::new(), success(2)),
             ],
             Some(Box::new(failure()))
         )
@@ -1452,8 +1555,8 @@ fn exhaustive_bit_string_pattern() {
         Decision::Switch(
             input,
             vec![
-                Case::new(Constructor::BitString("1".into()), Vec::new(), success(1)),
-                Case::new(Constructor::BitString("2".into()), Vec::new(), success(2)),
+                Case::new(Constructor::BitString, Vec::new(), success(1)),
+                Case::new(Constructor::BitString, Vec::new(), success(2)),
             ],
             Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
         )
@@ -1496,7 +1599,7 @@ fn exhaustive_custom_list_empty() {
     let list_type = setup.new_type(Type::Int);
     let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type);
-    setup.compiler.types[list_type.0] = Type::Enum(vec![
+    setup.compiler.types[list_type.0] = Type::Variants(vec![
         ("Empty".into(), Vec::new()),
         ("NonEmpty".into(), vec![int_type, list_type]),
     ]);
@@ -1562,7 +1665,7 @@ fn exhaustive_custom_list_non_empty() {
     let discard = setup.discard();
     let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type);
-    setup.compiler.types[list_type.0] = Type::Enum(vec![
+    setup.compiler.types[list_type.0] = Type::Variants(vec![
         ("Empty".into(), Vec::new()),
         ("NonEmpty".into(), vec![int_type, list_type]),
     ]);

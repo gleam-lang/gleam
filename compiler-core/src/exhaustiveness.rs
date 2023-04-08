@@ -38,7 +38,7 @@ pub enum Constructor {
     Tuple(Vec<TypeId>),
     Variant(TypeId, usize),
     String(SmolStr),
-    BitString(SmolStr),
+    BitString,
 }
 
 impl Constructor {
@@ -49,7 +49,7 @@ impl Constructor {
             | Constructor::Float(_)
             | Constructor::Tuple(_)
             | Constructor::String(_)
-            | Constructor::BitString(_) => 0,
+            | Constructor::BitString => 0,
 
             Constructor::Variant(_, index) => *index,
         }
@@ -98,7 +98,6 @@ pub enum Pattern {
     EmptyList,
     // TODO: Compile the matching within the bit strings
     BitString {
-        // TODO: this is incorrect
         value: SmolStr,
     },
 }
@@ -115,7 +114,7 @@ pub enum Type {
     BitString,
     List(TypeId),
     Tuple(Vec<TypeId>),
-    Enum(Vec<(SmolStr, Vec<TypeId>)>),
+    Variants(Vec<(SmolStr, Vec<TypeId>)>),
 }
 
 /// A unique ID to a type.
@@ -434,7 +433,7 @@ impl Match {
                         Constructor::Int(_)
                         | Constructor::Float(_)
                         | Constructor::String(_)
-                        | Constructor::BitString(_) => {
+                        | Constructor::BitString => {
                             terms.push(Term::Infinite { variable });
                         }
 
@@ -448,7 +447,7 @@ impl Match {
                         }
 
                         Constructor::Variant(type_, idx) => {
-                            let name = if let Type::Enum(variants) = &self.types[type_.0] {
+                            let name = if let Type::Variants(variants) = &self.types[type_.0] {
                                 variants[*idx].0.clone()
                             } else {
                                 unreachable!()
@@ -570,34 +569,37 @@ impl Compiler {
             };
         }
 
-        let branch_var = self.branch_variable(&rows[0], &rows);
+        let branch_mode = self.branch_mode(&rows[0], &rows);
 
-        match self.variable_type(branch_var).clone() {
-            Type::BitString | Type::String | Type::Float | Type::Int => {
-                let (cases, fallback) = self.compile_infinite_cases(rows, branch_var);
-                Decision::Switch(branch_var, cases, Some(fallback))
+        match branch_mode {
+            BranchMode::Infinite { variable } => {
+                let (cases, fallback) = self.compile_infinite_cases(rows, variable);
+                Decision::Switch(variable, cases, Some(fallback))
             }
 
-            Type::Tuple(types) => {
+            BranchMode::Tuple { variable, types } => {
                 let variables = self.new_variables(&types);
                 let cases = vec![(Constructor::Tuple(types), variables, Vec::new())];
-                let cases = self.compile_constructor_cases(rows, branch_var, cases);
-                Decision::Switch(branch_var, cases, None)
+                let cases = self.compile_constructor_cases(rows, variable, cases);
+                Decision::Switch(variable, cases, None)
             }
 
-            Type::List(elem) => self.compile_list_cases(rows, branch_var, elem),
+            BranchMode::List {
+                variable,
+                element_type,
+            } => self.compile_list_cases(rows, variable, element_type),
 
-            Type::Enum(variants) => {
+            BranchMode::Variants { variable, variants } => {
                 let cases = variants
                     .iter()
                     .enumerate()
                     .map(|(idx, (_, args))| {
-                        let variant = Constructor::Variant(branch_var.type_id, idx);
+                        let variant = Constructor::Variant(variable.type_id, idx);
                         (variant, self.new_variables(args), Vec::new())
                     })
                     .collect();
-                let cases = self.compile_constructor_cases(rows, branch_var, cases);
-                Decision::Switch(branch_var, cases, None)
+                let cases = self.compile_constructor_cases(rows, variable, cases);
+                Decision::Switch(variable, cases, None)
             }
         }
     }
@@ -611,49 +613,48 @@ impl Compiler {
     ) -> (Vec<Case>, Box<Decision>) {
         let mut raw_cases: Vec<(Constructor, Vec<Variable>, Vec<Row>)> = Vec::new();
         let mut fallback_rows = Vec::new();
-        let mut tested: HashMap<(SmolStr, SmolStr), usize> = HashMap::new();
+        let mut tested: HashMap<SmolStr, usize> = HashMap::new();
 
         for mut row in rows {
-            if let Some(col) = row.remove_column(&branch_var) {
-                for (pat, row) in self.flatten_or(col.pattern, row) {
-                    let (key, cons) = match self.pattern(pat) {
-                        Pattern::Int { value } => (
-                            (value.clone(), value.clone()),
-                            Constructor::Int(value.clone()),
-                        ),
-                        Pattern::Float { value } => (
-                            (value.clone(), value.clone()),
-                            Constructor::Float(value.clone()),
-                        ),
-                        Pattern::String { value } => (
-                            (value.clone(), value.clone()),
-                            Constructor::String(value.clone()),
-                        ),
-                        Pattern::BitString { value } => (
-                            (value.clone(), value.clone()),
-                            Constructor::BitString(value.clone()),
-                        ),
+            let col = match row.remove_column(&branch_var) {
+                // This row does not match on the branch variable, so we push it
+                // into the fallback rows to be tested later.
+                None => {
+                    fallback_rows.push(row);
+                    continue;
+                }
+                // This row does match on the branch variable.
+                Some(col) => col,
+            };
 
-                        pattern @ (Pattern::Constructor { .. }
-                        | Pattern::Assign { .. }
-                        | Pattern::Tuple { .. }
-                        | Pattern::Variable { .. }
-                        | Pattern::Discard
-                        | Pattern::EmptyList
-                        | Pattern::List { .. }
-                        | Pattern::Or { .. }) => panic!("Unexpected pattern {:?}", pattern),
-                    };
-
-                    if let Some(index) = tested.get(&key) {
-                        raw_cases[*index].2.push(row);
-                        continue;
+            for (pat, row) in self.flatten_or(col.pattern, row) {
+                let (key, cons) = match self.pattern(pat) {
+                    Pattern::Int { value } => (value.clone(), Constructor::Int(value.clone())),
+                    Pattern::Float { value } => (value.clone(), Constructor::Float(value.clone())),
+                    Pattern::BitString { value } => (value.clone(), Constructor::BitString),
+                    Pattern::String { value } => {
+                        (value.clone(), Constructor::String(value.clone()))
                     }
 
-                    _ = tested.insert(key, raw_cases.len());
-                    raw_cases.push((cons, Vec::new(), vec![row]));
+                    pattern @ (Pattern::Constructor { .. }
+                    | Pattern::Assign { .. }
+                    | Pattern::Tuple { .. }
+                    | Pattern::Variable { .. }
+                    | Pattern::Discard
+                    | Pattern::EmptyList
+                    | Pattern::List { .. }
+                    | Pattern::Or { .. }) => panic!("Unexpected pattern {:?}", pattern),
+                };
+
+                // This tag has already been tested, so this is a redundant test.
+                // Add the row to the previous test rather than duplicating it.
+                if let Some(index) = tested.get(&key) {
+                    raw_cases[*index].2.push(row);
+                    continue; // Do not insert a new test
                 }
-            } else {
-                fallback_rows.push(row);
+
+                _ = tested.insert(key, raw_cases.len());
+                raw_cases.push((cons, Vec::new(), vec![row]));
             }
         }
 
@@ -896,9 +897,9 @@ impl Compiler {
         }
     }
 
-    /// Given a row, returns the variable in that row that's referred to the
+    /// Given a row, returns the kind of branch that is referred to the
     /// most across all rows.
-    fn branch_variable(&self, row: &Row, rows: &[Row]) -> Variable {
+    fn branch_mode(&self, row: &Row, rows: &[Row]) -> BranchMode {
         let mut counts = HashMap::new();
 
         for row in rows {
@@ -907,11 +908,33 @@ impl Compiler {
             }
         }
 
-        row.columns
+        let variable = row
+            .columns
             .iter()
             .map(|col| col.variable)
             .max_by_key(|var| counts[var])
-            .expect("Row must have at least one column")
+            .expect("Row must have at least one column");
+
+        match self.variable_type(variable) {
+            Type::BitString | Type::String | Type::Float | Type::Int => {
+                BranchMode::Infinite { variable }
+            }
+
+            Type::Tuple(types) => BranchMode::Tuple {
+                variable,
+                types: types.clone(),
+            },
+
+            Type::List(element_type) => BranchMode::List {
+                variable,
+                element_type: *element_type,
+            },
+
+            Type::Variants(variants) => BranchMode::Variants {
+                variable,
+                variants: variants.clone(),
+            },
+        }
     }
 
     /// Returns a new variable to use in the decision tree.
@@ -942,4 +965,23 @@ impl Compiler {
     fn variable_type(&self, id: Variable) -> &Type {
         &self.types[id.type_id.0]
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum BranchMode {
+    Infinite {
+        variable: Variable,
+    },
+    Tuple {
+        variable: Variable,
+        types: Vec<TypeId>,
+    },
+    List {
+        variable: Variable,
+        element_type: TypeId,
+    },
+    Variants {
+        variable: Variable,
+        variants: Vec<(SmolStr, Vec<TypeId>)>,
+    },
 }
