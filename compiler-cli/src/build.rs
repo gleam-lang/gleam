@@ -19,13 +19,8 @@ pub fn download_dependencies() -> Result<Manifest> {
     crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)
 }
 
-pub fn main(options: Options, manifest: Option<Manifest>) -> Result<Built> {
+pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
     let paths = crate::project_paths_at_current_directory();
-    let manifest = match manifest {
-        Some(manifest) => manifest,
-        None => download_dependencies()?,
-    };
-
     let perform_codegen = options.codegen;
     let root_config = crate::config::root_config()?;
     let telemetry = Box::new(cli::Reporter::new());

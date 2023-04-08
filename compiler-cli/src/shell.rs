@@ -15,7 +15,7 @@ pub fn command() -> Result<(), Error> {
             mode: Mode::Dev,
             target: Some(Target::Erlang),
         },
-        None,
+        crate::build::download_dependencies()?,
     )?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

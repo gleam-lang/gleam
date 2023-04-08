@@ -137,7 +137,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
             target: Some(Target::Erlang),
             codegen: Codegen::All,
         },
-        None,
+        build::download_dependencies()?,
     )?;
 
     let generated_files = generated_files(paths, &built.root_package)?;

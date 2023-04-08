@@ -63,7 +63,7 @@ pub fn command(
             mode: Mode::Dev,
             target: Some(target),
         },
-        Some(manifest),
+        manifest,
     )?;
 
     // A module can not be run if it does not exist or does not have a public main function.
