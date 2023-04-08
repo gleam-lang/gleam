@@ -453,7 +453,7 @@ fn command_check() -> Result<(), Error> {
             mode: Mode::Dev,
             target: None,
         },
-        None,
+        build::download_dependencies()?,
     )?;
     Ok(())
 }
@@ -466,7 +466,7 @@ fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<(),
             mode: Mode::Dev,
             target,
         },
-        None,
+        build::download_dependencies()?,
     )?;
     Ok(())
 }

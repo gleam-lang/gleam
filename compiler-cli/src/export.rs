@@ -35,7 +35,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
             mode,
             target: Some(target),
         },
-        None,
+        crate::build::download_dependencies()?,
     )?;
 
     for entry in crate::fs::read_dir(&build)?.filter_map(Result::ok) {
