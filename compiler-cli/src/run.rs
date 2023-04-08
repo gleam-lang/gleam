@@ -36,14 +36,14 @@ pub fn command(
         }
     };
 
+    // Download dependencies
+    let manifest = crate::build::download_dependencies()?;
+
     // Get the config
     let config = match &module {
         Some(mod_path) => crate::config::module_config(mod_path, &paths),
         _ => crate::config::root_config(),
     }?;
-
-    // Download dependencies
-    let manifest = crate::build::download_dependencies()?;
 
     // Determine which module to run
     let module = module.unwrap_or(match which {
