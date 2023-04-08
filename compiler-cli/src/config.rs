@@ -25,7 +25,7 @@ pub fn module_config(mod_path: &str, project_paths: &ProjectPaths) -> Result<Pac
             .find(|file| {
                 file.path()
                     .join("src")
-                    .join(crate::module::root_module(mod_path))
+                    .join(mod_path.to_string() + ".gleam")
                     .is_dir()
             })
         }
