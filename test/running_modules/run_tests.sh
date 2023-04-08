@@ -17,8 +17,11 @@ should_succeed() {
 should_fail() {
     echo
     echo Running: "$@"
-    cargo run -- $@ > /dev/null 2>&1
-    if [ $? -eq 0 ]
+    
+    EXIT_CODE=0
+    cargo run -- $@ > /dev/null 2>&1 || EXIT_CODE=$?
+    
+    if [ $EXIT_CODE -eq 0 ]
     then
         echo ERROR: Command should have failed
         exit 1
