@@ -232,7 +232,6 @@ fn patterns() {
     );
 }
 
-
 #[test]
 fn patterns_with_annotation() {
     assert_format!(
@@ -243,7 +242,6 @@ fn patterns_with_annotation() {
 "#
     );
 }
-
 
 #[test]
 fn long_patterns() {
@@ -281,7 +279,6 @@ fn multiple_long_patterns() {
 "#
     );
 }
-
 
 #[test]
 fn multiple_long_patterns_with_annotations() {
