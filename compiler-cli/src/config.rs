@@ -26,10 +26,12 @@ pub fn module_config(mod_path: &str, project_paths: &ProjectPaths) -> Result<Pac
                 file.path()
                     .join("src")
                     .join(mod_path.to_string() + ".gleam")
-                    .is_dir()
+                    .is_file()
             })
         }
     });
+
+    println!("{:?}", package_path);
 
     match package_path {
         Some(file) => {
