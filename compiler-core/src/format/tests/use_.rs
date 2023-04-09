@@ -314,3 +314,15 @@ fn multiple_long_annotations() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2114
+#[test]
+fn comment() {
+    assert_format!(
+        r#"fn main() {
+  // comment
+  use x <- result.then(y)
+}
+"#
+    );
+}

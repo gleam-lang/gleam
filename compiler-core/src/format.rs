@@ -1526,6 +1526,8 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn use_<'a>(&mut self, use_: &'a Use) -> Document<'a> {
+        let comments = self.pop_comments(use_.location.start);
+
         let call = if use_.call.is_call() {
             docvec![" ", self.expr(&use_.call)]
         } else {
@@ -1533,7 +1535,7 @@ impl<'comments> Formatter<'comments> {
         }
         .group();
 
-        if use_.assignments.is_empty() {
+        let doc = if use_.assignments.is_empty() {
             docvec!["use <-", call]
         } else {
             let assignments = use_.assignments.iter().map(|use_assignment| {
@@ -1551,7 +1553,9 @@ impl<'comments> Formatter<'comments> {
                 .chain(assignments);
             let left = concat(left).nest(INDENT).append(break_("", " ")).group();
             docvec![left, "<-", call].group()
-        }
+        };
+
+        commented(doc, comments)
     }
 
     fn bit_string_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {

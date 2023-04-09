@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where comments above a `use` expression would be formatted
+  incorrectly.
+
 ## v0.28.1 - 2023-04-05
 
 - Fixed a bug where the languag server would unset too many error diagnostics
