@@ -41,7 +41,7 @@ pub fn command(
 
     // Get the config for the module that is being run to check the target.
     let mod_config = match &module {
-        Some(mod_path) => crate::config::module_config(mod_path, &paths),
+        Some(mod_path) => crate::config::find_package_config_for_module(mod_path, &paths),
         _ => crate::config::root_config(),
     }?;
     // The root config is required to run the project.

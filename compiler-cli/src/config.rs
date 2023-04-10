@@ -15,7 +15,7 @@ pub fn root_config() -> Result<PackageConfig, Error> {
 
 /// Get the config for a dependency module. Return the config for the current
 /// project if a dependency doesn't have a config file.
-pub fn module_config(mod_path: &str, project_paths: &ProjectPaths) -> Result<PackageConfig, Error> {
+pub fn find_package_config_for_module(mod_path: &str, project_paths: &ProjectPaths) -> Result<PackageConfig, Error> {
     let package_path = fs::read_dir(project_paths.build_packages_directory()).map_or(None, |x| {
         {
             x.filter_map(Result::ok)
