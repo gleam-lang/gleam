@@ -83,7 +83,7 @@ pub fn command(
             }),
             _ => run_erlang(&paths, &root_config.name, &module, arguments),
         },
-        Target::JavaScript => match runtime.unwrap_or(root_config.javascript.runtime) {
+        Target::JavaScript => match runtime.unwrap_or(mod_config.javascript.runtime) {
             Runtime::Deno => run_javascript_deno(
                 &paths,
                 &root_config,

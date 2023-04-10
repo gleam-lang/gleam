@@ -31,8 +31,6 @@ pub fn module_config(mod_path: &str, project_paths: &ProjectPaths) -> Result<Pac
         }
     });
 
-    println!("{:?}", package_path);
-
     match package_path {
         Some(file) => {
             let config_path = file.path().join("gleam.toml");
