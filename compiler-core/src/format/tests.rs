@@ -5085,3 +5085,16 @@ fn calling_pipeline_1_list() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2119
+#[test]
+fn empty_line_after_fn_with_return_annotation() {
+    assert_format!(
+        r#"fn main() {
+  fn() -> String { "" }
+
+  0
+}
+"#
+    );
+}

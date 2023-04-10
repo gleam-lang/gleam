@@ -510,9 +510,10 @@ where
                         arguments: args,
                         body,
                         return_annotation,
+                        end_position,
                         ..
                     })) => UntypedExpr::Fn {
-                        location,
+                        location: SrcSpan::new(location.start, end_position),
                         is_capture: false,
                         arguments: args,
                         body,
@@ -1402,7 +1403,7 @@ where
         Ok(Some(ModuleStatement::Function(Function {
             documentation,
             location: SrcSpan { start, end },
-            end_position: rbr_e - 1,
+            end_position: rbr_e,
             public,
             name,
             arguments: args,
