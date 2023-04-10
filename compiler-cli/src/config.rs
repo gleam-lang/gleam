@@ -18,10 +18,7 @@ pub fn root_config() -> Result<PackageConfig, Error> {
 pub fn module_config(mod_path: &str, project_paths: &ProjectPaths) -> Result<PackageConfig, Error> {
     let package_path = fs::read_dir(project_paths.build_packages_directory()).map_or(None, |x| {
         {
-            x.filter_map(|file| match file {
-                Ok(file) => Some(file),
-                Err(_) => None,
-            })
+            x.filter_map(Result::ok)
             .find(|file| {
                 file.path()
                     .join("src")
