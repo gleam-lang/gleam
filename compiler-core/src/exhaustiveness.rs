@@ -6,6 +6,28 @@
 //!
 //! Adapted from Yorick Peterse's implementation at
 //! https://github.com/yorickpeterse/pattern-matching-in-rust. Thank you Yorick!
+//!
+//! Note that while this produces a decision tree, this tree is not suitable for
+//! use in code generation yet as it is incomplete. The tree is not correctly
+//! formed for:
+//! - Bit strings
+//! - String prefixes
+//!
+//! These were not implemented as they are more complex and I've not worked out
+//! a good way to do them yet. The tricky bit is that unlike the others they are
+//! not an exact match and they can overlap with other patterns. Take this
+//! example:
+//!
+//!     case x {
+//!        "1" <> _ -> ...
+//!        "12" <> _ -> ...
+//!        "123" -> ...
+//!        _ -> ...
+//!     }
+//!
+//! The decision tree needs to take into account that the first pattern is a
+//! super-pattern of the second, and the second is a super-pattern of the third.
+//!
 
 #[cfg(test)]
 mod tests;
