@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.28.2 - 2023-04-10
 
 - Fixed a bug where comments above a `use` expression would be formatted
   incorrectly.
