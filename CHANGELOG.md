@@ -6,6 +6,8 @@
   incorrectly.
 - Fixed a bug where the formatter would fail to preserve empty lines after a
   block.
+- Fixed a bug where the formatter would fail to preserve empty lines after an
+  anonymous function with a return annotation.
 
 ## v0.28.1 - 2023-04-05
 
