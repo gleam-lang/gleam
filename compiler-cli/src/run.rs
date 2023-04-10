@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use gleam_core::{
     build::{Codegen, Mode, Options, Runtime, Target},
     config::{DenoFlag, PackageConfig},
@@ -7,7 +5,9 @@ use gleam_core::{
     io::{CommandExecutor, Stdio},
     paths::ProjectPaths,
 };
+use lazy_static::lazy_static;
 use smol_str::SmolStr;
+use std::path::PathBuf;
 
 use crate::fs::ProjectIO;
 
@@ -29,7 +29,7 @@ pub fn command(
 
     // Validate the module path
     if let Some(mod_path) = &module {
-        if !crate::module::is_gleam_module(mod_path) {
+        if !is_gleam_module(mod_path) {
             return Err(Error::InvalidModuleName {
                 module: mod_path.to_owned(),
             });
@@ -246,5 +246,42 @@ fn add_deno_flag(args: &mut Vec<String>, flag: &str, flags: &DenoFlag) {
                 args.push(format!("{}={}", flag.to_owned(), allow.join(",")));
             }
         }
+    }
+}
+
+/// Check if a module name is a valid gleam module name.
+fn is_gleam_module(module: &str) -> bool {
+    use regex::Regex;
+    lazy_static! {
+        static ref RE: Regex = Regex::new(&format!(
+            "^({module}{slash})*{module}$",
+            module = "[a-z][_a-z0-9]*",
+            slash = "/",
+        ))
+        .expect("is_gleam_module() RE regex");
+    }
+
+    RE.is_match(module)
+}
+
+#[test]
+fn invalid_module_names() {
+    for mod_name in [
+        "",
+        "/mod/name",
+        "/mod/name/",
+        "mod/name/",
+        "/mod/",
+        "mod/",
+        "common-invalid-character",
+    ] {
+        assert!(!is_gleam_module(mod_name));
+    }
+}
+
+#[test]
+fn valid_module_names() {
+    for mod_name in ["valid", "valid/name", "valid/mod/name"] {
+        assert!(is_gleam_module(mod_name));
     }
 }
