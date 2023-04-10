@@ -4,6 +4,8 @@
 
 - Fixed a bug where comments above a `use` expression would be formatted
   incorrectly.
+- Fixed a bug where the formatter would fail to preserve empty lines after a
+  block.
 
 ## v0.28.1 - 2023-04-05
 
