@@ -130,18 +130,17 @@ impl UntypedExpr {
             | Self::Call { location, .. }
             | Self::List { location, .. }
             | Self::Float { location, .. }
+            | Self::Block { location, .. }
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::Panic { location, .. }
             | Self::String { location, .. }
             | Self::BitString { location, .. }
+            | Self::NegateInt { location, .. }
+            | Self::NegateBool { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::FieldAccess { location, .. }
-            | Self::RecordUpdate { location, .. }
-            | Self::NegateBool { location, .. }
-            | Self::NegateInt { location, .. } => *location,
-
-            Self::Block { statements, .. } => statements.last().location(),
+            | Self::RecordUpdate { location, .. } => *location,
         }
     }
 

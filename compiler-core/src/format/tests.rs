@@ -4,6 +4,7 @@ use pretty_assertions::assert_eq;
 
 mod asignments;
 mod bit_string;
+mod blocks;
 mod record_update;
 mod tuple;
 mod use_;
