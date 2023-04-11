@@ -18,12 +18,14 @@
 //! not an exact match and they can overlap with other patterns. Take this
 //! example:
 //!
-//!     case x {
-//!        "1" <> _ -> ...
-//!        "12" <> _ -> ...
-//!        "123" -> ...
-//!        _ -> ...
-//!     }
+//! ```text
+//! case x {
+//!    "1" <> _ -> ...
+//!    "12" <> _ -> ...
+//!    "123" -> ...
+//!    _ -> ...
+//! }
+//! ```
 //!
 //! The decision tree needs to take into account that the first pattern is a
 //! super-pattern of the second, and the second is a super-pattern of the third.
@@ -118,7 +120,6 @@ pub enum Pattern {
         arguments: Vec<PatternId>,
     },
     List {
-        type_: TypeId,
         first: PatternId,
         rest: PatternId,
     },
@@ -856,7 +857,7 @@ impl Compiler {
                         empty_rows.push(Row::new(columns, row.guard, row.body));
                     }
 
-                    Pattern::List { first, rest, .. } => {
+                    Pattern::List { first, rest } => {
                         columns.push(Column::new(first_var, *first));
                         columns.push(Column::new(rest_var, *rest));
                         non_empty_rows.push(Row::new(columns, row.guard, row.body));

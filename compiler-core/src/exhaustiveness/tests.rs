@@ -47,10 +47,8 @@ impl Setup {
         self.compiler.patterns.alloc(Pattern::EmptyList)
     }
 
-    fn list(&mut self, type_: TypeId, first: PatternId, rest: PatternId) -> PatternId {
-        self.compiler
-            .patterns
-            .alloc(Pattern::List { type_, first, rest })
+    fn list(&mut self, first: PatternId, rest: PatternId) -> PatternId {
+        self.compiler.patterns.alloc(Pattern::List { first, rest })
     }
 
     fn variant(&mut self, typ: TypeId, index: usize, args: Vec<PatternId>) -> PatternId {
@@ -1715,10 +1713,7 @@ fn exhaustive_list_non_empty() {
     let discard = setup.discard();
     let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type);
-    let rules = vec![
-        (setup.list(list_type, discard, discard), rhs(1)),
-        (discard, rhs(2)),
-    ];
+    let rules = vec![(setup.list(discard, discard), rhs(1)), (discard, rhs(2))];
     let input = setup.new_variable(list_type);
     let result = setup.compile(input, rules);
 
@@ -1750,7 +1745,7 @@ fn nonexhaustive_list_empty() {
     let discard = setup.discard();
     let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type);
-    let rules = vec![(setup.list(list_type, discard, discard), rhs(1))];
+    let rules = vec![(setup.list(discard, discard), rhs(1))];
     let input = setup.new_variable(list_type);
     let result = setup.compile(input, rules);
 
@@ -1819,10 +1814,10 @@ fn nonexhaustive_list_exactly_one() {
     let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type);
     let empty_pattern = setup.empty_list();
-    let at_least_one_pattern = setup.list(list_type, discard, discard);
+    let at_least_one_pattern = setup.list(discard, discard);
     let rules = vec![
         (empty_pattern, rhs(1)),
-        (setup.list(list_type, discard, at_least_one_pattern), rhs(2)),
+        (setup.list(discard, at_least_one_pattern), rhs(2)),
     ];
     let input = setup.new_variable(list_type);
     let result = setup.compile(input, rules);
@@ -1875,8 +1870,8 @@ fn nonexhaustive_list_at_least_two() {
     let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type);
     let empty_pattern = setup.empty_list();
-    let one_pattern = setup.list(list_type, discard, empty_pattern);
-    let two_pattern = setup.list(list_type, discard, one_pattern);
+    let one_pattern = setup.list(discard, empty_pattern);
+    let two_pattern = setup.list(discard, one_pattern);
     let rules = vec![
         (empty_pattern, rhs(1)),
         (one_pattern, rhs(2)),
