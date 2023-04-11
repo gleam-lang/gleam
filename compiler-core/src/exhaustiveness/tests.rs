@@ -197,10 +197,10 @@ fn move_variable_patterns() {
     let mut setup = Setup::new();
     let typ = type_::int();
     let var1 = setup.new_variable(typ.clone());
-    let var2 = setup.new_variable(typ.clone());
+    let var2 = setup.new_variable(typ);
     let cons = Constructor::Int("42".into());
     let constructor_pattern = setup.compiler.patterns.alloc(Pattern::Constructor {
-        constructor: cons.clone(),
+        constructor: cons,
         arguments: Vec::new(),
     });
     let row = Row {
@@ -219,10 +219,10 @@ fn move_variable_patterns() {
     assert_eq!(
         case,
         Row {
-            columns: vec![Column::new(var1.clone(), constructor_pattern)],
+            columns: vec![Column::new(var1, constructor_pattern)],
             guard: None,
             body: Body {
-                bindings: vec![("a".into(), var2.clone())],
+                bindings: vec![("a".into(), var2)],
                 clause_index: 42
             }
         }
@@ -233,7 +233,7 @@ fn move_variable_patterns() {
 fn move_variable_patterns_without_constructor_pattern() {
     let mut setup = Setup::new();
     let typ = type_::int();
-    let var1 = setup.new_variable(typ.clone());
+    let var1 = setup.new_variable(typ);
     let row = Row {
         columns: vec![Column::new(var1.clone(), setup.bind("a"))],
         guard: None,
@@ -262,11 +262,11 @@ fn branch_mode_int() {
     let mut setup = Setup::new();
     let typ = type_::int();
     let var1 = setup.new_variable(typ.clone());
-    let var2 = setup.new_variable(typ.clone());
+    let var2 = setup.new_variable(typ);
     let rows = vec![
         Row::new(
             vec![
-                Column::new(var1.clone(), setup.int("42")),
+                Column::new(var1, setup.int("42")),
                 Column::new(var2.clone(), setup.int("51")),
             ],
             None,
@@ -287,7 +287,7 @@ fn branch_mode_string() {
     let mut setup = Setup::new();
     let typ = type_::string();
     let var1 = setup.new_variable(typ.clone());
-    let var2 = setup.new_variable(typ.clone());
+    let var2 = setup.new_variable(typ);
     let rows = vec![
         Row::new(
             vec![Column::new(var2.clone(), setup.string("42"))],
@@ -296,7 +296,7 @@ fn branch_mode_string() {
         ),
         Row::new(
             vec![
-                Column::new(var1.clone(), setup.string("42")),
+                Column::new(var1, setup.string("42")),
                 Column::new(var2.clone(), setup.string("51")),
             ],
             None,
@@ -312,11 +312,11 @@ fn branch_mode_float() {
     let mut setup = Setup::new();
     let typ = type_::float();
     let var1 = setup.new_variable(typ.clone());
-    let var2 = setup.new_variable(typ.clone());
+    let var2 = setup.new_variable(typ);
     let rows = vec![
         Row::new(
             vec![
-                Column::new(var1.clone(), setup.float("42")),
+                Column::new(var1, setup.float("42")),
                 Column::new(var2.clone(), setup.float("51")),
             ],
             None,
@@ -337,11 +337,11 @@ fn branch_mode_bitstring() {
     let mut setup = Setup::new();
     let typ = type_::bit_string();
     let var1 = setup.new_variable(typ.clone());
-    let var2 = setup.new_variable(typ.clone());
+    let var2 = setup.new_variable(typ);
     let rows = vec![
         Row::new(
             vec![
-                Column::new(var1.clone(), setup.bit_string("42")),
+                Column::new(var1, setup.bit_string("42")),
                 Column::new(var2.clone(), setup.bit_string("51")),
             ],
             None,
@@ -384,7 +384,7 @@ fn branch_mode_tuple() {
         ),
         Row::new(
             vec![Column::new(
-                var2.clone(),
+                var2,
                 setup.tuple(vec![(int_0, int.clone()), (int_2, int.clone())]),
             )],
             None,
@@ -395,7 +395,7 @@ fn branch_mode_tuple() {
     assert_eq!(
         branch,
         BranchMode::Tuple {
-            variable: var1.clone(),
+            variable: var1,
             types: vec![int.clone(), int]
         }
     );
@@ -405,14 +405,14 @@ fn branch_mode_tuple() {
 fn simple_pattern() {
     let mut setup = Setup::new();
     let typ = type_::int();
-    let input = setup.new_variable(typ.clone());
+    let input = setup.new_variable(typ);
     let rules = vec![(setup.int("1"), rhs(1)), (setup.discard(), rhs(2))];
     let result = setup.compile(input.clone(), rules);
 
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![Case::new(
                 Constructor::Int("1".into()),
                 Vec::new(),
@@ -427,14 +427,14 @@ fn simple_pattern() {
 fn nonexhaustive_pattern() {
     let mut setup = Setup::new();
     let typ = type_::int();
-    let input = setup.new_variable(typ.clone());
+    let input = setup.new_variable(typ);
     let rules = vec![(setup.int("1"), rhs(1))];
     let result = setup.compile(input.clone(), rules);
 
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![Case::new(
                 Constructor::Int("1".into()),
                 Vec::new(),
@@ -463,7 +463,7 @@ fn redundant_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![Case::new(
                 Constructor::Int("1".into()),
                 Vec::new(),
@@ -479,7 +479,7 @@ fn redundant_pattern() {
 fn redundant_int() {
     let mut setup = Setup::new();
     let typ = type_::int();
-    let input = setup.new_variable(typ.clone());
+    let input = setup.new_variable(typ);
     let rules = vec![
         (setup.int("1"), rhs(1)),
         (setup.int("1"), rhs(2)),
@@ -496,10 +496,7 @@ fn redundant_int() {
                 Case::new(Constructor::Int("1".into()), Vec::new(), success(1)),
                 Case::new(Constructor::Int("2".into()), Vec::new(), success(3)),
             ],
-            Some(Box::new(success_with_bindings(
-                vec![("a", input.clone())],
-                4
-            )))
+            Some(Box::new(success_with_bindings(vec![("a", input)], 4)))
         )
     );
     assert_eq!(result.diagnostics.reachable, vec![1, 3, 4]);
@@ -509,7 +506,7 @@ fn redundant_int() {
 fn variable_pattern() {
     let mut setup = Setup::new();
     let typ = type_::int();
-    let input = setup.new_variable(typ.clone());
+    let input = setup.new_variable(typ);
     let rules = vec![(setup.int("1"), rhs(1)), (setup.bind("a"), rhs(2))];
     let result = setup.compile(input.clone(), rules);
 
@@ -522,10 +519,7 @@ fn variable_pattern() {
                 Vec::new(),
                 success(1)
             )],
-            Some(Box::new(success_with_bindings(
-                vec![("a", input.clone())],
-                2
-            )))
+            Some(Box::new(success_with_bindings(vec![("a", input)], 2)))
         )
     );
 }
@@ -541,7 +535,7 @@ fn nonexhaustive_float_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(Constructor::Float("4.0".into()), Vec::new(), success(1)),
                 Case::new(Constructor::Float("5.3".into()), Vec::new(), success(2)),
@@ -572,10 +566,7 @@ fn exhaustive_float_pattern() {
                 Case::new(Constructor::Float("4.0".into()), Vec::new(), success(1)),
                 Case::new(Constructor::Float("5.1".into()), Vec::new(), success(2)),
             ],
-            Some(Box::new(success_with_bindings(
-                vec![("a", input.clone())],
-                3
-            )))
+            Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
         )
     );
 }
@@ -591,7 +582,7 @@ fn nonexhaustive_int_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(Constructor::Int("4".into()), Vec::new(), success(1)),
                 Case::new(Constructor::Int("5".into()), Vec::new(), success(2)),
@@ -622,10 +613,7 @@ fn exhaustive_int_pattern() {
                 Case::new(Constructor::Int("4".into()), Vec::new(), success(1)),
                 Case::new(Constructor::Int("5".into()), Vec::new(), success(2)),
             ],
-            Some(Box::new(success_with_bindings(
-                vec![("a", input.clone())],
-                3
-            )))
+            Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
         )
     );
 }
@@ -649,16 +637,16 @@ fn nonexhaustive_nested_int_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![Case::new(
-                Constructor::Tuple(vec![int_type.clone(), int_type.clone()]),
+                Constructor::Tuple(vec![int_type.clone(), int_type]),
                 vec![var_1.clone(), var_2.clone()],
                 Decision::Switch(
-                    var_1.clone(),
+                    var_1,
                     vec![Case::new(
                         Constructor::Int("4".into()),
                         Vec::new(),
-                        success_with_bindings(vec![("a", var_2.clone())], 1)
+                        success_with_bindings(vec![("a", var_2)], 1)
                     )],
                     Some(Box::new(failure()))
                 )
@@ -679,7 +667,7 @@ fn exhaustive_empty_tuple_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![Case::new(Constructor::Tuple(vec![]), vec![], success(1))],
             None
         )
@@ -708,10 +696,10 @@ fn exhaustive_three_tuple_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![Case::new(
-                Constructor::Tuple(vec![int_type.clone(), int_type.clone(), int_type.clone()]),
-                vec![var1.clone(), var2.clone(), var3],
+                Constructor::Tuple(vec![int_type.clone(), int_type.clone(), int_type]),
+                vec![var1, var2, var3],
                 success(1)
             )],
             None
@@ -746,9 +734,9 @@ fn exhaustive_nested_int_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![Case::new(
-                Constructor::Tuple(vec![int_type.clone(), int_type.clone()]),
+                Constructor::Tuple(vec![int_type.clone(), int_type]),
                 vec![var1.clone(), var2.clone()],
                 Decision::Switch(
                     var2.clone(),
@@ -769,7 +757,7 @@ fn exhaustive_nested_int_pattern() {
                         )
                     )],
                     Some(Box::new(success_with_bindings(
-                        vec![("a", var1.clone()), ("b", var2.clone())],
+                        vec![("a", var1), ("b", var2)],
                         2
                     )))
                 )
@@ -794,19 +782,19 @@ fn nonexhaustive_option_type() {
     let input = setup.new_variable(option_type.clone());
     let int = setup.int("4");
     let rules = vec![(setup.variant(option_type.clone(), 0, vec![int]), rhs(1))];
-    let var1 = setup.var(1, int_type.clone());
+    let var1 = setup.var(1, int_type);
     let result = setup.compile(input.clone(), rules);
 
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(
                     Constructor::Variant(option_type.clone(), 0),
                     vec![var1.clone()],
                     Decision::Switch(
-                        var1.clone(),
+                        var1,
                         vec![Case::new(
                             Constructor::Int("4".into()),
                             Vec::new(),
@@ -815,11 +803,7 @@ fn nonexhaustive_option_type() {
                         Some(Box::new(failure()))
                     )
                 ),
-                Case::new(
-                    Constructor::Variant(option_type.clone(), 1),
-                    Vec::new(),
-                    failure()
-                )
+                Case::new(Constructor::Variant(option_type, 1), Vec::new(), failure())
             ],
             None,
         )
@@ -845,7 +829,7 @@ fn nonexhaustive_option_type_with_multiple_arguments() {
     let int4 = setup.int("4");
     let int5 = setup.int("5");
     let var1 = setup.var(1, int_type.clone());
-    let var2 = setup.var(2, int_type.clone());
+    let var2 = setup.var(2, int_type);
     let input = setup.new_variable(option_type.clone());
     let rules = vec![(
         setup.variant(option_type.clone(), 0, vec![int4, int5]),
@@ -856,18 +840,18 @@ fn nonexhaustive_option_type_with_multiple_arguments() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(
                     Constructor::Variant(option_type.clone(), 0),
                     vec![var1.clone(), var2.clone()],
                     Decision::Switch(
-                        var2.clone(),
+                        var2,
                         vec![Case::new(
                             Constructor::Int("5".into()),
                             Vec::new(),
                             Decision::Switch(
-                                var1.clone(),
+                                var1,
                                 vec![Case::new(
                                     Constructor::Int("4".into()),
                                     Vec::new(),
@@ -879,11 +863,7 @@ fn nonexhaustive_option_type_with_multiple_arguments() {
                         Some(Box::new(failure()))
                     )
                 ),
-                Case::new(
-                    Constructor::Variant(option_type.clone(), 1),
-                    Vec::new(),
-                    failure()
-                )
+                Case::new(Constructor::Variant(option_type, 1), Vec::new(), failure())
             ],
             None
         )
@@ -908,7 +888,7 @@ fn exhaustive_option_type() {
             ("None".into(), Vec::new()),
         ],
     );
-    let var_1 = setup.var(1, int_type.clone());
+    let var_1 = setup.var(1, int_type);
     let input = setup.new_variable(option_type.clone());
     let rules = vec![
         (setup.variant(option_type.clone(), 0, vec![int_4]), rhs(1)),
@@ -920,7 +900,7 @@ fn exhaustive_option_type() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(
                     Constructor::Variant(option_type.clone(), 0),
@@ -932,17 +912,10 @@ fn exhaustive_option_type() {
                             Vec::new(),
                             success(1)
                         )],
-                        Some(Box::new(success_with_bindings(
-                            vec![("a", var_1.clone())],
-                            2
-                        )))
+                        Some(Box::new(success_with_bindings(vec![("a", var_1)], 2)))
                     )
                 ),
-                Case::new(
-                    Constructor::Variant(option_type.clone(), 1),
-                    Vec::new(),
-                    success(3)
-                )
+                Case::new(Constructor::Variant(option_type, 1), Vec::new(), success(3))
             ],
             None
         )
@@ -963,7 +936,7 @@ fn redundant_option_type_with_bool() {
     );
     let int1 = setup.int("1");
     let var_a = setup.bind("a");
-    let var1 = setup.var(1, int_type.clone());
+    let var1 = setup.var(1, int_type);
     let input = setup.new_variable(option_type.clone());
     let rules = vec![
         (setup.variant(option_type.clone(), 0, vec![int1]), rhs(1)),
@@ -976,7 +949,7 @@ fn redundant_option_type_with_bool() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(
                     Constructor::Variant(option_type.clone(), 0),
@@ -988,17 +961,10 @@ fn redundant_option_type_with_bool() {
                             Vec::new(),
                             success(1)
                         )],
-                        Some(Box::new(success_with_bindings(
-                            vec![("a", var1.clone())],
-                            2
-                        )))
+                        Some(Box::new(success_with_bindings(vec![("a", var1)], 2)))
                     )
                 ),
-                Case::new(
-                    Constructor::Variant(option_type.clone(), 1),
-                    Vec::new(),
-                    success(3)
-                )
+                Case::new(Constructor::Variant(option_type, 1), Vec::new(), success(3))
             ],
             None
         )
@@ -1022,7 +988,7 @@ fn redundant_option_type_with_int() {
     let input = setup.new_variable(option_type.clone());
     let int4 = setup.int("4");
     let bind_a = setup.bind("a");
-    let var1 = setup.var(1, int_type.clone());
+    let var1 = setup.var(1, int_type);
     let rules = vec![
         (setup.variant(option_type.clone(), 0, vec![int4]), rhs(1)),
         (setup.variant(option_type.clone(), 0, vec![int4]), rhs(10)),
@@ -1034,7 +1000,7 @@ fn redundant_option_type_with_int() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(
                     Constructor::Variant(option_type.clone(), 0),
@@ -1046,17 +1012,10 @@ fn redundant_option_type_with_int() {
                             Vec::new(),
                             success(1)
                         ),],
-                        Some(Box::new(success_with_bindings(
-                            vec![("a", var1.clone())],
-                            2
-                        )))
+                        Some(Box::new(success_with_bindings(vec![("a", var1)], 2)))
                     )
                 ),
-                Case::new(
-                    Constructor::Variant(option_type.clone(), 1),
-                    Vec::new(),
-                    success(3)
-                )
+                Case::new(Constructor::Variant(option_type, 1), Vec::new(), success(3))
             ],
             None
         )
@@ -1080,7 +1039,7 @@ fn exhaustive_option_type_with_binding() {
     let input = setup.new_variable(option_type.clone());
     let int4 = setup.int("4");
     let bind_a = setup.bind("a");
-    let var1 = setup.var(1, int_type.clone());
+    let var1 = setup.var(1, int_type);
     let rules = vec![
         (setup.variant(option_type.clone(), 0, vec![int4]), rhs(1)),
         (bind_a, rhs(2)),
@@ -1096,7 +1055,7 @@ fn exhaustive_option_type_with_binding() {
                     Constructor::Variant(option_type.clone(), 0),
                     vec![var1.clone()],
                     Decision::Switch(
-                        var1.clone(),
+                        var1,
                         vec![Case::new(
                             Constructor::Int("4".into()),
                             Vec::new(),
@@ -1109,9 +1068,9 @@ fn exhaustive_option_type_with_binding() {
                     )
                 ),
                 Case::new(
-                    Constructor::Variant(option_type.clone(), 1),
+                    Constructor::Variant(option_type, 1),
                     Vec::new(),
-                    success_with_bindings(vec![("a", input.clone())], 2)
+                    success_with_bindings(vec![("a", input)], 2)
                 )
             ],
             None,
@@ -1145,18 +1104,18 @@ fn nonexhaustive_pair_in_option_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(
                     Constructor::Variant(option_type.clone(), 0),
                     vec![var_1.clone()],
                     Decision::Switch(
-                        var_1.clone(),
+                        var_1,
                         vec![Case::new(
-                            Constructor::Tuple(vec![int_type.clone(), int_type.clone()]),
+                            Constructor::Tuple(vec![int_type.clone(), int_type]),
                             vec![var_2.clone(), var_3.clone()],
                             Decision::Switch(
-                                var_2.clone(),
+                                var_2,
                                 vec![Case::new(
                                     Constructor::Int("4".into()),
                                     Vec::new(),
@@ -1168,11 +1127,7 @@ fn nonexhaustive_pair_in_option_pattern() {
                         None,
                     )
                 ),
-                Case::new(
-                    Constructor::Variant(option_type.clone(), 1),
-                    Vec::new(),
-                    failure()
-                )
+                Case::new(Constructor::Variant(option_type, 1), Vec::new(), failure())
             ],
             None
         )
@@ -1196,7 +1151,7 @@ fn or_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(Constructor::Int("1".into()), Vec::new(), success(1)),
                 Case::new(Constructor::Int("2".into()), Vec::new(), success(1))
@@ -1220,7 +1175,7 @@ fn or_int_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(Constructor::Int("4".into()), Vec::new(), success(1)),
                 Case::new(Constructor::Int("5".into()), Vec::new(), success(1)),
@@ -1246,7 +1201,7 @@ fn nonexhaustive_guard() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![Case::new(
                 Constructor::Int("4".into()),
                 Vec::new(),
@@ -1273,7 +1228,7 @@ fn nonexhaustive_option_with_two_rows_and_guard() {
     );
     let int_4 = setup.int("4");
     let bind_a = setup.bind("a");
-    let var_1 = setup.var(1, int_type.clone());
+    let var_1 = setup.var(1, int_type);
     let input = setup.new_variable(option_type.clone());
     let rows = vec![
         Row::new(
@@ -1298,7 +1253,7 @@ fn nonexhaustive_option_with_two_rows_and_guard() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(
                     Constructor::Variant(option_type.clone(), 0),
@@ -1314,17 +1269,10 @@ fn nonexhaustive_option_with_two_rows_and_guard() {
                                 Box::new(success_with_bindings(vec![("a", var_1.clone())], 2)),
                             )
                         )],
-                        Some(Box::new(success_with_bindings(
-                            vec![("a", var_1.clone())],
-                            2
-                        )))
+                        Some(Box::new(success_with_bindings(vec![("a", var_1)], 2)))
                     ),
                 ),
-                Case::new(
-                    Constructor::Variant(option_type.clone(), 1),
-                    Vec::new(),
-                    failure()
-                )
+                Case::new(Constructor::Variant(option_type, 1), Vec::new(), failure())
             ],
             None
         )
@@ -1365,10 +1313,7 @@ fn exhaustive_guard() {
                     Box::new(success_with_bindings(vec![("a", input.clone())], 2))
                 )
             )],
-            Some(Box::new(success_with_bindings(
-                vec![("a", input.clone())],
-                2
-            )))
+            Some(Box::new(success_with_bindings(vec![("a", input)], 2)))
         )
     );
 }
@@ -1405,10 +1350,7 @@ fn exhaustive_guard_with_bool() {
                     Box::new(success_with_bindings(vec![("a", input.clone())], 2))
                 )
             )],
-            Some(Box::new(success_with_bindings(
-                vec![("a", input.clone())],
-                2
-            )))
+            Some(Box::new(success_with_bindings(vec![("a", input)], 2)))
         )
     );
 }
@@ -1453,10 +1395,7 @@ fn exhaustive_guard_with_int() {
                 ),
                 Case::new(Constructor::Int("2".into()), Vec::new(), success(2))
             ],
-            Some(Box::new(success_with_bindings(
-                vec![("b", input.clone())],
-                3
-            )))
+            Some(Box::new(success_with_bindings(vec![("b", input)], 3)))
         )
     );
 }
@@ -1503,10 +1442,7 @@ fn exhaustive_guard_with_same_int() {
                     Box::new(Decision::Guard(20, rhs(2), Box::new(success(3))))
                 )
             )],
-            Some(Box::new(success_with_bindings(
-                vec![("b", input.clone())],
-                4
-            )))
+            Some(Box::new(success_with_bindings(vec![("b", input)], 4)))
         )
     );
 }
@@ -1525,7 +1461,7 @@ fn exhaustive_option_with_guard() {
     );
     let bind_a = setup.bind("a");
     let input = setup.new_variable(option_type.clone());
-    let var_1 = setup.var(1, int_type.clone());
+    let var_1 = setup.var(1, int_type);
     let rows = vec![
         Row::new(
             vec![Column::new(
@@ -1557,25 +1493,21 @@ fn exhaustive_option_with_guard() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(
                     Constructor::Variant(option_type.clone(), 0),
                     vec![var_1.clone()],
                     Decision::Guard(
-                        42.clone(),
+                        42,
                         Body {
                             bindings: vec![("a".into(), var_1.clone())],
                             clause_index: 2
                         },
-                        Box::new(success_with_bindings(vec![("a", var_1.clone())], 3))
+                        Box::new(success_with_bindings(vec![("a", var_1)], 3))
                     )
                 ),
-                Case::new(
-                    Constructor::Variant(option_type.clone(), 1),
-                    Vec::new(),
-                    success(1)
-                ),
+                Case::new(Constructor::Variant(option_type, 1), Vec::new(), success(1)),
             ],
             None
         )
@@ -1625,9 +1557,9 @@ fn exhaustive_nested_int_with_guard() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![Case::new(
-                Constructor::Tuple(vec![int_type.clone(), int_type.clone()]),
+                Constructor::Tuple(vec![int_type.clone(), int_type]),
                 vec![var_1.clone(), var_2.clone()],
                 Decision::Switch(
                     var_2.clone(),
@@ -1648,7 +1580,7 @@ fn exhaustive_nested_int_with_guard() {
                         )
                     )],
                     Some(Box::new(success_with_bindings(
-                        vec![("a", var_1.clone()), ("b", var_2.clone())],
+                        vec![("a", var_1), ("b", var_2)],
                         3
                     )))
                 )
@@ -1666,7 +1598,7 @@ fn assign_pattern() {
     let discard = setup.discard();
     let rules = vec![
         (setup.int("1"), rhs(1)),
-        (setup.assign("it", discard), rhs(2.clone())),
+        (setup.assign("it", discard), rhs(2)),
     ];
     let var_0 = setup.var(0, typ);
     let result = setup.compile(input.clone(), rules);
@@ -1674,7 +1606,7 @@ fn assign_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![Case::new(
                 Constructor::Int("1".into()),
                 Vec::new(),
@@ -1699,7 +1631,7 @@ fn nonexhaustive_string_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(Constructor::String("Hello".into()), Vec::new(), success(1)),
                 Case::new(
@@ -1738,10 +1670,7 @@ fn exhaustive_string_pattern() {
                     success(2)
                 ),
             ],
-            Some(Box::new(success_with_bindings(
-                vec![("a", input.clone())],
-                3
-            )))
+            Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
         )
     );
 }
@@ -1760,7 +1689,7 @@ fn nonexhaustive_bit_string_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(Constructor::BitString, Vec::new(), success(1)),
                 Case::new(Constructor::BitString, Vec::new(), success(2)),
@@ -1791,10 +1720,7 @@ fn exhaustive_bit_string_pattern() {
                 Case::new(Constructor::BitString, Vec::new(), success(1)),
                 Case::new(Constructor::BitString, Vec::new(), success(2)),
             ],
-            Some(Box::new(success_with_bindings(
-                vec![("a", input.clone())],
-                3
-            )))
+            Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
         )
     );
 }
@@ -1822,7 +1748,7 @@ fn exhaustive_list_pattern() {
                     id: 2,
                     type_: list_type
                 },
-                decision: success_with_bindings(vec![("a", input.clone())], 2)
+                decision: success_with_bindings(vec![("a", input)], 2)
             })
         }
     );
@@ -1833,7 +1759,7 @@ fn exhaustive_custom_list_empty() {
     let mut setup = Setup::new();
     let int_type = type_::int();
     let list_type = setup.insert_list_type(int_type.clone());
-    let var_1 = setup.var(1, int_type.clone());
+    let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type.clone());
     let input = setup.new_variable(list_type.clone());
     let rules = vec![
@@ -1845,7 +1771,7 @@ fn exhaustive_custom_list_empty() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(
                     Constructor::Variant(list_type.clone(), 0),
@@ -1853,8 +1779,8 @@ fn exhaustive_custom_list_empty() {
                     success(1)
                 ),
                 Case::new(
-                    Constructor::Variant(list_type.clone(), 1),
-                    vec![var_1.clone(), var_2.clone()],
+                    Constructor::Variant(list_type, 1),
+                    vec![var_1, var_2],
                     success_with_bindings(vec![], 2),
                 ),
             ],
@@ -1876,7 +1802,7 @@ fn exhaustive_list_just_empty_pattern() {
     assert_eq!(
         result.tree,
         Decision::List {
-            variable: input.clone(),
+            variable: input,
             empty: Box::new(success(1)),
             non_empty: Box::new(NonEmptyListDecision {
                 first: Variable {
@@ -1899,7 +1825,7 @@ fn exhaustive_custom_list_non_empty() {
     let int_type = type_::int();
     let list_type = setup.insert_list_type(int_type.clone());
     let discard = setup.discard();
-    let var_1 = setup.var(1, int_type.clone());
+    let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type.clone());
     let rules = vec![
         (
@@ -1914,7 +1840,7 @@ fn exhaustive_custom_list_non_empty() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(
                     Constructor::Variant(list_type.clone(), 0),
@@ -1922,8 +1848,8 @@ fn exhaustive_custom_list_non_empty() {
                     success(2)
                 ),
                 Case::new(
-                    Constructor::Variant(list_type.clone(), 1),
-                    vec![var_1.clone(), var_2.clone()],
+                    Constructor::Variant(list_type, 1),
+                    vec![var_1, var_2],
                     success(1),
                 ),
             ],
@@ -1947,7 +1873,7 @@ fn exhaustive_list_non_empty() {
     assert_eq!(
         result.tree,
         Decision::List {
-            variable: input.clone(),
+            variable: input,
             empty: Box::new(success(2)),
             non_empty: Box::new(NonEmptyListDecision {
                 first: Variable {
@@ -1979,7 +1905,7 @@ fn nonexhaustive_list_empty() {
     assert_eq!(
         result.tree,
         Decision::List {
-            variable: input.clone(),
+            variable: input,
             empty: Box::new(failure()),
             non_empty: Box::new(NonEmptyListDecision {
                 first: Variable {
@@ -2013,7 +1939,7 @@ fn nonexhaustive_list_at_least_one() {
     assert_eq!(
         result.tree,
         Decision::List {
-            variable: input.clone(),
+            variable: input,
             empty: Box::new(success(1)),
             non_empty: Box::new(NonEmptyListDecision {
                 first: Variable {
@@ -2052,7 +1978,7 @@ fn nonexhaustive_list_exactly_one() {
     assert_eq!(
         result.tree,
         Decision::List {
-            variable: input.clone(),
+            variable: input,
             empty: Box::new(success(1)),
             non_empty: Box::new(NonEmptyListDecision {
                 first: Variable {
@@ -2110,7 +2036,7 @@ fn nonexhaustive_list_at_least_two() {
     assert_eq!(
         result.tree,
         Decision::List {
-            variable: input.clone(),
+            variable: input,
             empty: Box::new(success(1)),
             non_empty: Box::new(NonEmptyListDecision {
                 first: Variable {
@@ -2145,11 +2071,11 @@ fn nonexhaustive_list_at_least_two() {
                             non_empty: Box::new(NonEmptyListDecision {
                                 first: Variable {
                                     id: 5,
-                                    type_: int_type.clone()
+                                    type_: int_type
                                 },
                                 rest: Variable {
                                     id: 6,
-                                    type_: list_type.clone()
+                                    type_: list_type
                                 },
                                 decision: failure()
                             })
@@ -2180,7 +2106,7 @@ fn nonexhaustive_string_prefix_discard_pattern() {
     assert_eq!(
         result.tree,
         Decision::Switch(
-            input.clone(),
+            input,
             vec![
                 Case::new(Constructor::StringPrefix, Vec::new(), success(1)),
                 Case::new(Constructor::StringPrefix, Vec::new(), success(2)),
@@ -2215,10 +2141,7 @@ fn exhaustive_string_prefix_discard_pattern() {
                     success(2)
                 ),
             ],
-            Some(Box::new(success_with_bindings(
-                vec![("a", input.clone())],
-                3
-            )))
+            Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
         )
     );
 }
@@ -2228,7 +2151,7 @@ fn exhaustive_string_prefix_bind_pattern() {
     let mut setup = Setup::new();
     let int_type = type_::string();
     let input = setup.new_variable(int_type.clone());
-    let var_1 = setup.var(0, int_type.clone());
+    let var_1 = setup.var(0, int_type);
     let rules = vec![
         (setup.string_prefix_bind("Hello", "a"), rhs(1)),
         (setup.string("Goodbye"), rhs(2)),
@@ -2244,7 +2167,7 @@ fn exhaustive_string_prefix_bind_pattern() {
                 Case::new(
                     Constructor::StringPrefix,
                     Vec::new(),
-                    success_with_bindings(vec![("a", var_1.clone())], 1)
+                    success_with_bindings(vec![("a", var_1)], 1)
                 ),
                 Case::new(
                     Constructor::String("Goodbye".into()),
@@ -2252,10 +2175,7 @@ fn exhaustive_string_prefix_bind_pattern() {
                     success(2)
                 ),
             ],
-            Some(Box::new(success_with_bindings(
-                vec![("a", input.clone())],
-                3
-            )))
+            Some(Box::new(success_with_bindings(vec![("a", input)], 3)))
         )
     );
 }

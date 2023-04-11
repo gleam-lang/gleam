@@ -462,7 +462,7 @@ impl Match {
 
                         Constructor::Variant(type_, index) => {
                             let name = self
-                                .custom_type_info(&type_)
+                                .custom_type_info(type_)
                                 .expect("Custom type constructor must have custom type kind")
                                 .constructors
                                 .get(*index)
@@ -560,7 +560,7 @@ impl Compiler {
 
     fn flatten_or(&self, id: PatternId, row: Row) -> Vec<(PatternId, Row)> {
         match self.pattern(id) {
-            Pattern::Or { left, right } => vec![(*left, row.clone()), (*right, row.clone())],
+            Pattern::Or { left, right } => vec![(*left, row.clone()), (*right, row)],
 
             Pattern::Int { .. }
             | Pattern::List { .. }
@@ -618,7 +618,7 @@ impl Compiler {
             BranchMode::List {
                 variable,
                 element_type,
-            } => self.compile_list_cases(rows, variable.clone(), element_type),
+            } => self.compile_list_cases(rows, variable, element_type),
 
             BranchMode::CustomType {
                 variable,
@@ -633,7 +633,7 @@ impl Compiler {
                     })
                     .collect();
                 let cases = self.compile_constructor_cases(rows, variable.clone(), cases);
-                Decision::Switch(variable.clone(), cases, None)
+                Decision::Switch(variable, cases, None)
             }
         }
     }
@@ -992,12 +992,12 @@ impl Compiler {
             .columns
             .iter()
             .map(|col| col.variable.clone())
-            .max_by_key(|var| counts.get(&var.id).map(|i| *i).unwrap_or(0))
+            .max_by_key(|var| counts.get(&var.id).copied().unwrap_or(0))
             .expect("The first row must have at least one column");
 
         match collapse_links(variable.type_.clone()).as_ref() {
             Type::Named { module, name, .. }
-                if module == ""
+                if module.is_empty()
                     && (name == "Int"
                         || name == "Float"
                         || name == "String"
@@ -1008,14 +1008,14 @@ impl Compiler {
 
             Type::Named {
                 module, name, args, ..
-            } if module == "" && name == "List" => BranchMode::List {
+            } if module.is_empty() && name == "List" => BranchMode::List {
                 variable,
                 element_type: args.get(0).expect("Lists have 1 argument").clone(),
             },
 
             Type::Named { module, name, .. } => {
                 let constructors = self
-                    .custom_type_info(&module, &name)
+                    .custom_type_info(module, name)
                     .expect("Custom type variants must exist")
                     .constructors
                     .clone();
