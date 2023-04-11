@@ -1371,12 +1371,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Check to see if it's a Type that can have accessible fields
         let accessors = match collapse_links(record.type_()).as_ref() {
             // A type in the current module which may have fields
-            Type::App { module, name, .. } if module == self.environment.current_module => {
+            Type::Named { module, name, .. } if module == self.environment.current_module => {
                 self.environment.accessors.get(name)
             }
 
             // A type in another module which may have fields
-            Type::App { module, name, .. } => self
+            Type::Named { module, name, .. } => self
                 .environment
                 .importable_modules
                 .get(module)

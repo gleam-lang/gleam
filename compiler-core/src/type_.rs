@@ -50,7 +50,7 @@ pub enum Type {
     /// empty, otherwise it will contain the name of the module that
     /// defines the type.
     ///
-    App {
+    Named {
         public: bool,
         module: SmolStr,
         name: SmolStr,
@@ -84,7 +84,7 @@ impl Type {
     }
 
     pub fn is_result(&self) -> bool {
-        matches!(self, Self::App { name, module, .. } if "Result" == name && is_prelude_module(module))
+        matches!(self, Self::Named { name, module, .. } if "Result" == name && is_prelude_module(module))
     }
 
     pub fn is_unbound(&self) -> bool {
@@ -111,7 +111,7 @@ impl Type {
 
     pub fn is_nil(&self) -> bool {
         match self {
-            Self::App { module, name, .. } if "Nil" == name && is_prelude_module(module) => true,
+            Self::Named { module, name, .. } if "Nil" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_nil(),
             _ => false,
         }
@@ -119,7 +119,7 @@ impl Type {
 
     pub fn is_bool(&self) -> bool {
         match self {
-            Self::App { module, name, .. } if "Bool" == name && is_prelude_module(module) => true,
+            Self::Named { module, name, .. } if "Bool" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_bool(),
             _ => false,
         }
@@ -127,7 +127,7 @@ impl Type {
 
     pub fn is_int(&self) -> bool {
         match self {
-            Self::App { module, name, .. } if "Int" == name && is_prelude_module(module) => true,
+            Self::Named { module, name, .. } if "Int" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_int(),
             _ => false,
         }
@@ -135,7 +135,9 @@ impl Type {
 
     pub fn is_float(&self) -> bool {
         match self {
-            Self::App { module, name, .. } if "Float" == name && is_prelude_module(module) => true,
+            Self::Named { module, name, .. } if "Float" == name && is_prelude_module(module) => {
+                true
+            }
             Self::Var { type_ } => type_.borrow().is_float(),
             _ => false,
         }
@@ -143,9 +145,19 @@ impl Type {
 
     pub fn is_string(&self) -> bool {
         match self {
-            Self::App { module, name, .. } if "String" == name && is_prelude_module(module) => true,
+            Self::Named { module, name, .. } if "String" == name && is_prelude_module(module) => {
+                true
+            }
             Self::Var { type_ } => type_.borrow().is_string(),
             _ => false,
+        }
+    }
+
+    pub fn named_type_name(&self) -> Option<(SmolStr, SmolStr)> {
+        match self {
+            Self::Named { module, name, .. } => Some((module.clone(), name.clone())),
+            Self::Var { type_ } => type_.borrow().named_type_name(),
+            _ => None,
         }
     }
 
@@ -164,7 +176,7 @@ impl Type {
         environment: &mut Environment<'_>,
     ) -> Option<Vec<Arc<Self>>> {
         match self {
-            Self::App {
+            Self::Named {
                 module: m,
                 name: n,
                 args,
@@ -193,7 +205,7 @@ impl Type {
                 // We are an unbound type variable! So convert us to a type link
                 // to the desired type.
                 *typ.borrow_mut() = TypeVar::Link {
-                    type_: Arc::new(Self::App {
+                    type_: Arc::new(Self::Named {
                         name: name.into(),
                         module: module.into(),
                         args: args.clone(),
@@ -209,9 +221,9 @@ impl Type {
 
     pub fn find_private_type(&self) -> Option<Self> {
         match self {
-            Self::App { public: false, .. } => Some(self.clone()),
+            Self::Named { public: false, .. } => Some(self.clone()),
 
-            Self::App { args, .. } => args.iter().find_map(|t| t.find_private_type()),
+            Self::Named { args, .. } => args.iter().find_map(|t| t.find_private_type()),
 
             Self::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
 
@@ -240,7 +252,7 @@ impl Type {
 pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
     if let Type::Var { type_: typ } = t.deref() {
         if let TypeVar::Link { type_: typ } = typ.borrow().deref() {
-            return typ.clone();
+            return collapse_links(typ.clone());
         }
     }
     t
@@ -606,6 +618,13 @@ impl TypeVar {
             _ => false,
         }
     }
+
+    pub fn named_type_name(&self) -> Option<(SmolStr, SmolStr)> {
+        match self {
+            Self::Link { type_ } => type_.named_type_name(),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -723,7 +742,7 @@ fn unify_unbound_type(typ: Arc<Type>, own_id: u64) -> Result<(), UnifyError> {
     }
 
     match typ.deref() {
-        Type::App { args, .. } => {
+        Type::Named { args, .. } => {
             for arg in args {
                 unify_unbound_type(arg.clone(), own_id)?
             }
@@ -798,14 +817,14 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             TypeVar::Generic { .. } => Arc::new(Type::Var { type_: typ.clone() }),
         },
 
-        Type::App {
+        Type::Named {
             public,
             module,
             name,
             args,
         } => {
             let args = args.iter().map(|t| generalise(t.clone())).collect();
-            Arc::new(Type::App {
+            Arc::new(Type::Named {
                 public: *public,
                 module: module.clone(),
                 name: name.clone(),

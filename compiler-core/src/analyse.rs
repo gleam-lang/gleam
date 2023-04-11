@@ -443,7 +443,7 @@ fn register_types_from_custom_type<'a>(
     assert_unique_type_name(names, name, *location)?;
     let mut hydrator = Hydrator::new();
     let parameters = make_type_vars(parameters, location, &mut hydrator, environment)?;
-    let typ = Arc::new(Type::App {
+    let typ = Arc::new(Type::Named {
         public: *public,
         module: module.to_owned(),
         name: name.clone(),

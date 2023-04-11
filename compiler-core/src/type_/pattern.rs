@@ -562,7 +562,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         }
                     }
 
-                    Type::App { .. } => {
+                    Type::Named { .. } => {
                         if pattern_args.is_empty() {
                             unify(type_, instantiated_constructor_type.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;

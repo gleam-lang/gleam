@@ -1812,7 +1812,7 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
             }
             TypeVar::Link { type_: typ } => type_var_ids(typ, ids),
         },
-        Type::App { args, .. } => {
+        Type::Named { args, .. } => {
             for arg in args {
                 type_var_ids(arg, ids)
             }
@@ -1905,11 +1905,11 @@ impl<'a> TypePrinter<'a> {
         match type_ {
             Type::Var { type_: typ } => self.print_var(&typ.borrow()),
 
-            Type::App {
+            Type::Named {
                 name, module, args, ..
             } if is_prelude_module(module) => self.print_prelude_type(name, args),
 
-            Type::App {
+            Type::Named {
                 name, module, args, ..
             } => self.print_type_app(module, name, args),
 

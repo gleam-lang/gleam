@@ -61,7 +61,7 @@ fn compile_expression(src: &str) -> TypedStatement {
     let mut environment = Environment::new(ids, "mymod", Target::Erlang, &modules, &emitter);
 
     // Insert a cat record to use in the tests
-    let cat_type = Arc::new(Type::App {
+    let cat_type = Arc::new(Type::Named {
         public: true,
         module: "mymod".into(),
         name: "Cat".into(),

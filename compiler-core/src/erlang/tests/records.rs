@@ -47,7 +47,7 @@ fn module_types() {
         "PetCat",
         &[(
             "name",
-            Arc::new(type_::Type::App {
+            Arc::new(type_::Type::Named {
                 public: true,
                 module: module_name,
                 name: "my_type".into(),

@@ -11,7 +11,7 @@ fn print(type_: Arc<Type>) -> String {
 }
 
 fn custom_bool() -> Arc<Type> {
-    Arc::new(Type::App {
+    Arc::new(Type::Named {
         public: true,
         module: "one/two".into(),
         name: "Bool".into(),
