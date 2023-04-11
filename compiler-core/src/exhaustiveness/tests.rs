@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use super::*;
 use crate::ast::AssignName;
 use id_arena::Arena;
@@ -10,7 +12,7 @@ struct Setup {
 impl Setup {
     fn new() -> Self {
         Self {
-            compiler: Compiler::new(Arena::new()),
+            compiler: Compiler::new(HashMap::new(), Arena::new()),
         }
     }
 }
@@ -20,6 +22,47 @@ impl Setup {
         let id = self.compiler.types.len();
         self.compiler.types.push(typ);
         TypeId(id)
+    }
+
+    fn insert_custom_type(
+        &mut self,
+        module: &str,
+        name: &str,
+        constructors: Vec<(SmolStr, Vec<TypeId>)>,
+    ) -> TypeId {
+        self.insert_constructors(module, name, constructors);
+        self.new_type(Type::CustomType {
+            module: module.into(),
+            name: name.into(),
+        })
+    }
+
+    fn insert_constructors(
+        &mut self,
+        module: &str,
+        name: &str,
+        constructors: Vec<(SmolStr, Vec<TypeId>)>,
+    ) {
+        _ = self
+            .compiler
+            .modules
+            .entry(module.into())
+            .or_default()
+            .custom_types
+            .insert(name.into(), CustomTypeInfo { constructors });
+    }
+
+    fn insert_list_type(&mut self, element_type: TypeId) -> TypeId {
+        let list_type = self.new_type(Type::CustomType {
+            module: "gleam".into(),
+            name: "List".into(),
+        });
+        let constructors = vec![
+            ("Empty".into(), Vec::new()),
+            ("NonEmpty".into(), vec![element_type, list_type]),
+        ];
+        self.insert_constructors("gleam", "List", constructors);
+        list_type
     }
 
     fn new_variable(&mut self, type_id: TypeId) -> Variable {
@@ -707,10 +750,11 @@ fn exhaustive_nested_int_pattern() {
 fn nonexhaustive_option_type() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Variants(vec![
-        ("Some".into(), vec![int_type]),
-        ("None".into(), Vec::new()),
-    ]));
+    let option_type = setup.insert_custom_type(
+        "gleam/option",
+        "Option",
+        vec![("Some".into(), vec![int_type]), ("None".into(), Vec::new())],
+    );
     let input = setup.new_variable(option_type);
     let int = setup.int("4");
     let rules = vec![(setup.variant(option_type, 0, vec![int]), rhs(1))];
@@ -750,10 +794,14 @@ fn nonexhaustive_option_type() {
 fn nonexhaustive_option_type_with_multiple_arguments() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Variants(vec![
-        ("Some".into(), vec![int_type, int_type]),
-        ("None".into(), Vec::new()),
-    ]));
+    let option_type = setup.insert_custom_type(
+        "gleam/option",
+        "Option",
+        vec![
+            ("Some".into(), vec![int_type, int_type]),
+            ("None".into(), Vec::new()),
+        ],
+    );
     let int4 = setup.int("4");
     let int5 = setup.int("5");
     let var1 = setup.var(1, int_type);
@@ -805,10 +853,11 @@ fn exhaustive_option_type() {
     let int_type = setup.new_type(Type::Int);
     let int_4 = setup.int("4");
     let bind_a = setup.bind("a");
-    let option_type = setup.new_type(Type::Variants(vec![
-        ("Some".into(), vec![int_type]),
-        ("None".into(), Vec::new()),
-    ]));
+    let option_type = setup.insert_custom_type(
+        "gleam/option",
+        "Option",
+        vec![("Some".into(), vec![int_type]), ("None".into(), Vec::new())],
+    );
     let var_1 = setup.var(1, int_type);
     let input = setup.new_variable(option_type);
     let rules = vec![
@@ -847,10 +896,11 @@ fn exhaustive_option_type() {
 fn redundant_option_type_with_bool() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Variants(vec![
-        ("Some".into(), vec![int_type]),
-        ("None".into(), Vec::new()),
-    ]));
+    let option_type = setup.insert_custom_type(
+        "gleam/option",
+        "Option",
+        vec![("Some".into(), vec![int_type]), ("None".into(), Vec::new())],
+    );
     let int1 = setup.int("1");
     let var_a = setup.bind("a");
     let var1 = setup.var(1, int_type);
@@ -894,10 +944,11 @@ fn redundant_option_type_with_bool() {
 fn redundant_option_type_with_int() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Variants(vec![
-        ("Some".into(), vec![int_type]),
-        ("None".into(), Vec::new()),
-    ]));
+    let option_type = setup.insert_custom_type(
+        "gleam/option",
+        "Option",
+        vec![("Some".into(), vec![int_type]), ("None".into(), Vec::new())],
+    );
     let input = setup.new_variable(option_type);
     let int4 = setup.int("4");
     let bind_a = setup.bind("a");
@@ -941,10 +992,11 @@ fn redundant_option_type_with_int() {
 fn exhaustive_option_type_with_binding() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Variants(vec![
-        ("Some".into(), vec![int_type]),
-        ("None".into(), Vec::new()),
-    ]));
+    let option_type = setup.insert_custom_type(
+        "gleam/option",
+        "Option",
+        vec![("Some".into(), vec![int_type]), ("None".into(), Vec::new())],
+    );
     let input = setup.new_variable(option_type);
     let int4 = setup.int("4");
     let bind_a = setup.bind("a");
@@ -989,10 +1041,11 @@ fn nonexhaustive_pair_in_option_pattern() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
     let tup_type = setup.new_type(Type::Tuple(vec![int_type, int_type]));
-    let option_type = setup.new_type(Type::Variants(vec![
-        ("Some".into(), vec![tup_type]),
-        ("None".into(), Vec::new()),
-    ]));
+    let option_type = setup.insert_custom_type(
+        "gleam/option",
+        "Option",
+        vec![("Some".into(), vec![tup_type]), ("None".into(), Vec::new())],
+    );
     let input = setup.new_variable(option_type);
     let int_4 = setup.int("4");
     let bind_a = setup.bind("a");
@@ -1120,10 +1173,11 @@ fn nonexhaustive_guard() {
 fn nonexhaustive_option_with_two_rows_and_guard() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Variants(vec![
-        ("Some".into(), vec![int_type]),
-        ("None".into(), Vec::new()),
-    ]));
+    let option_type = setup.insert_custom_type(
+        "gleam/option",
+        "Option",
+        vec![("Some".into(), vec![int_type]), ("None".into(), Vec::new())],
+    );
     let int_4 = setup.int("4");
     let bind_a = setup.bind("a");
     let var_1 = setup.var(1, int_type);
@@ -1305,10 +1359,11 @@ fn exhaustive_guard_with_same_int() {
 fn exhaustive_option_with_guard() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let option_type = setup.new_type(Type::Variants(vec![
-        ("Some".into(), vec![int_type]),
-        ("None".into(), Vec::new()),
-    ]));
+    let option_type = setup.insert_custom_type(
+        "gleam/option",
+        "Option",
+        vec![("Some".into(), vec![int_type]), ("None".into(), Vec::new())],
+    );
     let bind_a = setup.bind("a");
     let input = setup.new_variable(option_type);
     let var_1 = setup.var(1, int_type);
@@ -1608,13 +1663,9 @@ fn exhaustive_list_pattern() {
 fn exhaustive_custom_list_empty() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let list_type = setup.new_type(Type::Int);
+    let list_type = setup.insert_list_type(int_type);
     let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type);
-    setup.compiler.types[list_type.0] = Type::Variants(vec![
-        ("Empty".into(), Vec::new()),
-        ("NonEmpty".into(), vec![int_type, list_type]),
-    ]);
     let input = setup.new_variable(list_type);
     let rules = vec![
         (setup.variant(list_type, 0, vec![]), rhs(1)),
@@ -1673,14 +1724,10 @@ fn exhaustive_list_just_empty_pattern() {
 fn exhaustive_custom_list_non_empty() {
     let mut setup = Setup::new();
     let int_type = setup.new_type(Type::Int);
-    let list_type = setup.new_type(Type::Int);
+    let list_type = setup.insert_list_type(int_type);
     let discard = setup.discard();
     let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type);
-    setup.compiler.types[list_type.0] = Type::Variants(vec![
-        ("Empty".into(), Vec::new()),
-        ("NonEmpty".into(), vec![int_type, list_type]),
-    ]);
     let rules = vec![
         (setup.variant(list_type, 1, vec![discard, discard]), rhs(1)),
         (discard, rhs(2)),

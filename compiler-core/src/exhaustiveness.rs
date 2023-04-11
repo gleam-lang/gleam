@@ -142,7 +142,7 @@ pub enum Type {
     BitString,
     List(TypeId),
     Tuple(Vec<TypeId>),
-    Variants(Vec<(SmolStr, Vec<TypeId>)>),
+    CustomType { module: SmolStr, name: SmolStr },
 }
 
 /// A unique ID to a type.
@@ -304,6 +304,7 @@ pub struct Match {
     pub types: Vec<Type>,
     pub tree: Decision,
     pub diagnostics: Diagnostics,
+    pub modules: HashMap<SmolStr, ModuleInfo>,
 }
 
 /// Information about a single constructor/value (aka term) being tested, used
@@ -475,12 +476,15 @@ impl Match {
                             });
                         }
 
-                        Constructor::Variant(type_, idx) => {
-                            let name = if let Type::Variants(variants) = &self.types[type_.0] {
-                                variants[*idx].0.clone()
-                            } else {
-                                unreachable!()
-                            };
+                        Constructor::Variant(type_, index) => {
+                            let name = self
+                                .custom_type_info(*type_)
+                                .expect("Custom type constructor must have custom type kind")
+                                .constructors
+                                .get(*index)
+                                .expect("Custom type constructor exist for type")
+                                .0
+                                .clone();
                             terms.push(Term::Variant {
                                 variable,
                                 name,
@@ -519,6 +523,23 @@ impl Match {
             }
         }
     }
+
+    fn custom_type_info(&self, type_: TypeId) -> Option<&CustomTypeInfo> {
+        match self.types.get(type_.0)? {
+            Type::CustomType { module, name } => self.modules.get(module)?.custom_types.get(name),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct CustomTypeInfo {
+    pub constructors: Vec<(SmolStr, Vec<TypeId>)>,
+}
+
+#[derive(Debug, Default)]
+pub struct ModuleInfo {
+    pub custom_types: HashMap<SmolStr, CustomTypeInfo>,
 }
 
 /// The `match` compiler itself (shocking, I know).
@@ -528,11 +549,13 @@ pub struct Compiler {
     types: Vec<Type>,
     diagnostics: Diagnostics,
     patterns: Arena<Pattern>,
+    modules: HashMap<SmolStr, ModuleInfo>,
 }
 
 impl Compiler {
-    pub fn new(patterns: Arena<Pattern>) -> Self {
+    pub fn new(modules: HashMap<SmolStr, ModuleInfo>, patterns: Arena<Pattern>) -> Self {
         Self {
+            modules,
             patterns,
             variable_id: 0,
             types: Vec::new(),
@@ -547,6 +570,7 @@ impl Compiler {
         Match {
             tree: self.compile_rows(rows),
             diagnostics: self.diagnostics,
+            modules: self.modules,
             types: self.types,
         }
     }
@@ -617,7 +641,10 @@ impl Compiler {
                 element_type,
             } => self.compile_list_cases(rows, variable, element_type),
 
-            BranchMode::Variants { variable, variants } => {
+            BranchMode::CustomType {
+                variable,
+                constructors: variants,
+            } => {
                 let cases = variants
                     .iter()
                     .enumerate()
@@ -1003,10 +1030,17 @@ impl Compiler {
                 element_type: *element_type,
             },
 
-            Type::Variants(variants) => BranchMode::Variants {
-                variable,
-                variants: variants.clone(),
-            },
+            Type::CustomType { module, name } => {
+                let constructors = self
+                    .custom_type_info(&module, &name)
+                    .expect("Custom type variants must exist")
+                    .constructors
+                    .clone();
+                BranchMode::CustomType {
+                    variable,
+                    constructors,
+                }
+            }
         }
     }
 
@@ -1038,6 +1072,10 @@ impl Compiler {
     fn variable_type(&self, id: Variable) -> &Type {
         &self.types[id.type_id.0]
     }
+
+    fn custom_type_info(&self, module: &str, name: &str) -> Option<&CustomTypeInfo> {
+        self.modules.get(module)?.custom_types.get(name)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -1053,8 +1091,8 @@ enum BranchMode {
         variable: Variable,
         element_type: TypeId,
     },
-    Variants {
+    CustomType {
         variable: Variable,
-        variants: Vec<(SmolStr, Vec<TypeId>)>,
+        constructors: Vec<(SmolStr, Vec<TypeId>)>,
     },
 }
