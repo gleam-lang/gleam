@@ -2,10 +2,10 @@
 #![allow(unused)]
 
 //! An implementation of the algorithm described at
-//! https://julesjacobs.com/notes/patternmatching/patternmatching.pdf.
+//! <https://julesjacobs.com/notes/patternmatching/patternmatching.pdf>.
 //!
 //! Adapted from Yorick Peterse's implementation at
-//! https://github.com/yorickpeterse/pattern-matching-in-rust. Thank you Yorick!
+//! <https://github.com/yorickpeterse/pattern-matching-in-rust>. Thank you Yorick!
 //!
 //! Note that while this produces a decision tree, this tree is not suitable for
 //! use in code generation yet as it is incomplete. The tree is not correctly
@@ -732,7 +732,8 @@ impl Compiler {
                     // This value has already been tested, so this is a redundant test.
                     // Add the row to the previous test rather than duplicating it.
                     Some(index) => {
-                        raw_cases[*index].2.push(row);
+                        let case = raw_cases.get_mut(*index).expect("Case must exist");
+                        case.2.push(row);
                     }
                     // This is the first time testing the tag, so we add a case for it.
                     None => {
