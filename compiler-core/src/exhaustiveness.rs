@@ -337,7 +337,12 @@ impl Term {
                     .map(|variable| {
                         mapping
                             .get(&variable.id)
-                            .map(|&idx| terms[idx].pattern_string(terms, mapping))
+                            .map(|&idx| {
+                                terms
+                                    .get(idx)
+                                    .expect("Term must exist")
+                                    .pattern_string(terms, mapping)
+                            })
                             .unwrap_or_else(|| "_".into())
                     })
                     .join(", ");
@@ -365,11 +370,21 @@ impl Term {
             } => {
                 let first = mapping
                     .get(&first.id)
-                    .map(|&idx| terms[idx].list_pattern_string(terms, mapping))
+                    .map(|&idx| {
+                        terms
+                            .get(idx)
+                            .expect("Term must exist")
+                            .list_pattern_string(terms, mapping)
+                    })
                     .unwrap_or_else(|| "_".into());
                 let rest = mapping
                     .get(&rest.id)
-                    .map(|&idx| terms[idx].list_pattern_string(terms, mapping))
+                    .map(|&idx| {
+                        terms
+                            .get(idx)
+                            .expect("Term must exist")
+                            .list_pattern_string(terms, mapping)
+                    })
                     .unwrap_or_else(|| "_".into());
 
                 match rest.as_str() {
@@ -813,11 +828,11 @@ impl Compiler {
                 let index = cons.index();
                 let mut columns = row.columns;
 
-                for (var, pattern) in cases[index].1.iter().zip(args.into_iter()) {
+                let case = cases.get_mut(index).expect("Case must exist");
+                for (var, pattern) in case.1.iter().zip(args.into_iter()) {
                     columns.push(Column::new(var.clone(), pattern));
                 }
-
-                cases[index].2.push(Row::new(columns, row.guard, row.body));
+                case.2.push(Row::new(columns, row.guard, row.body));
             }
         }
 
