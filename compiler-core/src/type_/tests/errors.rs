@@ -1765,3 +1765,15 @@ fn() {
 "
     );
 }
+
+#[test]
+fn negate_float_as_integer() {
+    assert_error!(
+        "
+fn() {
+    let a = 7.0
+    let b = -a
+}
+"
+    );
+}
