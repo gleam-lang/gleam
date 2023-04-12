@@ -390,7 +390,7 @@ expression.",
                     location: Some(Location {
                         src: src.clone(),
                         path: path.to_path_buf(),
-                        label: diagnostic::Label { text: Some("Double unary expression".into()), span: *location },
+                        label: diagnostic::Label { text: Some("Unnecessary double unary expression".into()), span: *location },
                         extra_labels: Vec::new()
                     })
                 },

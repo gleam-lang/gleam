@@ -166,25 +166,60 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 arguments: args,
             } => self.infer_record_update(*constructor, spread, args, location),
 
-            UntypedExpr::NegateBool { location, value } => {
-                if let UntypedExpr::NegateBool { location: _, value: _ } = &*value {
-                    self.environment.warnings.emit(Warning::DoubleUnary { location });
+            UntypedExpr::UnaryBang { location, value } => {
+                if let UntypedExpr::UnaryBang {
+                    location: _,
+                    value: _,
+                } = &*value
+                {
+                    self.environment
+                        .warnings
+                        .emit(Warning::DoubleUnary { location });
                 }
                 self.infer_negate_bool(location, *value)
-            },
+            }
 
-            UntypedExpr::NegateInt { location, value } => {
-                if let UntypedExpr::Int { location: _, value: v } = &*value {
+            UntypedExpr::UnaryMinus { location, value } => {
+                // Emit warnings for a double unary -- on an int
+                if let UntypedExpr::Int {
+                    location: _,
+                    value: v,
+                } = &*value
+                {
                     if v.starts_with('-') {
-                        self.environment.warnings.emit(Warning::DoubleUnary { location });
+                        self.environment
+                            .warnings
+                            .emit(Warning::DoubleUnary { location });
                     }
                 }
-                if let UntypedExpr::NegateInt { location: _, value: _ } = &*value {
-                    self.environment.warnings.emit(Warning::DoubleUnary { location });
+
+                // Emit warnings for a double unary -- on a float
+                if let UntypedExpr::Float {
+                    location: _,
+                    value: v,
+                } = &*value
+                {
+                    if v.starts_with('-') {
+                        self.environment
+                            .warnings
+                            .emit(Warning::DoubleUnary { location });
+                    }
+                }
+
+                // Emit warnings for a double unary -- on an expression that evaluates
+                // to an int or a float
+                if let UntypedExpr::UnaryMinus {
+                    location: _,
+                    value: _,
+                } = &*value
+                {
+                    self.environment
+                        .warnings
+                        .emit(Warning::DoubleUnary { location });
                 }
 
                 self.infer_negate_int(location, *value)
-            },
+            }
         }
     }
 
@@ -390,8 +425,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         let value = self.infer(value)?;
 
-        unify(int(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))
-        .or_else(|_| unify(float(), value.type_()).map_err(|e| convert_unify_error(e, value.location())))?;
+        unify(int(), value.type_())
+            .or_else(|_| unify(float(), value.type_()))
+            .map_err(|e| convert_unify_error(e, value.location()))?;
 
         Ok(TypedExpr::NegateInt {
             location,

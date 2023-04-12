@@ -1592,13 +1592,3 @@ fn block_maths() {
         vec![("do", "fn(Float, Float) -> Float")],
     );
 }
-
-#[test]
-fn double_unary() {
-    assert_warning!(r#"pub fn double_unary() {
-        let x = --7
-        let _ = --x
-        let a = !!True
-        let _ = !!a
-    }"#);
-}

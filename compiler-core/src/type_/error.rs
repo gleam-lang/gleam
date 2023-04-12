@@ -324,8 +324,8 @@ pub enum Warning {
     },
 
     DoubleUnary {
-        location: SrcSpan
-    }
+        location: SrcSpan,
+    },
 }
 
 impl Error {
