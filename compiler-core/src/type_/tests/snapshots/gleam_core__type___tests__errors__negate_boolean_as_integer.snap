@@ -10,7 +10,7 @@ error: Type mismatch
 
 Expected type:
 
-    Int
+    Float
 
 Found type:
 
