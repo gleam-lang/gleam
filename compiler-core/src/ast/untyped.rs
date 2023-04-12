@@ -111,7 +111,7 @@ pub enum UntypedExpr {
         value: Box<Self>,
     },
 
-    NegateFloat {
+    NegateInt {
         location: SrcSpan,
         value: Box<Self>,
     },
@@ -136,7 +136,7 @@ impl UntypedExpr {
             | Self::Panic { location, .. }
             | Self::String { location, .. }
             | Self::BitString { location, .. }
-            | Self::NegateFloat { location, .. }
+            | Self::NegateInt { location, .. }
             | Self::NegateBool { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::FieldAccess { location, .. }
