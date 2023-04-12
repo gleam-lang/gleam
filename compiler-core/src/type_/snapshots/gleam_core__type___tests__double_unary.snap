@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests.rs
-expression: "pub fn double_unary() {\n        let x = --7\n        let y = --x\n        let _ = !!True\n    }"
+expression: "pub fn double_unary() {\n        let x = --7\n        let _ = --x\n        let a = !!True\n        let _ = !!a\n    }"
 ---
 
 warning: Unnecessary double unary expression
@@ -14,16 +14,24 @@ Hint: If you're trying to type cast, look for a `from_<type>` function in the ta
 warning: Unnecessary double unary expression
   ┌─ /src/warning/wrn.gleam:3:17
   │
-3 │         let y = --x
+3 │         let _ = --x
   │                 ^^^ Double unary expression
 
 Hint: If you're trying to type cast, look for a `from_<type>` function in the target type's module
 
-warning: Unused variable
-  ┌─ /src/warning/wrn.gleam:3:13
+warning: Unnecessary double unary expression
+  ┌─ /src/warning/wrn.gleam:4:17
   │
-3 │         let y = --x
-  │             ^ This variable is never used.
+4 │         let a = !!True
+  │                 ^^^^^^ Double unary expression
 
-Hint: You can ignore it with an underscore: `_y`.
+Hint: If you're trying to type cast, look for a `from_<type>` function in the target type's module
+
+warning: Unnecessary double unary expression
+  ┌─ /src/warning/wrn.gleam:5:17
+  │
+5 │         let _ = !!a
+  │                 ^^^ Double unary expression
+
+Hint: If you're trying to type cast, look for a `from_<type>` function in the target type's module
 

@@ -166,16 +166,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 arguments: args,
             } => self.infer_record_update(*constructor, spread, args, location),
 
-            UntypedExpr::NegateBool { location, value } => self.infer_negate_bool(location, *value),
+            UntypedExpr::NegateBool { location, value } => {
+                if let UntypedExpr::NegateBool { location: _, value: _ } = &* value {
+                    self.environment.warnings.emit(Warning::DoubleUnary { location });
+                }
+                self.infer_negate_bool(location, *value)
+            },
 
             UntypedExpr::NegateInt { location, value } => {
-                
                 if let UntypedExpr::Int { location: _, value: v } = &*value {
                     if v.starts_with('-') {
                         self.environment.warnings.emit(Warning::DoubleUnary { location });
                     }
                 }
-
                 if let UntypedExpr::NegateInt { location: _, value: _ } = &*value {
                     self.environment.warnings.emit(Warning::DoubleUnary { location });
                 }
