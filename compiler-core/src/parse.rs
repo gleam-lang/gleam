@@ -586,7 +586,7 @@ where
             Some((start, Token::Minus, _end)) => {
                 let _ = self.next_tok();
                 match self.parse_expression_unit()? {
-                    Some(value) => UntypedExpr::NegateFloat {
+                    Some(value) => UntypedExpr::NegateInt {
                         location: SrcSpan {
                             start,
                             end: value.location().end,

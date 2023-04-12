@@ -161,7 +161,7 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            UntypedExpr::NegateFloat {
+            UntypedExpr::NegateInt {
                 value: expression, ..
             }
             | UntypedExpr::NegateBool {

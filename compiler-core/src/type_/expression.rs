@@ -179,7 +179,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 self.infer_negate_bool(location, *value)
             }
 
-            UntypedExpr::NegateFloat { location, value } => {
+            UntypedExpr::NegateInt { location, value } => {
                 // Emit warnings for a double unary -- on an int
                 if let UntypedExpr::Int {
                     location: _,
@@ -195,7 +195,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 // Emit warnings for a double unary -- on an expression that evaluates
                 // to an int or a float
-                if let UntypedExpr::NegateFloat {
+                if let UntypedExpr::NegateInt {
                     location: _,
                     value: _,
                 } = &*value
@@ -412,8 +412,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         let value = self.infer(value)?;
 
-        unify(int(), value.type_())
-            .map_err(|e| convert_unify_error(e, value.location()))?;
+        unify(int(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
 
         Ok(TypedExpr::NegateInt {
             location,
