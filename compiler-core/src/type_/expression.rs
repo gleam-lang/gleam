@@ -168,7 +168,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::NegateBool { location, value } => self.infer_negate_bool(location, *value),
 
-            UntypedExpr::NegateInt { location, value } => self.infer_negate_int(location, *value),
+            UntypedExpr::NegateInt { location, value } => {
+                
+                if let UntypedExpr::Int { location: _, value: v } = &*value {
+                    if v.starts_with('-') {
+                        self.environment.warnings.emit(Warning::DoubleUnary { location });
+                    }
+                }
+
+                if let UntypedExpr::NegateInt { location: _, value: _ } = &*value {
+                    self.environment.warnings.emit(Warning::DoubleUnary { location });
+                }
+
+                self.infer_negate_int(location, *value)
+            },
         }
     }
 
