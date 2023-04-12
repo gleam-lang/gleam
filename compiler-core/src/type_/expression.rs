@@ -218,7 +218,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         .emit(Warning::DoubleUnary { location });
                 }
 
-                self.infer_negate_int(location, *value)
+                self.infer_unary_minus(location, *value)
             }
         }
     }
@@ -418,7 +418,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_negate_int(
+    fn infer_unary_minus(
         &mut self,
         location: SrcSpan,
         value: UntypedExpr,
