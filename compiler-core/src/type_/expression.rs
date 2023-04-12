@@ -193,8 +193,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                 }
 
-                // Emit warnings for a double unary -- on an expression that evaluates
-                // to an int or a float
+                // Emit warnings for a double unary -- on an expression that evaluates to an int
                 if let UntypedExpr::NegateInt {
                     location: _,
                     value: _,
