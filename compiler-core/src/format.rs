@@ -672,9 +672,9 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
-            UntypedExpr::UnaryMinus { value, .. } => self.negate_int(value),
+            UntypedExpr::NegateFloat { value, .. } => self.negate_int(value),
 
-            UntypedExpr::UnaryBang { value, .. } => self.negate_bool(value),
+            UntypedExpr::NegateBool { value, .. } => self.negate_bool(value),
 
             UntypedExpr::Fn {
                 is_capture: true,
@@ -877,8 +877,8 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::Panic { .. }
             | UntypedExpr::BitString { .. }
             | UntypedExpr::RecordUpdate { .. }
-            | UntypedExpr::UnaryBang { .. }
-            | UntypedExpr::UnaryMinus { .. } => self.expr(fun),
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateFloat { .. } => self.expr(fun),
         };
 
         match args {
@@ -1517,7 +1517,7 @@ impl<'comments> Formatter<'comments> {
 
     fn negate_int<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::BinOp { .. } | UntypedExpr::UnaryMinus { .. } => {
+            UntypedExpr::BinOp { .. } | UntypedExpr::NegateFloat { .. } => {
                 "- ".to_doc().append(self.expr(expr))
             }
 
@@ -1578,8 +1578,8 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::Panic { .. }
             | UntypedExpr::BitString { .. }
             | UntypedExpr::RecordUpdate { .. }
-            | UntypedExpr::UnaryBang { .. }
-            | UntypedExpr::UnaryMinus { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateFloat { .. }
             | UntypedExpr::Block { .. } => self.expr(expr),
         }
     }

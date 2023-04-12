@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\nfn() {\n  let a = 3.0\n  let b = -a\n}\n"
+expression: "\nfn() {\n    let a = 7.0\n    let b = -a\n}\n"
 ---
 error: Type mismatch
-  ┌─ /src/one/two.gleam:4:12
+  ┌─ /src/one/two.gleam:4:14
   │
-4 │   let b = -a
-  │            ^
+4 │     let b = -a
+  │              ^
 
 Expected type:
 
