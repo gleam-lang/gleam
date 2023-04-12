@@ -566,7 +566,7 @@ where
             Some((start, Token::Bang, _end)) => {
                 let _ = self.next_tok();
                 match self.parse_expression_unit()? {
-                    Some(value) => UntypedExpr::NegateBool {
+                    Some(value) => UntypedExpr::UnaryBang {
                         location: SrcSpan {
                             start,
                             end: value.location().end,
@@ -586,7 +586,7 @@ where
             Some((start, Token::Minus, _end)) => {
                 let _ = self.next_tok();
                 match self.parse_expression_unit()? {
-                    Some(value) => UntypedExpr::NegateInt {
+                    Some(value) => UntypedExpr::UnaryMinus {
                         location: SrcSpan {
                             start,
                             end: value.location().end,

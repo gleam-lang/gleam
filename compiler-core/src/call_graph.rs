@@ -161,10 +161,10 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            UntypedExpr::NegateInt {
+            UntypedExpr::UnaryMinus {
                 value: expression, ..
             }
-            | UntypedExpr::NegateBool {
+            | UntypedExpr::UnaryBang {
                 value: expression, ..
             }
             | UntypedExpr::TupleIndex {

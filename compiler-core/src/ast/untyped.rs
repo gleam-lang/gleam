@@ -106,12 +106,12 @@ pub enum UntypedExpr {
         arguments: Vec<UntypedRecordUpdateArg>,
     },
 
-    NegateBool {
+    UnaryBang {
         location: SrcSpan,
         value: Box<Self>,
     },
 
-    NegateInt {
+    UnaryMinus {
         location: SrcSpan,
         value: Box<Self>,
     },
@@ -136,8 +136,8 @@ impl UntypedExpr {
             | Self::Panic { location, .. }
             | Self::String { location, .. }
             | Self::BitString { location, .. }
-            | Self::NegateInt { location, .. }
-            | Self::NegateBool { location, .. }
+            | Self::UnaryMinus { location, .. }
+            | Self::UnaryBang { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::FieldAccess { location, .. }
             | Self::RecordUpdate { location, .. } => *location,
