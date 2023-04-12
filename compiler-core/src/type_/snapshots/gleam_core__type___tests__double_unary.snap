@@ -3,7 +3,7 @@ source: compiler-core/src/type_/tests.rs
 expression: "pub fn double_unary() {\n        let x = --7\n        let y = --x\n        let _ = !!True\n    }"
 ---
 
-warning: Double unary expression
+warning: Unnecessary double unary expression
   ┌─ /src/warning/wrn.gleam:2:17
   │
 2 │         let x = --7
@@ -11,7 +11,7 @@ warning: Double unary expression
 
 Hint: If you're trying to type cast, look for a `from_<type>` function in the target type's module
 
-warning: Double unary expression
+warning: Unnecessary double unary expression
   ┌─ /src/warning/wrn.gleam:3:17
   │
 3 │         let y = --x
