@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub fn main() { let _ = !!True }"
+---
+
+warning: Unnecessary double unary expression
+  ┌─ /src/warning/wrn.gleam:1:25
+  │
+1 │ pub fn main() { let _ = !!True }
+  │                         ^^^^^^ Unnecessary double unary expression
+
+Hint: If you're trying to type cast, look for a `from_<type>` function in the target type's module
+
