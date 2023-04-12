@@ -167,7 +167,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => self.infer_record_update(*constructor, spread, args, location),
 
             UntypedExpr::NegateBool { location, value } => {
-                if let UntypedExpr::NegateBool { location: _, value: _ } = &* value {
+                if let UntypedExpr::NegateBool { location: _, value: _ } = &*value {
                     self.environment.warnings.emit(Warning::DoubleUnary { location });
                 }
                 self.infer_negate_bool(location, *value)
@@ -390,7 +390,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         let value = self.infer(value)?;
 
-        unify(int(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
+        unify(int(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))
+        .or_else(|_| unify(float(), value.type_()).map_err(|e| convert_unify_error(e, value.location())))?;
 
         Ok(TypedExpr::NegateInt {
             location,
