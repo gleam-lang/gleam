@@ -322,6 +322,10 @@ pub enum Warning {
         location: SrcSpan,
         name: SmolStr,
     },
+
+    DoubleUnary {
+        location: SrcSpan
+    }
 }
 
 impl Error {

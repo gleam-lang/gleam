@@ -382,6 +382,18 @@ expression.",
                         extra_labels: Vec::new(),
                     }),
                 },
+                type_::Warning::DoubleUnary { location } => Diagnostic {
+                    title: "Double unary expression".into(),
+                    text: "".into(),
+                    hint: Some("If you're trying to type cast, look for a `from_<type>` function in the target type's module".into()),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label { text: Some("Double unary expression".into()), span: *location },
+                        extra_labels: Vec::new()
+                    })
+                },
             },
         }
     }
