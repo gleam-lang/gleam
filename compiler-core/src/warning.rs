@@ -383,7 +383,7 @@ expression.",
                     }),
                 },
                 type_::Warning::DoubleUnary { location } => Diagnostic {
-                    title: "Double unary expression".into(),
+                    title: "Unnecessary double unary expression".into(),
                     text: "".into(),
                     hint: Some("If you're trying to type cast, look for a `from_<type>` function in the target type's module".into()),
                     level: diagnostic::Level::Warning,
