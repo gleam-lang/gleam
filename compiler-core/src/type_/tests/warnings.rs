@@ -563,3 +563,22 @@ fn double_unary_float_variable() {
         "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2050
+#[test]
+fn double_unary_boolean_literal() {
+    assert_warning!("pub fn main() { let _ = !!True }");
+}
+
+// https://github.com/gleam-lang/gleam/issues/2050
+#[test]
+fn double_unary_boolean_variable() {
+    assert_warning!(
+        r#"
+        pub fn main() { 
+            let x = True
+            let _ = !!x 
+        }
+        "#
+    );
+}
