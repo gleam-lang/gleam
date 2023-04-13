@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.28.3 - 2023-04-13
+
+- Added a warning for double unary minus (--) on integers
+- Added a warning for double unary bang (!!) on booleans 
+
 ## v0.28.2 - 2023-04-10
 
 - Fixed a bug where comments above a `use` expression would be formatted
