@@ -382,15 +382,27 @@ expression.",
                         extra_labels: Vec::new(),
                     }),
                 },
-                type_::Warning::DoubleUnary { location } => Diagnostic {
-                    title: "Unnecessary double unary expression".into(),
+                type_::Warning::UnnecessaryDoubleIntNegation { location } => Diagnostic {
+                    title: "Unnecessary double negation (--) on integer.".into(),
                     text: "".into(),
-                    hint: Some("If you're trying to type cast, look for a `from_<type>` function in the target type's module".into()),
+                    hint: Some("You can safely remove this".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
                         path: path.to_path_buf(),
-                        label: diagnostic::Label { text: Some("Unnecessary double unary expression".into()), span: *location },
+                        label: diagnostic::Label { text: None, span: *location },
+                        extra_labels: Vec::new()
+                    })
+                },
+                type_::Warning::UnnecessaryDoubleBooleanNegation { location } => Diagnostic {
+                    title: "Unnecessary double negation (!!) on boolean.".into(),
+                    text: "".into(),
+                    hint: Some("You can safely remove this.".into()),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label { text: None, span: *location },
                         extra_labels: Vec::new()
                     })
                 },
