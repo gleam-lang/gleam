@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Added a warning for double unary minus (--) on integers
+- Added a warning for double unary bang (!!) on booleans 
+
 ## v0.28.3 - 2023-04-17
 
 - Fixed a bug where the language server would show outdated error diagnostics
