@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- New Gleam projects are created with `actions/checkout@v3.5.1` and
+  `erlef/setup-beam@1.15.3` in their GitHub actions CI configuration.
+
 ## v0.28.2 - 2023-04-10
 
 - Fixed a bug where comments above a `use` expression would be formatted
