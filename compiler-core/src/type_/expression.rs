@@ -166,13 +166,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 arguments: args,
             } => self.infer_record_update(*constructor, spread, args, location),
 
-            UntypedExpr::NegateBool { location, value } => {
-                self.infer_negate_bool(location, *value)
-            }
+            UntypedExpr::NegateBool { location, value } => self.infer_negate_bool(location, *value),
 
-            UntypedExpr::NegateInt { location, value } => {
-                self.infer_negate_int(location, *value)
-            }
+            UntypedExpr::NegateInt { location, value } => self.infer_negate_int(location, *value),
         }
     }
 
@@ -365,7 +361,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         unify(bool(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
 
-        if let TypedExpr::NegateBool { location:_, value: _ } = value {
+        if let TypedExpr::NegateBool { .. } = value {
             self.environment
                 .warnings
                 .emit(Warning::UnnecessaryDoubleBooleanNegation { location });

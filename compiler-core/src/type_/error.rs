@@ -328,8 +328,8 @@ pub enum Warning {
     },
 
     UnnecessaryDoubleBooleanNegation {
-        location: SrcSpan
-    }
+        location: SrcSpan,
+    },
 }
 
 impl Error {
