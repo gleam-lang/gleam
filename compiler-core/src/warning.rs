@@ -390,9 +390,12 @@ expression.",
                     location: Some(Location {
                         src: src.clone(),
                         path: path.to_path_buf(),
-                        label: diagnostic::Label { text: None, span: *location },
-                        extra_labels: Vec::new()
-                    })
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
                 },
                 type_::Warning::UnnecessaryDoubleBooleanNegation { location } => Diagnostic {
                     title: "Unnecessary double negation (!!) on boolean.".into(),
@@ -402,9 +405,12 @@ expression.",
                     location: Some(Location {
                         src: src.clone(),
                         path: path.to_path_buf(),
-                        label: diagnostic::Label { text: None, span: *location },
-                        extra_labels: Vec::new()
-                    })
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
                 },
             },
         }
