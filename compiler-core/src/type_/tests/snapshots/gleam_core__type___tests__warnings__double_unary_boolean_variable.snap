@@ -3,11 +3,11 @@ source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n        pub fn main() { \n            let x = True\n            let _ = !!x \n        }\n        "
 ---
 
-warning: Unnecessary double unary expression
+warning: Unnecessary double negation (!!) on boolean.
   ┌─ /src/warning/wrn.gleam:4:21
   │
 4 │             let _ = !!x 
-  │                     ^^^ Unnecessary double unary expression
+  │                     ^^^
 
-Hint: If you're trying to type cast, look for a `from_<type>` function in the target type's module
+Hint: You can safely remove this.
 

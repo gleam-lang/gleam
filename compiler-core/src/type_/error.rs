@@ -323,9 +323,13 @@ pub enum Warning {
         name: SmolStr,
     },
 
-    DoubleUnary {
+    UnnecessaryDoubleIntNegation {
         location: SrcSpan,
     },
+
+    UnnecessaryDoubleBooleanNegation {
+        location: SrcSpan
+    }
 }
 
 impl Error {
