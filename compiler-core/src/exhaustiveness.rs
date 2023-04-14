@@ -32,22 +32,22 @@
 //!
 
 mod missing_patterns;
+mod pattern;
 #[cfg(test)]
 mod tests;
 
+use self::pattern::{Constructor, Pattern, PatternId};
 use crate::{
     ast::AssignName,
     type_::{collapse_links, Type},
 };
-use id_arena::{Arena, Id};
+use id_arena::Arena;
 use itertools::Itertools;
 use smol_str::SmolStr;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
-
-type PatternId = Id<Pattern>;
 
 /// The body of code to evaluate in case of a match.
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -59,82 +59,6 @@ pub struct Body {
 
     /// The index of the clause in the case expression that should be run.
     clause_index: u16,
-}
-
-/// A type constructor.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Constructor {
-    Int(SmolStr),
-    Float(SmolStr),
-    Tuple(Vec<Arc<Type>>),
-    String(SmolStr),
-    Variant(Arc<Type>, usize),
-    // TODO: Generate a decision tree for this
-    BitString,
-    // TODO: Generate a decision tree for this
-    StringPrefix,
-}
-
-impl Constructor {
-    /// Returns the index of this constructor relative to its type.
-    fn index(&self) -> usize {
-        match self {
-            Constructor::Int(_)
-            | Constructor::Float(_)
-            | Constructor::Tuple(_)
-            | Constructor::String(_)
-            | Constructor::BitString
-            | Constructor::StringPrefix => 0,
-
-            Constructor::Variant(_, index) => *index,
-        }
-    }
-}
-
-/// A user defined pattern such as `Some((x, 10))`.
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub enum Pattern {
-    Discard,
-    Or {
-        left: PatternId,
-        right: PatternId,
-    },
-    Int {
-        value: SmolStr,
-    },
-    Float {
-        value: SmolStr,
-    },
-    String {
-        value: SmolStr,
-    },
-    StringPrefix {
-        prefix: SmolStr,
-        rest: AssignName,
-    },
-    Assign {
-        name: SmolStr,
-        pattern: PatternId,
-    },
-    Variable {
-        name: SmolStr,
-    },
-    Tuple {
-        elements: Vec<PatternId>,
-    },
-    Constructor {
-        constructor: Constructor,
-        arguments: Vec<PatternId>,
-    },
-    List {
-        first: PatternId,
-        rest: PatternId,
-    },
-    EmptyList,
-    // TODO: Compile the matching within the bit strings
-    BitString {
-        value: SmolStr,
-    },
 }
 
 /// A variable used in a match expression.
