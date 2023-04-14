@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Added a warning for double unary minus (--) on integers
-- Added a warning for double unary bang (!!) on booleans 
+- Added a warning for double unary bang (!!) on bool 
 
 ## v0.28.3 - 2023-04-17
 
