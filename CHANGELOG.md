@@ -1,9 +1,11 @@
 # Changelog
 
-## v0.28.3 - 2023-04-13
-
+## Unreleased
 - Added a warning for double unary minus (--) on integers
 - Added a warning for double unary bang (!!) on booleans 
+
+- New Gleam projects are created with `actions/checkout@v3.5.1` and
+  `erlef/setup-beam@1.15.3` in their GitHub actions CI configuration.
 
 ## v0.28.2 - 2023-04-10
 
