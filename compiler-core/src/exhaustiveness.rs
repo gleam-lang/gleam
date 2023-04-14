@@ -34,6 +34,8 @@
 mod missing_patterns;
 mod pattern;
 #[cfg(test)]
+mod pattern_tests;
+#[cfg(test)]
 mod tests;
 
 use self::pattern::{Constructor, Pattern, PatternId};

@@ -138,6 +138,7 @@ impl Patterns {
                 self.insert(Pattern::Tuple { elements })
             }
 
+            // TODO: test
             TypedPattern::List { elements, tail, .. } => {
                 let mut list = match tail {
                     Some(tail) => self.register(tail),
@@ -150,6 +151,7 @@ impl Patterns {
                 list
             }
 
+            // TODO: test
             TypedPattern::Constructor {
                 name,
                 arguments,
@@ -159,7 +161,7 @@ impl Patterns {
                 type_,
                 ..
             } => {
-                // TODO: Constructor
+                // TODO: Implement constructor
                 let constructor = todo!();
                 let arguments = todo!("Convert arguments to patterns. Need to handle labels");
                 self.insert(Pattern::Constructor {
@@ -168,6 +170,7 @@ impl Patterns {
                 })
             }
 
+            // TODO: test
             TypedPattern::BitString { location, .. } => {
                 // TODO: in future support bit strings fully and check the
                 // exhaustiveness of their segment patterns.
@@ -178,6 +181,7 @@ impl Patterns {
                 })
             }
 
+            // TODO: test
             TypedPattern::StringPrefix {
                 left_side_string,
                 right_side_assignment,
@@ -196,5 +200,10 @@ impl Patterns {
 
     pub fn insert(&mut self, pattern: Pattern) -> PatternId {
         self.arena.alloc(pattern)
+    }
+
+    #[cfg(test)]
+    pub fn into_inner(self) -> Arena<Pattern> {
+        self.arena
     }
 }
