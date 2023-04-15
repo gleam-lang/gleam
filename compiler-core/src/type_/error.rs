@@ -118,8 +118,8 @@ pub enum Error {
     },
 
     DuplicateName {
-        location_a: SrcSpan,
-        location_b: SrcSpan,
+        location: SrcSpan,
+        previous_location: SrcSpan,
         name: SmolStr,
     },
 
@@ -130,12 +130,6 @@ pub enum Error {
     },
 
     DuplicateTypeName {
-        location: SrcSpan,
-        previous_location: SrcSpan,
-        name: SmolStr,
-    },
-
-    DuplicateConstName {
         location: SrcSpan,
         previous_location: SrcSpan,
         name: SmolStr,
