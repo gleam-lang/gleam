@@ -42,8 +42,8 @@ impl<'a> CallGraphBuilder<'a> {
 
         if let Some(Some((_, previous_location))) = previous {
             return Err(Error::DuplicateName {
-                location_a: location,
-                location_b: previous_location,
+                previous_location,
+                location,
                 name: name.clone(),
             });
         }

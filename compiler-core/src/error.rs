@@ -898,52 +898,17 @@ Names in a Gleam module must be unique so one will need to be renamed."
                 }
 
                 TypeError::DuplicateName {
-                    location_a,
+                    location,
+                    previous_location,
                     name,
-                    location_b,
                     ..
                 } => {
-                    let (first, second) = if location_a.start < location_b.start {
-                        (location_a, location_b)
-                    } else {
-                        (location_b, location_a)
-                    };
                     let text = format!(
                         "`{name}` has been defined multiple times.
 Names in a Gleam module must be unique so one will need to be renamed."
                     );
                     Diagnostic {
                         title: "Duplicate definition".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("Redefined here".into()),
-                                span: *second,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![Label {
-                                text: Some("First defined here".into()),
-                                span: *first,
-                            }],
-                        }),
-                    }
-                }
-
-                TypeError::DuplicateConstName {
-                    location,
-                    name,
-                    previous_location,
-                    ..
-                } => {
-                    let text = format!(
-                        "`{name}` has been defined multiple times.
-Names in a Gleam module must be unique so one will need to be renamed."
-                    );
-                    Diagnostic {
-                        title: "Duplicate constant definition".into(),
                         text,
                         hint: None,
                         level: Level::Error,
