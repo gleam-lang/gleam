@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use gleam_core::{
     config::PackageConfig,
     error::{Error, FileIoAction, FileKind},
+    manifest::Manifest,
     paths::ProjectPaths,
 };
 
@@ -15,16 +16,32 @@ pub fn root_config() -> Result<PackageConfig, Error> {
 
 /// Get the config for a dependency module. Return the config for the current
 /// project if a dependency doesn't have a config file.
-pub fn find_package_config_for_module(mod_path: &str, project_paths: &ProjectPaths) -> Result<PackageConfig, Error> {
+pub fn find_package_config_for_module(
+    mod_path: &str,
+    project_paths: &ProjectPaths,
+) -> Result<PackageConfig, Error> {
+    let manifest: Manifest =
+        toml::from_str(&fs::read_to_string(project_paths.manifest()).unwrap()).unwrap();
+
+    let gleam_projects: Vec<&String> = manifest
+        .packages
+        .iter()
+        .filter(|package| package.build_tools.contains(&"gleam".to_string()))
+        .map(|package| &package.name)
+        .collect();
+
     let package_path = fs::read_dir(project_paths.build_packages_directory()).map_or(None, |x| {
         {
             x.filter_map(Result::ok)
-            .find(|file| {
-                file.path()
-                    .join("src")
-                    .join(mod_path.to_string() + ".gleam")
-                    .is_file()
-            })
+                .filter(|project_folder| {
+                    gleam_projects.contains(&&project_folder.file_name().into_string().unwrap())
+                })
+                .find(|file| {
+                    file.path()
+                        .join("src")
+                        .join(mod_path.to_string() + ".gleam")
+                        .is_file()
+                })
         }
     });
 
