@@ -898,11 +898,16 @@ Names in a Gleam module must be unique so one will need to be renamed."
                 }
 
                 TypeError::DuplicateName {
-                    location,
-                    previous_location,
+                    location_a,
+                    location_b,
                     name,
                     ..
                 } => {
+                    let (first_location, second_location) = if location_a.start < location_b.start {
+                      (location_a, location_b)
+                    } else {
+                        (location_b, location_a)
+                    };
                     let text = format!(
                         "`{name}` has been defined multiple times.
 Names in a Gleam module must be unique so one will need to be renamed."
@@ -915,13 +920,13 @@ Names in a Gleam module must be unique so one will need to be renamed."
                         location: Some(Location {
                             label: Label {
                                 text: Some("Redefined here".into()),
-                                span: *location,
+                                span: *second_location,
                             },
                             path: path.clone(),
                             src: src.clone(),
                             extra_labels: vec![Label {
                                 text: Some("First defined here".into()),
-                                span: *previous_location,
+                                span: *first_location,
                             }],
                         }),
                     }

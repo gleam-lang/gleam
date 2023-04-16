@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "external fn foo() -> Float =\n  \"module1\" \"function1\"\nexternal fn foo() -> Float =\n  \"module2\" \"function2\""
+---
+error: Duplicate definition
+  ┌─ /src/one/two.gleam:1:1
+  │    
+1 │   ╭ external fn foo() -> Float =
+2 │   │   "module1" "function1"
+  │   ╰───────────────────────^ First defined here
+3 │ ╭   external fn foo() -> Float =
+4 │ │     "module2" "function2"
+  │ ╰─────────────────────────^ Redefined here
+
+`foo` has been defined multiple times.
+Names in a Gleam module must be unique so one will need to be renamed.
+

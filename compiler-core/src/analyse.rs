@@ -109,43 +109,18 @@ pub fn infer_module(
         register_type_alias(t, &mut type_names, &mut env, &name)?;
     }
 
-    // Check name uniqueness among constants, functions and external functions.
-    let mut name_locations = HashMap::new();
-    for c in &statements.constants {
-        name_locations
-            .entry(&c.name)
-            .or_insert_with(Vec::new)
-            .push(c.location)
-    }
-    for f in &statements.functions {
-        name_locations
-            .entry(&f.name)
-            .or_insert_with(Vec::new)
-            .push(f.location)
-    }
-    for ef in &statements.external_functions {
-        name_locations
-            .entry(&ef.name)
-            .or_insert_with(Vec::new)
-            .push(ef.location)
-    }
-    for (name, locations) in name_locations {
-        let mut sorted_locations = locations.clone();
-        sorted_locations.sort_by_key(|l| l.start);
-        for location in sorted_locations {
-            assert_unique_name(&mut value_names, name, location)?;
-        }
-    }
-
     // Register values so they can be used in functions earlier in the module.
     for f in &statements.functions {
-        register_value_from_function(f, &mut env, &mut hydrators, &name)?;
+        register_value_from_function(f, &mut value_names, &mut env, &mut hydrators, &name)?;
     }
-    for f in &statements.external_functions {
-        register_external_function(f, &mut env)?;
+    for ef in &statements.external_functions {
+        register_external_function(ef, &mut value_names, &mut env)?;
     }
     for t in &statements.custom_types {
         register_values_from_custom_type(t, &mut hydrators, &mut env, &mut value_names, &name)?;
+    }
+    for c in &statements.constants {
+        assert_unique_name(&mut value_names, &c.name, c.location)?;
     }
 
     // Infer the types of each statement in the module
@@ -627,6 +602,7 @@ fn register_values_from_custom_type(
 
 fn register_external_function(
     f: &ExternalFunction<()>,
+    names: &mut HashMap<SmolStr, SrcSpan>,
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     let ExternalFunction {
@@ -640,6 +616,7 @@ fn register_external_function(
         documentation,
         ..
     } = f;
+    assert_unique_name(names, name, *location)?;
     let mut hydrator = Hydrator::new();
     let (typ, field_map) = environment.in_new_scope(|environment| {
         let return_type = hydrator.type_from_ast(retrn, environment)?;
@@ -689,6 +666,7 @@ fn register_external_function(
 
 fn register_value_from_function(
     f: &Function<(), ast::UntypedExpr>,
+    names: &mut HashMap<SmolStr, SrcSpan>,
     environment: &mut Environment<'_>,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
     module_name: &SmolStr,
@@ -702,6 +680,7 @@ fn register_value_from_function(
         documentation,
         ..
     } = f;
+    assert_unique_name(names, name, *location)?;
     let _ = environment.ungeneralised_functions.insert(name.clone());
     let mut builder = FieldMapBuilder::new(args.len() as u32);
     for arg in args.iter() {
@@ -1269,8 +1248,8 @@ fn assert_unique_name(
 ) -> Result<(), Error> {
     match names.insert(name.clone(), location) {
         Some(previous_location) => Err(Error::DuplicateName {
-            previous_location,
-            location,
+            location_a: location,
+            location_b: previous_location,
             name: name.clone(),
         }),
         None => Ok(()),

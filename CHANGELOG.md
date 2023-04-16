@@ -4,8 +4,7 @@
 
 - New Gleam projects are created with `actions/checkout@v3.5.1` and
   `erlef/setup-beam@1.15.3` in their GitHub actions CI configuration.
-- Fixed a bug where the compiler would show duplicate name errors for
-  constants, functions and external functions in unpredictable order.
+- Collapsed DuplicateName and DuplicateConstantName errors into one.
 
 ## v0.28.2 - 2023-04-10
 
