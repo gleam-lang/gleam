@@ -327,7 +327,7 @@ pub enum Warning {
         location: SrcSpan,
     },
 
-    UnnecessaryDoubleBooleanNegation {
+    UnnecessaryDoubleBoolNegation {
         location: SrcSpan,
     },
 }

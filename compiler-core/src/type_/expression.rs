@@ -364,7 +364,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if let TypedExpr::NegateBool { .. } = value {
             self.environment
                 .warnings
-                .emit(Warning::UnnecessaryDoubleBooleanNegation { location });
+                .emit(Warning::UnnecessaryDoubleBoolNegation { location });
         }
 
         Ok(TypedExpr::NegateBool {
