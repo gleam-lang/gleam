@@ -38,10 +38,15 @@ pub fn find_package_config_for_module(
                     },
                 )
                 .find(|file| {
-                    file.path()
-                        .join("src")
-                        .join(mod_path.to_string() + ".gleam")
-                        .is_file()
+                    let mut path = file.path();
+                    path.push("src");
+
+                    for file in mod_path.split('/') {
+                        path.push(file);
+                    }
+
+                    let _ = path.set_extension("gleam");
+                    path.is_file()
                 })
         }
     });
