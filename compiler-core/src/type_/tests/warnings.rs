@@ -547,13 +547,13 @@ fn double_unary_integer_variable() {
 
 // https://github.com/gleam-lang/gleam/issues/2050
 #[test]
-fn double_unary_boolean_literal() {
+fn double_unary_bool_literal() {
     assert_warning!("pub fn main() { let _ = !!True }");
 }
 
 // https://github.com/gleam-lang/gleam/issues/2050
 #[test]
-fn double_unary_boolean_variable() {
+fn double_unary_bool_variable() {
     assert_warning!(
         r#"
         pub fn main() { 

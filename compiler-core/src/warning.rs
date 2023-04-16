@@ -397,8 +397,8 @@ expression.",
                         extra_labels: Vec::new(),
                     }),
                 },
-                type_::Warning::UnnecessaryDoubleBooleanNegation { location } => Diagnostic {
-                    title: "Unnecessary double negation (!!) on boolean.".into(),
+                type_::Warning::UnnecessaryDoubleBoolNegation { location } => Diagnostic {
+                    title: "Unnecessary double negation (!!) on bool.".into(),
                     text: "".into(),
                     hint: Some("You can safely remove this.".into()),
                     level: diagnostic::Level::Warning,
