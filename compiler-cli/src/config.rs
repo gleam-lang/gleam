@@ -28,16 +28,22 @@ pub fn find_package_config_for_module(
         .collect();
 
     let maybe_package_path = gleam_projects.into_iter().find(|package_to_check| {
-        let mut path = project_paths.build_packages_directory();
-        path.push(package_to_check);
-        path.push("src");
+        let mut src_path = project_paths.build_packages_directory();
+        src_path.push(package_to_check);
+        let mut test_path = src_path.clone();
+
+        test_path.push("src");
+        src_path.push("test");
 
         for file in mod_path.split('/') {
-            path.push(file);
+            src_path.push(file);
+            test_path.push(file);
         }
 
-        let _ = path.set_extension("gleam");
-        path.is_file()
+        let _ = src_path.set_extension("gleam");
+        let _ = test_path.set_extension("gleam");
+
+        src_path.is_file() || test_path.is_file()
     });
 
     match maybe_package_path {
