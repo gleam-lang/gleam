@@ -110,9 +110,6 @@ pub fn infer_module(
     }
 
     // Register values so they can be used in functions earlier in the module.
-    for t in &statements.custom_types {
-        register_values_from_custom_type(t, &mut hydrators, &mut env, &mut value_names, &name)?;
-    }
     for c in &statements.constants {
         assert_unique_name(&mut value_names, &c.name, c.location)?;
     }
@@ -121,6 +118,9 @@ pub fn infer_module(
     }
     for ef in &statements.external_functions {
         register_external_function(ef, &mut value_names, &mut env)?;
+    }
+    for t in &statements.custom_types {
+        register_values_from_custom_type(t, &mut hydrators, &mut env, &mut value_names, &name)?;
     }
 
     // Infer the types of each statement in the module
