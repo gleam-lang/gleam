@@ -18,11 +18,9 @@ pub fn root_config() -> Result<PackageConfig, Error> {
 /// project if a dependency doesn't have a config file.
 pub fn find_package_config_for_module(
     mod_path: &str,
+    manifest: &Manifest,
     project_paths: &ProjectPaths,
 ) -> Result<PackageConfig, Error> {
-    let manifest: Manifest =
-        toml::from_str(&fs::read_to_string(project_paths.manifest()).unwrap()).unwrap();
-
     let gleam_projects: Vec<&String> = manifest
         .packages
         .iter()
@@ -33,9 +31,12 @@ pub fn find_package_config_for_module(
     let package_path = fs::read_dir(project_paths.build_packages_directory()).map_or(None, |x| {
         {
             x.filter_map(Result::ok)
-                .filter(|project_folder| {
-                    gleam_projects.contains(&&project_folder.file_name().into_string().unwrap())
-                })
+                .filter(
+                    |project_folder| match project_folder.file_name().into_string() {
+                        Ok(utf8_str) => gleam_projects.contains(&&utf8_str),
+                        Err(_) => false,
+                    },
+                )
                 .find(|file| {
                     file.path()
                         .join("src")
