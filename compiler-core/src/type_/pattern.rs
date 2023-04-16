@@ -465,8 +465,33 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         field_map.reorder(&mut pattern_args, location)?
                     }
 
-                    // The fun has no field map and so we error if arguments have been labelled
-                    None => assert_no_labelled_arguments(&pattern_args)?,
+                    None => {
+                        // The fun has no field map and so we error if arguments have been labelled
+                        assert_no_labelled_arguments(&pattern_args)?;
+
+                        if with_spread {
+                            // The location of the spread operator itself
+                            let spread_location = SrcSpan {
+                                start: location.end - 3,
+                                end: location.end - 1,
+                            };
+
+                            if let ValueConstructorVariant::Record { arity, .. } = &cons.variant {
+                                while pattern_args.len() < usize::from(*arity) {
+                                    pattern_args.push(CallArg {
+                                        value: Pattern::Discard {
+                                            name: "_".into(),
+                                            location: spread_location,
+                                            type_: (),
+                                        },
+                                        location: spread_location,
+                                        label: None,
+                                        implicit: false,
+                                    });
+                                }
+                            };
+                        }
+                    }
                 }
 
                 let constructor_typ = cons.type_.clone();
