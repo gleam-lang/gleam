@@ -1,4 +1,3 @@
-use std::fs;
 use std::path::PathBuf;
 
 use gleam_core::{
@@ -28,32 +27,24 @@ pub fn find_package_config_for_module(
         .map(|package| &package.name)
         .collect();
 
-    let package_path = fs::read_dir(project_paths.build_packages_directory()).map_or(None, |x| {
-        {
-            x.filter_map(Result::ok)
-                .filter(
-                    |project_folder| match project_folder.file_name().into_string() {
-                        Ok(utf8_str) => gleam_projects.contains(&&utf8_str),
-                        Err(_) => false,
-                    },
-                )
-                .find(|file| {
-                    let mut path = file.path();
-                    path.push("src");
+    let maybe_package_path = gleam_projects.into_iter().find(|package_to_check| {
+        let mut path = project_paths.build_packages_directory();
+        path.push(package_to_check);
+        path.push("src");
 
-                    for file in mod_path.split('/') {
-                        path.push(file);
-                    }
-
-                    let _ = path.set_extension("gleam");
-                    path.is_file()
-                })
+        for file in mod_path.split('/') {
+            path.push(file);
         }
+
+        let _ = path.set_extension("gleam");
+        path.is_file()
     });
 
-    match package_path {
-        Some(file) => {
-            let config_path = file.path().join("gleam.toml");
+    match maybe_package_path {
+        Some(package_path) => {
+            let mut config_path = project_paths.build_packages_directory();
+            config_path.push(package_path);
+            config_path.push("gleam.toml");
             read(config_path)
         }
         None => root_config(),
