@@ -486,7 +486,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                         },
                                         location: spread_location,
                                         label: None,
-                                        implicit: false,
+                                        implicit: true,
                                     });
                                 }
                             };
