@@ -75,12 +75,7 @@ impl FeedbackBookKeeper {
         // We don't limit this to files that have been compiled as a previous
         // cached version could be used instead of a recompile.
         if any_compiled {
-            // TODO: avoid clobbering warnings. They should be preserved rather than
-            // removed with the errors here. We will need to store the warnings and
-            // re-send them.
-            for path in self.files_with_errors.drain() {
-                feedback.unset_existing_diagnostics(path);
-            }
+            self.unset_errors(&mut feedback);
         }
 
         for warning in warnings {
@@ -88,6 +83,15 @@ impl FeedbackBookKeeper {
         }
 
         feedback
+    }
+
+    fn unset_errors(&mut self, feedback: &mut Feedback) {
+        // TODO: avoid clobbering warnings. They should be preserved rather than
+        // removed with the errors here. We will need to store the warnings and
+        // re-send them.
+        for path in self.files_with_errors.drain() {
+            feedback.unset_existing_diagnostics(path);
+        }
     }
 
     /// Compilation failed, boo!
@@ -104,6 +108,9 @@ impl FeedbackBookKeeper {
     ) -> Feedback {
         let diagnostic = error.to_diagnostic();
         let mut feedback = self.response(compiled, warnings);
+
+        // A new error means that any existing errors are no longer valid. Unset them.
+        self.unset_errors(&mut feedback);
 
         match diagnostic.location.as_ref().map(|l| l.path.clone()) {
             Some(path) => {
@@ -134,6 +141,8 @@ impl FeedbackBookKeeper {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
     use crate::{
         ast::SrcSpan,
@@ -334,6 +343,48 @@ mod tests {
         assert_eq!(
             Feedback {
                 diagnostics: HashMap::from([(file1, vec![])]),
+                messages: vec![],
+            },
+            feedback
+        );
+    }
+
+    // https://github.com/gleam-lang/gleam/issues/2122
+    #[test]
+    fn second_failure_unsets_previous_error() {
+        let mut book_keeper = FeedbackBookKeeper::default();
+        let file1 = PathBuf::from("src/file1.gleam");
+        let file2 = PathBuf::from("src/file2.gleam");
+
+        let error = |file: &Path| Error::Parse {
+            path: file.to_path_buf(),
+            src: "blah".into(),
+            error: ParseError {
+                error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+                location: SrcSpan::new(1, 4),
+            },
+        };
+
+        let feedback = book_keeper.build_with_error(error(&file1), vec![].into_iter(), vec![]);
+
+        assert_eq!(
+            Feedback {
+                diagnostics: HashMap::from([(file1.clone(), vec![error(&file1).to_diagnostic()])]),
+                messages: vec![],
+            },
+            feedback
+        );
+
+        let feedback = book_keeper.build_with_error(error(&file2), vec![].into_iter(), vec![]);
+
+        assert_eq!(
+            Feedback {
+                diagnostics: HashMap::from([
+                    // Unset the previous error
+                    (file1, vec![]),
+                    // Set the new one
+                    (file2.clone(), vec![error(&file2).to_diagnostic()]),
+                ]),
                 messages: vec![],
             },
             feedback
