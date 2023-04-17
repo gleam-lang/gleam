@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed a bug where the language server would show outdated error diagnostics
+  when a new one was emitted in a different module.
 - New Gleam projects are created with `actions/checkout@v3.5.1` and
   `erlef/setup-beam@1.15.3` in their GitHub actions CI configuration.
 
