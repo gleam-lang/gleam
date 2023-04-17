@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.28.3 - 2023-04-17
 
 - Fixed a bug where the language server would show outdated error diagnostics
   when a new one was emitted in a different module.

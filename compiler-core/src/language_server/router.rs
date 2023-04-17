@@ -103,12 +103,7 @@ where
     let is_module = path.extension().map(|x| x == "gleam").unwrap_or(false);
     let mut directory = path.to_path_buf();
 
-    loop {
-        let root = match directory.parent() {
-            Some(path) => path,
-            None => break, // Reached the root of the filesystem.
-        };
-
+    while let Some(root) = directory.parent() {
         // If there's no gleam.toml in the root then we continue to the next parent.
         if !io.is_file(&root.join("gleam.toml")) {
             _ = directory.pop();
