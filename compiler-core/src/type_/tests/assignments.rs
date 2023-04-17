@@ -129,6 +129,11 @@ fn let_23() {
     assert_infer!("let [] = [] 1", "Int");
 }
 
+#[test]
+fn let_24() {
+    assert_infer!("let assert Ok(..) = Ok(10)", "Result(Int, a)");
+}
+
 // // https://github.com/gleam-lang/gleam/issues/1991
 // #[test]
 // fn block() {
