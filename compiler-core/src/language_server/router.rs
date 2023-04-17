@@ -91,17 +91,37 @@ where
     }
 }
 
-/// Given a path, find the nearest parent directory containing a `gleam.toml`
-/// file.
+/// Given a given path, find the nearest parent directory containing a
+/// `gleam.toml` file.
+///
+/// The file must be in either the `src` or `test` directory if it is not a
+/// `.gleam` file.
 fn find_gleam_project_parent<IO>(io: &IO, path: &Path) -> Option<PathBuf>
 where
     IO: FileSystemReader,
 {
-    let mut current = path.to_path_buf();
-    while current.pop() {
-        if io.is_file(&current.join("gleam.toml")) {
-            return Some(current);
+    let is_module = path.extension().map(|x| x == "gleam").unwrap_or(false);
+    let mut directory = path.to_path_buf();
+
+    loop {
+        let root = match directory.parent() {
+            Some(path) => path,
+            None => break, // Reached the root of the filesystem.
+        };
+
+        // If there's no gleam.toml in the root then we continue to the next parent.
+        if !io.is_file(&root.join("gleam.toml")) {
+            _ = directory.pop();
+            continue;
         }
+
+        // If it is a Gleam module then it must reside in the src or test directory.
+        if is_module && !(directory.ends_with("test") || directory.ends_with("src")) {
+            _ = directory.pop();
+            continue;
+        }
+
+        return Some(root.to_path_buf());
     }
     None
 }
@@ -159,6 +179,17 @@ mod find_gleam_project_parent_tests {
         assert_eq!(
             find_gleam_project_parent(&io, Path::new("/app/src/one/two/three.gleam")),
             Some(PathBuf::from("/app"))
+        );
+    }
+
+    // https://github.com/gleam-lang/gleam/issues/2121
+    #[test]
+    fn module_in_project_but_not_src_or_test() {
+        let io = InMemoryFileSystem::new();
+        io.write(Path::new("/app/gleam.toml"), "").unwrap();
+        assert_eq!(
+            find_gleam_project_parent(&io, Path::new("/app/other/one/two/three.gleam")),
+            None,
         );
     }
 
