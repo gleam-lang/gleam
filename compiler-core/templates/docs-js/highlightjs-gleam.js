@@ -1,4 +1,5 @@
-hljs.registerLanguage("gleam", function (hljs) {
+hljs.registerLanguage(
+  "gleam", function (hljs) {
   const KEYWORDS =
     "as assert case const external fn if import let " +
     "panic use opaque pub todo tuple type";
