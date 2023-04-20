@@ -410,7 +410,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: HashMap::from([(file1.clone(), vec![error.to_diagnostic()])]),
+                diagnostics: HashMap::from([(file1, vec![error.to_diagnostic()])]),
                 messages: vec![],
             },
             feedback

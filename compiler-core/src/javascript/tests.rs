@@ -112,7 +112,7 @@ pub fn compile(src: &str, dep: Option<(&str, &str, &str)>) -> TypedModule {
 
 pub fn compile_js(src: &str, dep: Option<(&str, &str, &str)>) -> String {
     let ast = compile(src, dep);
-    let line_numbers = LineNumbers::new(&src);
+    let line_numbers = LineNumbers::new(src);
     module(&ast, &line_numbers, Path::new(""), &"".into()).unwrap()
 }
 
