@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- Added a warning for double unary minus (--) on integers
-- Added a warning for double unary bang (!!) on bool 
+- A warning is now emitted for double unary negation on ints (`--`) and bools
+  (`!!`) as this does nothing but return the original value.
 
 ## v0.28.3 - 2023-04-17
 
