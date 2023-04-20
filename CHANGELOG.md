@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed a bug where record patterns using the spread operator (`..`) to discard
+  unwanted arguments would not type check correctly when the record had no
+  labelled fields.
 - A warning is now emitted for double unary negation on ints (`--`) and bools
   (`!!`) as this does nothing but return the original value.
 
