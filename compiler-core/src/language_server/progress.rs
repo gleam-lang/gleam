@@ -47,7 +47,7 @@ impl<'a> ConnectionProgressReporter<'a> {
         };
         let notification = lsp_server::Notification {
             method: "$/progress".into(),
-            params: serde_json::to_value(&params).expect("ProgressParams json"),
+            params: serde_json::to_value(params).expect("ProgressParams json"),
         };
         self.connection
             .sender
@@ -96,7 +96,7 @@ fn create_token(create_token: &str, connection: &lsp_server::Connection) {
     let request = lsp_server::Request {
         id: CREATE_COMPILING_TOKEN.to_string().into(),
         method: "window/workDoneProgress/create".into(),
-        params: serde_json::to_value(&params).expect("WorkDoneProgressCreateParams json"),
+        params: serde_json::to_value(params).expect("WorkDoneProgressCreateParams json"),
     };
     connection
         .sender
