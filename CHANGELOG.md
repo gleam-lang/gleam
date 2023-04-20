@@ -7,6 +7,7 @@
   labelled fields.
 - A warning is now emitted for double unary negation on ints (`--`) and bools
   (`!!`) as this does nothing but return the original value.
+- The errors emitted when a name is reused in a module have been made clearer.
 
 ## v0.28.3 - 2023-04-17
 
@@ -16,7 +17,6 @@
   that were outside of the `src` or `test` directories.
 - New Gleam projects are created with `actions/checkout@v3.5.1` and
   `erlef/setup-beam@1.15.3` in their GitHub actions CI configuration.
-- Collapsed DuplicateName and DuplicateConstantName errors into one.
 
 ## v0.28.2 - 2023-04-10
 
