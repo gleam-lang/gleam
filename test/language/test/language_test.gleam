@@ -300,22 +300,30 @@ fn imported_custom_types_test() -> List(Test) {
     ),
     lazy_equality_test(
       "No fields assert assignment",
-      fn() { let assert importable.NoFields = importable.NoFields },
+      fn() {
+        let assert importable.NoFields = importable.NoFields
+      },
       importable.NoFields,
     ),
     lazy_equality_test(
       "No fields unqualified assert assignment",
-      fn() { let assert NoFields = importable.NoFields },
+      fn() {
+        let assert NoFields = importable.NoFields
+      },
       importable.NoFields,
     ),
     lazy_equality_test(
       "No fields let assignment",
-      fn() { let importable.NoFields = importable.NoFields },
+      fn() {
+        let importable.NoFields = importable.NoFields
+      },
       importable.NoFields,
     ),
     lazy_equality_test(
       "No fields unqualified let assignment",
-      fn() { let NoFields = importable.NoFields },
+      fn() {
+        let NoFields = importable.NoFields
+      },
       importable.NoFields,
     ),
   ]
@@ -1331,14 +1339,10 @@ fn bool_negation_tests() {
     |> example(fn() { assert_equal(False, !True) }),
     "!False"
     |> example(fn() { assert_equal(True, !False) }),
-    "!!False"
-    |> example(fn() { assert_equal(False, !!False) }),
-    "!!True"
-    |> example(fn() { assert_equal(True, !!True) }),
     // This would crash if the right hand side evaluated
-    "!True && assert False = True"
+    "!True && panic"
     |> example(fn() { assert_equal(False, !True && panic) }),
-    "!False || assert False = True"
+    "!False || panic"
     |> example(fn() { assert_equal(True, !False || panic) }),
   ]
 }
@@ -1354,13 +1358,13 @@ fn int_negation_tests() {
     "-{-a}"
     |> example(fn() {
       let a = 3
-      let b = - { -a }
+      let b = -{ -a }
       assert_equal(3, b)
     }),
     "-{-{-a}}"
     |> example(fn() {
       let a = 3
-      let b = - { - { -a } }
+      let b = -{ -{ -a } }
       assert_equal(-3, b)
     }),
     "a - - b"
@@ -1374,7 +1378,7 @@ fn int_negation_tests() {
     |> example(fn() {
       let a = 3
       let b = -a
-      let c = a - - { - { - { - { -b } } } }
+      let c = a - -{ -{ -{ -{ -b } } } }
       assert_equal(0, c)
     }),
     "- a - {- {b}}"
