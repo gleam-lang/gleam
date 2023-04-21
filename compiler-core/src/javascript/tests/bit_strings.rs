@@ -231,5 +231,14 @@ fn go(x) {
     );
 }
 
-// binary rest
-// utf8 matched
+#[test]
+fn match_binary_size() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let <<_, a:2-binary>> = x
+  let <<_, b:binary-size(2)>> = x
+}
+"#,
+    );
+}

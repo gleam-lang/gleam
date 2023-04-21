@@ -143,6 +143,10 @@ export class BitString {
     return byteArrayToInt(this.buffer.slice(start, end));
   }
 
+  binaryFromSlice(start, end) {
+    return new BitString(this.buffer.slice(start, end));
+  }
+
   sliceAfter(index) {
     return new BitString(this.buffer.slice(index));
   }
