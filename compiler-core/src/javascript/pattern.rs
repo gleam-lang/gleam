@@ -135,7 +135,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             Index::ByteAt(i) => docvec!(".byteAt(", i, ")"),
             Index::IntFromSlice(start, end) => docvec!(".intFromSlice(", start, ", ", end, ")"),
             Index::FloatAt(i) => docvec!(".floatAt(", i, ")"),
-            Index::BinaryFromSlice(start, end) => docvec!(".binaryFromSlice(", start, ", ", end, ")"),
+            Index::BinaryFromSlice(start, end) => {
+                docvec!(".binaryFromSlice(", start, ", ", end, ")")
+            }
             Index::SliceAfter(i) => docvec!(".sliceAfter(", i, ")"),
             Index::StringPrefixSlice(i) => docvec!(".slice(", i, ")"),
         }))
@@ -507,7 +509,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                 feature: "This bit string size option in patterns".into(),
                                 location: segment.location,
                             }),
-                        }
+                        },
 
                         _ => Err(Error::Unsupported {
                             feature: "This bit string segment option in patterns".into(),
