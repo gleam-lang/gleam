@@ -1473,6 +1473,16 @@ fn bit_string_match_tests() {
         },
       )
     }),
+    "let <<_, rest:binary>> = <<1,2,3>>"
+    |> example(fn() {
+      assert_equal(
+        <<1, 2, 3>>,
+        {
+          let <<x:2-binary>> = <<1, 2, 3>>
+          x
+        },
+      )
+    }),
   ]
 }
 

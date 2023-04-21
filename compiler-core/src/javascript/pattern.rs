@@ -18,6 +18,7 @@ enum Index<'a> {
     ByteAt(usize),
     IntFromSlice(usize, usize),
     FloatAt(usize),
+    BinaryFromSlice(usize, usize),
     SliceAfter(usize),
     StringPrefixSlice(usize),
 }
@@ -102,6 +103,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.path.push(Index::FloatAt(i));
     }
 
+    fn push_binary_from_slice(&mut self, start: usize, end: usize) {
+        self.path.push(Index::BinaryFromSlice(start, end));
+    }
+
     fn push_rest_from(&mut self, i: usize) {
         self.path.push(Index::SliceAfter(i));
     }
@@ -130,6 +135,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             Index::ByteAt(i) => docvec!(".byteAt(", i, ")"),
             Index::IntFromSlice(start, end) => docvec!(".intFromSlice(", start, ", ", end, ")"),
             Index::FloatAt(i) => docvec!(".floatAt(", i, ")"),
+            Index::BinaryFromSlice(start, end) => docvec!(".binaryFromSlice(", start, ", ", end, ")"),
             Index::SliceAfter(i) => docvec!(".sliceAfter(", i, ")"),
             Index::StringPrefixSlice(i) => docvec!(".slice(", i, ")"),
         }))
@@ -479,6 +485,28 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             self.pop();
                             offset.set_open_ended();
                             Ok(())
+                        }
+
+                        [Opt::Binary { .. }, Opt::Size { value: size, .. }]
+                        | [Opt::Size { value: size, .. }, Opt::Binary { .. }] => match &**size {
+                            Pattern::Int { value, .. } => {
+                                let start = offset.bytes;
+                                let increment = value
+                                    .parse::<usize>()
+                                    .expect("part of an Int node should always parse as integer");
+                                offset.increment(increment);
+                                let end = offset.bytes;
+
+                                self.push_binary_from_slice(start, end);
+                                self.traverse_pattern(subject, &segment.value)?;
+                                self.pop();
+                                Ok(())
+                            }
+
+                            _ => Err(Error::Unsupported {
+                                feature: "This bit string size option in patterns".into(),
+                                location: segment.location,
+                            }),
                         }
 
                         _ => Err(Error::Unsupported {
