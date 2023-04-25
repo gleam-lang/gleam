@@ -136,9 +136,9 @@ fn to_in_memory_filesystem(path: &Path) -> InMemoryFileSystem {
         .map(|d| d.into_path());
 
     for fullpath in files {
-        let content = std::fs::read_to_string(&fullpath).unwrap();
+        let content = std::fs::read(&fullpath).unwrap();
         let path = fullpath.strip_prefix(path).unwrap();
-        fs.write(path, &content).unwrap();
+        fs.write_bytes(path, &content).unwrap();
     }
 
     fs
