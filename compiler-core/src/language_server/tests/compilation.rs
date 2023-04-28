@@ -52,6 +52,71 @@ fn compile_project_successfully() {
 }
 
 #[test]
+fn compile_project_with_warnings() {
+    let io = LanguageServerTestIO::new();
+    let mut engine = setup_language_server(&io);
+
+    let program_with_warnings = r#"
+        pub fn main() {}
+    "#;
+    io.write_source_module("app", program_with_warnings);
+
+    let response = engine.compile_please();
+
+    assert!(response.result.is_ok());
+    assert_eq!(response.warnings.len(), 1);
+    assert_eq!(response.compiled_modules.len(), 1);
+}
+
+#[test]
+fn compile_multiple_files() {
+    let io = LanguageServerTestIO::new();
+    let mut engine = setup_language_server(&io);
+
+    let app_file = r#"
+        import app2
+        pub fn main() { app2.main() }
+    "#;
+    let app_2_file = r#"
+        pub fn main() { True }
+    "#;
+    io.write_source_module("app", app_file);
+    io.write_source_module("app2", app_2_file);
+
+    let response = engine.compile_please();
+
+    assert!(response.result.is_ok());
+    assert_eq!(response.compiled_modules.len(), 2);
+}
+
+#[test]
+fn compile_test_file() {
+    let io = LanguageServerTestIO::new();
+    let mut engine = setup_language_server(&io);
+
+    let app_file = r#"
+        import app2
+        pub fn main() { app2.main() }
+    "#;
+    let app_2_file = r#"
+        pub fn main() { True }
+    "#;
+    let app_test_file = r#"
+        import app
+        pub fn main() { app.main() == True }
+    "#;
+
+    io.write_source_module("app", app_file);
+    io.write_source_module("app2", app_2_file);
+    io.write_test_module("app_test", app_test_file);
+
+    let response = engine.compile_please();
+
+    assert!(response.result.is_ok());
+    assert_eq!(response.compiled_modules.len(), 3);
+}
+
+#[test]
 fn compile_empty_project() {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_language_server(&io);
