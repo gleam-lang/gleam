@@ -61,7 +61,7 @@ impl LanguageServerTestIO {
     /// - `code` - The contents of the file.
     pub fn write_source_module(&self, name: &str, code: &str) {
         let src_dir = self.paths.src_directory();
-        let path = src_dir.join(name).with_extension(".gleam");
+        let path = src_dir.join(name).with_extension("gleam");
         self.io.write(&path, code).unwrap()
     }
 
@@ -72,7 +72,7 @@ impl LanguageServerTestIO {
     /// - `code` - The contents of the file.
     pub fn write_test_module(&self, name: &str, code: &str) {
         let test_dir = self.paths.test_directory();
-        let path = test_dir.join(name).with_extension(".gleam");
+        let path = test_dir.join(name).with_extension("gleam");
         self.io.write(&path, code).unwrap()
     }
 

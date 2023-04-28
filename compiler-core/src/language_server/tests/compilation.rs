@@ -30,6 +30,28 @@ fn compile_sends_correct_actions() {
 }
 
 #[test]
+fn compile_project_successfully() {
+    let io = LanguageServerTestIO::new();
+    let mut engine = setup_language_server(&io);
+
+    let valid_gleam_program = r#"
+        pub fn main() {
+            True
+        }
+    "#;
+    io.write_source_module("app", valid_gleam_program);
+
+    let response = engine.compile_please();
+
+    assert!(response.result.is_ok());
+    assert!(response.warnings.is_empty());
+    assert_eq!(
+        response.compiled_modules,
+        vec![std::path::PathBuf::from("/src/app.gleam")]
+    );
+}
+
+#[test]
 fn compile_empty_project() {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_language_server(&io);
