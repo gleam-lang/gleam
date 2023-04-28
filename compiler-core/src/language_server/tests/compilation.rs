@@ -1,4 +1,4 @@
-use super::*;
+use super::common::*;
 
 #[test]
 fn compile_please_empty_project() {
