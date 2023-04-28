@@ -1,7 +1,36 @@
 use super::common::*;
 
 #[test]
-fn compile_please_empty_project() {
+fn compile_sends_correct_actions() {
+    let io = LanguageServerTestIO::new();
+    let mut engine = setup_language_server(&io);
+
+    let _response = engine.compile_please();
+    drop(engine);
+
+    let actions_during_new = vec![
+        Action::DependencyDownloadingStarted,
+        Action::DownloadDependencies,
+        Action::DependencyDownloadingFinished,
+        Action::LockBuild,
+        Action::UnlockBuild,
+    ];
+    let actions_during_compile = vec![
+        Action::CompilationStarted,
+        Action::LockBuild,
+        Action::UnlockBuild,
+        Action::CompilationFinished,
+    ];
+
+    let actual_actions = io.into_actions();
+    assert_eq!(
+        actual_actions,
+        [actions_during_new, actions_during_compile].concat()
+    );
+}
+
+#[test]
+fn compile_empty_project() {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_language_server(&io);
 
@@ -10,22 +39,10 @@ fn compile_please_empty_project() {
     assert!(response.result.is_ok());
     assert!(response.warnings.is_empty());
     assert!(response.compiled_modules.is_empty());
-
-    drop(engine);
-
-    assert_compile_please_actions(
-        io,
-        vec![
-            Action::CompilationStarted,
-            Action::LockBuild,
-            Action::UnlockBuild,
-            Action::CompilationFinished,
-        ],
-    );
 }
 
 #[test]
-fn compile_please_error_in_src() {
+fn compile_error_in_src() {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_language_server(&io);
 
@@ -36,22 +53,10 @@ fn compile_please_error_in_src() {
     assert!(response.result.is_err());
     assert!(response.warnings.is_empty());
     assert!(response.compiled_modules.is_empty());
-
-    drop(engine);
-
-    assert_compile_please_actions(
-        io,
-        vec![
-            Action::CompilationStarted,
-            Action::LockBuild,
-            Action::UnlockBuild,
-            Action::CompilationFinished,
-        ],
-    );
 }
 
 #[test]
-fn compile_please_error_in_test() {
+fn compile_error_in_test() {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_language_server(&io);
 
@@ -62,33 +67,4 @@ fn compile_please_error_in_test() {
     assert!(response.result.is_err());
     assert!(response.warnings.is_empty());
     assert!(response.compiled_modules.is_empty());
-
-    drop(engine);
-
-    assert_compile_please_actions(
-        io,
-        vec![
-            Action::CompilationStarted,
-            Action::LockBuild,
-            Action::UnlockBuild,
-            Action::CompilationFinished,
-        ],
-    );
-}
-
-fn assert_compile_please_actions(io: LanguageServerTestIO, expected_actions: Vec<Action>) {
-    let actual_actions = io.into_actions();
-
-    let actions_during_new = vec![
-        Action::DependencyDownloadingStarted,
-        Action::DownloadDependencies,
-        Action::DependencyDownloadingFinished,
-        Action::LockBuild,
-        Action::UnlockBuild,
-    ];
-
-    assert_eq!(
-        actual_actions,
-        [actions_during_new, expected_actions].concat()
-    );
 }
