@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn compile_please() {
     let io = LanguageServerTestIO::new();
-    let mut engine = setup_engine(&io);
+    let mut engine = setup_language_server(&io);
 
     let response = engine.compile_please();
     assert!(response.result.is_ok());
@@ -33,9 +33,9 @@ fn compile_please() {
 #[test]
 fn compile_error_in_src() {
     let io = LanguageServerTestIO::new();
-    let mut engine = setup_engine(&io);
+    let mut engine = setup_language_server(&io);
 
-    io.src_module("app/error", "pub type Error {");
+    io.write_source_module("app/error", "pub type Error {");
 
     let response = engine.compile_please();
     assert!(response.result.is_err());
@@ -65,9 +65,9 @@ fn compile_error_in_src() {
 #[test]
 fn compile_error_in_test() {
     let io = LanguageServerTestIO::new();
-    let mut engine = setup_engine(&io);
+    let mut engine = setup_language_server(&io);
 
-    io.test_module("app/error", "pub type Error {");
+    io.write_test_module("app/error", "pub type Error {");
 
     let response = engine.compile_please();
     assert!(response.result.is_err());

@@ -33,6 +33,8 @@ enum Action {
     UnlockBuild,
 }
 
+/// A wrapper around `crate::io::memory::InMemoryFileSystem` which records
+/// the actions performed on it for testing.
 #[derive(Debug, Clone)]
 struct LanguageServerTestIO {
     io: InMemoryFileSystem,
@@ -54,13 +56,23 @@ impl LanguageServerTestIO {
         Arc::try_unwrap(self.actions).unwrap().into_inner().unwrap()
     }
 
-    pub fn src_module(&self, name: &str, code: &str) {
+    /// Writes a Gleam source file to the in-memory file system.
+    ///
+    /// # Arguments
+    /// - `name` - The name of the file without the file extension.
+    /// - `code` - The contents of the file.
+    pub fn write_source_module(&self, name: &str, code: &str) {
         let src_dir = self.paths.src_directory();
         let path = src_dir.join(name).with_extension(".gleam");
         self.io.write(&path, code).unwrap()
     }
 
-    pub fn test_module(&self, name: &str, code: &str) {
+    /// Writes a Gleam test file to the in-memory file system.
+    ///
+    /// # Arguments
+    /// - `name` - The name of the file without the file extension.
+    /// - `code` - The contents of the file.
+    pub fn write_test_module(&self, name: &str, code: &str) {
         let test_dir = self.paths.test_directory();
         let path = test_dir.join(name).with_extension(".gleam");
         self.io.write(&path, code).unwrap()
@@ -229,7 +241,8 @@ impl ProgressReporter for LanguageServerTestIO {
     }
 }
 
-fn setup_engine(
+/// Creates a new language server engine with the given test IO.
+fn setup_language_server(
     io: &LanguageServerTestIO,
 ) -> LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO> {
     LanguageServerEngine::new(
