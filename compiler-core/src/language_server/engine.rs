@@ -16,10 +16,14 @@ use std::path::PathBuf;
 
 use super::{src_span_to_lsp_range, DownloadDependencies, MakeLocker};
 
+/// A response to a language server request.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Response<T> {
+    /// The result of the request.
     pub result: Result<T, Error>,
+    /// Any warnings that occurred during the request.
     pub warnings: Vec<Warning>,
+    /// The paths of any modules that were compiled during the request.
     pub compiled_modules: Vec<PathBuf>,
 }
 
@@ -80,6 +84,11 @@ where
         })
     }
 
+    /// Compiles the current project, returning a `Response` with any warnings and the
+    /// paths of any modules that were compiled.
+    ///
+    /// If there is no project, or the project is not a Gleam project, then
+    /// nothing is compiled.
     pub fn compile_please(&mut self) -> Response<()> {
         self.respond(Self::compile)
     }
