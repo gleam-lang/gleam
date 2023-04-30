@@ -27,6 +27,11 @@ pub struct Response<T> {
     pub compiled_modules: Vec<PathBuf>,
 }
 
+/// A language server engine that can compile a project and respond to language
+/// server requests.
+///
+/// The language server engine is only be created when the project is a Gleam
+/// project.
 #[derive(Debug)]
 pub struct LanguageServerEngine<IO, Reporter> {
     paths: ProjectPaths,
@@ -86,9 +91,6 @@ where
 
     /// Compiles the current project, returning a `Response` with any warnings and the
     /// paths of any modules that were compiled.
-    ///
-    /// If there is no project, or the project is not a Gleam project, then
-    /// nothing is compiled.
     pub fn compile_please(&mut self) -> Response<()> {
         self.respond(Self::compile)
     }
