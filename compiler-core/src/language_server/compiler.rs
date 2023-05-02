@@ -1,4 +1,5 @@
 use debug_ignore::DebugIgnore;
+use smol_str::SmolStr;
 
 use crate::{
     build::{self, Mode, Module, NullTelemetry, ProjectCompiler},
@@ -24,10 +25,9 @@ pub struct LspProjectCompiler<IO> {
     /// Whether the dependencies have been compiled previously.
     pub dependencies_compiled: bool,
 
-    // TODO: use smolstr
     /// Information on compiled modules.
-    pub modules: HashMap<String, Module>,
-    pub sources: HashMap<String, ModuleSourceInformation>,
+    pub modules: HashMap<SmolStr, Module>,
+    pub sources: HashMap<SmolStr, ModuleSourceInformation>,
 
     /// The storage for the warning emitter.
     pub warnings: Arc<VectorWarningEmitterIO>,
@@ -124,8 +124,8 @@ where
             let line_numbers = LineNumbers::new(&module.code);
             let source = ModuleSourceInformation { path, line_numbers };
             compiled_modules.push(module.input_path.clone());
-            _ = self.sources.insert(module.name.to_string(), source);
-            _ = self.modules.insert(module.name.to_string(), module);
+            _ = self.sources.insert(module.name.clone(), source);
+            _ = self.modules.insert(module.name.clone(), module);
         }
 
         Ok(compiled_modules)
