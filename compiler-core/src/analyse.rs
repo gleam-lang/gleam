@@ -229,7 +229,7 @@ pub fn register_import(
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     // Determine local alias of imported module
-    let module_name = import.variable_name();
+    let module_name = import.used_name();
 
     let Import {
         module,

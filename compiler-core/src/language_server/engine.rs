@@ -1,5 +1,5 @@
 use crate::{
-    ast::{TypedExpr, TypedPattern},
+    ast::{Import, ModuleStatement, TypedExpr, TypedModuleStatement, TypedPattern},
     build::{Located, Module},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -8,10 +8,11 @@ use crate::{
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
-    type_::pretty::Printer,
+    type_::{pretty::Printer, ValueConstructorVariant},
     Error, Result, Warning,
 };
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
+use smol_str::SmolStr;
 use std::path::PathBuf;
 
 use super::{src_span_to_lsp_range, DownloadDependencies, MakeLocker};
@@ -169,17 +170,25 @@ where
         params: lsp::CompletionParams,
     ) -> Response<Option<Vec<lsp::CompletionItem>>> {
         self.respond(|this| {
-            let found = this
-                .node_at_position(&params.text_document_position)
-                .map(|(_, found)| found);
+            // let found = this
+            //     .node_at_position(&params.text_document_position)
+            //     .map(|(_, found)| found);
 
-            Ok(match found {
-                None => None,
-                Some(Located::Pattern(_pattern)) => None,
-                Some(Located::Statement(_statement)) => None,
-                Some(Located::Expression(_expression)) => None,
-                Some(Located::ModuleStatement(_statement)) => None,
-            })
+            // match found {
+            //     None => Ok(None),
+            //     Some(Located::Pattern(_pattern)) => Ok(None),
+            //     Some(Located::Statement(statement)) => Ok(None),
+            //     Some(Located::Expression(_expression)) => Ok(this.completion_for_expression()),
+            //     Some(Located::ModuleStatement(_statement)) => Ok(None),
+            // }
+
+            let module = match this.module_for_uri(&params.text_document_position.text_document.uri)
+            {
+                Some(m) => m,
+                None => return Ok(None),
+            };
+
+            Ok(this.completion_for_expression(module))
         })
     }
 
@@ -269,11 +278,78 @@ where
             .components()
             .skip(1)
             .map(|c| c.as_os_str().to_string_lossy());
-        let module_name = Itertools::intersperse(components, "/".into())
+        let module_name: SmolStr = Itertools::intersperse(components, "/".into())
             .collect::<String>()
             .strip_suffix(".gleam")?
-            .to_string();
+            .into();
         self.compiler.modules.get(&module_name)
+    }
+
+    fn completion_for_expression<'b>(
+        &'b self,
+        module: &'b Module,
+    ) -> Option<Vec<lsp::CompletionItem>> {
+        let mut completions = vec![];
+
+        // Module functions
+        // TODO: include private
+        for (name, value) in &module.ast.type_info.values {
+            completions.push(value_completion(None, name, value));
+        }
+
+        // Imported modules
+        for import in module.ast.statements.iter().filter_map(get_import) {
+            let alias = import.used_name();
+            let modules = &self.compiler.modules;
+            let module = modules.get(&import.module).expect("Module must exist");
+            for (name, value) in &module.ast.type_info.values {
+                completions.push(value_completion(Some(&alias), name, value));
+            }
+        }
+
+        Some(completions)
+    }
+}
+
+fn value_completion(
+    module: Option<&str>,
+    name: &str,
+    value: &crate::type_::ValueConstructor,
+) -> lsp::CompletionItem {
+    let label = match module {
+        Some(module) => format!("{module}.{name}"),
+        None => name.to_string(),
+    };
+
+    let type_ = Printer::new().pretty_print(&value.type_, 0);
+
+    let kind = Some(match value.variant {
+        ValueConstructorVariant::LocalVariable { .. } => lsp::CompletionItemKind::VARIABLE,
+        ValueConstructorVariant::ModuleConstant { .. } => lsp::CompletionItemKind::CONSTANT,
+        ValueConstructorVariant::ModuleFn { .. } => lsp::CompletionItemKind::FUNCTION,
+        ValueConstructorVariant::Record { .. } => lsp::CompletionItemKind::STRUCT,
+    });
+
+    let documentation = value.get_documentation().map(|d| {
+        lsp::Documentation::MarkupContent(lsp::MarkupContent {
+            kind: lsp::MarkupKind::Markdown,
+            value: d.to_string(),
+        })
+    });
+
+    lsp::CompletionItem {
+        label,
+        kind,
+        detail: Some(type_),
+        documentation,
+        ..Default::default()
+    }
+}
+
+fn get_import(statement: &TypedModuleStatement) -> Option<&Import<SmolStr>> {
+    match statement {
+        ModuleStatement::Import(import) => Some(&import),
+        _ => None,
     }
 }
 

@@ -429,7 +429,7 @@ pub struct Import<PackageName> {
     pub package: PackageName,
 }
 impl<T> Import<T> {
-    pub(crate) fn variable_name(&self) -> SmolStr {
+    pub(crate) fn used_name(&self) -> SmolStr {
         self.as_name
             .as_ref()
             .cloned()
