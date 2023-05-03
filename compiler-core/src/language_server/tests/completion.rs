@@ -5,10 +5,11 @@ use lsp_types::{
 
 use super::*;
 
-fn expression_completions_for(src: &str) -> Vec<CompletionItem> {
+fn expression_completions_for(src: &str, dep: &str) -> Vec<CompletionItem> {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
 
+    io.src_module("dep", dep.into());
     io.src_module("app", &format!("fn typing_in_here() {{\n  0\n}}\n {src}"));
     let response = engine.compile_please();
     assert!(response.result.is_ok());
@@ -33,7 +34,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        expression_completions_for(code),
+        expression_completions_for(code, ""),
         vec![CompletionItem {
             label: "main".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -53,7 +54,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        expression_completions_for(code),
+        expression_completions_for(code, ""),
         vec![CompletionItem {
             label: "main".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -77,7 +78,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        expression_completions_for(code),
+        expression_completions_for(code, ""),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -107,7 +108,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        expression_completions_for(code),
+        expression_completions_for(code, ""),
         vec![CompletionItem {
             label: "Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -133,7 +134,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        expression_completions_for(code),
+        expression_completions_for(code, ""),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -168,11 +169,99 @@ pub type Box {
 ";
 
     assert_eq!(
-        expression_completions_for(code),
+        expression_completions_for(code, ""),
         vec![CompletionItem {
             label: "Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
             detail: Some("fn(Int, Int, Float) -> Box".into()),
+            documentation: None,
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
+fn imported_module_function() {
+    let code = "
+import dep
+
+fn main() {
+  0
+}";
+    let dep = "
+pub fn wobble() {
+  Nil
+}
+";
+
+    assert_eq!(
+        expression_completions_for(code, dep),
+        vec![CompletionItem {
+            label: "dep.wobble".into(),
+            kind: Some(CompletionItemKind::FUNCTION),
+            detail: Some("fn() -> Nil".into()),
+            documentation: None,
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
+fn imported_public_enum() {
+    let code = "
+import dep
+
+fn main() {
+  0
+}";
+    let dep = "
+pub type Direction {
+  Left
+  Right
+}
+";
+
+    assert_eq!(
+        expression_completions_for(code, dep),
+        vec![
+            CompletionItem {
+                label: "dep.Left".into(),
+                kind: Some(CompletionItemKind::ENUM_MEMBER),
+                detail: Some("Direction".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "dep.Right".into(),
+                kind: Some(CompletionItemKind::ENUM_MEMBER),
+                detail: Some("Direction".into()),
+                documentation: None,
+                ..Default::default()
+            }
+        ]
+    );
+}
+
+#[test]
+fn imported_public_record() {
+    let code = "
+import dep
+
+fn main() {
+  0
+}";
+    let dep = "
+pub type Box {
+  Box(Int)
+}
+";
+
+    assert_eq!(
+        expression_completions_for(code, dep),
+        vec![CompletionItem {
+            label: "dep.Box".into(),
+            kind: Some(CompletionItemKind::CONSTRUCTOR),
+            detail: Some("fn(Int) -> Box".into()),
             documentation: None,
             ..Default::default()
         }]
