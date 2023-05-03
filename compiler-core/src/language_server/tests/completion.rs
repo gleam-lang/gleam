@@ -14,14 +14,27 @@ fn expression_completions_for(src: &str, dep: &str) -> Vec<CompletionItem> {
     let response = engine.compile_please();
     assert!(response.result.is_ok());
 
-    let path = PathBuf::from("/").join("src").join("app.gleam");
+    dbg!(&engine.compiler.modules);
+
+    let path = PathBuf::from(if cfg!(target_family = "windows") {
+        r#"\\?\C:\src\app.gleam"#
+    } else {
+        "/src/app.gleam"
+    });
+
+    dbg!(&path);
+
     let url = Url::from_file_path(path).unwrap();
+
+    dbg!(&url);
+    _ = dbg!(url.to_file_path());
+
     let response = engine.completion(TextDocumentPositionParams::new(
         TextDocumentIdentifier::new(url),
         Position::new(2, 1),
     ));
 
-    let mut completions = response.result.unwrap().unwrap();
+    let mut completions = dbg!(response).result.unwrap().unwrap();
     completions.sort_by(|a, b| a.label.cmp(&b.label));
     completions
 }

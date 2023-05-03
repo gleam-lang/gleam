@@ -32,7 +32,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
     /// package.
     /// In the event the the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
-    compiler: LspProjectCompiler<FileSystemProxy<IO>>,
+    pub compiler: LspProjectCompiler<FileSystemProxy<IO>>,
 
     modules_compiled_since_last_feedback: Vec<PathBuf>,
 
@@ -281,6 +281,11 @@ where
             .collect::<String>()
             .strip_suffix(".gleam")?
             .into();
+
+        dbg!(&uri);
+        dbg!(&path);
+        dbg!(&self.compiler.modules);
+
         self.compiler.modules.get(&module_name)
     }
 
