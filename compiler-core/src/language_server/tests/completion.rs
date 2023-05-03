@@ -267,3 +267,116 @@ pub type Box {
         }]
     );
 }
+
+#[test]
+fn imported_unqualifed_module_function() {
+    let code = "
+import dep.{wobble}
+
+fn main() {
+  0
+}";
+    let dep = "
+pub fn wobble() {
+  Nil
+}
+";
+
+    assert_eq!(
+        expression_completions_for(code, dep),
+        vec![
+            CompletionItem {
+                label: "dep.wobble".into(),
+                kind: Some(CompletionItemKind::FUNCTION),
+                detail: Some("fn() -> Nil".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "wobble".into(),
+                kind: Some(CompletionItemKind::FUNCTION),
+                detail: Some("fn() -> Nil".into()),
+                documentation: None,
+                ..Default::default()
+            },
+        ]
+    );
+}
+
+#[test]
+fn imported_unqualifed_public_enum() {
+    let code = "
+import dep.{Left}
+
+fn main() {
+  0
+}";
+    let dep = "
+pub type Direction {
+  Left
+  Right
+}
+";
+
+    assert_eq!(
+        expression_completions_for(code, dep),
+        vec![
+            CompletionItem {
+                label: "Left".into(),
+                kind: Some(CompletionItemKind::ENUM_MEMBER),
+                detail: Some("Direction".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "dep.Left".into(),
+                kind: Some(CompletionItemKind::ENUM_MEMBER),
+                detail: Some("Direction".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "dep.Right".into(),
+                kind: Some(CompletionItemKind::ENUM_MEMBER),
+                detail: Some("Direction".into()),
+                documentation: None,
+                ..Default::default()
+            },
+        ]
+    );
+}
+
+#[test]
+fn imported_unqualifed_public_record() {
+    let code = "
+import dep.{Box}
+
+fn main() {
+  0
+}";
+    let dep = "
+pub type Box {
+  Box(Int)
+}
+";
+
+    assert_eq!(
+        expression_completions_for(code, dep),
+        vec![
+            CompletionItem {
+                label: "Box".into(),
+                kind: Some(CompletionItemKind::CONSTRUCTOR),
+                detail: Some("fn(Int) -> Box".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "dep.Box".into(),
+                kind: Some(CompletionItemKind::CONSTRUCTOR),
+                detail: Some("fn(Int) -> Box".into()),
+                documentation: None,
+                ..Default::default()
+            },
+        ]
+    );
+}
