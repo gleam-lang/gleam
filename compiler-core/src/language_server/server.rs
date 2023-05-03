@@ -366,7 +366,9 @@ where
 
     fn completion(&mut self, params: lsp::CompletionParams) -> (Json, Feedback) {
         let path = path(&params.text_document_position.text_document.uri);
-        self.respond_with_engine(path, |engine| engine.completion(params))
+        self.respond_with_engine(path, |engine| {
+            engine.completion(params.text_document_position)
+        })
     }
 
     /// A file opened in the editor may be unsaved, so store a copy of the
