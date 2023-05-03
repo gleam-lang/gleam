@@ -15,7 +15,13 @@ impl ProjectPaths {
     }
 
     pub fn at_filesystem_root() -> Self {
-        Self::new(PathBuf::from("/"))
+        let path = if cfg!(target_family = "windows") {
+            r#"C:\"#
+        } else {
+            "/"
+        };
+
+        Self::new(PathBuf::from(path))
     }
 
     pub fn root(&self) -> &Path {
