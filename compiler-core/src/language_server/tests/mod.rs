@@ -1,4 +1,5 @@
 mod compilation;
+mod completion;
 
 use std::{
     collections::HashMap,
@@ -56,13 +57,13 @@ impl LanguageServerTestIO {
 
     pub fn src_module(&self, name: &str, code: &str) {
         let src_dir = self.paths.src_directory();
-        let path = src_dir.join(name).with_extension(".gleam");
+        let path = src_dir.join(name).with_extension("gleam");
         self.io.write(&path, code).unwrap()
     }
 
     pub fn test_module(&self, name: &str, code: &str) {
         let test_dir = self.paths.test_directory();
-        let path = test_dir.join(name).with_extension(".gleam");
+        let path = test_dir.join(name).with_extension("gleam");
         self.io.write(&path, code).unwrap()
     }
 

@@ -167,7 +167,7 @@ where
     // TODO: module imports
     pub fn completion(
         &mut self,
-        params: lsp::CompletionParams,
+        params: lsp::TextDocumentPositionParams,
     ) -> Response<Option<Vec<lsp::CompletionItem>>> {
         self.respond(|this| {
             // let found = this
@@ -182,8 +182,7 @@ where
             //     Some(Located::ModuleStatement(_statement)) => Ok(None),
             // }
 
-            let module = match this.module_for_uri(&params.text_document_position.text_document.uri)
-            {
+            let module = match this.module_for_uri(&params.text_document.uri) {
                 Some(m) => m,
                 None => return Ok(None),
             };
@@ -327,7 +326,8 @@ fn value_completion(
         ValueConstructorVariant::LocalVariable { .. } => lsp::CompletionItemKind::VARIABLE,
         ValueConstructorVariant::ModuleConstant { .. } => lsp::CompletionItemKind::CONSTANT,
         ValueConstructorVariant::ModuleFn { .. } => lsp::CompletionItemKind::FUNCTION,
-        ValueConstructorVariant::Record { .. } => lsp::CompletionItemKind::STRUCT,
+        ValueConstructorVariant::Record { arity: 0, .. } => lsp::CompletionItemKind::ENUM_MEMBER,
+        ValueConstructorVariant::Record { .. } => lsp::CompletionItemKind::CONSTRUCTOR,
     });
 
     let documentation = value.get_documentation().map(|d| {
