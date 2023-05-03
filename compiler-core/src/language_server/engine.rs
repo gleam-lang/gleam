@@ -301,8 +301,18 @@ where
             let alias = import.used_name();
             let modules = &self.compiler.modules;
             let module = modules.get(&import.module).expect("Module must exist");
+
+            // Qualified values
             for (name, value) in &module.ast.type_info.values {
                 completions.push(value_completion(Some(&alias), name, value));
+            }
+
+            // Unqualified values
+            for unqualified in &import.unqualified {
+                let Some(value) = module.ast.type_info.values.get(&unqualified.name) else {
+                    continue;
+                };
+                completions.push(value_completion(None, unqualified.variable_name(), value));
             }
         }
 
