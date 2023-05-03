@@ -13,8 +13,10 @@ fn expression_completions_for(src: &str) -> Vec<CompletionItem> {
     let response = engine.compile_please();
     assert!(response.result.is_ok());
 
+    let path = PathBuf::from("/").join("src").join("app.gleam");
+    let url = Url::from_file_path(path).unwrap();
     let response = engine.completion(TextDocumentPositionParams::new(
-        TextDocumentIdentifier::new(Url::parse("file:///src/app.gleam").unwrap()),
+        TextDocumentIdentifier::new(url),
         Position::new(2, 1),
     ));
 
