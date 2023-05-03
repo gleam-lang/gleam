@@ -348,7 +348,7 @@ fn value_completion(
 
 fn get_import(statement: &TypedModuleStatement) -> Option<&Import<SmolStr>> {
     match statement {
-        ModuleStatement::Import(import) => Some(&import),
+        ModuleStatement::Import(import) => Some(import),
         _ => None,
     }
 }
