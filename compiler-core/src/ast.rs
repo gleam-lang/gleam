@@ -577,10 +577,6 @@ impl TypedModuleStatement {
             }
 
             ModuleStatement::CustomType(custom) => {
-                dbg!(&custom.name);
-                dbg!(byte_index);
-                dbg!(custom.full_location());
-
                 // Note that the custom type `.location` covers the function
                 // head, not the entire statement.
                 if custom.full_location().contains(byte_index) {
