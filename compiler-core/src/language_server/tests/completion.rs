@@ -458,3 +458,27 @@ pub opaque type Wibble {
         },]
     );
 }
+
+#[test]
+fn private_function_in_dep() {
+    let code = "import dep";
+    let dep = "
+fn private() {
+  1
+}
+";
+
+    assert_eq!(expression_completions(code, dep), vec![]);
+}
+
+#[test]
+fn private_type_in_dep() {
+    let code = "import dep";
+    let dep = "
+type Wibble {
+  Wobble
+}
+";
+
+    assert_eq!(expression_completions(code, dep), vec![]);
+}
