@@ -167,23 +167,44 @@ where
                 None => return Ok(None),
             };
 
-            match this.node_at_position(&params).map(|(_, found)| found) {
-                None => Ok(None),
+            let line_numbers = LineNumbers::new(&module.code);
+            let byte_index =
+                line_numbers.byte_index(params.position.line, params.position.character);
 
-                Some(Located::Pattern(_pattern)) => Ok(None),
+            let Some(found) = module.find_node(byte_index) else {
+                return Ok(None);
+            };
 
-                Some(Located::Statement(_) | Located::Expression(_)) => {
-                    Ok(this.completion_for_expression(module))
+            let completions = match found {
+                Located::Pattern(_pattern) => None,
+
+                Located::Statement(_) | Located::Expression(_) => {
+                    Some(this.completion_values(module))
                 }
 
-                Some(Located::ModuleStatement(statement)) => {
-                    if statement.is_function() {
-                        Ok(this.completion_for_expression(module))
+                Located::ModuleStatement(ModuleStatement::Function(function)) => {
+                    // The location of a function refers to the head, not the body
+                    if function.location.contains(byte_index) {
+                        Some(this.completion_types(module))
                     } else {
-                        Ok(None)
+                        Some(this.completion_values(module))
                     }
                 }
-            }
+
+                Located::ModuleStatement(
+                    ModuleStatement::ExternalFunction(_)
+                    | ModuleStatement::TypeAlias(_)
+                    | ModuleStatement::CustomType(_),
+                ) => Some(this.completion_types(module)),
+
+                Located::ModuleStatement(
+                    ModuleStatement::Import(_)
+                    | ModuleStatement::ExternalType(_)
+                    | ModuleStatement::ModuleConstant(_),
+                ) => None,
+            };
+
+            Ok(completions)
         })
     }
 
@@ -289,10 +310,23 @@ where
         self.compiler.modules.get(&module_name)
     }
 
-    fn completion_for_expression<'b>(
-        &'b self,
-        module: &'b Module,
-    ) -> Option<Vec<lsp::CompletionItem>> {
+    fn completion_types<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
+        let mut completions = vec![];
+
+        // TODO: Prelude types
+
+        // Module types
+        for (name, type_) in &module.ast.type_info.types {
+            completions.push(type_completion(None, name, type_));
+        }
+
+        // TODO: Imported types
+        // TODO: Unqualified imported types
+
+        completions
+    }
+
+    fn completion_values<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
 
         // Module functions
@@ -330,7 +364,30 @@ where
             }
         }
 
-        Some(completions)
+        completions
+    }
+}
+
+fn type_completion(
+    module: Option<&SmolStr>,
+    name: &SmolStr,
+    type_: &crate::type_::TypeConstructor,
+) -> lsp::CompletionItem {
+    let label = match module {
+        Some(module) => format!("{module}.{name}"),
+        None => name.to_string(),
+    };
+
+    let kind = Some(if type_.typ.is_variable() {
+        lsp::CompletionItemKind::VARIABLE
+    } else {
+        lsp::CompletionItemKind::CLASS
+    });
+
+    lsp::CompletionItem {
+        label,
+        kind,
+        ..Default::default()
     }
 }
 
