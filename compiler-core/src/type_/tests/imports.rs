@@ -39,6 +39,18 @@ pub fn main() {
 }
 
 #[test]
+fn using_private_constructor_pattern() {
+    assert_with_module_error!(
+        ("one", "type Two { Two }"),
+        "import one
+
+pub fn main(x) {
+  let one.Two = x
+}",
+    );
+}
+
+#[test]
 fn using_opaque_constructo() {
     assert_with_module_error!(
         ("one", "pub opaque type Two { Two }"),
@@ -58,6 +70,54 @@ fn using_private_function() {
 
 pub fn main() {
   one.two
+}",
+    );
+}
+
+#[test]
+fn unqualified_using_private_constructo() {
+    assert_with_module_error!(
+        ("one", "type Two { Two }"),
+        "import one.{Two}
+
+pub fn main() {
+  Two
+}",
+    );
+}
+
+#[test]
+fn unqualified_using_private_constructor_pattern() {
+    assert_with_module_error!(
+        ("one", "type Two { Two }"),
+        "import one.{Two}
+
+pub fn main(x) {
+  let Two = x
+}",
+    );
+}
+
+#[test]
+fn unqualified_using_opaque_constructo() {
+    assert_with_module_error!(
+        ("one", "pub opaque type Two { Two }"),
+        "import one.{Two}
+
+pub fn main() {
+  Two
+}",
+    );
+}
+
+#[test]
+fn unqualified_using_private_function() {
+    assert_with_module_error!(
+        ("one", "fn two() { 2 }"),
+        "import one.{two}
+
+pub fn main() {
+  two
 }",
     );
 }

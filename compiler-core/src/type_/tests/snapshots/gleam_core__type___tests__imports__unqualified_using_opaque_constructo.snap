@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/imports.rs
+assertion_line: 103
+expression: "import one.{Two}\n\npub fn main() {\n  Two\n}"
+---
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   Two
+  │   ^^^ Did you mean `Nil`?
+
+The name `Two` is not in scope here.
+
