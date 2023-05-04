@@ -173,12 +173,12 @@ where
                 Some(Located::Pattern(_pattern)) => Ok(None),
 
                 Some(Located::Statement(_)) | Some(Located::Expression(_)) => {
-                    Ok(this.completion_for_expression(&module))
+                    Ok(this.completion_for_expression(module))
                 }
 
                 Some(Located::ModuleStatement(statement)) => {
                     if statement.is_function() {
-                        Ok(this.completion_for_expression(&module))
+                        Ok(this.completion_for_expression(module))
                     } else {
                         Ok(None)
                     }
