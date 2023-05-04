@@ -2035,6 +2035,10 @@ pub mod value_constructor {
     pub fn has_variant(&self) -> bool {
       !self.reader.get_pointer_field(1).is_null()
     }
+    #[inline]
+    pub fn get_public(self) -> bool {
+      self.reader.get_bool_field(0)
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -2117,6 +2121,14 @@ pub mod value_constructor {
     pub fn has_variant(&self) -> bool {
       !self.builder.get_pointer_field(1).is_null()
     }
+    #[inline]
+    pub fn get_public(self) -> bool {
+      self.builder.get_bool_field(0)
+    }
+    #[inline]
+    pub fn set_public(&mut self, value: bool)  {
+      self.builder.set_bool_field(0, value);
+    }
   }
 
   pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -2135,7 +2147,7 @@ pub mod value_constructor {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 0, pointers: 2 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 2 };
     pub const TYPE_ID: u64 = 0xd4c6_d8f1_a8fb_051c;
   }
 }

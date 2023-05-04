@@ -258,6 +258,38 @@ fn module_fn_value() {
 
     assert_eq!(roundtrip(&module), module);
 }
+#[test]
+fn private_module_fn_value() {
+    let module = Module {
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a".into(),
+        types: HashMap::new(),
+        types_constructors: HashMap::new(),
+        accessors: HashMap::new(),
+        values: [(
+            "one".into(),
+            ValueConstructor {
+                public: false,
+                type_: type_::int(),
+                variant: ValueConstructorVariant::ModuleFn {
+                    documentation: Some("wobble!".into()),
+                    name: "one".into(),
+                    field_map: None,
+                    module: "a".into(),
+                    arity: 5,
+                    location: SrcSpan {
+                        start: 535,
+                        end: 1100,
+                    },
+                },
+            },
+        )]
+        .into(),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
 
 // https://github.com/gleam-lang/gleam/commit/c8f3bd0ddbf61c27ea35f37297058ecca7515f6c
 #[test]
