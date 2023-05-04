@@ -449,6 +449,15 @@ pub struct Module {
 }
 
 impl Module {
+    pub fn get_public_value(&self, name: &str) -> Option<&ValueConstructor> {
+        let value = self.values.get(name)?;
+        if value.public {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
     pub fn get_main_function(&self) -> Result<ModuleFunction, crate::Error> {
         match self.values.get(&SmolStr::from("main")) {
             Some(ValueConstructor {
