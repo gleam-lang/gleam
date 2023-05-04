@@ -501,11 +501,9 @@ pub fn main() {
 
     // The fn
     assert!(module.find_node(2).is_some());
-    assert!(module.find_node(14).is_some());
+    assert!(module.find_node(24).is_some());
 
-    assert!(module.find_node(15).is_none());
-    assert!(module.find_node(16).is_none());
-    assert!(module.find_node(17).is_none());
+    assert!(module.find_node(25).is_none());
 }
 
 #[test]

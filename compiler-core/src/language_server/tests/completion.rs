@@ -6,12 +6,26 @@ use lsp_types::{
 
 use super::*;
 
-fn expression_completions_for(src: &str, dep: &str) -> Vec<CompletionItem> {
+fn expression_completions(src: &str, dep: &str) -> Vec<CompletionItem> {
+    let src = format!("fn typing_in_here() {{\n  0\n}}\n {src}");
+    let position = Position::new(1, 0);
+    positioned_expression_completions(&src, dep, position)
+        .into_iter()
+        .filter(|c| c.label != "typing_in_here")
+        .sorted_by(|a, b| a.label.cmp(&b.label))
+        .collect_vec()
+}
+
+fn positioned_expression_completions(
+    src: &str,
+    dep: &str,
+    position: Position,
+) -> Vec<CompletionItem> {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
 
     io.src_module("dep", dep.into());
-    io.src_module("app", &format!("fn typing_in_here() {{\n  0\n}}\n {src}"));
+    io.src_module("app", src.into());
     let response = engine.compile_please();
     assert!(response.result.is_ok());
 
@@ -25,17 +39,24 @@ fn expression_completions_for(src: &str, dep: &str) -> Vec<CompletionItem> {
 
     let response = engine.completion(TextDocumentPositionParams::new(
         TextDocumentIdentifier::new(url),
-        Position::new(2, 1),
+        position,
     ));
 
-    response
-        .result
-        .unwrap()
-        .unwrap()
-        .into_iter()
-        .filter(|c| c.label != "typing_in_here")
-        .sorted_by(|a, b| a.label.cmp(&b.label))
-        .collect_vec()
+    response.result.unwrap().unwrap_or_default()
+}
+
+#[test]
+fn completions_for_outside_a_function() {
+    let code = "
+
+pub fn main() {
+  0
+}";
+
+    assert_eq!(
+        positioned_expression_completions(code, "", Position::new(0, 0)),
+        vec![]
+    );
 }
 
 #[test]
@@ -46,7 +67,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        expression_completions_for(code, ""),
+        expression_completions(code, ""),
         vec![CompletionItem {
             label: "main".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -66,7 +87,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        expression_completions_for(code, ""),
+        expression_completions(code, ""),
         vec![CompletionItem {
             label: "main".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -90,7 +111,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        expression_completions_for(code, ""),
+        expression_completions(code, ""),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -120,7 +141,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        expression_completions_for(code, ""),
+        expression_completions(code, ""),
         vec![CompletionItem {
             label: "Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -146,7 +167,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        expression_completions_for(code, ""),
+        expression_completions(code, ""),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -181,7 +202,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        expression_completions_for(code, ""),
+        expression_completions(code, ""),
         vec![CompletionItem {
             label: "Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -204,7 +225,7 @@ pub fn wobble() {
 ";
 
     assert_eq!(
-        expression_completions_for(code, dep),
+        expression_completions(code, dep),
         vec![CompletionItem {
             label: "dep.wobble".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -228,7 +249,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        expression_completions_for(code, dep),
+        expression_completions(code, dep),
         vec![
             CompletionItem {
                 label: "dep.Left".into(),
@@ -260,7 +281,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        expression_completions_for(code, dep),
+        expression_completions(code, dep),
         vec![CompletionItem {
             label: "dep.Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -283,7 +304,7 @@ pub fn wobble() {
 ";
 
     assert_eq!(
-        expression_completions_for(code, dep),
+        expression_completions(code, dep),
         vec![
             CompletionItem {
                 label: "dep.wobble".into(),
@@ -316,7 +337,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        expression_completions_for(code, dep),
+        expression_completions(code, dep),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -355,7 +376,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        expression_completions_for(code, dep),
+        expression_completions(code, dep),
         vec![
             CompletionItem {
                 label: "Box".into(),
@@ -385,7 +406,7 @@ fn private() {
     let dep = "";
 
     assert_eq!(
-        expression_completions_for(code, dep),
+        expression_completions(code, dep),
         vec![CompletionItem {
             label: "private".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -406,7 +427,7 @@ type Wibble {
     let dep = "";
 
     assert_eq!(
-        expression_completions_for(code, dep),
+        expression_completions(code, dep),
         vec![CompletionItem {
             label: "Wobble".into(),
             kind: Some(CompletionItemKind::ENUM_MEMBER),
@@ -427,7 +448,7 @@ pub opaque type Wibble {
     let dep = "";
 
     assert_eq!(
-        expression_completions_for(code, dep),
+        expression_completions(code, dep),
         vec![CompletionItem {
             label: "Wobble".into(),
             kind: Some(CompletionItemKind::ENUM_MEMBER),
