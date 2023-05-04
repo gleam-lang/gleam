@@ -417,23 +417,23 @@ type Wibble {
     );
 }
 
-// #[test]
-// fn opaque_type() {
-//     let code = "
-// pub opaque type Wibble {
-//   Wobble
-// }
-// ";
-//     let dep = "";
+#[test]
+fn opaque_type() {
+    let code = "
+pub opaque type Wibble {
+  Wobble
+}
+";
+    let dep = "";
 
-//     assert_eq!(
-//         expression_completions_for(code, dep),
-//         vec![CompletionItem {
-//             label: "Wobble".into(),
-//             kind: Some(CompletionItemKind::ENUM_MEMBER),
-//             detail: Some("Wibble".into()),
-//             documentation: None,
-//             ..Default::default()
-//         },]
-//     );
-// }
+    assert_eq!(
+        expression_completions_for(code, dep),
+        vec![CompletionItem {
+            label: "Wobble".into(),
+            kind: Some(CompletionItemKind::ENUM_MEMBER),
+            detail: Some("Wibble".into()),
+            documentation: None,
+            ..Default::default()
+        },]
+    );
+}

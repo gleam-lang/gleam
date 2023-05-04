@@ -289,7 +289,7 @@ pub fn register_import(
             .insert(imported_name.clone(), *location);
 
         // Register the unqualified import if it is a value
-        if let Some(value) = module_info.values.get(name) {
+        if let Some(value) = module_info.get_public_value(name) {
             environment.insert_variable(
                 imported_name.clone(),
                 value.variant.clone(),
@@ -578,16 +578,14 @@ fn register_values_from_custom_type(
             module: module_name.clone(),
         };
 
-        if !opaque {
-            environment.insert_module_value(
-                constructor.name.clone(),
-                ValueConstructor {
-                    public: *public,
-                    type_: typ.clone(),
-                    variant: constructor_info.clone(),
-                },
-            );
-        }
+        environment.insert_module_value(
+            constructor.name.clone(),
+            ValueConstructor {
+                public: *public && !opaque,
+                type_: typ.clone(),
+                variant: constructor_info.clone(),
+            },
+        );
 
         if !public {
             environment.init_usage(
