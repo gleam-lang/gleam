@@ -183,6 +183,7 @@ where
                 }
 
                 Located::ModuleStatement(ModuleStatement::Function(function)) => {
+                    // TODO: test
                     // The location of a function refers to the head, not the body
                     if function.location.contains(byte_index) {
                         Some(this.completion_types(module))
@@ -192,8 +193,11 @@ where
                 }
 
                 Located::ModuleStatement(
+                    // TODO: test
                     ModuleStatement::ExternalFunction(_)
+                    // TODO: test
                     | ModuleStatement::TypeAlias(_)
+                    // TODO: test
                     | ModuleStatement::CustomType(_),
                 ) => Some(this.completion_types(module)),
 
@@ -218,35 +222,6 @@ where
             compiled_modules: modules,
         }
     }
-
-    // fn completion_for_import(&self) -> Vec<lsp::CompletionItem> {
-    //     // TODO: Test
-    //     let dependencies_modules = self
-    //         .compiler
-    //         .project_compiler
-    //         .get_importable_modules()
-    //         .keys()
-    //         .map(|name| name.to_string());
-    //     // TODO: Test
-    //     let project_modules = self
-    //         .compiler
-    //         .modules
-    //         .iter()
-    //         // TODO: We should autocomplete test modules if we are in the test dir
-    //         // TODO: Test
-    //         .filter(|(_name, module)| module.origin.is_src())
-    //         .map(|(name, _module)| name)
-    //         .cloned();
-    //     dependencies_modules
-    //         .chain(project_modules)
-    //         .map(|label| lsp::CompletionItem {
-    //             label,
-    //             kind: None,
-    //             documentation: None,
-    //             ..Default::default()
-    //         })
-    //         .collect()
-    // }
 
     pub fn hover(&mut self, params: lsp::HoverParams) -> Response<Option<Hover>> {
         self.respond(|this| {
@@ -313,14 +288,18 @@ where
     fn completion_types<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
 
+        // TODO: test
         // TODO: Prelude types
 
+        // TODO: test
         // Module types
         for (name, type_) in &module.ast.type_info.types {
             completions.push(type_completion(None, name, type_));
         }
 
+        // TODO: test
         // TODO: Imported types
+        // TODO: test
         // TODO: Unqualified imported types
 
         completions

@@ -875,6 +875,7 @@ fn infer_custom_type(
     let CustomType {
         documentation: doc,
         location,
+        end_position,
         public,
         opaque,
         name,
@@ -941,6 +942,7 @@ fn infer_custom_type(
     Ok(ModuleStatement::CustomType(CustomType {
         documentation: doc,
         location,
+        end_position,
         public,
         opaque,
         name,
