@@ -393,9 +393,8 @@ impl<'a> ModuleEncoder<'a> {
 
             Type::Var { type_: typ } => match typ.borrow().deref() {
                 TypeVar::Link { type_: typ } => self.build_type(builder, typ),
-                TypeVar::Generic { id } => self.build_type_var(builder.init_var(), *id),
-                TypeVar::Unbound { .. } => {
-                    panic!("Unexpected unbound var when serialising module metadata",)
+                TypeVar::Unbound { id, .. } | TypeVar::Generic { id } => {
+                    self.build_type_var(builder.init_var(), *id)
                 }
             },
         }
