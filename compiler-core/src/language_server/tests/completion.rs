@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use lsp_types::{
     CompletionItem, CompletionItemKind, Documentation, MarkupContent, MarkupKind, Position,
     TextDocumentIdentifier, TextDocumentPositionParams, Url,
@@ -14,29 +15,27 @@ fn expression_completions_for(src: &str, dep: &str) -> Vec<CompletionItem> {
     let response = engine.compile_please();
     assert!(response.result.is_ok());
 
-    dbg!(&engine.compiler.modules);
-
     let path = PathBuf::from(if cfg!(target_family = "windows") {
         r#"\\?\C:\src\app.gleam"#
     } else {
         "/src/app.gleam"
     });
 
-    dbg!(&path);
-
     let url = Url::from_file_path(path).unwrap();
-
-    dbg!(&url);
-    _ = dbg!(url.to_file_path());
 
     let response = engine.completion(TextDocumentPositionParams::new(
         TextDocumentIdentifier::new(url),
         Position::new(2, 1),
     ));
 
-    let mut completions = dbg!(response).result.unwrap().unwrap();
-    completions.sort_by(|a, b| a.label.cmp(&b.label));
-    completions
+    response
+        .result
+        .unwrap()
+        .unwrap()
+        .into_iter()
+        .filter(|c| c.label != "typing_in_here")
+        .sorted_by(|a, b| a.label.cmp(&b.label))
+        .collect_vec()
 }
 
 #[test]
@@ -197,10 +196,7 @@ pub type Box {
 fn imported_module_function() {
     let code = "
 import dep
-
-fn main() {
-  0
-}";
+";
     let dep = "
 pub fn wobble() {
   Nil
@@ -223,10 +219,7 @@ pub fn wobble() {
 fn imported_public_enum() {
     let code = "
 import dep
-
-fn main() {
-  0
-}";
+";
     let dep = "
 pub type Direction {
   Left
@@ -259,10 +252,7 @@ pub type Direction {
 fn imported_public_record() {
     let code = "
 import dep
-
-fn main() {
-  0
-}";
+";
     let dep = "
 pub type Box {
   Box(Int)
@@ -285,10 +275,7 @@ pub type Box {
 fn imported_unqualifed_module_function() {
     let code = "
 import dep.{wobble}
-
-fn main() {
-  0
-}";
+";
     let dep = "
 pub fn wobble() {
   Nil
@@ -320,10 +307,7 @@ pub fn wobble() {
 fn imported_unqualifed_public_enum() {
     let code = "
 import dep.{Left}
-
-fn main() {
-  0
-}";
+";
     let dep = "
 pub type Direction {
   Left
@@ -363,10 +347,7 @@ pub type Direction {
 fn imported_unqualifed_public_record() {
     let code = "
 import dep.{Box}
-
-fn main() {
-  0
-}";
+";
     let dep = "
 pub type Box {
   Box(Int)

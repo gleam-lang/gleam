@@ -282,10 +282,6 @@ where
             .strip_suffix(".gleam")?
             .into();
 
-        dbg!(&uri);
-        dbg!(&path);
-        dbg!(&self.compiler.modules);
-
         self.compiler.modules.get(&module_name)
     }
 

@@ -334,14 +334,24 @@ impl<'a> Environment<'a> {
                     }
                 })?;
                 let _ = self.unused_modules.remove(module_name);
-                module
-                    .values
-                    .get(name)
-                    .ok_or_else(|| UnknownValueConstructorError::ModuleValue {
+                let value = module.values.get(name).ok_or_else(|| {
+                    UnknownValueConstructorError::ModuleValue {
+                        name: name.clone(),
+                        module_name: module.name.clone(),
+                        value_constructors: module.values.keys().cloned().collect(),
+                    }
+                })?;
+                if value.public {
+                    Ok(value)
+                } else {
+                    // TODO: Special error here as this is a private value
+                    // rather than an undefined one.
+                    Err(UnknownValueConstructorError::ModuleValue {
                         name: name.clone(),
                         module_name: module.name.clone(),
                         value_constructors: module.values.keys().cloned().collect(),
                     })
+                }
             }
         }
     }
