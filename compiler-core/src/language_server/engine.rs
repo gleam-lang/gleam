@@ -308,6 +308,9 @@ where
 
             // Qualified values
             for (name, value) in &module.ast.type_info.values {
+                if !value.public {
+                    continue;
+                }
                 completions.push(value_completion(Some(&alias), name, value));
             }
 
@@ -316,6 +319,9 @@ where
                 let Some(value) = module.ast.type_info.values.get(&unqualified.name) else {
                     continue;
                 };
+                if !value.public {
+                    continue;
+                }
                 completions.push(value_completion(None, unqualified.variable_name(), value));
             }
         }
