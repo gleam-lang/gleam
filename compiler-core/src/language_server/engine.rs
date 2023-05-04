@@ -172,7 +172,7 @@ where
 
                 Some(Located::Pattern(_pattern)) => Ok(None),
 
-                Some(Located::Statement(_)) | Some(Located::Expression(_)) => {
+                Some(Located::Statement(_) | Located::Expression(_)) => {
                     Ok(this.completion_for_expression(module))
                 }
 
