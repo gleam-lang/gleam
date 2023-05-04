@@ -1701,13 +1701,14 @@ where
                 // No separator
                 None,
             )?;
-            let _ = self.expect_one(&Token::RightBrace)?;
+            let (_, close_end) = self.expect_one(&Token::RightBrace)?;
             if constructors.is_empty() {
                 parse_error(ParseErrorType::NoConstructors, SrcSpan { start, end })
             } else {
                 Ok(Some(ModuleStatement::CustomType(CustomType {
                     documentation,
                     location: SrcSpan { start, end },
+                    end_position: close_end,
                     public,
                     opaque,
                     name,
