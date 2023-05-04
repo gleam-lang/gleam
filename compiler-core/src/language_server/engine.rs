@@ -157,37 +157,33 @@ where
         })
     }
 
-    // TODO: function & constructor labels
-    // TODO: module types (including private)
-    // TODO: module values (including private)
-    // TODO: locally defined variables
-    // TODO: imported module values
-    // TODO: imported module types
-    // TODO: record accessors
-    // TODO: module imports
     pub fn completion(
         &mut self,
         params: lsp::TextDocumentPositionParams,
     ) -> Response<Option<Vec<lsp::CompletionItem>>> {
         self.respond(|this| {
-            // let found = this
-            //     .node_at_position(&params.text_document_position)
-            //     .map(|(_, found)| found);
-
-            // match found {
-            //     None => Ok(None),
-            //     Some(Located::Pattern(_pattern)) => Ok(None),
-            //     Some(Located::Statement(statement)) => Ok(None),
-            //     Some(Located::Expression(_expression)) => Ok(this.completion_for_expression()),
-            //     Some(Located::ModuleStatement(_statement)) => Ok(None),
-            // }
-
             let module = match this.module_for_uri(&params.text_document.uri) {
                 Some(m) => m,
                 None => return Ok(None),
             };
 
-            Ok(this.completion_for_expression(module))
+            match this.node_at_position(&params).map(|(_, found)| found) {
+                None => Ok(None),
+
+                Some(Located::Pattern(_pattern)) => Ok(None),
+
+                Some(Located::Statement(_)) | Some(Located::Expression(_)) => {
+                    Ok(this.completion_for_expression(&module))
+                }
+
+                Some(Located::ModuleStatement(statement)) => {
+                    if statement.is_function() {
+                        Ok(this.completion_for_expression(&module))
+                    } else {
+                        Ok(None)
+                    }
+                }
+            }
         })
     }
 
@@ -249,16 +245,24 @@ where
         })
     }
 
-    fn node_at_position(
+    fn module_node_at_position(
         &self,
         params: &lsp::TextDocumentPositionParams,
-    ) -> Option<(LineNumbers, Located<'_>)> {
-        let module = self.module_for_uri(&params.text_document.uri)?;
+        module: &'a Module,
+    ) -> Option<(LineNumbers, Located<'a>)> {
         let line_numbers = LineNumbers::new(&module.code);
         let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
         let node = module.find_node(byte_index);
         let node = node?;
         Some((line_numbers, node))
+    }
+
+    fn node_at_position(
+        &self,
+        params: &lsp::TextDocumentPositionParams,
+    ) -> Option<(LineNumbers, Located<'_>)> {
+        let module = self.module_for_uri(&params.text_document.uri)?;
+        self.module_node_at_position(params, module)
     }
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
@@ -292,7 +296,6 @@ where
         let mut completions = vec![];
 
         // Module functions
-        // TODO: include private
         for (name, value) in &module.ast.type_info.values {
             completions.push(value_completion(None, name, value));
         }
