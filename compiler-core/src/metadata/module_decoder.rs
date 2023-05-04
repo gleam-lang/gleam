@@ -148,8 +148,9 @@ impl ModuleDecoder {
     ) -> Result<ValueConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
         let variant = self.value_constructor_variant(&reader.get_variant()?)?;
+        let public = reader.get_public();
         Ok(ValueConstructor {
-            public: true,
+            public,
             type_,
             variant,
         })

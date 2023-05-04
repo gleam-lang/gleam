@@ -74,6 +74,7 @@ struct Type {
 struct ValueConstructor {
   type @0 :Type;
   variant @1 :ValueConstructorVariant;
+  public @2 :Bool;
 }
 
 struct ValueConstructorVariant {
