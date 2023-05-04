@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/imports.rs
+assertion_line: 91
+expression: "import one.{Two}\n\npub fn main(x) {\n  let Two = x\n}"
+---
+error: Unknown module field
+  ┌─ /src/one/two.gleam:1:13
+  │
+1 │ import one.{Two}
+  │             ^^^ Did you mean `Two`?
+
+The module `one` does not have a `Two` field.
+
