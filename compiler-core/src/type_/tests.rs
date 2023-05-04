@@ -35,6 +35,7 @@ macro_rules! assert_infer_with_module {
     (($name:expr, $module_src:literal), $src:expr, $module:expr $(,)?) => {
         let constructors = $crate::type_::tests::infer_module($src, vec![($name, $module_src)]);
         let expected = $crate::type_::tests::stringify_tuple_strs($module);
+
         assert_eq!(($src, constructors), ($src, expected));
     };
 }
@@ -202,6 +203,7 @@ pub fn infer_module(src: &str, dep: Vec<(&str, &str)>) -> Vec<(SmolStr, String)>
     ast.type_info
         .values
         .iter()
+        .filter(|(_, v)| v.public)
         .map(|(k, v)| {
             let mut printer = Printer::new();
             (k.clone(), printer.pretty_print(&v.type_, 0))

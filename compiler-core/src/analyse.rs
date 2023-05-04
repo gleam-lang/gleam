@@ -185,11 +185,13 @@ pub fn infer_module(
     // Remove private and imported types and values to create the public interface
     env.module_types
         .retain(|_, info| info.public && info.module == name);
-    env.module_values.retain(|_, info| info.public);
     env.accessors.retain(|_, accessors| accessors.public);
 
     // Ensure no exported values have private types in their type signature
     for value in env.module_values.values() {
+        if !value.public {
+            continue;
+        }
         if let Some(leaked) = value.type_.find_private_type() {
             return Err(Error::PrivateTypeLeak {
                 location: value.variant.definition_location(),
