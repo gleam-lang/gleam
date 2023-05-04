@@ -478,6 +478,15 @@ impl Module {
             }),
         }
     }
+
+    fn public_value_names(&self) -> Vec<SmolStr> {
+        self.values
+            .iter()
+            .filter(|(_, v)| v.public)
+            .map(|(k, _)| k)
+            .cloned()
+            .collect_vec()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
