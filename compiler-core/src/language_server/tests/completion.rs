@@ -374,3 +374,66 @@ pub type Box {
         ]
     );
 }
+
+#[test]
+fn private_function() {
+    let code = "
+fn private() {
+  1
+}
+";
+    let dep = "";
+
+    assert_eq!(
+        expression_completions_for(code, dep),
+        vec![CompletionItem {
+            label: "private".into(),
+            kind: Some(CompletionItemKind::FUNCTION),
+            detail: Some("fn() -> Int".into()),
+            documentation: None,
+            ..Default::default()
+        },]
+    );
+}
+
+#[test]
+fn private_type() {
+    let code = "
+type Wibble {
+  Wobble
+}
+";
+    let dep = "";
+
+    assert_eq!(
+        expression_completions_for(code, dep),
+        vec![CompletionItem {
+            label: "Wobble".into(),
+            kind: Some(CompletionItemKind::ENUM_MEMBER),
+            detail: Some("Wibble".into()),
+            documentation: None,
+            ..Default::default()
+        },]
+    );
+}
+
+// #[test]
+// fn opaque_type() {
+//     let code = "
+// pub opaque type Wibble {
+//   Wobble
+// }
+// ";
+//     let dep = "";
+
+//     assert_eq!(
+//         expression_completions_for(code, dep),
+//         vec![CompletionItem {
+//             label: "Wobble".into(),
+//             kind: Some(CompletionItemKind::ENUM_MEMBER),
+//             detail: Some("Wibble".into()),
+//             documentation: None,
+//             ..Default::default()
+//         },]
+//     );
+// }
