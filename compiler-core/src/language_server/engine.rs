@@ -184,7 +184,6 @@ where
                 }
 
                 Located::ModuleStatement(ModuleStatement::Function(function)) => {
-                    // TODO: test
                     // The location of a function refers to the head, not the body
                     if function.location.contains(byte_index) {
                         Some(this.completion_types(module))
@@ -194,11 +193,8 @@ where
                 }
 
                 Located::ModuleStatement(
-                    // TODO: test
                     ModuleStatement::ExternalFunction(_)
-                    // TODO: test
                     | ModuleStatement::TypeAlias(_)
-                    // TODO: test
                     | ModuleStatement::CustomType(_),
                 ) => Some(this.completion_types(module)),
 
@@ -289,8 +285,7 @@ where
     fn completion_types<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
 
-        // TODO: test
-        // TODO: Prelude types
+        // Prelude types
         for type_ in PreludeType::iter() {
             completions.push(lsp::CompletionItem {
                 label: type_.name().into(),
@@ -300,16 +295,41 @@ where
             });
         }
 
-        // TODO: test
         // Module types
         for (name, type_) in &module.ast.type_info.types {
             completions.push(type_completion(None, name, type_));
         }
 
-        // TODO: test
-        // TODO: Imported types
-        // TODO: test
-        // TODO: Unqualified imported types
+        // Imported modules
+        for import in module.ast.statements.iter().filter_map(get_import) {
+            let alias = import.used_name();
+            let modules = &self.compiler.modules;
+
+            // The module may not be known of yet if it has not previously
+            // compiled yet in this editor session.
+            let Some(module) = modules.get(&import.module) else {
+                continue;
+            };
+
+            // Qualified types
+            for (name, type_) in &module.ast.type_info.types {
+                if !type_.public {
+                    continue;
+                }
+                completions.push(type_completion(Some(&alias), name, type_));
+            }
+
+            // Unqualified types
+            for unqualified in &import.unqualified {
+                let Some(type_) = module.ast.type_info.types.get(&unqualified.name) else {
+                    continue;
+                };
+                if !type_.public {
+                    continue;
+                }
+                completions.push(type_completion(None, unqualified.variable_name(), type_));
+            }
+        }
 
         completions
     }
@@ -358,7 +378,7 @@ where
 
 fn type_completion(
     module: Option<&SmolStr>,
-    name: &SmolStr,
+    name: &str,
     type_: &crate::type_::TypeConstructor,
 ) -> lsp::CompletionItem {
     let label = match module {
