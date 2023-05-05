@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- The language server will now provide autocomplete suggestions for values
-  either imported or defined at the top level of the current module.
+- The language server will now provide autocomplete suggestions for types and
+  values either imported or defined at the top level of the current module.
 - Fixed a bug where record patterns using the spread operator (`..`) to discard
   unwanted arguments would not type check correctly when the record had no
   labelled fields.
