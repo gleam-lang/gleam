@@ -1,3 +1,5 @@
+use strum::{EnumIter, IntoEnumIterator};
+
 use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 
 use super::{
@@ -16,6 +18,35 @@ const STRING: &str = "String";
 const UTF_CODEPOINT: &str = "UtfCodepoint";
 
 // TODO: use "gleam" as the prelude module name, not ""
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
+pub enum PreludeType {
+    BitString,
+    Bool,
+    Float,
+    Int,
+    List,
+    Nil,
+    Result,
+    String,
+    UtfCodepoint,
+}
+
+impl PreludeType {
+    pub fn name(self) -> &'static str {
+        match self {
+            PreludeType::BitString => BIT_STRING,
+            PreludeType::Bool => BOOL,
+            PreludeType::Float => FLOAT,
+            PreludeType::Int => INT,
+            PreludeType::List => LIST,
+            PreludeType::Nil => NIL,
+            PreludeType::Result => RESULT,
+            PreludeType::String => STRING,
+            PreludeType::UtfCodepoint => UTF_CODEPOINT,
+        }
+    }
+}
 
 pub fn int() -> Arc<Type> {
     Arc::new(Type::App {
@@ -142,196 +173,214 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         accessors: HashMap::new(),
     };
 
-    let _ = prelude.types.insert(
-        INT.into(),
-        TypeConstructor {
-            parameters: vec![],
-            typ: int(),
-            origin: Default::default(),
-            module: "".into(),
-            public: true,
-        },
-    );
+    for t in PreludeType::iter() {
+        match t {
+            PreludeType::BitString => {
+                let _ = prelude.types.insert(
+                    "BitString".into(),
+                    TypeConstructor {
+                        origin: Default::default(),
+                        parameters: vec![],
+                        typ: bit_string(),
+                        module: "".into(),
+                        public: true,
+                    },
+                );
+            }
 
-    let _ = prelude
-        .types_constructors
-        .insert(BOOL.into(), vec!["True".into(), "False".into()]);
+            PreludeType::Bool => {
+                let _ = prelude
+                    .types_constructors
+                    .insert(BOOL.into(), vec!["True".into(), "False".into()]);
+                let _ = prelude.values.insert(
+                    "True".into(),
+                    value(
+                        ValueConstructorVariant::Record {
+                            documentation: None,
+                            module: "".into(),
+                            name: "True".into(),
+                            field_map: None,
+                            arity: 0,
+                            location: SrcSpan::default(),
+                            constructors_count: 2,
+                        },
+                        bool(),
+                    ),
+                );
+                let _ = prelude.values.insert(
+                    "False".into(),
+                    value(
+                        ValueConstructorVariant::Record {
+                            documentation: None,
+                            module: "".into(),
+                            name: "False".into(),
+                            field_map: None,
+                            arity: 0,
+                            location: SrcSpan::default(),
+                            constructors_count: 2,
+                        },
+                        bool(),
+                    ),
+                );
+                let _ = prelude.types.insert(
+                    BOOL.into(),
+                    TypeConstructor {
+                        origin: Default::default(),
+                        parameters: vec![],
+                        typ: bool(),
+                        module: "".into(),
+                        public: true,
+                    },
+                );
+            }
 
-    let _ = prelude.values.insert(
-        "True".into(),
-        value(
-            ValueConstructorVariant::Record {
-                documentation: None,
-                module: "".into(),
-                name: "True".into(),
-                field_map: None,
-                arity: 0,
-                location: SrcSpan::default(),
-                constructors_count: 2,
-            },
-            bool(),
-        ),
-    );
-    let _ = prelude.values.insert(
-        "False".into(),
-        value(
-            ValueConstructorVariant::Record {
-                documentation: None,
-                module: "".into(),
-                name: "False".into(),
-                field_map: None,
-                arity: 0,
-                location: SrcSpan::default(),
-                constructors_count: 2,
-            },
-            bool(),
-        ),
-    );
-    let _ = prelude.types.insert(
-        BOOL.into(),
-        TypeConstructor {
-            origin: Default::default(),
-            parameters: vec![],
-            typ: bool(),
-            module: "".into(),
-            public: true,
-        },
-    );
+            PreludeType::Float => {
+                let _ = prelude.types.insert(
+                    FLOAT.into(),
+                    TypeConstructor {
+                        origin: Default::default(),
+                        parameters: vec![],
+                        typ: float(),
+                        module: "".into(),
+                        public: true,
+                    },
+                );
+            }
 
-    let list_parameter = generic_var(ids.next());
-    let _ = prelude.types.insert(
-        LIST.into(),
-        TypeConstructor {
-            origin: Default::default(),
-            parameters: vec![list_parameter.clone()],
-            typ: list(list_parameter),
-            module: "".into(),
-            public: true,
-        },
-    );
+            PreludeType::Int => {
+                let _ = prelude.types.insert(
+                    INT.into(),
+                    TypeConstructor {
+                        parameters: vec![],
+                        typ: int(),
+                        origin: Default::default(),
+                        module: "".into(),
+                        public: true,
+                    },
+                );
+            }
 
-    let _ = prelude.types.insert(
-        FLOAT.into(),
-        TypeConstructor {
-            origin: Default::default(),
-            parameters: vec![],
-            typ: float(),
-            module: "".into(),
-            public: true,
-        },
-    );
+            PreludeType::List => {
+                let list_parameter = generic_var(ids.next());
+                let _ = prelude.types.insert(
+                    LIST.into(),
+                    TypeConstructor {
+                        origin: Default::default(),
+                        parameters: vec![list_parameter.clone()],
+                        typ: list(list_parameter),
+                        module: "".into(),
+                        public: true,
+                    },
+                );
+            }
 
-    let _ = prelude.types.insert(
-        STRING.into(),
-        TypeConstructor {
-            origin: Default::default(),
-            parameters: vec![],
-            typ: string(),
-            module: "".into(),
-            public: true,
-        },
-    );
+            PreludeType::Nil => {
+                let _ = prelude.values.insert(
+                    NIL.into(),
+                    value(
+                        ValueConstructorVariant::Record {
+                            documentation: None,
+                            module: "".into(),
+                            name: NIL.into(),
+                            arity: 0,
+                            field_map: None,
+                            location: SrcSpan::default(),
+                            constructors_count: 1,
+                        },
+                        nil(),
+                    ),
+                );
+                let _ = prelude.types.insert(
+                    NIL.into(),
+                    TypeConstructor {
+                        origin: Default::default(),
+                        parameters: vec![],
+                        typ: nil(),
+                        module: "".into(),
+                        public: true,
+                    },
+                );
+            }
 
-    let result_value = generic_var(ids.next());
-    let result_error = generic_var(ids.next());
-    let _ = prelude.types.insert(
-        RESULT.into(),
-        TypeConstructor {
-            origin: Default::default(),
-            parameters: vec![result_value.clone(), result_error.clone()],
-            typ: result(result_value, result_error),
-            module: "".into(),
-            public: true,
-        },
-    );
+            PreludeType::Result => {
+                let result_value = generic_var(ids.next());
+                let result_error = generic_var(ids.next());
+                let _ = prelude.types.insert(
+                    RESULT.into(),
+                    TypeConstructor {
+                        origin: Default::default(),
+                        parameters: vec![result_value.clone(), result_error.clone()],
+                        typ: result(result_value, result_error),
+                        module: "".into(),
+                        public: true,
+                    },
+                );
+                let _ = prelude
+                    .types_constructors
+                    .insert(RESULT.into(), vec!["Ok".into(), "Error".into()]);
+                let ok = generic_var(ids.next());
+                let error = generic_var(ids.next());
+                let _ = prelude.values.insert(
+                    "Ok".into(),
+                    value(
+                        ValueConstructorVariant::Record {
+                            documentation: None,
+                            module: "".into(),
+                            name: "Ok".into(),
+                            field_map: None,
+                            arity: 1,
+                            location: SrcSpan::default(),
+                            constructors_count: 2,
+                        },
+                        fn_(vec![ok.clone()], result(ok, error)),
+                    ),
+                );
+                let ok = generic_var(ids.next());
+                let error = generic_var(ids.next());
+                let _ = prelude.values.insert(
+                    "Error".into(),
+                    value(
+                        ValueConstructorVariant::Record {
+                            documentation: None,
+                            module: "".into(),
+                            name: "Error".into(),
+                            field_map: None,
+                            arity: 1,
+                            location: SrcSpan::default(),
+                            constructors_count: 2,
+                        },
+                        fn_(vec![error.clone()], result(ok, error)),
+                    ),
+                );
+            }
 
-    let _ = prelude
-        .types_constructors
-        .insert(RESULT.into(), vec!["Ok".into(), "Error".into()]);
+            PreludeType::String => {
+                let _ = prelude.types.insert(
+                    STRING.into(),
+                    TypeConstructor {
+                        origin: Default::default(),
+                        parameters: vec![],
+                        typ: string(),
+                        module: "".into(),
+                        public: true,
+                    },
+                );
+            }
 
-    let _ = prelude.values.insert(
-        NIL.into(),
-        value(
-            ValueConstructorVariant::Record {
-                documentation: None,
-                module: "".into(),
-                name: NIL.into(),
-                arity: 0,
-                field_map: None,
-                location: SrcSpan::default(),
-                constructors_count: 1,
-            },
-            nil(),
-        ),
-    );
-    let _ = prelude.types.insert(
-        NIL.into(),
-        TypeConstructor {
-            origin: Default::default(),
-            parameters: vec![],
-            typ: nil(),
-            module: "".into(),
-            public: true,
-        },
-    );
-
-    let _ = prelude.types.insert(
-        "BitString".into(),
-        TypeConstructor {
-            origin: Default::default(),
-            parameters: vec![],
-            typ: bit_string(),
-            module: "".into(),
-            public: true,
-        },
-    );
-
-    let _ = prelude.types.insert(
-        UTF_CODEPOINT.into(),
-        TypeConstructor {
-            origin: Default::default(),
-            parameters: vec![],
-            typ: utf_codepoint(),
-            module: "".into(),
-            public: true,
-        },
-    );
-
-    let ok = generic_var(ids.next());
-    let error = generic_var(ids.next());
-    let _ = prelude.values.insert(
-        "Ok".into(),
-        value(
-            ValueConstructorVariant::Record {
-                documentation: None,
-                module: "".into(),
-                name: "Ok".into(),
-                field_map: None,
-                arity: 1,
-                location: SrcSpan::default(),
-                constructors_count: 2,
-            },
-            fn_(vec![ok.clone()], result(ok, error)),
-        ),
-    );
-
-    let ok = generic_var(ids.next());
-    let error = generic_var(ids.next());
-    let _ = prelude.values.insert(
-        "Error".into(),
-        value(
-            ValueConstructorVariant::Record {
-                documentation: None,
-                module: "".into(),
-                name: "Error".into(),
-                field_map: None,
-                arity: 1,
-                location: SrcSpan::default(),
-                constructors_count: 2,
-            },
-            fn_(vec![error.clone()], result(ok, error)),
-        ),
-    );
+            PreludeType::UtfCodepoint => {
+                let _ = prelude.types.insert(
+                    UTF_CODEPOINT.into(),
+                    TypeConstructor {
+                        origin: Default::default(),
+                        parameters: vec![],
+                        typ: utf_codepoint(),
+                        module: "".into(),
+                        public: true,
+                    },
+                );
+            }
+        }
+    }
 
     prelude
 }
