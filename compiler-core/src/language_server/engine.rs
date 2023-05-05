@@ -366,6 +366,7 @@ fn type_completion(
     lsp::CompletionItem {
         label,
         kind,
+        detail: Some("Type".into()),
         ..Default::default()
     }
 }

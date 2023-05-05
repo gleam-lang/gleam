@@ -12,7 +12,6 @@ fn expression_completions(src: &str, dep: &str) -> Vec<CompletionItem> {
     positioned_expression_completions(&src, dep, position)
         .into_iter()
         .filter(|c| c.label != "typing_in_here")
-        .sorted_by(|a, b| a.label.cmp(&b.label))
         .collect_vec()
 }
 
@@ -42,7 +41,9 @@ fn positioned_expression_completions(
         position,
     ));
 
-    response.result.unwrap().unwrap_or_default()
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+    completions
 }
 
 #[test]
@@ -481,4 +482,35 @@ type Wibble {
 ";
 
     assert_eq!(expression_completions(code, dep), vec![]);
+}
+
+#[test]
+fn in_custom_type_defintion() {
+    let code = "import dep";
+    let dep = "
+type Wibble {
+  Wobble
+}
+";
+
+    assert_eq!(expression_completions(code, dep), vec![]);
+}
+
+#[test]
+fn for_custom_type_definition() {
+    let code = "
+pub type Wibble {
+  Wobble
+}";
+
+    assert_eq!(
+        positioned_expression_completions(code, "", Position::new(2, 0)),
+        vec![CompletionItem {
+            label: "Wibble".into(),
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            documentation: None,
+            ..Default::default()
+        }]
+    );
 }
