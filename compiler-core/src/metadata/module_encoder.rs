@@ -124,6 +124,7 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: type_constructor::Builder<'_>,
         constructor: &TypeConstructor,
     ) {
+        builder.set_public(constructor.public);
         builder.set_module(&constructor.module);
         let type_builder = builder.reborrow().init_type();
         self.build_type(type_builder, &constructor.typ);

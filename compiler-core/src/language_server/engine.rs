@@ -321,12 +321,9 @@ where
 
             // Unqualified types
             for unqualified in &import.unqualified {
-                let Some(type_) = module.types.get(&unqualified.name) else {
+                let Some(type_) = module.get_public_type(&unqualified.name) else {
                     continue;
                 };
-                if !type_.public {
-                    continue;
-                }
                 completions.push(type_completion(None, unqualified.variable_name(), type_));
             }
         }
@@ -363,12 +360,9 @@ where
 
             // Unqualified values
             for unqualified in &import.unqualified {
-                let Some(value) = module.values.get(&unqualified.name) else {
+                let Some(value) = module.get_public_value(&unqualified.name) else {
                     continue;
                 };
-                if !value.public {
-                    continue;
-                }
                 completions.push(value_completion(None, unqualified.variable_name(), value));
             }
         }

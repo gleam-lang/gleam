@@ -84,7 +84,7 @@ impl ModuleDecoder {
     ) -> Result<TypeConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
         Ok(TypeConstructor {
-            public: true,
+            public: reader.get_public(),
             origin: Default::default(),
             module: reader.get_module()?.into(),
             parameters: read_vec!(reader.get_parameters()?, self, type_),
