@@ -495,7 +495,7 @@ pub struct CustomType<T> {
 
 impl<T> CustomType<T> {
     /// The `location` field of a `CustomType` is only the location of `pub type
-    /// TheName`. This method returns a SrcSpan that includes the entire type
+    /// TheName`. This method returns a `SrcSpan` that includes the entire type
     /// definition.
     pub fn full_location(&self) -> SrcSpan {
         SrcSpan::new(self.location.start, self.end_position)
