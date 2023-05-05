@@ -8,12 +8,13 @@ use crate::{
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
-    type_::{pretty::Printer, ValueConstructorVariant},
+    type_::{pretty::Printer, PreludeType, ValueConstructorVariant},
     Error, Result, Warning,
 };
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
 use smol_str::SmolStr;
 use std::path::PathBuf;
+use strum::IntoEnumIterator;
 
 use super::{src_span_to_lsp_range, DownloadDependencies, MakeLocker};
 
@@ -290,6 +291,14 @@ where
 
         // TODO: test
         // TODO: Prelude types
+        for type_ in PreludeType::iter() {
+            completions.push(lsp::CompletionItem {
+                label: type_.name().into(),
+                detail: Some("Type".into()),
+                kind: Some(lsp::CompletionItemKind::CLASS),
+                ..Default::default()
+            });
+        }
 
         // TODO: test
         // Module types

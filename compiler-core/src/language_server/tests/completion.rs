@@ -505,12 +505,77 @@ pub type Wibble {
 
     assert_eq!(
         positioned_expression_completions(code, "", Position::new(2, 0)),
-        vec![CompletionItem {
-            label: "Wibble".into(),
-            kind: Some(CompletionItemKind::CLASS),
-            detail: Some("Type".into()),
-            documentation: None,
-            ..Default::default()
-        }]
+        vec![
+            CompletionItem {
+                label: "BitString".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "Bool".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "Float".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "Int".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "List".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "Nil".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "Result".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "String".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "UtfCodepoint".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "Wibble".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            },
+        ]
     );
 }
