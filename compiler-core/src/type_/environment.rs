@@ -270,7 +270,7 @@ impl<'a> Environment<'a> {
                     .ok_or_else(|| UnknownTypeConstructorError::ModuleType {
                         name: name.clone(),
                         module_name: module.name.clone(),
-                        type_constructors: module.types.keys().cloned().collect(),
+                        type_constructors: module.public_type_names(),
                     })
             }
         }
@@ -303,7 +303,7 @@ impl<'a> Environment<'a> {
                     UnknownTypeConstructorError::ModuleType {
                         name: name.clone(),
                         module_name: module.name.clone(),
-                        type_constructors: module.types.keys().cloned().collect(),
+                        type_constructors: module.public_type_names(),
                     }
                 })
             }
@@ -334,24 +334,13 @@ impl<'a> Environment<'a> {
                     }
                 })?;
                 let _ = self.unused_modules.remove(module_name);
-                let value = module.values.get(name).ok_or_else(|| {
+                module.get_public_value(name).ok_or_else(|| {
                     UnknownValueConstructorError::ModuleValue {
                         name: name.clone(),
                         module_name: module.name.clone(),
-                        value_constructors: module.values.keys().cloned().collect(),
+                        value_constructors: module.public_value_names(),
                     }
-                })?;
-                if value.public {
-                    Ok(value)
-                } else {
-                    // TODO: Special error here as this is a private value
-                    // rather than an undefined one.
-                    Err(UnknownValueConstructorError::ModuleValue {
-                        name: name.clone(),
-                        module_name: module.name.clone(),
-                        value_constructors: module.values.keys().cloned().collect(),
-                    })
-                }
+                })
             }
         }
     }

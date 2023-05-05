@@ -1,29 +1,3 @@
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-// TODO: The "did you mean" suggestions should not include private items for imports
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-use itertools::Itertools;
-use vec1::Vec1;
-
 use super::{pipe::PipeTyper, *};
 use crate::{
     analyse::infer_bit_string_segment_option,
@@ -37,8 +11,9 @@ use crate::{
         USE_ASSIGNMENT_VARIABLE,
     },
 };
-
 use im::hashmap;
+use itertools::Itertools;
+use vec1::Vec1;
 
 #[derive(Debug)]
 pub(crate) struct ExprTyper<'a, 'b> {
@@ -1563,7 +1538,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         location: *location,
                         module_name: module_name.clone(),
                         name: name.clone(),
-                        value_constructors: module.values.keys().cloned().collect(),
+                        value_constructors: module.public_value_names(),
                     })?
             }
         };
