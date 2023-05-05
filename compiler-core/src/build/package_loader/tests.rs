@@ -34,7 +34,7 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<Smol
     let path = Path::new("/artefact").join(format!("{name}.cache_meta"));
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
 
-    let cache = crate::type_::Module {
+    let cache = crate::type_::ModuleInterface {
         name: name.into(),
         origin: Origin::Src,
         package: "my_package".into(),

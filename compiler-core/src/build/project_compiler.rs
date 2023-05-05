@@ -52,7 +52,7 @@ pub struct Options {
 #[derive(Debug)]
 pub struct Built {
     pub root_package: Package,
-    module_interfaces: im::HashMap<SmolStr, type_::Module>,
+    module_interfaces: im::HashMap<SmolStr, type_::ModuleInterface>,
 }
 
 impl Built {
@@ -71,7 +71,7 @@ pub struct ProjectCompiler<IO> {
     // The gleam.toml config for the root package of the project
     config: PackageConfig,
     packages: HashMap<String, ManifestPackage>,
-    importable_modules: im::HashMap<SmolStr, type_::Module>,
+    importable_modules: im::HashMap<SmolStr, type_::ModuleInterface>,
     defined_modules: im::HashMap<SmolStr, PathBuf>,
     warnings: WarningEmitter,
     telemetry: Box<dyn Telemetry>,
@@ -120,7 +120,7 @@ where
         }
     }
 
-    pub fn get_importable_modules(&self) -> &im::HashMap<SmolStr, type_::Module> {
+    pub fn get_importable_modules(&self) -> &im::HashMap<SmolStr, type_::ModuleInterface> {
         &self.importable_modules
     }
 
@@ -523,7 +523,8 @@ pub(crate) fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, 
     })
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CheckpointState {
-    importable_modules: im::HashMap<SmolStr, type_::Module>,
+    importable_modules: im::HashMap<SmolStr, type_::ModuleInterface>,
     defined_modules: im::HashMap<SmolStr, PathBuf>,
 }

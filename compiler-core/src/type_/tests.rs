@@ -441,7 +441,7 @@ fn infer_module_type_retention_test() {
 
     assert_eq!(
         module.type_info,
-        Module {
+        ModuleInterface {
             origin: Origin::Src,
             package: "thepackage".into(),
             name: "ok".into(),

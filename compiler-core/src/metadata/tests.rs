@@ -8,14 +8,16 @@ use crate::{
         TypedConstantBitStringSegmentOption,
     },
     build::Origin,
-    type_::{self, Module, Type, TypeConstructor, ValueConstructor, ValueConstructorVariant},
+    type_::{
+        self, ModuleInterface, Type, TypeConstructor, ValueConstructor, ValueConstructorVariant,
+    },
     uid::UniqueIdGenerator,
 };
 use std::{collections::HashMap, io::BufReader, sync::Arc};
 
 use pretty_assertions::assert_eq;
 
-fn roundtrip(input: &Module) -> Module {
+fn roundtrip(input: &ModuleInterface) -> ModuleInterface {
     let buffer = ModuleEncoder::new(input).encode().unwrap();
     let ids = UniqueIdGenerator::new();
     ModuleDecoder::new(ids)
@@ -23,8 +25,8 @@ fn roundtrip(input: &Module) -> Module {
         .unwrap()
 }
 
-fn constant_module(constant: TypedConstant) -> Module {
-    Module {
+fn constant_module(constant: TypedConstant) -> ModuleInterface {
+    ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -48,7 +50,9 @@ fn constant_module(constant: TypedConstant) -> Module {
     }
 }
 
-fn bit_string_segment_option_module(option: TypedConstantBitStringSegmentOption) -> Module {
+fn bit_string_segment_option_module(
+    option: TypedConstantBitStringSegmentOption,
+) -> ModuleInterface {
     constant_module(Constant::BitString {
         location: Default::default(),
         segments: vec![BitStringSegment {
@@ -65,7 +69,7 @@ fn bit_string_segment_option_module(option: TypedConstantBitStringSegmentOption)
 
 #[test]
 fn empty_module() {
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "one/two".into(),
@@ -79,7 +83,7 @@ fn empty_module() {
 
 #[test]
 fn module_with_app_type() {
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -103,7 +107,7 @@ fn module_with_app_type() {
 
 #[test]
 fn module_with_fn_type() {
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -127,7 +131,7 @@ fn module_with_fn_type() {
 
 #[test]
 fn module_with_tuple_type() {
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -156,8 +160,8 @@ fn module_with_generic_type() {
     let t7 = type_::generic_var(7);
     let t8 = type_::generic_var(8);
 
-    fn make(t1: Arc<Type>, t2: Arc<Type>) -> Module {
-        Module {
+    fn make(t1: Arc<Type>, t2: Arc<Type>) -> ModuleInterface {
+        ModuleInterface {
             package: "some_package".into(),
             origin: Origin::Src,
             name: "a/b".into(),
@@ -186,8 +190,8 @@ fn module_with_type_links() {
     let linked_type = type_::link(type_::int());
     let type_ = type_::int();
 
-    fn make(type_: Arc<Type>) -> Module {
-        Module {
+    fn make(type_: Arc<Type>) -> ModuleInterface {
+        ModuleInterface {
             package: "some_package".into(),
             origin: Origin::Src,
             name: "a".into(),
@@ -213,7 +217,7 @@ fn module_with_type_links() {
 
 #[test]
 fn module_type_to_constructors_mapping() {
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -228,7 +232,7 @@ fn module_type_to_constructors_mapping() {
 
 #[test]
 fn module_fn_value() {
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -260,7 +264,7 @@ fn module_fn_value() {
 }
 #[test]
 fn private_module_fn_value() {
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -294,7 +298,7 @@ fn private_module_fn_value() {
 // https://github.com/gleam-lang/gleam/commit/c8f3bd0ddbf61c27ea35f37297058ecca7515f6c
 #[test]
 fn module_fn_value_regression() {
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b/c".into(),
@@ -327,7 +331,7 @@ fn module_fn_value_regression() {
 
 #[test]
 fn module_fn_value_with_field_map() {
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -362,7 +366,7 @@ fn module_fn_value_with_field_map() {
 fn record_value() {
     let mut random = rand::thread_rng();
 
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -398,7 +402,7 @@ fn record_value() {
 fn record_value_with_field_map() {
     let mut random = rand::thread_rng();
 
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -435,7 +439,7 @@ fn record_value_with_field_map() {
 
 #[test]
 fn accessors() {
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -636,7 +640,7 @@ fn constant_var() {
         })),
     };
 
-    let module = Module {
+    let module = ModuleInterface {
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),

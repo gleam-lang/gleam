@@ -438,7 +438,7 @@ pub struct ModuleFunction {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Module {
+pub struct ModuleInterface {
     pub name: SmolStr,
     pub origin: Origin,
     pub package: SmolStr,
@@ -448,7 +448,7 @@ pub struct Module {
     pub accessors: HashMap<SmolStr, AccessorsMap>,
 }
 
-impl Module {
+impl ModuleInterface {
     pub fn get_public_value(&self, name: &str) -> Option<&ValueConstructor> {
         let value = self.values.get(name)?;
         if value.public {

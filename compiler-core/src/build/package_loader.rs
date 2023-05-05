@@ -133,7 +133,7 @@ where
         Ok(loaded)
     }
 
-    fn load_cached_module(&self, info: CachedModule) -> Result<type_::Module, Error> {
+    fn load_cached_module(&self, info: CachedModule) -> Result<type_::ModuleInterface, Error> {
         let path = self
             .artefact_directory
             .join(info.name.replace('/', "@"))

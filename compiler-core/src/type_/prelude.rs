@@ -1,6 +1,8 @@
 use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 
-use super::{Module, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant};
+use super::{
+    ModuleInterface, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant,
+};
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 const BIT_STRING: &str = "BitString";
@@ -123,14 +125,14 @@ pub fn link(type_: Arc<Type>) -> Arc<Type> {
     })
 }
 
-pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
+pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
     let value = |variant, type_| ValueConstructor {
         public: true,
         variant,
         type_,
     };
 
-    let mut prelude = Module {
+    let mut prelude = ModuleInterface {
         name: "gleam".into(),
         package: "".into(),
         origin: Origin::Src,

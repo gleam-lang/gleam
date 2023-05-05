@@ -31,7 +31,7 @@ pub trait HasLocation {
     fn location(&self) -> SrcSpan;
 }
 
-pub type TypedModule = Module<type_::Module, TypedModuleStatement>;
+pub type TypedModule = Module<type_::ModuleInterface, TypedModuleStatement>;
 
 pub type UntypedModule = Module<(), TargetGroup>;
 

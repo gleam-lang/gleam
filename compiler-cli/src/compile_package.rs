@@ -7,7 +7,7 @@ use gleam_core::{
     build::{Mode, PackageCompiler, Target, TargetCodegenConfiguration},
     metadata,
     paths::{self, ProjectPaths},
-    type_::Module,
+    type_::ModuleInterface,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
     Result,
@@ -49,7 +49,10 @@ pub fn command(options: CompilePackage) -> Result<()> {
     Ok(())
 }
 
-fn load_libraries(ids: &UniqueIdGenerator, lib: &Path) -> Result<im::HashMap<SmolStr, Module>> {
+fn load_libraries(
+    ids: &UniqueIdGenerator,
+    lib: &Path,
+) -> Result<im::HashMap<SmolStr, ModuleInterface>> {
     tracing::info!("Reading precompiled module metadata files");
     let mut manifests = im::HashMap::new();
     for lib in fs::read_dir(lib)?.filter_map(Result::ok) {

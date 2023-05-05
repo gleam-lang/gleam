@@ -90,7 +90,7 @@ where
     pub fn compile(
         mut self,
         warnings: &WarningEmitter,
-        existing_modules: &mut im::HashMap<SmolStr, type_::Module>,
+        existing_modules: &mut im::HashMap<SmolStr, type_::ModuleInterface>,
         already_defined_modules: &mut im::HashMap<SmolStr, PathBuf>,
     ) -> Result<Vec<Module>, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
@@ -365,7 +365,7 @@ fn analyse(
     target: Target,
     ids: &UniqueIdGenerator,
     mut parsed_modules: Vec<UncompiledModule>,
-    module_types: &mut im::HashMap<SmolStr, type_::Module>,
+    module_types: &mut im::HashMap<SmolStr, type_::ModuleInterface>,
     warnings: &WarningEmitter,
 ) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
@@ -607,7 +607,7 @@ impl CacheMetadata {
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) struct Loaded {
     pub to_compile: Vec<UncompiledModule>,
-    pub cached: Vec<type_::Module>,
+    pub cached: Vec<type_::ModuleInterface>,
 }
 
 #[derive(Debug, PartialEq, Eq)]

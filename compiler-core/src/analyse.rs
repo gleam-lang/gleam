@@ -18,7 +18,7 @@ use crate::{
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
-        AccessorsMap, Module, PatternConstructor, RecordAccessor, Type, TypeConstructor,
+        AccessorsMap, ModuleInterface, PatternConstructor, RecordAccessor, Type, TypeConstructor,
         ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
@@ -70,7 +70,7 @@ pub fn infer_module(
     mut module: UntypedModule,
     origin: Origin,
     package: &SmolStr,
-    modules: &im::HashMap<SmolStr, Module>,
+    modules: &im::HashMap<SmolStr, ModuleInterface>,
     warnings: &TypeWarningEmitter,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
@@ -212,7 +212,7 @@ pub fn infer_module(
         documentation,
         name: name.clone(),
         statements: typed_statements,
-        type_info: Module {
+        type_info: ModuleInterface {
             name,
             types,
             types_constructors,

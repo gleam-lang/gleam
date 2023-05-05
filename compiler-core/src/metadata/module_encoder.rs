@@ -15,13 +15,13 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 #[derive(Debug)]
 pub struct ModuleEncoder<'a> {
-    data: &'a type_::Module,
+    data: &'a type_::ModuleInterface,
     next_type_var_id: u64,
     type_var_id_map: HashMap<u64, u64>,
 }
 
 impl<'a> ModuleEncoder<'a> {
-    pub fn new(data: &'a type_::Module) -> Self {
+    pub fn new(data: &'a type_::ModuleInterface) -> Self {
         Self {
             data,
             next_type_var_id: 0,

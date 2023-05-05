@@ -303,16 +303,15 @@ where
         // Imported modules
         for import in module.ast.statements.iter().filter_map(get_import) {
             let alias = import.used_name();
-            let modules = &self.compiler.modules;
 
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
-            let Some(module) = modules.get(&import.module) else {
+            let Some(module) = self.compiler.get_module_inferface(&import.module) else {
                 continue;
             };
 
             // Qualified values
-            for (name, value) in &module.ast.type_info.values {
+            for (name, value) in &module.values {
                 if !value.public {
                     continue;
                 }
@@ -321,7 +320,7 @@ where
 
             // Unqualified values
             for unqualified in &import.unqualified {
-                let Some(value) = module.ast.type_info.values.get(&unqualified.name) else {
+                let Some(value) = module.values.get(&unqualified.name) else {
                     continue;
                 };
                 if !value.public {

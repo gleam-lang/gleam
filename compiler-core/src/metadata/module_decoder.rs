@@ -11,7 +11,7 @@ use crate::{
     build::Origin,
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, FieldMap, Module, RecordAccessor, Type, TypeConstructor,
+        self, AccessorsMap, FieldMap, ModuleInterface, RecordAccessor, Type, TypeConstructor,
         ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
@@ -58,12 +58,12 @@ impl ModuleDecoder {
         }
     }
 
-    pub fn read(&mut self, reader: impl BufRead) -> Result<Module> {
+    pub fn read(&mut self, reader: impl BufRead) -> Result<ModuleInterface> {
         let message_reader =
             capnp::serialize_packed::read_message(reader, capnp::message::ReaderOptions::new())?;
         let reader = message_reader.get_root::<module::Reader<'_>>()?;
 
-        Ok(Module {
+        Ok(ModuleInterface {
             name: reader.get_name()?.into(),
             package: reader.get_package()?.into(),
             origin: Origin::Src,
