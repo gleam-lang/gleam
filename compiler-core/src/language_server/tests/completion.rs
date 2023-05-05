@@ -46,6 +46,74 @@ fn positioned_expression_completions(
     completions
 }
 
+fn prelude_type_completions() -> Vec<CompletionItem> {
+    vec![
+        CompletionItem {
+            label: "BitString".into(),
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            documentation: None,
+            ..Default::default()
+        },
+        CompletionItem {
+            label: "Bool".into(),
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            documentation: None,
+            ..Default::default()
+        },
+        CompletionItem {
+            label: "Float".into(),
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            documentation: None,
+            ..Default::default()
+        },
+        CompletionItem {
+            label: "Int".into(),
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            documentation: None,
+            ..Default::default()
+        },
+        CompletionItem {
+            label: "List".into(),
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            documentation: None,
+            ..Default::default()
+        },
+        CompletionItem {
+            label: "Nil".into(),
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            documentation: None,
+            ..Default::default()
+        },
+        CompletionItem {
+            label: "Result".into(),
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            documentation: None,
+            ..Default::default()
+        },
+        CompletionItem {
+            label: "String".into(),
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            documentation: None,
+            ..Default::default()
+        },
+        CompletionItem {
+            label: "UtfCodepoint".into(),
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            documentation: None,
+            ..Default::default()
+        },
+    ]
+}
+
 #[test]
 fn completions_for_outside_a_function() {
     let code = "
@@ -505,77 +573,170 @@ pub type Wibble {
 
     assert_eq!(
         positioned_expression_completions(code, "", Position::new(2, 0)),
-        vec![
-            CompletionItem {
-                label: "BitString".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "Bool".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "Float".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "Int".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "List".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "Nil".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "Result".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "String".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "UtfCodepoint".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                ..Default::default()
-            },
-            CompletionItem {
+        [
+            prelude_type_completions(),
+            vec![CompletionItem {
                 label: "Wibble".into(),
                 kind: Some(CompletionItemKind::CLASS),
                 detail: Some("Type".into()),
                 documentation: None,
                 ..Default::default()
-            },
+            },]
         ]
+        .concat()
     );
 }
+
+#[test]
+fn for_type_alias() {
+    let code = "
+pub type Wibble = Result(
+  String,
+  String
+)
+";
+
+    assert_eq!(
+        positioned_expression_completions(code, "", Position::new(2, 0)),
+        [
+            prelude_type_completions(),
+            vec![CompletionItem {
+                label: "Wibble".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            },]
+        ]
+        .concat()
+    );
+}
+
+#[test]
+fn for_external_function() {
+    let code = "
+pub external fn wibble(
+  String,
+) -> String =
+  \"ok\" \"ok\"
+";
+
+    assert_eq!(
+        positioned_expression_completions(code, "", Position::new(2, 0)),
+        prelude_type_completions(),
+    );
+}
+
+#[test]
+fn for_function_arguments() {
+    let code = "
+pub fn wibble(
+  _: String,
+) -> Nil {
+  Nil
+}
+";
+
+    assert_eq!(
+        positioned_expression_completions(code, "", Position::new(2, 0)),
+        prelude_type_completions(),
+    );
+}
+
+#[test]
+fn imported_type() {
+    let dep = "
+pub type Zoo = List(String)
+type Private = List(String)
+";
+    let code = "import dep
+
+pub fn wibble(
+  _: String,
+) -> Nil {
+  Nil
+}
+";
+
+    assert_eq!(
+        positioned_expression_completions(code, dep, Position::new(3, 0)),
+        [
+            prelude_type_completions(),
+            vec![CompletionItem {
+                label: "dep.Zoo".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            },]
+        ]
+        .concat()
+    );
+}
+
+#[test]
+fn unqualified_imported_type() {
+    let dep = "
+pub type Zoo = List(String)
+type Private = List(String)
+";
+    let code = "import dep.{Zoo}
+
+pub fn wibble(
+  _: String,
+) -> Nil {
+  Nil
+}
+";
+
+    assert_eq!(
+        positioned_expression_completions(code, dep, Position::new(3, 0)),
+        [
+            prelude_type_completions(),
+            vec![
+                CompletionItem {
+                    label: "Zoo".into(),
+                    kind: Some(CompletionItemKind::CLASS),
+                    detail: Some("Type".into()),
+                    documentation: None,
+                    ..Default::default()
+                },
+                CompletionItem {
+                    label: "dep.Zoo".into(),
+                    kind: Some(CompletionItemKind::CLASS),
+                    detail: Some("Type".into()),
+                    documentation: None,
+                    ..Default::default()
+                },
+            ]
+        ]
+        .concat()
+    );
+}
+
+// #[test]
+// fn local_private_type() {
+//     let code = "
+// type Zoo = Int
+
+// pub external fn wibble(
+//   String,
+// ) -> String =
+//   \"ok\" \"ok\"
+// ";
+
+//     assert_eq!(
+//         positioned_expression_completions(code, "", Position::new(4, 0)),
+//         [
+//             prelude_type_completions(),
+//             vec![CompletionItem {
+//                 label: "Zoo".into(),
+//                 kind: Some(CompletionItemKind::CLASS),
+//                 detail: Some("Type".into()),
+//                 documentation: None,
+//                 ..Default::default()
+//             }],
+//         ]
+//         .concat()
+//     );
+// }
