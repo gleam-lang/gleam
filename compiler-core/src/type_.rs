@@ -458,6 +458,15 @@ impl ModuleInterface {
         }
     }
 
+    pub fn get_public_type(&self, name: &str) -> Option<&TypeConstructor> {
+        let type_ = self.types.get(name)?;
+        if type_.public {
+            Some(type_)
+        } else {
+            None
+        }
+    }
+
     pub fn get_main_function(&self) -> Result<ModuleFunction, crate::Error> {
         match self.values.get(&SmolStr::from("main")) {
             Some(ValueConstructor {

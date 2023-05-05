@@ -82,6 +82,30 @@ fn empty_module() {
 }
 
 #[test]
+fn module_with_private_type() {
+    let module = ModuleInterface {
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b".into(),
+        types: [(
+            "ListIntType".into(),
+            TypeConstructor {
+                typ: type_::list(type_::int()),
+                public: false,
+                origin: Default::default(),
+                module: "the/module".into(),
+                parameters: vec![],
+            },
+        )]
+        .into(),
+        types_constructors: HashMap::new(),
+        values: HashMap::new(),
+        accessors: HashMap::new(),
+    };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
 fn module_with_app_type() {
     let module = ModuleInterface {
         package: "some_package".into(),

@@ -182,9 +182,11 @@ pub fn infer_module(
     // Generate warnings for unused items
     env.convert_unused_to_warnings();
 
-    // Remove private and imported types and values to create the public interface
-    env.module_types
-        .retain(|_, info| info.public && info.module == name);
+    // Remove imported types and values to create the public interface
+    // Private types and values are retained so they can be used in the language
+    // server, but are filtered out when type checking to prevent using private
+    // items.
+    env.module_types.retain(|_, info| info.module == name);
     env.accessors.retain(|_, accessors| accessors.public);
 
     // Ensure no exported values have private types in their type signature
@@ -301,7 +303,7 @@ pub fn register_import(
         }
 
         // Register the unqualified import if it is a type constructor
-        if let Some(typ) = module_info.types.get(name) {
+        if let Some(typ) = module_info.get_public_type(name) {
             let typ_info = TypeConstructor {
                 origin: *location,
                 ..typ.clone()
