@@ -7,7 +7,7 @@ error: Unknown module field
   ┌─ /src/one/two.gleam:4:7
   │
 4 │   let one.Two = x
-  │       ^^^^^^^ Did you mean `Two`?
+  │       ^^^^^^^
 
 The module `one` does not have a `Two` field.
 

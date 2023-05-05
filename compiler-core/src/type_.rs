@@ -488,8 +488,17 @@ impl ModuleInterface {
         }
     }
 
-    fn public_value_names(&self) -> Vec<SmolStr> {
+    pub fn public_value_names(&self) -> Vec<SmolStr> {
         self.values
+            .iter()
+            .filter(|(_, v)| v.public)
+            .map(|(k, _)| k)
+            .cloned()
+            .collect_vec()
+    }
+
+    pub fn public_type_names(&self) -> Vec<SmolStr> {
+        self.types
             .iter()
             .filter(|(_, v)| v.public)
             .map(|(k, _)| k)

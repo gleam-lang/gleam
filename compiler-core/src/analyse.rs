@@ -344,8 +344,8 @@ pub fn register_import(
                 location: *location,
                 name: name.clone(),
                 module_name: module.clone(),
-                value_constructors: module_info.values.keys().cloned().collect(),
-                type_constructors: module_info.types.keys().cloned().collect(),
+                value_constructors: module_info.public_value_names(),
+                type_constructors: module_info.public_type_names(),
             });
         }
     }
