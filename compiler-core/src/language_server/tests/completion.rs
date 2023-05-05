@@ -714,29 +714,29 @@ pub fn wibble(
     );
 }
 
-// #[test]
-// fn local_private_type() {
-//     let code = "
-// type Zoo = Int
+#[test]
+fn local_private_type() {
+    let code = "
+type Zoo = Int
 
-// pub external fn wibble(
-//   String,
-// ) -> String =
-//   \"ok\" \"ok\"
-// ";
+pub external fn wibble(
+  String,
+) -> String =
+  \"ok\" \"ok\"
+";
 
-//     assert_eq!(
-//         positioned_expression_completions(code, "", Position::new(4, 0)),
-//         [
-//             prelude_type_completions(),
-//             vec![CompletionItem {
-//                 label: "Zoo".into(),
-//                 kind: Some(CompletionItemKind::CLASS),
-//                 detail: Some("Type".into()),
-//                 documentation: None,
-//                 ..Default::default()
-//             }],
-//         ]
-//         .concat()
-//     );
-// }
+    assert_eq!(
+        positioned_expression_completions(code, "", Position::new(4, 0)),
+        [
+            prelude_type_completions(),
+            vec![CompletionItem {
+                label: "Zoo".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                ..Default::default()
+            }],
+        ]
+        .concat()
+    );
+}
