@@ -306,6 +306,7 @@ where
 
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
+            // TODO: test getting completions from modules defined in other packages
             let Some(module) = self.compiler.get_module_inferface(&import.module) else {
                 continue;
             };
@@ -347,6 +348,7 @@ where
 
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
+            // TODO: test getting completions from modules defined in other packages
             let Some(module) = self.compiler.get_module_inferface(&import.module) else {
                 continue;
             };
