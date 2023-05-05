@@ -75,6 +75,78 @@ pub fn main() {
 }
 
 #[test]
+fn using_private_type_alias() {
+    assert_with_module_error!(
+        ("one", "type X = Int"),
+        "import one
+
+pub fn main() {
+  one.X
+}",
+    );
+}
+
+#[test]
+fn using_private_unqualified_type_alias() {
+    assert_with_module_error!(
+        ("one", "type X = Int"),
+        "import one.{X}
+
+pub fn main() {
+  X
+}",
+    );
+}
+
+#[test]
+fn using_private_external_type() {
+    assert_with_module_error!(
+        ("one", "external type X"),
+        "import one
+
+pub fn main() {
+  one.X
+}",
+    );
+}
+
+#[test]
+fn using_private_unqualified_external_type() {
+    assert_with_module_error!(
+        ("one", "external type X"),
+        "import one.{X}
+
+pub fn main() {
+  X
+}",
+    );
+}
+
+#[test]
+fn using_private_custom_type() {
+    assert_with_module_error!(
+        ("one", "type X { Y }"),
+        "import one
+
+pub fn main() {
+  one.X
+}",
+    );
+}
+
+#[test]
+fn using_private_unqualified_custom_type() {
+    assert_with_module_error!(
+        ("one", "type X { Y }"),
+        "import one.{X}
+
+pub fn main() {
+  X
+}",
+    );
+}
+
+#[test]
 fn unqualified_using_private_constructo() {
     assert_with_module_error!(
         ("one", "type Two { Two }"),
