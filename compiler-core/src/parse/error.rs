@@ -37,7 +37,7 @@ impl ParseError {
             ParseErrorType::ExpectedPattern => ("I was expecting a pattern after this.", vec![]),
             ParseErrorType::ExpectedType => (
                 "I was expecting a type after this.",
-                vec!["See: https://gleam.run/book/tour/type-annotations".into()],
+                vec!["See: https://gleam.run/book/tour/let-bindings.html".into()],
             ),
             ParseErrorType::ExpectedUpName => ("I was expecting a type name here.", vec![]),
             ParseErrorType::ExpectedValue => ("I was expecting a value after this.", vec![]),
