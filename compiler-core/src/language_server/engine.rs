@@ -304,7 +304,12 @@ where
         for import in module.ast.statements.iter().filter_map(get_import) {
             let alias = import.used_name();
             let modules = &self.compiler.modules;
-            let module = modules.get(&import.module).expect("Module must exist");
+
+            // The module may not be known of yet if it has not previously
+            // compiled yet in this editor session.
+            let Some(module) = modules.get(&import.module) else {
+                continue;
+            };
 
             // Qualified values
             for (name, value) in &module.ast.type_info.values {
