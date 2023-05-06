@@ -1,3 +1,4 @@
+use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
@@ -25,7 +26,6 @@ use std::{
     collections::HashSet,
     path::{Path, PathBuf},
 };
-use crate::type_::PRELUDE_MODULE_NAME;
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration};
 

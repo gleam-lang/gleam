@@ -6,6 +6,7 @@ mod pattern;
 #[cfg(test)]
 mod tests;
 
+use crate::type_::is_prelude_module;
 use crate::{
     ast::{
         CustomType, ExternalFunction, ExternalType, Function, Import, ModuleConstant, TypeAlias, *,
@@ -26,7 +27,6 @@ use pattern::pattern;
 use smol_str::SmolStr;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
-use crate::type_::is_prelude_module;
 
 const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;

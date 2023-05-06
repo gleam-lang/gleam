@@ -1,3 +1,4 @@
+use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     build::{Origin, Target},
     erlang::module,
@@ -5,7 +6,6 @@ use crate::{
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
 };
-use crate::type_::PRELUDE_MODULE_NAME;
 
 mod assert;
 mod bit_strings;
@@ -32,7 +32,10 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = modules.insert(PRELUDE_MODULE_NAME.into(), crate::type_::build_prelude(&ids));
+    let _ = modules.insert(
+        PRELUDE_MODULE_NAME.into(),
+        crate::type_::build_prelude(&ids),
+    );
     if let Some((dep_package, dep_name, dep_src)) = dep {
         let (mut ast, _) = crate::parse::parse_module(dep_src).expect("dep syntax error");
         ast.name = dep_name.into();

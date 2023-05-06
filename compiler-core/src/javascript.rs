@@ -7,6 +7,7 @@ mod typescript;
 
 use std::path::Path;
 
+use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{
         CustomType, ExternalFunction, ExternalType, Function, Import, ModuleConstant, TypeAlias, *,
@@ -17,7 +18,6 @@ use crate::{
 };
 use itertools::Itertools;
 use smol_str::SmolStr;
-use crate::type_::PRELUDE_MODULE_NAME;
 
 use self::import::{Imports, Member};
 

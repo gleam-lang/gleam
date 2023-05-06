@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{SrcSpan, TypedExpr},
     build::Located,
@@ -10,7 +11,6 @@ use crate::{
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
 };
-use crate::type_::PRELUDE_MODULE_NAME;
 
 use super::{Statement, TypedModule, TypedStatement};
 

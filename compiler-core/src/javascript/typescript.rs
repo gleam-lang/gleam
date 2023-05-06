@@ -17,6 +17,7 @@ use heck::ToUpperCamelCase;
 use itertools::Itertools;
 use smol_str::SmolStr;
 
+use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{
         CustomType, ExternalFunction, ExternalType, Function, Import, ModuleConstant,
@@ -27,7 +28,6 @@ use crate::{
     pretty::{break_, Document, Documentable},
     type_::{Type, TypeVar},
 };
-use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 
 use super::{concat, import::Imports, line, lines, wrap_args, Output, INDENT};
 
