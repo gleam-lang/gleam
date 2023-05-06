@@ -5,7 +5,6 @@ use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 use super::{
     ModuleInterface, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant,
 };
-use smol_str::SmolStr;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 const BIT_STRING: &str = "BitString";
@@ -20,7 +19,7 @@ const UTF_CODEPOINT: &str = "UtfCodepoint";
 
 pub const PRELUDE_MODULE_NAME: &str = "gleam";
 
-pub fn is_prelude_module(module: &SmolStr) -> bool {
+pub fn is_prelude_module(module: &str) -> bool {
     module == PRELUDE_MODULE_NAME
 }
 

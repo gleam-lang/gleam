@@ -381,7 +381,7 @@ pub fn register_import(
 }
 
 fn validate_module_name(name: &SmolStr) -> Result<(), Error> {
-    if name == PRELUDE_MODULE_NAME {
+    if is_prelude_module(name) {
         return Err(Error::ReservedModuleName { name: name.clone() });
     };
     for segment in name.split('/') {

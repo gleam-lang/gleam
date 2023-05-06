@@ -14,6 +14,8 @@
 - The errors emitted when a name is reused in a module have been made clearer.
 - Fixed an incorrect URL in the error message for failing to parse a let binding
   with a type annotation.
+- Fixed a bug where shadowing a prelude type name could result in incorrect
+  errors in exhaustiveness checking.
 - Running a module now uses the dependency's target and runtime in its `gleam.toml`.
 
 ## v0.28.3 - 2023-04-17
