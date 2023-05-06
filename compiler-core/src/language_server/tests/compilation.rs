@@ -1,3 +1,5 @@
+use crate::language_server::engine::Compilation;
+
 use super::*;
 
 #[test]
@@ -8,7 +10,7 @@ fn compile_please() {
     let response = engine.compile_please();
     assert!(response.result.is_ok());
     assert!(response.warnings.is_empty());
-    assert!(response.compiled_modules.is_empty());
+    assert_eq!(response.compilation, Compilation::Yes(vec![]));
 
     drop(engine);
     let actions = io.into_actions();
@@ -40,7 +42,7 @@ fn compile_error_in_src() {
     let response = engine.compile_please();
     assert!(response.result.is_err());
     assert!(response.warnings.is_empty());
-    assert!(response.compiled_modules.is_empty());
+    assert_eq!(response.compilation, Compilation::Yes(vec![]));
 
     drop(engine);
     let actions = io.into_actions();
@@ -72,7 +74,7 @@ fn compile_error_in_test() {
     let response = engine.compile_please();
     assert!(response.result.is_err());
     assert!(response.warnings.is_empty());
-    assert!(response.compiled_modules.is_empty());
+    assert_eq!(response.compilation, Compilation::Yes(vec![]));
 
     drop(engine);
     let actions = io.into_actions();

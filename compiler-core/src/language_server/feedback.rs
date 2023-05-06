@@ -4,6 +4,8 @@ use std::{
     path::PathBuf,
 };
 
+use super::engine::Compilation;
+
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Feedback {
     pub diagnostics: HashMap<PathBuf, Vec<Diagnostic>>,
@@ -50,31 +52,25 @@ impl FeedbackBookKeeper {
     /// Send diagnostics for any warnings and remove any diagnostics for files
     /// that have compiled without warnings.
     ///
-    pub fn response(
-        &mut self,
-        compiled: impl Iterator<Item = PathBuf>,
-        warnings: Vec<Warning>,
-    ) -> Feedback {
-        let mut any_compiled = false;
+    pub fn response(&mut self, compilation: Compilation, warnings: Vec<Warning>) -> Feedback {
         let mut feedback = Feedback::default();
 
-        // Any existing diagnostics for files that have been compiled are no
-        // longer valid so we set an empty vector of diagnostics for the files
-        // to erase their diagnostics.
-        for path in compiled {
-            any_compiled = true;
-            let has_existing_diagnostics = self.files_with_warnings.remove(&path);
-            if has_existing_diagnostics {
-                feedback.unset_existing_diagnostics(path);
+        if let Compilation::Yes(compiled_modules) = compilation {
+            // Any existing diagnostics for files that have been compiled are no
+            // longer valid so we set an empty vector of diagnostics for the files
+            // to erase their diagnostics.
+            for path in compiled_modules {
+                let has_existing_diagnostics = self.files_with_warnings.remove(&path);
+                if has_existing_diagnostics {
+                    feedback.unset_existing_diagnostics(path);
+                }
             }
-        }
 
-        // If any have been compiled and there is no error (which there is not
-        // in this function) then it means that compilation has succeeded, so
-        // there should be no error diagnostics.
-        // We don't limit this to files that have been compiled as a previous
-        // cached version could be used instead of a recompile.
-        if any_compiled {
+            // Compilation was attempted and there is no error (which there is not
+            // in this function) then it means that compilation has succeeded, so
+            // there should be no error diagnostics.
+            // We don't limit this to files that have been compiled as a previous
+            // cached version could be used instead of a recompile.
             self.unset_errors(&mut feedback);
         }
 
@@ -103,11 +99,11 @@ impl FeedbackBookKeeper {
     pub fn build_with_error(
         &mut self,
         error: Error,
-        compiled: impl Iterator<Item = PathBuf>,
+        compilation: Compilation,
         warnings: Vec<Warning>,
     ) -> Feedback {
         let diagnostic = error.to_diagnostic();
-        let mut feedback = self.response(compiled, warnings);
+        let mut feedback = self.response(compilation, warnings);
 
         // A new error means that any existing errors are no longer valid. Unset them.
         self.unset_errors(&mut feedback);
@@ -127,7 +123,7 @@ impl FeedbackBookKeeper {
     }
 
     pub fn error(&mut self, error: Error) -> Feedback {
-        self.build_with_error(error, vec![].into_iter(), vec![])
+        self.build_with_error(error, Compilation::No, vec![])
     }
 
     fn insert_warning(&mut self, feedback: &mut Feedback, warning: Warning) {
@@ -173,7 +169,7 @@ mod tests {
         };
 
         let feedback = book_keeper.response(
-            vec![file1.clone()].into_iter(),
+            Compilation::Yes(vec![file1.clone()]),
             vec![warning1.clone(), warning1.clone(), warning2.clone()],
         );
 
@@ -192,7 +188,7 @@ mod tests {
         );
 
         let feedback = book_keeper.response(
-            vec![file1.clone(), file2.clone(), file3].into_iter(),
+            Compilation::Yes(vec![file1.clone(), file2.clone(), file3]),
             vec![],
         );
 
@@ -230,7 +226,7 @@ mod tests {
 
         let feedback = book_keeper.build_with_error(
             locationless_error.clone(),
-            vec![].into_iter(),
+            Compilation::Yes(vec![]),
             vec![warning1.clone()],
         );
 
@@ -268,8 +264,11 @@ mod tests {
             },
         };
 
-        let feedback =
-            book_keeper.build_with_error(error.clone(), vec![].into_iter(), vec![warning1.clone()]);
+        let feedback = book_keeper.build_with_error(
+            error.clone(),
+            Compilation::Yes(vec![]),
+            vec![warning1.clone()],
+        );
 
         assert_eq!(
             Feedback {
@@ -284,7 +283,7 @@ mod tests {
 
         // The error diagnostic should be removed if the file compiles later.
 
-        let feedback = book_keeper.response(vec![file3.clone()].into_iter(), vec![]);
+        let feedback = book_keeper.response(Compilation::Yes(vec![file3.clone()]), vec![]);
 
         assert_eq!(
             Feedback {
@@ -325,7 +324,8 @@ mod tests {
             },
         };
 
-        let feedback = book_keeper.build_with_error(error.clone(), vec![].into_iter(), vec![]);
+        let feedback =
+            book_keeper.build_with_error(error.clone(), Compilation::Yes(vec![]), vec![]);
 
         assert_eq!(
             Feedback {
@@ -338,7 +338,7 @@ mod tests {
         // The error diagnostic should be removed on a successful compilation,
         // even though the file is not in the compiled files iterator.
 
-        let feedback = book_keeper.response(vec![file2].into_iter(), vec![]);
+        let feedback = book_keeper.response(Compilation::Yes(vec![file2]), vec![]);
 
         assert_eq!(
             Feedback {
@@ -365,7 +365,8 @@ mod tests {
             },
         };
 
-        let feedback = book_keeper.build_with_error(error(&file1), vec![].into_iter(), vec![]);
+        let feedback =
+            book_keeper.build_with_error(error(&file1), Compilation::Yes(vec![]), vec![]);
 
         assert_eq!(
             Feedback {
@@ -375,7 +376,8 @@ mod tests {
             feedback
         );
 
-        let feedback = book_keeper.build_with_error(error(&file2), vec![].into_iter(), vec![]);
+        let feedback =
+            book_keeper.build_with_error(error(&file2), Compilation::Yes(vec![]), vec![]);
 
         assert_eq!(
             Feedback {
@@ -406,7 +408,8 @@ mod tests {
             },
         };
 
-        let feedback = book_keeper.build_with_error(error.clone(), vec![].into_iter(), vec![]);
+        let feedback =
+            book_keeper.build_with_error(error.clone(), Compilation::Yes(vec![]), vec![]);
 
         assert_eq!(
             Feedback {
@@ -419,7 +422,7 @@ mod tests {
         // The error diagnostic should not be removed, nothing has been
         // successfully compiled.
 
-        let feedback = book_keeper.response(vec![].into_iter(), vec![]);
+        let feedback = book_keeper.response(Compilation::No, vec![]);
 
         assert_eq!(
             Feedback {

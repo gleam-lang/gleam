@@ -22,7 +22,15 @@ use super::{src_span_to_lsp_range, DownloadDependencies, MakeLocker};
 pub struct Response<T> {
     pub result: Result<T, Error>,
     pub warnings: Vec<Warning>,
-    pub compiled_modules: Vec<PathBuf>,
+    pub compilation: Compilation,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Compilation {
+    /// Compilation was attempted and succeeded for these modules.
+    Yes(Vec<PathBuf>),
+    /// Compilation was not attempted for this operation.
+    No,
 }
 
 #[derive(Debug)]
@@ -36,6 +44,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
     pub compiler: LspProjectCompiler<FileSystemProxy<IO>>,
 
     modules_compiled_since_last_feedback: Vec<PathBuf>,
+    compiled_since_last_feedback: bool,
 
     // Used to publish progress notifications to the client without waiting for
     // the usual request-response loop.
@@ -76,6 +85,7 @@ where
 
         Ok(Self {
             modules_compiled_since_last_feedback: vec![],
+            compiled_since_last_feedback: false,
             progress_reporter,
             compiler,
             paths,
@@ -88,6 +98,8 @@ where
 
     /// Compile the project if we are in one. Otherwise do nothing.
     fn compile(&mut self) -> Result<(), Error> {
+        self.compiled_since_last_feedback = true;
+
         self.progress_reporter.compilation_started();
         let result = self.compiler.compile();
         self.progress_reporter.compilation_finished();
@@ -212,11 +224,16 @@ where
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
         let result = handler(self);
         let warnings = self.take_warnings();
-        let modules = std::mem::take(&mut self.modules_compiled_since_last_feedback);
+        let compilation = if self.compiled_since_last_feedback {
+            let modules = std::mem::take(&mut self.modules_compiled_since_last_feedback);
+            Compilation::Yes(modules)
+        } else {
+            Compilation::No
+        };
         Response {
             result,
             warnings,
-            compiled_modules: modules,
+            compilation,
         }
     }
 

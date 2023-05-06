@@ -291,17 +291,16 @@ where
                 let engine::Response {
                     result,
                     warnings,
-                    compiled_modules,
+                    compilation,
                 } = handler(&mut project.engine);
-                let modules = compiled_modules.into_iter();
                 match result {
                     Ok(value) => {
-                        let feedback = project.feedback.response(modules, warnings);
+                        let feedback = project.feedback.response(compilation, warnings);
                         let json = serde_json::to_value(value).expect("response to json");
                         (json, feedback)
                     }
                     Err(e) => {
-                        let feedback = project.feedback.build_with_error(e, modules, warnings);
+                        let feedback = project.feedback.build_with_error(e, compilation, warnings);
                         (Json::Null, feedback)
                     }
                 }
