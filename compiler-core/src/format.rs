@@ -85,6 +85,13 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
+    fn any_comments(&self, limit: u32) -> bool {
+        self.comments
+            .first()
+            .map(|comment| comment.start < limit)
+            .unwrap_or(false)
+    }
+
     // Pop comments that occur before a byte-index in the source, consuming
     // and retaining any empty lines contained within.
     fn pop_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'comments str>> {
@@ -882,11 +889,12 @@ impl<'comments> Formatter<'comments> {
         };
 
         match args {
-            [arg] if is_breakable_expr(&arg.value) => expr
-                .append("(")
-                .append(self.call_arg(arg))
-                .append(")")
-                .group(),
+            [arg] if is_breakable_expr(&arg.value) && !self.any_comments(arg.location.start) => {
+                expr.append("(")
+                    .append(self.call_arg(arg))
+                    .append(")")
+                    .group()
+            }
 
             _ => expr
                 .append(wrap_args(args.iter().map(|a| self.call_arg(a))).group())
