@@ -16,6 +16,8 @@
   with a type annotation.
 - Fixed a bug where shadowing a prelude type name could result in incorrect
   errors in exhaustiveness checking.
+- Fixed a bug where the formatter would incorrectly format blocks with a comment
+  before them that were the only argument to a function call.
 - Running a module now uses the dependency's target and runtime in its `gleam.toml`.
 
 ## v0.28.3 - 2023-04-17
