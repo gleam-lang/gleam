@@ -1,5 +1,4 @@
 use debug_ignore::DebugIgnore;
-use itertools::Itertools;
 use smol_str::SmolStr;
 
 use crate::{
