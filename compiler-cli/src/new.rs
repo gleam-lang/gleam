@@ -180,7 +180,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3.5.1
-      - uses: erlef/setup-beam@v1.15.3
+      - uses: erlef/setup-beam@1.15.4
         with:
           otp-version: "{}"
           gleam-version: "{}"
