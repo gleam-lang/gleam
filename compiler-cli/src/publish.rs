@@ -4,6 +4,7 @@ use gleam_core::{
     config::{PackageConfig, SpdxLicense},
     hex, paths,
     paths::ProjectPaths,
+    recipe::Recipe,
     Error, Result,
 };
 use hexpm::version::{Range, Version};
@@ -144,7 +145,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
     let src_files = project_files()?;
     let contents_tar_gz = contents_tarball(&src_files, &generated_files)?;
     let version = "3";
-    let metadata = metadata_config(&built.root_package.config, &src_files, &generated_files);
+    let metadata = metadata_config(&built.root_package.config, &src_files, &generated_files)?;
 
     // Calculate checksum
     let mut hasher = sha2::Sha256::new();
@@ -186,12 +187,25 @@ fn check_config_for_publishing(config: &PackageConfig) -> Result<()> {
     }
 }
 
-fn metadata_config(
-    config: &PackageConfig,
+fn metadata_config<'a>(
+    config: &'a PackageConfig,
     source_files: &[PathBuf],
     generated_files: &[(PathBuf, String)],
-) -> String {
+) -> Result<String> {
     let repo_url = http::Uri::try_from(config.repository.url().unwrap_or_default()).ok();
+    let requirements: Result<Vec<ReleaseRequirement<'a>>> = config
+        .dependencies
+        .iter()
+        .map(|(name, recipe)| match recipe {
+            Recipe::Hex { version } => Ok(ReleaseRequirement {
+                name,
+                requirement: version,
+            }),
+            _ => Err(Error::PublishNonHexDependencies {
+                package: name.to_string(),
+            }),
+        })
+        .collect();
     let metadata = ReleaseMetadata {
         name: &config.name,
         version: &config.version,
@@ -205,16 +219,12 @@ fn metadata_config(
             .map(|l| (l.title.as_str(), l.href.clone()))
             .chain(repo_url.into_iter().map(|u| ("Repository", u)))
             .collect(),
-        requirements: config
-            .dependencies
-            .iter()
-            .map(|(name, requirement)| ReleaseRequirement { name, requirement })
-            .collect(),
+        requirements: requirements?,
         build_tools: vec!["gleam"],
     }
     .as_erlang();
     tracing::info!(contents = ?metadata, "Generated Hex metadata.config");
-    metadata
+    Ok(metadata)
 }
 
 fn contents_tarball(files: &[PathBuf], data_files: &[(PathBuf, String)]) -> Result<Vec<u8>, Error> {

@@ -195,6 +195,9 @@ pub enum Error {
         licence_missing: bool,
     },
 
+    #[error("Dependency {package:?} has not been published to Hex")]
+    PublishNonHexDependencies { package: String },
+
     #[error("The package {package} uses unsupported build tools {build_tools:?}")]
     UnsupportedBuildTool {
         package: String,
@@ -2340,6 +2343,18 @@ licences = ["Apache-2.0"]"#
                     hint: None,
                     location: None,
                     level: Level::Error,
+                }
+            }
+
+            Error::PublishNonHexDependencies {
+                package
+            } => {
+                Diagnostic {
+                    title: "Unblished dependencies".into(),
+                    text: wrap_format!("The package cannot be published to Hex because dependency {} is not a Hex dependency", package),
+                    hint: None,
+                    location: None,
+                    level: Level::Error
                 }
             }
 
