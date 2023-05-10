@@ -31,7 +31,7 @@ pub fn resolve_versions(
     config: &PackageConfig,
     manifest: Option<&Manifest>,
 ) -> Result<PackageVersions> {
-    let specified_dependencies = config.dependencies_for(mode)?.into_iter();
+    let specified_dependencies = config.dependency_versions_for(mode)?.into_iter();
     let locked = config.locked(manifest)?;
     tracing::info!("resolving_versions");
     hexpm::version::resolve_versions(

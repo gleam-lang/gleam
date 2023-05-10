@@ -1,6 +1,7 @@
 use crate::error::{FileIoAction, FileKind};
 use crate::io::FileSystemReader;
 use crate::manifest::Manifest;
+use crate::recipe::Recipe;
 use crate::{Error, Result};
 use globset::{Glob, GlobSetBuilder};
 use hexpm::version::{Range, Version};
@@ -29,7 +30,7 @@ fn default_javascript_runtime() -> Runtime {
     Runtime::NodeJs
 }
 
-pub type Dependencies = HashMap<String, Range>;
+pub type Dependencies = HashMap<String, Recipe>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SpdxLicense {
@@ -103,11 +104,18 @@ impl PackageConfig {
         }
     }
 
+    pub fn dependency_versions_for(&self, mode: Mode) -> Result<HashMap<String, Range>> {
+        self.dependencies_for(mode)?
+            .iter()
+            .map(|(package, recipe)| Ok((package.clone(), recipe.version_range()?)))
+            .collect()
+    }
+
     pub fn all_dependencies(&self) -> Result<Dependencies> {
         let mut deps =
             HashMap::with_capacity(self.dependencies.len() + self.dev_dependencies.len());
-        for (name, requirement) in self.dependencies.iter().chain(&self.dev_dependencies) {
-            let already_inserted = deps.insert(name.clone(), requirement.clone()).is_some();
+        for (name, recipe) in self.dependencies.iter().chain(&self.dev_dependencies) {
+            let already_inserted = deps.insert(name.clone(), recipe.clone()).is_some();
             if already_inserted {
                 return Err(Error::DuplicateDependency(name.clone()));
             }
@@ -184,7 +192,7 @@ struct StalePackageRemover<'a> {
 
 impl<'a> StalePackageRemover<'a> {
     pub fn fresh_and_locked(
-        requirements: &'a HashMap<String, Range>,
+        requirements: &'a HashMap<String, Recipe>,
         manifest: &'a Manifest,
     ) -> HashMap<String, Version> {
         let locked = manifest
@@ -201,7 +209,7 @@ impl<'a> StalePackageRemover<'a> {
 
     fn run(
         &mut self,
-        requirements: &'a HashMap<String, Range>,
+        requirements: &'a HashMap<String, Recipe>,
         manifest: &'a Manifest,
     ) -> HashMap<String, Version> {
         // Record all the requirements that have not changed
@@ -249,13 +257,13 @@ impl<'a> StalePackageRemover<'a> {
 fn locked_no_manifest() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("prod1".into(), Range::new("~> 1.0".into())),
-        ("prod2".into(), Range::new("~> 2.0".into())),
+        ("prod1".into(), Recipe::hex("~> 1.0")),
+        ("prod2".into(), Recipe::hex("~> 2.0")),
     ]
     .into();
     config.dev_dependencies = [
-        ("dev1".into(), Range::new("~> 1.0".into())),
-        ("dev2".into(), Range::new("~> 2.0".into())),
+        ("dev1".into(), Recipe::hex("~> 1.0")),
+        ("dev2".into(), Recipe::hex("~> 2.0")),
     ]
     .into();
     assert_eq!(config.locked(None).unwrap(), [].into());
@@ -265,13 +273,13 @@ fn locked_no_manifest() {
 fn locked_no_changes() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("prod1".into(), Range::new("~> 1.0".into())),
-        ("prod2".into(), Range::new("~> 2.0".into())),
+        ("prod1".into(), Recipe::hex("~> 1.0")),
+        ("prod2".into(), Recipe::hex("~> 2.0")),
     ]
     .into();
     config.dev_dependencies = [
-        ("dev1".into(), Range::new("~> 1.0".into())),
-        ("dev2".into(), Range::new("~> 2.0".into())),
+        ("dev1".into(), Recipe::hex("~> 1.0")),
+        ("dev2".into(), Recipe::hex("~> 2.0")),
     ]
     .into();
     let manifest = Manifest {
@@ -298,8 +306,8 @@ fn locked_no_changes() {
 #[test]
 fn locked_some_removed() {
     let mut config = PackageConfig::default();
-    config.dependencies = [("prod1".into(), Range::new("~> 1.0".into()))].into();
-    config.dev_dependencies = [("dev2".into(), Range::new("~> 2.0".into()))].into();
+    config.dependencies = [("prod1".into(), Recipe::hex("~> 1.0"))].into();
+    config.dev_dependencies = [("dev2".into(), Recipe::hex("~> 2.0"))].into();
     let manifest = Manifest {
         requirements: config.all_dependencies().unwrap(),
         packages: vec![
@@ -325,21 +333,21 @@ fn locked_some_removed() {
 fn locked_some_changed() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("prod1".into(), Range::new("~> 3.0".into())), // Does not match manifest
-        ("prod2".into(), Range::new("~> 2.0".into())),
+        ("prod1".into(), Recipe::hex("~> 3.0")), // Does not match manifest
+        ("prod2".into(), Recipe::hex("~> 2.0")),
     ]
     .into();
     config.dev_dependencies = [
-        ("dev1".into(), Range::new("~> 3.0".into())), // Does not match manifest
-        ("dev2".into(), Range::new("~> 2.0".into())),
+        ("dev1".into(), Recipe::hex("~> 3.0")), // Does not match manifest
+        ("dev2".into(), Recipe::hex("~> 2.0")),
     ]
     .into();
     let manifest = Manifest {
         requirements: [
-            ("prod1".into(), Range::new("~> 1.0".into())),
-            ("prod2".into(), Range::new("~> 2.0".into())),
-            ("dev1".into(), Range::new("~> 1.0".into())),
-            ("dev2".into(), Range::new("~> 2.0".into())),
+            ("prod1".into(), Recipe::hex("~> 1.0")),
+            ("prod2".into(), Recipe::hex("~> 2.0")),
+            ("dev1".into(), Recipe::hex("~> 1.0")),
+            ("dev2".into(), Recipe::hex("~> 2.0")),
         ]
         .into(),
         packages: vec![
@@ -365,15 +373,15 @@ fn locked_some_changed() {
 fn locked_nested_are_removed_too() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("1".into(), Range::new("~> 2.0".into())), // Does not match manifest
-        ("2".into(), Range::new("~> 1.0".into())),
+        ("1".into(), Recipe::hex("~> 2.0")), // Does not match manifest
+        ("2".into(), Recipe::hex("~> 1.0")),
     ]
     .into();
     config.dev_dependencies = [].into();
     let manifest = Manifest {
         requirements: [
-            ("1".into(), Range::new("~> 1.0".into())),
-            ("2".into(), Range::new("~> 1.0".into())),
+            ("1".into(), Recipe::hex("~> 1.0")),
+            ("2".into(), Recipe::hex("~> 1.0")),
         ]
         .into(),
         packages: vec![

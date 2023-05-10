@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 
+use crate::recipe::Recipe;
 use crate::Result;
-use hexpm::version::{Range, Version};
+use hexpm::version::Version;
 use itertools::Itertools;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct Manifest {
     #[serde(serialize_with = "ordered_map")]
-    pub requirements: HashMap<String, Range>,
+    pub requirements: HashMap<String, Recipe>,
     #[serde(serialize_with = "sorted_vec")]
     pub packages: Vec<ManifestPackage>,
 }
@@ -103,10 +104,10 @@ impl Manifest {
 fn manifest_toml_format() {
     let mut manifest = Manifest {
         requirements: [
-            ("zzz".into(), Range::new("> 0.0.0".into())),
-            ("aaa".into(), Range::new("> 0.0.0".into())),
-            ("gleam_stdlib".into(), Range::new("~> 0.17".into())),
-            ("gleeunit".into(), Range::new("~> 0.1".into())),
+            ("zzz".into(), Recipe::hex("> 0.0.0")),
+            ("aaa".into(), Recipe::hex("> 0.0.0")),
+            ("gleam_stdlib".into(), Recipe::hex("~> 0.17")),
+            ("gleeunit".into(), Recipe::hex("~> 0.1")),
         ]
         .into(),
         packages: vec![
