@@ -10,6 +10,7 @@ use gleam_core::{
     config::PackageConfig,
     error::{FileIoAction, FileKind, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
+    recipe::Recipe,
     io::{HttpClient as _, TarUnpacker, WrappedReader},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
@@ -146,7 +147,7 @@ pub fn download<Telem: Telemetry>(
     // Insert the new packages to add, if it exists
     if let Some((packages, dev)) = new_package {
         for package in packages {
-            let version = hexpm::version::Range::new(">= 0.0.0".into());
+            let version = Recipe::hex(">= 0.0.0");
             let _ = if dev {
                 config.dev_dependencies.insert(package.to_string(), version)
             } else {
