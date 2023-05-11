@@ -502,7 +502,7 @@ fn resolve_versions<Telem: Telemetry>(
     telemetry: &Telem,
 ) -> Result<Manifest, Error> {
     telemetry.resolving_package_versions();
-    let resolved = dependency::resolve_versions(
+    let resolved = dependency::resolve_versions_from_config(
         PackageFetcher::boxed(runtime.clone()),
         mode,
         config,
@@ -576,7 +576,7 @@ impl TarUnpacker for Untar {
     }
 }
 
-impl hexpm::version::PackageFetcher for PackageFetcher {
+impl dependency::PackageFetcher for PackageFetcher {
     fn get_dependencies(
         &self,
         package: &str,
