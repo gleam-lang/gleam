@@ -224,8 +224,10 @@ where
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
         let result = handler(self);
         let warnings = self.take_warnings();
+        // TODO: test. Ensure hover doesn't report as compiled
         let compilation = if self.compiled_since_last_feedback {
             let modules = std::mem::take(&mut self.modules_compiled_since_last_feedback);
+            self.compiled_since_last_feedback = false;
             Compilation::Yes(modules)
         } else {
             Compilation::No
