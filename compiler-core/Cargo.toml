@@ -77,6 +77,8 @@ xxhash-rust = { version = "0.8.6", features = ["xxh3"] }
 # Language server protocol server plumbing
 lsp-server = "0.5"
 lsp-types = "0.92"
+# Pubgrub dependency resolution algorithm
+pubgrub = "0.2"
 
 [build-dependencies]
 # Data (de)serialisation
