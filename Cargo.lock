@@ -766,6 +766,7 @@ dependencies = [
  "lsp-types",
  "petgraph",
  "pretty_assertions",
+ "pubgrub",
  "pulldown-cmark",
  "rand",
  "regex",
