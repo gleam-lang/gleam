@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use crate::config::PackageConfig;
 use crate::{Error, Result};
 use hexpm::version::Range;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
@@ -20,9 +22,19 @@ impl Recipe {
     pub fn version_range(&self) -> Result<Range, Error> {
         match self {
             Recipe::Hex { version: range } => Ok(range.clone()),
-            Recipe::Path { .. } => Err(Error::DependencyResolutionFailed(
-                "Path dependencies are currently unsuported".to_string(),
-            )),
+            Recipe::Path { path } => {
+                let mut config_path = path.clone();
+                config_path.push("gleam.toml");
+                let toml = std::fs::read_to_string(&config_path).map_err(|_| {
+                    Error::DependencyResolutionFailed("Local dependency could not be found".into())
+                })?;
+                let config: PackageConfig = toml::from_str(&toml).map_err(|_| {
+                    Error::DependencyResolutionFailed(
+                        "Local dependency config could not be parsed".into(),
+                    )
+                })?;
+                Ok(Range::new(format!("== {}", config.version.to_string())))
+            }
             Recipe::Git { .. } => Err(Error::DependencyResolutionFailed(
                 "Git dependencies are currently unsuported".to_string(),
             )),
@@ -117,4 +129,22 @@ impl<'de> Deserialize<'de> for Recipe {
     {
         deserializer.deserialize_any(RecipeVisitor)
     }
+}
+
+#[test]
+fn read_recipe() {
+    let toml = r#"
+        short = "~> 0.5"
+        hex = { version = "~> 1.0.0" }
+        local = { path = "/path/to/package" }
+        github = { git = "https://github.com/gleam-lang/otp.git" }
+    "#;
+    let deps: HashMap<String, Recipe> = toml::from_str(toml).unwrap();
+    assert_eq!(deps["short"], Recipe::hex("~> 0.5"));
+    assert_eq!(deps["hex"], Recipe::hex("~> 1.0.0"));
+    assert_eq!(deps["local"], Recipe::path("/path/to/package"));
+    assert_eq!(
+        deps["github"],
+        Recipe::git("https://github.com/gleam-lang/otp.git")
+    );
 }
