@@ -6,7 +6,8 @@ use std::{
 use flate2::read::GzDecoder;
 use futures::future;
 use gleam_core::{
-    build::{Mode, Target, Telemetry},
+    dependency,
+    build::{Mode, Target Telemetry},
     config::PackageConfig,
     error::{FileIoAction, FileKind, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
@@ -501,7 +502,7 @@ fn resolve_versions<Telem: Telemetry>(
     telemetry: &Telem,
 ) -> Result<Manifest, Error> {
     telemetry.resolving_package_versions();
-    let resolved = hex::resolve_versions(
+    let resolved = dependency::resolve_versions(
         PackageFetcher::boxed(runtime.clone()),
         mode,
         config,
