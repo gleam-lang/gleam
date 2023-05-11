@@ -89,10 +89,10 @@ impl Manifest {
 
         // Requirements
         buffer.push_str("[requirements]\n");
-        for (name, range) in requirements.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+        for (name, recipe) in requirements.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
             buffer.push_str(name);
             buffer.push_str(" = \"");
-            buffer.push_str(&range.to_string());
+            buffer.push_str(&recipe.to_string());
             buffer.push_str("\"\n");
         }
 
