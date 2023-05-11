@@ -1,15 +1,13 @@
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
-use hexpm::version::{PackageVersions, Version};
+use hexpm::version::Version;
 use std::path::Path;
 use tar::Archive;
 
 use crate::{
-    build::Mode,
-    config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter, HttpClient, TarUnpacker},
-    manifest::{Manifest, ManifestPackage, ManifestPackageSource},
+    manifest::{ManifestPackage, ManifestPackageSource},
     paths::{self, ProjectPaths},
     Error, Result,
 };
@@ -24,24 +22,6 @@ J1i2xWFndWa6nfFnRxZmCStCOZWYYPlaxr+FZceFbpMwzTNs4g3d4tLNUcbKAIH4
 0wIDAQAB
 -----END PUBLIC KEY-----
 ";
-
-pub fn resolve_versions(
-    package_fetcher: Box<dyn hexpm::version::PackageFetcher>,
-    mode: Mode,
-    config: &PackageConfig,
-    manifest: Option<&Manifest>,
-) -> Result<PackageVersions> {
-    let specified_dependencies = config.dependency_versions_for(mode)?.into_iter();
-    let locked = config.locked(manifest)?;
-    tracing::info!("resolving_versions");
-    hexpm::version::resolve_versions(
-        package_fetcher,
-        config.name.to_string(),
-        specified_dependencies,
-        &locked,
-    )
-    .map_err(Error::dependency_resolution_failed)
-}
 
 fn key_name(hostname: &str) -> String {
     format!("gleam-{hostname}")
