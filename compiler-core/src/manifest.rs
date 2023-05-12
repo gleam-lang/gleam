@@ -81,6 +81,16 @@ impl Manifest {
                     buffer.push_str(&outer_checksum.to_string());
                     buffer.push('"');
                 }
+                ManifestPackageSource::Git { repo, commit } => {
+                    buffer.push_str(r#", source = "git", repo = ""#);
+                    buffer.push_str(&repo);
+                    buffer.push_str(r#", commit = ""#);
+                    buffer.push_str(&commit);
+                    buffer.push('"');
+                }
+                ManifestPackageSource::Local => {
+                    buffer.push_str(r#", source = "local""#);
+                }
             };
 
             buffer.push_str(" },\n");
@@ -207,6 +217,7 @@ impl<'de> serde::Deserialize<'de> for Base16Checksum {
             .map_err(serde::de::Error::custom)
     }
 }
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct ManifestPackage {
     pub name: String,
@@ -248,6 +259,10 @@ impl Default for ManifestPackage {
 pub enum ManifestPackageSource {
     #[serde(rename = "hex")]
     Hex { outer_checksum: Base16Checksum },
+    #[serde(rename = "git")]
+    Git { repo: String, commit: String },
+    #[serde(rename = "local")]
+    Local,
 }
 
 fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
