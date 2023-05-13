@@ -19,6 +19,7 @@ mod functions;
 mod imports;
 mod pretty;
 mod statement_if;
+mod type_alias;
 mod use_;
 mod warnings;
 

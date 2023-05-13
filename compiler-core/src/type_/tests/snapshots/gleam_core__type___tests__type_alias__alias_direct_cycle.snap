@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/type_alias.rs
+expression: "\ntype A = #(A, A)\n"
+---
+error: Type cycle
+  ┌─ /src/one/two.gleam:2:1
+  │
+2 │ type A = #(A, A)
+  │ ^^^^^^^^^^
+
+This type alias is defined in terms of itself.
+
+    ┌─────┐
+    │     A
+    └─────┘
+f we tried to compile this recursive type it would expand forever in a loop, and we'd never get the final type.
+

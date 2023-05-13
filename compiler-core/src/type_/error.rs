@@ -248,6 +248,15 @@ pub enum Error {
     UnlabelledAfterlabelled {
         location: SrcSpan,
     },
+
+    /// A type alias was defined directly or indirectly in terms of itself, which would
+    /// cause it to expand to infinite size.
+    /// e.g.
+    ///     type ForkBomb = #(ForkBomb, ForkBomb)
+    RecursiveTypeAlias {
+        location: SrcSpan,
+        cycle: Vec<SmolStr>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
