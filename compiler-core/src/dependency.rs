@@ -18,26 +18,9 @@ pub type ResolutionError = PubGrubError<String, Version>;
 
 type PubgrubRange = pubgrub::range::Range<Version>;
 
-pub fn resolve_versions_from_config(
+pub fn resolve_versions<Requirements>(
     package_fetcher: Box<dyn PackageFetcher>,
-    mode: Mode,
-    config: &PackageConfig,
-    manifest: Option<&Manifest>,
-) -> Result<PackageVersions> {
-    let specified_dependencies = config.dependency_versions_for(mode)?.into_iter();
-    let locked = config.locked(manifest)?;
-    tracing::info!("resolving_versions");
-
-    resolve_versions(
-        package_fetcher,
-        config.name.to_string(),
-        specified_dependencies,
-        &locked,
-    )
-}
-
-fn resolve_versions<Requirements>(
-    package_fetcher: Box<dyn PackageFetcher>,
+    mut provided_packages: HashMap<String, hexpm::Package>,
     root_name: String,
     dependencies: Requirements,
     locked: &HashMap<String, Version>,
@@ -45,6 +28,7 @@ fn resolve_versions<Requirements>(
 where
     Requirements: Iterator<Item = (String, Range)>,
 {
+    tracing::info!("resolving_versions");
     let root_version = Version::new(0, 0, 0);
     let root = hexpm::Package {
         name: root_name.to_string(),
@@ -60,7 +44,7 @@ where
     };
 
     let packages = pubgrub::solver::resolve(
-        &DependencyProvider::new(package_fetcher, root, &locked),
+        &DependencyProvider::new(package_fetcher, provided_packages, root, &locked),
         root_name.to_string(),
         root_version,
     )
@@ -169,10 +153,10 @@ struct DependencyProvider<'a> {
 impl<'a> DependencyProvider<'a> {
     fn new(
         remote: Box<dyn PackageFetcher>,
+        mut packages: HashMap<String, hexpm::Package>,
         root: hexpm::Package,
         locked: &'a HashMap<String, Version>,
     ) -> Self {
-        let mut packages = HashMap::new();
         let _ = packages.insert(root.name.clone(), root);
         Self {
             packages: RefCell::new(packages),
@@ -418,6 +402,7 @@ mod tests {
         let locked_stdlib = ("gleam_stdlib".to_string(), Version::parse("0.1.0").unwrap());
         let result = resolve_versions(
             make_remote(),
+            HashMap::new(),
             "app".to_string(),
             vec![("gleam_stdlib".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
             &vec![locked_stdlib].into_iter().collect(),
@@ -435,6 +420,7 @@ mod tests {
     fn resolution_without_deps() {
         let result = resolve_versions(
             make_remote(),
+            HashMap::new(),
             "app".to_string(),
             vec![].into_iter(),
             &vec![].into_iter().collect(),
@@ -447,6 +433,7 @@ mod tests {
     fn resolution_1_dep() {
         let result = resolve_versions(
             make_remote(),
+            HashMap::new(),
             "app".to_string(),
             vec![("gleam_stdlib".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
             &vec![].into_iter().collect(),
@@ -467,6 +454,7 @@ mod tests {
     fn resolution_with_nested_deps() {
         let result = resolve_versions(
             make_remote(),
+            HashMap::new(),
             "app".to_string(),
             vec![("gleam_otp".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
             &vec![].into_iter().collect(),
@@ -490,6 +478,7 @@ mod tests {
     fn resolution_locked_to_older_version() {
         let result = resolve_versions(
             make_remote(),
+            HashMap::new(),
             "app".to_string(),
             vec![("gleam_otp".to_string(), Range::new("~> 0.1.0".to_string()))].into_iter(),
             &vec![].into_iter().collect(),
@@ -513,6 +502,7 @@ mod tests {
     fn resolution_retired_versions_not_used_by_default() {
         let result = resolve_versions(
             make_remote(),
+            HashMap::new(),
             "app".to_string(),
             vec![(
                 "package_with_retired".to_string(),
@@ -538,6 +528,7 @@ mod tests {
     fn resolution_retired_versions_can_be_used_if_locked() {
         let result = resolve_versions(
             make_remote(),
+            HashMap::new(),
             "app".to_string(),
             vec![(
                 "package_with_retired".to_string(),
@@ -565,6 +556,7 @@ mod tests {
     fn resolution_prerelease_can_be_selected() {
         let result = resolve_versions(
             make_remote(),
+            HashMap::new(),
             "app".to_string(),
             vec![(
                 "gleam_otp".to_string(),
@@ -595,6 +587,7 @@ mod tests {
     fn resolution_not_found_dep() {
         let _ = resolve_versions(
             make_remote(),
+            HashMap::new(),
             "app".to_string(),
             vec![("unknown".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
             &vec![].into_iter().collect(),
@@ -606,6 +599,7 @@ mod tests {
     fn resolution_no_matching_version() {
         let _ = resolve_versions(
             make_remote(),
+            HashMap::new(),
             "app".to_string(),
             vec![(
                 "gleam_stdlib".to_string(),
@@ -621,6 +615,7 @@ mod tests {
     fn resolution_locked_version_doesnt_satisfy_requirements() {
         let err = resolve_versions(
             make_remote(),
+            HashMap::new(),
             "app".to_string(),
             vec![(
                 "gleam_stdlib".to_string(),

@@ -1,20 +1,21 @@
 use std::{
     collections::{HashMap, HashSet},
+    path::{Path, PathBuf},
     time::Instant,
 };
 
 use flate2::read::GzDecoder;
 use futures::future;
 use gleam_core::{
-    dependency,
-    build::{Mode, Target Telemetry},
+    build::{Mode, Target, Telemetry},
     config::PackageConfig,
+    dependency,
     error::{FileIoAction, FileKind, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
-    recipe::Recipe,
     io::{HttpClient as _, TarUnpacker, WrappedReader},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
+    recipe::Recipe,
     Error, Result,
 };
 use hexpm::version::Version;
@@ -494,6 +495,14 @@ fn get_manifest<Telem: Telemetry>(
     }
 }
 
+fn provide_git_package(
+    repo: &str,
+    provided: &mut HashMap<String, hexpm::Package>,
+) -> Result<hexpm::version::Range> {
+    // TODO
+    Ok(hexpm::version::Range::new("== 0.0.0".to_string()))
+}
+
 fn resolve_versions<Telem: Telemetry>(
     runtime: tokio::runtime::Handle,
     mode: Mode,
@@ -502,11 +511,26 @@ fn resolve_versions<Telem: Telemetry>(
     telemetry: &Telem,
 ) -> Result<Manifest, Error> {
     telemetry.resolving_package_versions();
-    let resolved = dependency::resolve_versions_from_config(
+    let dependencies = config.dependencies_for(mode)?;
+    let locked = config.locked(manifest)?;
+
+    let mut version_requirements = HashMap::new();
+    let mut provided_packages = HashMap::new();
+    for (name, recipe) in dependencies.into_iter() { 
+        let version = match recipe {
+            Recipe::Hex { version } => version,
+            Recipe::Path { path } => provide_local_package(&path, &mut provided_packages)?,
+            Recipe::Git { git } => provide_git_package(&git, &mut provided_packages)?,
+        };
+        let _ = version_requirements.insert(name, version);
+    }
+
+    let resolved = dependency::resolve_versions(
         PackageFetcher::boxed(runtime.clone()),
-        mode,
-        config,
-        manifest,
+        provided_packages,
+        config.name.to_string(),
+        version_requirements.into_iter(),
+        &locked,
     )?;
     let packages = runtime.block_on(future::try_join_all(
         resolved
@@ -518,6 +542,47 @@ fn resolve_versions<Telem: Telemetry>(
         requirements: config.all_dependencies()?,
     };
     Ok(manifest)
+}
+
+fn provide_local_package(
+    mut package_path: &Path,
+    provided: &mut HashMap<String, hexpm::Package>,
+) -> Result<hexpm::version::Range> {
+    let config = crate::config::read(package_path.join("gleam.toml"))?;
+    let mut requirements = HashMap::new();
+    for (name, recipe) in config.dependencies.into_iter() {
+        let version = match recipe {
+            Recipe::Hex { version } => version,
+            Recipe::Path { path } => {
+                provide_local_package(&package_path.join(path), provided)?
+            },
+            Recipe::Git { git } => provide_git_package(&git, provided)?,
+        };
+        let _ = requirements.insert(
+            name,
+            hexpm::Dependency {
+                requirement: version,
+                optional: false,
+                app: None,
+                repository: None,
+            },
+        );
+    }
+    let release = hexpm::Release {
+        version: config.version.clone(),
+        requirements,
+        retirement_status: None,
+        outer_checksum: vec![],
+        meta: (),
+    };
+    let package = hexpm::Package {
+        name: config.name.to_string(),
+        repository: "local".to_string(),
+        releases: vec![release],
+    };
+    let _ = provided.insert(config.name.to_string(), package);
+    let version = hexpm::version::Range::new(format!("== {}", config.version));
+    Ok(version)
 }
 
 async fn lookup_package(name: String, version: Version) -> Result<ManifestPackage> {
