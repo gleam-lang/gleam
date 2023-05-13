@@ -20,6 +20,8 @@
   error diagnostic after it becomes outdated.
 - Fixed a bug where the formatter would incorrectly format blocks with a comment
   before them that were the only argument to a function call.
+- Fixed a bug where the language server would not reset the build directory when
+  it was created by a different version of Gleam.
 - New Gleam projects are created with `erlef/setup-beam@1.15.4` in their GitHub
   actions CI configuration.
 - Running a module now uses the dependency's target and runtime in its `gleam.toml`.

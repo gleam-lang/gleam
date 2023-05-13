@@ -103,6 +103,11 @@ where
         // Lock the build directory to ensure to ensure we are the only one compiling
         let _lock_guard = self.locker.lock_for_build();
 
+        // Verify that the build directory was created using the same version of
+        // Gleam as we are running. If it is not then we discard the build
+        // directory as the cache files may be in a different format.
+        self.project_compiler.check_gleam_version()?;
+
         if !self.dependencies_compiled {
             tracing::info!("compiling_dependencies");
             self.project_compiler.compile_dependencies()?;
