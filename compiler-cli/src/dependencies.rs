@@ -6,7 +6,7 @@ use std::{
 use flate2::read::GzDecoder;
 use futures::future;
 use gleam_core::{
-    build::{Mode, Telemetry},
+    build::{Mode, Target, Telemetry},
     config::PackageConfig,
     error::{FileIoAction, FileKind, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
@@ -170,7 +170,7 @@ pub fn download<Telem: Telemetry>(
     let local = LocalPackages::read_from_disc(paths)?;
 
     // Remove any packages that are no longer required due to gleam.toml changes
-    remove_extra_packages(paths, &local, &manifest)?;
+    remove_extra_packages(paths, &local, &manifest, &telemetry)?;
 
     // Download them from Hex to the local cache
     runtime.block_on(download_missing_packages(
@@ -182,15 +182,6 @@ pub fn download<Telem: Telemetry>(
     ))?;
 
     if manifest_updated {
-        // If the manifest has changed then we need to blow away the build
-        // caches as they may now be outdated.
-        // TODO: test
-        let _guard = BuildLock::lock_all_build(paths, &telemetry)?;
-        tracing::debug!("deleting_build_caches");
-        for mode in Mode::iter() {
-            fs::delete_dir(&paths.build_directory_for_mode(mode))?;
-        }
-
         // Record new state of the packages directory
         // TODO: test
         tracing::debug!("writing_manifest_toml");
@@ -228,16 +219,33 @@ async fn download_missing_packages<Telem: Telemetry>(
     Ok(())
 }
 
-fn remove_extra_packages(
+fn remove_extra_packages<Telem: Telemetry>(
     paths: &ProjectPaths,
     local: &LocalPackages,
     manifest: &Manifest,
+    telemetry: &Telem,
 ) -> Result<()> {
+    let _guard = BuildLock::lock_all_build(paths, telemetry)?;
+
     for (package, version) in local.extra_local_packages(manifest) {
+        // TODO: test
+        // Delete the package source
         let path = paths.build_packages_package(&package);
         if path.exists() {
             tracing::debug!(package=%package, version=%version, "removing_unneeded_package");
             fs::delete_dir(&path)?;
+        }
+
+        // TODO: test
+        // Delete any build artefacts for the package
+        for mode in Mode::iter() {
+            for target in Target::iter() {
+                let path = paths.build_directory_for_package(mode, target, &package);
+                if path.exists() {
+                    tracing::debug!(package=%package, version=%version, "deleting_build_cache");
+                    fs::delete_dir(&path)?;
+                }
+            }
         }
     }
     Ok(())
