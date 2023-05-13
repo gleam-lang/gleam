@@ -11,6 +11,9 @@
   JavaScript.
 - A warning is now emitted for double unary negation on ints (`--`) and bools
   (`!!`) as this does nothing but return the original value.
+- Previously the build tool would discard the entire build directory when dependencies
+  were changed. Now it will only discard the build artefacts for removed
+  dependencies.
 - The errors emitted when a name is reused in a module have been made clearer.
 - Fixed an incorrect URL in the error message for failing to parse a let binding
   with a type annotation.
