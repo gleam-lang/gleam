@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+use crate::dep_tree;
 use crate::{
     ast::{
         self, BitStringSegmentOption, CustomType, DefinitionLocation, ExternalFunction,
@@ -103,9 +104,8 @@ pub fn infer_module(
         register_types_from_custom_type(t, &mut type_names, &mut env, &name, &mut hydrators)?;
     }
     // TODO: Extract a Type alias class to perform this.
-    // TODO: Sort type aliases by dependency order so they don't have to be
-    // ordered in the file
-    for t in &statements.type_aliases {
+    let sorted_aliases = sorted_type_aliases(&statements.type_aliases)?;
+    for t in sorted_aliases {
         register_type_alias(t, &mut type_names, &mut env, &name)?;
     }
 
@@ -1329,4 +1329,72 @@ fn get_compatible_record_fields<A>(
     }
 
     compatible
+}
+
+/// Given a type, return a list of all the types it depends on
+fn get_type_dependencies(typ: &TypeAst) -> Vec<SmolStr> {
+    let mut deps = Vec::with_capacity(1);
+
+    match typ {
+        TypeAst::Var { .. } => (),
+        TypeAst::Hole { .. } => (),
+        TypeAst::Constructor {
+            name,
+            arguments,
+            module,
+            ..
+        } => {
+            deps.push(match module {
+                Some(module) => format!("{}.{}", name, module).into(),
+                None => name.clone(),
+            });
+
+            for arg in arguments {
+                deps.extend(get_type_dependencies(arg))
+            }
+        }
+        TypeAst::Fn {
+            arguments, return_, ..
+        } => {
+            for arg in arguments {
+                deps.extend(get_type_dependencies(arg))
+            }
+            deps.extend(get_type_dependencies(return_))
+        }
+        TypeAst::Tuple { elems, .. } => {
+            for elem in elems {
+                deps.extend(get_type_dependencies(elem))
+            }
+        }
+    }
+
+    deps
+}
+
+fn sorted_type_aliases(aliases: &Vec<TypeAlias<()>>) -> Result<Vec<&TypeAlias<()>>, Error> {
+    let mut deps: Vec<(SmolStr, Vec<SmolStr>)> = Vec::with_capacity(aliases.len());
+
+    for alias in aliases {
+        deps.push((alias.alias.clone(), get_type_dependencies(&alias.type_ast)))
+    }
+
+    let sorted_deps = dep_tree::toposort_deps(deps).map_err(|err| {
+        let dep_tree::Error::Cycle(cycle) = err;
+
+        let last = cycle.last().expect("Cycle should not be empty");
+        let alias = aliases
+            .iter()
+            .find(|alias| alias.alias == *last)
+            .expect("Could not find alias for cycle");
+
+        Error::RecursiveTypeAlias {
+            cycle,
+            location: alias.location,
+        }
+    })?;
+
+    Ok(aliases
+        .iter()
+        .sorted_by_key(|alias| sorted_deps.iter().position(|x| x == &alias.alias))
+        .collect())
 }

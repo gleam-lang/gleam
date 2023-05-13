@@ -2011,6 +2011,27 @@ value, or use `assert` rather than `let`."
                         extra_labels: vec![],
                     }),
                 },
+
+                TypeError::RecursiveTypeAlias { location, cycle } =>  {
+                    let mut text = "This type alias is defined in terms of itself.\n".into();
+                    write_cycle(&mut text, cycle);
+                    text.push_str("f we tried to compile this recursive type it would expand forever in a loop, and we'd never get the final type.");
+                    Diagnostic {
+                        title: "Type cycle".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
             },
 
             Error::Parse { path, src, error } => {
@@ -2047,7 +2068,7 @@ value, or use `assert` rather than `let`."
                 let mut text = "The import statements for these modules form a cycle:
 "
                 .into();
-                import_cycle(&mut text, modules);
+                write_cycle(&mut text, modules);
                 text.push_str(
                     "Gleam doesn't support dependency cycles like these, please break the
 cycle to continue.",
@@ -2065,7 +2086,7 @@ cycle to continue.",
                 let mut text = "The dependencies for these packages form a cycle:
 "
                 .into();
-                import_cycle(&mut text, packages);
+                write_cycle(&mut text, packages);
                 text.push_str(
                     "Gleam doesn't support dependency cycles like these, please break the
 cycle to continue.",
@@ -2373,16 +2394,16 @@ fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
     }
 }
 
-fn import_cycle(buffer: &mut String, modules: &[SmolStr]) {
+fn write_cycle(buffer: &mut String, cycle: &[SmolStr]) {
     buffer.push_str(
         "
     ┌─────┐\n",
     );
-    for (index, name) in modules.iter().enumerate() {
+    for (index, name) in cycle.iter().enumerate() {
         if index != 0 {
             buffer.push_str("    │     ↓\n");
         }
-        buffer.push_str("    │    ");
+        buffer.push_str("    │     ");
         buffer.push_str(name);
         buffer.push('\n');
     }
