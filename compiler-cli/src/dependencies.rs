@@ -495,14 +495,6 @@ fn get_manifest<Telem: Telemetry>(
     }
 }
 
-fn provide_git_package(
-    repo: &str,
-    provided: &mut HashMap<String, hexpm::Package>,
-) -> Result<hexpm::version::Range> {
-    // TODO
-    Ok(hexpm::version::Range::new("== 0.0.0".to_string()))
-}
-
 fn resolve_versions<Telem: Telemetry>(
     runtime: tokio::runtime::Handle,
     mode: Mode,
@@ -516,26 +508,33 @@ fn resolve_versions<Telem: Telemetry>(
 
     let mut version_requirements = HashMap::new();
     let mut provided_packages = HashMap::new();
+    let mut provider_info = HashMap::new();
     for (name, recipe) in dependencies.into_iter() { 
         let version = match recipe {
             Recipe::Hex { version } => version,
-            Recipe::Path { path } => provide_local_package(&path, &mut provided_packages)?,
-            Recipe::Git { git } => provide_git_package(&git, &mut provided_packages)?,
+            Recipe::Path { path } => provide_local_package(&name, &path, &mut provider_info, &mut provided_packages)?,
+            Recipe::Git { git } => provide_git_package(&name, &git, &mut provider_info, &mut provided_packages)?,
         };
         let _ = version_requirements.insert(name, version);
     }
 
     let resolved = dependency::resolve_versions(
         PackageFetcher::boxed(runtime.clone()),
-        provided_packages,
+        provided_packages.clone(),
         config.name.to_string(),
         version_requirements.into_iter(),
         &locked,
     )?;
+
+    let provided_package_requirements = provided_packages
+        .into_iter()
+        .map(|(name, package)| (name, package.releases[0].requirements.keys().cloned().collect()))
+        .collect();
+    
     let packages = runtime.block_on(future::try_join_all(
         resolved
             .into_iter()
-            .map(|(name, version)| lookup_package(name, version)),
+            .map(|(name, version)| lookup_package(name, version, &provider_info, &provided_package_requirements)),
     ))?;
     let manifest = Manifest {
         packages,
@@ -544,19 +543,56 @@ fn resolve_versions<Telem: Telemetry>(
     Ok(manifest)
 }
 
+#[derive(Clone, Eq, PartialEq, Debug)] 
+enum ProviderInfo {
+    Git { repo: String, commit: String },
+    Local { path: PathBuf }
+}
+
 fn provide_local_package(
-    mut package_path: &Path,
+    package_name: &str,
+    package_path: &Path,
+    info: &mut HashMap<String, ProviderInfo>,
+    provided: &mut HashMap<String, hexpm::Package>,
+) -> Result<hexpm::version::Range> {
+    let canonical_path = package_path.canonicalize().expect("local package cannonical path");
+    let local_info = ProviderInfo::Local { path: canonical_path.clone() };
+    let other_info = info.insert(package_name.to_string(), local_info.clone());
+    if None == other_info || Some(local_info) == other_info {
+        provide_package(package_name, &canonical_path, info, provided)
+    } else {
+        Err(Error::DependencyResolutionFailed(format!("{} has multiple conflicting definitions", package_name)))
+    }
+}
+
+fn provide_git_package(
+    package_name: &str,
+    repo: &str,
+    info: &mut HashMap<String, ProviderInfo>,
+    provided: &mut HashMap<String, hexpm::Package>,
+) -> Result<hexpm::version::Range> {
+    // TODO
+    Ok(hexpm::version::Range::new("== 0.0.0".to_string()))
+}
+
+fn provide_package(
+    package_name: &str,
+    package_path: &Path,
+    info: &mut HashMap<String, ProviderInfo>,
     provided: &mut HashMap<String, hexpm::Package>,
 ) -> Result<hexpm::version::Range> {
     let config = crate::config::read(package_path.join("gleam.toml"))?;
+    if config.name != package_name {
+        return Err(Error::DependencyResolutionFailed(format!("{} was expected but {} was found", package_name, config.name)))
+    };
     let mut requirements = HashMap::new();
     for (name, recipe) in config.dependencies.into_iter() {
         let version = match recipe {
             Recipe::Hex { version } => version,
             Recipe::Path { path } => {
-                provide_local_package(&package_path.join(path), provided)?
+                provide_local_package(&name, &package_path.join(path), info, provided)?
             },
-            Recipe::Git { git } => provide_git_package(&git, provided)?,
+            Recipe::Git { git } => provide_git_package(&name, &git, info, provided)?,
         };
         let _ = requirements.insert(
             name,
@@ -585,20 +621,50 @@ fn provide_local_package(
     Ok(version)
 }
 
-async fn lookup_package(name: String, version: Version) -> Result<ManifestPackage> {
-    let config = hexpm::Config::new();
-    let release = hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
-    let manifest = ManifestPackage {
-        name,
-        version,
-        otp_app: Some(release.meta.app),
-        build_tools: release.meta.build_tools,
-        requirements: release.requirements.keys().cloned().collect_vec(),
-        source: ManifestPackageSource::Hex {
-            outer_checksum: Base16Checksum(release.outer_checksum),
+async fn lookup_package(
+    name: String,
+    version: Version,
+    provided_packages_info: &HashMap<String, ProviderInfo>,
+    provided_packages_requirements: &HashMap<String, Vec<String>>
+) -> Result<ManifestPackage> {
+    match provided_packages_info.get(&name) {
+        Some(ProviderInfo::Local { .. }) => {
+            let requirements = provided_packages_requirements.get(&name).expect("provided package requirements").clone();
+            Ok(ManifestPackage {
+                name,
+                version,
+                otp_app: None, // Note, this will probably need to be set to something eventually
+                build_tools: vec!["gleam".to_string()],
+                requirements,
+                source: ManifestPackageSource::Local
+            })
         },
-    };
-    Ok(manifest)
+        Some(ProviderInfo::Git { repo, commit }) => {
+            let requirements = provided_packages_requirements.get(&name).expect("provided package requirements").clone();
+            Ok(ManifestPackage {
+                name,
+                version,
+                otp_app: None, // Note, this will probably need to be set to something eventually
+                build_tools: vec!["gleam".to_string()],
+                requirements,
+                source: ManifestPackageSource::Git { repo: repo.to_string(), commit: commit.to_string() }
+            })
+        },
+        None => {
+            let config = hexpm::Config::new();
+            let release = hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
+            Ok(ManifestPackage {
+                name,
+                version,
+                otp_app: Some(release.meta.app),
+                build_tools: release.meta.build_tools,
+                requirements: release.requirements.keys().cloned().collect_vec(),
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(release.outer_checksum),
+                },
+            })
+        }
+    }
 }
 
 struct PackageFetcher {
