@@ -12,7 +12,7 @@ use gleam_core::{
     dependency,
     error::{FileIoAction, FileKind, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
-    io::{HttpClient as _, TarUnpacker, WrappedReader},
+    io::{HttpClient as _, TarUnpacker, WrappedReader, FileSystemWriter},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
     recipe::Recipe,
@@ -138,9 +138,7 @@ pub fn download<Telem: Telemetry>(
     let lock = BuildLock::new_packages(paths)?;
     let _guard = lock.lock(&telemetry);
 
-    let http = HttpClient::boxed();
     let fs = ProjectIO::boxed();
-    let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed(), paths.clone());
 
     // Read the project config
     let mut config = crate::config::read(paths.root_config())?;
@@ -176,8 +174,9 @@ pub fn download<Telem: Telemetry>(
     remove_extra_packages(paths, &local, &manifest, &telemetry)?;
 
     // Download them from Hex to the local cache
-    runtime.block_on(download_missing_packages(
-        downloader,
+    runtime.block_on(add_missing_packages(
+        paths,
+        fs,
         &manifest,
         &local,
         project_name,
@@ -195,30 +194,49 @@ pub fn download<Telem: Telemetry>(
     Ok(manifest)
 }
 
-async fn download_missing_packages<Telem: Telemetry>(
-    downloader: hex::Downloader,
+async fn add_missing_packages<Telem: Telemetry>(
+    paths: &ProjectPaths,
+    fs: Box<ProjectIO>,
     manifest: &Manifest,
     local: &LocalPackages,
     project_name: SmolStr,
     telemetry: &Telem,
 ) -> Result<(), Error> {
-    let mut count = 0;
-    let mut missing = local
-        .missing_local_packages(manifest, &project_name)
+    let missing_packages = local
+        .missing_local_packages(manifest, &project_name);
+
+    // Link local paths
+    let packages_dir = paths.build_packages_directory();
+    for package in missing_packages.iter() {
+        match &package.source {
+            ManifestPackageSource::Hex { .. } => Ok(()),
+            ManifestPackageSource::Local { path } => fs.symlink_dir(&path, &packages_dir),
+            ManifestPackageSource::Git { .. } => Ok(()),
+        }?
+    }
+    
+    let mut num_to_download = 0;
+    let mut missing_hex_packages = missing_packages
         .into_iter()
-        .map(|package| {
-            count += 1;
-            package
+        .filter(|package| match package.source {
+            ManifestPackageSource::Hex { .. } => true,
+            _ => false
         })
+        .map(|package| { num_to_download += 1; package })
         .peekable();
-    if missing.peek().is_some() {
+    
+    // If we need to download at-least one package
+    if missing_hex_packages.peek().is_some() {
+        let http = HttpClient::boxed();
+        let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed(), paths.clone());
         let start = Instant::now();
         telemetry.downloading_package("packages");
         downloader
-            .download_hex_packages(missing, &project_name)
+            .download_hex_packages(missing_hex_packages, &project_name)
             .await?;
-        telemetry.packages_downloaded(start, count);
+        telemetry.packages_downloaded(start, num_to_download);
     }
+
     Ok(())
 }
 
@@ -628,7 +646,7 @@ async fn lookup_package(
     provided_packages_requirements: &HashMap<String, Vec<String>>
 ) -> Result<ManifestPackage> {
     match provided_packages_info.get(&name) {
-        Some(ProviderInfo::Local { .. }) => {
+        Some(ProviderInfo::Local { path }) => {
             let requirements = provided_packages_requirements.get(&name).expect("provided package requirements").clone();
             Ok(ManifestPackage {
                 name,
@@ -636,7 +654,7 @@ async fn lookup_package(
                 otp_app: None, // Note, this will probably need to be set to something eventually
                 build_tools: vec!["gleam".to_string()],
                 requirements,
-                source: ManifestPackageSource::Local
+                source: ManifestPackageSource::Local { path: path.to_path_buf() }
             })
         },
         Some(ProviderInfo::Git { repo, commit }) => {
