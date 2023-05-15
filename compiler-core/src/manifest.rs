@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use crate::recipe::Recipe;
 use crate::Result;
@@ -88,8 +89,10 @@ impl Manifest {
                     buffer.push_str(&commit);
                     buffer.push('"');
                 }
-                ManifestPackageSource::Local => {
+                ManifestPackageSource::Local { path } => {
                     buffer.push_str(r#", source = "local""#);
+                    buffer.push_str(&path.to_str().expect("local path non utf-8"));
+                    buffer.push('"');
                 }
             };
 
@@ -262,7 +265,7 @@ pub enum ManifestPackageSource {
     #[serde(rename = "git")]
     Git { repo: String, commit: String },
     #[serde(rename = "local")]
-    Local,
+    Local { path: PathBuf }, // should be the canonical path
 }
 
 fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
