@@ -208,9 +208,10 @@ async fn add_missing_packages<Telem: Telemetry>(
     // Link local paths
     let packages_dir = paths.build_packages_directory();
     for package in missing_packages.iter() {
+        let package_dest = packages_dir.join(project_name.to_string());
         match &package.source {
             ManifestPackageSource::Hex { .. } => Ok(()),
-            ManifestPackageSource::Local { path } => fs.symlink_dir(&path, &packages_dir),
+            ManifestPackageSource::Local { path } => fs.symlink_dir(&path, &package_dest),
             ManifestPackageSource::Git { .. } => Ok(()),
         }?
     }
