@@ -63,9 +63,11 @@ impl Recipe {
 impl ToString for Recipe {
     fn to_string(&self) -> String {
         match self {
-            Recipe::Hex { version: range } => range.to_string(),
-            Recipe::Path { path } => format!("{{path: {}}}", path.display()),
-            Recipe::Git { git: url } => format!("{{git: {}}}", url),
+            Recipe::Hex { version: range } => {
+                format!(r#"{{ "version" = "{}" }}"#, range.to_string())
+            }
+            Recipe::Path { path } => format!(r#"{{ "path" = "{}" }}"#, path.display()),
+            Recipe::Git { git: url } => format!(r#"{{ "git" = "{}" }}"#, url),
         }
     }
 }

@@ -90,7 +90,7 @@ impl Manifest {
                     buffer.push('"');
                 }
                 ManifestPackageSource::Local { path } => {
-                    buffer.push_str(r#", source = "local""#);
+                    buffer.push_str(r#", source = "local", path = ""#);
                     buffer.push_str(&path.to_str().expect("local path non utf-8"));
                     buffer.push('"');
                 }
@@ -104,9 +104,9 @@ impl Manifest {
         buffer.push_str("[requirements]\n");
         for (name, recipe) in requirements.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
             buffer.push_str(name);
-            buffer.push_str(" = \"");
+            buffer.push_str(" = ");
             buffer.push_str(&recipe.to_string());
-            buffer.push_str("\"\n");
+            buffer.push_str("\n");
         }
 
         buffer
