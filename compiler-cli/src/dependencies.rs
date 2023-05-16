@@ -575,12 +575,26 @@ fn provide_local_package(
     provided: &mut HashMap<String, hexpm::Package>,
 ) -> Result<hexpm::version::Range> {
     let canonical_path = package_path.canonicalize().expect("local package cannonical path");
-    let local_info = ProviderInfo::Local { path: canonical_path.clone() };
-    let other_info = info.insert(package_name.to_string(), local_info.clone());
-    if None == other_info || Some(local_info) == other_info {
-        provide_package(package_name, &canonical_path, info, provided)
-    } else {
-        Err(Error::DependencyResolutionFailed(format!("{} has multiple conflicting definitions", package_name)))
+    let package_info = ProviderInfo::Local { path: canonical_path.clone() };
+
+    // Determine if package has already been walked
+    match info.insert(package_name.to_string(), package_info.clone()) {
+        None => {
+            // No package with this name has been found yet
+            provide_package(package_name, &canonical_path, info, provided)
+        },
+        Some(existing_package_info) => {
+            // A package with this name has already been found
+            // True only if they are both local with the same canonical path, or both git with the same repo and commit
+            if existing_package_info == package_info {
+                // It is the same package, do not parse it again
+                let config = crate::config::read(package_path.join("gleam.toml"))?;
+                Ok(hexpm::version::Range::new(format!("== {}", config.version)))
+            } else {
+                // A different source was provided for this package
+                Err(Error::DependencyResolutionFailed(format!("{} has multiple conflicting definition", package_name)))
+            }
+        }
     }
 }
 
@@ -591,7 +605,7 @@ fn provide_git_package(
     provided: &mut HashMap<String, hexpm::Package>,
 ) -> Result<hexpm::version::Range> {
     // TODO
-    Ok(hexpm::version::Range::new("== 0.0.0".to_string()))
+    Err(Error::DependencyResolutionFailed("Git dependencies are not supported".to_string()))
 }
 
 fn provide_package(
@@ -609,6 +623,7 @@ fn provide_package(
         let version = match recipe {
             Recipe::Hex { version } => version,
             Recipe::Path { path } => {
+                // Recursively walk local packages
                 provide_local_package(&name, &package_path.join(path), info, provided)?
             },
             Recipe::Git { git } => provide_git_package(&name, &git, info, provided)?,
