@@ -160,6 +160,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Tristan Sloughter](https://github.com/tsloughter)
  - [Uku Taht](https://github.com/ukutaht)
  - [Weizheng Liu](https://github.com/weizhliu)
+ - [Willyboar](https://github.com/Willyboar)
  - [Wilson Silva](https://github.com/wilsonsilva)
  - [Wojtek Mach](https://github.com/wojtekmach)
  - [Yasuo Higano](https://github.com/Yasuo-Higano)
