@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, cell::RefCell, collections::HashMap, error::Error as StdError};
 
-use crate::{build::Mode, config::PackageConfig, manifest::Manifest, Error, Result};
+use crate::{Error, Result};
 
 use hexpm::{
     version::{Range, Version},
@@ -20,7 +20,7 @@ type PubgrubRange = pubgrub::range::Range<Version>;
 
 pub fn resolve_versions<Requirements>(
     package_fetcher: Box<dyn PackageFetcher>,
-    mut provided_packages: HashMap<String, hexpm::Package>,
+    provided_packages: HashMap<String, hexpm::Package>,
     root_name: String,
     dependencies: Requirements,
     locked: &HashMap<String, Version>,

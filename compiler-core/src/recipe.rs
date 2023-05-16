@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -64,10 +63,10 @@ impl ToString for Recipe {
     fn to_string(&self) -> String {
         match self {
             Recipe::Hex { version: range } => {
-                format!(r#"{{ "version" = "{}" }}"#, range.to_string())
+                format!(r#"{{ version = "{}" }}"#, range.to_string())
             }
-            Recipe::Path { path } => format!(r#"{{ "path" = "{}" }}"#, path.display()),
-            Recipe::Git { git: url } => format!(r#"{{ "git" = "{}" }}"#, url),
+            Recipe::Path { path } => format!(r#"{{ path = "{}" }}"#, path.display()),
+            Recipe::Git { git: url } => format!(r#"{{ git = "{}" }}"#, url),
         }
     }
 }
@@ -133,20 +132,27 @@ impl<'de> Deserialize<'de> for Recipe {
     }
 }
 
-#[test]
-fn read_recipe() {
-    let toml = r#"
-        short = "~> 0.5"
-        hex = { version = "~> 1.0.0" }
-        local = { path = "/path/to/package" }
-        github = { git = "https://github.com/gleam-lang/otp.git" }
-    "#;
-    let deps: HashMap<String, Recipe> = toml::from_str(toml).unwrap();
-    assert_eq!(deps["short"], Recipe::hex("~> 0.5"));
-    assert_eq!(deps["hex"], Recipe::hex("~> 1.0.0"));
-    assert_eq!(deps["local"], Recipe::path("/path/to/package"));
-    assert_eq!(
-        deps["github"],
-        Recipe::git("https://github.com/gleam-lang/otp.git")
-    );
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn read_recipe() {
+        let toml = r#"
+            short = "~> 0.5"
+            hex = { version = "~> 1.0.0" }
+            local = { path = "/path/to/package" }
+            github = { git = "https://github.com/gleam-lang/otp.git" }
+        "#;
+        let deps: HashMap<String, Recipe> = toml::from_str(toml).unwrap();
+        assert_eq!(deps["short"], Recipe::hex("~> 0.5"));
+        assert_eq!(deps["hex"], Recipe::hex("~> 1.0.0"));
+        assert_eq!(deps["local"], Recipe::path("/path/to/package"));
+        assert_eq!(
+            deps["github"],
+            Recipe::git("https://github.com/gleam-lang/otp.git")
+        );
+    }
 }

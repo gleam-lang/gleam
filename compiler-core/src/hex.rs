@@ -154,12 +154,15 @@ impl Downloader {
         &self,
         package: &ManifestPackage,
     ) -> Result<bool, Error> {
-        let outer_checksum = if let ManifestPackageSource::Hex { outer_checksum } = &package.source {
+        let outer_checksum = if let ManifestPackageSource::Hex { outer_checksum } = &package.source
+        {
             outer_checksum
         } else {
-            return Err(Error::DependencyResolutionFailed("Attempt to download non-hex package from hex".to_string()))
+            return Err(Error::DependencyResolutionFailed(
+                "Attempt to download non-hex package from hex".to_string(),
+            ));
         };
-        
+
         let tarball_path = paths::global_package_cache_package_tarball(
             &package.name,
             &package.version.to_string(),

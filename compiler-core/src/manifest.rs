@@ -180,10 +180,10 @@ packages = [
 ]
 
 [requirements]
-aaa = "> 0.0.0"
-gleam_stdlib = "~> 0.17"
-gleeunit = "~> 0.1"
-zzz = "> 0.0.0"
+aaa = { version = "> 0.0.0" }
+gleam_stdlib = { version = "~> 0.17" }
+gleeunit = { version = "~> 0.1" }
+zzz = { version = "> 0.0.0" }
 "#
     );
     let deserialised: Manifest = toml::from_str(&buffer).unwrap();
