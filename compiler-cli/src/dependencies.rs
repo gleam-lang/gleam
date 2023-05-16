@@ -628,7 +628,10 @@ fn provide_git_package(
     _provided: &mut HashMap<String, hexpm::Package>,
 ) -> Result<hexpm::version::Range> {
     // TODO
-    let _git = ProviderInfo::Git { repo: "repo".to_string(), commit: "commit".to_string() };
+    let _git = ProviderInfo::Git {
+        repo: "repo".to_string(),
+        commit: "commit".to_string(),
+    };
     Err(Error::DependencyResolutionFailed(
         "Git dependencies are not supported".to_string(),
     ))
@@ -652,8 +655,13 @@ fn provide_package(
         let version = match recipe {
             Recipe::Hex { version } => version,
             Recipe::Path { path } => {
+                let resolved_path = if path.is_absolute() {
+                    path
+                } else {
+                    package_path.join(path)
+                };
                 // Recursively walk local packages
-                provide_local_package(&name, &package_path.join(path), info, provided)?
+                provide_local_package(&name, &resolved_path, info, provided)?
             }
             Recipe::Git { git } => provide_git_package(&name, &git, info, provided)?,
         };
