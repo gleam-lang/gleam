@@ -47,6 +47,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Arnaud Berthomier](https://github.com/oz)
  - [Ben Marx](https://github.com/bgmarx)
  - [Ben Myles](https://github.com/benmyles)
+ - [Benjamin Peinhardt](https://github.com/bcpeinhardt)
  - [brettkolodny](https://github.com/brettkolodny)
  - [Brian Glusman](https://github.com/bglusman)
  - [Bruno Michel](https://github.com/nono)
