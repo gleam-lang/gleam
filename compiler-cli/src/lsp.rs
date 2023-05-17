@@ -7,6 +7,7 @@ use gleam_core::{
 };
 
 pub fn main() -> Result<()> {
+    eprintln!("Starting language server...");
     tracing::info!("language_server_starting");
 
     // Create the transport. Includes the stdio (stdin and stdout) versions but this could

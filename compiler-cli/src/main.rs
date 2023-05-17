@@ -211,7 +211,7 @@ enum Command {
     Clean,
 
     /// Run the language server, to be used by editors
-    #[clap(name = "lsp", hide = true)]
+    #[clap(name = "lsp")]
     LanguageServer,
 
     /// Export something useful from the Gleam project
