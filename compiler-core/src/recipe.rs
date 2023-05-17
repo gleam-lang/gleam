@@ -22,8 +22,7 @@ impl Recipe {
         match self {
             Recipe::Hex { version: range } => Ok(range.clone()),
             Recipe::Path { path } => {
-                let mut config_path = path.clone();
-                config_path.push("gleam.toml");
+                let config_path = path.join("gleam.toml");
                 let toml = std::fs::read_to_string(&config_path).map_err(|_| {
                     Error::DependencyResolutionFailed("Local dependency could not be found".into())
                 })?;
