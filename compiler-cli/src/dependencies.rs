@@ -218,10 +218,7 @@ async fn add_missing_packages<Telem: Telemetry>(
     let mut num_to_download = 0;
     let mut missing_hex_packages = missing_packages
         .into_iter()
-        .filter(|package| match package.source {
-            ManifestPackageSource::Hex { .. } => true,
-            _ => false,
-        })
+        .filter(|package| package.is_hex())
         .map(|package| {
             num_to_download += 1;
             package
