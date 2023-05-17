@@ -239,6 +239,13 @@ impl ManifestPackage {
         self.build_tools = build_tools.iter().map(|s| (*s).to_string()).collect();
         self
     }
+
+    pub fn is_hex(&self) -> bool {
+        match self.source {
+            ManifestPackageSource::Hex { .. } => true,
+            _ => false,
+        }
+    }
 }
 
 #[cfg(test)]
