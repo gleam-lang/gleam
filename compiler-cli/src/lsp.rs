@@ -7,8 +7,21 @@ use gleam_core::{
 };
 
 pub fn main() -> Result<()> {
-    eprintln!("Starting language server...");
     tracing::info!("language_server_starting");
+
+    eprintln!(
+        "Hello human!
+
+This command is intended to be run by language server clients such
+as a text editor rather than being run directly in the console.
+
+Many editors will automatically start the language server for you
+when you open a Gleam project. If yours does not you may need to
+look up how to configure your editor to use a language server.
+
+You can exit this program by pressing ctrl+c.
+"
+    );
 
     // Create the transport. Includes the stdio (stdin and stdout) versions but this could
     // also be implemented to use sockets or HTTP.
