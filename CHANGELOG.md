@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The `gleam lsp` command is no longer hidden from the help output.
+
 ## v0.29.0-rc1 - 2023-05-16
 
 - The language server will now provide autocomplete suggestions for types and
