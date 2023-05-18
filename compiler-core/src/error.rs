@@ -439,15 +439,29 @@ forward slash and must not end with a slash."
                 hint: None,
             },
 
-            Error::ModuleDoesNotExist { module } => Diagnostic {
-                title: "Module does not exist".into(),
-                text: format!("Module `{module}` was not found"),
-                level: Level::Error,
-                location: None,
-                hint: Some(
-                    format!("Try creating the file `src/{}.gleam`.",
-                    module)
-                ),
+            Error::ModuleDoesNotExist { module } => {
+                let prefix = module.split("/").next();
+
+                let suggested_file = match prefix {
+                    Some("src") => &module[4..],
+                    Some("test") => &module[5..],
+                    _ => module,
+                };
+
+                let text = match prefix {
+                    Some("src") | Some("test") => format!("You are calling a module with `{prefix}`.\nOnly modules within /src and /test are executable.", prefix = prefix.unwrap()),
+                    _ => format!("No module was found with the name `{module}`."),
+                };
+
+                Diagnostic {
+                    title: "Module does not exist".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                    hint: Some(
+                        format!("Did you mean `{suggested_file}`.")
+                    ),
+                }
             },
 
             Error::ModuleDoesNotHaveMainFunction { module } => Diagnostic {
