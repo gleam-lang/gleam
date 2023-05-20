@@ -12,17 +12,17 @@ use smol_str::SmolStr;
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(untagged, remote = "Self")]
-pub enum Recipe {
+pub enum Requirement {
     Hex { version: Range },
     Path { path: PathBuf },
     Git { git: SmolStr },
 }
 
-impl Recipe {
+impl Requirement {
     pub fn version_range(&self) -> Result<Range, Error> {
         match self {
-            Recipe::Hex { version: range } => Ok(range.clone()),
-            Recipe::Path { path } => {
+            Requirement::Hex { version: range } => Ok(range.clone()),
+            Requirement::Path { path } => {
                 let config_path = path.join("gleam.toml");
                 let toml = std::fs::read_to_string(&config_path).map_err(|_| {
                     Error::DependencyResolutionFailed("Local dependency could not be found".into())
@@ -34,51 +34,51 @@ impl Recipe {
                 })?;
                 Ok(Range::new(format!("== {}", config.version)))
             }
-            Recipe::Git { .. } => Err(Error::DependencyResolutionFailed(
+            Requirement::Git { .. } => Err(Error::DependencyResolutionFailed(
                 "Git dependencies are currently unsuported".to_string(),
             )),
         }
     }
 
-    pub fn hex(range: &str) -> Recipe {
-        Recipe::Hex {
+    pub fn hex(range: &str) -> Requirement {
+        Requirement::Hex {
             version: Range::new(range.to_string()),
         }
     }
 
-    pub fn path(path: &str) -> Recipe {
-        Recipe::Path { path: path.into() }
+    pub fn path(path: &str) -> Requirement {
+        Requirement::Path { path: path.into() }
     }
 
-    pub fn git(url: &str) -> Recipe {
-        Recipe::Git { git: url.into() }
+    pub fn git(url: &str) -> Requirement {
+        Requirement::Git { git: url.into() }
     }
 }
 
 // Serialization
 
-impl ToString for Recipe {
+impl ToString for Requirement {
     fn to_string(&self) -> String {
         match self {
-            Recipe::Hex { version: range } => {
+            Requirement::Hex { version: range } => {
                 format!(r#"{{ version = "{}" }}"#, range.to_string())
             }
-            Recipe::Path { path } => format!(r#"{{ path = "{}" }}"#, path.display()),
-            Recipe::Git { git: url } => format!(r#"{{ git = "{}" }}"#, url),
+            Requirement::Path { path } => format!(r#"{{ path = "{}" }}"#, path.display()),
+            Requirement::Git { git: url } => format!(r#"{{ git = "{}" }}"#, url),
         }
     }
 }
 
-impl Serialize for Recipe {
+impl Serialize for Requirement {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         let mut map = serializer.serialize_map(Some(1))?;
         match self {
-            Recipe::Hex { version: range } => map.serialize_entry("version", range)?,
-            Recipe::Path { path } => map.serialize_entry("path", path)?,
-            Recipe::Git { git: url } => map.serialize_entry("git", url)?,
+            Requirement::Hex { version: range } => map.serialize_entry("version", range)?,
+            Requirement::Path { path } => map.serialize_entry("path", path)?,
+            Requirement::Git { git: url } => map.serialize_entry("git", url)?,
         }
         map.end()
     }
@@ -89,18 +89,18 @@ impl Serialize for Recipe {
 #[derive(Debug, Copy, Clone)]
 pub struct Void;
 
-impl FromStr for Recipe {
+impl FromStr for Requirement {
     type Err = Void;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Recipe::hex(s))
+        Ok(Requirement::hex(s))
     }
 }
 
-struct RecipeVisitor;
+struct RequirementVisitor;
 
-impl<'de> Visitor<'de> for RecipeVisitor {
-    type Value = Recipe;
+impl<'de> Visitor<'de> for RequirementVisitor {
+    type Value = Requirement;
 
     fn expecting<'a>(&self, formatter: &mut fmt::Formatter<'a>) -> fmt::Result {
         formatter.write_str("string or map")
@@ -117,16 +117,16 @@ impl<'de> Visitor<'de> for RecipeVisitor {
     where
         M: MapAccess<'de>,
     {
-        Recipe::deserialize(de::value::MapAccessDeserializer::new(visitor))
+        Requirement::deserialize(de::value::MapAccessDeserializer::new(visitor))
     }
 }
 
-impl<'de> Deserialize<'de> for Recipe {
-    fn deserialize<D>(deserializer: D) -> Result<Recipe, D::Error>
+impl<'de> Deserialize<'de> for Requirement {
+    fn deserialize<D>(deserializer: D) -> Result<Requirement, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_any(RecipeVisitor)
+        deserializer.deserialize_any(RequirementVisitor)
     }
 }
 
@@ -144,13 +144,13 @@ mod tests {
             local = { path = "/path/to/package" }
             github = { git = "https://github.com/gleam-lang/otp.git" }
         "#;
-        let deps: HashMap<String, Recipe> = toml::from_str(toml).unwrap();
-        assert_eq!(deps["short"], Recipe::hex("~> 0.5"));
-        assert_eq!(deps["hex"], Recipe::hex("~> 1.0.0"));
-        assert_eq!(deps["local"], Recipe::path("/path/to/package"));
+        let deps: HashMap<String, Requirement> = toml::from_str(toml).unwrap();
+        assert_eq!(deps["short"], Requirement::hex("~> 0.5"));
+        assert_eq!(deps["hex"], Requirement::hex("~> 1.0.0"));
+        assert_eq!(deps["local"], Requirement::path("/path/to/package"));
         assert_eq!(
             deps["github"],
-            Recipe::git("https://github.com/gleam-lang/otp.git")
+            Requirement::git("https://github.com/gleam-lang/otp.git")
         );
     }
 }
