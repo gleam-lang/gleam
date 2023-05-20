@@ -119,26 +119,6 @@ but it is locked to {version}, which is incompatible.",
     }
 
     Ok(requirements)
-    // let locked = locked
-    //     .iter()
-    //     .map(|(name, version)| (name.to_string(), Range::new(version.to_string())));
-    // // Add the locked versions as new requirements that override any existing
-    // // entry in the dependencies list. Collection into a HashMap is used for
-    // // de-duplication.
-    // let deps: HashMap<_, _> = dependencies.chain(locked).collect();
-    // deps.into_iter()
-    //     .map(|(package, requirement)| {
-    //         (
-    //             package,
-    //             Dependency {
-    //                 app: None,
-    //                 optional: false,
-    //                 repository: None,
-    //                 requirement,
-    //             },
-    //         )
-    //     })
-    //     .collect()
 }
 
 pub trait PackageFetcher {
