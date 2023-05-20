@@ -130,6 +130,9 @@ pub enum Error {
     #[error("{module} is not a valid module name")]
     InvalidModuleName { module: String },
 
+    #[error("{module} must belong in src/ or test/")]
+    InvalidModulePrefix { module: String, prefix: String },
+
     #[error("{module} is not module")]
     ModuleDoesNotExist { module: SmolStr },
 
@@ -439,29 +442,26 @@ forward slash and must not end with a slash."
                 hint: None,
             },
 
-            Error::ModuleDoesNotExist { module } => {
-                let prefix = module.split("/").next();
-
-                let suggested_file = match prefix {
-                    Some("src") => &module[4..],
-                    Some("test") => &module[5..],
-                    _ => module,
-                };
-
-                let text = match prefix {
-                    Some("src") | Some("test") => format!("You are calling a module with `{prefix}`.\nOnly modules within /src and /test are executable.", prefix = prefix.unwrap()),
-                    _ => format!("No module was found with the name `{module}`."),
-                };
-
+            Error::InvalidModulePrefix { prefix, module } => {
                 Diagnostic {
                     title: "Module does not exist".into(),
-                    text,
+                    text: format!("You are calling a module with `{prefix}`.\nOnly files within src/ and test/ are valid modules."),
                     level: Level::Error,
                     location: None,
                     hint: Some(
-                        format!("Did you mean `{suggested_file}`.")
+                        format!("Try running `{module}`.")
                     ),
                 }
+            }
+
+            Error::ModuleDoesNotExist { module,  } => Diagnostic {
+                title: "Module does not exist".into(),
+                text: format!("No module was found with the name `{module}`."),
+                level: Level::Error,
+                location: None,
+                hint: Some(
+                    format!("No module was found with the name `{module}`.")
+                ),
             },
 
             Error::ModuleDoesNotHaveMainFunction { module } => Diagnostic {
