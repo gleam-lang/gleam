@@ -4,7 +4,7 @@ use gleam_core::{
     config::{PackageConfig, SpdxLicense},
     hex, paths,
     paths::ProjectPaths,
-    recipe::Recipe,
+    requirement::Requirement,
     Error, Result,
 };
 use hexpm::version::{Range, Version};
@@ -197,7 +197,7 @@ fn metadata_config<'a>(
         .dependencies
         .iter()
         .map(|(name, recipe)| match recipe {
-            Recipe::Hex { version } => Ok(ReleaseRequirement {
+            Requirement::Hex { version } => Ok(ReleaseRequirement {
                 name,
                 requirement: version,
             }),

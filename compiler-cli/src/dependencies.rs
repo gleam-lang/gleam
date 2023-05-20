@@ -15,7 +15,7 @@ use gleam_core::{
     io::{FileSystemWriter, HttpClient as _, TarUnpacker, WrappedReader},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
-    recipe::Recipe,
+    requirement::Requirement,
     Error, Result,
 };
 use hexpm::version::Version;
@@ -147,7 +147,7 @@ pub fn download<Telem: Telemetry>(
     // Insert the new packages to add, if it exists
     if let Some((packages, dev)) = new_package {
         for package in packages {
-            let version = Recipe::hex(">= 0.0.0");
+            let version = Requirement::hex(">= 0.0.0");
             let _ = if dev {
                 config.dev_dependencies.insert(package.to_string(), version)
             } else {
@@ -529,11 +529,11 @@ fn resolve_versions<Telem: Telemetry>(
     let mut provider_info = HashMap::new();
     for (name, recipe) in dependencies.into_iter() {
         let version = match recipe {
-            Recipe::Hex { version } => version,
-            Recipe::Path { path } => {
+            Requirement::Hex { version } => version,
+            Requirement::Path { path } => {
                 provide_local_package(&name, &path, &mut provider_info, &mut provided_packages)?
             }
-            Recipe::Git { git } => {
+            Requirement::Git { git } => {
                 provide_git_package(&name, &git, &mut provider_info, &mut provided_packages)?
             }
         };
@@ -650,8 +650,8 @@ fn provide_package(
     let mut requirements = HashMap::new();
     for (name, recipe) in config.dependencies.into_iter() {
         let version = match recipe {
-            Recipe::Hex { version } => version,
-            Recipe::Path { path } => {
+            Requirement::Hex { version } => version,
+            Requirement::Path { path } => {
                 let resolved_path = if path.is_absolute() {
                     path
                 } else {
@@ -660,7 +660,7 @@ fn provide_package(
                 // Recursively walk local packages
                 provide_local_package(&name, &resolved_path, info, provided)?
             }
-            Recipe::Git { git } => provide_git_package(&name, &git, info, provided)?,
+            Requirement::Git { git } => provide_git_package(&name, &git, info, provided)?,
         };
         let _ = requirements.insert(
             name,

@@ -73,7 +73,7 @@ pub mod metadata;
 pub mod parse;
 pub mod paths;
 pub mod pretty;
-pub mod recipe;
+pub mod requirement;
 pub mod type_;
 pub mod uid;
 pub mod version;

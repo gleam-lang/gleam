@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::recipe::Recipe;
+use crate::requirement::Requirement;
 use crate::Result;
 use hexpm::version::Version;
 use itertools::Itertools;
@@ -10,7 +10,7 @@ use smol_str::SmolStr;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct Manifest {
     #[serde(serialize_with = "ordered_map")]
-    pub requirements: HashMap<String, Recipe>,
+    pub requirements: HashMap<String, Requirement>,
     #[serde(serialize_with = "sorted_vec")]
     pub packages: Vec<ManifestPackage>,
 }
@@ -118,10 +118,10 @@ impl Manifest {
 fn manifest_toml_format() {
     let mut manifest = Manifest {
         requirements: [
-            ("zzz".into(), Recipe::hex("> 0.0.0")),
-            ("aaa".into(), Recipe::hex("> 0.0.0")),
-            ("gleam_stdlib".into(), Recipe::hex("~> 0.17")),
-            ("gleeunit".into(), Recipe::hex("~> 0.1")),
+            ("zzz".into(), Requirement::hex("> 0.0.0")),
+            ("aaa".into(), Requirement::hex("> 0.0.0")),
+            ("gleam_stdlib".into(), Requirement::hex("~> 0.17")),
+            ("gleeunit".into(), Requirement::hex("~> 0.1")),
         ]
         .into(),
         packages: vec![
