@@ -8,13 +8,14 @@ use hexpm::version::Range;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 use serde::Deserialize;
+use smol_str::SmolStr;
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(untagged, remote = "Self")]
 pub enum Recipe {
     Hex { version: Range },
     Path { path: PathBuf },
-    Git { git: String },
+    Git { git: SmolStr },
 }
 
 impl Recipe {
@@ -31,7 +32,7 @@ impl Recipe {
                         "Local dependency config could not be parsed".into(),
                     )
                 })?;
-                Ok(Range::new(format!("== {}", config.version.to_string())))
+                Ok(Range::new(format!("== {}", config.version)))
             }
             Recipe::Git { .. } => Err(Error::DependencyResolutionFailed(
                 "Git dependencies are currently unsuported".to_string(),
@@ -50,9 +51,7 @@ impl Recipe {
     }
 
     pub fn git(url: &str) -> Recipe {
-        Recipe::Git {
-            git: url.to_string(),
-        }
+        Recipe::Git { git: url.into() }
     }
 }
 

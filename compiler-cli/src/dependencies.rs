@@ -543,7 +543,7 @@ fn resolve_versions<Telem: Telemetry>(
     let resolved = dependency::resolve_versions(
         PackageFetcher::boxed(runtime.clone()),
         provided_packages.clone(),
-        config.name.to_string(),
+        config.name.clone(),
         version_requirements.into_iter(),
         &locked,
     )?;
@@ -577,7 +577,7 @@ fn resolve_versions<Telem: Telemetry>(
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 enum ProviderInfo {
-    Git { repo: String, commit: String },
+    Git { repo: SmolStr, commit: SmolStr },
     Local { path: PathBuf },
 }
 
@@ -626,8 +626,8 @@ fn provide_git_package(
 ) -> Result<hexpm::version::Range> {
     // TODO
     let _git = ProviderInfo::Git {
-        repo: "repo".to_string(),
-        commit: "commit".to_string(),
+        repo: SmolStr::new_inline("repo"),
+        commit: SmolStr::new_inline("commit")
     };
     Err(Error::DependencyResolutionFailed(
         "Git dependencies are not supported".to_string(),
@@ -724,8 +724,8 @@ async fn lookup_package(
                 build_tools: vec!["gleam".to_string()],
                 requirements,
                 source: ManifestPackageSource::Git {
-                    repo: repo.to_string(),
-                    commit: commit.to_string(),
+                    repo: repo.clone(),
+                    commit: commit.clone(),
                 },
             })
         }

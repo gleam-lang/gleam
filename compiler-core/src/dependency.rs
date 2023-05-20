@@ -11,6 +11,7 @@ use pubgrub::{
     solver::{choose_package_with_fewest_versions, Dependencies},
     type_aliases::Map,
 };
+use smol_str::SmolStr;
 
 pub type PackageVersions = HashMap<String, Version>;
 
@@ -21,7 +22,7 @@ type PubgrubRange = pubgrub::range::Range<Version>;
 pub fn resolve_versions<Requirements>(
     package_fetcher: Box<dyn PackageFetcher>,
     provided_packages: HashMap<String, hexpm::Package>,
-    root_name: String,
+    root_name: SmolStr,
     dependencies: Requirements,
     locked: &HashMap<String, Version>,
 ) -> Result<PackageVersions>
@@ -403,7 +404,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            "app".to_string(),
+            SmolStr::new_inline("app"),
             vec![("gleam_stdlib".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
             &vec![locked_stdlib].into_iter().collect(),
         )
@@ -421,7 +422,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            "app".to_string(),
+            SmolStr::new_inline("app"),
             vec![].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -434,7 +435,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            "app".to_string(),
+            SmolStr::new_inline("app"),
             vec![("gleam_stdlib".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -455,7 +456,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            "app".to_string(),
+            SmolStr::new_inline("app"),
             vec![("gleam_otp".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -479,7 +480,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            "app".to_string(),
+            SmolStr::new_inline("app"),
             vec![("gleam_otp".to_string(), Range::new("~> 0.1.0".to_string()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -503,7 +504,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            "app".to_string(),
+            SmolStr::new_inline("app"),
             vec![(
                 "package_with_retired".to_string(),
                 Range::new("> 0.0.0".to_string()),
@@ -529,7 +530,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            "app".to_string(),
+            SmolStr::new_inline("app"),
             vec![(
                 "package_with_retired".to_string(),
                 Range::new("> 0.0.0".to_string()),
@@ -557,7 +558,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            "app".to_string(),
+            SmolStr::new_inline("app"),
             vec![(
                 "gleam_otp".to_string(),
                 Range::new("~> 0.3.0-rc1".to_string()),
@@ -588,7 +589,7 @@ mod tests {
         let _ = resolve_versions(
             make_remote(),
             HashMap::new(),
-            "app".to_string(),
+            SmolStr::new_inline("app"),
             vec![("unknown".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -600,7 +601,7 @@ mod tests {
         let _ = resolve_versions(
             make_remote(),
             HashMap::new(),
-            "app".to_string(),
+            SmolStr::new_inline("app"),
             vec![(
                 "gleam_stdlib".to_string(),
                 Range::new("~> 99.0".to_string()),
@@ -616,7 +617,7 @@ mod tests {
         let err = resolve_versions(
             make_remote(),
             HashMap::new(),
-            "app".to_string(),
+            SmolStr::new_inline("app"),
             vec![(
                 "gleam_stdlib".to_string(),
                 Range::new("~> 0.1.0".to_string()),
