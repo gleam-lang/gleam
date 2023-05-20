@@ -7,7 +7,7 @@ use gleam_core::{
 };
 use lazy_static::lazy_static;
 use smol_str::SmolStr;
-use std::path::PathBuf;
+use std::{path::PathBuf, println};
 
 use crate::fs::ProjectIO;
 
@@ -27,6 +27,8 @@ pub fn command(
 ) -> Result<(), Error> {
     let paths = crate::project_paths_at_current_directory();
 
+    println!("{:?}", paths);
+
     // Validate the module path
     if let Some(mod_path) = &module {
         if !is_gleam_module(mod_path) {
@@ -36,16 +38,65 @@ pub fn command(
         }
     };
 
+    println!("downloading dependencies");
+
     // Download dependencies
     let manifest = crate::build::download_dependencies()?;
 
     // Get the config for the module that is being run to check the target.
     let mod_config = match &module {
         Some(mod_path) => {
-            crate::config::find_package_config_for_module(mod_path, &manifest, &paths)
+            println!("mod path:{}", mod_path);
+
+            let config = crate::config::find_package_config_for_module(mod_path, &manifest, &paths);
+
+            println!("config: {:?}", config);
+
+            // Suggest correct module name if the module path is not valid
+            match config {
+                Ok(_) => config,
+                Err(err) => {
+                    println!("looking for prefixes");
+
+                    let find_config = crate::config::find_package_config_for_module;
+
+                    println!(
+                        "mod_path.starts_with(\"src / \") {}",
+                        mod_path.starts_with("src/")
+                    );
+
+                    println!(
+                        "mod_path.starts_with(\"test / \") {}",
+                        mod_path.starts_with("test/")
+                    );
+
+                    if mod_path.starts_with("src/")
+                        && find_config(&mod_path.strip_prefix("src/").unwrap(), &manifest, &paths)
+                            .is_ok()
+                    {
+                        return Err(Error::InvalidModulePrefix {
+                            module: mod_path.clone(),
+                            prefix: "src/".to_string(),
+                            module_suggestion: mod_path.strip_prefix("src/").unwrap().to_string(),
+                        });
+                    } else if mod_path.starts_with("test/")
+                        && find_config(&mod_path.strip_prefix("test/").unwrap(), &manifest, &paths)
+                            .is_ok()
+                    {
+                        return Err(Error::InvalidModulePrefix {
+                            module: mod_path.clone(),
+                            prefix: "test/".to_string(),
+                            module_suggestion: mod_path.strip_prefix("test/").unwrap().to_string(),
+                        });
+                    }
+
+                    Err(err)
+                }
+            }
         }
         _ => crate::config::root_config(),
     }?;
+
     // The root config is required to run the project.
     let root_config = crate::config::root_config()?;
 
