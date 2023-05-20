@@ -454,13 +454,14 @@ forward slash and must not end with a slash."
                 }
             }
 
-            Error::ModuleDoesNotExist { module,  } => Diagnostic {
+            Error::ModuleDoesNotExist { module } => Diagnostic {
                 title: "Module does not exist".into(),
-                text: format!("No module was found with the name `{module}`."),
+                text: format!("Module `{module}` was not found"),
                 level: Level::Error,
                 location: None,
                 hint: Some(
-                    format!("No module was found with the name `{module}`.")
+                    format!("Try creating the file `src/{}.gleam`.",
+                    module)
                 ),
             },
 
