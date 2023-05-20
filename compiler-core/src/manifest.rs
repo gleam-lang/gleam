@@ -5,6 +5,7 @@ use crate::recipe::Recipe;
 use crate::Result;
 use hexpm::version::Version;
 use itertools::Itertools;
+use smol_str::SmolStr;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct Manifest {
@@ -270,7 +271,7 @@ pub enum ManifestPackageSource {
     #[serde(rename = "hex")]
     Hex { outer_checksum: Base16Checksum },
     #[serde(rename = "git")]
-    Git { repo: String, commit: String },
+    Git { repo: SmolStr, commit: SmolStr },
     #[serde(rename = "local")]
     Local { path: PathBuf }, // should be the canonical path
 }
