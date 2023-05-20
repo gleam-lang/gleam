@@ -147,6 +147,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Scott Wey](https://github.com/scottwey)
  - [Sean Jensen-Grey](https://github.com/seanjensengrey)
  - [Sebastian Porto](https://github.com/sporto)
+ - [SEKUN](https://github.com/sekunho)
  - [Seve Salazar](https://github.com/tehprofessor)
  - [Signal Insights](https://github.com/signalinsights)
  - [Simone Vittori](https://github.com/simonewebdesign)
