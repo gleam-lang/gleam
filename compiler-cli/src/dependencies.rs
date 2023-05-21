@@ -662,7 +662,7 @@ fn provide_local_package(
 ) -> Result<hexpm::version::Range> {
     let canonical_path = package_path
         .canonicalize()
-        .expect("local package cannonical path");
+        .map_err(|_| Error::DependencyCanonicalizationFailed(package_name.to_string()))?;
     let package_source = ProvidedPackageSource::Local {
         path: canonical_path.clone(),
     };

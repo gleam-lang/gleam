@@ -186,6 +186,9 @@ pub enum Error {
     #[error("Git dependencies are currently unsupported")]
     GitDependencyUnsuported,
 
+    #[error("Failed to create canonical path for package {0}")]
+    DependencyCanonicalizationFailed(String),
+
     #[error("Dependency tree resolution failed: {0}")]
     DependencyResolutionFailed(String),
 
@@ -2282,6 +2285,18 @@ The error from the parser was:
                 );
                 Diagnostic {
                     title: "Invalid version format".into(),
+                    text,
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }
+            }
+
+            Error::DependencyCanonicalizationFailed(package) => {
+                let text = format!("Local package {} has no canonical path", package);
+
+                Diagnostic {
+                    title: "Failed to create canonical path".into(),
                     text,
                     hint: None,
                     location: None,

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use crate::config::PackageConfig;
-use crate::{Error, Result};
+use crate::error::{Error, FileIoAction, FileKind, Result};
 use hexpm::version::Range;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
@@ -24,9 +24,13 @@ impl Requirement {
             Requirement::Hex { version: range } => Ok(range.clone()),
             Requirement::Path { path } => {
                 let config_path = path.join("gleam.toml");
-                let toml = std::fs::read_to_string(config_path).map_err(|_| {
-                    Error::DependencyResolutionFailed("Local dependency could not be found".into())
-                })?;
+                let toml =
+                    std::fs::read_to_string(&config_path).map_err(|error| Error::FileIo {
+                        kind: FileKind::File,
+                        action: FileIoAction::Read,
+                        path: config_path,
+                        err: Some(error.to_string()),
+                    })?;
                 let config: PackageConfig = toml::from_str(&toml).map_err(|_| {
                     Error::DependencyResolutionFailed(
                         "Local dependency config could not be parsed".into(),
@@ -34,9 +38,7 @@ impl Requirement {
                 })?;
                 Ok(Range::new(format!("== {}", config.version)))
             }
-            Requirement::Git { .. } => Err(Error::DependencyResolutionFailed(
-                "Git dependencies are currently unsuported".to_string(),
-            )),
+            Requirement::Git { .. } => Err(Error::GitDependencyUnsuported),
         }
     }
 
