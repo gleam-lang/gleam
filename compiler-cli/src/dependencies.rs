@@ -291,7 +291,7 @@ fn write_manifest_to_disc(paths: &ProjectPaths, manifest: &Manifest) -> Result<(
 }
 
 // This is the container for locally pinned packages.
-// Fpr packages provided by paths and git deps, see the ProvidedPackage struct
+// For packages provided by paths and git deps, see the ProvidedPackage struct
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct LocalPackages {
     packages: HashMap<String, Version>,
