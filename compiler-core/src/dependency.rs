@@ -38,14 +38,14 @@ where
             version: root_version.clone(),
             outer_checksum: vec![],
             retirement_status: None,
-            requirements: root_dependencies(dependencies, &locked)
+            requirements: root_dependencies(dependencies, locked)
                 .map_err(Error::dependency_resolution_failed)?,
             meta: (),
         }],
     };
 
     let packages = pubgrub::solver::resolve(
-        &DependencyProvider::new(package_fetcher, provided_packages, root, &locked),
+        &DependencyProvider::new(package_fetcher, provided_packages, root, locked),
         root_name.to_string(),
         root_version,
     )
@@ -101,16 +101,14 @@ where
             Some(locked_version) => {
                 let compatible = range
                     .to_pubgrub()
-                    .map_err(|e| {
-                        ResolutionError::Failure(format!("Failed to parse range {}", e.to_string()))
-                    })?
+                    .map_err(|e| ResolutionError::Failure(format!("Failed to parse range {}", e)))?
                     .contains(locked_version);
                 if !compatible {
                     return Err(ResolutionError::Failure(format!(
                         "{package} is specified with the requirement `{requirement}`, \
 but it is locked to {version}, which is incompatible.",
                         package = name,
-                        requirement = range.to_string(),
+                        requirement = range,
                         version = locked_version,
                     )));
                 }

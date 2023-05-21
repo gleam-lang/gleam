@@ -85,14 +85,14 @@ impl Manifest {
                 }
                 ManifestPackageSource::Git { repo, commit } => {
                     buffer.push_str(r#", source = "git", repo = ""#);
-                    buffer.push_str(&repo);
+                    buffer.push_str(repo);
                     buffer.push_str(r#", commit = ""#);
-                    buffer.push_str(&commit);
+                    buffer.push_str(commit);
                     buffer.push('"');
                 }
                 ManifestPackageSource::Local { path } => {
                     buffer.push_str(r#", source = "local", path = ""#);
-                    buffer.push_str(&path.to_str().expect("local path non utf-8"));
+                    buffer.push_str(path.to_str().expect("local path non utf-8"));
                     buffer.push('"');
                 }
             };
@@ -107,7 +107,7 @@ impl Manifest {
             buffer.push_str(name);
             buffer.push_str(" = ");
             buffer.push_str(&recipe.to_string());
-            buffer.push_str("\n");
+            buffer.push('\n');
         }
 
         buffer
@@ -242,10 +242,7 @@ impl ManifestPackage {
     }
 
     pub fn is_hex(&self) -> bool {
-        match self.source {
-            ManifestPackageSource::Hex { .. } => true,
-            _ => false,
-        }
+        matches!(self.source, ManifestPackageSource::Hex { .. })
     }
 }
 

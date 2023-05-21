@@ -183,11 +183,17 @@ pub enum Error {
     #[error("{0}")]
     Http(String),
 
+    #[error("Git dependencies are currently unsupported")]
+    GitDependencyUnsuported,
+
     #[error("Dependency tree resolution failed: {0}")]
     DependencyResolutionFailed(String),
 
     #[error("The package {0} is listed in dependencies and dev-dependencies")]
     DuplicateDependency(String),
+
+    #[error("The package {0} is provided multiple times, as {1} and {2}")]
+    ProvidedDependencyConflict(String, String, String),
 
     #[error("The package was missing required fields for publishing")]
     MissingHexPublishFields {
@@ -2294,6 +2300,28 @@ The error from the version resolver library was:
                 );
                 Diagnostic {
                     title: "Dependency resolution failed".into(),
+                    text,
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }
+            }
+
+            Error::GitDependencyUnsuported => {
+                Diagnostic {
+                    title: "Git dependencies are not currently supported".into(),
+                    text: "Please remove all git dependencies from the gleam.toml file".into(),
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }
+            }
+
+            Error::ProvidedDependencyConflict(name, pkg1, pkg2) => {
+                let text = format!("The package {} resolves to both {} nad {}", name, pkg1, pkg2);
+
+                Diagnostic {
+                    title: "Conflicting provided dependencies".into(),
                     text,
                     hint: None,
                     location: None,
