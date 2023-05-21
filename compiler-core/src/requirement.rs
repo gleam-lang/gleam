@@ -24,7 +24,7 @@ impl Requirement {
             Requirement::Hex { version: range } => Ok(range.clone()),
             Requirement::Path { path } => {
                 let config_path = path.join("gleam.toml");
-                let toml = std::fs::read_to_string(&config_path).map_err(|_| {
+                let toml = std::fs::read_to_string(config_path).map_err(|_| {
                     Error::DependencyResolutionFailed("Local dependency could not be found".into())
                 })?;
                 let config: PackageConfig = toml::from_str(&toml).map_err(|_| {
@@ -61,7 +61,7 @@ impl ToString for Requirement {
     fn to_string(&self) -> String {
         match self {
             Requirement::Hex { version: range } => {
-                format!(r#"{{ version = "{}" }}"#, range.to_string())
+                format!(r#"{{ version = "{}" }}"#, range)
             }
             Requirement::Path { path } => format!(r#"{{ path = "{}" }}"#, path.display()),
             Requirement::Git { git: url } => format!(r#"{{ git = "{}" }}"#, url),
@@ -102,7 +102,7 @@ struct RequirementVisitor;
 impl<'de> Visitor<'de> for RequirementVisitor {
     type Value = Requirement;
 
-    fn expecting<'a>(&self, formatter: &mut fmt::Formatter<'a>) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("string or map")
     }
 
@@ -110,7 +110,7 @@ impl<'de> Visitor<'de> for RequirementVisitor {
     where
         E: de::Error,
     {
-        Ok(FromStr::from_str(value).unwrap())
+        Ok(FromStr::from_str(value).expect("expected string"))
     }
 
     fn visit_map<M>(self, visitor: M) -> Result<Self::Value, M::Error>
