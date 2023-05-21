@@ -453,7 +453,7 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         completion_provider: Some(lsp::CompletionOptions {
             resolve_provider: None,
-            trigger_characters: Some(vec![" ".into()]),
+            trigger_characters: None,
             all_commit_characters: None,
             work_done_progress_options: lsp::WorkDoneProgressOptions {
                 work_done_progress: None,
