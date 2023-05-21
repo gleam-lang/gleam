@@ -158,9 +158,7 @@ impl Downloader {
         {
             outer_checksum
         } else {
-            return Err(Error::DependencyResolutionFailed(
-                "Attempt to download non-hex package from hex".to_string(),
-            ));
+            panic!("Attempt to download non-hex package from hex")
         };
 
         let tarball_path = paths::global_package_cache_package_tarball(
