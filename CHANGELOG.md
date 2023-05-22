@@ -3,6 +3,8 @@
 ## Unreleased
 
 - The `gleam lsp` command is no longer hidden from the help output.
+- Fixed a bug where some language server clients would show autocompletion
+  suggestions too eagerly.
 
 ## v0.29.0-rc1 - 2023-05-16
 
