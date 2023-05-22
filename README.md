@@ -45,6 +45,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Anthony Khong](https://github.com/anthony-khong)
  - [Anthony Scotti](https://github.com/amscotti)
  - [Arnaud Berthomier](https://github.com/oz)
+ - [Barry Moore](https://github.com/chiroptical)
  - [Ben Marx](https://github.com/bgmarx)
  - [Ben Myles](https://github.com/benmyles)
  - [Benjamin Peinhardt](https://github.com/bcpeinhardt)
