@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New projects now require `gleam_stdlib` v0.29.
+
 ## v0.29.0-rc2 - 2023-05-22
 
 - The `gleam lsp` command is no longer hidden from the help output.
