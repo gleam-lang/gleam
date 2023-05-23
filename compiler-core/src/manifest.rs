@@ -86,7 +86,7 @@ impl Manifest {
                 ManifestPackageSource::Git { repo, commit } => {
                     buffer.push_str(r#", source = "git", repo = ""#);
                     buffer.push_str(repo);
-                    buffer.push_str(r#", commit = ""#);
+                    buffer.push_str(r#"", commit = ""#);
                     buffer.push_str(commit);
                     buffer.push('"');
                 }
@@ -120,6 +120,14 @@ fn manifest_toml_format() {
         requirements: [
             ("zzz".into(), Requirement::hex("> 0.0.0")),
             ("aaa".into(), Requirement::hex("> 0.0.0")),
+            (
+                "awsome_local2".into(),
+                Requirement::git("https://github.com/gleam-lang/gleam.git"),
+            ),
+            (
+                "awsome_local1".into(),
+                Requirement::path("../path/to/package"),
+            ),
             ("gleam_stdlib".into(), Requirement::hex("~> 0.17")),
             ("gleeunit".into(), Requirement::hex("~> 0.1")),
         ]
@@ -156,6 +164,27 @@ fn manifest_toml_format() {
                 },
             },
             ManifestPackage {
+                name: "awsome_local2".into(),
+                version: Version::new(1, 2, 3),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Git {
+                    repo: "https://github.com/gleam-lang/gleam.git".into(),
+                    commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+                },
+            },
+            ManifestPackage {
+                name: "awsome_local1".into(),
+                version: Version::new(1, 2, 3),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Local {
+                    path: "/home/louis/packages/path/to/package".into(),
+                },
+            },
+            ManifestPackage {
                 name: "gleeunit".into(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["gleam".into()].into(),
@@ -175,6 +204,8 @@ fn manifest_toml_format() {
 
 packages = [
   { name = "aaa", version = "0.4.0", build_tools = ["rebar3", "make"], requirements = ["zzz", "gleam_stdlib"], otp_app = "aaa_app", source = "hex", outer_checksum = "0316" },
+  { name = "awsome_local1", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "local", path = "/home/louis/packages/path/to/package" },
+  { name = "awsome_local2", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "git", repo = "https://github.com/gleam-lang/gleam.git", commit = "bd9fe02f72250e6a136967917bcb1bdccaffa3c8" },
   { name = "gleam_stdlib", version = "0.17.1", build_tools = ["gleam"], requirements = [], source = "hex", outer_checksum = "0116" },
   { name = "gleeunit", version = "0.4.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], source = "hex", outer_checksum = "032E" },
   { name = "zzz", version = "0.4.0", build_tools = ["mix"], requirements = [], source = "hex", outer_checksum = "0316" },
@@ -182,6 +213,8 @@ packages = [
 
 [requirements]
 aaa = { version = "> 0.0.0" }
+awsome_local1 = { path = "../path/to/package" }
+awsome_local2 = { git = "https://github.com/gleam-lang/gleam.git" }
 gleam_stdlib = { version = "~> 0.17" }
 gleeunit = { version = "~> 0.1" }
 zzz = { version = "> 0.0.0" }
