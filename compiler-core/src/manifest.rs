@@ -106,7 +106,7 @@ impl Manifest {
         for (name, recipe) in requirements.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
             buffer.push_str(name);
             buffer.push_str(" = ");
-            buffer.push_str(&recipe.to_string());
+            buffer.push_str(&recipe.to_toml());
             buffer.push('\n');
         }
 

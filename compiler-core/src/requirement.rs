@@ -55,12 +55,8 @@ impl Requirement {
     pub fn git(url: &str) -> Requirement {
         Requirement::Git { git: url.into() }
     }
-}
 
-// Serialization
-
-impl ToString for Requirement {
-    fn to_string(&self) -> String {
+    pub fn to_toml(&self) -> String {
         match self {
             Requirement::Hex { version: range } => {
                 format!(r#"{{ version = "{}" }}"#, range)
@@ -70,6 +66,8 @@ impl ToString for Requirement {
         }
     }
 }
+
+// Serialization
 
 impl Serialize for Requirement {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
