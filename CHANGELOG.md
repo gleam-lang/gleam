@@ -13,6 +13,8 @@
   completion.
 - A warning is now emitted when using `list.length` to check for the empty list,
   which is slow compared to checking for equality or pattern matching (#2180).
+- The new `gleam remove <package_name>` can be used to remove dependencies
+  from a Gleam project.
 
 ## v0.29.0 - 2023-05-23
 

@@ -67,6 +67,7 @@ mod lsp;
 mod new;
 mod panic;
 mod publish;
+mod remove;
 mod run;
 mod shell;
 
@@ -198,13 +199,20 @@ enum Command {
 
     /// Add new project dependencies
     Add {
-        /// The names of Hex packages to add
+        /// The names of packages to add
         #[clap(required = true)]
         packages: Vec<String>,
 
         /// Add the packages as dev-only dependencies
         #[clap(long)]
         dev: bool,
+    },
+
+    /// Remove project dependencies
+    Remove {
+        /// The names of packages to remove
+        #[clap(required = true)]
+        packages: Vec<String>,
     },
 
     /// Clean build artifacts
@@ -419,6 +427,8 @@ fn main() {
         }
 
         Command::Add { packages, dev } => add::command(packages, dev),
+
+        Command::Remove { packages } => remove::command(packages),
 
         Command::Update => dependencies::update(),
 
