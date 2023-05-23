@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Type aliases can now refer to type aliases defined later in the same module.
 - Fixed a bug where unapplied record constructors in constant expressions would
   generate invalid Erlang.
 
