@@ -10,6 +10,7 @@ use crate::{
 mod assert;
 mod bit_strings;
 mod case;
+mod consts;
 mod external_fn;
 mod functions;
 mod guards;

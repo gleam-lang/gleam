@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/erlang/tests/consts.rs
+assertion_line: 23
+expression: "\npub type X {\n  X(Int)\n}\n\npub const z = #(X)\n\npub fn main() {\n  z\n}"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([main/0]).
+-export_type([x/0]).
+
+-type x() :: {x, integer()}.
+
+-spec main() -> {fun((integer()) -> x())}.
+main() ->
+    {fun(Field@0) -> {x, Field@0} end}.
+

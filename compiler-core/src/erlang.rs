@@ -1003,14 +1003,15 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
                 .map(|s| const_segment(&s.value, &s.options, env)),
         ),
 
+        Constant::Record { tag, typ, args, .. } if args.is_empty() => match typ.deref() {
+            Type::Fn { args, .. } => record_constructor_function(tag, args.len()),
+            _ => atom(tag.to_snake_case()),
+        },
+
         Constant::Record { tag, args, .. } => {
-            if args.is_empty() {
-                atom(tag.to_snake_case())
-            } else {
-                let args = args.iter().map(|a| const_inline(&a.value, env));
-                let tag = atom(tag.to_snake_case());
-                tuple(std::iter::once(tag).chain(args))
-            }
+            let args = args.iter().map(|a| const_inline(&a.value, env));
+            let tag = atom(tag.to_snake_case());
+            tuple(std::iter::once(tag).chain(args))
         }
 
         Constant::Var {
@@ -1023,6 +1024,18 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             env,
         ),
     }
+}
+
+fn record_constructor_function(tag: &SmolStr, arity: usize) -> Document<'_> {
+    let chars = incrementing_args_list(arity);
+    "fun("
+        .to_doc()
+        .append(Document::String(chars.clone()))
+        .append(") -> {")
+        .append(atom(tag.to_snake_case()))
+        .append(", ")
+        .append(Document::String(chars))
+        .append("} end")
 }
 
 fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
@@ -1525,17 +1538,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity, .. },
             ..
-        } => {
-            let chars = incrementing_args_list(*arity as usize);
-            "fun("
-                .to_doc()
-                .append(Document::String(chars.clone()))
-                .append(") -> {")
-                .append(atom(name.to_snake_case()))
-                .append(", ")
-                .append(Document::String(chars))
-                .append("} end")
-        }
+        } => record_constructor_function(name, *arity as usize),
 
         TypedExpr::ModuleSelect {
             typ,
