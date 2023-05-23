@@ -127,6 +127,10 @@ pub(crate) fn print_added(text: &str) {
     print_colourful_prefix("      Added", text)
 }
 
+pub(crate) fn print_removed(text: &str) {
+    print_colourful_prefix("    Removed", text)
+}
+
 pub(crate) fn print_generating_documentation() {
     print_colourful_prefix(" Generating", "documentation")
 }
