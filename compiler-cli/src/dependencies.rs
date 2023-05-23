@@ -823,3 +823,196 @@ impl dependency::PackageFetcher for PackageFetcher {
         hexpm::get_package_response(response, HEXPM_PUBLIC_KEY).map_err(|e| e.into())
     }
 }
+
+#[test]
+fn provided_local_to_hex() {
+    let provided_package = ProvidedPackage {
+        version: hexpm::version::Version::new(1, 0, 0),
+        source: ProvidedPackageSource::Local {
+            path: "canonical/path/to/package".into(),
+        },
+        requirements: [
+            (
+                "req_1".into(),
+                hexpm::version::Range::new("~> 1.0.0".to_string()),
+            ),
+            (
+                "req_2".into(),
+                hexpm::version::Range::new("== 1.0.0".to_string()),
+            ),
+        ]
+        .into(),
+    };
+
+    let hex_package = hexpm::Package {
+        name: "package".to_string(),
+        repository: "local".to_string(),
+        releases: vec![hexpm::Release {
+            version: hexpm::version::Version::new(1, 0, 0),
+            retirement_status: None,
+            outer_checksum: vec![],
+            meta: (),
+            requirements: [
+                (
+                    "req_1".into(),
+                    hexpm::Dependency {
+                        requirement: hexpm::version::Range::new("~> 1.0.0".to_string()),
+                        optional: false,
+                        app: None,
+                        repository: None,
+                    },
+                ),
+                (
+                    "req_2".into(),
+                    hexpm::Dependency {
+                        requirement: hexpm::version::Range::new("== 1.0.0".to_string()),
+                        optional: false,
+                        app: None,
+                        repository: None,
+                    },
+                ),
+            ]
+            .into(),
+        }],
+    };
+
+    assert_eq!(
+        provided_package.to_hex_package(&SmolStr::new_inline("package")),
+        hex_package
+    );
+}
+
+#[test]
+fn provided_git_to_hex() {
+    let provided_package = ProvidedPackage {
+        version: hexpm::version::Version::new(1, 0, 0),
+        source: ProvidedPackageSource::Git {
+            repo: "https://github.com/gleam-lang/gleam.git".into(),
+            commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+        },
+        requirements: [
+            (
+                "req_1".into(),
+                hexpm::version::Range::new("~> 1.0.0".to_string()),
+            ),
+            (
+                "req_2".into(),
+                hexpm::version::Range::new("== 1.0.0".to_string()),
+            ),
+        ]
+        .into(),
+    };
+
+    let hex_package = hexpm::Package {
+        name: "package".to_string(),
+        repository: "local".to_string(),
+        releases: vec![hexpm::Release {
+            version: hexpm::version::Version::new(1, 0, 0),
+            retirement_status: None,
+            outer_checksum: vec![],
+            meta: (),
+            requirements: [
+                (
+                    "req_1".into(),
+                    hexpm::Dependency {
+                        requirement: hexpm::version::Range::new("~> 1.0.0".to_string()),
+                        optional: false,
+                        app: None,
+                        repository: None,
+                    },
+                ),
+                (
+                    "req_2".into(),
+                    hexpm::Dependency {
+                        requirement: hexpm::version::Range::new("== 1.0.0".to_string()),
+                        optional: false,
+                        app: None,
+                        repository: None,
+                    },
+                ),
+            ]
+            .into(),
+        }],
+    };
+
+    assert_eq!(
+        provided_package.to_hex_package(&SmolStr::new_inline("package")),
+        hex_package
+    );
+}
+
+#[test]
+fn provided_local_to_manifest() {
+    let provided_package = ProvidedPackage {
+        version: hexpm::version::Version::new(1, 0, 0),
+        source: ProvidedPackageSource::Local {
+            path: "canonical/path/to/package".into(),
+        },
+        requirements: [
+            (
+                "req_1".into(),
+                hexpm::version::Range::new("~> 1.0.0".to_string()),
+            ),
+            (
+                "req_2".into(),
+                hexpm::version::Range::new("== 1.0.0".to_string()),
+            ),
+        ]
+        .into(),
+    };
+
+    let manifest_package = ManifestPackage {
+        name: "package".to_string(),
+        version: hexpm::version::Version::new(1, 0, 0),
+        otp_app: None,
+        build_tools: vec!["gleam".to_string()],
+        requirements: vec!["req_2".into(), "req_1".into()],
+        source: ManifestPackageSource::Local {
+            path: "canonical/path/to/package".into(),
+        },
+    };
+
+    assert_eq!(
+        provided_package.to_manifest_package(&SmolStr::new_inline("package")),
+        manifest_package
+    );
+}
+
+#[test]
+fn provided_git_to_manifest() {
+    let provided_package = ProvidedPackage {
+        version: hexpm::version::Version::new(1, 0, 0),
+        source: ProvidedPackageSource::Git {
+            repo: "https://github.com/gleam-lang/gleam.git".into(),
+            commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+        },
+        requirements: [
+            (
+                "req_1".into(),
+                hexpm::version::Range::new("~> 1.0.0".to_string()),
+            ),
+            (
+                "req_2".into(),
+                hexpm::version::Range::new("== 1.0.0".to_string()),
+            ),
+        ]
+        .into(),
+    };
+
+    let manifest_package = ManifestPackage {
+        name: "package".to_string(),
+        version: hexpm::version::Version::new(1, 0, 0),
+        otp_app: None,
+        build_tools: vec!["gleam".to_string()],
+        requirements: vec!["req_2".into(), "req_1".into()],
+        source: ManifestPackageSource::Git {
+            repo: "https://github.com/gleam-lang/gleam.git".into(),
+            commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+        },
+    };
+
+    assert_eq!(
+        provided_package.to_manifest_package(&SmolStr::new_inline("package")),
+        manifest_package
+    );
+}
