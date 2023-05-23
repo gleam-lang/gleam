@@ -276,7 +276,6 @@ fn get_or_suggest_main_function(
     match built.get_main_function(&SmolStr::from(module.to_owned())) {
         Ok(main_fn) => Ok(main_fn),
         Err(err) => {
-            // Suggest possible modules that may have been intended
             if let Some(mod_path) = module.strip_prefix("src/") {
                 if let Ok(_) = built.get_main_function(&SmolStr::from(mod_path.to_owned())) {
                     return Err(Error::InvalidModulePrefix {
