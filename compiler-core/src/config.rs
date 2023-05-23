@@ -107,15 +107,15 @@ impl PackageConfig {
     pub fn dependency_versions_for(&self, mode: Mode) -> Result<HashMap<String, Range>> {
         self.dependencies_for(mode)?
             .iter()
-            .map(|(package, recipe)| Ok((package.clone(), recipe.version_range()?)))
+            .map(|(package, requirement)| Ok((package.clone(), requirement.version_range()?)))
             .collect()
     }
 
     pub fn all_dependencies(&self) -> Result<Dependencies> {
         let mut deps =
             HashMap::with_capacity(self.dependencies.len() + self.dev_dependencies.len());
-        for (name, recipe) in self.dependencies.iter().chain(&self.dev_dependencies) {
-            let already_inserted = deps.insert(name.clone(), recipe.clone()).is_some();
+        for (name, requirement) in self.dependencies.iter().chain(&self.dev_dependencies) {
+            let already_inserted = deps.insert(name.clone(), requirement.clone()).is_some();
             if already_inserted {
                 return Err(Error::DuplicateDependency(name.clone()));
             }

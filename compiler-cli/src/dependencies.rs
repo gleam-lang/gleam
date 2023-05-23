@@ -617,8 +617,8 @@ fn resolve_versions<Telem: Telemetry>(
     let mut root_requirements = HashMap::new();
 
     // Populate the provided_packages and root_requrements maps
-    for (name, recipe) in dependencies.into_iter() {
-        let version = match recipe {
+    for (name, requirement) in dependencies.into_iter() {
+        let version = match requirement {
             Requirement::Hex { version } => version,
             Requirement::Path { path } => {
                 provide_local_package(&name, &path, &mut provided_packages)?
@@ -717,8 +717,8 @@ fn provide_package(
         )));
     };
     let mut requirements = HashMap::new();
-    for (name, recipe) in config.dependencies.into_iter() {
-        let version = match recipe {
+    for (name, requirement) in config.dependencies.into_iter() {
+        let version = match requirement {
             Requirement::Hex { version } => version,
             Requirement::Path { path } => {
                 let resolved_path = if path.is_absolute() {

@@ -196,7 +196,7 @@ fn metadata_config<'a>(
     let requirements: Result<Vec<ReleaseRequirement<'a>>> = config
         .dependencies
         .iter()
-        .map(|(name, recipe)| match recipe {
+        .map(|(name, requirement)| match requirement {
             Requirement::Hex { version } => Ok(ReleaseRequirement {
                 name,
                 requirement: version,
