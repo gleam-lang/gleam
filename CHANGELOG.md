@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where unapplied record constructors in constant expressions would
+  generate invalid Erlang.
+
 ## v0.29.0 - 2023-05-23
 
 - New projects now require `gleam_stdlib` v0.29.
