@@ -137,7 +137,7 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
-    fn read_recipe() {
+    fn read_requirement() {
         let toml = r#"
             short = "~> 0.5"
             hex = { version = "~> 1.0.0" }
