@@ -585,10 +585,8 @@ impl ProvidedPackageSource {
             }
         }
     }
-}
 
-impl ToString for ProvidedPackageSource {
-    fn to_string(&self) -> String {
+    fn to_toml(&self) -> String {
         match self {
             ProvidedPackageSource::Git { repo, commit } => {
                 format!(r#"{{ repo: "{}", commit: "{}" }}"#, repo, commit)
@@ -684,8 +682,8 @@ fn provide_local_package(
             // A different source for this package has already been found
             Err(Error::ProvidedDependencyConflict(
                 package_name.to_string(),
-                package_source.to_string(),
-                package.source.to_string(),
+                package_source.to_toml(),
+                package.source.to_toml(),
             ))
         }
     }
