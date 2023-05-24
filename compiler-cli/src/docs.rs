@@ -73,7 +73,7 @@ pub fn build() -> Result<()> {
     crate::fs::write_outputs_under(&outputs, &out)?;
 
     println!(
-        "\nThe documentation for {package} has been rendered to \n./{out}/index.html",
+        "\nThe documentation for {package} has been rendered to \n{out}/index.html",
         package = config.name,
         out = out.to_string_lossy()
     );
