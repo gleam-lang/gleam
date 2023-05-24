@@ -713,76 +713,74 @@ fn provide_package(
     provided: &mut HashMap<SmolStr, ProvidedPackage>,
     parents: &mut Vec<SmolStr>,
 ) -> Result<hexpm::version::Range> {
+    // Return early if a package cyle is detected
     if parents.contains(&package_name) {
-        // Dependency cycled detected
-        Err(Error::ProvidedDependencyCycle(
+        return Err(Error::ProvidedDependencyCycle(
             package_name.to_string(),
             parents.join(" -> "),
-        ))
-    } else {
-        // This package is not in a dependency cycle
-        match provided.get(&package_name) {
-            None => {
-                // No package with this name has been provided load the project config
-                let config = crate::config::read(package_path.join("gleam.toml"))?;
-                // Check that we are loading the correct project
-                if config.name != package_name {
-                    return Err(Error::DependencyResolutionFailed(format!(
-                        "{} was expected but {} was found",
-                        package_name, config.name
-                    )));
-                };
-                // Walk the requirements of the package
-                let mut requirements = HashMap::new();
-                parents.push(package_name);
-                for (name, requirement) in config.dependencies.into_iter() {
-                    let name = SmolStr::from(name);
-                    let version = match requirement {
-                        Requirement::Hex { version } => version,
-                        Requirement::Path { path } => {
-                            let resolved_path = if path.is_absolute() {
-                                path
-                            } else {
-                                package_path.join(path)
-                            };
-                            // Recursively walk local packages
-                            provide_local_package(name.clone(), &resolved_path, provided, parents)?
-                        }
-                        Requirement::Git { git } => {
-                            provide_git_package(name.clone(), &git, provided)?
-                        }
-                    };
-                    let _ = requirements.insert(name, version);
-                }
-                let _ = parents.pop();
-                // Add the package to the set
-                let version = hexpm::version::Range::new(format!("== {}", &config.version));
-                let _ = provided.insert(
-                    config.name,
-                    ProvidedPackage {
-                        version: config.version,
-                        source: package_source,
-                        requirements,
-                    },
-                );
-                // Return the version
-                Ok(version)
-            }
-            Some(package) if package.source == package_source => {
-                // This package has already been provided from this source, return the version
-                let version = hexpm::version::Range::new(format!("== {}", &package.version));
-                Ok(version)
-            }
-            Some(package) => {
-                // This package has already been provided from a different source which conflicts
-                Err(Error::ProvidedDependencyConflict(
-                    package_name.to_string(),
-                    package_source.to_toml(),
-                    package.source.to_toml(),
-                ))
-            }
-        }
+        ));
     }
+
+    // Check that we do not have a cached version of this package already
+    match provided.get(&package_name) {
+        Some(package) if package.source == package_source => {
+            // This package has already been provided from this source, return the version
+            let version = hexpm::version::Range::new(format!("== {}", &package.version));
+            return Ok(version);
+        }
+        Some(package) => {
+            // This package has already been provided from a different source which conflicts
+            return Err(Error::ProvidedDependencyConflict(
+                package_name.to_string(),
+                package_source.to_toml(),
+                package.source.to_toml(),
+            ));
+        }
+        None => (),
+    }
+
+    // Load the package
+    let config = crate::config::read(package_path.join("gleam.toml"))?;
+    // Check that we are loading the correct project
+    if config.name != package_name {
+        return Err(Error::DependencyResolutionFailed(format!(
+            "{} was expected but {} was found",
+            package_name, config.name
+        )));
+    };
+    // Walk the requirements of the package
+    let mut requirements = HashMap::new();
+    parents.push(package_name);
+    for (name, requirement) in config.dependencies.into_iter() {
+        let name = SmolStr::from(name);
+        let version = match requirement {
+            Requirement::Hex { version } => version,
+            Requirement::Path { path } => {
+                let resolved_path = if path.is_absolute() {
+                    path
+                } else {
+                    package_path.join(path)
+                };
+                // Recursively walk local packages
+                provide_local_package(name.clone(), &resolved_path, provided, parents)?
+            }
+            Requirement::Git { git } => provide_git_package(name.clone(), &git, provided)?,
+        };
+        let _ = requirements.insert(name, version);
+    }
+    let _ = parents.pop();
+    // Add the package to the provided packages dictionary
+    let version = hexpm::version::Range::new(format!("== {}", &config.version));
+    let _ = provided.insert(
+        config.name,
+        ProvidedPackage {
+            version: config.version,
+            source: package_source,
+            requirements,
+        },
+    );
+    // Return the version
+    Ok(version)
 }
 
 #[test]
