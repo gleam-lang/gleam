@@ -717,12 +717,16 @@ fn provide_package(
 ) -> Result<hexpm::version::Range> {
     // Return early if a package cyle is detected
     if parents.contains(&package_name) {
-        return Err(Error::ProvidedDependencyCycle(
-            package_name.to_string(),
-            parents.join(" -> "),
-        ));
+        let mut last_cycle = parents
+            .split(|p| p == &package_name)
+            .last()
+            .unwrap_or_default()
+            .to_vec();
+        last_cycle.push(package_name);
+        return Err(Error::PackageCycle {
+            packages: last_cycle,
+        });
     }
-
     // Check that we do not have a cached version of this package already
     match provided.get(&package_name) {
         Some(package) if package.source == package_source => {
@@ -732,23 +736,23 @@ fn provide_package(
         }
         Some(package) => {
             // This package has already been provided from a different source which conflicts
-            return Err(Error::ProvidedDependencyConflict(
-                package_name.to_string(),
-                package_source.to_toml(),
-                package.source.to_toml(),
-            ));
+            return Err(Error::ProvidedDependencyConflict {
+                package: package_name.to_string(),
+                source_1: package_source.to_toml(),
+                source_2: package.source.to_toml(),
+            });
         }
         None => (),
     }
-
     // Load the package
     let config = crate::config::read(package_path.join("gleam.toml"))?;
     // Check that we are loading the correct project
     if config.name != package_name {
-        return Err(Error::DependencyResolutionFailed(format!(
-            "{} was expected but {} was found",
-            package_name, config.name
-        )));
+        return Err(Error::WrongDependencyProvided {
+            expected: package_name.to_string(),
+            path: package_path.to_path_buf(),
+            found: config.name.to_string(),
+        });
     };
     // Walk the requirements of the package
     let mut requirements = HashMap::new();
@@ -794,10 +798,15 @@ fn provide_wrong_package() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    let error = Err(Error::DependencyResolutionFailed(
-        "wrong_name was expected but hello_world was found".to_string(),
-    ));
-    assert_eq!(result, error)
+    if let Err(Error::WrongDependencyProvided {
+        expected, found, ..
+    }) = result
+    {
+        assert_eq!(expected, "wrong_name");
+        assert_eq!(found, "hello_world");
+    } else {
+        panic!("Expected WrongDependencyProvided error")
+    }
 }
 
 #[test]
@@ -851,7 +860,11 @@ fn provide_conflicting_package() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    assert!(result.is_err()); // Error contains canonical path, so we cannot assert against the actual error value
+    if let Err(Error::ProvidedDependencyConflict { package, .. }) = result {
+        assert_eq!(package, "hello_world");
+    } else {
+        panic!("Expected ProvidedDependencyConflict error")
+    }
 }
 
 #[test]
@@ -886,10 +899,9 @@ fn provided_recursive() {
     );
     assert_eq!(
         result,
-        Err(Error::ProvidedDependencyCycle(
-            "hello_world".to_string(),
-            "root -> hello_world -> subpackage".to_string()
-        ))
+        Err(Error::PackageCycle {
+            packages: vec!["subpackage".into(), "hello_world".into()],
+        })
     )
 }
 
