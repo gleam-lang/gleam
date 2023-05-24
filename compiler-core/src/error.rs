@@ -130,6 +130,9 @@ pub enum Error {
     #[error("{module} is not a valid module name")]
     InvalidModuleName { module: String },
 
+    #[error("{module} must belong in src/ or test/")]
+    InvalidModulePrefix { module: String, prefix: String },
+
     #[error("{module} is not module")]
     ModuleDoesNotExist { module: SmolStr },
 
@@ -438,6 +441,18 @@ forward slash and must not end with a slash."
                 location: None,
                 hint: None,
             },
+
+            Error::InvalidModulePrefix { prefix, module } => {
+                Diagnostic {
+                    title: "Module does not exist".into(),
+                    text: format!("You are calling a module with `{prefix}`.\nOnly files within src/ and test/ are valid modules."),
+                    level: Level::Error,
+                    location: None,
+                    hint: Some(
+                        format!("Try running `{module}`.")
+                    ),
+                }
+            }
 
             Error::ModuleDoesNotExist { module } => Diagnostic {
                 title: "Module does not exist".into(),

@@ -17,10 +17,10 @@ should_succeed() {
 should_fail() {
     echo
     echo Running: "$@"
-    
+
     EXIT_CODE=0
     cargo run -- $@ > /dev/null 2>&1 || EXIT_CODE=$?
-    
+
     if [ $EXIT_CODE -eq 0 ]
     then
         echo ERROR: Command should have failed
@@ -52,6 +52,9 @@ should_succeed run --module gleeunit --target javascript --runtime deno
 
 # Unknown module
 should_fail run --module doesnt_exist
+
+# Unknown module should only belong as a package or in src/ and test/
+should_fail run --module src/doesnt_exist
 
 # No main function
 should_fail run --module module/no_main_function

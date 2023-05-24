@@ -4,6 +4,7 @@ use gleam_core::{
     error::Error,
     io::{CommandExecutor, Stdio},
     paths::ProjectPaths,
+    type_::ModuleFunction,
 };
 use lazy_static::lazy_static;
 use smol_str::SmolStr;
@@ -46,6 +47,7 @@ pub fn command(
         }
         _ => crate::config::root_config(),
     }?;
+
     // The root config is required to run the project.
     let root_config = crate::config::root_config()?;
 
@@ -69,7 +71,7 @@ pub fn command(
     )?;
 
     // A module can not be run if it does not exist or does not have a public main function.
-    let main_function = built.get_main_function(&SmolStr::from(module.to_owned()))?;
+    let main_function = get_or_suggest_main_function(built, &module)?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
@@ -264,6 +266,37 @@ fn is_gleam_module(module: &str) -> bool {
     }
 
     RE.is_match(module)
+}
+
+/// If provided module is not executable, suggest a possible valid module.
+fn get_or_suggest_main_function(
+    built: gleam_core::build::Built,
+    module: &String,
+) -> Result<ModuleFunction, Error> {
+    match built.get_main_function(&SmolStr::from(module.to_owned())) {
+        Ok(main_fn) => Ok(main_fn),
+        Err(err) => {
+            if let Some(mod_path) = module.strip_prefix("src/") {
+                if let Ok(_) = built.get_main_function(&SmolStr::from(mod_path.to_owned())) {
+                    return Err(Error::InvalidModulePrefix {
+                        module: mod_path.to_string(),
+                        prefix: "src/".to_string(),
+                    });
+                }
+            }
+
+            if let Some(mod_path) = module.strip_prefix("test/") {
+                if let Ok(_) = built.get_main_function(&SmolStr::from(mod_path.to_owned())) {
+                    return Err(Error::InvalidModulePrefix {
+                        module: mod_path.to_string(),
+                        prefix: "test/".to_string(),
+                    });
+                }
+            }
+
+            Err(err)
+        }
+    }
 }
 
 #[test]
