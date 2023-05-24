@@ -785,7 +785,7 @@ fn provide_wrong_package() {
         "wrong_name".into(),
         &Path::new("../test/hello_world"),
         &mut provided,
-        &mut vec!["root".into(), "subpackage".into()]
+        &mut vec!["root".into(), "subpackage".into()],
     );
     let error = Err(Error::DependencyResolutionFailed(
         "wrong_name was expected but hello_world was found".to_string(),
@@ -801,7 +801,7 @@ fn provide_existing_package() {
         "hello_world".into(),
         &Path::new("../test/hello_world"),
         &mut provided,
-        &mut vec!["root".into(), "subpackage".into()]
+        &mut vec!["root".into(), "subpackage".into()],
     );
     assert_eq!(
         result,
@@ -812,7 +812,7 @@ fn provide_existing_package() {
         "hello_world".into(),
         &Path::new("../test/hello_world"),
         &mut provided,
-        &mut vec!["root".into(), "subpackage".into()]
+        &mut vec!["root".into(), "subpackage".into()],
     );
     assert_eq!(
         result,
@@ -828,7 +828,7 @@ fn provide_conflicting_package() {
         "hello_world".into(),
         &Path::new("../test/hello_world"),
         &mut provided,
-        &mut vec!["root".into(), "subpackage".into()]
+        &mut vec!["root".into(), "subpackage".into()],
     );
     assert_eq!(
         result,
@@ -842,7 +842,7 @@ fn provide_conflicting_package() {
             path: Path::new("../test/other").to_path_buf(),
         },
         &mut provided,
-        &mut vec!["root".into(), "subpackage".into()]
+        &mut vec!["root".into(), "subpackage".into()],
     );
     assert!(result.is_err()); // Error contains canonical path, so we cannot assert against the actual error value
 }
@@ -854,7 +854,7 @@ fn provided_is_absolute() {
         "hello_world".into(),
         &Path::new("../test/hello_world"),
         &mut provided,
-        &mut vec!["root".into(), "subpackage".into()]
+        &mut vec!["root".into(), "subpackage".into()],
     );
     assert_eq!(
         result,
@@ -875,11 +875,14 @@ fn provided_recursive() {
         "hello_world".into(),
         &Path::new("../test/hello_world"),
         &mut provided,
-        &mut vec!["root".into(), "hello_world".into(), "subpackage".into()]
+        &mut vec!["root".into(), "hello_world".into(), "subpackage".into()],
     );
     assert_eq!(
         result,
-        Err(Error::ProvidedDependencyCycle("hello_world".to_string(), "root -> hello_world -> subpackage".to_string()))
+        Err(Error::ProvidedDependencyCycle(
+            "hello_world".to_string(),
+            "root -> hello_world -> subpackage".to_string()
+        ))
     )
 }
 
