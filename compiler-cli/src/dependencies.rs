@@ -295,8 +295,10 @@ fn write_manifest_to_disc(paths: &ProjectPaths, manifest: &Manifest) -> Result<(
     fs::write(&path, &manifest.to_toml())
 }
 
-// This is the container for locally pinned packages.
-// For packages provided by paths and git deps, see the ProvidedPackage struct
+// This is the container for locally pinned packages, representing the current contents of
+// the `project/build/packages` directory.
+// For descriptions of packages provided by paths and git deps, see the ProvidedPackage struct.
+// The same package may appear in both at different times.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct LocalPackages {
     packages: HashMap<String, Version>,
