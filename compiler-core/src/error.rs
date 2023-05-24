@@ -195,11 +195,19 @@ pub enum Error {
     #[error("The package {0} is listed in dependencies and dev-dependencies")]
     DuplicateDependency(String),
 
-    #[error("The package {0} is provided multiple times, as {1} and {2}")]
-    ProvidedDependencyConflict(String, String, String),
+    #[error("Expected package {expected} at path {path} but found {found} instead")]
+    WrongDependencyProvided {
+        path: PathBuf,
+        expected: String,
+        found: String,
+    },
 
-    #[error("The package {0} has a dependency cycle: {1} -> {0}")]
-    ProvidedDependencyCycle(String, String),
+    #[error("The package {package} is provided multiple times, as {source_1} and {source_2}")]
+    ProvidedDependencyConflict {
+        package: String,
+        source_1: String,
+        source_2: String,
+    },
 
     #[error("The package was missing required fields for publishing")]
     MissingHexPublishFields {
@@ -2335,11 +2343,16 @@ The error from the version resolver library was:
                 }
             }
 
-            Error::ProvidedDependencyConflict(name, pkg1, pkg2) => {
-                let text = format!("The package {} resolves to both {} nad {}", name, pkg1, pkg2);
+            Error::WrongDependencyProvided { path, expected, found } => {
+                let text = format!(
+                    "Expected package {} at path {} but found {} instead",
+                    expected,
+                    path.to_string_lossy(),
+                    found
+                );
 
                 Diagnostic {
-                    title: "Conflicting provided dependencies".into(),
+                    title: "Wrong dependency provided".into(),
                     text,
                     hint: None,
                     location: None,
@@ -2347,11 +2360,16 @@ The error from the version resolver library was:
                 }
             }
 
-            Error::ProvidedDependencyCycle(name, path) => {
-                let text = format!("The package {0} has a dependency cycle: {1} -> {0}", name, path);
+            Error::ProvidedDependencyConflict{package, source_1, source_2} => {
+                let text = format!(
+                    "The package {} is provided as both {} nad {}",
+                    package,
+                    source_1,
+                    source_2
+                );
 
                 Diagnostic {
-                    title: "Provided dependencies are recursive".into(),
+                    title: "Conflicting provided dependencies".into(),
                     text,
                     hint: None,
                     location: None,
