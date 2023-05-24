@@ -794,7 +794,7 @@ fn provide_wrong_package() {
     let mut provided = HashMap::new();
     let result = provide_local_package(
         "wrong_name".into(),
-        &Path::new("../test/hello_world"),
+        &Path::new("./test/hello_world"),
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
@@ -815,7 +815,7 @@ fn provide_existing_package() {
 
     let result = provide_local_package(
         "hello_world".into(),
-        &Path::new("../test/hello_world"),
+        &Path::new("./test/hello_world"),
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
@@ -826,7 +826,7 @@ fn provide_existing_package() {
 
     let result = provide_local_package(
         "hello_world".into(),
-        &Path::new("../test/hello_world"),
+        &Path::new("./test/hello_world"),
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
@@ -842,7 +842,7 @@ fn provide_conflicting_package() {
 
     let result = provide_local_package(
         "hello_world".into(),
-        &Path::new("../test/hello_world"),
+        &Path::new("./test/hello_world"),
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
@@ -853,9 +853,9 @@ fn provide_conflicting_package() {
 
     let result = provide_package(
         "hello_world".into(),
-        &Path::new("../test/other"),
+        &Path::new("./test/other"),
         ProvidedPackageSource::Local {
-            path: Path::new("../test/other").to_path_buf(),
+            path: Path::new("./test/other").to_path_buf(),
         },
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -872,7 +872,7 @@ fn provided_is_absolute() {
     let mut provided = HashMap::new();
     let result = provide_local_package(
         "hello_world".into(),
-        &Path::new("../test/hello_world"),
+        &Path::new("./test/hello_world"),
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
@@ -893,7 +893,7 @@ fn provided_recursive() {
     let mut provided = HashMap::new();
     let result = provide_local_package(
         "hello_world".into(),
-        &Path::new("../test/hello_world"),
+        &Path::new("./test/hello_world"),
         &mut provided,
         &mut vec!["root".into(), "hello_world".into(), "subpackage".into()],
     );
