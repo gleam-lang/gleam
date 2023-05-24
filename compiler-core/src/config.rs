@@ -4,7 +4,7 @@ use crate::manifest::Manifest;
 use crate::requirement::Requirement;
 use crate::{Error, Result};
 use globset::{Glob, GlobSetBuilder};
-use hexpm::version::{Range, Version};
+use hexpm::version::Version;
 use http::Uri;
 use serde::Deserialize;
 use smol_str::SmolStr;
@@ -102,13 +102,6 @@ impl PackageConfig {
             Mode::Dev | Mode::Lsp => self.all_dependencies(),
             Mode::Prod => Ok(self.dependencies.clone()),
         }
-    }
-
-    pub fn dependency_versions_for(&self, mode: Mode) -> Result<HashMap<String, Range>> {
-        self.dependencies_for(mode)?
-            .iter()
-            .map(|(package, requirement)| Ok((package.clone(), requirement.version_range()?)))
-            .collect()
     }
 
     pub fn all_dependencies(&self) -> Result<Dependencies> {
