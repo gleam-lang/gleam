@@ -1,0 +1,8 @@
+name = "hello_world"
+version = "0.1.0"
+
+[dependencies]
+gleam_stdlib = "~> 0.28"
+
+[dev-dependencies]
+gleeunit = "~> 0.10"
