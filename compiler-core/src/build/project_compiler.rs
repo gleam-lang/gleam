@@ -62,6 +62,7 @@ impl Built {
             Some(module_data) => module_data.get_main_function(),
             None => Err(Error::ModuleDoesNotExist {
                 module: module.clone(),
+                suggestion: None,
             }),
         }
     }

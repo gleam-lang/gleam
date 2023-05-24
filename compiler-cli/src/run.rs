@@ -7,7 +7,6 @@ use gleam_core::{
     type_::ModuleFunction,
 };
 use lazy_static::lazy_static;
-use smol_str::SmolStr;
 use std::path::PathBuf;
 
 use crate::fs::ProjectIO;
@@ -273,30 +272,27 @@ fn get_or_suggest_main_function(
     built: gleam_core::build::Built,
     module: &String,
 ) -> Result<ModuleFunction, Error> {
-    match built.get_main_function(&SmolStr::from(module.to_owned())) {
-        Ok(main_fn) => Ok(main_fn),
-        Err(err) => {
-            if let Some(mod_path) = module.strip_prefix("src/") {
-                if let Ok(_) = built.get_main_function(&SmolStr::from(mod_path.to_owned())) {
-                    return Err(Error::InvalidModulePrefix {
-                        module: mod_path.to_string(),
-                        prefix: "src/".to_string(),
-                    });
-                }
-            }
+    // Check if the module exists
+    let error = match built.get_main_function(&module.into()) {
+        Ok(main_fn) => return Ok(main_fn),
+        Err(error) => error,
+    };
 
-            if let Some(mod_path) = module.strip_prefix("test/") {
-                if let Ok(_) = built.get_main_function(&SmolStr::from(mod_path.to_owned())) {
-                    return Err(Error::InvalidModulePrefix {
-                        module: mod_path.to_string(),
-                        prefix: "test/".to_string(),
-                    });
-                }
-            }
-
-            Err(err)
+    // Otherwise see if the module has been prefixed with "src/" or "test/".
+    for prefix in ["src/", "test/"] {
+        let other = match module.strip_prefix(prefix) {
+            Some(other) => other.into(),
+            None => continue,
+        };
+        if built.get_main_function(&other).is_ok() {
+            return Err(Error::ModuleDoesNotExist {
+                module: module.into(),
+                suggestion: Some(other),
+            });
         }
     }
+
+    Err(error)
 }
 
 #[test]

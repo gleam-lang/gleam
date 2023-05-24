@@ -130,11 +130,11 @@ pub enum Error {
     #[error("{module} is not a valid module name")]
     InvalidModuleName { module: String },
 
-    #[error("{module} must belong in src/ or test/")]
-    InvalidModulePrefix { module: String, prefix: String },
-
     #[error("{module} is not module")]
-    ModuleDoesNotExist { module: SmolStr },
+    ModuleDoesNotExist {
+        module: SmolStr,
+        suggestion: Option<SmolStr>,
+    },
 
     #[error("{module} does not have a main function")]
     ModuleDoesNotHaveMainFunction { module: SmolStr },
@@ -442,25 +442,19 @@ forward slash and must not end with a slash."
                 hint: None,
             },
 
-            Error::InvalidModulePrefix { prefix, module } => {
+            Error::ModuleDoesNotExist { module, suggestion } => {
+                let hint = match suggestion {
+                    Some(suggestion) => format!("Did you mean `{}`?", suggestion),
+                    None => format!("Try creating the file `src/{}.gleam`.", module),
+                };
                 Diagnostic {
                     title: "Module does not exist".into(),
-                    text: format!("You are calling a module with `{prefix}`.\nOnly files within src/ and test/ are valid modules."),
+                    text: format!("Module `{module}` was not found"),
                     level: Level::Error,
                     location: None,
-                    hint: Some(
-                        format!("Try running `{module}`.")
-                    ),
+                    hint: Some(hint),
                 }
             }
-
-            Error::ModuleDoesNotExist { module } => Diagnostic {
-                title: "Module does not exist".into(),
-                text: format!("Module `{module}` was not found"),
-                level: Level::Error,
-                location: None,
-                hint: Some(format!("Try creating the file `src/{}.gleam`.", module)),
-            },
 
             Error::ModuleDoesNotHaveMainFunction { module } => Diagnostic {
                 title: "Module does not have a main function".into(),
