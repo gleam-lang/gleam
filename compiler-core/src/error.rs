@@ -198,6 +198,9 @@ pub enum Error {
     #[error("The package {0} is provided multiple times, as {1} and {2}")]
     ProvidedDependencyConflict(String, String, String),
 
+    #[error("The package {0} has a dependency cycle: {1} -> {0}")]
+    ProvidedDependencyCycle(String, String),
+
     #[error("The package was missing required fields for publishing")]
     MissingHexPublishFields {
         description_missing: bool,
@@ -2337,6 +2340,18 @@ The error from the version resolver library was:
 
                 Diagnostic {
                     title: "Conflicting provided dependencies".into(),
+                    text,
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }
+            }
+
+            Error::ProvidedDependencyCycle(name, path) => {
+                let text = format!("The package {0} has a dependency cycle: {1} -> {0}", name, path);
+
+                Diagnostic {
+                    title: "Provided dependencies are recursive".into(),
                     text,
                     hint: None,
                     location: None,

@@ -621,10 +621,15 @@ fn resolve_versions<Telem: Telemetry>(
     for (name, requirement) in dependencies.into_iter() {
         let version = match requirement {
             Requirement::Hex { version } => version,
-            Requirement::Path { path } => {
-                provide_local_package(&name, &path, &mut provided_packages)?
+            Requirement::Path { path } => provide_local_package(
+                SmolStr::from(&name),
+                &path,
+                &mut provided_packages,
+                &mut vec![],
+            )?,
+            Requirement::Git { git } => {
+                provide_git_package(SmolStr::from(&name), &git, &mut provided_packages)?
             }
-            Requirement::Git { git } => provide_git_package(&name, &git, &mut provided_packages)?,
         };
         let _ = root_requirements.insert(name, version);
     }
@@ -660,9 +665,10 @@ fn resolve_versions<Telem: Telemetry>(
 
 /// Provide a package from a local project
 fn provide_local_package(
-    package_name: &str,
+    package_name: SmolStr,
     package_path: &Path,
     provided: &mut HashMap<SmolStr, ProvidedPackage>,
+    parents: &mut Vec<SmolStr>,
 ) -> Result<hexpm::version::Range> {
     let canonical_path = package_path
         .canonicalize()
@@ -670,12 +676,18 @@ fn provide_local_package(
     let package_source = ProvidedPackageSource::Local {
         path: canonical_path.clone(),
     };
-    provide_package(package_name, &canonical_path, package_source, provided)
+    provide_package(
+        package_name,
+        &canonical_path,
+        package_source,
+        provided,
+        parents,
+    )
 }
 
 /// Provide a package from a git repository
 fn provide_git_package(
-    _package_name: &str,
+    _package_name: SmolStr,
     _repo: &str,
     _provided: &mut HashMap<SmolStr, ProvidedPackage>,
 ) -> Result<hexpm::version::Range> {
@@ -688,65 +700,80 @@ fn provide_git_package(
 
 /// Adds a gleam project located at a specific path to the list of "provided packages"
 fn provide_package(
-    package_name: &str,
+    package_name: SmolStr,
     package_path: &Path,
     package_source: ProvidedPackageSource,
     provided: &mut HashMap<SmolStr, ProvidedPackage>,
+    parents: &mut Vec<SmolStr>,
 ) -> Result<hexpm::version::Range> {
-    // Determine if package has already been provided
-    match provided.get(package_name) {
-        None => {
-            // No package with this name has been provided load the project config
-            let config = crate::config::read(package_path.join("gleam.toml"))?;
-            // Check that we are loading the correct project
-            if config.name != package_name {
-                return Err(Error::DependencyResolutionFailed(format!(
-                    "{} was expected but {} was found",
-                    package_name, config.name
-                )));
-            };
-            // Add package to list of provided packages
-            let mut requirements = HashMap::new();
-            for (name, requirement) in config.dependencies.into_iter() {
-                let version = match requirement {
-                    Requirement::Hex { version } => version,
-                    Requirement::Path { path } => {
-                        let resolved_path = if path.is_absolute() {
-                            path
-                        } else {
-                            package_path.join(path)
-                        };
-                        // Recursively walk local packages
-                        provide_local_package(&name, &resolved_path, provided)?
-                    }
-                    Requirement::Git { git } => provide_git_package(&name, &git, provided)?,
+    if parents.contains(&package_name) {
+        // Dependency cycled detected
+        Err(Error::ProvidedDependencyCycle(
+            package_name.to_string(),
+            parents.join(" -> "),
+        ))
+    } else {
+        // This package is not in a dependency cycle
+        match provided.get(&package_name) {
+            None => {
+                // No package with this name has been provided load the project config
+                let config = crate::config::read(package_path.join("gleam.toml"))?;
+                // Check that we are loading the correct project
+                if config.name != package_name {
+                    return Err(Error::DependencyResolutionFailed(format!(
+                        "{} was expected but {} was found",
+                        package_name, config.name
+                    )));
                 };
-                let _ = requirements.insert(SmolStr::new(name), version);
+                // Walk the requirements of the package
+                let mut requirements = HashMap::new();
+                parents.push(package_name);
+                for (name, requirement) in config.dependencies.into_iter() {
+                    let name = SmolStr::from(name);
+                    let version = match requirement {
+                        Requirement::Hex { version } => version,
+                        Requirement::Path { path } => {
+                            let resolved_path = if path.is_absolute() {
+                                path
+                            } else {
+                                package_path.join(path)
+                            };
+                            // Recursively walk local packages
+                            provide_local_package(name.clone(), &resolved_path, provided, parents)?
+                        }
+                        Requirement::Git { git } => {
+                            provide_git_package(name.clone(), &git, provided)?
+                        }
+                    };
+                    let _ = requirements.insert(name, version);
+                }
+                let _ = parents.pop();
+                // Add the package to the set
+                let version = hexpm::version::Range::new(format!("== {}", &config.version));
+                let _ = provided.insert(
+                    config.name,
+                    ProvidedPackage {
+                        version: config.version,
+                        source: package_source,
+                        requirements,
+                    },
+                );
+                // Return the version
+                Ok(version)
             }
-            let version = hexpm::version::Range::new(format!("== {}", &config.version));
-            let _ = provided.insert(
-                config.name,
-                ProvidedPackage {
-                    version: config.version,
-                    source: package_source,
-                    requirements,
-                },
-            );
-            // Return the version
-            Ok(version)
-        }
-        Some(package) if package.source == package_source => {
-            // This package has already been provided from this source, return the version
-            let version = hexpm::version::Range::new(format!("== {}", &package.version));
-            Ok(version)
-        }
-        Some(package) => {
-            // This package has already been provided from a different source which conflicts
-            Err(Error::ProvidedDependencyConflict(
-                package_name.to_string(),
-                package_source.to_toml(),
-                package.source.to_toml(),
-            ))
+            Some(package) if package.source == package_source => {
+                // This package has already been provided from this source, return the version
+                let version = hexpm::version::Range::new(format!("== {}", &package.version));
+                Ok(version)
+            }
+            Some(package) => {
+                // This package has already been provided from a different source which conflicts
+                Err(Error::ProvidedDependencyConflict(
+                    package_name.to_string(),
+                    package_source.to_toml(),
+                    package.source.to_toml(),
+                ))
+            }
         }
     }
 }
@@ -758,6 +785,7 @@ fn provide_wrong_package() {
         "wrong_name".into(),
         &Path::new("../test/hello_world"),
         &mut provided,
+        &mut vec!["root".into(), "subpackage".into()]
     );
     let error = Err(Error::DependencyResolutionFailed(
         "wrong_name was expected but hello_world was found".to_string(),
@@ -773,6 +801,7 @@ fn provide_existing_package() {
         "hello_world".into(),
         &Path::new("../test/hello_world"),
         &mut provided,
+        &mut vec!["root".into(), "subpackage".into()]
     );
     assert_eq!(
         result,
@@ -783,6 +812,7 @@ fn provide_existing_package() {
         "hello_world".into(),
         &Path::new("../test/hello_world"),
         &mut provided,
+        &mut vec!["root".into(), "subpackage".into()]
     );
     assert_eq!(
         result,
@@ -798,6 +828,7 @@ fn provide_conflicting_package() {
         "hello_world".into(),
         &Path::new("../test/hello_world"),
         &mut provided,
+        &mut vec!["root".into(), "subpackage".into()]
     );
     assert_eq!(
         result,
@@ -811,6 +842,7 @@ fn provide_conflicting_package() {
             path: Path::new("../test/other").to_path_buf(),
         },
         &mut provided,
+        &mut vec!["root".into(), "subpackage".into()]
     );
     assert!(result.is_err()); // Error contains canonical path, so we cannot assert against the actual error value
 }
@@ -822,6 +854,7 @@ fn provided_is_absolute() {
         "hello_world".into(),
         &Path::new("../test/hello_world"),
         &mut provided,
+        &mut vec!["root".into(), "subpackage".into()]
     );
     assert_eq!(
         result,
@@ -833,6 +866,21 @@ fn provided_is_absolute() {
     } else {
         panic!("Provide_local_package provided a package that is not local!")
     }
+}
+
+#[test]
+fn provided_recursive() {
+    let mut provided = HashMap::new();
+    let result = provide_local_package(
+        "hello_world".into(),
+        &Path::new("../test/hello_world"),
+        &mut provided,
+        &mut vec!["root".into(), "hello_world".into(), "subpackage".into()]
+    );
+    assert_eq!(
+        result,
+        Err(Error::ProvidedDependencyCycle("hello_world".to_string(), "root -> hello_world -> subpackage".to_string()))
+    )
 }
 
 /// Determine the information to add to the manifest for a specific package
