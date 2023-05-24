@@ -210,7 +210,8 @@ async fn add_missing_packages<Telem: Telemetry>(
         match &package.source {
             ManifestPackageSource::Hex { .. } => Ok(()),
             ManifestPackageSource::Local { path } => {
-                fs.copy_dir(&path.join("src"), &package_dest.join("src"))?;
+                fs.mkdir(&package_dest)?;
+                fs.copy_dir(&path.join("src"), &package_dest)?;
                 fs.copy(&path.join("gleam.toml"), &package_dest.join("gleam.toml"))
             }
             ManifestPackageSource::Git { .. } => Ok(()),
