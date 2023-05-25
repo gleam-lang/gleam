@@ -5,6 +5,8 @@
 - Type aliases can now refer to type aliases defined later in the same module.
 - Fixed a bug where unapplied record constructors in constant expressions would
   generate invalid Erlang.
+- Fixed a bug where `gleam docs build` would print an incorrect path upon
+  completion.
 
 ## v0.29.0 - 2023-05-23
 
