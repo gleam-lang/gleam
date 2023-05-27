@@ -19,29 +19,6 @@ pub enum Requirement {
 }
 
 impl Requirement {
-    pub fn version_range(&self) -> Result<Range, Error> {
-        match self {
-            Requirement::Hex { version: range } => Ok(range.clone()),
-            Requirement::Path { path } => {
-                let config_path = path.join("gleam.toml");
-                let toml =
-                    std::fs::read_to_string(&config_path).map_err(|error| Error::FileIo {
-                        kind: FileKind::File,
-                        action: FileIoAction::Read,
-                        path: config_path,
-                        err: Some(error.to_string()),
-                    })?;
-                let config: PackageConfig = toml::from_str(&toml).map_err(|_| {
-                    Error::DependencyResolutionFailed(
-                        "Local dependency config could not be parsed".into(),
-                    )
-                })?;
-                Ok(Range::new(format!("== {}", config.version)))
-            }
-            Requirement::Git { .. } => Err(Error::GitDependencyUnsuported),
-        }
-    }
-
     pub fn hex(range: &str) -> Requirement {
         Requirement::Hex {
             version: Range::new(range.to_string()),
