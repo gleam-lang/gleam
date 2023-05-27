@@ -1,0 +1,9 @@
+name = "project_a"
+version = "0.1.0"
+
+[dependencies]
+project_b = { path = "../project_b" }
+project_c = { path = "../project_c" }
+
+[dev-dependencies]
+gleeunit = "~> 0.10"

@@ -1,0 +1,6 @@
+name = "project_b"
+version = "0.1.0"
+description = "A Gleam project"
+
+[dependencies]
+project_d = { path = "../project_d" }
