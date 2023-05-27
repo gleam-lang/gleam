@@ -2,8 +2,7 @@ use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use crate::config::PackageConfig;
-use crate::error::{Error, FileIoAction, FileKind, Result};
+use crate::error::Result;
 use hexpm::version::Range;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
