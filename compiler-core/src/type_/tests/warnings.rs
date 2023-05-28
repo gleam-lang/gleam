@@ -563,3 +563,22 @@ fn double_unary_bool_variable() {
         "#
     );
 }
+
+#[test]
+fn prefer_list_is_empty_over_list_length() {
+    assert_warning!(
+        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        r#"
+        import gleam/list
+
+        pub fn main() {
+            let a_list = []
+            let _ = list.length(a_list) == 0
+        }
+        "#,
+        Warning::UnusedVariable {
+            name: "b".into(),
+            location: SrcSpan { start: 17, end: 18 },
+        }
+    );
+}
