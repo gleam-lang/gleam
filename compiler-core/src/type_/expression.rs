@@ -692,16 +692,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .map_err(|e| convert_unify_error(e, right.location()))?;
 
                 match (&left, &right) {
-                    (TypedExpr::Call { fun, .. }, TypedExpr::Int { value, .. }) => {
+                    (TypedExpr::Call { fun, .. }, TypedExpr::Int { value, .. })
+                    | (TypedExpr::Int { value, .. }, TypedExpr::Call { fun, .. }) => {
                         match fun.as_ref() {
                             TypedExpr::ModuleSelect {
                                 module_name, label, ..
                             } => {
                                 if module_name == "gleam/list" && label == "length" && value == "0"
                                 {
-                                    self.environment
-                                        .warnings
-                                        .emit(Warning::PerfListLength { location });
+                                    self.environment.warnings.emit(Warning::PerfListLength {
+                                        location,
+                                        is_not_eq: name == BinOp::NotEq,
+                                    });
                                 }
                             }
                             _ => {}

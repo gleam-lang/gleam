@@ -336,6 +336,7 @@ pub enum Warning {
 
     PerfListLength {
         location: SrcSpan,
+        is_not_eq: bool,
     },
 }
 
