@@ -576,9 +576,78 @@ fn prefer_list_is_empty_over_list_length() {
             let _ = list.length(a_list) == 0
         }
         "#,
-        Warning::UnusedVariable {
-            name: "b".into(),
-            location: SrcSpan { start: 17, end: 18 },
+        Warning::PerfListLength {
+            is_not_eq: false,
+            location: SrcSpan {
+                start: 100,
+                end: 124
+            },
+        }
+    );
+}
+
+#[test]
+fn prefer_list_is_empty_over_list_length_with_arguments_flipped() {
+    assert_warning!(
+        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        r#"
+        import gleam/list
+
+        pub fn main() {
+            let a_list = []
+            let _ = 0 == list.length(a_list)
+        }
+        "#,
+        Warning::PerfListLength {
+            is_not_eq: false,
+            location: SrcSpan {
+                start: 100,
+                end: 124
+            },
+        }
+    );
+}
+
+#[test]
+fn prefer_list_is_empty_over_list_length_with_not_eq() {
+    assert_warning!(
+        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        r#"
+        import gleam/list
+
+        pub fn main() {
+            let a_list = []
+            let _ = list.length(a_list) != 0
+        }
+        "#,
+        Warning::PerfListLength {
+            is_not_eq: true,
+            location: SrcSpan {
+                start: 100,
+                end: 124
+            },
+        }
+    );
+}
+
+#[test]
+fn prefer_list_is_empty_over_list_length_with_not_eq_and_arguments_flipped() {
+    assert_warning!(
+        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        r#"
+        import gleam/list
+
+        pub fn main() {
+            let a_list = []
+            let _ = 0 != list.length(a_list)
+        }
+        "#,
+        Warning::PerfListLength {
+            is_not_eq: true,
+            location: SrcSpan {
+                start: 100,
+                end: 124
+            },
         }
     );
 }
