@@ -412,6 +412,21 @@ expression.",
                         extra_labels: Vec::new(),
                     }),
                 },
+                type_::Warning::PerfListLength { location } => Diagnostic {
+                    title: "Inefficient list emptiness check".into(),
+                    text: "".into(),
+                    hint: Some("You can use list.is_empty instead.".into()),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
             },
         }
     }

@@ -691,6 +691,25 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 unify(left.type_(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
 
+                match (&left, &right) {
+                    (TypedExpr::Call { fun, .. }, TypedExpr::Int { value, .. }) => {
+                        match fun.as_ref() {
+                            TypedExpr::ModuleSelect {
+                                module_name, label, ..
+                            } => {
+                                if module_name == "gleam/list" && label == "length" && value == "0"
+                                {
+                                    self.environment
+                                        .warnings
+                                        .emit(Warning::PerfListLength { location });
+                                }
+                            }
+                            _ => {}
+                        };
+                    }
+                    _ => {}
+                }
+
                 return Ok(TypedExpr::BinOp {
                     location,
                     name,

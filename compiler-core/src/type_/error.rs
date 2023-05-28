@@ -333,6 +333,10 @@ pub enum Warning {
     UnnecessaryDoubleBoolNegation {
         location: SrcSpan,
     },
+
+    PerfListLength {
+        location: SrcSpan,
+    },
 }
 
 impl Error {
