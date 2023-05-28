@@ -587,6 +587,28 @@ fn prefer_list_is_empty_over_list_length() {
 }
 
 #[test]
+fn prefer_list_is_empty_over_list_length_with_negative_zero() {
+    assert_warning!(
+        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        r#"
+        import gleam/list
+
+        pub fn main() {
+            let a_list = []
+            let _ = list.length(a_list) == -0
+        }
+        "#,
+        Warning::PerfListLength {
+            is_not_eq: false,
+            location: SrcSpan {
+                start: 100,
+                end: 125
+            },
+        }
+    );
+}
+
+#[test]
 fn prefer_list_is_empty_over_list_length_with_arguments_flipped() {
     assert_warning!(
         ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
