@@ -416,8 +416,8 @@ expression.",
                     location,
                     is_not_eq,
                 } => Diagnostic {
-                    title: "Inefficient list emptiness check".into(),
-                    text: "".into(),
+                    title: "Inefficient empty list check".into(),
+                    text: "`list.length` runs in linear time while `list.is_empty` runs in constant time.".into(),
                     hint: Some(if *is_not_eq {
                         "You can use `!list.is_empty` instead.".into()
                     } else {
