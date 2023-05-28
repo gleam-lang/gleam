@@ -810,7 +810,8 @@ pub(crate) fn assign_subjects<'a>(
     }
     out
 }
-// Helper function to calculate length of str as utf16 without escape characters
+
+/// Calculates the length of str as utf16 without escape characters.
 fn utf16_no_escape_len(str: &SmolStr) -> usize {
     let mut filtered_str = String::new();
     let mut str_iter = str.chars();

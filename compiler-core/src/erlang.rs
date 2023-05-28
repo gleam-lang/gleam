@@ -1685,9 +1685,9 @@ fn variable_name(name: &str) -> String {
     first_uppercased.chain(chars).collect()
 }
 
-// When rendering a type variable to an erlang type spec we need all type variables with the
-// same id to end up with the same name in the generated erlang.
-// This function converts a usize into base 26 A-Z for this purpose.
+/// When rendering a type variable to an erlang type spec we need all type variables with the
+/// same id to end up with the same name in the generated erlang.
+/// This function converts a usize into base 26 A-Z for this purpose.
 fn id_to_type_var(id: u64) -> Document<'static> {
     if id < 26 {
         let mut name = "".to_string();
