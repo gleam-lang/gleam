@@ -412,10 +412,17 @@ expression.",
                         extra_labels: Vec::new(),
                     }),
                 },
-                type_::Warning::PerfListLength { location } => Diagnostic {
+                type_::Warning::PerfListLength {
+                    location,
+                    is_not_eq,
+                } => Diagnostic {
                     title: "Inefficient list emptiness check".into(),
                     text: "".into(),
-                    hint: Some("You can use list.is_empty instead.".into()),
+                    hint: Some(if *is_not_eq {
+                        "You can use `!list.is_empty` instead.".into()
+                    } else {
+                        "You can use `list.is_empty` instead.".into()
+                    }),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
