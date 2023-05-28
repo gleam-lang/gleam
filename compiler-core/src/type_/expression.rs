@@ -698,8 +698,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             TypedExpr::ModuleSelect {
                                 module_name, label, ..
                             } => {
-                                if module_name == "gleam/list" && label == "length" && value == "0"
-                                {
+                                let is_list_length_call =
+                                    module_name == "gleam/list" && label == "length";
+                                let is_emptiness_check = value == "0" || value == "-0";
+
+                                if is_list_length_call && is_emptiness_check {
                                     self.environment.warnings.emit(Warning::PerfListLength {
                                         location,
                                         is_not_eq: name == BinOp::NotEq,
