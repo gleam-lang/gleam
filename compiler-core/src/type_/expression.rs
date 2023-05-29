@@ -755,8 +755,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         right: &TypedExpr,
         location: SrcSpan,
     ) {
-        const STDLIB_MODULE_NAME: &str = "gleam_stdlib";
-
         // Look for a call expression as either of the binary operands.
         let fun = match (&left, &right) {
             (TypedExpr::Call { fun, .. }, _) | (_, TypedExpr::Call { fun, .. }) => fun,
@@ -786,7 +784,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         // Check that we're actually using `list.length` from the standard library.
-        if list_module.package != STDLIB_MODULE_NAME {
+        if list_module.package != crate::STDLIB_PACKAGE_NAME {
             return;
         }
 
@@ -2182,20 +2180,18 @@ fn get_empty_list_check_kind<'a>(
             if binop == BinOp::Eq || binop == BinOp::NotEq =>
         {
             match (binop, value.as_str()) {
-                (BinOp::Eq, "0" | "-0") => Some(EmptyListCheckKind::EmptyList),
-                (BinOp::NotEq, "0" | "-0") => Some(EmptyListCheckKind::NonEmptyList),
+                (BinOp::Eq, "0" | "-0") => Some(EmptyListCheckKind::Empty),
+                (BinOp::NotEq, "0" | "-0") => Some(EmptyListCheckKind::NonEmpty),
                 _ => None,
             }
         }
         (_, TypedExpr::Int { value, .. }) => match (binop, value.as_str()) {
-            (BinOp::LtEqInt, "0" | "-0") | (BinOp::LtInt, "1") => {
-                Some(EmptyListCheckKind::EmptyList)
-            }
+            (BinOp::LtEqInt, "0" | "-0") | (BinOp::LtInt, "1") => Some(EmptyListCheckKind::Empty),
             _ => None,
         },
         (TypedExpr::Int { value, .. }, _) => match (binop, value.as_str()) {
             (BinOp::GtEqInt, "0" | "-0") | (BinOp::GtInt, "1") => {
-                Some(EmptyListCheckKind::NonEmptyList)
+                Some(EmptyListCheckKind::NonEmpty)
             }
             _ => None,
         },

@@ -86,6 +86,8 @@ pub(crate) mod graph;
 pub use error::{Error, Result};
 pub use warning::Warning;
 
+const STDLIB_PACKAGE_NAME: &str = "gleam_stdlib";
+
 mod schema_capnp {
     #![allow(dead_code, unused_qualifications)]
     include!("../generated/schema_capnp.rs");

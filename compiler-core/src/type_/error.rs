@@ -267,8 +267,8 @@ pub enum PatternMatchKind {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EmptyListCheckKind {
-    EmptyList,
-    NonEmptyList,
+    Empty,
+    NonEmpty,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]

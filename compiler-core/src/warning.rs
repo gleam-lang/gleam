@@ -414,14 +414,22 @@ expression.",
                 },
                 type_::Warning::InefficientEmptyListCheck { location, kind } => {
                     use type_::error::EmptyListCheckKind;
+                    let text = "The `list.length` function has to iterate across the whole
+list to calculate the length, which is wasteful if you only
+need to know if the list is empty or not.
+"
+                    .into();
+                    let hint = Some(match kind {
+                        EmptyListCheckKind::Empty => "You can use `the_list == []` instead.".into(),
+                        EmptyListCheckKind::NonEmpty => {
+                            "You can use `the_list != []` instead.".into()
+                        }
+                    });
 
                     Diagnostic {
-                        title: "Inefficient empty list check".into(),
-                        text: "`list.length` runs in linear time while `list.is_empty` runs in constant time.".into(),
-                        hint: Some(match kind {
-                            EmptyListCheckKind::EmptyList => "You can use `list.is_empty` instead.".into(),
-                            EmptyListCheckKind::NonEmptyList => "You can use `!list.is_empty` instead.".into()
-                        }),
+                        title: "Inefficient use of list.length".into(),
+                        text,
+                        hint,
                         level: diagnostic::Level::Warning,
                         location: Some(Location {
                             src: src.clone(),
