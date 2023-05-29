@@ -142,10 +142,10 @@ macro_rules! assert_warning {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
-    ($(($name:expr, $module_src:literal)),+, $src:expr) => {
+    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr) => {
         let output = $crate::type_::tests::get_printed_warnings(
             $src,
-            vec![$(("thepackage", $name, $module_src)),*]
+            vec![$(($package, $name, $module_src)),*]
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
