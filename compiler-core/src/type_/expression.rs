@@ -802,7 +802,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Check the kind of the empty list check so we know whether to recommend
         // `list.is_empty` or `!list.is_empty` as a replacement.
-        let kind = match get_empty_list_check_kind(binop, &left, &right) {
+        let kind = match get_empty_list_check_kind(binop, left, right) {
             Some(kind) => kind,
             None => return,
         };
@@ -2192,21 +2192,19 @@ fn get_empty_list_check_kind<'a>(
             if binop == BinOp::Eq || binop == BinOp::NotEq =>
         {
             match (binop, value.as_str()) {
-                (BinOp::Eq, "0") | (BinOp::Eq, "-0") => Some(EmptyListCheckKind::EmptyList),
-                (BinOp::NotEq, "0") | (BinOp::NotEq, "-0") => {
-                    Some(EmptyListCheckKind::NonEmptyList)
-                }
+                (BinOp::Eq, "0" | "-0") => Some(EmptyListCheckKind::EmptyList),
+                (BinOp::NotEq, "0" | "-0") => Some(EmptyListCheckKind::NonEmptyList),
                 _ => None,
             }
         }
         (_, TypedExpr::Int { value, .. }) => match (binop, value.as_str()) {
-            (BinOp::LtEqInt, "0") | (BinOp::LtEqInt, "-0") | (BinOp::LtInt, "1") => {
+            (BinOp::LtEqInt, "0" | "-0") | (BinOp::LtInt, "1") => {
                 Some(EmptyListCheckKind::EmptyList)
             }
             _ => None,
         },
         (TypedExpr::Int { value, .. }, _) => match (binop, value.as_str()) {
-            (BinOp::GtEqInt, "0") | (BinOp::GtEqInt, "-0") | (BinOp::GtInt, "1") => {
+            (BinOp::GtEqInt, "0" | "-0") | (BinOp::GtInt, "1") => {
                 Some(EmptyListCheckKind::NonEmptyList)
             }
             _ => None,
