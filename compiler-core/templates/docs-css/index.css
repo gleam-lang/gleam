@@ -231,6 +231,13 @@ p {
   font-size: 1.3rem;
 }
 
+blockquote {
+  border-left: 4px solid var(--accent);
+  padding: var(--small-gap) var(--gap);
+  background-color: var(--accented-background);
+  margin: var(--small-gap) 0;
+}
+
 /* Code */
 
 pre,
