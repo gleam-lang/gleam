@@ -414,14 +414,13 @@ expression.",
                 },
                 type_::Warning::InefficientEmptyListCheck {
                     location,
-                    is_not_eq,
+                    kind,
                 } => Diagnostic {
                     title: "Inefficient empty list check".into(),
                     text: "`list.length` runs in linear time while `list.is_empty` runs in constant time.".into(),
-                    hint: Some(if *is_not_eq {
-                        "You can use `!list.is_empty` instead.".into()
-                    } else {
-                        "You can use `list.is_empty` instead.".into()
+                    hint: Some(match kind {
+                        type_::error::EmptyListCheckKind::EmptyList => "You can use `list.is_empty` instead.".into(),
+                        type_::error::EmptyListCheckKind::NonEmptyList => "You can use `!list.is_empty` instead.".into()
                     }),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {

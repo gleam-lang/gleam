@@ -756,9 +756,35 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
     ) {
         // Check if we have a call expression on one side and an int literal on the other.
-        let (fun, value) = match (&left, &right) {
+        let (fun, kind) = match (&left, &right) {
             (TypedExpr::Call { fun, .. }, TypedExpr::Int { value, .. })
-            | (TypedExpr::Int { value, .. }, TypedExpr::Call { fun, .. }) => (fun, value),
+            | (TypedExpr::Int { value, .. }, TypedExpr::Call { fun, .. })
+                if binop == BinOp::Eq || binop == BinOp::NotEq =>
+            {
+                match (binop, value.as_str()) {
+                    (BinOp::Eq, "0") | (BinOp::Eq, "-0") => (fun, EmptyListCheckKind::EmptyList),
+                    (BinOp::NotEq, "0") | (BinOp::NotEq, "-0") => {
+                        (fun, EmptyListCheckKind::NonEmptyList)
+                    }
+                    _ => return,
+                }
+            }
+            (TypedExpr::Call { fun, .. }, TypedExpr::Int { value, .. }) => {
+                match (binop, value.as_str()) {
+                    (BinOp::LtEqInt, "0") | (BinOp::LtEqInt, "-0") | (BinOp::LtInt, "1") => {
+                        (fun, EmptyListCheckKind::EmptyList)
+                    }
+                    _ => return,
+                }
+            }
+            (TypedExpr::Int { value, .. }, TypedExpr::Call { fun, .. }) => {
+                match (binop, value.as_str()) {
+                    (BinOp::GtEqInt, "0") | (BinOp::GtEqInt, "-0") | (BinOp::GtInt, "1") => {
+                        (fun, EmptyListCheckKind::NonEmptyList)
+                    }
+                    _ => return,
+                }
+            }
             _ => return,
         };
 
@@ -800,28 +826,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             return;
         }
 
-        // Check that we're doing what looks like a list emptiness check.
-        let is_emptiness_check = match (binop, value.as_str()) {
-            (BinOp::Eq, "0")
-            | (BinOp::Eq, "-0")
-            | (BinOp::NotEq, "0")
-            | (BinOp::NotEq, "-0")
-            | (BinOp::LtEqInt, "0")
-            | (BinOp::LtEqInt, "-0")
-            | (BinOp::LtInt, "1") => true,
-            _ => false,
-        };
-        if !is_emptiness_check {
-            return;
-        }
-
         // If we've gotten this far, go ahead and emit the warning.
         self.environment
             .warnings
-            .emit(Warning::InefficientEmptyListCheck {
-                location,
-                is_not_eq: binop == BinOp::NotEq,
-            });
+            .emit(Warning::InefficientEmptyListCheck { location, kind });
     }
 
     fn infer_assignment(
