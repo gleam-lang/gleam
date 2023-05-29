@@ -691,3 +691,19 @@ fn allow_list_length_eq_1() {
         "#
     );
 }
+
+/// https://github.com/gleam-lang/gleam/issues/2067
+#[test]
+fn allow_1_lt_list_length() {
+    assert_no_warnings!(
+        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        r#"
+        import gleam/list
+
+        pub fn main() {
+            let a_list = []
+            let _ = 1 < list.length(a_list)
+        }
+        "#
+    );
+}
