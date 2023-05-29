@@ -183,17 +183,40 @@ pub enum Error {
     #[error("{0}")]
     Http(String),
 
+    #[error("Git dependencies are currently unsupported")]
+    GitDependencyUnsuported,
+
+    #[error("Failed to create canonical path for package {0}")]
+    DependencyCanonicalizationFailed(String),
+
     #[error("Dependency tree resolution failed: {0}")]
     DependencyResolutionFailed(String),
 
     #[error("The package {0} is listed in dependencies and dev-dependencies")]
     DuplicateDependency(String),
 
+    #[error("Expected package {expected} at path {path} but found {found} instead")]
+    WrongDependencyProvided {
+        path: PathBuf,
+        expected: String,
+        found: String,
+    },
+
+    #[error("The package {package} is provided multiple times, as {source_1} and {source_2}")]
+    ProvidedDependencyConflict {
+        package: String,
+        source_1: String,
+        source_2: String,
+    },
+
     #[error("The package was missing required fields for publishing")]
     MissingHexPublishFields {
         description_missing: bool,
         licence_missing: bool,
     },
+
+    #[error("Dependency {package:?} has not been published to Hex")]
+    PublishNonHexDependencies { package: String },
 
     #[error("The package {package} uses unsupported build tools {build_tools:?}")]
     UnsupportedBuildTool {
@@ -2280,6 +2303,18 @@ The error from the parser was:
                 }
             }
 
+            Error::DependencyCanonicalizationFailed(package) => {
+                let text = format!("Local package {} has no canonical path", package);
+
+                Diagnostic {
+                    title: "Failed to create canonical path".into(),
+                    text,
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }
+            }
+
             Error::DependencyResolutionFailed(error) => {
                 let text = format!(
                     "An error occurred while determining what dependency packages and versions
@@ -2291,6 +2326,50 @@ The error from the version resolver library was:
                 );
                 Diagnostic {
                     title: "Dependency resolution failed".into(),
+                    text,
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }
+            }
+
+            Error::GitDependencyUnsuported => {
+                Diagnostic {
+                    title: "Git dependencies are not currently supported".into(),
+                    text: "Please remove all git dependencies from the gleam.toml file".into(),
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }
+            }
+
+            Error::WrongDependencyProvided { path, expected, found } => {
+                let text = format!(
+                    "Expected package {} at path {} but found {} instead",
+                    expected,
+                    path.to_string_lossy(),
+                    found
+                );
+
+                Diagnostic {
+                    title: "Wrong dependency provided".into(),
+                    text,
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }
+            }
+
+            Error::ProvidedDependencyConflict{package, source_1, source_2} => {
+                let text = format!(
+                    "The package {} is provided as both {} nad {}",
+                    package,
+                    source_1,
+                    source_2
+                );
+
+                Diagnostic {
+                    title: "Conflicting provided dependencies".into(),
                     text,
                     hint: None,
                     location: None,
@@ -2340,6 +2419,18 @@ licences = ["Apache-2.0"]"#
                     hint: None,
                     location: None,
                     level: Level::Error,
+                }
+            }
+
+            Error::PublishNonHexDependencies {
+                package
+            } => {
+                Diagnostic {
+                    title: "Unblished dependencies".into(),
+                    text: wrap_format!("The package cannot be published to Hex because dependency {} is not a Hex dependency", package),
+                    hint: None,
+                    location: None,
+                    level: Level::Error
                 }
             }
 

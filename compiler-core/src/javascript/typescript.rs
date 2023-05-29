@@ -31,9 +31,9 @@ use crate::{
 
 use super::{concat, import::Imports, line, lines, wrap_args, Output, INDENT};
 
-// When rendering a type variable to an TypeScript type spec we need all type
-// variables with the same id to end up with the same name in the generated
-// TypeScript. This function converts a usize into base 26 A-Z for this purpose.
+/// When rendering a type variable to an TypeScript type spec we need all type
+/// variables with the same id to end up with the same name in the generated
+/// TypeScript. This function converts a usize into base 26 A-Z for this purpose.
 fn id_to_type_var(id: u64) -> Document<'static> {
     if id < 26 {
         return std::iter::once(
@@ -73,15 +73,15 @@ fn name_with_generics<'a>(
     ]
 }
 
-// A generic can either be rendered as an actual type variable such as `A` or `B`,
-// or it can be rendered as `any` depending on how many usages it has. If it
-// has only 1 usage it is an `any` type. If it has more than 1 usage it is a
-// TS generic. This function gathers usages for this determination.
-//
-//   Examples:
-//     fn(a) -> String       // `a` is `any`
-//     fn() -> Result(a, b)  // `a` and `b` are `any`
-//     fn(a) -> a            // `a` is a generic
+/// A generic can either be rendered as an actual type variable such as `A` or `B`,
+/// or it can be rendered as `any` depending on how many usages it has. If it
+/// has only 1 usage it is an `any` type. If it has more than 1 usage it is a
+/// TS generic. This function gathers usages for this determination.
+///
+///   Examples:
+///     fn(a) -> String       // `a` is `any`
+///     fn() -> Result(a, b)  // `a` and `b` are `any`
+///     fn(a) -> a            // `a` is a generic
 fn collect_generic_usages<'a>(
     mut ids: HashMap<u64, u64>,
     types: impl IntoIterator<Item = &'a Arc<Type>>,

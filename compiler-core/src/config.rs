@@ -1,9 +1,10 @@
 use crate::error::{FileIoAction, FileKind};
 use crate::io::FileSystemReader;
 use crate::manifest::Manifest;
+use crate::requirement::Requirement;
 use crate::{Error, Result};
 use globset::{Glob, GlobSetBuilder};
-use hexpm::version::{Range, Version};
+use hexpm::version::Version;
 use http::Uri;
 use serde::Deserialize;
 use smol_str::SmolStr;
@@ -29,7 +30,7 @@ fn default_javascript_runtime() -> Runtime {
     Runtime::NodeJs
 }
 
-pub type Dependencies = HashMap<String, Range>;
+pub type Dependencies = HashMap<String, Requirement>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SpdxLicense {
@@ -184,7 +185,7 @@ struct StalePackageRemover<'a> {
 
 impl<'a> StalePackageRemover<'a> {
     pub fn fresh_and_locked(
-        requirements: &'a HashMap<String, Range>,
+        requirements: &'a HashMap<String, Requirement>,
         manifest: &'a Manifest,
     ) -> HashMap<String, Version> {
         let locked = manifest
@@ -201,7 +202,7 @@ impl<'a> StalePackageRemover<'a> {
 
     fn run(
         &mut self,
-        requirements: &'a HashMap<String, Range>,
+        requirements: &'a HashMap<String, Requirement>,
         manifest: &'a Manifest,
     ) -> HashMap<String, Version> {
         // Record all the requirements that have not changed
@@ -249,13 +250,13 @@ impl<'a> StalePackageRemover<'a> {
 fn locked_no_manifest() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("prod1".into(), Range::new("~> 1.0".into())),
-        ("prod2".into(), Range::new("~> 2.0".into())),
+        ("prod1".into(), Requirement::hex("~> 1.0")),
+        ("prod2".into(), Requirement::hex("~> 2.0")),
     ]
     .into();
     config.dev_dependencies = [
-        ("dev1".into(), Range::new("~> 1.0".into())),
-        ("dev2".into(), Range::new("~> 2.0".into())),
+        ("dev1".into(), Requirement::hex("~> 1.0")),
+        ("dev2".into(), Requirement::hex("~> 2.0")),
     ]
     .into();
     assert_eq!(config.locked(None).unwrap(), [].into());
@@ -265,13 +266,13 @@ fn locked_no_manifest() {
 fn locked_no_changes() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("prod1".into(), Range::new("~> 1.0".into())),
-        ("prod2".into(), Range::new("~> 2.0".into())),
+        ("prod1".into(), Requirement::hex("~> 1.0")),
+        ("prod2".into(), Requirement::hex("~> 2.0")),
     ]
     .into();
     config.dev_dependencies = [
-        ("dev1".into(), Range::new("~> 1.0".into())),
-        ("dev2".into(), Range::new("~> 2.0".into())),
+        ("dev1".into(), Requirement::hex("~> 1.0")),
+        ("dev2".into(), Requirement::hex("~> 2.0")),
     ]
     .into();
     let manifest = Manifest {
@@ -298,8 +299,8 @@ fn locked_no_changes() {
 #[test]
 fn locked_some_removed() {
     let mut config = PackageConfig::default();
-    config.dependencies = [("prod1".into(), Range::new("~> 1.0".into()))].into();
-    config.dev_dependencies = [("dev2".into(), Range::new("~> 2.0".into()))].into();
+    config.dependencies = [("prod1".into(), Requirement::hex("~> 1.0"))].into();
+    config.dev_dependencies = [("dev2".into(), Requirement::hex("~> 2.0"))].into();
     let manifest = Manifest {
         requirements: config.all_dependencies().unwrap(),
         packages: vec![
@@ -325,21 +326,21 @@ fn locked_some_removed() {
 fn locked_some_changed() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("prod1".into(), Range::new("~> 3.0".into())), // Does not match manifest
-        ("prod2".into(), Range::new("~> 2.0".into())),
+        ("prod1".into(), Requirement::hex("~> 3.0")), // Does not match manifest
+        ("prod2".into(), Requirement::hex("~> 2.0")),
     ]
     .into();
     config.dev_dependencies = [
-        ("dev1".into(), Range::new("~> 3.0".into())), // Does not match manifest
-        ("dev2".into(), Range::new("~> 2.0".into())),
+        ("dev1".into(), Requirement::hex("~> 3.0")), // Does not match manifest
+        ("dev2".into(), Requirement::hex("~> 2.0")),
     ]
     .into();
     let manifest = Manifest {
         requirements: [
-            ("prod1".into(), Range::new("~> 1.0".into())),
-            ("prod2".into(), Range::new("~> 2.0".into())),
-            ("dev1".into(), Range::new("~> 1.0".into())),
-            ("dev2".into(), Range::new("~> 2.0".into())),
+            ("prod1".into(), Requirement::hex("~> 1.0")),
+            ("prod2".into(), Requirement::hex("~> 2.0")),
+            ("dev1".into(), Requirement::hex("~> 1.0")),
+            ("dev2".into(), Requirement::hex("~> 2.0")),
         ]
         .into(),
         packages: vec![
@@ -365,15 +366,15 @@ fn locked_some_changed() {
 fn locked_nested_are_removed_too() {
     let mut config = PackageConfig::default();
     config.dependencies = [
-        ("1".into(), Range::new("~> 2.0".into())), // Does not match manifest
-        ("2".into(), Range::new("~> 1.0".into())),
+        ("1".into(), Requirement::hex("~> 2.0")), // Does not match manifest
+        ("2".into(), Requirement::hex("~> 1.0")),
     ]
     .into();
     config.dev_dependencies = [].into();
     let manifest = Manifest {
         requirements: [
-            ("1".into(), Range::new("~> 1.0".into())),
-            ("2".into(), Range::new("~> 1.0".into())),
+            ("1".into(), Requirement::hex("~> 1.0")),
+            ("2".into(), Requirement::hex("~> 1.0")),
         ]
         .into(),
         packages: vec![

@@ -1,13 +1,16 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 
+use crate::requirement::Requirement;
 use crate::Result;
-use hexpm::version::{Range, Version};
+use hexpm::version::Version;
 use itertools::Itertools;
+use smol_str::SmolStr;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct Manifest {
     #[serde(serialize_with = "ordered_map")]
-    pub requirements: HashMap<String, Range>,
+    pub requirements: HashMap<String, Requirement>,
     #[serde(serialize_with = "sorted_vec")]
     pub packages: Vec<ManifestPackage>,
 }
@@ -80,6 +83,18 @@ impl Manifest {
                     buffer.push_str(&outer_checksum.to_string());
                     buffer.push('"');
                 }
+                ManifestPackageSource::Git { repo, commit } => {
+                    buffer.push_str(r#", source = "git", repo = ""#);
+                    buffer.push_str(repo);
+                    buffer.push_str(r#"", commit = ""#);
+                    buffer.push_str(commit);
+                    buffer.push('"');
+                }
+                ManifestPackageSource::Local { path } => {
+                    buffer.push_str(r#", source = "local", path = ""#);
+                    buffer.push_str(path.to_str().expect("local path non utf-8"));
+                    buffer.push('"');
+                }
             };
 
             buffer.push_str(" },\n");
@@ -88,11 +103,11 @@ impl Manifest {
 
         // Requirements
         buffer.push_str("[requirements]\n");
-        for (name, range) in requirements.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+        for (name, requirement) in requirements.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
             buffer.push_str(name);
-            buffer.push_str(" = \"");
-            buffer.push_str(&range.to_string());
-            buffer.push_str("\"\n");
+            buffer.push_str(" = ");
+            buffer.push_str(&requirement.to_toml());
+            buffer.push('\n');
         }
 
         buffer
@@ -103,10 +118,18 @@ impl Manifest {
 fn manifest_toml_format() {
     let mut manifest = Manifest {
         requirements: [
-            ("zzz".into(), Range::new("> 0.0.0".into())),
-            ("aaa".into(), Range::new("> 0.0.0".into())),
-            ("gleam_stdlib".into(), Range::new("~> 0.17".into())),
-            ("gleeunit".into(), Range::new("~> 0.1".into())),
+            ("zzz".into(), Requirement::hex("> 0.0.0")),
+            ("aaa".into(), Requirement::hex("> 0.0.0")),
+            (
+                "awsome_local2".into(),
+                Requirement::git("https://github.com/gleam-lang/gleam.git"),
+            ),
+            (
+                "awsome_local1".into(),
+                Requirement::path("../path/to/package"),
+            ),
+            ("gleam_stdlib".into(), Requirement::hex("~> 0.17")),
+            ("gleeunit".into(), Requirement::hex("~> 0.1")),
         ]
         .into(),
         packages: vec![
@@ -141,6 +164,27 @@ fn manifest_toml_format() {
                 },
             },
             ManifestPackage {
+                name: "awsome_local2".into(),
+                version: Version::new(1, 2, 3),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Git {
+                    repo: "https://github.com/gleam-lang/gleam.git".into(),
+                    commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+                },
+            },
+            ManifestPackage {
+                name: "awsome_local1".into(),
+                version: Version::new(1, 2, 3),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Local {
+                    path: "/home/louis/packages/path/to/package".into(),
+                },
+            },
+            ManifestPackage {
                 name: "gleeunit".into(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["gleam".into()].into(),
@@ -160,16 +204,20 @@ fn manifest_toml_format() {
 
 packages = [
   { name = "aaa", version = "0.4.0", build_tools = ["rebar3", "make"], requirements = ["zzz", "gleam_stdlib"], otp_app = "aaa_app", source = "hex", outer_checksum = "0316" },
+  { name = "awsome_local1", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "local", path = "/home/louis/packages/path/to/package" },
+  { name = "awsome_local2", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "git", repo = "https://github.com/gleam-lang/gleam.git", commit = "bd9fe02f72250e6a136967917bcb1bdccaffa3c8" },
   { name = "gleam_stdlib", version = "0.17.1", build_tools = ["gleam"], requirements = [], source = "hex", outer_checksum = "0116" },
   { name = "gleeunit", version = "0.4.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], source = "hex", outer_checksum = "032E" },
   { name = "zzz", version = "0.4.0", build_tools = ["mix"], requirements = [], source = "hex", outer_checksum = "0316" },
 ]
 
 [requirements]
-aaa = "> 0.0.0"
-gleam_stdlib = "~> 0.17"
-gleeunit = "~> 0.1"
-zzz = "> 0.0.0"
+aaa = { version = "> 0.0.0" }
+awsome_local1 = { path = "../path/to/package" }
+awsome_local2 = { git = "https://github.com/gleam-lang/gleam.git" }
+gleam_stdlib = { version = "~> 0.17" }
+gleeunit = { version = "~> 0.1" }
+zzz = { version = "> 0.0.0" }
 "#
     );
     let deserialised: Manifest = toml::from_str(&buffer).unwrap();
@@ -206,6 +254,7 @@ impl<'de> serde::Deserialize<'de> for Base16Checksum {
             .map_err(serde::de::Error::custom)
     }
 }
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct ManifestPackage {
     pub name: String,
@@ -223,6 +272,10 @@ impl ManifestPackage {
     pub fn with_build_tools(mut self, build_tools: &'static [&'static str]) -> Self {
         self.build_tools = build_tools.iter().map(|s| (*s).to_string()).collect();
         self
+    }
+
+    pub fn is_hex(&self) -> bool {
+        matches!(self.source, ManifestPackageSource::Hex { .. })
     }
 }
 
@@ -247,6 +300,10 @@ impl Default for ManifestPackage {
 pub enum ManifestPackageSource {
     #[serde(rename = "hex")]
     Hex { outer_checksum: Base16Checksum },
+    #[serde(rename = "git")]
+    Git { repo: SmolStr, commit: SmolStr },
+    #[serde(rename = "local")]
+    Local { path: PathBuf }, // should be the canonical path
 }
 
 fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>

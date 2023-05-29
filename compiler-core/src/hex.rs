@@ -1,15 +1,13 @@
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
-use hexpm::version::{PackageVersions, Version};
+use hexpm::version::Version;
 use std::path::Path;
 use tar::Archive;
 
 use crate::{
-    build::Mode,
-    config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter, HttpClient, TarUnpacker},
-    manifest::{Manifest, ManifestPackage, ManifestPackageSource},
+    manifest::{ManifestPackage, ManifestPackageSource},
     paths::{self, ProjectPaths},
     Error, Result,
 };
@@ -24,24 +22,6 @@ J1i2xWFndWa6nfFnRxZmCStCOZWYYPlaxr+FZceFbpMwzTNs4g3d4tLNUcbKAIH4
 0wIDAQAB
 -----END PUBLIC KEY-----
 ";
-
-pub fn resolve_versions(
-    package_fetcher: Box<dyn hexpm::version::PackageFetcher>,
-    mode: Mode,
-    config: &PackageConfig,
-    manifest: Option<&Manifest>,
-) -> Result<PackageVersions> {
-    let specified_dependencies = config.dependencies_for(mode)?.into_iter();
-    let locked = config.locked(manifest)?;
-    tracing::info!("resolving_versions");
-    hexpm::version::resolve_versions(
-        package_fetcher,
-        config.name.to_string(),
-        specified_dependencies,
-        &locked,
-    )
-    .map_err(Error::dependency_resolution_failed)
-}
 
 fn key_name(hostname: &str) -> String {
     format!("gleam-{hostname}")
@@ -174,6 +154,13 @@ impl Downloader {
         &self,
         package: &ManifestPackage,
     ) -> Result<bool, Error> {
+        let outer_checksum = if let ManifestPackageSource::Hex { outer_checksum } = &package.source
+        {
+            outer_checksum
+        } else {
+            panic!("Attempt to download non-hex package from hex")
+        };
+
         let tarball_path = paths::global_package_cache_package_tarball(
             &package.name,
             &package.version.to_string(),
@@ -199,8 +186,6 @@ impl Downloader {
             &self.hex_config,
         );
         let response = self.http.send(request).await?;
-
-        let ManifestPackageSource::Hex { outer_checksum } = &package.source;
 
         let tarball =
             hexpm::get_package_tarball_response(response, &outer_checksum.0).map_err(|error| {

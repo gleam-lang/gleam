@@ -2771,7 +2771,7 @@ fn concat_pattern_variable_left_hand_side_error<T>(start: u32, end: u32) -> Resu
 // Higher number means higher precedence.
 // All operators are left associative.
 
-// Simple-Precedence-Parser, handle seeing an operator or end
+/// Simple-Precedence-Parser, handle seeing an operator or end
 fn handle_op<A>(
     next_op: Option<(Spanned, u8)>,
     opstack: &mut Vec<(Spanned, u8)>,
@@ -2853,7 +2853,7 @@ fn tok_to_binop(t: &Token) -> Option<BinOp> {
         _ => None,
     }
 }
-// Simple-Precedence-Parser, perform reduction for expression
+/// Simple-Precedence-Parser, perform reduction for expression
 fn do_reduce_expression(op: Spanned, estack: &mut Vec<UntypedExpr>) {
     match (estack.pop(), estack.pop()) {
         (Some(er), Some(el)) => {
@@ -2864,7 +2864,7 @@ fn do_reduce_expression(op: Spanned, estack: &mut Vec<UntypedExpr>) {
     }
 }
 
-// Simple-Precedence-Parser, perform reduction for clause guard
+/// Simple-Precedence-Parser, perform reduction for clause guard
 fn do_reduce_clause_guard(op: Spanned, estack: &mut Vec<UntypedClauseGuard>) {
     match (estack.pop(), estack.pop()) {
         (Some(er), Some(el)) => {
@@ -3050,7 +3050,9 @@ fn parse_error<T>(error: ParseErrorType, location: SrcSpan) -> Result<T, ParseEr
 // Misc Helpers
 //
 
-// useful for checking if a user tried to enter a reserved word as a name
+/// Returns whether the given token is a reserved word.
+///
+/// Useful for checking if a user tried to enter a reserved word as a name.
 fn is_reserved_word(tok: Token) -> bool {
     matches![
         tok,

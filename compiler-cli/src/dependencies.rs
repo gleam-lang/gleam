@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
+    path::{Path, PathBuf},
     time::Instant,
 };
 
@@ -8,11 +9,13 @@ use futures::future;
 use gleam_core::{
     build::{Mode, Target, Telemetry},
     config::PackageConfig,
+    dependency,
     error::{FileIoAction, FileKind, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
-    io::{HttpClient as _, TarUnpacker, WrappedReader},
+    io::{FileSystemWriter, HttpClient as _, TarUnpacker, WrappedReader},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
+    requirement::Requirement,
     Error, Result,
 };
 use hexpm::version::Version;
@@ -135,9 +138,7 @@ pub fn download<Telem: Telemetry>(
     let lock = BuildLock::new_packages(paths)?;
     let _guard = lock.lock(&telemetry);
 
-    let http = HttpClient::boxed();
     let fs = ProjectIO::boxed();
-    let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed(), paths.clone());
 
     // Read the project config
     let mut config = crate::config::read(paths.root_config())?;
@@ -146,7 +147,7 @@ pub fn download<Telem: Telemetry>(
     // Insert the new packages to add, if it exists
     if let Some((packages, dev)) = new_package {
         for package in packages {
-            let version = hexpm::version::Range::new(">= 0.0.0".into());
+            let version = Requirement::hex(">= 0.0.0");
             let _ = if dev {
                 config.dev_dependencies.insert(package.to_string(), version)
             } else {
@@ -173,8 +174,9 @@ pub fn download<Telem: Telemetry>(
     remove_extra_packages(paths, &local, &manifest, &telemetry)?;
 
     // Download them from Hex to the local cache
-    runtime.block_on(download_missing_packages(
-        downloader,
+    runtime.block_on(add_missing_packages(
+        paths,
+        fs,
         &manifest,
         &local,
         project_name,
@@ -192,30 +194,56 @@ pub fn download<Telem: Telemetry>(
     Ok(manifest)
 }
 
-async fn download_missing_packages<Telem: Telemetry>(
-    downloader: hex::Downloader,
+async fn add_missing_packages<Telem: Telemetry>(
+    paths: &ProjectPaths,
+    fs: Box<ProjectIO>,
     manifest: &Manifest,
     local: &LocalPackages,
     project_name: SmolStr,
     telemetry: &Telem,
 ) -> Result<(), Error> {
-    let mut count = 0;
-    let mut missing = local
-        .missing_local_packages(manifest, &project_name)
+    let missing_packages = local.missing_local_packages(manifest, &project_name);
+
+    // Link local paths
+    for package in missing_packages.iter() {
+        let package_dest = paths.build_packages_package(&package.name);
+        match &package.source {
+            ManifestPackageSource::Hex { .. } => Ok(()),
+            ManifestPackageSource::Local { path } => {
+                fs.delete(&package_dest)?;
+                fs.mkdir(&package_dest)?;
+                fs.copy_dir(&path.join("src"), &package_dest)?;
+                if path.join("priv").exists() {
+                    fs.copy_dir(&path.join("priv"), &package_dest)?;
+                }
+                fs.copy(&path.join("gleam.toml"), &package_dest.join("gleam.toml"))
+            }
+            ManifestPackageSource::Git { .. } => Ok(()),
+        }?
+    }
+
+    let mut num_to_download = 0;
+    let mut missing_hex_packages = missing_packages
         .into_iter()
+        .filter(|package| package.is_hex())
         .map(|package| {
-            count += 1;
+            num_to_download += 1;
             package
         })
         .peekable();
-    if missing.peek().is_some() {
+
+    // If we need to download at-least one package
+    if missing_hex_packages.peek().is_some() {
+        let http = HttpClient::boxed();
+        let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed(), paths.clone());
         let start = Instant::now();
         telemetry.downloading_package("packages");
         downloader
-            .download_hex_packages(missing, &project_name)
+            .download_hex_packages(missing_hex_packages, &project_name)
             .await?;
-        telemetry.packages_downloaded(start, count);
+        telemetry.packages_downloaded(start, num_to_download);
     }
+
     Ok(())
 }
 
@@ -269,6 +297,10 @@ fn write_manifest_to_disc(paths: &ProjectPaths, manifest: &Manifest) -> Result<(
     fs::write(&path, &manifest.to_toml())
 }
 
+// This is the container for locally pinned packages, representing the current contents of
+// the `project/build/packages` directory.
+// For descriptions of packages provided by paths and git deps, see the ProvidedPackage struct.
+// The same package may appear in both at different times.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct LocalPackages {
     packages: HashMap<String, Version>,
@@ -296,7 +328,12 @@ impl LocalPackages {
         manifest
             .packages
             .iter()
-            .filter(|p| p.name != root && self.packages.get(&p.name) != Some(&p.version))
+            .filter(|p| {
+                p.name != root && {
+                    self.packages.get(&p.name) != Some(&p.version)
+                        || matches!(p.source, ManifestPackageSource::Local { .. })
+                }
+            })
             .collect()
     }
 
@@ -492,6 +529,89 @@ fn get_manifest<Telem: Telemetry>(
     }
 }
 
+#[derive(Clone, Eq, PartialEq, Debug)]
+struct ProvidedPackage {
+    version: Version,
+    source: ProvidedPackageSource,
+    requirements: HashMap<SmolStr, hexpm::version::Range>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+enum ProvidedPackageSource {
+    Git { repo: SmolStr, commit: SmolStr },
+    Local { path: PathBuf },
+}
+
+impl ProvidedPackage {
+    fn to_hex_package(&self, name: &SmolStr) -> hexpm::Package {
+        let requirements = self
+            .requirements
+            .iter()
+            .map(|(name, version)| {
+                (
+                    name.to_string(),
+                    hexpm::Dependency {
+                        requirement: version.clone(),
+                        optional: false,
+                        app: None,
+                        repository: None,
+                    },
+                )
+            })
+            .collect();
+        let release = hexpm::Release {
+            version: self.version.clone(),
+            requirements,
+            retirement_status: None,
+            outer_checksum: vec![],
+            meta: (),
+        };
+        hexpm::Package {
+            name: name.to_string(),
+            repository: "local".to_string(),
+            releases: vec![release],
+        }
+    }
+
+    fn to_manifest_package(&self, name: &str) -> ManifestPackage {
+        let mut package = ManifestPackage {
+            name: name.to_string(),
+            version: self.version.clone(),
+            otp_app: None, // Note, this will probably need to be set to something eventually
+            build_tools: vec!["gleam".to_string()],
+            requirements: self.requirements.keys().map(SmolStr::to_string).collect(),
+            source: self.source.to_manifest_package_source(),
+        };
+        package.requirements.sort();
+        package
+    }
+}
+
+impl ProvidedPackageSource {
+    fn to_manifest_package_source(&self) -> ManifestPackageSource {
+        match self {
+            ProvidedPackageSource::Git { repo, commit } => ManifestPackageSource::Git {
+                repo: repo.clone(),
+                commit: commit.clone(),
+            },
+            ProvidedPackageSource::Local { path } => {
+                ManifestPackageSource::Local { path: path.clone() }
+            }
+        }
+    }
+
+    fn to_toml(&self) -> String {
+        match self {
+            ProvidedPackageSource::Git { repo, commit } => {
+                format!(r#"{{ repo: "{}", commit: "{}" }}"#, repo, commit)
+            }
+            ProvidedPackageSource::Local { path } => {
+                format!(r#"{{ path: "{}" }}"#, path.to_string_lossy())
+            }
+        }
+    }
+}
+
 fn resolve_versions<Telem: Telemetry>(
     runtime: tokio::runtime::Handle,
     mode: Mode,
@@ -500,38 +620,317 @@ fn resolve_versions<Telem: Telemetry>(
     telemetry: &Telem,
 ) -> Result<Manifest, Error> {
     telemetry.resolving_package_versions();
-    let resolved = hex::resolve_versions(
+    let dependencies = config.dependencies_for(mode)?;
+    let locked = config.locked(manifest)?;
+
+    // Packages which are provided directly instead of downloaded from hex
+    let mut provided_packages = HashMap::new();
+    // The version requires of the current project
+    let mut root_requirements = HashMap::new();
+
+    // Populate the provided_packages and root_requrements maps
+    for (name, requirement) in dependencies.into_iter() {
+        let version = match requirement {
+            Requirement::Hex { version } => version,
+            Requirement::Path { path } => provide_local_package(
+                SmolStr::from(&name),
+                &path,
+                &mut provided_packages,
+                &mut vec![],
+            )?,
+            Requirement::Git { git } => {
+                provide_git_package(SmolStr::from(&name), &git, &mut provided_packages)?
+            }
+        };
+        let _ = root_requirements.insert(name, version);
+    }
+
+    // Convert provided packages into hex packages for pub-grub resolve
+    let provided_hex_packages = provided_packages
+        .iter()
+        .map(|(name, package)| (name.to_string(), package.to_hex_package(name)))
+        .collect();
+
+    let resolved = dependency::resolve_versions(
         PackageFetcher::boxed(runtime.clone()),
-        mode,
-        config,
-        manifest,
+        provided_hex_packages,
+        config.name.clone(),
+        root_requirements.into_iter(),
+        &locked,
     )?;
-    let packages = runtime.block_on(future::try_join_all(
+
+    // Convert the hex packages and local packages into manfiest packages
+    let manifest_packages = runtime.block_on(future::try_join_all(
         resolved
             .into_iter()
-            .map(|(name, version)| lookup_package(name, version)),
+            .map(|(name, version)| lookup_package(name, version, &provided_packages)),
     ))?;
+
     let manifest = Manifest {
-        packages,
+        packages: manifest_packages,
         requirements: config.all_dependencies()?,
     };
+
     Ok(manifest)
 }
 
-async fn lookup_package(name: String, version: Version) -> Result<ManifestPackage> {
-    let config = hexpm::Config::new();
-    let release = hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
-    let manifest = ManifestPackage {
-        name,
-        version,
-        otp_app: Some(release.meta.app),
-        build_tools: release.meta.build_tools,
-        requirements: release.requirements.keys().cloned().collect_vec(),
-        source: ManifestPackageSource::Hex {
-            outer_checksum: Base16Checksum(release.outer_checksum),
-        },
+/// Provide a package from a local project
+fn provide_local_package(
+    package_name: SmolStr,
+    package_path: &Path,
+    provided: &mut HashMap<SmolStr, ProvidedPackage>,
+    parents: &mut Vec<SmolStr>,
+) -> Result<hexpm::version::Range> {
+    let canonical_path = package_path
+        .canonicalize()
+        .map_err(|_| Error::DependencyCanonicalizationFailed(package_name.to_string()))?;
+    let package_source = ProvidedPackageSource::Local {
+        path: canonical_path.clone(),
     };
-    Ok(manifest)
+    provide_package(
+        package_name,
+        &canonical_path,
+        package_source,
+        provided,
+        parents,
+    )
+}
+
+/// Provide a package from a git repository
+fn provide_git_package(
+    _package_name: SmolStr,
+    _repo: &str,
+    _provided: &mut HashMap<SmolStr, ProvidedPackage>,
+) -> Result<hexpm::version::Range> {
+    let _git = ProvidedPackageSource::Git {
+        repo: SmolStr::new_inline("repo"),
+        commit: SmolStr::new_inline("commit"),
+    };
+    Err(Error::GitDependencyUnsuported)
+}
+
+/// Adds a gleam project located at a specific path to the list of "provided packages"
+fn provide_package(
+    package_name: SmolStr,
+    package_path: &Path,
+    package_source: ProvidedPackageSource,
+    provided: &mut HashMap<SmolStr, ProvidedPackage>,
+    parents: &mut Vec<SmolStr>,
+) -> Result<hexpm::version::Range> {
+    // Return early if a package cyle is detected
+    if parents.contains(&package_name) {
+        let mut last_cycle = parents
+            .split(|p| p == &package_name)
+            .last()
+            .unwrap_or_default()
+            .to_vec();
+        last_cycle.push(package_name);
+        return Err(Error::PackageCycle {
+            packages: last_cycle,
+        });
+    }
+    // Check that we do not have a cached version of this package already
+    match provided.get(&package_name) {
+        Some(package) if package.source == package_source => {
+            // This package has already been provided from this source, return the version
+            let version = hexpm::version::Range::new(format!("== {}", &package.version));
+            return Ok(version);
+        }
+        Some(package) => {
+            // This package has already been provided from a different source which conflicts
+            return Err(Error::ProvidedDependencyConflict {
+                package: package_name.to_string(),
+                source_1: package_source.to_toml(),
+                source_2: package.source.to_toml(),
+            });
+        }
+        None => (),
+    }
+    // Load the package
+    let config = crate::config::read(package_path.join("gleam.toml"))?;
+    // Check that we are loading the correct project
+    if config.name != package_name {
+        return Err(Error::WrongDependencyProvided {
+            expected: package_name.to_string(),
+            path: package_path.to_path_buf(),
+            found: config.name.to_string(),
+        });
+    };
+    // Walk the requirements of the package
+    let mut requirements = HashMap::new();
+    parents.push(package_name);
+    for (name, requirement) in config.dependencies.into_iter() {
+        let name = SmolStr::from(name);
+        let version = match requirement {
+            Requirement::Hex { version } => version,
+            Requirement::Path { path } => {
+                let resolved_path = if path.is_absolute() {
+                    path
+                } else {
+                    package_path.join(path)
+                };
+                // Recursively walk local packages
+                provide_local_package(name.clone(), &resolved_path, provided, parents)?
+            }
+            Requirement::Git { git } => provide_git_package(name.clone(), &git, provided)?,
+        };
+        let _ = requirements.insert(name, version);
+    }
+    let _ = parents.pop();
+    // Add the package to the provided packages dictionary
+    let version = hexpm::version::Range::new(format!("== {}", &config.version));
+    let _ = provided.insert(
+        config.name,
+        ProvidedPackage {
+            version: config.version,
+            source: package_source,
+            requirements,
+        },
+    );
+    // Return the version
+    Ok(version)
+}
+
+#[test]
+fn provide_wrong_package() {
+    let mut provided = HashMap::new();
+    let result = provide_local_package(
+        "wrong_name".into(),
+        &Path::new("./test/hello_world"),
+        &mut provided,
+        &mut vec!["root".into(), "subpackage".into()],
+    );
+    if let Err(Error::WrongDependencyProvided {
+        expected, found, ..
+    }) = result
+    {
+        assert_eq!(expected, "wrong_name");
+        assert_eq!(found, "hello_world");
+    } else {
+        panic!("Expected WrongDependencyProvided error")
+    }
+}
+
+#[test]
+fn provide_existing_package() {
+    let mut provided = HashMap::new();
+
+    let result = provide_local_package(
+        "hello_world".into(),
+        &Path::new("./test/hello_world"),
+        &mut provided,
+        &mut vec!["root".into(), "subpackage".into()],
+    );
+    assert_eq!(
+        result,
+        Ok(hexpm::version::Range::new("== 0.1.0".to_string()))
+    );
+
+    let result = provide_local_package(
+        "hello_world".into(),
+        &Path::new("./test/hello_world"),
+        &mut provided,
+        &mut vec!["root".into(), "subpackage".into()],
+    );
+    assert_eq!(
+        result,
+        Ok(hexpm::version::Range::new("== 0.1.0".to_string()))
+    );
+}
+
+#[test]
+fn provide_conflicting_package() {
+    let mut provided = HashMap::new();
+
+    let result = provide_local_package(
+        "hello_world".into(),
+        &Path::new("./test/hello_world"),
+        &mut provided,
+        &mut vec!["root".into(), "subpackage".into()],
+    );
+    assert_eq!(
+        result,
+        Ok(hexpm::version::Range::new("== 0.1.0".to_string()))
+    );
+
+    let result = provide_package(
+        "hello_world".into(),
+        &Path::new("./test/other"),
+        ProvidedPackageSource::Local {
+            path: Path::new("./test/other").to_path_buf(),
+        },
+        &mut provided,
+        &mut vec!["root".into(), "subpackage".into()],
+    );
+    if let Err(Error::ProvidedDependencyConflict { package, .. }) = result {
+        assert_eq!(package, "hello_world");
+    } else {
+        panic!("Expected ProvidedDependencyConflict error")
+    }
+}
+
+#[test]
+fn provided_is_absolute() {
+    let mut provided = HashMap::new();
+    let result = provide_local_package(
+        "hello_world".into(),
+        &Path::new("./test/hello_world"),
+        &mut provided,
+        &mut vec!["root".into(), "subpackage".into()],
+    );
+    assert_eq!(
+        result,
+        Ok(hexpm::version::Range::new("== 0.1.0".to_string()))
+    );
+    let package = provided.get("hello_world").unwrap().clone();
+    if let ProvidedPackageSource::Local { path } = package.source {
+        assert!(path.is_absolute())
+    } else {
+        panic!("Provide_local_package provided a package that is not local!")
+    }
+}
+
+#[test]
+fn provided_recursive() {
+    let mut provided = HashMap::new();
+    let result = provide_local_package(
+        "hello_world".into(),
+        &Path::new("./test/hello_world"),
+        &mut provided,
+        &mut vec!["root".into(), "hello_world".into(), "subpackage".into()],
+    );
+    assert_eq!(
+        result,
+        Err(Error::PackageCycle {
+            packages: vec!["subpackage".into(), "hello_world".into()],
+        })
+    )
+}
+
+/// Determine the information to add to the manifest for a specific package
+async fn lookup_package(
+    name: String,
+    version: Version,
+    provided: &HashMap<SmolStr, ProvidedPackage>,
+) -> Result<ManifestPackage> {
+    match provided.get(name.as_str()) {
+        Some(provided_package) => Ok(provided_package.to_manifest_package(name.as_str())),
+        None => {
+            let config = hexpm::Config::new();
+            let release =
+                hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
+            Ok(ManifestPackage {
+                name: name.to_string(),
+                version,
+                otp_app: Some(release.meta.app),
+                build_tools: release.meta.build_tools,
+                requirements: release.requirements.keys().cloned().collect_vec(),
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(release.outer_checksum),
+                },
+            })
+        }
+    }
 }
 
 struct PackageFetcher {
@@ -567,14 +966,14 @@ impl TarUnpacker for Untar {
 
     fn io_result_unpack(
         &self,
-        path: &std::path::Path,
+        path: &Path,
         mut archive: tar::Archive<GzDecoder<tar::Entry<'_, WrappedReader>>>,
     ) -> std::io::Result<()> {
         archive.unpack(path)
     }
 }
 
-impl hexpm::version::PackageFetcher for PackageFetcher {
+impl dependency::PackageFetcher for PackageFetcher {
     fn get_dependencies(
         &self,
         package: &str,
@@ -588,4 +987,197 @@ impl hexpm::version::PackageFetcher for PackageFetcher {
             .map_err(Box::new)?;
         hexpm::get_package_response(response, HEXPM_PUBLIC_KEY).map_err(|e| e.into())
     }
+}
+
+#[test]
+fn provided_local_to_hex() {
+    let provided_package = ProvidedPackage {
+        version: hexpm::version::Version::new(1, 0, 0),
+        source: ProvidedPackageSource::Local {
+            path: "canonical/path/to/package".into(),
+        },
+        requirements: [
+            (
+                "req_1".into(),
+                hexpm::version::Range::new("~> 1.0.0".to_string()),
+            ),
+            (
+                "req_2".into(),
+                hexpm::version::Range::new("== 1.0.0".to_string()),
+            ),
+        ]
+        .into(),
+    };
+
+    let hex_package = hexpm::Package {
+        name: "package".to_string(),
+        repository: "local".to_string(),
+        releases: vec![hexpm::Release {
+            version: hexpm::version::Version::new(1, 0, 0),
+            retirement_status: None,
+            outer_checksum: vec![],
+            meta: (),
+            requirements: [
+                (
+                    "req_1".into(),
+                    hexpm::Dependency {
+                        requirement: hexpm::version::Range::new("~> 1.0.0".to_string()),
+                        optional: false,
+                        app: None,
+                        repository: None,
+                    },
+                ),
+                (
+                    "req_2".into(),
+                    hexpm::Dependency {
+                        requirement: hexpm::version::Range::new("== 1.0.0".to_string()),
+                        optional: false,
+                        app: None,
+                        repository: None,
+                    },
+                ),
+            ]
+            .into(),
+        }],
+    };
+
+    assert_eq!(
+        provided_package.to_hex_package(&SmolStr::new_inline("package")),
+        hex_package
+    );
+}
+
+#[test]
+fn provided_git_to_hex() {
+    let provided_package = ProvidedPackage {
+        version: hexpm::version::Version::new(1, 0, 0),
+        source: ProvidedPackageSource::Git {
+            repo: "https://github.com/gleam-lang/gleam.git".into(),
+            commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+        },
+        requirements: [
+            (
+                "req_1".into(),
+                hexpm::version::Range::new("~> 1.0.0".to_string()),
+            ),
+            (
+                "req_2".into(),
+                hexpm::version::Range::new("== 1.0.0".to_string()),
+            ),
+        ]
+        .into(),
+    };
+
+    let hex_package = hexpm::Package {
+        name: "package".to_string(),
+        repository: "local".to_string(),
+        releases: vec![hexpm::Release {
+            version: hexpm::version::Version::new(1, 0, 0),
+            retirement_status: None,
+            outer_checksum: vec![],
+            meta: (),
+            requirements: [
+                (
+                    "req_1".into(),
+                    hexpm::Dependency {
+                        requirement: hexpm::version::Range::new("~> 1.0.0".to_string()),
+                        optional: false,
+                        app: None,
+                        repository: None,
+                    },
+                ),
+                (
+                    "req_2".into(),
+                    hexpm::Dependency {
+                        requirement: hexpm::version::Range::new("== 1.0.0".to_string()),
+                        optional: false,
+                        app: None,
+                        repository: None,
+                    },
+                ),
+            ]
+            .into(),
+        }],
+    };
+
+    assert_eq!(
+        provided_package.to_hex_package(&SmolStr::new_inline("package")),
+        hex_package
+    );
+}
+
+#[test]
+fn provided_local_to_manifest() {
+    let provided_package = ProvidedPackage {
+        version: hexpm::version::Version::new(1, 0, 0),
+        source: ProvidedPackageSource::Local {
+            path: "canonical/path/to/package".into(),
+        },
+        requirements: [
+            (
+                "req_1".into(),
+                hexpm::version::Range::new("~> 1.0.0".to_string()),
+            ),
+            (
+                "req_2".into(),
+                hexpm::version::Range::new("== 1.0.0".to_string()),
+            ),
+        ]
+        .into(),
+    };
+
+    let manifest_package = ManifestPackage {
+        name: "package".to_string(),
+        version: hexpm::version::Version::new(1, 0, 0),
+        otp_app: None,
+        build_tools: vec!["gleam".to_string()],
+        requirements: vec!["req_1".into(), "req_2".into()],
+        source: ManifestPackageSource::Local {
+            path: "canonical/path/to/package".into(),
+        },
+    };
+
+    assert_eq!(
+        provided_package.to_manifest_package(&SmolStr::new_inline("package")),
+        manifest_package
+    );
+}
+
+#[test]
+fn provided_git_to_manifest() {
+    let provided_package = ProvidedPackage {
+        version: hexpm::version::Version::new(1, 0, 0),
+        source: ProvidedPackageSource::Git {
+            repo: "https://github.com/gleam-lang/gleam.git".into(),
+            commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+        },
+        requirements: [
+            (
+                "req_1".into(),
+                hexpm::version::Range::new("~> 1.0.0".to_string()),
+            ),
+            (
+                "req_2".into(),
+                hexpm::version::Range::new("== 1.0.0".to_string()),
+            ),
+        ]
+        .into(),
+    };
+
+    let manifest_package = ManifestPackage {
+        name: "package".to_string(),
+        version: hexpm::version::Version::new(1, 0, 0),
+        otp_app: None,
+        build_tools: vec!["gleam".to_string()],
+        requirements: vec!["req_1".into(), "req_2".into()],
+        source: ManifestPackageSource::Git {
+            repo: "https://github.com/gleam-lang/gleam.git".into(),
+            commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+        },
+    };
+
+    assert_eq!(
+        provided_package.to_manifest_package(&SmolStr::new_inline("package")),
+        manifest_package
+    );
 }

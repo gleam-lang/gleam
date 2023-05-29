@@ -1,0 +1,5 @@
+name = "project_c"
+version = "0.1.0"
+
+[dependencies]
+project_b = { path = "../project_b" }

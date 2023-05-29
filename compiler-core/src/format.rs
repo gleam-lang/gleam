@@ -92,8 +92,8 @@ impl<'comments> Formatter<'comments> {
             .unwrap_or(false)
     }
 
-    // Pop comments that occur before a byte-index in the source, consuming
-    // and retaining any empty lines contained within.
+    /// Pop comments that occur before a byte-index in the source, consuming
+    /// and retaining any empty lines contained within.
     fn pop_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'comments str>> {
         let (popped, rest, empty_lines) =
             comments_before(self.comments, self.empty_lines, limit, true);
@@ -102,8 +102,8 @@ impl<'comments> Formatter<'comments> {
         popped
     }
 
-    // Pop doc comments that occur before a byte-index in the source, consuming
-    // and dropping any empty lines contained within.
+    /// Pop doc comments that occur before a byte-index in the source, consuming
+    /// and dropping any empty lines contained within.
     fn pop_doc_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'comments str>> {
         let (popped, rest, empty_lines) =
             comments_before(self.doc_comments, self.empty_lines, limit, false);
@@ -112,8 +112,8 @@ impl<'comments> Formatter<'comments> {
         popped
     }
 
-    // Remove between 0 and `limit` empty lines following the current position,
-    // returning true if any empty lines were removed.
+    /// Remove between 0 and `limit` empty lines following the current position,
+    /// returning true if any empty lines were removed.
     fn pop_empty_lines(&mut self, limit: u32) -> bool {
         let mut end = 0;
         for (i, &position) in self.empty_lines.iter().enumerate() {
