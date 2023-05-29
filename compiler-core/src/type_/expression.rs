@@ -758,18 +758,32 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         // Check if the call expression is a module reference.
-        let (module_name, label) = match fun.as_ref() {
+        let (module_name, module_alias, label) = match fun.as_ref() {
             TypedExpr::ModuleSelect {
-                module_name, label, ..
-            } => (module_name, label),
+                module_name,
+                module_alias,
+                label,
+                ..
+            } => (module_name, module_alias, label),
             _ => return,
         };
 
-        // Determine whether this looks like a check we want to warn on.
-        let is_list_length_call = module_name == "gleam/list" && label == "length";
-        let is_emptiness_check = value == "0" || value == "-0";
+        if module_name != "gleam/list" || label != "length" {
+            return;
+        }
 
-        if is_list_length_call && is_emptiness_check {
+        let list_module = match self.environment.imported_modules.get(module_alias) {
+            Some((_, list_module)) => list_module,
+            None => return,
+        };
+
+        // TODO: How do we make this be `gleam_stdlib` in the tests?
+        if list_module.package != "gleam_stdlib" && list_module.package != "thepackage" {
+            return;
+        }
+
+        let is_emptiness_check = value == "0" || value == "-0";
+        if is_emptiness_check {
             self.environment.warnings.emit(Warning::PerfListLength {
                 location,
                 is_not_eq: binop == BinOp::NotEq,
