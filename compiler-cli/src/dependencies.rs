@@ -20,7 +20,7 @@ use gleam_core::{
 };
 use hexpm::version::Version;
 use itertools::Itertools;
-use pathdiff::diff_paths;
+use same_file::is_same_file;
 use smol_str::SmolStr;
 use strum::IntoEnumIterator;
 
@@ -537,7 +537,7 @@ struct ProvidedPackage {
     requirements: HashMap<SmolStr, hexpm::version::Range>,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, Debug)]
 enum ProvidedPackageSource {
     Git { repo: SmolStr, commit: SmolStr },
     Local { path: PathBuf },
@@ -609,6 +609,28 @@ impl ProvidedPackageSource {
             ProvidedPackageSource::Local { path } => {
                 format!(r#"{{ path: "{}" }}"#, path.to_string_lossy())
             }
+        }
+    }
+}
+
+impl PartialEq for ProvidedPackageSource {
+    fn eq(&self, other: &ProvidedPackageSource) -> bool {
+        match (self, other) {
+            (
+                ProvidedPackageSource::Local { path: own_path },
+                ProvidedPackageSource::Local { path: other_path },
+            ) => is_same_file(own_path, other_path).unwrap_or(false),
+            (
+                ProvidedPackageSource::Git {
+                    repo: own_repo,
+                    commit: own_commit,
+                },
+                ProvidedPackageSource::Git {
+                    repo: other_repo,
+                    commit: other_commit,
+                },
+            ) => own_repo == other_repo && own_commit == other_commit,
+            _ => false,
         }
     }
 }
@@ -688,20 +710,12 @@ fn provide_local_package(
     provided: &mut HashMap<SmolStr, ProvidedPackage>,
     parents: &mut Vec<SmolStr>,
 ) -> Result<hexpm::version::Range> {
-    // Canonical paths are absolute and uniquely identify a file
-    let canonical_path = package_path
-        .canonicalize()
-        .map_err(|_| Error::DependencyCanonicalizationFailed(package_name.to_string()))?;
-    // Turn the canonical path into a path relitive to the project root
-    let relitive_canonical_path = diff_paths(canonical_path, project_paths.root()).ok_or(
-        Error::DependencyCanonicalizationFailed(package_name.to_string()),
-    )?;
     let package_source = ProvidedPackageSource::Local {
-        path: relitive_canonical_path.clone(),
+        path: package_path.to_path_buf(),
     };
     provide_package(
         package_name,
-        &relitive_canonical_path,
+        package_path,
         package_source,
         project_paths,
         provided,
