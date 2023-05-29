@@ -691,7 +691,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 unify(left.type_(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
 
-                self.check_inefficient_length_comparison(name, &left, &right, location);
+                self.check_for_inefficient_list_length_call(name, &left, &right, location);
 
                 return Ok(TypedExpr::BinOp {
                     location,
@@ -743,7 +743,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn check_inefficient_length_comparison(
+    fn check_for_inefficient_list_length_call(
         &mut self,
         binop: BinOp,
         left: &TypedExpr,
