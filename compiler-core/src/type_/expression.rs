@@ -755,45 +755,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         right: &TypedExpr,
         location: SrcSpan,
     ) {
-        // Check if we have a call expression on one side and an int literal on the other.
-        let (fun, kind) = match (&left, &right) {
-            // For `==` and `!=` we don't care which side each of the operands are on.
-            (TypedExpr::Call { fun, .. }, TypedExpr::Int { value, .. })
-            | (TypedExpr::Int { value, .. }, TypedExpr::Call { fun, .. })
-                if binop == BinOp::Eq || binop == BinOp::NotEq =>
-            {
-                let kind = match (binop, value.as_str()) {
-                    (BinOp::Eq, "0") | (BinOp::Eq, "-0") => EmptyListCheckKind::EmptyList,
-                    (BinOp::NotEq, "0") | (BinOp::NotEq, "-0") => EmptyListCheckKind::NonEmptyList,
-                    _ => return,
-                };
-
-                (fun, kind)
-            }
-            (TypedExpr::Call { fun, .. }, TypedExpr::Int { value, .. }) => {
-                let kind = match (binop, value.as_str()) {
-                    (BinOp::LtEqInt, "0") | (BinOp::LtEqInt, "-0") | (BinOp::LtInt, "1") => {
-                        EmptyListCheckKind::EmptyList
-                    }
-                    _ => return,
-                };
-
-                (fun, kind)
-            }
-            (TypedExpr::Int { value, .. }, TypedExpr::Call { fun, .. }) => {
-                let kind = match (binop, value.as_str()) {
-                    (BinOp::GtEqInt, "0") | (BinOp::GtEqInt, "-0") | (BinOp::GtInt, "1") => {
-                        EmptyListCheckKind::NonEmptyList
-                    }
-                    _ => return,
-                };
-
-                (fun, kind)
-            }
+        // Look for a call expression as either of the binary operands.
+        let fun = match (&left, &right) {
+            (TypedExpr::Call { fun, .. }, _) | (_, TypedExpr::Call { fun, .. }) => fun,
             _ => return,
         };
 
-        // Check if the call expression is a module reference.
+        // Extract the module information from the call expression.
         let (module_name, module_alias, label) = match fun.as_ref() {
             TypedExpr::ModuleSelect {
                 module_name,
@@ -809,6 +777,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             return;
         }
 
+        // Resolve the module against the imported modules we have available.
         let list_module = match self.environment.imported_modules.get(module_alias) {
             Some((_, list_module)) => list_module,
             None => return,
@@ -830,6 +799,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if list_module.package != STDLIB_MODULE_NAME {
             return;
         }
+
+        // Check the kind of the empty list check so we know whether to recommend
+        // `list.is_empty` or `!list.is_empty` as a replacement.
+        let kind = match get_empty_list_check_kind(binop, &left, &right) {
+            Some(kind) => kind,
+            None => return,
+        };
 
         // If we've gotten this far, go ahead and emit the warning.
         self.environment
@@ -2196,6 +2172,46 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
             })
         })
+    }
+}
+
+/// Returns the kind of an empty list check.
+///
+/// Based on the binary operator being used and the position of the operands we
+/// can categorize an empty list check in one of two ways:
+///   - Checking for the empty list
+///   - Checking for a non-empty list
+fn get_empty_list_check_kind<'a>(
+    binop: BinOp,
+    left: &'a TypedExpr,
+    right: &'a TypedExpr,
+) -> Option<EmptyListCheckKind> {
+    match (&left, &right) {
+        // For `==` and `!=` we don't care which side each of the operands are on.
+        (_, TypedExpr::Int { value, .. }) | (TypedExpr::Int { value, .. }, _)
+            if binop == BinOp::Eq || binop == BinOp::NotEq =>
+        {
+            match (binop, value.as_str()) {
+                (BinOp::Eq, "0") | (BinOp::Eq, "-0") => Some(EmptyListCheckKind::EmptyList),
+                (BinOp::NotEq, "0") | (BinOp::NotEq, "-0") => {
+                    Some(EmptyListCheckKind::NonEmptyList)
+                }
+                _ => None,
+            }
+        }
+        (_, TypedExpr::Int { value, .. }) => match (binop, value.as_str()) {
+            (BinOp::LtEqInt, "0") | (BinOp::LtEqInt, "-0") | (BinOp::LtInt, "1") => {
+                Some(EmptyListCheckKind::EmptyList)
+            }
+            _ => None,
+        },
+        (TypedExpr::Int { value, .. }, _) => match (binop, value.as_str()) {
+            (BinOp::GtEqInt, "0") | (BinOp::GtEqInt, "-0") | (BinOp::GtInt, "1") => {
+                Some(EmptyListCheckKind::NonEmptyList)
+            }
+            _ => None,
+        },
+        _ => None,
     }
 }
 
