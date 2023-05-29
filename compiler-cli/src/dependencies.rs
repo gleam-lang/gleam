@@ -511,7 +511,7 @@ fn get_manifest<Telem: Telemetry>(
     };
 
     if should_resolve {
-        let manifest = resolve_versions(runtime, mode, config, None, telemetry)?;
+        let manifest = resolve_versions(runtime, mode, paths, config, None, telemetry)?;
         return Ok((true, manifest));
     }
 
@@ -524,7 +524,7 @@ fn get_manifest<Telem: Telemetry>(
         Ok((false, manifest))
     } else {
         tracing::debug!("manifest_outdated");
-        let manifest = resolve_versions(runtime, mode, config, Some(&manifest), telemetry)?;
+        let manifest = resolve_versions(runtime, mode, paths, config, Some(&manifest), telemetry)?;
         Ok((true, manifest))
     }
 }
@@ -615,6 +615,7 @@ impl ProvidedPackageSource {
 fn resolve_versions<Telem: Telemetry>(
     runtime: tokio::runtime::Handle,
     mode: Mode,
+    project_paths: &ProjectPaths,
     config: &PackageConfig,
     manifest: Option<&Manifest>,
     telemetry: &Telem,
@@ -635,12 +636,16 @@ fn resolve_versions<Telem: Telemetry>(
             Requirement::Path { path } => provide_local_package(
                 SmolStr::from(&name),
                 &path,
+                project_paths,
                 &mut provided_packages,
                 &mut vec![],
             )?,
-            Requirement::Git { git } => {
-                provide_git_package(SmolStr::from(&name), &git, &mut provided_packages)?
-            }
+            Requirement::Git { git } => provide_git_package(
+                SmolStr::from(&name),
+                &git,
+                project_paths,
+                &mut provided_packages,
+            )?,
         };
         let _ = root_requirements.insert(name, version);
     }
@@ -678,6 +683,7 @@ fn resolve_versions<Telem: Telemetry>(
 fn provide_local_package(
     package_name: SmolStr,
     package_path: &Path,
+    project_paths: &ProjectPaths,
     provided: &mut HashMap<SmolStr, ProvidedPackage>,
     parents: &mut Vec<SmolStr>,
 ) -> Result<hexpm::version::Range> {
@@ -691,6 +697,7 @@ fn provide_local_package(
         package_name,
         &canonical_path,
         package_source,
+        project_paths,
         provided,
         parents,
     )
@@ -700,6 +707,7 @@ fn provide_local_package(
 fn provide_git_package(
     _package_name: SmolStr,
     _repo: &str,
+    _project_paths: &ProjectPaths,
     _provided: &mut HashMap<SmolStr, ProvidedPackage>,
 ) -> Result<hexpm::version::Range> {
     let _git = ProvidedPackageSource::Git {
@@ -714,6 +722,7 @@ fn provide_package(
     package_name: SmolStr,
     package_path: &Path,
     package_source: ProvidedPackageSource,
+    project_paths: &ProjectPaths,
     provided: &mut HashMap<SmolStr, ProvidedPackage>,
     parents: &mut Vec<SmolStr>,
 ) -> Result<hexpm::version::Range> {
@@ -770,9 +779,17 @@ fn provide_package(
                     package_path.join(path)
                 };
                 // Recursively walk local packages
-                provide_local_package(name.clone(), &resolved_path, provided, parents)?
+                provide_local_package(
+                    name.clone(),
+                    &resolved_path,
+                    project_paths,
+                    provided,
+                    parents,
+                )?
             }
-            Requirement::Git { git } => provide_git_package(name.clone(), &git, provided)?,
+            Requirement::Git { git } => {
+                provide_git_package(name.clone(), &git, project_paths, provided)?
+            }
         };
         let _ = requirements.insert(name, version);
     }
@@ -794,9 +811,11 @@ fn provide_package(
 #[test]
 fn provide_wrong_package() {
     let mut provided = HashMap::new();
+    let project_paths = crate::project_paths_at_current_directory();
     let result = provide_local_package(
         "wrong_name".into(),
         &Path::new("./test/hello_world"),
+        &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
@@ -814,10 +833,12 @@ fn provide_wrong_package() {
 #[test]
 fn provide_existing_package() {
     let mut provided = HashMap::new();
+    let project_paths = crate::project_paths_at_current_directory();
 
     let result = provide_local_package(
         "hello_world".into(),
         &Path::new("./test/hello_world"),
+        &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
@@ -829,6 +850,7 @@ fn provide_existing_package() {
     let result = provide_local_package(
         "hello_world".into(),
         &Path::new("./test/hello_world"),
+        &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
@@ -841,10 +863,11 @@ fn provide_existing_package() {
 #[test]
 fn provide_conflicting_package() {
     let mut provided = HashMap::new();
-
+    let project_paths = crate::project_paths_at_current_directory();
     let result = provide_local_package(
         "hello_world".into(),
         &Path::new("./test/hello_world"),
+        &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
@@ -859,6 +882,7 @@ fn provide_conflicting_package() {
         ProvidedPackageSource::Local {
             path: Path::new("./test/other").to_path_buf(),
         },
+        &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
@@ -872,9 +896,11 @@ fn provide_conflicting_package() {
 #[test]
 fn provided_is_absolute() {
     let mut provided = HashMap::new();
+    let project_paths = crate::project_paths_at_current_directory();
     let result = provide_local_package(
         "hello_world".into(),
         &Path::new("./test/hello_world"),
+        &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
@@ -893,9 +919,11 @@ fn provided_is_absolute() {
 #[test]
 fn provided_recursive() {
     let mut provided = HashMap::new();
+    let project_paths = crate::project_paths_at_current_directory();
     let result = provide_local_package(
         "hello_world".into(),
         &Path::new("./test/hello_world"),
+        &project_paths,
         &mut provided,
         &mut vec!["root".into(), "hello_world".into(), "subpackage".into()],
     );
