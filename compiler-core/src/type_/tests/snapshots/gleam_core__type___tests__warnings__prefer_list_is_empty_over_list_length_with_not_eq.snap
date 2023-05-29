@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n        import gleam/list\n\n        pub fn main() {\n            let a_list = []\n            let _ = list.length(a_list) != 0\n        }\n        "
+---
+
+warning: Inefficient empty list check
+  ┌─ /src/warning/wrn.gleam:6:21
+  │
+6 │             let _ = list.length(a_list) != 0
+  │                     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+`list.length` runs in linear time while `list.is_empty` runs in constant time.
+Hint: You can use `!list.is_empty` instead.
+

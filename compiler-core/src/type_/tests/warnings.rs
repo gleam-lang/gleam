@@ -575,14 +575,7 @@ fn prefer_list_is_empty_over_list_length() {
             let a_list = []
             let _ = list.length(a_list) == 0
         }
-        "#,
-        Warning::PerfListLength {
-            is_not_eq: false,
-            location: SrcSpan {
-                start: 100,
-                end: 124
-            },
-        }
+        "#
     );
 }
 
@@ -597,14 +590,7 @@ fn prefer_list_is_empty_over_list_length_with_negative_zero() {
             let a_list = []
             let _ = list.length(a_list) == -0
         }
-        "#,
-        Warning::PerfListLength {
-            is_not_eq: false,
-            location: SrcSpan {
-                start: 100,
-                end: 125
-            },
-        }
+        "#
     );
 }
 
@@ -619,14 +605,7 @@ fn prefer_list_is_empty_over_list_length_with_arguments_flipped() {
             let a_list = []
             let _ = 0 == list.length(a_list)
         }
-        "#,
-        Warning::PerfListLength {
-            is_not_eq: false,
-            location: SrcSpan {
-                start: 100,
-                end: 124
-            },
-        }
+        "#
     );
 }
 
@@ -641,14 +620,7 @@ fn prefer_list_is_empty_over_list_length_with_not_eq() {
             let a_list = []
             let _ = list.length(a_list) != 0
         }
-        "#,
-        Warning::PerfListLength {
-            is_not_eq: true,
-            location: SrcSpan {
-                start: 100,
-                end: 124
-            },
-        }
+        "#
     );
 }
 
@@ -663,13 +635,6 @@ fn prefer_list_is_empty_over_list_length_with_not_eq_and_arguments_flipped() {
             let a_list = []
             let _ = 0 != list.length(a_list)
         }
-        "#,
-        Warning::PerfListLength {
-            is_not_eq: true,
-            location: SrcSpan {
-                start: 100,
-                end: 124
-            },
-        }
+        "#
     );
 }
