@@ -34,7 +34,8 @@ macro_rules! assert_infer {
 #[macro_export]
 macro_rules! assert_infer_with_module {
     (($name:expr, $module_src:literal), $src:expr, $module:expr $(,)?) => {
-        let constructors = $crate::type_::tests::infer_module($src, vec![($name, $module_src)]);
+        let constructors =
+            $crate::type_::tests::infer_module($src, vec![("thepackage", $name, $module_src)]);
         let expected = $crate::type_::tests::stringify_tuple_strs($module);
 
         assert_eq!(($src, constructors), ($src, expected));
@@ -90,7 +91,8 @@ macro_rules! assert_error {
 #[macro_export]
 macro_rules! assert_with_module_error {
     (($name:expr, $module_src:literal), $src:expr $(,)?) => {
-        let output = $crate::type_::tests::module_error($src, vec![($name, $module_src)]);
+        let output =
+            $crate::type_::tests::module_error($src, vec![("thepackage", $name, $module_src)]);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
@@ -101,13 +103,16 @@ macro_rules! assert_with_module_error {
     ) => {
         let output = $crate::type_::tests::module_error(
             $src,
-            vec![($name, $module_src), ($name2, $module_src2)],
+            vec![
+                ("thepackage", $name, $module_src),
+                ("thepackage", $name2, $module_src2),
+            ],
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
 
-fn get_warnings(src: &str, deps: Vec<(&str, &str)>) -> Vec<Warning> {
+fn get_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> Vec<Warning> {
     let warnings = VectorWarningEmitterIO::default();
     _ = compile_module(src, Some(Arc::new(warnings.clone())), deps).unwrap();
     warnings
@@ -119,7 +124,7 @@ fn get_warnings(src: &str, deps: Vec<(&str, &str)>) -> Vec<Warning> {
         .collect_vec()
 }
 
-fn get_printed_warnings(src: &str, deps: Vec<(&str, &str)>) -> String {
+fn get_printed_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
     let warnings = get_warnings(src, deps);
     let mut nocolor = termcolor::Buffer::no_color();
     for warning in warnings {
@@ -140,7 +145,7 @@ macro_rules! assert_warning {
     ($(($name:expr, $module_src:literal)),+, $src:expr) => {
         let output = $crate::type_::tests::get_printed_warnings(
             $src,
-            vec![$(($name, $module_src)),*]
+            vec![$(("thepackage", $name, $module_src)),*]
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
@@ -154,7 +159,7 @@ macro_rules! assert_warning {
     ($(($name:expr, $module_src:literal)),+, $src:expr, $warning:expr $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
-            vec![$(($name, $module_src)),*],
+            vec![$(("thepackage", $name, $module_src)),*],
         );
         assert!(!warnings.is_empty());
         assert_eq!($warning, warnings[0]);
@@ -170,7 +175,7 @@ macro_rules! assert_no_warnings {
     ($(($name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
-            vec![$(($name, $module_src)),*],
+            vec![$(("thepackage", $name, $module_src)),*],
         );
         assert!(warnings.is_empty());
     };
@@ -207,7 +212,15 @@ pub fn stringify_tuple_strs(module: Vec<(&str, &str)>) -> Vec<(SmolStr, String)>
         .collect()
 }
 
-pub fn infer_module(src: &str, dep: Vec<(&str, &str)>) -> Vec<(SmolStr, String)> {
+/// A module loaded as a dependency in the tests.
+///
+/// In order the tuple elements indicate:
+/// 1. The package name.
+/// 2. The module name.
+/// 3. The module source.
+type DependencyModule<'a> = (&'a str, &'a str, &'a str);
+
+pub fn infer_module(src: &str, dep: Vec<DependencyModule<'_>>) -> Vec<(SmolStr, String)> {
     let ast = compile_module(src, None, dep).expect("should successfully infer");
     ast.type_info
         .values
@@ -224,7 +237,7 @@ pub fn infer_module(src: &str, dep: Vec<(&str, &str)>) -> Vec<(SmolStr, String)>
 pub fn compile_module(
     src: &str,
     warnings: Option<Arc<dyn WarningEmitterIO>>,
-    dep: Vec<(&str, &str)>,
+    dep: Vec<DependencyModule<'_>>,
 ) -> Result<TypedModule, crate::type_::Error> {
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
@@ -242,7 +255,7 @@ pub fn compile_module(
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
 
-    for (name, module_src) in dep {
+    for (package, name, module_src) in dep {
         let (mut ast, _) = crate::parse::parse_module(module_src).expect("syntax error");
         ast.name = name.into();
         let module = crate::analyse::infer_module(
@@ -250,7 +263,7 @@ pub fn compile_module(
             &ids,
             ast,
             Origin::Src,
-            &"thepackage".into(),
+            &package.into(),
             &modules,
             &warnings,
         )
@@ -270,7 +283,7 @@ pub fn compile_module(
     )
 }
 
-pub fn module_error(src: &str, deps: Vec<(&str, &str)>) -> String {
+pub fn module_error(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
     let error = compile_module(src, None, deps).expect_err("should infer an error");
     let error = Error::Type {
         src: src.into(),
