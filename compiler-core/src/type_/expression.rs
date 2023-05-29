@@ -757,33 +757,38 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) {
         // Check if we have a call expression on one side and an int literal on the other.
         let (fun, kind) = match (&left, &right) {
+            // For `==` and `!=` we don't care which side each of the operands are on.
             (TypedExpr::Call { fun, .. }, TypedExpr::Int { value, .. })
             | (TypedExpr::Int { value, .. }, TypedExpr::Call { fun, .. })
                 if binop == BinOp::Eq || binop == BinOp::NotEq =>
             {
-                match (binop, value.as_str()) {
-                    (BinOp::Eq, "0") | (BinOp::Eq, "-0") => (fun, EmptyListCheckKind::EmptyList),
-                    (BinOp::NotEq, "0") | (BinOp::NotEq, "-0") => {
-                        (fun, EmptyListCheckKind::NonEmptyList)
-                    }
+                let kind = match (binop, value.as_str()) {
+                    (BinOp::Eq, "0") | (BinOp::Eq, "-0") => EmptyListCheckKind::EmptyList,
+                    (BinOp::NotEq, "0") | (BinOp::NotEq, "-0") => EmptyListCheckKind::NonEmptyList,
                     _ => return,
-                }
+                };
+
+                (fun, kind)
             }
             (TypedExpr::Call { fun, .. }, TypedExpr::Int { value, .. }) => {
-                match (binop, value.as_str()) {
+                let kind = match (binop, value.as_str()) {
                     (BinOp::LtEqInt, "0") | (BinOp::LtEqInt, "-0") | (BinOp::LtInt, "1") => {
-                        (fun, EmptyListCheckKind::EmptyList)
+                        EmptyListCheckKind::EmptyList
                     }
                     _ => return,
-                }
+                };
+
+                (fun, kind)
             }
             (TypedExpr::Int { value, .. }, TypedExpr::Call { fun, .. }) => {
-                match (binop, value.as_str()) {
+                let kind = match (binop, value.as_str()) {
                     (BinOp::GtEqInt, "0") | (BinOp::GtEqInt, "-0") | (BinOp::GtInt, "1") => {
-                        (fun, EmptyListCheckKind::NonEmptyList)
+                        EmptyListCheckKind::NonEmptyList
                     }
                     _ => return,
-                }
+                };
+
+                (fun, kind)
             }
             _ => return,
         };
