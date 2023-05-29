@@ -437,7 +437,7 @@ fn unused_imported_module_with_alias_warnings_test() {
 #[test]
 fn unused_imported_module_no_warning_on_used_function_test() {
     assert_no_warnings!(
-        ("gleam/foo", "pub fn bar() { 1 }"),
+        ("thepackage", "gleam/foo", "pub fn bar() { 1 }"),
         "import gleam/foo pub fn baz() { foo.bar() }",
     );
 }
@@ -445,7 +445,7 @@ fn unused_imported_module_no_warning_on_used_function_test() {
 #[test]
 fn unused_imported_module_no_warning_on_used_type_test() {
     assert_no_warnings!(
-        ("gleam/foo", "pub type Foo = Int"),
+        ("thepackage", "gleam/foo", "pub type Foo = Int"),
         "import gleam/foo pub fn baz(a: foo.Foo) { a }",
     );
 }
@@ -453,7 +453,7 @@ fn unused_imported_module_no_warning_on_used_type_test() {
 #[test]
 fn unused_imported_module_no_warning_on_used_unqualified_function_test() {
     assert_no_warnings!(
-        ("gleam/foo", "pub fn bar() { 1 }"),
+        ("thepackage", "gleam/foo", "pub fn bar() { 1 }"),
         "import gleam/foo.{bar} pub fn baz() { bar() }",
     );
 }
@@ -461,7 +461,7 @@ fn unused_imported_module_no_warning_on_used_unqualified_function_test() {
 #[test]
 fn unused_imported_module_no_warning_on_used_unqualified_type_test() {
     assert_no_warnings!(
-        ("gleam/foo", "pub type Foo = Int"),
+        ("thepackage", "gleam/foo", "pub type Foo = Int"),
         "import gleam/foo.{Foo} pub fn baz(a: Foo) { a }",
     );
 }
@@ -469,7 +469,7 @@ fn unused_imported_module_no_warning_on_used_unqualified_type_test() {
 #[test]
 fn module_access_registers_import_usage() {
     assert_no_warnings!(
-        ("gleam/bibble", "pub const bobble = 1"),
+        ("thepackage", "gleam/bibble", "pub const bobble = 1"),
         "import gleam/bibble pub fn main() { bibble.bobble }",
     );
 }
@@ -504,7 +504,7 @@ pub fn main(s) {
 #[test]
 fn imported_function_referenced_in_constant() {
     assert_no_warnings!(
-        ("one", "pub fn two() { 2 }"),
+        ("thepackage", "one", "pub fn two() { 2 }"),
         "
 import one
 
@@ -517,7 +517,7 @@ pub const make_two = one.two
 #[test]
 fn imported_constructor_referenced_in_constant() {
     assert_no_warnings!(
-        ("one", "pub type Two { Two(Int) }"),
+        ("thepackage", "one", "pub type Two { Two(Int) }"),
         "
 import one
 
@@ -728,7 +728,11 @@ fn prefer_list_is_empty_over_list_length_lt_1() {
 #[test]
 fn allow_list_length_eq_1() {
     assert_no_warnings!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 
@@ -744,7 +748,11 @@ fn allow_list_length_eq_1() {
 #[test]
 fn allow_1_eq_list_length() {
     assert_no_warnings!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 
@@ -760,7 +768,11 @@ fn allow_1_eq_list_length() {
 #[test]
 fn allow_list_length_eq_3() {
     assert_no_warnings!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 
@@ -776,7 +788,11 @@ fn allow_list_length_eq_3() {
 #[test]
 fn allow_1_lt_list_length() {
     assert_no_warnings!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 
@@ -792,7 +808,11 @@ fn allow_1_lt_list_length() {
 #[test]
 fn allow_list_length_gt_1() {
     assert_no_warnings!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 
