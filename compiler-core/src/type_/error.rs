@@ -334,7 +334,7 @@ pub enum Warning {
         location: SrcSpan,
     },
 
-    PerfListLength {
+    InefficientEmptyListCheck {
         location: SrcSpan,
         is_not_eq: bool,
     },

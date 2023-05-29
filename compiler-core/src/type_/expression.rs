@@ -691,7 +691,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 unify(left.type_(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
 
-                self.check_for_inefficient_list_length_call(name, &left, &right, location);
+                self.check_for_inefficient_empty_list_check(name, &left, &right, location);
 
                 return Ok(TypedExpr::BinOp {
                     location,
@@ -743,7 +743,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn check_for_inefficient_list_length_call(
+    /// Checks for inefficient usage of `list.length` for checking for the empty list.
+    ///
+    /// If we find one of these usages, emit a warning to use `list.is_empty` instead.
+    fn check_for_inefficient_empty_list_check(
         &mut self,
         binop: BinOp,
         left: &TypedExpr,
@@ -802,10 +805,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         // If we've gotten this far, go ahead and emit the warning.
-        self.environment.warnings.emit(Warning::PerfListLength {
-            location,
-            is_not_eq: binop == BinOp::NotEq,
-        });
+        self.environment
+            .warnings
+            .emit(Warning::InefficientEmptyListCheck {
+                location,
+                is_not_eq: binop == BinOp::NotEq,
+            });
     }
 
     fn infer_assignment(

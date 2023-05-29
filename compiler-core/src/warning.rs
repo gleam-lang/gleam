@@ -412,7 +412,7 @@ expression.",
                         extra_labels: Vec::new(),
                     }),
                 },
-                type_::Warning::PerfListLength {
+                type_::Warning::InefficientEmptyListCheck {
                     location,
                     is_not_eq,
                 } => Diagnostic {
