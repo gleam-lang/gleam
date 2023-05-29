@@ -412,27 +412,28 @@ expression.",
                         extra_labels: Vec::new(),
                     }),
                 },
-                type_::Warning::InefficientEmptyListCheck {
-                    location,
-                    kind,
-                } => Diagnostic {
-                    title: "Inefficient empty list check".into(),
-                    text: "`list.length` runs in linear time while `list.is_empty` runs in constant time.".into(),
-                    hint: Some(match kind {
-                        type_::error::EmptyListCheckKind::EmptyList => "You can use `list.is_empty` instead.".into(),
-                        type_::error::EmptyListCheckKind::NonEmptyList => "You can use `!list.is_empty` instead.".into()
-                    }),
-                    level: diagnostic::Level::Warning,
-                    location: Some(Location {
-                        src: src.clone(),
-                        path: path.to_path_buf(),
-                        label: diagnostic::Label {
-                            text: None,
-                            span: *location,
-                        },
-                        extra_labels: Vec::new(),
-                    }),
-                },
+                type_::Warning::InefficientEmptyListCheck { location, kind } => {
+                    use type_::error::EmptyListCheckKind;
+
+                    Diagnostic {
+                        title: "Inefficient empty list check".into(),
+                        text: "`list.length` runs in linear time while `list.is_empty` runs in constant time.".into(),
+                        hint: Some(match kind {
+                            EmptyListCheckKind::EmptyList => "You can use `list.is_empty` instead.".into(),
+                            EmptyListCheckKind::NonEmptyList => "You can use `!list.is_empty` instead.".into()
+                        }),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
             },
         }
     }
