@@ -734,6 +734,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .into_error(right.type_defining_location())
         })?;
 
+        self.check_for_inefficient_empty_list_check(name, &left, &right, location);
+
         Ok(TypedExpr::BinOp {
             location,
             name,
@@ -799,7 +801,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         // Check that we're doing what looks like a list emptiness check.
-        let is_emptiness_check = value == "0" || value == "-0";
+        let is_emptiness_check = match (binop, value.as_str()) {
+            (BinOp::Eq, "0")
+            | (BinOp::Eq, "-0")
+            | (BinOp::NotEq, "0")
+            | (BinOp::NotEq, "-0")
+            | (BinOp::LtEqInt, "0")
+            | (BinOp::LtEqInt, "-0")
+            | (BinOp::LtInt, "1") => true,
+            _ => false,
+        };
         if !is_emptiness_check {
             return;
         }

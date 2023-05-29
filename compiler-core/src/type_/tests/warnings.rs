@@ -564,6 +564,7 @@ fn double_unary_bool_variable() {
     );
 }
 
+/// https://github.com/gleam-lang/gleam/issues/2067
 #[test]
 fn prefer_list_is_empty_over_list_length_with_eq() {
     assert_warning!(
@@ -579,6 +580,7 @@ fn prefer_list_is_empty_over_list_length_with_eq() {
     );
 }
 
+/// https://github.com/gleam-lang/gleam/issues/2067
 #[test]
 fn prefer_list_is_empty_over_list_length_with_eq_and_negative_zero() {
     assert_warning!(
@@ -594,6 +596,7 @@ fn prefer_list_is_empty_over_list_length_with_eq_and_negative_zero() {
     );
 }
 
+/// https://github.com/gleam-lang/gleam/issues/2067
 #[test]
 fn prefer_list_is_empty_over_list_length_with_eq_and_arguments_flipped() {
     assert_warning!(
@@ -609,6 +612,7 @@ fn prefer_list_is_empty_over_list_length_with_eq_and_arguments_flipped() {
     );
 }
 
+/// https://github.com/gleam-lang/gleam/issues/2067
 #[test]
 fn prefer_list_is_empty_over_list_length_with_not_eq() {
     assert_warning!(
@@ -624,6 +628,7 @@ fn prefer_list_is_empty_over_list_length_with_not_eq() {
     );
 }
 
+/// https://github.com/gleam-lang/gleam/issues/2067
 #[test]
 fn prefer_list_is_empty_over_list_length_with_not_eq_and_arguments_flipped() {
     assert_warning!(
@@ -634,6 +639,54 @@ fn prefer_list_is_empty_over_list_length_with_not_eq_and_arguments_flipped() {
         pub fn main() {
             let a_list = []
             let _ = 0 != list.length(a_list)
+        }
+        "#
+    );
+}
+
+/// https://github.com/gleam-lang/gleam/issues/2067
+#[test]
+fn prefer_list_is_empty_over_list_length_with_lt_eq() {
+    assert_warning!(
+        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        r#"
+        import gleam/list
+
+        pub fn main() {
+            let a_list = []
+            let _ = list.length(a_list) <= 0
+        }
+        "#
+    );
+}
+
+/// https://github.com/gleam-lang/gleam/issues/2067
+#[test]
+fn prefer_list_is_empty_over_list_length_with_lt() {
+    assert_warning!(
+        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        r#"
+        import gleam/list
+
+        pub fn main() {
+            let a_list = []
+            let _ = list.length(a_list) < 1
+        }
+        "#
+    );
+}
+
+/// https://github.com/gleam-lang/gleam/issues/2067
+#[test]
+fn allow_list_length_eq_1() {
+    assert_no_warnings!(
+        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        r#"
+        import gleam/list
+
+        pub fn main() {
+            let a_list = []
+            let _ = list.length(a_list) == 1
         }
         "#
     );
