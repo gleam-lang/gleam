@@ -5,6 +5,7 @@
 - Dependencies can now be loaded from paths. Path dependencies currently use
   the same semantics as hex dependencies, and must be updated using the command
   `gleam deps update` to load changes.
+- Blockquotes are now styled in rendered HTML documentation.
 - Type aliases can now refer to type aliases defined later in the same module.
 - Fixed a bug where unapplied record constructors in constant expressions would
   generate invalid Erlang.
