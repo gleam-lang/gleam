@@ -10,6 +10,7 @@
   generate invalid Erlang.
 - Fixed a bug where `gleam docs build` would print an incorrect path upon
   completion.
+- A warning is now emitted when using `list.length` to check for the empty list instead of `list.is_empty` (#2180).
 
 ## v0.29.0 - 2023-05-23
 
