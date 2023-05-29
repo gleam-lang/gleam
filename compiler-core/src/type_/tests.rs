@@ -172,10 +172,10 @@ macro_rules! assert_no_warnings {
         let warnings = $crate::type_::tests::get_warnings($src, vec![]);
         assert!(warnings.is_empty());
     };
-    ($(($name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
+    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
-            vec![$(("thepackage", $name, $module_src)),*],
+            vec![$(($package, $name, $module_src)),*],
         );
         assert!(warnings.is_empty());
     };
