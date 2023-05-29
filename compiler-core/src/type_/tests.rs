@@ -137,6 +137,11 @@ macro_rules! assert_warning {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
+    ($(($name:expr, $module_src:literal)),+, $src:expr) => {
+        let output = $crate::type_::tests::get_printed_warnings($src, vec![$(($name, $module_src)),*]);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+
     ($src:expr, $warning:expr $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings($src, vec![]);
         assert!(!warnings.is_empty());
