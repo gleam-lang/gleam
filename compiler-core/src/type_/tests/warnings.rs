@@ -565,7 +565,7 @@ fn double_unary_bool_variable() {
 }
 
 #[test]
-fn prefer_list_is_empty_over_list_length() {
+fn prefer_list_is_empty_over_list_length_with_eq() {
     assert_warning!(
         ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
         r#"
@@ -580,7 +580,7 @@ fn prefer_list_is_empty_over_list_length() {
 }
 
 #[test]
-fn prefer_list_is_empty_over_list_length_with_negative_zero() {
+fn prefer_list_is_empty_over_list_length_with_eq_and_negative_zero() {
     assert_warning!(
         ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
         r#"
@@ -595,7 +595,7 @@ fn prefer_list_is_empty_over_list_length_with_negative_zero() {
 }
 
 #[test]
-fn prefer_list_is_empty_over_list_length_with_arguments_flipped() {
+fn prefer_list_is_empty_over_list_length_with_eq_and_arguments_flipped() {
     assert_warning!(
         ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
         r#"
