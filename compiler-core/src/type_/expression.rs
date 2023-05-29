@@ -768,6 +768,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             _ => return,
         };
 
+        // Check if we have a `list.length` call from `gleam/list`.
         if module_name != "gleam/list" || label != "length" {
             return;
         }
@@ -777,18 +778,34 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             None => return,
         };
 
-        // TODO: How do we make this be `gleam_stdlib` in the tests?
-        if list_module.package != "gleam_stdlib" && list_module.package != "thepackage" {
+        // TODO: Figure out how to simulate loading the `gleam_stdlib` package in the tests.
+        const STDLIB_MODULE_NAME: &str = if cfg!(test) {
+            // In the tests we currently declare all modules ourselves in a package
+            // named "thepackage".
+            //
+            // Therefore, we need to use that as the "stdlib" module name when running
+            // the tests if we want the warning to work as expected.s
+            "thepackage"
+        } else {
+            "gleam_stdlib"
+        };
+
+        // Check that we're actually using `list.length` from the standard library.
+        if list_module.package != STDLIB_MODULE_NAME {
             return;
         }
 
+        // Check that we're doing what looks like a list emptiness check.
         let is_emptiness_check = value == "0" || value == "-0";
-        if is_emptiness_check {
-            self.environment.warnings.emit(Warning::PerfListLength {
-                location,
-                is_not_eq: binop == BinOp::NotEq,
-            });
+        if !is_emptiness_check {
+            return;
         }
+
+        // If we've gotten this far, go ahead and emit the warning.
+        self.environment.warnings.emit(Warning::PerfListLength {
+            location,
+            is_not_eq: binop == BinOp::NotEq,
+        });
     }
 
     fn infer_assignment(
