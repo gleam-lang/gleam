@@ -568,7 +568,11 @@ fn double_unary_bool_variable() {
 #[test]
 fn prefer_list_is_empty_over_list_length_eq_0() {
     assert_warning!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 
@@ -584,7 +588,11 @@ fn prefer_list_is_empty_over_list_length_eq_0() {
 #[test]
 fn prefer_list_is_empty_over_list_length_eq_negative_0() {
     assert_warning!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 
@@ -600,7 +608,11 @@ fn prefer_list_is_empty_over_list_length_eq_negative_0() {
 #[test]
 fn prefer_list_is_empty_over_0_eq_list_length() {
     assert_warning!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 
@@ -616,7 +628,11 @@ fn prefer_list_is_empty_over_0_eq_list_length() {
 #[test]
 fn prefer_list_is_empty_over_negative_0_eq_list_length() {
     assert_warning!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 
@@ -632,7 +648,11 @@ fn prefer_list_is_empty_over_negative_0_eq_list_length() {
 #[test]
 fn prefer_list_is_empty_over_list_length_not_eq_0() {
     assert_warning!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 
@@ -648,7 +668,11 @@ fn prefer_list_is_empty_over_list_length_not_eq_0() {
 #[test]
 fn prefer_list_is_empty_over_0_not_eq_list_length() {
     assert_warning!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 
@@ -664,7 +688,11 @@ fn prefer_list_is_empty_over_0_not_eq_list_length() {
 #[test]
 fn prefer_list_is_empty_over_list_length_lt_eq_0() {
     assert_warning!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 
@@ -680,7 +708,11 @@ fn prefer_list_is_empty_over_list_length_lt_eq_0() {
 #[test]
 fn prefer_list_is_empty_over_list_length_lt_1() {
     assert_warning!(
-        ("gleam/list", "pub fn length(_list: List(a)) -> Int { 0 }"),
+        (
+            "gleam_stdlib",
+            "gleam/list",
+            "pub fn length(_list: List(a)) -> Int { 0 }"
+        ),
         r#"
         import gleam/list
 

@@ -755,6 +755,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         right: &TypedExpr,
         location: SrcSpan,
     ) {
+        const STDLIB_MODULE_NAME: &str = "gleam_stdlib";
+
         // Look for a call expression as either of the binary operands.
         let fun = match (&left, &right) {
             (TypedExpr::Call { fun, .. }, _) | (_, TypedExpr::Call { fun, .. }) => fun,
@@ -781,18 +783,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let list_module = match self.environment.imported_modules.get(module_alias) {
             Some((_, list_module)) => list_module,
             None => return,
-        };
-
-        // TODO: Figure out how to simulate loading the `gleam_stdlib` package in the tests.
-        const STDLIB_MODULE_NAME: &str = if cfg!(test) {
-            // In the tests we currently declare all modules ourselves in a package
-            // named "thepackage".
-            //
-            // Therefore, we need to use that as the "stdlib" module name when running
-            // the tests if we want the warning to work as expected.s
-            "thepackage"
-        } else {
-            "gleam_stdlib"
         };
 
         // Check that we're actually using `list.length` from the standard library.
