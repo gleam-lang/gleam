@@ -691,29 +691,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 unify(left.type_(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
 
-                match (&left, &right) {
-                    (TypedExpr::Call { fun, .. }, TypedExpr::Int { value, .. })
-                    | (TypedExpr::Int { value, .. }, TypedExpr::Call { fun, .. }) => {
-                        match fun.as_ref() {
-                            TypedExpr::ModuleSelect {
-                                module_name, label, ..
-                            } => {
-                                let is_list_length_call =
-                                    module_name == "gleam/list" && label == "length";
-                                let is_emptiness_check = value == "0" || value == "-0";
-
-                                if is_list_length_call && is_emptiness_check {
-                                    self.environment.warnings.emit(Warning::PerfListLength {
-                                        location,
-                                        is_not_eq: name == BinOp::NotEq,
-                                    });
-                                }
-                            }
-                            _ => {}
-                        };
-                    }
-                    _ => {}
-                }
+                self.check_inefficient_length_comparison(name, &left, &right, location);
 
                 return Ok(TypedExpr::BinOp {
                     location,
@@ -763,6 +741,40 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             left: Box::new(left),
             right: Box::new(right),
         })
+    }
+
+    fn check_inefficient_length_comparison(
+        &mut self,
+        binop: BinOp,
+        left: &TypedExpr,
+        right: &TypedExpr,
+        location: SrcSpan,
+    ) {
+        // Check if we have a call expression on one side and an int literal on the other.
+        let (fun, value) = match (&left, &right) {
+            (TypedExpr::Call { fun, .. }, TypedExpr::Int { value, .. })
+            | (TypedExpr::Int { value, .. }, TypedExpr::Call { fun, .. }) => (fun, value),
+            _ => return,
+        };
+
+        // Check if the call expression is a module reference.
+        let (module_name, label) = match fun.as_ref() {
+            TypedExpr::ModuleSelect {
+                module_name, label, ..
+            } => (module_name, label),
+            _ => return,
+        };
+
+        // Determine whether this looks like a check we want to warn on.
+        let is_list_length_call = module_name == "gleam/list" && label == "length";
+        let is_emptiness_check = value == "0" || value == "-0";
+
+        if is_list_length_call && is_emptiness_check {
+            self.environment.warnings.emit(Warning::PerfListLength {
+                location,
+                is_not_eq: binop == BinOp::NotEq,
+            });
+        }
     }
 
     fn infer_assignment(
