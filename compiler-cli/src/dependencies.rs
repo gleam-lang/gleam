@@ -20,6 +20,7 @@ use gleam_core::{
 };
 use hexpm::version::Version;
 use itertools::Itertools;
+use pathdiff::diff_paths;
 use smol_str::SmolStr;
 use strum::IntoEnumIterator;
 
@@ -687,15 +688,20 @@ fn provide_local_package(
     provided: &mut HashMap<SmolStr, ProvidedPackage>,
     parents: &mut Vec<SmolStr>,
 ) -> Result<hexpm::version::Range> {
+    // Canonical paths are absolute and uniquely identify a file
     let canonical_path = package_path
         .canonicalize()
         .map_err(|_| Error::DependencyCanonicalizationFailed(package_name.to_string()))?;
+    // Turn the canonical path into a path relitive to the project root
+    let relitive_canonical_path = diff_paths(canonical_path, project_paths.root()).ok_or(
+        Error::DependencyCanonicalizationFailed(package_name.to_string()),
+    )?;
     let package_source = ProvidedPackageSource::Local {
-        path: canonical_path.clone(),
+        path: relitive_canonical_path.clone(),
     };
     provide_package(
         package_name,
-        &canonical_path,
+        &relitive_canonical_path,
         package_source,
         project_paths,
         provided,
@@ -910,7 +916,7 @@ fn provided_is_absolute() {
     );
     let package = provided.get("hello_world").unwrap().clone();
     if let ProvidedPackageSource::Local { path } = package.source {
-        assert!(path.is_absolute())
+        assert!(!path.is_absolute())
     } else {
         panic!("Provide_local_package provided a package that is not local!")
     }
