@@ -230,16 +230,24 @@ where
         let build_path =
             self.paths
                 .build_directory_for_package(self.mode(), self.target(), &package.name);
-        if self.io.is_directory(&build_path) {
-            tracing::debug!(package=%package.name, "loading_precompiled_package");
-            return self.load_cached_package(build_path, package);
-        }
 
         self.telemetry.compiling_package(&package.name);
         let result = match usable_build_tool(package)? {
             BuildTool::Gleam => self.compile_gleam_dep_package(package),
-            BuildTool::Rebar3 => self.compile_rebar3_dep_package(package),
-            BuildTool::Mix => self.compile_mix_dep_package(package),
+            BuildTool::Rebar3 => {
+                if self.io.is_directory(&build_path) {
+                    tracing::debug!(package=%package.name, "loading_precompiled_rebar_package");
+                    return self.load_cached_package(build_path, package);
+                }
+                self.compile_rebar3_dep_package(package)
+            }
+            BuildTool::Mix => {
+                if self.io.is_directory(&build_path) {
+                    tracing::debug!(package=%package.name, "loading_precompiled_mix_package");
+                    return self.load_cached_package(build_path, package);
+                }
+                self.compile_mix_dep_package(package)
+            }
         };
 
         // TODO: test. This one is not covered by the integration tests.
