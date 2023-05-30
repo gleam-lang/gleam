@@ -57,6 +57,7 @@ pub enum Token {
     RArrow,     // '->'
     LArrow,     // '<-'
     DotDot,     // '..'
+    At,         // '@'
     EndOfFile,
     // Extra
     CommentNormal,
@@ -155,6 +156,7 @@ impl fmt::Display for Token {
             Token::EndOfFile => "EOF",
             Token::CommentNormal => "//",
             Token::CommentDoc { .. } => "///",
+            Token::At => "@",
             Token::CommentModule => "////",
             Token::EmptyLine => "EMPTYLINE",
             Token::As => "as",
