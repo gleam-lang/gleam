@@ -324,7 +324,11 @@ enum Hex {
 #[derive(Subcommand, Debug)]
 enum Docs {
     /// Render HTML docs locally
-    Build,
+    Build {
+        /// Opens the docs in a browser after rendering
+        #[clap(long)]
+        open: bool,
+    },
 
     /// Publish HTML docs to HexDocs
     ///
@@ -366,7 +370,7 @@ fn main() {
 
         Command::Check => command_check(),
 
-        Command::Docs(Docs::Build) => docs::build(),
+        Command::Docs(Docs::Build { open }) => docs::build(docs::BuildOptions { open }),
 
         Command::Docs(Docs::Publish) => docs::publish(),
 
