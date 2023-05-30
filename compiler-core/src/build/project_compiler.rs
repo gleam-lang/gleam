@@ -8,7 +8,7 @@ use crate::{
     dep_tree,
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
-    manifest::ManifestPackage,
+    manifest::{ManifestPackage, ManifestPackageSource},
     metadata,
     paths::{self, ProjectPaths},
     type_::{self, ModuleFunction},
@@ -407,10 +407,13 @@ where
     }
 
     fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
-        let config_path = self.paths.build_packages_package_config(&package.name);
+        let package_root = match &package.source {
+            ManifestPackageSource::Local { path } => path.clone(),
+            _ => self.paths.build_packages_package(&package.name),
+        };
+        let config_path = package_root.join("gleam.toml");
         let config = PackageConfig::read(config_path, &self.io)?;
-        let root = self.paths.build_packages_package(&package.name);
-        self.compile_gleam_package(&config, false, root)
+        self.compile_gleam_package(&config, false, package_root)
             .map(|_| ())?;
         Ok(())
     }
