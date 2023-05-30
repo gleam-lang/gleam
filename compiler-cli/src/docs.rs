@@ -52,6 +52,7 @@ impl ApiKeyCommand for RemoveCommand {
 
 #[derive(Debug)]
 pub struct BuildOptions {
+    /// Whether to open the docs after building.
     pub open: bool,
 }
 
