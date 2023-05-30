@@ -100,11 +100,9 @@ pub fn build(options: BuildOptions) -> Result<()> {
 /// For the docs this will generally be a browser (unless some other program is
 /// configured as the default for `.html` files).
 fn open_docs(path: &Path) -> Result<()> {
-    opener::open(path).map_err(|error| Error::FileIo {
-        kind: FileKind::File,
-        action: FileIoAction::Open,
+    opener::open(path).map_err(|error| Error::FailedToOpenDocs {
         path: path.to_path_buf(),
-        err: Some(error.to_string()),
+        error: error.to_string(),
     })?;
 
     Ok(())
