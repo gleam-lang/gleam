@@ -5,7 +5,7 @@ use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
     build::{Codegen, Mode, Options, Package},
     config::{DocsPage, PackageConfig},
-    error::{Error, FileIoAction, FileKind},
+    error::Error,
     hex,
     io::HttpClient as _,
     Result,
