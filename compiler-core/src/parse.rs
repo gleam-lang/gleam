@@ -192,8 +192,25 @@ where
         }
     }
 
+    /// Parse conditional compilation blocks.
     fn parse_target_group(&mut self) -> Result<Option<TargetGroup>, ParseError> {
         match &self.tok0 {
+            // Attribute-syntax
+            Some((_, Token::At, _)) => {
+                let _ = self.next_tok();
+                match &self.tok0 {
+                    Some((_, Token::If, _)) => {
+                        let _ = self.next_tok();
+                        let _ = self.expect_one(&Token::LeftParen)?;
+                        let target = self.expect_target()?;
+                        let _ = self.expect_one(&Token::RightParen)?;
+                        let statements = self.expect_module_statements()?;
+                        Ok(Some(TargetGroup::Only(target, statements)))
+                    }
+                    _ => Ok(None),
+                }
+            }
+            // If-syntax
             Some((_, Token::If, _)) => {
                 let _ = self.next_tok();
                 let target = self.expect_target()?;
