@@ -101,7 +101,20 @@ pub fn build(options: BuildOptions) -> Result<()> {
 /// configured as the default for `.html` files).
 fn open_docs(path: &Path) {
     if let Err(error) = opener::open(path) {
-        eprintln!("Failed to open docs:\n{}", error);
+        use std::io::Write;
+
+        let buffer_writer = crate::cli::stderr_buffer_writer();
+        let mut buffer = buffer_writer.buffer();
+
+        buffer
+            .write_all(b"\n")
+            .expect("error pretty buffer write space before");
+
+        write!(buffer, "Failed to open docs:\n{}", error).unwrap();
+
+        buffer_writer
+            .print(&buffer)
+            .expect("Writing warning to stderr");
     }
 }
 
