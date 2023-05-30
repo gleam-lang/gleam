@@ -5,7 +5,7 @@ use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
     build::{Codegen, Mode, Options, Package},
     config::{DocsPage, PackageConfig},
-    error::Error,
+    error::{Error, FileIoAction, FileKind},
     hex,
     io::HttpClient as _,
     Result,
@@ -88,7 +88,7 @@ pub fn build(options: BuildOptions) -> Result<()> {
     );
 
     if options.open {
-        open_docs(&index_html);
+        open_docs(&index_html)?;
     }
 
     // We're done!
@@ -99,23 +99,15 @@ pub fn build(options: BuildOptions) -> Result<()> {
 ///
 /// For the docs this will generally be a browser (unless some other program is
 /// configured as the default for `.html` files).
-fn open_docs(path: &Path) {
-    if let Err(error) = opener::open(path) {
-        use std::io::Write;
+fn open_docs(path: &Path) -> Result<()> {
+    opener::open(path).map_err(|error| Error::FileIo {
+        kind: FileKind::File,
+        action: FileIoAction::Open,
+        path: path.to_path_buf(),
+        err: Some(error.to_string()),
+    })?;
 
-        let buffer_writer = crate::cli::stderr_buffer_writer();
-        let mut buffer = buffer_writer.buffer();
-
-        buffer
-            .write_all(b"\n")
-            .expect("error pretty buffer write space before");
-
-        write!(buffer, "Failed to open docs:\n{}", error).unwrap();
-
-        buffer_writer
-            .print(&buffer)
-            .expect("Writing warning to stderr");
-    }
+    Ok(())
 }
 
 pub(crate) fn build_documentation(
