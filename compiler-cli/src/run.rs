@@ -9,7 +9,7 @@ use gleam_core::{
 use lazy_static::lazy_static;
 use std::path::PathBuf;
 
-use crate::{add, fs::ProjectIO};
+use crate::fs::ProjectIO;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
