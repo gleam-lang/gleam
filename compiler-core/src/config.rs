@@ -123,12 +123,14 @@ impl PackageConfig {
         fs: &FS,
     ) -> Result<PackageConfig, Error> {
         let toml = fs.read(path.as_ref())?;
-        toml::from_str(&toml).map_err(|e| Error::FileIo {
+        let config: PackageConfig = toml::from_str(&toml).map_err(|e| Error::FileIo {
             action: FileIoAction::Parse,
             kind: FileKind::File,
             path: path.as_ref().to_path_buf(),
             err: Some(e.to_string()),
-        })
+        })?;
+        config.check_gleam_compatability()?;
+        Ok(config)
     }
 
     /// Get the locked packages for the current config and a given (optional)

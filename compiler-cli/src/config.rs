@@ -55,12 +55,14 @@ pub fn find_package_config_for_module(
 
 pub fn read(config_path: PathBuf) -> Result<PackageConfig, Error> {
     let toml = crate::fs::read(&config_path)?;
-    toml::from_str(&toml).map_err(|e| Error::FileIo {
+    let config: PackageConfig = toml::from_str(&toml).map_err(|e| Error::FileIo {
         action: FileIoAction::Parse,
         kind: FileKind::File,
         path: config_path,
         err: Some(e.to_string()),
-    })
+    })?;
+    config.check_gleam_compatability()?;
+    Ok(config)
 }
 
 pub fn ensure_config_exists(paths: &ProjectPaths) -> Result<(), Error> {
