@@ -72,6 +72,8 @@ pub struct PackageConfig {
     pub name: SmolStr,
     #[serde(default = "default_version")]
     pub version: Version,
+    #[serde(default, rename = "gleam-version")]
+    pub gleam_version: Option<SmolStr>,
     #[serde(default, alias = "licenses")]
     pub licences: Vec<SpdxLicense>,
     #[serde(default)]
@@ -172,6 +174,29 @@ impl PackageConfig {
         }
         .expect("internal module globs")
         .is_match(module)
+    }
+
+    // Checks to see if the gleam version specified in the config is compatable
+    // with the current compiler version
+    pub fn check_gleam_compatability(&self) -> Result<(), Error> {
+        if let Some(required_version) = &self.gleam_version {
+            let compiler_version = hexpm::version::Version::parse(env!("CARGO_PKG_VERSION"))
+                .expect("Parse compiler semantic version");
+            let range = hexpm::version::Range::new(required_version.to_string())
+                .to_pubgrub()
+                .map_err(|error| Error::InvalidVersionFormat {
+                    input: required_version.to_string(),
+                    error: error.to_string(),
+                })?;
+            if !range.contains(&compiler_version) {
+                return Err(Error::IncompatibleCompilerVersion {
+                    package: self.name.to_string(),
+                    required_version: required_version.to_string(),
+                    gleam_version: env!("CARGO_PKG_VERSION").to_string(),
+                });
+            }
+        }
+        Ok(())
     }
 }
 
@@ -542,6 +567,7 @@ impl Default for PackageConfig {
         Self {
             name: Default::default(),
             version: default_version(),
+            gleam_version: Default::default(),
             description: Default::default(),
             documentation: Default::default(),
             dependencies: Default::default(),
