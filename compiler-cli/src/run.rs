@@ -9,7 +9,7 @@ use gleam_core::{
 use lazy_static::lazy_static;
 use std::path::PathBuf;
 
-use crate::fs::ProjectIO;
+use crate::{add, fs::ProjectIO};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
@@ -186,6 +186,11 @@ fn run_javascript_deno(
 
     // Run the main function.
     args.push("run".into());
+
+    // Enable unstable features and APIs
+    if config.javascript.deno.unstable {
+        args.push("--unstable".into())
+    }
 
     // Set deno permissions
     if config.javascript.deno.allow_all {

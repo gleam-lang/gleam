@@ -646,6 +646,8 @@ pub struct DenoConfig {
     pub allow_write: DenoFlag,
     #[serde(default)]
     pub allow_all: bool,
+    #[serde(default)]
+    pub unstable: bool,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
