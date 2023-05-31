@@ -11,6 +11,7 @@ mod telemetry;
 mod tests;
 
 pub use self::package_compiler::PackageCompiler;
+pub use self::package_loader::StaleTracker;
 pub use self::project_compiler::{Built, CheckpointState, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 

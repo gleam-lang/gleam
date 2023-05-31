@@ -4,7 +4,9 @@
 mod generated_tests;
 
 use gleam_core::{
-    build::{ErlangAppCodegenConfiguration, Mode, Target, TargetCodegenConfiguration},
+    build::{
+        ErlangAppCodegenConfiguration, Mode, StaleTracker, Target, TargetCodegenConfiguration,
+    },
     config::PackageConfig,
     io::{memory::InMemoryFileSystem, Content, FileSystemWriter},
     warning::{VectorWarningEmitterIO, WarningEmitter},
@@ -59,7 +61,12 @@ pub fn prepare(path: &str) -> String {
     compiler.write_metadata = true;
     compiler.compile_beam_bytecode = false;
     compiler.copy_native_files = false;
-    let result = compiler.compile(&warning_emitter, &mut modules, &mut im::HashMap::new());
+    let result = compiler.compile(
+        &warning_emitter,
+        &mut modules,
+        &mut im::HashMap::new(),
+        &mut StaleTracker::default(),
+    );
     match result {
         Ok(_) => {
             for path in initial_files {

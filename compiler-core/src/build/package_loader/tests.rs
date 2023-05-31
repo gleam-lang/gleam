@@ -70,6 +70,7 @@ fn run_loader(fs: InMemoryFileSystem, root: &Path, artefact: &Path) -> LoaderTes
         artefact_directory: &artefact,
         package_name: &"my_package".into(),
         target: Target::JavaScript,
+        stale_modules: &mut StaleTracker::default(),
         already_defined_modules: &mut defined,
     };
     let loaded = loader.run().unwrap();

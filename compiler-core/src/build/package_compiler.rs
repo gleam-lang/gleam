@@ -4,7 +4,7 @@ use crate::{
     build::{
         module_loader::SourceFingerprint,
         native_file_copier::NativeFileCopier,
-        package_loader::{CodegenRequired, PackageLoader},
+        package_loader::{CodegenRequired, PackageLoader, StaleTracker},
         Mode, Module, Origin, Package, Target,
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
@@ -92,6 +92,7 @@ where
         warnings: &WarningEmitter,
         existing_modules: &mut im::HashMap<SmolStr, type_::ModuleInterface>,
         already_defined_modules: &mut im::HashMap<SmolStr, PathBuf>,
+        stale_modules: &mut StaleTracker,
     ) -> Result<Vec<Module>, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
@@ -115,6 +116,7 @@ where
             &artefact_directory,
             self.target.target(),
             &self.config.name,
+            stale_modules,
             already_defined_modules,
         )
         .run()?;
