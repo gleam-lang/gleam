@@ -199,7 +199,7 @@ enum Command {
 
     /// Add new project dependencies
     Add {
-        /// The names of packages to add
+        /// The names of Hex packages to add
         #[clap(required = true)]
         packages: Vec<String>,
 
