@@ -221,11 +221,14 @@ impl<'a> StalePackageRemover<'a> {
             .packages
             .iter()
             .filter(|package| {
+                let new = requirements.contains_key(package.name.as_str())
+                    && !manifest.requirements.contains_key(package.name.as_str());
                 let fresh = self.fresh.contains(package.name.as_str());
-                if !fresh {
+                let locked = !new && fresh;
+                if !locked {
                     tracing::info!(name = package.name.as_str(), "unlocking_stale_package");
                 }
-                fresh
+                locked
             })
             .map(|package| (package.name.clone(), package.version.clone()))
             .collect()
