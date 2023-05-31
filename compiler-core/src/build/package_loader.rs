@@ -58,6 +58,7 @@ pub struct PackageLoader<'a, IO> {
     artefact_directory: &'a Path,
     package_name: &'a SmolStr,
     target: Target,
+    stale_modules: &'a mut StaleTracker,
     already_defined_modules: &'a mut im::HashMap<SmolStr, PathBuf>,
 }
 
@@ -75,6 +76,7 @@ where
         artefact_directory: &'a Path,
         target: Target,
         package_name: &'a SmolStr,
+        stale_modules: &'a mut StaleTracker,
         already_defined_modules: &'a mut im::HashMap<SmolStr, PathBuf>,
     ) -> Self {
         Self {
@@ -87,6 +89,7 @@ where
             target,
             package_name,
             artefact_directory,
+            stale_modules,
             already_defined_modules,
         }
     }
@@ -102,7 +105,6 @@ where
         let sequence = dep_tree::toposort_deps(deps).map_err(convert_deps_tree_error)?;
 
         let mut loaded = Loaded::default();
-        let mut stale = StaleTracker::default();
         for name in sequence {
             let input = inputs
                 .remove(&name)
@@ -112,16 +114,16 @@ where
                 // A new uncached module is to be compiled
                 Input::New(module) => {
                     tracing::debug!(module = %module.name, "module_to_be_compiled");
-                    stale.add(module.name.clone());
+                    self.stale_modules.add(module.name.clone());
                     loaded.to_compile.push(module);
                 }
 
                 // A cached module with dependencies that are stale must be
                 // recompiled as the changes in the dependencies may have affect
                 // the output, making the cache invalid.
-                Input::Cached(info) if stale.includes_any(&info.dependencies) => {
+                Input::Cached(info) if self.stale_modules.includes_any(&info.dependencies) => {
                     tracing::debug!(module = %info.name, "module_to_be_compiled");
-                    stale.add(info.name.clone());
+                    self.stale_modules.add(info.name.clone());
                     let module = self.load_and_parse(info)?;
                     loaded.to_compile.push(module);
                 }
@@ -233,7 +235,7 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
 }
 
 #[derive(Debug, Default)]
-struct StaleTracker(HashSet<SmolStr>);
+pub struct StaleTracker(HashSet<SmolStr>);
 
 impl StaleTracker {
     fn add(&mut self, name: SmolStr) {

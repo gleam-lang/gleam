@@ -1,7 +1,7 @@
 use crate::{
     build::{
-        package_compiler, package_compiler::PackageCompiler, project_compiler,
-        telemetry::Telemetry, Mode, Module, Origin, Package, Target,
+        package_compiler, package_compiler::PackageCompiler, package_loader::StaleTracker,
+        project_compiler, telemetry::Telemetry, Mode, Module, Origin, Package, Target,
     },
     codegen::{self, ErlangApp},
     config::PackageConfig,
@@ -75,6 +75,7 @@ pub struct ProjectCompiler<IO> {
     packages: HashMap<String, ManifestPackage>,
     importable_modules: im::HashMap<SmolStr, type_::ModuleInterface>,
     defined_modules: im::HashMap<SmolStr, PathBuf>,
+    stale_modules: StaleTracker,
     warnings: WarningEmitter,
     telemetry: Box<dyn Telemetry>,
     options: Options,
@@ -110,6 +111,7 @@ where
         Self {
             importable_modules: im::HashMap::new(),
             defined_modules: im::HashMap::new(),
+            stale_modules: StaleTracker::default(),
             ids: UniqueIdGenerator::new(),
             warnings: WarningEmitter::new(warning_emitter),
             subprocess_stdio: Stdio::Inherit,
@@ -479,6 +481,7 @@ where
             &mut self.warnings,
             &mut self.importable_modules,
             &mut self.defined_modules,
+            &mut self.stale_modules,
         )?;
 
         Ok(compiled)
