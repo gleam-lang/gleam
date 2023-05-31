@@ -620,6 +620,7 @@ impl PartialEq for ProvidedPackageSource {
                 ProvidedPackageSource::Local { path: own_path },
                 ProvidedPackageSource::Local { path: other_path },
             ) => is_same_file(own_path, other_path).unwrap_or(false),
+
             (
                 ProvidedPackageSource::Git {
                     repo: own_repo,
@@ -630,7 +631,9 @@ impl PartialEq for ProvidedPackageSource {
                     commit: other_commit,
                 },
             ) => own_repo == other_repo && own_commit == other_commit,
-            _ => false,
+
+            (ProvidedPackageSource::Git { .. }, ProvidedPackageSource::Local { .. })
+            | (ProvidedPackageSource::Local { .. }, ProvidedPackageSource::Git { .. }) => false,
         }
     }
 }
