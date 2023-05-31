@@ -226,6 +226,13 @@ pub enum Error {
 
     #[error("Opening docs at {path} failed: {error}")]
     FailedToOpenDocs { path: PathBuf, error: String },
+
+    #[error("The package {package} requires gleam version {required_version} and you are using {gleam_version}")]
+    IncompatibleCompilerVersion {
+        package: String,
+        required_version: String,
+        gleam_version: String,
+    },
 }
 
 impl Error {
@@ -2478,6 +2485,27 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                     hint: None,
                     level: Level::Error,
                     location: None,
+                }
+            }
+
+            Error::IncompatibleCompilerVersion {
+                package,
+                required_version,
+                gleam_version
+            } => {
+                let text = format!(
+                    "The package {} requires gleam version {} \
+but you are using version {}.",
+                    package,
+                    required_version,
+                    gleam_version
+                );
+                Diagnostic {
+                    title: "Incompatible gleam version".into(),
+                    text,
+                    hint: None,
+                    location: None,
+                    level: Level::Error
                 }
             }
 
