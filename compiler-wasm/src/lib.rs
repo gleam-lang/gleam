@@ -75,6 +75,7 @@ fn manifest_from_name(name: &str) -> ManifestPackage {
             pre: vec![],
             build: None,
         },
+        active: true,
         build_tools: vec!["gleam".into()],
         otp_app: None,
         requirements: vec![],

@@ -523,6 +523,7 @@ fn manifest_package(
     ManifestPackage {
         name: name.into(),
         version: Version::parse(version).unwrap(),
+        active: true,
         build_tools: vec![],
         otp_app: None,
         requirements: requirements.iter().map(|e| (*e).to_string()).collect(),

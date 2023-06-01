@@ -67,6 +67,7 @@ fn list_manifest_format() {
             ManifestPackage {
                 name: "root".into(),
                 version: Version::parse("1.0.0").unwrap(),
+                active: true,
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -77,6 +78,7 @@ fn list_manifest_format() {
             ManifestPackage {
                 name: "aaa".into(),
                 version: Version::new(0, 4, 2),
+                active: true,
                 build_tools: ["rebar3".into(), "make".into()].into(),
                 otp_app: Some("aaa_app".into()),
                 requirements: vec!["zzz".into(), "gleam_stdlib".into()],
@@ -87,6 +89,7 @@ fn list_manifest_format() {
             ManifestPackage {
                 name: "zzz".into(),
                 version: Version::new(0, 4, 0),
+                active: true,
                 build_tools: ["mix".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -379,6 +382,7 @@ fn missing_local_packages() {
             ManifestPackage {
                 name: "root".into(),
                 version: Version::parse("1.0.0").unwrap(),
+                active: true,
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -389,6 +393,7 @@ fn missing_local_packages() {
             ManifestPackage {
                 name: "local1".into(),
                 version: Version::parse("1.0.0").unwrap(),
+                active: true,
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -399,6 +404,7 @@ fn missing_local_packages() {
             ManifestPackage {
                 name: "local2".into(),
                 version: Version::parse("3.0.0").unwrap(),
+                active: true,
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -423,6 +429,7 @@ fn missing_local_packages() {
             &ManifestPackage {
                 name: "local1".into(),
                 version: Version::parse("1.0.0").unwrap(),
+                active: true,
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -433,6 +440,7 @@ fn missing_local_packages() {
             &ManifestPackage {
                 name: "local2".into(),
                 version: Version::parse("3.0.0").unwrap(),
+                active: true,
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -460,6 +468,7 @@ fn extra_local_packages() {
             ManifestPackage {
                 name: "local1".into(),
                 version: Version::parse("1.0.0").unwrap(),
+                active: true,
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -470,6 +479,7 @@ fn extra_local_packages() {
             ManifestPackage {
                 name: "local2".into(),
                 version: Version::parse("3.0.0").unwrap(),
+                active: true,
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -578,6 +588,7 @@ impl ProvidedPackage {
         let mut package = ManifestPackage {
             name: name.to_string(),
             version: self.version.clone(),
+            active: true,
             otp_app: None, // Note, this will probably need to be set to something eventually
             build_tools: vec!["gleam".to_string()],
             requirements: self.requirements.keys().map(SmolStr::to_string).collect(),
@@ -706,12 +717,16 @@ fn resolve_versions<Telem: Telemetry>(
                 acc
             });
 
-    // Filter out all inactive packages from the manifest packages
+    // Deactivate packages which are only optional
     let manifest_packages = lookup_result
         .iter()
-        .map(|(_act, pkg)| pkg)
-        .filter(|pkg| activated_packages.contains(&pkg.name))
         .cloned()
+        .map(|(_act, mut pkg)| {
+            if !activated_packages.contains(&pkg.name) {
+                pkg.active = false;
+            }
+            pkg
+        })
         .collect();
 
     let manifest = Manifest {
@@ -1004,6 +1019,7 @@ async fn lookup_package(
             let manifest_package = ManifestPackage {
                 name: name.to_string(),
                 version,
+                active: true, // This may be set to false later, after all packages are fetched
                 otp_app: Some(release.meta.app),
                 build_tools: release.meta.build_tools,
                 requirements: release.requirements.keys().cloned().collect_vec(),
@@ -1213,6 +1229,7 @@ fn provided_local_to_manifest() {
     let manifest_package = ManifestPackage {
         name: "package".to_string(),
         version: hexpm::version::Version::new(1, 0, 0),
+        active: true,
         otp_app: None,
         build_tools: vec!["gleam".to_string()],
         requirements: vec!["req_1".into(), "req_2".into()],
@@ -1251,6 +1268,7 @@ fn provided_git_to_manifest() {
     let manifest_package = ManifestPackage {
         name: "package".to_string(),
         version: hexpm::version::Version::new(1, 0, 0),
+        active: true, 
         otp_app: None,
         build_tools: vec!["gleam".to_string()],
         requirements: vec!["req_1".into(), "req_2".into()],

@@ -40,6 +40,7 @@ impl Manifest {
             name,
             source,
             version,
+            active,
             otp_app,
             build_tools,
             requirements,
@@ -50,7 +51,9 @@ impl Manifest {
             buffer.push_str(name);
             buffer.push_str(r#"", version = ""#);
             buffer.push_str(&version.to_string());
-            buffer.push_str(r#"", build_tools = ["#);
+            buffer.push_str(r#"", active = "#);
+            buffer.push_str(&active.to_string());
+            buffer.push_str(r#", build_tools = ["#);
             for (i, tool) in build_tools.iter().enumerate() {
                 if i != 0 {
                     buffer.push_str(", ");
@@ -136,6 +139,7 @@ fn manifest_toml_format() {
             ManifestPackage {
                 name: "gleam_stdlib".into(),
                 version: Version::new(0, 17, 1),
+                active: true,
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -146,6 +150,7 @@ fn manifest_toml_format() {
             ManifestPackage {
                 name: "aaa".into(),
                 version: Version::new(0, 4, 0),
+                active: true,
                 build_tools: ["rebar3".into(), "make".into()].into(),
                 otp_app: Some("aaa_app".into()),
                 requirements: vec!["zzz".into(), "gleam_stdlib".into()],
@@ -156,6 +161,7 @@ fn manifest_toml_format() {
             ManifestPackage {
                 name: "zzz".into(),
                 version: Version::new(0, 4, 0),
+                active: true,
                 build_tools: ["mix".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -166,6 +172,7 @@ fn manifest_toml_format() {
             ManifestPackage {
                 name: "awsome_local2".into(),
                 version: Version::new(1, 2, 3),
+                active: true,
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -177,6 +184,7 @@ fn manifest_toml_format() {
             ManifestPackage {
                 name: "awsome_local1".into(),
                 version: Version::new(1, 2, 3),
+                active: true,
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec![],
@@ -187,11 +195,23 @@ fn manifest_toml_format() {
             ManifestPackage {
                 name: "gleeunit".into(),
                 version: Version::new(0, 4, 0),
+                active: true,
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec!["gleam_stdlib".into()],
                 source: ManifestPackageSource::Hex {
                     outer_checksum: Base16Checksum(vec![3, 46]),
+                },
+            },
+            ManifestPackage {
+                name: "optional_inactive".into(),
+                version: Version::new(0, 4, 0),
+                active: false,
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![12, 18]),
                 },
             },
         ],
@@ -203,12 +223,13 @@ fn manifest_toml_format() {
 # You typically do not need to edit this file
 
 packages = [
-  { name = "aaa", version = "0.4.0", build_tools = ["rebar3", "make"], requirements = ["zzz", "gleam_stdlib"], otp_app = "aaa_app", source = "hex", outer_checksum = "0316" },
-  { name = "awsome_local1", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "local", path = "/home/louis/packages/path/to/package" },
-  { name = "awsome_local2", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "git", repo = "https://github.com/gleam-lang/gleam.git", commit = "bd9fe02f72250e6a136967917bcb1bdccaffa3c8" },
-  { name = "gleam_stdlib", version = "0.17.1", build_tools = ["gleam"], requirements = [], source = "hex", outer_checksum = "0116" },
-  { name = "gleeunit", version = "0.4.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], source = "hex", outer_checksum = "032E" },
-  { name = "zzz", version = "0.4.0", build_tools = ["mix"], requirements = [], source = "hex", outer_checksum = "0316" },
+  { name = "aaa", version = "0.4.0", active = true, build_tools = ["rebar3", "make"], requirements = ["zzz", "gleam_stdlib"], otp_app = "aaa_app", source = "hex", outer_checksum = "0316" },
+  { name = "awsome_local1", version = "1.2.3", active = true, build_tools = ["gleam"], requirements = [], source = "local", path = "/home/louis/packages/path/to/package" },
+  { name = "awsome_local2", version = "1.2.3", active = true, build_tools = ["gleam"], requirements = [], source = "git", repo = "https://github.com/gleam-lang/gleam.git", commit = "bd9fe02f72250e6a136967917bcb1bdccaffa3c8" },
+  { name = "gleam_stdlib", version = "0.17.1", active = true, build_tools = ["gleam"], requirements = [], source = "hex", outer_checksum = "0116" },
+  { name = "gleeunit", version = "0.4.0", active = true, build_tools = ["gleam"], requirements = ["gleam_stdlib"], source = "hex", outer_checksum = "032E" },
+  { name = "optional_inactive", version = "0.4.0", active = false, build_tools = ["gleam"], requirements = [], source = "hex", outer_checksum = "0C12" },
+  { name = "zzz", version = "0.4.0", active = true, build_tools = ["mix"], requirements = [], source = "hex", outer_checksum = "0316" },
 ]
 
 [requirements]
@@ -259,6 +280,7 @@ impl<'de> serde::Deserialize<'de> for Base16Checksum {
 pub struct ManifestPackage {
     pub name: String,
     pub version: Version,
+    pub active: bool,
     pub build_tools: Vec<String>,
     #[serde(default)]
     pub otp_app: Option<String>,
@@ -285,6 +307,7 @@ impl Default for ManifestPackage {
         Self {
             name: Default::default(),
             build_tools: Default::default(),
+            active: true,
             otp_app: Default::default(),
             requirements: Default::default(),
             version: Version::new(1, 0, 0),
