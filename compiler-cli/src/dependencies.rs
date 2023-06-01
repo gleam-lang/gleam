@@ -693,6 +693,10 @@ fn resolve_versions<Telem: Telemetry>(
         .map(|(name, package)| (name.to_string(), package.to_hex_package(name)))
         .collect();
 
+    // Add the root dependencies to the set of active packages
+    let activated_packages: HashSet<String> = config.all_dependencies()?.into_keys().collect();
+
+    // Do version solve
     let resolved = dependency::resolve_versions(
         PackageFetcher::boxed(runtime.clone()),
         provided_hex_packages,
@@ -712,8 +716,8 @@ fn resolve_versions<Telem: Telemetry>(
     let activated_packages =
         lookup_result
             .iter()
-            .fold(HashSet::new(), |mut acc, (activated, _pkg)| {
-                acc.extend(activated);
+            .fold(activated_packages, |mut acc, (activated, _pkg)| {
+                acc.extend(activated.clone());
                 acc
             });
 
