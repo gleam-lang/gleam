@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::time::Instant;
 
 use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
@@ -49,7 +50,13 @@ impl ApiKeyCommand for RemoveCommand {
     }
 }
 
-pub fn build() -> Result<()> {
+#[derive(Debug)]
+pub struct BuildOptions {
+    /// Whether to open the docs after building.
+    pub open: bool,
+}
+
+pub fn build(options: BuildOptions) -> Result<()> {
     let paths = crate::project_paths_at_current_directory();
     let config = crate::config::root_config()?;
 
@@ -72,13 +79,32 @@ pub fn build() -> Result<()> {
     crate::fs::delete_dir(&out)?;
     crate::fs::write_outputs_under(&outputs, &out)?;
 
+    let index_html = out.join("index.html");
+
     println!(
-        "\nThe documentation for {package} has been rendered to \n{out}/index.html",
+        "\nThe documentation for {package} has been rendered to \n{index_html}",
         package = config.name,
-        out = out.to_string_lossy()
+        index_html = index_html.to_string_lossy()
     );
 
+    if options.open {
+        open_docs(&index_html)?;
+    }
+
     // We're done!
+    Ok(())
+}
+
+/// Opens the indicated path in the default program configured by the system.
+///
+/// For the docs this will generally be a browser (unless some other program is
+/// configured as the default for `.html` files).
+fn open_docs(path: &Path) -> Result<()> {
+    opener::open(path).map_err(|error| Error::FailedToOpenDocs {
+        path: path.to_path_buf(),
+        error: error.to_string(),
+    })?;
+
     Ok(())
 }
 
