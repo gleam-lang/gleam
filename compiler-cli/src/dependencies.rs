@@ -1272,7 +1272,7 @@ fn provided_git_to_manifest() {
     let manifest_package = ManifestPackage {
         name: "package".to_string(),
         version: hexpm::version::Version::new(1, 0, 0),
-        active: true, 
+        active: true,
         otp_app: None,
         build_tools: vec!["gleam".to_string()],
         requirements: vec!["req_1".into(), "req_2".into()],
