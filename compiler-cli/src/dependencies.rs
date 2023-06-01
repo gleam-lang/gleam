@@ -333,10 +333,10 @@ impl LocalPackages {
             .packages
             .iter()
             .filter(|p| {
-                p.name != root && {
-                    self.packages.get(&p.name) != Some(&p.version)
-                        || matches!(p.source, ManifestPackageSource::Local { .. })
-                }
+                let is_local = matches!(p.source, ManifestPackageSource::Local { .. });
+                let is_outdated = self.packages.get(&p.name) != Some(&p.version);
+                let should_update = is_local || is_outdated;
+                p.name != root && p.active && should_update
             })
             .collect()
     }
