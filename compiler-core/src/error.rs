@@ -223,6 +223,9 @@ pub enum Error {
         package: String,
         build_tools: Vec<String>,
     },
+
+    #[error("Opening docs at {path} failed: {error}")]
+    FailedToOpenDocs { path: PathBuf, error: String },
 }
 
 impl Error {
@@ -2455,6 +2458,29 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                     level: Level::Error,
                 }
             }
+
+            Error::FailedToOpenDocs {
+                path,
+                error,
+            } => {
+                let error = format!("\nThe error message from the library was:\n\n    {error}\n");
+                let text = format!(
+                    "An error occurred while trying to open the docs:
+
+    {}
+{}",
+                    path.to_string_lossy(),
+                    error,
+                );
+                Diagnostic {
+                    title: "Failed to open docs".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }
+            }
+
             Error::InvalidRuntime {
                 target,
                 invalid_runtime,

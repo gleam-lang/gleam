@@ -80,6 +80,8 @@ fslock = "0.2.1"
 smol_str = "0.1"
 # Provides a way to determine if two files are the same using filesystem node ids
 same-file = "1.0.6"
+# Open generated docs in browser
+opener = "0.6"
 
 [dev-dependencies]
 # Test assertion errors with diffs
