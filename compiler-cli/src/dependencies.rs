@@ -691,11 +691,28 @@ fn resolve_versions<Telem: Telemetry>(
     )?;
 
     // Convert the hex packages and local packages into manfiest packages
-    let manifest_packages = runtime.block_on(future::try_join_all(
+    let lookup_result = runtime.block_on(future::try_join_all(
         resolved
             .into_iter()
             .map(|(name, version)| lookup_package(name, version, &provided_packages)),
     ))?;
+
+    // Form a set of activated packages which have at-least one non-optional dependency
+    let activated_packages =
+        lookup_result
+            .iter()
+            .fold(HashSet::new(), |mut acc, (activated, _pkg)| {
+                acc.extend(activated);
+                acc
+            });
+
+    // Filter out all inactive packages from the manifest packages
+    let manifest_packages = lookup_result
+        .iter()
+        .map(|(_act, pkg)| pkg)
+        .filter(|pkg| activated_packages.contains(&pkg.name))
+        .cloned()
+        .collect();
 
     let manifest = Manifest {
         packages: manifest_packages,
@@ -963,14 +980,28 @@ async fn lookup_package(
     name: String,
     version: Version,
     provided: &HashMap<SmolStr, ProvidedPackage>,
-) -> Result<ManifestPackage> {
+) -> Result<(HashSet<String>, ManifestPackage)> {
     match provided.get(name.as_str()) {
-        Some(provided_package) => Ok(provided_package.to_manifest_package(name.as_str())),
+        Some(provided_package) => {
+            let manifest_package = provided_package.to_manifest_package(name.as_str());
+            // Activate all dependencies
+            let activated = manifest_package.requirements.iter().cloned().collect();
+            Ok((activated, manifest_package))
+        }
         None => {
             let config = hexpm::Config::new();
             let release =
                 hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
-            Ok(ManifestPackage {
+
+            // Activate non-optional dependencies
+            let activated = release
+                .requirements
+                .iter()
+                .filter(|(_name, dep)| !dep.optional)
+                .map(|(name, _dep)| name.clone())
+                .collect();
+
+            let manifest_package = ManifestPackage {
                 name: name.to_string(),
                 version,
                 otp_app: Some(release.meta.app),
@@ -979,7 +1010,9 @@ async fn lookup_package(
                 source: ManifestPackageSource::Hex {
                     outer_checksum: Base16Checksum(release.outer_checksum),
                 },
-            })
+            };
+
+            Ok((activated, manifest_package))
         }
     }
 }
