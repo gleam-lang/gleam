@@ -416,6 +416,34 @@ fn locked_nested_are_removed_too() {
 }
 
 #[test]
+fn locked_unlock_new() {
+    let mut config = PackageConfig::default();
+    config.dependencies = [
+        ("1".into(), Requirement::hex("~> 1.0")),
+        ("2".into(), Requirement::hex("~> 1.0")),
+        ("3".into(), Requirement::hex("~> 3.0")), // Does not match manifest
+    ]
+    .into();
+    config.dev_dependencies = [].into();
+    let manifest = Manifest {
+        requirements: [
+            ("1".into(), Requirement::hex("~> 1.0")),
+            ("2".into(), Requirement::hex("~> 1.0")),
+        ]
+        .into(),
+        packages: vec![
+            manifest_package("1", "1.1.0", &["3"]),
+            manifest_package("2", "1.1.0", &["3"]),
+            manifest_package("3", "1.1.0", &[]),
+        ],
+    };
+    assert_eq!(
+        config.locked(Some(&manifest)).unwrap(),
+        [locked_version("1", "1.1.0"), locked_version("2", "1.1.0"),].into()
+    )
+}
+
+#[test]
 fn default_internal_modules() {
     // When no internal modules are specified then we default to
     // `["$package/internal", "$package/internal/*"]`
