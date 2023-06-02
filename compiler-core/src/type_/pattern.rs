@@ -1,9 +1,9 @@
 use im::hashmap;
 use itertools::Itertools;
 
-///! Type inference and checking of patterns used in case expressions
-///! and variables bindings.
-///!
+/// Type inference and checking of patterns used in case expressions
+/// and variables bindings.
+///
 use super::*;
 use crate::{
     analyse::Inferred,

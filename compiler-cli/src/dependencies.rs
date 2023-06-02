@@ -837,7 +837,7 @@ fn provide_wrong_package() {
     let project_paths = crate::project_paths_at_current_directory();
     let result = provide_local_package(
         "wrong_name".into(),
-        &Path::new("./test/hello_world"),
+        Path::new("./test/hello_world"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -860,7 +860,7 @@ fn provide_existing_package() {
 
     let result = provide_local_package(
         "hello_world".into(),
-        &Path::new("./test/hello_world"),
+        Path::new("./test/hello_world"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -872,7 +872,7 @@ fn provide_existing_package() {
 
     let result = provide_local_package(
         "hello_world".into(),
-        &Path::new("./test/hello_world"),
+        Path::new("./test/hello_world"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -889,7 +889,7 @@ fn provide_conflicting_package() {
     let project_paths = crate::project_paths_at_current_directory();
     let result = provide_local_package(
         "hello_world".into(),
-        &Path::new("./test/hello_world"),
+        Path::new("./test/hello_world"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -901,7 +901,7 @@ fn provide_conflicting_package() {
 
     let result = provide_package(
         "hello_world".into(),
-        &Path::new("./test/other"),
+        Path::new("./test/other"),
         ProvidedPackageSource::Local {
             path: Path::new("./test/other").to_path_buf(),
         },
@@ -922,7 +922,7 @@ fn provided_is_absolute() {
     let project_paths = crate::project_paths_at_current_directory();
     let result = provide_local_package(
         "hello_world".into(),
-        &Path::new("./test/hello_world"),
+        Path::new("./test/hello_world"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -945,7 +945,7 @@ fn provided_recursive() {
     let project_paths = crate::project_paths_at_current_directory();
     let result = provide_local_package(
         "hello_world".into(),
-        &Path::new("./test/hello_world"),
+        Path::new("./test/hello_world"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "hello_world".into(), "subpackage".into()],
