@@ -53,7 +53,7 @@ impl BuildLock {
         let mut locks = vec![];
         for mode in Mode::iter() {
             for target in Target::iter() {
-                locks.push(BuildLock::new_target(paths, mode, target)?.lock(telemetry));
+                locks.push(Self::new_target(paths, mode, target)?.lock(telemetry));
             }
         }
         Ok(locks)

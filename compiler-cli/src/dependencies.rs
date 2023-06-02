@@ -591,22 +591,20 @@ impl ProvidedPackage {
 impl ProvidedPackageSource {
     fn to_manifest_package_source(&self) -> ManifestPackageSource {
         match self {
-            ProvidedPackageSource::Git { repo, commit } => ManifestPackageSource::Git {
+            Self::Git { repo, commit } => ManifestPackageSource::Git {
                 repo: repo.clone(),
                 commit: commit.clone(),
             },
-            ProvidedPackageSource::Local { path } => {
-                ManifestPackageSource::Local { path: path.clone() }
-            }
+            Self::Local { path } => ManifestPackageSource::Local { path: path.clone() },
         }
     }
 
     fn to_toml(&self) -> String {
         match self {
-            ProvidedPackageSource::Git { repo, commit } => {
+            Self::Git { repo, commit } => {
                 format!(r#"{{ repo: "{}", commit: "{}" }}"#, repo, commit)
             }
-            ProvidedPackageSource::Local { path } => {
+            Self::Local { path } => {
                 format!(r#"{{ path: "{}" }}"#, path.to_string_lossy())
             }
         }
@@ -614,26 +612,26 @@ impl ProvidedPackageSource {
 }
 
 impl PartialEq for ProvidedPackageSource {
-    fn eq(&self, other: &ProvidedPackageSource) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (
-                ProvidedPackageSource::Local { path: own_path },
-                ProvidedPackageSource::Local { path: other_path },
-            ) => is_same_file(own_path, other_path).unwrap_or(false),
+            (Self::Local { path: own_path }, Self::Local { path: other_path }) => {
+                is_same_file(own_path, other_path).unwrap_or(false)
+            }
 
             (
-                ProvidedPackageSource::Git {
+                Self::Git {
                     repo: own_repo,
                     commit: own_commit,
                 },
-                ProvidedPackageSource::Git {
+                Self::Git {
                     repo: other_repo,
                     commit: other_commit,
                 },
             ) => own_repo == other_repo && own_commit == other_commit,
 
-            (ProvidedPackageSource::Git { .. }, ProvidedPackageSource::Local { .. })
-            | (ProvidedPackageSource::Local { .. }, ProvidedPackageSource::Git { .. }) => false,
+            (Self::Git { .. }, Self::Local { .. }) | (Self::Local { .. }, Self::Git { .. }) => {
+                false
+            }
         }
     }
 }
