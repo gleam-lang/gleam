@@ -4,8 +4,7 @@
     clippy::dbg_macro,
     clippy::todo,
     clippy::mem_forget,
-    // TODO: enable once the false positive bug is solved
-    // clippy::use_self,
+    clippy::use_self,
     clippy::filter_map_next,
     clippy::needless_continue,
     clippy::needless_borrow,
