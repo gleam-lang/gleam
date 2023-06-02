@@ -155,6 +155,7 @@ where
         self.check_gleam_version()?;
         self.compile_dependencies()?;
         self.warnings.reset_count();
+        self.stale_modules.empty();
 
         match self.options.codegen {
             Codegen::All => self.telemetry.compiling_package(&self.config.name),

@@ -245,6 +245,10 @@ impl StaleTracker {
     fn includes_any(&self, names: &[SmolStr]) -> bool {
         names.iter().any(|n| self.0.contains(n.as_str()))
     }
+
+    pub fn empty(&mut self) {
+        let _ = self.0.drain(); // Clears the set but retains allocated memory
+    }
 }
 
 #[derive(Debug)]
