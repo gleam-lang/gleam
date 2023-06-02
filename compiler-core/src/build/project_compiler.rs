@@ -273,7 +273,7 @@ where
 
         // TODO: test
         if !self.options.codegen.should_codegen(false) {
-            tracing::debug!(%name, "skipping_mix_build_as_codegen_disabled");
+            tracing::debug!(%name, "skipping_rebar3_build_as_codegen_disabled");
             return Ok(());
         }
 
