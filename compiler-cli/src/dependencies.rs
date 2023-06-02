@@ -311,11 +311,12 @@ impl LocalPackages {
         manifest
             .packages
             .iter()
-            .filter(|p| {
-                let is_local = matches!(p.source, ManifestPackageSource::Local { .. });
-                let is_outdated = self.packages.get(&p.name) != Some(&p.version);
-                p.name != root && is_outdated && !is_local
-            })
+            // We don't need to download the root package
+            .filter(|p| p.name != root)
+            // We don't need to download local packages because we use the linked source directly
+            .filter(|p| !p.is_local())
+            // We don't need to download packages which we have the correct version of
+            .filter(|p| self.packages.get(&p.name) != Some(&p.version))
             .collect()
     }
 

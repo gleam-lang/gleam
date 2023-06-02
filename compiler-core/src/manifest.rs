@@ -274,8 +274,14 @@ impl ManifestPackage {
         self
     }
 
+    #[inline]
     pub fn is_hex(&self) -> bool {
         matches!(self.source, ManifestPackageSource::Hex { .. })
+    }
+
+    #[inline]
+    pub fn is_local(&self) -> bool {
+        matches!(self.source, ManifestPackageSource::Local { .. })
     }
 }
 
