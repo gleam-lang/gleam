@@ -229,27 +229,11 @@ where
     }
 
     fn load_cache_or_compile_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
-        let build_path =
-            self.paths
-                .build_directory_for_package(self.mode(), self.target(), &package.name);
-
         self.telemetry.compiling_package(&package.name);
         let result = match usable_build_tool(package)? {
             BuildTool::Gleam => self.compile_gleam_dep_package(package),
-            BuildTool::Rebar3 => {
-                if self.io.is_directory(&build_path) {
-                    tracing::debug!(package=%package.name, "loading_precompiled_rebar_package");
-                    return self.load_cached_package(build_path, package);
-                }
-                self.compile_rebar3_dep_package(package)
-            }
-            BuildTool::Mix => {
-                if self.io.is_directory(&build_path) {
-                    tracing::debug!(package=%package.name, "loading_precompiled_mix_package");
-                    return self.load_cached_package(build_path, package);
-                }
-                self.compile_mix_dep_package(package)
-            }
+            BuildTool::Rebar3 => self.compile_rebar3_dep_package(package),
+            BuildTool::Mix => self.compile_mix_dep_package(package),
         };
 
         // TODO: test. This one is not covered by the integration tests.
@@ -271,6 +255,14 @@ where
         let mode = self.mode();
         let target = self.target();
 
+        let package_build = self.paths.build_directory_for_package(mode, target, name);
+
+        // TODO: test
+        if self.io.is_directory(&package_build) {
+            tracing::debug!(%name, "using_precompiled_rebar3_package");
+            return Ok(());
+        }
+
         // TODO: test
         if !self.options.codegen.should_codegen(false) {
             tracing::debug!(%name, "skipping_rebar3_build_as_codegen_disabled");
@@ -286,7 +278,6 @@ where
         let package = self.paths.build_packages_package(name);
         let build_packages = self.paths.build_directory_for_target(mode, target);
         let ebins = self.paths.build_packages_ebins_glob(mode, target);
-        let package_build = self.paths.build_directory_for_package(mode, target, name);
         let rebar3_path = |path: &Path| format!("../{}", path.to_str().expect("Build path"));
 
         tracing::debug!("copying_package_to_build");
@@ -329,6 +320,14 @@ where
         let target = self.target();
         let mix_target = "prod";
 
+        let dest = self.paths.build_directory_for_package(mode, target, name);
+
+        // TODO: test
+        if self.io.is_directory(&dest) {
+            tracing::debug!(%name, "using_precompiled_mix_package");
+            return Ok(());
+        }
+
         // TODO: test
         if !self.options.codegen.should_codegen(false) {
             tracing::debug!(%name, "skipping_mix_build_as_codegen_disabled");
@@ -348,7 +347,6 @@ where
         let up = paths::unnest(&project_dir);
         let mix_path = |path: &Path| up.join(path).to_str().unwrap_or_default().to_string();
         let ebins = self.paths.build_packages_ebins_glob(mode, target);
-        let dest = self.paths.build_directory_for_package(mode, target, name);
 
         // Elixir core libs must be loaded
         package_compiler::maybe_link_elixir_libs(&self.io, &build_dir, self.subprocess_stdio)?;
