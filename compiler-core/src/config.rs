@@ -72,7 +72,7 @@ pub struct PackageConfig {
     pub name: SmolStr,
     #[serde(default = "default_version")]
     pub version: Version,
-    #[serde(default, rename = "gleam-version")]
+    #[serde(default, rename = "gleam")]
     pub gleam_version: Option<SmolStr>,
     #[serde(default, alias = "licenses")]
     pub licences: Vec<SpdxLicense>,
