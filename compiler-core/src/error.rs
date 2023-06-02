@@ -227,7 +227,7 @@ pub enum Error {
     #[error("Opening docs at {path} failed: {error}")]
     FailedToOpenDocs { path: PathBuf, error: String },
 
-    #[error("The package {package} requires gleam version {required_version} and you are using {gleam_version}")]
+    #[error("The package {package} requires a Gleam version satisfying {required_version} and you are using v{gleam_version}")]
     IncompatibleCompilerVersion {
         package: String,
         required_version: String,
@@ -2494,14 +2494,14 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                 gleam_version
             } => {
                 let text = format!(
-                    "The package {} requires gleam version {} \
-but you are using version {}.",
+                    "The package {} requires a Gleam version satisfying {} \
+but you are using v{}.",
                     package,
                     required_version,
                     gleam_version
                 );
                 Diagnostic {
-                    title: "Incompatible gleam version".into(),
+                    title: "Incompatible Gleam version".into(),
                     text,
                     hint: None,
                     location: None,
