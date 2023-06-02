@@ -18,6 +18,7 @@
 - The new `gleam remove <package_name>` can be used to remove dependencies
   from a Gleam project.
 - The `gleam docs build` command gains the `--open` flag to open the docs after they are generated (#2188).
+- Updated font loading in generated HTML documentation to fix an issue with fonts not loading properly in some browsers (#2209).
 
 ## v0.29.0 - 2023-05-23
 
