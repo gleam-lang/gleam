@@ -129,7 +129,6 @@ impl PackageConfig {
             path: path.as_ref().to_path_buf(),
             err: Some(e.to_string()),
         })?;
-        config.check_gleam_compatability()?;
         Ok(config)
     }
 

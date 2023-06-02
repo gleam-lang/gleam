@@ -96,6 +96,9 @@ where
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
+        // Ensure that the package is compatable with this version of Gleam
+        self.config.check_gleam_compatability()?;
+
         let artefact_directory = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
         let codegen_required = if self.perform_codegen {
             CodegenRequired::Yes
