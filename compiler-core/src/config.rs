@@ -2,6 +2,7 @@ use crate::error::{FileIoAction, FileKind};
 use crate::io::FileSystemReader;
 use crate::manifest::Manifest;
 use crate::requirement::Requirement;
+use crate::version::COMPILER_VERSION;
 use crate::{Error, Result};
 use globset::{Glob, GlobSetBuilder};
 use hexpm::version::Version;
@@ -181,7 +182,7 @@ impl PackageConfig {
     // with the current compiler version
     pub fn check_gleam_compatability(&self) -> Result<(), Error> {
         if let Some(required_version) = &self.gleam_version {
-            let compiler_version = hexpm::version::Version::parse(env!("CARGO_PKG_VERSION"))
+            let compiler_version = hexpm::version::Version::parse(COMPILER_VERSION)
                 .expect("Parse compiler semantic version");
             let range = hexpm::version::Range::new(required_version.to_string())
                 .to_pubgrub()
@@ -193,7 +194,7 @@ impl PackageConfig {
                 return Err(Error::IncompatibleCompilerVersion {
                     package: self.name.to_string(),
                     required_version: required_version.to_string(),
-                    gleam_version: env!("CARGO_PKG_VERSION").to_string(),
+                    gleam_version: COMPILER_VERSION.to_string(),
                 });
             }
         }

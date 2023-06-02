@@ -82,6 +82,7 @@ use gleam_core::{
     build::{Codegen, Mode, Options, Runtime, Target},
     hex::RetirementReason,
     paths::ProjectPaths,
+    version::COMPILER_VERSION,
 };
 use hex::ApiKeyCommand as _;
 
@@ -89,8 +90,6 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
 use strum::VariantNames;
-
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Parser, Debug)]
 #[clap(version)]
@@ -396,7 +395,7 @@ fn main() {
 
         Command::Deps(Dependencies::Update) => dependencies::update(),
 
-        Command::New(options) => new::create(options, VERSION),
+        Command::New(options) => new::create(options, COMPILER_VERSION),
 
         Command::Shell => shell::command(),
 

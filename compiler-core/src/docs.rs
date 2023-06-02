@@ -15,6 +15,7 @@ use crate::{
     io::OutputFile,
     paths::ProjectPaths,
     pretty,
+    version::COMPILER_VERSION,
 };
 use askama::Template;
 use itertools::Itertools;
@@ -23,7 +24,6 @@ use serde_json::to_string as serde_to_string;
 use smol_str::SmolStr;
 
 const MAX_COLUMNS: isize = 65;
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn generate_html(
     paths: &ProjectPaths,
@@ -98,7 +98,7 @@ pub fn generate_html(
         };
 
         let temp = PageTemplate {
-            gleam_version: VERSION,
+            gleam_version: COMPILER_VERSION,
             links: &links,
             pages: &pages,
             modules: &modules_links,
@@ -227,7 +227,7 @@ pub fn generate_html(
         let page_meta_description = "";
 
         let template = ModuleTemplate {
-            gleam_version: VERSION,
+            gleam_version: COMPILER_VERSION,
             unnest,
             links: &links,
             pages: &pages,
