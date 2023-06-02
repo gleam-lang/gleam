@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Adding a new dependency unlocks the target package.
 - Dependencies can now be loaded from paths. Path dependencies currently use
   the same semantics as hex dependencies, and must be updated using the command
   `gleam deps update` to load changes.
