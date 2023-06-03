@@ -415,6 +415,7 @@ fn locked_nested_are_removed_too() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/1754
 #[test]
 fn locked_unlock_new() {
     let mut config = PackageConfig::default();
