@@ -41,6 +41,9 @@ impl ParseError {
             ),
             ParseErrorType::ExpectedUpName => ("I was expecting a type name here.", vec![]),
             ParseErrorType::ExpectedValue => ("I was expecting a value after this.", vec![]),
+            ParseErrorType::ExpectedStatement => {
+                ("I was expecting a statement after this.", vec![])
+            }
             ParseErrorType::ExtraSeparator => (
                 "This is an extra delimiter.",
                 vec!["Hint: Try removing it?".into()],
@@ -213,6 +216,7 @@ pub enum ParseErrorType {
     ExpectedType,            // after ':' or '->' where a type annotation is expected
     ExpectedUpName,          // any token used when a UpName was expected
     ExpectedValue,           // no value after "="
+    ExpectedStatement,       // no statement after "@<name>"
     ExprLparStart,           // it seems "(" was used to start an expression
     ExtraSeparator,          // #(1,,) <- the 2nd comma is an extra separator
     IncorrectName,           // UpName or DiscardName used when Name was expected

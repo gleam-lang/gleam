@@ -204,8 +204,8 @@ where
                         let _ = self.expect_one(&Token::LeftParen)?;
                         let target = self.expect_target()?;
                         let _ = self.expect_one(&Token::RightParen)?;
-                        let statements = self.expect_module_statements()?;
-                        Ok(Some(TargetGroup::Only(target, statements)))
+                        let statement = self.expect_module_statement()?;
+                        Ok(Some(TargetGroup::Only(target, vec![statement])))
                     }
                     _ => Ok(None),
                 }
@@ -228,6 +228,16 @@ where
                 }
             }
             None => Ok(None),
+        }
+    }
+
+    fn expect_module_statement(&mut self) -> Result<UntypedModuleStatement, ParseError> {
+        match self.parse_module_statement()? {
+            None => parse_error(
+                ParseErrorType::ExpectedStatement,
+                SrcSpan { start: 0, end: 0 },
+            ),
+            Some(statement) => self.ensure_no_errors(Ok(statement)),
         }
     }
 
