@@ -207,6 +207,16 @@ where
                         let statement = self.expect_module_statement()?;
                         Ok(Some(TargetGroup::Only(target, vec![statement])))
                     }
+                    Some((_, Token::Name { .. }, _)) => {
+                        let (start, _, end) = self.maybe_name().expect("Expected a Name token.");
+                        parse_error(
+                            ParseErrorType::UnexpectedToken {
+                                expected: vec!["target".into()],
+                                hint: Some("Did you mean to write @target?".into()),
+                            },
+                            SrcSpan { start, end },
+                        )
+                    }
                     _ => Ok(None),
                 }
             }
