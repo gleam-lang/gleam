@@ -199,7 +199,7 @@ where
             Some((_, Token::At, _)) => {
                 let _ = self.next_tok();
                 match &self.tok0 {
-                    Some((_, Token::If, _)) => {
+                    Some((_, Token::Name { name }, _)) if name == "target" => {
                         let _ = self.next_tok();
                         let _ = self.expect_one(&Token::LeftParen)?;
                         let target = self.expect_target()?;
