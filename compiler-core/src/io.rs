@@ -158,6 +158,7 @@ impl DirEntry {
 /// but in tests and in other places other implementations may be used.
 pub trait FileSystemReader {
     fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf>;
+    fn gleam_ext_files(&self, dir: &Path) -> Vec<PathBuf>;
     fn gleam_cache_files(&self, dir: &Path) -> Vec<PathBuf>;
     fn read_dir(&self, path: &Path) -> Result<ReadDir>;
     fn read(&self, path: &Path) -> Result<String, Error>;

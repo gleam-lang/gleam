@@ -41,7 +41,7 @@ impl ProjectIO {
 }
 
 impl FileSystemReader for ProjectIO {
-    fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
+    fn gleam_ext_files(&self, dir: &Path) -> Vec<PathBuf> {
         if !dir.is_dir() {
             return vec![];
         }
@@ -52,6 +52,13 @@ impl FileSystemReader for ProjectIO {
             .filter_map(Result::ok)
             .filter(|e| e.file_type().is_file())
             .map(|d| d.into_path())
+            .filter(move |d| is_gleam_ext(d, dir.clone()))
+            .collect()
+    }
+
+    fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
+        self.gleam_ext_files(dir)
+            .into_iter()
             .filter(move |d| is_gleam_path(d, dir.clone()))
             .collect()
     }
@@ -304,7 +311,7 @@ pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), Error> {
     Ok(())
 }
 
-fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
+pub fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
     use regex::Regex;
     lazy_static! {
         static ref RE: Regex = Regex::new(&format!(
@@ -320,6 +327,21 @@ fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
             .expect("is_gleam_path(): strip_prefix")
             .to_str()
             .expect("is_gleam_path(): to_str"),
+    )
+}
+
+fn is_gleam_ext(path: &Path, dir: impl AsRef<Path>) -> bool {
+    use regex::Regex;
+    lazy_static! {
+        static ref RE: Regex =
+            Regex::new(&format!("^.*\\.gleam$",)).expect("is_gleam_ext() RE regex");
+    }
+
+    RE.is_match(
+        path.strip_prefix(dir)
+            .expect("is_gleam_ext(): strip_prefix")
+            .to_str()
+            .expect("is_gleam_ext(): to_str"),
     )
 }
 
