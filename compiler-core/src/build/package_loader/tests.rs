@@ -1,3 +1,4 @@
+use debug_ignore::DebugIgnore;
 use smol_str::SmolStr;
 
 use super::*;
@@ -5,9 +6,13 @@ use crate::{
     build::module_loader::SourceFingerprint,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
     parse::extra::ModuleExtra,
-    warning::NullWarningEmitterIO,
+    warning::{NullWarningEmitterIO, TypeWarningEmitter},
+    Warning,
 };
-use std::time::Duration;
+use std::{
+    sync::{atomic::AtomicUsize, Arc},
+    time::Duration,
+};
 
 #[derive(Debug)]
 struct LoaderTestOutput {

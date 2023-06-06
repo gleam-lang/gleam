@@ -128,11 +128,13 @@ pub enum Warning {
         src: SmolStr,
         warning: crate::type_::Warning,
     },
-
     Parse {
         path: PathBuf,
         src: SmolStr,
         warning: crate::parse::Warning,
+    },
+    InvalidSource {
+        name: SmolStr,
     },
 }
 
@@ -186,6 +188,15 @@ impl Warning {
                 }
             },
 
+            Warning::InvalidSource { name } => Diagnostic {
+                title: "Invalid gleam source filename.".into(),
+                text: "".into(),
+                level: diagnostic::Level::Warning,
+                location: None,
+                hint: Some(format!(
+                    "Rename `{name}` to be valid, or remove this file from the project source."
+                )),
+            },
             Self::Type { path, warning, src } => match warning {
                 type_::Warning::Todo {
                     kind,
