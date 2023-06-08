@@ -14,6 +14,8 @@ im = "15.1.0"
 ctrlc = { version = "3.2.1", features = ["termination"] }
 # Command line interface
 clap = { version = "3.0", features = ["derive"] }
+# Command line completions
+clap_complete = { version = "3.2.5" }
 # Extra iter methods
 itertools = "0.10.1"
 # Parsing
