@@ -1,0 +1,6 @@
+---
+source: compiler-core/src/erlang/tests/conditional_compilation.rs
+expression: "@target(javascript)\n  pub fn main() { 1 }\n"
+---
+-module(my@mod).
+
