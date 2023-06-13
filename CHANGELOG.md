@@ -31,6 +31,8 @@
 - Fixed a bug where invalid Erlang would be generated when piping into `panic`.
 - The `gleam docs build` command gains the `--open` flag to open the docs after
   they are generated (#2188).
+- Fixed a bug where type annotations for constants could not be written with
+  type annotations.
 - Updated font loading in generated HTML documentation to fix an issue with
   fonts not loading properly in some browsers (#2209).
 
