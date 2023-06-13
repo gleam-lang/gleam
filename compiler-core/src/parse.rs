@@ -87,6 +87,12 @@ pub struct Parsed {
     pub warnings: Vec<Warning>,
 }
 
+#[derive(Debug, Default)]
+struct Attributes {
+    external_erlang: Option<(SmolStr, SmolStr)>,
+    external_javascript: Option<(SmolStr, SmolStr)>,
+}
+
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Warning {
     DeprecatedIf { location: SrcSpan, target: Target },
@@ -220,27 +226,21 @@ where
     fn parse_target_group(&mut self) -> Result<Option<Vec<TargettedDefinition>>, ParseError> {
         match &self.tok0 {
             // Attribute-syntax
-            Some((_, Token::At, _)) => {
-                let _ = self.next_tok();
-                match &self.tok0 {
-                    Some((_, Token::Name { name }, _)) if name == "target" => {
-                        let _ = self.next_tok();
-                        let _ = self.expect_one(&Token::LeftParen)?;
-                        let target = self.expect_target()?;
-                        let _ = self.expect_one(&Token::RightParen)?;
-                        let statement = self.expect_definition()?;
-                        Ok(Some(vec![TargettedDefinition::Only(target, statement)]))
-                    }
-                    Some((start, Token::Name { .. }, end)) => parse_error(
-                        ParseErrorType::UnexpectedToken {
-                            expected: vec!["target".into()],
-                            hint: Some("Did you mean @target?".into()),
-                        },
-                        SrcSpan::new(*start, *end),
-                    ),
-                    _ => Ok(None),
+            Some((_, Token::At, _)) => match &self.tok1 {
+                Some((_, Token::Name { name }, _)) if name == "target" => {
+                    let _ = self.next_tok();
+                    let _ = self.next_tok();
+                    let _ = self.expect_one(&Token::LeftParen)?;
+                    let target = self.expect_target()?;
+                    let _ = self.expect_one(&Token::RightParen)?;
+                    let definition = self.expect_definition()?;
+                    Ok(Some(vec![TargettedDefinition::Only(target, definition)]))
                 }
-            }
+                _ => {
+                    let definition = self.expect_definition()?;
+                    Ok(Some(vec![TargettedDefinition::Any(definition)]))
+                }
+            },
 
             // If-syntax
             Some((start, Token::If, _)) => {
@@ -252,7 +252,7 @@ where
                     target,
                     location: SrcSpan::new(start, end),
                 });
-                let statements = self.expect_module_statements()?;
+                let statements = self.expect_definitions()?;
                 let (_, _) = self.expect_one(&Token::RightBrace)?;
                 let statements = statements
                     .into_iter()
@@ -262,7 +262,7 @@ where
             }
 
             Some(_) => {
-                let statements = self.expect_module_statements()?;
+                let statements = self.expect_definitions()?;
                 if statements.is_empty() {
                     return Ok(None);
                 }
@@ -277,7 +277,7 @@ where
     }
 
     fn expect_definition(&mut self) -> Result<UntypedDefinition, ParseError> {
-        match self.parse_module_statement()? {
+        match self.parse_definition()? {
             None => parse_error(
                 ParseErrorType::ExpectedStatement,
                 SrcSpan { start: 0, end: 0 },
@@ -286,12 +286,15 @@ where
         }
     }
 
-    fn expect_module_statements(&mut self) -> Result<Vec<UntypedDefinition>, ParseError> {
-        let statements = Parser::series_of(self, &Parser::parse_module_statement, None);
+    fn expect_definitions(&mut self) -> Result<Vec<UntypedDefinition>, ParseError> {
+        let statements = Parser::series_of(self, &Parser::parse_definition, None);
         self.ensure_no_errors(statements)
     }
 
-    fn parse_module_statement(&mut self) -> Result<Option<UntypedDefinition>, ParseError> {
+    fn parse_definition(&mut self) -> Result<Option<UntypedDefinition>, ParseError> {
+        let mut attributes = Attributes::default();
+        self.parse_attributes(&mut attributes)?;
+
         match (self.tok0.take(), self.tok1.as_ref()) {
             // Imports
             (Some((_, Token::Import, _)), _) => {
@@ -332,15 +335,15 @@ where
                 }
             }
 
-            // function
+            // Function
             (Some((start, Token::Fn, _)), _) => {
                 let _ = self.next_tok();
-                self.parse_function(start, false, false)
+                self.parse_function(start, false, false, attributes)
             }
             (Some((start, Token::Pub, _)), Some((_, Token::Fn, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
-                self.parse_function(start, true, false)
+                self.parse_function(start, true, false, attributes)
             }
 
             // Custom Types, and Type Aliases
@@ -576,7 +579,7 @@ where
             }
             Some((start, Token::Fn, _)) => {
                 let _ = self.next_tok();
-                match self.parse_function(start, false, true)? {
+                match self.parse_function(start, false, true, Attributes::default())? {
                     Some(Definition::Function(Function {
                         location,
                         arguments: args,
@@ -1438,6 +1441,7 @@ where
         start: u32,
         public: bool,
         is_anon: bool,
+        attributes: Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = if is_anon {
             None
@@ -1482,6 +1486,8 @@ where
             body,
             return_type: (),
             return_annotation,
+            external_erlang: attributes.external_erlang,
+            external_javascript: attributes.external_javascript,
         })))
     }
 
@@ -2808,6 +2814,53 @@ where
             None
         } else {
             Some(content.into())
+        }
+    }
+
+    fn parse_attributes(&mut self, attributes: &mut Attributes) -> Result<(), ParseError> {
+        while let Some((start, _)) = self.maybe_one(&Token::At) {
+            self.parse_attribute(start, attributes)?;
+        }
+        Ok(())
+    }
+
+    fn parse_attribute(
+        &mut self,
+        start: u32,
+        attributes: &mut Attributes,
+    ) -> Result<(), ParseError> {
+        // Parse the name of the attribute. Later this will be a name token, but
+        // for now we parse `external`, which is currently a keyword.
+        let (_, end) = self.expect_one(&Token::External)?;
+
+        // And now we parse the arguments to the attribute.
+        let _ = self.expect_one(&Token::LeftParen)?;
+        let (_, name, _) = self.expect_name()?;
+
+        match name.as_str() {
+            "erlang" => {
+                let _ = self.expect_one(&Token::Comma)?;
+                let (_, module, _) = self.expect_string()?;
+                let _ = self.expect_one(&Token::Comma)?;
+                let (_, function, _) = self.expect_string()?;
+                let _ = self.maybe_one(&Token::Comma);
+                let _ = self.expect_one(&Token::RightParen)?;
+                attributes.external_erlang = Some((module, function));
+                Ok(())
+            }
+
+            "javascript" => {
+                let _ = self.expect_one(&Token::Comma)?;
+                let (_, module, _) = self.expect_string()?;
+                let _ = self.expect_one(&Token::Comma)?;
+                let (_, function, _) = self.expect_string()?;
+                let _ = self.maybe_one(&Token::Comma);
+                let _ = self.expect_one(&Token::RightParen)?;
+                attributes.external_javascript = Some((module, function));
+                Ok(())
+            }
+
+            _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan::new(start, end)),
         }
     }
 }

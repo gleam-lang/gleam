@@ -29,6 +29,8 @@ fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>, Error> {
                 end_position: src.len() as u32,
                 return_type: (),
                 documentation: None,
+                external_erlang: None,
+                external_javascript: None,
             }),
             Input::External(name) => ModuleFunction::External(ExternalFunction {
                 name: name.into(),

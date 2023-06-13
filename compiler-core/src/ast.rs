@@ -402,6 +402,8 @@ pub struct Function<T, Expr> {
     pub return_annotation: Option<TypeAst>,
     pub return_type: T,
     pub documentation: Option<SmolStr>,
+    pub external_erlang: Option<(SmolStr, SmolStr)>,
+    pub external_javascript: Option<(SmolStr, SmolStr)>,
 }
 
 impl<T, E> Function<T, E> {

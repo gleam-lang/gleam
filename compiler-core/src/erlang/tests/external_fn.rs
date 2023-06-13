@@ -76,3 +76,44 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn attribute_erlang() {
+    assert_erl!(
+        r#"
+@external(erlang, "one", "one")
+pub fn one() -> Int {
+  todo
+}
+"#
+    );
+}
+
+#[test]
+fn attribute_javascript() {
+    assert_erl!(
+        r#"
+@external(javascript, "./one.mjs", "one")
+pub fn one() -> Int {
+  todo
+}
+"#
+    );
+}
+
+#[test]
+fn erlang_and_javascript() {
+    assert_erl!(
+        r#"
+@external(erlang, "one", "one")
+@external(javascript, "./one.mjs", "one")
+pub fn one() -> Int {
+  todo
+}
+"#
+    );
+}
+
+// TODO: test duplicate externals for a single target are a compile error
+// TODO: bodies absent is not an error if there is an external impl
+// TODO: without a body or a suitable external impl is an error

@@ -199,6 +199,11 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "I was expecting a value here.",
                 vec!["If a list expression has a spread then a tail must also be given.".into()],
             ),
+            ParseErrorType::UnknownAttribute => (
+                "I was expecting a target name here",
+                vec!["Try `erlang` or `javascript` instead.".into()],
+            ),
+            ParseErrorType::UnknownTarget => ("I don't know what this attribute is.", vec![]),
         }
     }
 }
@@ -233,6 +238,8 @@ pub enum ParseErrorType {
     OpNakedRight, // Operator with no value to the right
     OpaqueTypeAlias, // Type aliases cannot be opaque
     TooManyArgHoles, // a function call can have at most 1 arg hole
+    UnknownAttribute, // an attribute was used that is not known
+    UnknownTarget, // an unknown target was used
     ListSpreadWithoutElements, // Pointless spread: `[..xs]`
     LowcaseBooleanPattern, // most likely user meant True or False in patterns
     UnexpectedLabel, // argument labels were provided, but are not supported in this context
