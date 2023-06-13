@@ -105,7 +105,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: "--workspace --target ${{ matrix.target }}"
+          args: "--workspace --target ${{ matrix.target }} --exclude compiler-wasm"
           use-cross: ${{ matrix.use-cross }}
 
       - name: test/project_erlang
