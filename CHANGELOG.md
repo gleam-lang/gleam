@@ -8,6 +8,8 @@
 - Adding a new dependency now unlocks the target package. This helps avoid
   failing to find a suitable version for the package due to already being
   locked.
+- Types named `Dynamic` are now called `dynamic_` in Erlang to avoid a clash
+  with the new Erlang `dynamic` type introduced in OTP26.
 - Dependencies can now be loaded from paths. Path dependencies currently use
   the same semantics as hex dependencies, and must be updated using the command
   `gleam deps update` to load changes.
