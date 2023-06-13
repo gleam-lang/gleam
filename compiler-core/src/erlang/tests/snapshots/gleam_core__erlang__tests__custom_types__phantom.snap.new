@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/erlang/tests/custom_types.rs
+assertion_line: 5
+expression: "pub type Map(k, v)"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export_type([map_/2]).
+
+-type map_(I, J) :: any() | {gleam_phantom, I, J}.
+
+
+
