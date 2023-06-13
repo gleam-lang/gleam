@@ -1735,9 +1735,10 @@ fn printed_comments<'a, 'comments>(
 
     let mut doc = Vec::new();
     while let Some(c) = comments.next() {
-        // There will never be consecutive empty lines (None values),
-        // and whenever we peek a None, we advance past it.
-        let c = c.expect("no consecutive empty lines");
+        let c = match c {
+            Some(c) => c,
+            None => continue,
+        };
         doc.push("//".to_doc().append(Document::String(c.to_string())));
         match comments.peek() {
             // Next line is a comment

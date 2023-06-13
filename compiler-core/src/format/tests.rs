@@ -5061,3 +5061,23 @@ fn empty_line_after_fn_with_return_annotation() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2174
+#[test]
+fn empty_line_after_crash() {
+    assert_format_rewrite!(
+        r#"pub type One {
+  One // Comment
+
+}
+
+"#,
+        r#"pub type One {
+  One
+}
+// Comment
+
+
+"#
+    );
+}
