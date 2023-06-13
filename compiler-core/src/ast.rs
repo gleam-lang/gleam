@@ -480,11 +480,14 @@ pub struct CustomType<T> {
     pub location: SrcSpan,
     pub end_position: u32,
     pub name: SmolStr,
-    pub parameters: Vec<SmolStr>,
     pub public: bool,
     pub constructors: Vec<RecordConstructor<T>>,
     pub documentation: Option<SmolStr>,
     pub opaque: bool,
+    /// The names of the type parameters.
+    pub parameters: Vec<SmolStr>,
+    /// Once type checked this field will contain the type information for the
+    /// type parameters.
     pub typed_parameters: Vec<T>,
 }
 

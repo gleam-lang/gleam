@@ -334,8 +334,10 @@ fn register_imports(
                     .append(typed_parameters.len()),
             );
             // Type definitions
-            let constructors = concat(Itertools::intersperse(
-                constructors
+            let definition = if constructors.is_empty() {
+                "any()".to_doc()
+            } else {
+                let constructors = constructors
                     .iter()
                     .map(|c| {
                         let name = atom(c.name.to_snake_case());
@@ -347,12 +349,11 @@ fn register_imports(
                             tuple(std::iter::once(name).chain(args))
                         }
                     })
-                    .chain(phantom_vars_constructor),
-                break_(" |", " | "),
-            ))
-            .nest(INDENT)
-            .group()
-            .append(".");
+                    .chain(phantom_vars_constructor);
+                let constructors =
+                    concat(Itertools::intersperse(constructors, break_(" |", " | ")));
+                constructors.nest(INDENT)
+            };
             let type_printer = TypePrinter::new(module_name);
             let params = concat(Itertools::intersperse(
                 typed_parameters.iter().map(|a| type_printer.print(a)),
@@ -364,7 +365,9 @@ fn register_imports(
                 .append("(")
                 .append(params)
                 .append(") :: ")
-                .append(constructors);
+                .append(definition)
+                .group()
+                .append(".");
             type_defs.push(doc);
         }
 

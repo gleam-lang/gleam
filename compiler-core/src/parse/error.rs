@@ -103,10 +103,6 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "This case expression has no clauses.",
                 vec!["See: https://gleam.run/book/tour/case-expressions".into()],
             ),
-            ParseErrorType::NoConstructors => (
-                "Custom types must have at least 1 constructor.",
-                vec!["See: https://gleam.run/book/tour/custom-types".into()],
-            ),
             ParseErrorType::NotConstType => (
                 "This type is not allowed in module constants.",
                 vec!["See: https://gleam.run/book/tour/constants".into()],
@@ -229,7 +225,6 @@ pub enum ParseErrorType {
         error: LexicalError,
     },
     NestedBitStringPattern,    // <<<<1>>, 2>>, <<1>> is not allowed in there
-    NoConstructors,            // A type "A {}" must have at least one constructor
     NoCaseClause,              // a case with no clauses
     NoExpression, // between "{" and "}" in expression position, there must be an expression
     NoLetBinding, // Bindings and rebinds always require let and must always bind to a value.

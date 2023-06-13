@@ -203,6 +203,11 @@ impl<'a> Generator<'a> {
         public: bool,
         opaque: bool,
     ) -> Vec<Output<'a>> {
+        // If there's no constructors then there's nothing to do here.
+        if constructors.is_empty() {
+            return vec![];
+        }
+
         self.tracker.custom_type_used = true;
         constructors
             .iter()

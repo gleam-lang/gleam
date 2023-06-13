@@ -58,9 +58,9 @@ use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitStringSegment,
     BitStringSegmentOption, CallArg, Clause, ClauseGuard, Constant, CustomType, Definition,
-    ExternalFnArg, ExternalFunction, ExternalType, Function, HasLocation, Import, Module,
-    ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan,
-    Statement, TargettedDefinition, TodoKind, TypeAlias, TypeAst, UnqualifiedImport, UntypedArg,
+    ExternalFnArg, ExternalFunction, Function, HasLocation, Import, Module, ModuleConstant,
+    Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement,
+    TargettedDefinition, TodoKind, TypeAlias, TypeAst, UnqualifiedImport, UntypedArg,
     UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
     UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
     Use, UseAssignment, CAPTURE_VARIABLE,
@@ -1723,13 +1723,17 @@ where
         public: bool,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
-        let (_, name, args, end) = self.expect_type_name()?;
-        Ok(Some(Definition::ExternalType(ExternalType {
+        let (_, name, parameters, end) = self.expect_type_name()?;
+        Ok(Some(Definition::CustomType(CustomType {
             location: SrcSpan { start, end },
             public,
             name,
-            arguments: args,
+            parameters,
             documentation,
+            end_position: end,
+            constructors: vec![],
+            opaque: false,
+            typed_parameters: vec![],
         })))
     }
 
@@ -1750,7 +1754,7 @@ where
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
         let (_, name, parameters, end) = self.expect_type_name()?;
-        if self.maybe_one(&Token::LeftBrace).is_some() {
+        let (constructors, end_position) = if self.maybe_one(&Token::LeftBrace).is_some() {
             // Custom Type
             let constructors = Parser::series_of(
                 self,
@@ -1773,54 +1777,41 @@ where
                 None,
             )?;
             let (_, close_end) = self.expect_one(&Token::RightBrace)?;
-            if constructors.is_empty() {
-                parse_error(ParseErrorType::NoConstructors, SrcSpan { start, end })
-            } else {
-                Ok(Some(Definition::CustomType(CustomType {
-                    documentation,
-                    location: SrcSpan { start, end },
-                    end_position: close_end,
-                    public,
-                    opaque,
-                    name,
-                    parameters,
-                    constructors,
-                    typed_parameters: vec![],
-                })))
-            }
+            (constructors, close_end)
         } else if let Some((eq_s, eq_e)) = self.maybe_one(&Token::Equal) {
             // Type Alias
-            if !opaque {
-                if let Some(t) = self.parse_type()? {
-                    let type_end = t.location().end;
-                    Ok(Some(Definition::TypeAlias(TypeAlias {
-                        documentation,
-                        location: SrcSpan {
-                            start,
-                            end: type_end,
-                        },
-                        public,
-                        alias: name,
-                        parameters,
-                        type_ast: t,
-                        type_: (),
-                    })))
-                } else {
-                    parse_error(
-                        ParseErrorType::ExpectedType,
-                        SrcSpan {
-                            start: eq_s,
-                            end: eq_e,
-                        },
-                    )
-                }
+            if opaque {
+                return parse_error(ParseErrorType::OpaqueTypeAlias, SrcSpan { start, end });
+            }
+
+            if let Some(t) = self.parse_type()? {
+                let type_end = t.location().end;
+                return Ok(Some(Definition::TypeAlias(TypeAlias {
+                    documentation,
+                    location: SrcSpan::new(start, type_end),
+                    public,
+                    alias: name,
+                    parameters,
+                    type_ast: t,
+                    type_: (),
+                })));
             } else {
-                parse_error(ParseErrorType::OpaqueTypeAlias, SrcSpan { start, end })
+                return parse_error(ParseErrorType::ExpectedType, SrcSpan::new(eq_s, eq_e));
             }
         } else {
-            // Stared defining a custom type or type alias, didn't supply any {} or =
-            parse_error(ParseErrorType::NoConstructors, SrcSpan { start, end })
-        }
+            (vec![], end)
+        };
+        Ok(Some(Definition::CustomType(CustomType {
+            documentation,
+            location: SrcSpan { start, end },
+            end_position,
+            public,
+            opaque,
+            name,
+            parameters,
+            constructors,
+            typed_parameters: vec![],
+        })))
     }
 
     // examples:
