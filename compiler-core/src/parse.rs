@@ -163,7 +163,7 @@ where
             definitions,
         };
         Ok(Parsed {
-            module: module.into(),
+            module,
             extra: Default::default(),
             warnings: Default::default(),
         })
