@@ -33,19 +33,19 @@ pub trait HasLocation {
 
 pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition>;
 
-pub type UntypedModule = Module<(), TargetGroup>;
+pub type UntypedModule = Module<(), TargettedDefinition>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module<Info, Statements> {
     pub name: SmolStr,
     pub documentation: Vec<SmolStr>,
     pub type_info: Info,
-    pub statements: Vec<Statements>,
+    pub definitions: Vec<Statements>,
 }
 
 impl TypedModule {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.statements
+        self.definitions
             .iter()
             .find_map(|statement| statement.find_node(byte_index))
     }
@@ -62,12 +62,12 @@ impl TypedModule {
 /// ```
 ///
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TargetGroup {
-    Any(Vec<UntypedDefinition>),
-    Only(Target, Vec<UntypedDefinition>),
+pub enum TargettedDefinition {
+    Any(UntypedDefinition),
+    Only(Target, UntypedDefinition),
 }
 
-impl TargetGroup {
+impl TargettedDefinition {
     pub fn is_for(&self, target: Target) -> bool {
         match self {
             Self::Any(_) => true,
@@ -75,26 +75,25 @@ impl TargetGroup {
         }
     }
 
-    pub fn statements(self) -> Vec<UntypedDefinition> {
+    pub fn into_inner(self) -> UntypedDefinition {
         match self {
             Self::Any(s) => s,
             Self::Only(_, s) => s,
         }
     }
 
-    pub fn statements_ref(&self) -> &[UntypedDefinition] {
+    pub fn inner(&self) -> &UntypedDefinition {
         match self {
             Self::Any(s) => s,
             Self::Only(_, s) => s,
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.statements_ref().len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    pub fn target(&self) -> Option<Target> {
+        match self {
+            Self::Any(_) => None,
+            Self::Only(t, _) => Some(*t),
+        }
     }
 }
 
@@ -111,17 +110,17 @@ impl UntypedModule {
     }
 
     pub fn iter_statements(&self, target: Target) -> impl Iterator<Item = &UntypedDefinition> {
-        self.statements
+        self.definitions
             .iter()
             .filter(move |group| group.is_for(target))
-            .flat_map(|group| group.statements_ref())
+            .map(|group| group.inner())
     }
 
     pub fn into_iter_statements(self, target: Target) -> impl Iterator<Item = UntypedDefinition> {
-        self.statements
+        self.definitions
             .into_iter()
             .filter(move |group| group.is_for(target))
-            .flat_map(|group| group.statements())
+            .map(|group| group.into_inner())
     }
 }
 
@@ -594,14 +593,6 @@ impl TypedDefinition {
             }
         }
     }
-
-    /// Returns `true` if the module statement is [`Function`].
-    ///
-    /// [`Function`]: ModuleStatement::Function
-    #[must_use]
-    pub fn is_function(&self) -> bool {
-        matches!(self, Self::Function(..))
-    }
 }
 
 impl<A, B, C, E> Definition<A, B, C, E> {
@@ -615,6 +606,22 @@ impl<A, B, C, E> Definition<A, B, C, E> {
             | Definition::ExternalType(ExternalType { location, .. })
             | Definition::ModuleConstant(ModuleConstant { location, .. }) => *location,
         }
+    }
+
+    /// Returns `true` if the definition is [`Import`].
+    ///
+    /// [`Import`]: Definition::Import
+    #[must_use]
+    pub fn is_import(&self) -> bool {
+        matches!(self, Self::Import(..))
+    }
+
+    /// Returns `true` if the module statement is [`Function`].
+    ///
+    /// [`Function`]: ModuleStatement::Function
+    #[must_use]
+    pub fn is_function(&self) -> bool {
+        matches!(self, Self::Function(..))
     }
 
     pub fn put_doc(&mut self, new_doc: SmolStr) {

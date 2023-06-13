@@ -137,7 +137,7 @@ pub fn generate_html(
 
         let functions: Vec<DocsFunction<'_>> = module
             .ast
-            .statements
+            .definitions
             .iter()
             .flat_map(|statement| function(&source_links, statement))
             .sorted()
@@ -145,7 +145,7 @@ pub fn generate_html(
 
         let types: Vec<Type<'_>> = module
             .ast
-            .statements
+            .definitions
             .iter()
             .flat_map(|statement| type_(&source_links, statement))
             .sorted()
@@ -153,7 +153,7 @@ pub fn generate_html(
 
         let constants: Vec<Constant<'_>> = module
             .ast
-            .statements
+            .definitions
             .iter()
             .flat_map(|statement| constant(&source_links, statement))
             .sorted()
