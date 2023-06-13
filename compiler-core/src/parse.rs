@@ -261,17 +261,10 @@ where
                 Ok(Some(statements))
             }
 
-            Some(_) => {
-                let statements = self.expect_definitions()?;
-                if statements.is_empty() {
-                    return Ok(None);
-                }
-                let statements = statements
-                    .into_iter()
-                    .map(TargettedDefinition::Any)
-                    .collect();
-                Ok(Some(statements))
-            }
+            Some(_) => Ok(self
+                .parse_definition()?
+                .map(|d| vec![TargettedDefinition::Any(d)])),
+
             None => Ok(None),
         }
     }
