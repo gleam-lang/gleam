@@ -82,7 +82,7 @@ fn attribute_erlang() {
     assert_erl!(
         r#"
 @external(erlang, "one", "one")
-pub fn one() -> Int {
+pub fn one(x: Int) -> Int {
   todo
 }
 "#
@@ -94,7 +94,7 @@ fn attribute_javascript() {
     assert_erl!(
         r#"
 @external(javascript, "./one.mjs", "one")
-pub fn one() -> Int {
+pub fn one(x: Int) -> Int {
   todo
 }
 "#
@@ -107,7 +107,7 @@ fn erlang_and_javascript() {
         r#"
 @external(erlang, "one", "one")
 @external(javascript, "./one.mjs", "one")
-pub fn one() -> Int {
+pub fn one(x: Int) -> Int {
   todo
 }
 "#

@@ -406,6 +406,8 @@ pub struct Function<T, Expr> {
     pub external_javascript: Option<(SmolStr, SmolStr)>,
 }
 
+pub type TypedFunction = Function<Arc<Type>, TypedExpr>;
+
 impl<T, E> Function<T, E> {
     fn full_location(&self) -> SrcSpan {
         SrcSpan::new(self.location.start, self.end_position)
