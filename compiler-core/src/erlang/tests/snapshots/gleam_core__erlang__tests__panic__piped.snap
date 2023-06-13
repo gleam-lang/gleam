@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/panic.rs
 assertion_line: 16
-expression: "\npub fn main(){\n  \"lets\"\n  |> panic\n}\n    "
+expression: "\npub fn main() {\n  \"lets\"\n  |> panic\n}\n    "
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
@@ -11,9 +11,9 @@ expression: "\npub fn main(){\n  \"lets\"\n  |> panic\n}\n    "
 -spec main() -> any().
 main() ->
     _pipe = <<"lets"/utf8>>,
-    erlang:error(#{gleam_error => panic,
+    (erlang:error(#{gleam_error => panic,
             message => <<"panic expression evaluated"/utf8>>,
             module => <<"my/mod"/utf8>>,
             function => <<"main"/utf8>>,
-            line => 4})(_pipe).
+            line => 4}))(_pipe).
 
