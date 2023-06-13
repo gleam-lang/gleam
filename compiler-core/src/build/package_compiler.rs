@@ -110,6 +110,7 @@ where
             self.ids.clone(),
             self.mode,
             self.root,
+            warnings,
             codegen_required,
             &artefact_directory,
             self.target.target(),

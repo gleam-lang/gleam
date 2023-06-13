@@ -80,14 +80,28 @@ use vec1::{vec1, Vec1};
 #[cfg(test)]
 mod tests;
 
+#[derive(Debug)]
+pub struct Parsed {
+    pub module: UntypedModule,
+    pub extra: ModuleExtra,
+    pub warnings: Vec<Warning>,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+pub enum Warning {
+    DeprecatedIf { location: SrcSpan, target: Target },
+}
+
 //
 // Public Interface
 //
-pub fn parse_module(src: &str) -> Result<(UntypedModule, ModuleExtra), ParseError> {
+pub fn parse_module(src: &str) -> Result<Parsed, ParseError> {
     let lex = lexer::make_tokenizer(src);
     let mut parser = Parser::new(lex);
-    let module = parser.parse_module()?;
-    Ok((module, parser.extra))
+    let mut parsed = parser.parse_module()?;
+    parsed.extra = parser.extra;
+    parsed.warnings = parser.warnings;
+    Ok(parsed)
 }
 
 //
@@ -117,6 +131,7 @@ pub struct Parser<T: Iterator<Item = LexResult>> {
     tok1: Option<Spanned>,
     extra: ModuleExtra,
     doc_comments: VecDeque<(u32, String)>,
+    warnings: Vec<Warning>,
 }
 impl<T> Parser<T>
 where
@@ -130,21 +145,27 @@ where
             tok1: None,
             extra: ModuleExtra::new(),
             doc_comments: VecDeque::new(),
+            warnings: vec![],
         };
         let _ = parser.next_tok();
         let _ = parser.next_tok();
         parser
     }
 
-    fn parse_module(&mut self) -> Result<UntypedModule, ParseError> {
-        let statements = Parser::series_of(self, &Parser::parse_target_group, None);
-        let statements = self.ensure_no_errors_or_remaining_input(statements)?;
-        let statements = statements.into_iter().flatten().collect_vec();
-        Ok(Module {
+    fn parse_module(&mut self) -> Result<Parsed, ParseError> {
+        let definitions = Parser::series_of(self, &Parser::parse_target_group, None);
+        let definitions = self.ensure_no_errors_or_remaining_input(definitions)?;
+        let definitions = definitions.into_iter().flatten().collect_vec();
+        let module = Module {
             name: "".into(),
             documentation: vec![],
             type_info: (),
-            definitions: statements,
+            definitions,
+        };
+        Ok(Parsed {
+            module: module.into(),
+            extra: Default::default(),
+            warnings: Default::default(),
         })
     }
 
@@ -221,10 +242,15 @@ where
             }
 
             // If-syntax
-            Some((_, Token::If, _)) => {
+            Some((start, Token::If, _)) => {
+                let start = *start;
                 let _ = self.next_tok();
                 let target = self.expect_target()?;
-                let _ = self.expect_one(&Token::LeftBrace)?;
+                let (_, end) = self.expect_one(&Token::LeftBrace)?;
+                self.warnings.push(Warning::DeprecatedIf {
+                    target,
+                    location: SrcSpan::new(start, end),
+                });
                 let statements = self.expect_module_statements()?;
                 let (_, _) = self.expect_one(&Token::RightBrace)?;
                 let statements = statements

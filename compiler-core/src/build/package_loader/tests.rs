@@ -5,6 +5,7 @@ use crate::{
     build::module_loader::SourceFingerprint,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
     parse::extra::ModuleExtra,
+    warning::NullWarningEmitterIO,
 };
 use std::time::Duration;
 
@@ -59,6 +60,7 @@ fn run_loader(fs: InMemoryFileSystem, root: &Path, artefact: &Path) -> LoaderTes
         ids,
         mode: Mode::Dev,
         root: &root,
+        warnings: &WarningEmitter::null(),
         codegen: CodegenRequired::Yes,
         artefact_directory: &artefact,
         package_name: &"my_package".into(),

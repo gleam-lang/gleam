@@ -1,5 +1,6 @@
 use crate::{
     ast::TodoKind,
+    build::Target,
     diagnostic::{self, Diagnostic, Location},
     type_,
 };
@@ -69,6 +70,10 @@ impl WarningEmitter {
         }
     }
 
+    pub fn null() -> Self {
+        Self::new(Arc::new(NullWarningEmitterIO))
+    }
+
     pub fn reset_count(&self) {
         self.count.store(0, Ordering::Relaxed);
     }
@@ -123,11 +128,44 @@ pub enum Warning {
         src: SmolStr,
         warning: crate::type_::Warning,
     },
+
+    Parse {
+        path: PathBuf,
+        src: SmolStr,
+        warning: crate::parse::Warning,
+    },
 }
 
 impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
+            Self::Parse { path, warning, src } => match warning {
+                crate::parse::Warning::DeprecatedIf { location, target } => {
+                    let target = match target {
+                        Target::Erlang => "erlang",
+                        Target::JavaScript => "javascript",
+                    };
+                    let text = format!(
+                        "This syntax has been replaced by the `@target({target})` attribute.\n"
+                    );
+                    Diagnostic {
+                        title: "Deprecated if syntax".into(),
+                        text,
+                        hint: Some("Run `gleam format` to auto-fix your code.".into()),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            path: path.to_path_buf(),
+                            src: src.clone(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+            },
+
             Self::Type { path, warning, src } => match warning {
                 type_::Warning::Todo {
                     kind,

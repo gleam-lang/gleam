@@ -84,7 +84,8 @@ pub fn compile(src: &str, dep: Option<(&str, &str, &str)>) -> TypedModule {
     );
 
     if let Some((dep_package, dep_name, dep_src)) = dep {
-        let (mut ast, _) = crate::parse::parse_module(dep_src).expect("dep syntax error");
+        let parsed = crate::parse::parse_module(dep_src).expect("dep syntax error");
+        let mut ast = parsed.module;
         ast.name = dep_name.into();
         let dep = crate::analyse::infer_module(
             Target::JavaScript,
@@ -99,7 +100,8 @@ pub fn compile(src: &str, dep: Option<(&str, &str, &str)>) -> TypedModule {
         let _ = modules.insert(dep_name.into(), dep.type_info);
     }
 
-    let (mut ast, _) = crate::parse::parse_module(src).expect("syntax error");
+    let parsed = crate::parse::parse_module(src).expect("syntax error");
+    let mut ast = parsed.module;
     ast.name = "my/mod".into();
     crate::analyse::infer_module(
         Target::JavaScript,

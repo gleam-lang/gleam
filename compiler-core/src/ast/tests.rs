@@ -16,7 +16,8 @@ use super::{Statement, TypedModule, TypedStatement};
 
 fn compile_module(src: &str) -> TypedModule {
     use crate::type_::build_prelude;
-    let (ast, _) = crate::parse::parse_module(src).expect("syntax error");
+    let parsed = crate::parse::parse_module(src).expect("syntax error");
+    let ast = parsed.module;
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
     // DUPE: preludeinsertion

@@ -126,13 +126,14 @@ impl UntypedModule {
 
 #[test]
 fn module_dependencies_test() {
-    let (module, _) = crate::parse::parse_module(
+    let parsed = crate::parse::parse_module(
         "import one 
          if erlang { import two } 
          if javascript { import three } 
          import four",
     )
     .expect("syntax error");
+    let module = parsed.module;
 
     assert_eq!(
         vec![
