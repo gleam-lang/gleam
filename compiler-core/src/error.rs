@@ -1998,7 +1998,7 @@ else it could crash."
                         PatternMatchKind::Assignment => {
                             "This assignment does not match all possibilities.
 Either use a case expression with patterns for each possible
-value, or use `assert` rather than `let`."
+value, or use `let assert` rather than `let`."
                         }
                     }
                     .to_string();
