@@ -9,6 +9,8 @@
 - The `javascript.deno.unstable` field in `gleam.toml` can now be used to
   enable Deno's unstable APIs when targeting JavaScript.
 - Blockquotes are now styled in rendered HTML documentation.
+- The `gleam` property can be set in `gleam.toml` can be set to a version
+  requirement to specify the version of Gleam required to build the project.
 - Type aliases can now refer to type aliases defined later in the same module.
 - Fixed a bug where unapplied record constructors in constant expressions would
   generate invalid Erlang.
@@ -18,8 +20,10 @@
   which is slow compared to checking for equality or pattern matching (#2180).
 - The new `gleam remove <package_name>` can be used to remove dependencies
   from a Gleam project.
-- The `gleam docs build` command gains the `--open` flag to open the docs after they are generated (#2188).
-- Updated font loading in generated HTML documentation to fix an issue with fonts not loading properly in some browsers (#2209).
+- The `gleam docs build` command gains the `--open` flag to open the docs after
+  they are generated (#2188).
+- Updated font loading in generated HTML documentation to fix an issue with
+  fonts not loading properly in some browsers (#2209).
 
 ## v0.29.0 - 2023-05-23
 
