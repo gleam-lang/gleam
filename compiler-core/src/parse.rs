@@ -821,7 +821,7 @@ where
             location: SrcSpan { start, end: start },
         })?;
 
-        let annotation = self.parse_type_annotation(&Token::Colon, false)?;
+        let annotation = self.parse_type_annotation(&Token::Colon)?;
         let end = match annotation {
             Some(ref a) => a.location().end,
             None => pattern.location().end,
@@ -848,7 +848,7 @@ where
             // DUPE: 62884
             return self.next_tok_unexpected(vec!["A pattern".into()])?;
         };
-        let annotation = self.parse_type_annotation(&Token::Colon, false)?;
+        let annotation = self.parse_type_annotation(&Token::Colon)?;
         let (eq_s, eq_e) = self.maybe_one(&Token::Equal).ok_or(ParseError {
             error: ParseErrorType::ExpectedEqual,
             location: SrcSpan {
@@ -1455,7 +1455,7 @@ where
             Some(&Token::Comma),
         )?;
         let (_, rpar_e) = self.expect_one(&Token::RightParen)?;
-        let return_annotation = self.parse_type_annotation(&Token::RArrow, false)?;
+        let return_annotation = self.parse_type_annotation(&Token::RArrow)?;
         let _ = self.expect_one(&Token::LeftBrace)?;
         let some_body = self.parse_statement_seq()?;
         let (_, rbr_e) = self.expect_one(&Token::RightBrace)?;
@@ -1500,7 +1500,7 @@ where
         let args = Parser::series_of(self, &Parser::parse_external_fn_param, Some(&Token::Comma))?;
         let _ = self.expect_one(&Token::RightParen)?;
         let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
-        let return_annotation = self.parse_type(false)?;
+        let return_annotation = self.parse_type()?;
         let _ = self.expect_one(&Token::Equal)?;
         let (_, module, _) = self.expect_string()?;
         let (_, fun, end) = self.expect_string()?;
@@ -1551,7 +1551,7 @@ where
                 self.tok1 = t1;
             }
         };
-        match (&label, self.parse_type(false)?) {
+        match (&label, self.parse_type()?) {
             (None, None) => Ok(None),
             (Some(_), None) => {
                 parse_error(ParseErrorType::ExpectedType, SrcSpan { start: end, end })
@@ -1642,7 +1642,7 @@ where
                 return Ok(None);
             }
         };
-        let annotation = if let Some(a) = self.parse_type_annotation(&Token::Colon, false)? {
+        let annotation = if let Some(a) = self.parse_type_annotation(&Token::Colon)? {
             end = a.location().end;
             Some(a)
         } else {
@@ -1791,7 +1791,7 @@ where
         } else if let Some((eq_s, eq_e)) = self.maybe_one(&Token::Equal) {
             // Type Alias
             if !opaque {
-                if let Some(t) = self.parse_type(false)? {
+                if let Some(t) = self.parse_type()? {
                     let type_end = t.location().end;
                     Ok(Some(Definition::TypeAlias(TypeAlias {
                         documentation,
@@ -1853,7 +1853,7 @@ where
                     (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                         let _ = Parser::next_tok(p);
                         let _ = Parser::next_tok(p);
-                        match Parser::parse_type(p, false)? {
+                        match Parser::parse_type(p)? {
                             Some(type_ast) => Ok(Some(RecordConstructorArg {
                                 label: Some(name),
                                 ast: type_ast,
@@ -1869,7 +1869,7 @@ where
                     (t0, t1) => {
                         p.tok0 = t0;
                         p.tok1 = t1;
-                        match Parser::parse_type(p, false)? {
+                        match Parser::parse_type(p)? {
                             Some(type_ast) => {
                                 let type_location = type_ast.location();
                                 Ok(Some(RecordConstructorArg {
@@ -1902,13 +1902,9 @@ where
     //   :Int
     //   :Result(a, _)
     //   :Result(Result(a, e), #(_, String))
-    fn parse_type_annotation(
-        &mut self,
-        start_tok: &Token,
-        for_const: bool,
-    ) -> Result<Option<TypeAst>, ParseError> {
+    fn parse_type_annotation(&mut self, start_tok: &Token) -> Result<Option<TypeAst>, ParseError> {
         if let Some((start, end)) = self.maybe_one(start_tok) {
-            match self.parse_type(for_const) {
+            match self.parse_type() {
                 Ok(None) => parse_error(ParseErrorType::ExpectedType, SrcSpan { start, end }),
                 other => other,
             }
@@ -1918,7 +1914,7 @@ where
     }
 
     // Parse the type part of a type annotation, same as `parse_type_annotation` minus the ":"
-    fn parse_type(&mut self, for_const: bool) -> Result<Option<TypeAst>, ParseError> {
+    fn parse_type(&mut self) -> Result<Option<TypeAst>, ParseError> {
         match self.tok0.take() {
             // Type hole
             Some((start, Token::DiscardName { name }, end)) => {
@@ -1933,7 +1929,7 @@ where
             Some((start, Token::Hash, end)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let elems = self.parse_types(for_const)?;
+                let elems = self.parse_types()?;
                 let _ = self.expect_one(&Token::RightParen)?;
                 Ok(Some(TypeAst::Tuple {
                     location: SrcSpan { start, end },
@@ -1945,14 +1941,11 @@ where
             Some((start, Token::Fn, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let args = Parser::series_of(
-                    self,
-                    &|x| Parser::parse_type(x, for_const),
-                    Some(&Token::Comma),
-                )?;
+                let args =
+                    Parser::series_of(self, &|x| Parser::parse_type(x), Some(&Token::Comma))?;
                 let _ = self.expect_one(&Token::RightParen)?;
                 let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
-                let retrn = self.parse_type(for_const)?;
+                let retrn = self.parse_type()?;
                 if let Some(retrn) = retrn {
                     Ok(Some(TypeAst::Fn {
                         location: SrcSpan {
@@ -1976,7 +1969,7 @@ where
             // Constructor function
             Some((start, Token::UpName { name }, end)) => {
                 let _ = self.next_tok();
-                self.parse_type_name_finish(for_const, start, None, name, end)
+                self.parse_type_name_finish(start, None, name, end)
             }
 
             // Constructor Module or type Variable
@@ -1984,9 +1977,7 @@ where
                 let _ = self.next_tok();
                 if self.maybe_one(&Token::Dot).is_some() {
                     let (_, upname, upname_e) = self.expect_upname()?;
-                    self.parse_type_name_finish(for_const, start, Some(mod_name), upname, upname_e)
-                } else if for_const {
-                    parse_error(ParseErrorType::NotConstType, SrcSpan { start, end })
+                    self.parse_type_name_finish(start, Some(mod_name), upname, upname_e)
                 } else {
                     Ok(Some(TypeAst::Var {
                         location: SrcSpan { start, end },
@@ -2005,14 +1996,13 @@ where
     // Parse the '( ... )' of a type name
     fn parse_type_name_finish(
         &mut self,
-        for_const: bool,
         start: u32,
         module: Option<SmolStr>,
         name: SmolStr,
         end: u32,
     ) -> Result<Option<TypeAst>, ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
-            let args = self.parse_types(for_const)?;
+            let args = self.parse_types()?;
             let (_, par_e) = self.expect_one(&Token::RightParen)?;
             Ok(Some(TypeAst::Constructor {
                 location: SrcSpan { start, end: par_e },
@@ -2031,12 +2021,8 @@ where
     }
 
     // For parsing a comma separated "list" of types, for tuple, constructor, and function
-    fn parse_types(&mut self, for_const: bool) -> Result<Vec<TypeAst>, ParseError> {
-        let elems = Parser::series_of(
-            self,
-            &|p| Parser::parse_type(p, for_const),
-            Some(&Token::Comma),
-        )?;
+    fn parse_types(&mut self) -> Result<Vec<TypeAst>, ParseError> {
+        let elems = Parser::series_of(self, &|p| Parser::parse_type(p), Some(&Token::Comma))?;
         Ok(elems)
     }
 
@@ -2177,7 +2163,7 @@ where
         let (start, name, end) = self.expect_name()?;
         let documentation = self.take_documentation(start);
 
-        let annotation = self.parse_type_annotation(&Token::Colon, true)?;
+        let annotation = self.parse_type_annotation(&Token::Colon)?;
 
         let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
         if let Some(value) = self.parse_const_value()? {

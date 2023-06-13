@@ -33,3 +33,17 @@ pub fn main() {
 }"#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2179
+#[test]
+fn const_type_variable() {
+    assert_erl!(
+        r#"
+fn identity(a: a) -> a {
+  a
+}
+
+const id: fn(a) -> a = identity
+"#
+    );
+}
