@@ -203,7 +203,7 @@ impl<'a> TypeScriptGenerator<'a> {
         let mut imports = self.collect_imports();
         let statements = self
             .module
-            .statements
+            .definitions
             .iter()
             .flat_map(|s| self.statement(s));
 
@@ -233,7 +233,7 @@ impl<'a> TypeScriptGenerator<'a> {
     fn collect_imports(&mut self) -> Imports<'a> {
         let mut imports = Imports::new();
 
-        for statement in &self.module.statements {
+        for statement in &self.module.definitions {
             match statement {
                 Definition::Function(Function { .. })
                 | Definition::TypeAlias(TypeAlias { .. })

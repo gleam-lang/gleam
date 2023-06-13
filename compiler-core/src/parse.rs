@@ -60,7 +60,7 @@ use crate::ast::{
     BitStringSegmentOption, CallArg, Clause, ClauseGuard, Constant, CustomType, Definition,
     ExternalFnArg, ExternalFunction, ExternalType, Function, HasLocation, Import, Module,
     ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan,
-    Statement, TargetGroup, TodoKind, TypeAlias, TypeAst, UnqualifiedImport, UntypedArg,
+    Statement, TargettedDefinition, TodoKind, TypeAlias, TypeAst, UnqualifiedImport, UntypedArg,
     UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
     UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
     Use, UseAssignment, CAPTURE_VARIABLE,
@@ -68,6 +68,7 @@ use crate::ast::{
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
 use error::{LexicalError, ParseError, ParseErrorType};
+use itertools::Itertools;
 use lexer::{LexResult, Spanned};
 use smol_str::SmolStr;
 use std::cmp::Ordering;
@@ -138,11 +139,12 @@ where
     fn parse_module(&mut self) -> Result<UntypedModule, ParseError> {
         let statements = Parser::series_of(self, &Parser::parse_target_group, None);
         let statements = self.ensure_no_errors_or_remaining_input(statements)?;
+        let statements = statements.into_iter().flatten().collect_vec();
         Ok(Module {
             name: "".into(),
             documentation: vec![],
             type_info: (),
-            statements,
+            definitions: statements,
         })
     }
 
@@ -193,7 +195,7 @@ where
     }
 
     /// Parse conditional compilation blocks.
-    fn parse_target_group(&mut self) -> Result<Option<TargetGroup>, ParseError> {
+    fn parse_target_group(&mut self) -> Result<Option<Vec<TargettedDefinition>>, ParseError> {
         match &self.tok0 {
             // Attribute-syntax
             Some((_, Token::At, _)) => {
@@ -204,8 +206,8 @@ where
                         let _ = self.expect_one(&Token::LeftParen)?;
                         let target = self.expect_target()?;
                         let _ = self.expect_one(&Token::RightParen)?;
-                        let statement = self.expect_module_statement()?;
-                        Ok(Some(TargetGroup::Only(target, vec![statement])))
+                        let statement = self.expect_definition()?;
+                        Ok(Some(vec![TargettedDefinition::Only(target, statement)]))
                     }
                     Some((start, Token::Name { .. }, end)) => parse_error(
                         ParseErrorType::UnexpectedToken {
@@ -217,6 +219,7 @@ where
                     _ => Ok(None),
                 }
             }
+
             // If-syntax
             Some((_, Token::If, _)) => {
                 let _ = self.next_tok();
@@ -224,21 +227,29 @@ where
                 let _ = self.expect_one(&Token::LeftBrace)?;
                 let statements = self.expect_module_statements()?;
                 let (_, _) = self.expect_one(&Token::RightBrace)?;
-                Ok(Some(TargetGroup::Only(target, statements)))
+                let statements = statements
+                    .into_iter()
+                    .map(|s| TargettedDefinition::Only(target, s))
+                    .collect();
+                Ok(Some(statements))
             }
+
             Some(_) => {
                 let statements = self.expect_module_statements()?;
                 if statements.is_empty() {
-                    Ok(None)
-                } else {
-                    Ok(Some(TargetGroup::Any(statements)))
+                    return Ok(None);
                 }
+                let statements = statements
+                    .into_iter()
+                    .map(TargettedDefinition::Any)
+                    .collect();
+                Ok(Some(statements))
             }
             None => Ok(None),
         }
     }
 
-    fn expect_module_statement(&mut self) -> Result<UntypedDefinition, ParseError> {
+    fn expect_definition(&mut self) -> Result<UntypedDefinition, ParseError> {
         match self.parse_module_statement()? {
             None => parse_error(
                 ParseErrorType::ExpectedStatement,

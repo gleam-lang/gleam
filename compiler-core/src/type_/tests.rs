@@ -440,7 +440,7 @@ fn infer_module_type_retention_test() {
     let module: UntypedModule = crate::ast::Module {
         documentation: vec![],
         name: "ok".into(),
-        statements: vec![],
+        definitions: vec![],
         type_info: (),
     };
     let ids = UniqueIdGenerator::new();

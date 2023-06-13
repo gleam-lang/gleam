@@ -6,6 +6,7 @@ use crate::{
         CustomType, ExternalFunction, ExternalType, Function, Import, ModuleConstant, TypeAlias,
         Use, *,
     },
+    build::Target,
     docvec,
     io::Utf8Writer,
     parse::extra::{Comment, ModuleExtra},
@@ -130,60 +131,42 @@ impl<'comments> Formatter<'comments> {
         end != 0
     }
 
-    fn target_group<'a>(&mut self, target_group: &'a TargetGroup) -> Document<'a> {
-        let mut has_imports = false;
-        let mut has_declarations = false;
-        let mut imports = Vec::new();
-        let mut declarations = Vec::with_capacity(target_group.len());
-
-        for statement in target_group.statements_ref() {
-            let start = statement.location().start;
-            match statement {
-                Definition::Import(Import { .. }) => {
-                    has_imports = true;
-                    let comments = self.pop_comments(start);
-                    let statement = self.module_statement(statement);
-                    imports.push(commented(statement, comments))
-                }
-
-                _other => {
-                    has_declarations = true;
-                    let comments = self.pop_comments(start);
-                    let declaration = self.documented_statement(statement);
-                    declarations.push(commented(declaration, comments))
-                }
-            }
-        }
-
-        let imports = join(imports.into_iter(), line());
-        let declarations = join(declarations.into_iter(), lines(2));
-
-        let sep = if has_imports && has_declarations {
-            lines(2)
-        } else {
-            nil()
+    fn targetted_definition<'a>(&mut self, definition: &'a TargettedDefinition) -> Document<'a> {
+        let target = definition.target();
+        let definition = definition.inner();
+        let start = definition.location().start;
+        let comments = self.pop_comments(start);
+        let document = self.documented_definition(definition);
+        let document = match target {
+            None => document,
+            Some(Target::Erlang) => docvec!["@target(erlang)", line(), document],
+            Some(Target::JavaScript) => docvec!["@target(javascript)", line(), document],
         };
-
-        match target_group {
-            TargetGroup::Any(_) => docvec![imports, sep, declarations],
-            TargetGroup::Only(target, _) => docvec![
-                "if ",
-                Document::String(target.to_string()),
-                " {",
-                docvec![line(), imports, sep, declarations].nest(INDENT),
-                line(),
-                "}"
-            ],
-        }
+        commented(document, comments)
     }
 
     pub(crate) fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
-        let groups = join(
-            module.statements.iter().map(|t| self.target_group(t)),
-            lines(2),
-        );
+        let mut documents = vec![];
+        let mut previous_was_import = false;
 
-        // Now that `groups` has been collected, only freestanding comments (//)
+        for definition in &module.definitions {
+            let is_import = definition.inner().is_import();
+
+            if documents.is_empty() {
+                ()
+            } else if previous_was_import && is_import {
+                documents.push(lines(1));
+            } else {
+                documents.push(lines(2));
+            };
+
+            documents.push(self.targetted_definition(definition));
+            previous_was_import = is_import;
+        }
+
+        let definitions = concat(documents);
+
+        // Now that definitions has been collected, only freestanding comments (//)
         // and doc comments (///) remain. Freestanding comments aren't associated
         // with any statement, and are moved to the bottom of the module.
         let doc_comments = join(
@@ -211,14 +194,14 @@ impl<'comments> Formatter<'comments> {
             nil()
         };
 
-        let non_empty = vec![module_comments, groups, doc_comments, comments]
+        let non_empty = vec![module_comments, definitions, doc_comments, comments]
             .into_iter()
             .filter(|doc| !doc.is_empty());
 
         join(non_empty, line()).append(line())
     }
 
-    fn module_statement<'a>(&mut self, statement: &'a UntypedDefinition) -> Document<'a> {
+    fn definition<'a>(&mut self, statement: &'a UntypedDefinition) -> Document<'a> {
         match statement {
             Definition::Function(Function {
                 name,
@@ -428,9 +411,9 @@ impl<'comments> Formatter<'comments> {
             .append(self.const_expr(value))
     }
 
-    fn documented_statement<'a>(&mut self, s: &'a UntypedDefinition) -> Document<'a> {
+    fn documented_definition<'a>(&mut self, s: &'a UntypedDefinition) -> Document<'a> {
         let comments = self.doc_comments(s.location().start);
-        comments.append(self.module_statement(s).group()).group()
+        comments.append(self.definition(s).group()).group()
     }
 
     fn doc_comments<'a>(&mut self, limit: u32) -> Document<'a> {

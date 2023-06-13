@@ -87,7 +87,7 @@ impl<'env> Env<'env> {
 
 pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
     module
-        .statements
+        .definitions
         .iter()
         .filter_map(|s| match s {
             Definition::CustomType(CustomType {
@@ -162,7 +162,7 @@ fn module_document<'a>(
         .append(").")
         .append(line());
 
-    for s in &module.statements {
+    for s in &module.definitions {
         register_imports(
             s,
             &mut exports,
@@ -218,7 +218,7 @@ fn module_document<'a>(
 
     let statements = concat(Itertools::intersperse(
         module
-            .statements
+            .definitions
             .iter()
             .flat_map(|s| module_statement(&module.name, s, &module.name, line_numbers)),
         lines(2),

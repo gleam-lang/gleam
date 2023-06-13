@@ -320,7 +320,7 @@ where
         }
 
         // Imported modules
-        for import in module.ast.statements.iter().filter_map(get_import) {
+        for import in module.ast.definitions.iter().filter_map(get_import) {
             let alias = import.used_name();
 
             // The module may not be known of yet if it has not previously
@@ -359,7 +359,7 @@ where
         }
 
         // Imported modules
-        for import in module.ast.statements.iter().filter_map(get_import) {
+        for import in module.ast.definitions.iter().filter_map(get_import) {
             let alias = import.used_name();
 
             // The module may not be known of yet if it has not previously

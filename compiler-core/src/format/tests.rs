@@ -1,10 +1,9 @@
-use super::*;
-
 use pretty_assertions::assert_eq;
 
 mod asignments;
 mod bit_string;
 mod blocks;
+mod conditional_compilation;
 mod record_update;
 mod tuple;
 mod use_;
@@ -22,7 +21,7 @@ macro_rules! assert_format {
 macro_rules! assert_format_rewrite {
     ($src:expr, $output:expr  $(,)?) => {
         let mut writer = String::new();
-        pretty(&mut writer, &$src.into(), std::path::Path::new("<stdin>")).unwrap();
+        $crate::format::pretty(&mut writer, &$src.into(), std::path::Path::new("<stdin>")).unwrap();
         assert_eq!(writer, $output);
     };
 }
@@ -4307,42 +4306,6 @@ fn case_in_call() {
       },
     )
   })
-}
-"
-    );
-}
-
-#[test]
-fn statement_if() {
-    assert_format!(
-        "external type X
-
-if erlang {
-  type Y {
-    Y
-  }
-}
-
-if javascript {
-  external type Y
-}
-"
-    );
-}
-
-#[test]
-fn statement_if_multiple() {
-    assert_format!(
-        "external type X
-
-if erlang {
-  type Y {
-    Y
-  }
-
-  type Z {
-    Z
-  }
 }
 "
     );

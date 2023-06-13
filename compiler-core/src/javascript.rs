@@ -61,7 +61,7 @@ impl<'a> Generator<'a> {
         // Generate JavaScript code for each statement
         let statements = self.collect_definitions().into_iter().chain(
             self.module
-                .statements
+                .definitions
                 .iter()
                 .flat_map(|s| self.statement(s)),
         );
@@ -266,7 +266,7 @@ impl<'a> Generator<'a> {
 
     fn collect_definitions(&mut self) -> Vec<Output<'a>> {
         self.module
-            .statements
+            .definitions
             .iter()
             .flat_map(|statement| match statement {
                 Definition::CustomType(CustomType {
@@ -289,7 +289,7 @@ impl<'a> Generator<'a> {
     fn collect_imports(&mut self) -> Imports<'a> {
         let mut imports = Imports::new();
 
-        for statement in &self.module.statements {
+        for statement in &self.module.definitions {
             match statement {
                 Definition::Function(Function { .. })
                 | Definition::TypeAlias(TypeAlias { .. })
@@ -478,7 +478,7 @@ impl<'a> Generator<'a> {
     }
 
     fn register_module_definitions_in_scope(&mut self) {
-        for statement in self.module.statements.iter() {
+        for statement in self.module.definitions.iter() {
             match statement {
                 Definition::ExternalFunction(ExternalFunction { name, .. })
                 | Definition::ModuleConstant(ModuleConstant { name, .. })

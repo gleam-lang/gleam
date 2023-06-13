@@ -217,7 +217,7 @@ impl Module {
 
         // Order statements to avoid missociating doc comments after the order
         // has changed during compilation.
-        let mut statements: Vec<_> = self.ast.statements.iter_mut().collect();
+        let mut statements: Vec<_> = self.ast.definitions.iter_mut().collect();
         statements.sort_by(|a, b| a.location().start.cmp(&b.location().start));
 
         // Doc Comments

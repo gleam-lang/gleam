@@ -79,9 +79,9 @@ pub fn infer_module(
     let mut env = Environment::new(ids.clone(), &name, modules, warnings);
     validate_module_name(&name)?;
 
-    let mut type_names = HashMap::with_capacity(module.statements.len());
-    let mut value_names = HashMap::with_capacity(module.statements.len());
-    let mut hydrators = HashMap::with_capacity(module.statements.len());
+    let mut type_names = HashMap::with_capacity(module.definitions.len());
+    let mut value_names = HashMap::with_capacity(module.definitions.len());
+    let mut hydrators = HashMap::with_capacity(module.definitions.len());
 
     let statements = GroupedStatements::new(module.into_iter_statements(target));
     let statements_count = statements.len();
@@ -213,7 +213,7 @@ pub fn infer_module(
     Ok(ast::Module {
         documentation,
         name: name.clone(),
-        statements: typed_statements,
+        definitions: typed_statements,
         type_info: ModuleInterface {
             name,
             types,
