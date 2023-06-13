@@ -8,9 +8,7 @@ mod tests;
 
 use crate::type_::is_prelude_module;
 use crate::{
-    ast::{
-        CustomType, ExternalFunction, ExternalType, Function, Import, ModuleConstant, TypeAlias, *,
-    },
+    ast::{CustomType, ExternalFunction, Function, Import, ModuleConstant, TypeAlias, *},
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -255,44 +253,6 @@ fn register_imports(
             ..
         }) => exports.push(atom(name.to_string()).append("/").append(args.len())),
 
-        Definition::ExternalType(ExternalType {
-            name,
-            arguments: args,
-            ..
-        }) => {
-            // Type Exports
-            type_exports.push(
-                Document::String(erl_safe_type_name(name.to_snake_case()))
-                    .append("/")
-                    .append(args.len()),
-            );
-            // phantom variant
-            let phantom = if args.is_empty() {
-                nil()
-            } else {
-                " | ".to_doc().append(tuple(
-                    std::iter::once("gleam_phantom".to_doc())
-                        .chain(args.iter().map(|a| Document::String(variable_name(a)))),
-                ))
-            };
-
-            // Type definition
-            let args = concat(Itertools::intersperse(
-                args.iter().map(|p| Document::String(variable_name(p))),
-                ", ".to_doc(),
-            ));
-
-            let doc = "-type "
-                .to_doc()
-                .append(Document::String(erl_safe_type_name(name.to_snake_case())))
-                .append("(")
-                .append(args)
-                .append(") :: any()")
-                .append(phantom)
-                .append(".");
-            type_defs.push(doc);
-        }
-
         Definition::CustomType(CustomType {
             name,
             constructors,
@@ -389,7 +349,6 @@ fn module_statement<'a>(
         Definition::TypeAlias(TypeAlias { .. })
         | Definition::CustomType(CustomType { .. })
         | Definition::Import(Import { .. })
-        | Definition::ExternalType(ExternalType { .. })
         | Definition::ModuleConstant(ModuleConstant { .. })
         | Definition::ExternalFunction(ExternalFunction { public: false, .. }) => vec![],
 

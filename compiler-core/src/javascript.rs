@@ -9,9 +9,7 @@ use std::path::Path;
 
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
-    ast::{
-        CustomType, ExternalFunction, ExternalType, Function, Import, ModuleConstant, TypeAlias, *,
-    },
+    ast::{CustomType, ExternalFunction, Function, Import, ModuleConstant, TypeAlias, *},
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -158,8 +156,7 @@ impl<'a> Generator<'a> {
 
     pub fn statement(&mut self, statement: &'a TypedDefinition) -> Vec<Output<'a>> {
         match statement {
-            Definition::TypeAlias(TypeAlias { .. })
-            | Definition::ExternalType(ExternalType { .. }) => vec![],
+            Definition::TypeAlias(TypeAlias { .. }) => vec![],
 
             // Handled in collect_imports
             Definition::Import(Import { .. }) => vec![],
@@ -284,7 +281,6 @@ impl<'a> Generator<'a> {
                 Definition::Function(Function { .. })
                 | Definition::TypeAlias(TypeAlias { .. })
                 | Definition::ExternalFunction(ExternalFunction { .. })
-                | Definition::ExternalType(ExternalType { .. })
                 | Definition::Import(Import { .. })
                 | Definition::ModuleConstant(ModuleConstant { .. }) => vec![],
             })
@@ -299,7 +295,6 @@ impl<'a> Generator<'a> {
                 Definition::Function(Function { .. })
                 | Definition::TypeAlias(TypeAlias { .. })
                 | Definition::CustomType(CustomType { .. })
-                | Definition::ExternalType(ExternalType { .. })
                 | Definition::ModuleConstant(ModuleConstant { .. }) => (),
                 Definition::ExternalFunction(ExternalFunction { module, .. })
                     if module.is_empty() => {}
@@ -494,8 +489,7 @@ impl<'a> Generator<'a> {
                     .for_each(|unq_import| self.register_in_scope(unq_import.variable_name())),
 
                 Definition::TypeAlias(TypeAlias { .. })
-                | Definition::CustomType(CustomType { .. })
-                | Definition::ExternalType(ExternalType { .. }) => (),
+                | Definition::CustomType(CustomType { .. }) => (),
             }
         }
     }

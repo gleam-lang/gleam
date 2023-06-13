@@ -4,8 +4,8 @@ use std::{path::PathBuf, time::SystemTime};
 
 use crate::{
     ast::{
-        CustomType, Definition, ExternalFunction, ExternalType, Function, ModuleConstant,
-        TypeAlias, TypedDefinition,
+        CustomType, Definition, ExternalFunction, Function, ModuleConstant, TypeAlias,
+        TypedDefinition,
     },
     build::Module,
     config::{DocsPage, PackageConfig},
@@ -540,21 +540,6 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
     let mut formatter = format::Formatter::new();
 
     match statement {
-        Definition::ExternalType(ExternalType {
-            public: true,
-            name,
-            documentation: doc,
-            arguments: args,
-            location,
-        }) => Some(Type {
-            name,
-            definition: print(formatter.external_type(true, name, args)),
-            documentation: markdown_documentation(doc),
-            text_documentation: text_documentation(doc),
-            constructors: vec![],
-            source_url: source_links.url(location),
-        }),
-
         Definition::CustomType(CustomType {
             public: true,
             opaque: false,

@@ -210,11 +210,9 @@ where
                     | Definition::CustomType(_),
                 ) => Some(this.completion_types(module)),
 
-                Located::ModuleStatement(
-                    Definition::Import(_)
-                    | Definition::ExternalType(_)
-                    | Definition::ModuleConstant(_),
-                ) => None,
+                Located::ModuleStatement(Definition::Import(_) | Definition::ModuleConstant(_)) => {
+                    None
+                }
             };
 
             Ok(completions)
