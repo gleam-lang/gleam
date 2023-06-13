@@ -398,17 +398,23 @@ impl<'a> TypeScriptGenerator<'a> {
             .map(|constructor| Ok(self.record_definition(constructor, opaque)))
             .collect();
 
+        let definition = if constructors.is_empty() {
+            "any".to_doc()
+        } else {
+            let constructors = constructors.iter().map(|x| {
+                name_with_generics(
+                    super::maybe_escape_identifier_doc(&x.name),
+                    x.arguments.iter().map(|a| &a.type_),
+                )
+            });
+            concat(Itertools::intersperse(constructors, break_("| ", " | ")))
+        };
+
         definitions.push(Ok(docvec![
             "export type ",
             name_with_generics(Document::String(format!("{name}$")), typed_parameters),
             " = ",
-            concat(Itertools::intersperse(
-                constructors.iter().map(|x| name_with_generics(
-                    super::maybe_escape_identifier_doc(&x.name),
-                    x.arguments.iter().map(|a| &a.type_)
-                )),
-                break_("| ", " | "),
-            )),
+            definition,
             ";",
         ]));
 

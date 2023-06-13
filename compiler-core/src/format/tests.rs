@@ -4,6 +4,7 @@ mod asignments;
 mod bit_string;
 mod blocks;
 mod conditional_compilation;
+mod external_types;
 mod record_update;
 mod tuple;
 mod use_;
@@ -62,25 +63,15 @@ fn multiple_statements_test() {
 import two
 import three
 
-pub external type One
+pub type One
 
-pub external type Two
+pub type Two
 
-pub external type Three
+pub type Three
 
-pub external type Four
+pub type Four
 "#
     );
-}
-
-#[test]
-fn external_types() {
-    assert_format!("external type Private\n");
-    assert_format!("external type Box(a)\n");
-    assert_format!("external type Box(a, b, zero)\n");
-    assert_format!("pub external type Private\n");
-    assert_format!("pub external type Box(a)\n");
-    assert_format!("pub external type Box(a, b, zero)\n");
 }
 
 #[test]
@@ -3279,14 +3270,14 @@ external fn whatever() -> Nil =
     assert_format!(
         r#"/// one
 ///two
-external type Thingy
+type Thingy
 "#
     );
 
     assert_format!(
         r#"/// one
 ///two
-external type Thingy
+type Thingy
 "#
     );
 
@@ -3320,7 +3311,7 @@ type Whatever {
 }
 
 #[test]
-fn comments() {
+fn comments1() {
     assert_format!(
         r#"import one
 
@@ -3331,7 +3322,10 @@ type Whatever {
 }
 "#
     );
+}
 
+#[test]
+fn comments2() {
     assert_format!(
         r#"import one
 
@@ -3343,7 +3337,10 @@ type Whatever {
 }
 "#
     );
+}
 
+#[test]
+fn comments3() {
     assert_format!(
         "// one
 fn main() {
@@ -3351,7 +3348,10 @@ fn main() {
 }
 "
     );
+}
 
+#[test]
+fn comments4() {
     assert_format!(
         "// one
 //two
@@ -3360,7 +3360,10 @@ fn main() {
 }
 "
     );
+}
 
+#[test]
+fn comments5() {
     assert_format!(
         r#"// one
 //two
@@ -3368,21 +3371,30 @@ external fn whatever() -> Nil =
   "" ""
 "#
     );
+}
 
+#[test]
+fn comments6() {
     assert_format!(
         r#"// one
 //two
-external type Thingy
+type Thingy
 "#
     );
+}
 
+#[test]
+fn comments7() {
     assert_format!(
         r#"// one
 //two
-external type Thingy
+type Thingy
 "#
     );
+}
 
+#[test]
+fn comments8() {
     assert_format!(
         r#"// one
 //two
@@ -3391,7 +3403,10 @@ type Whatever {
 }
 "#
     );
+}
 
+#[test]
+fn comments9() {
     assert_format!(
         r#"// one
 //two
@@ -3399,7 +3414,10 @@ type Whatever =
   Int
 "#
     );
+}
 
+#[test]
+fn comments10() {
     assert_format!(
         r#"// zero
 import one
@@ -3419,7 +3437,10 @@ type Whatever {
 }
 "
     );
+}
 
+#[test]
+fn comment23() {
     assert_format!(
         "fn main() {
   // Hello
@@ -3428,7 +3449,10 @@ type Whatever {
 }
 "
     );
+}
 
+#[test]
+fn comment24() {
     assert_format!(
         "fn main() {
   // Hello
@@ -3437,7 +3461,10 @@ type Whatever {
 }
 "
     );
+}
 
+#[test]
+fn comment25() {
     assert_format!(
         "fn main() {
   // Hello
@@ -3446,7 +3473,10 @@ type Whatever {
 }
 "
     );
+}
 
+#[test]
+fn comment14() {
     assert_format!(
         "fn main() {
   // Hello
@@ -3455,7 +3485,10 @@ type Whatever {
 }
 "
     );
+}
 
+#[test]
+fn comment15() {
     assert_format!(
         "fn main() {
   // Hello
@@ -3469,7 +3502,10 @@ type Whatever {
 }
 "
     );
+}
 
+#[test]
+fn comment16() {
     assert_format!(
         "fn main() {
   // Hello
@@ -3491,7 +3527,10 @@ type Whatever {
 }
 "
     );
+}
 
+#[test]
+fn comment17() {
     assert_format!(
         "fn main() {
   // Hello
@@ -3513,7 +3552,10 @@ type Whatever {
 }
 "
     );
+}
 
+#[test]
+fn comment18() {
     assert_format!(
         "fn main() {
   // Hello
@@ -3523,7 +3565,10 @@ type Whatever {
 }
 "
     );
+}
 
+#[test]
+fn comment19() {
     assert_format!(
         "fn main() {
   let // hello
@@ -3532,7 +3577,10 @@ type Whatever {
 }
 "
     );
+}
 
+#[test]
+fn comment20() {
     assert_format!(
         "fn main() {
   let [
@@ -3545,7 +3593,10 @@ type Whatever {
 }
 "
     );
+}
 
+#[test]
+fn comment21() {
     assert_format!(
         "pub type Spec {
   Spec(
@@ -3557,7 +3608,10 @@ type Whatever {
 }
 "
     );
+}
 
+#[test]
+fn comment22() {
     assert_format!(
         "/// ß↑e̊
 ///
@@ -4786,7 +4840,7 @@ fn multiple_line_documentation_comment_statement_grouping() {
         r#"/// This is the first line of the documenation comment.
 /// This is the second line of the documenation comment.
 /// This is the third line of the documenation comment.
-pub external type Map(key, value)
+pub type Map(key, value)
 "#
     );
 }

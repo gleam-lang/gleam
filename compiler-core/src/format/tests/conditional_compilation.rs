@@ -3,7 +3,7 @@ use crate::{assert_format, assert_format_rewrite};
 #[test]
 fn if_rewrite() {
     assert_format_rewrite!(
-        "external type X
+        "type X
 
 if erlang {
   type Y {
@@ -25,7 +25,7 @@ if javascript {
   }
 }
 ",
-        "external type X
+        "type X
 
 @target(erlang)
 type Y {
@@ -53,7 +53,7 @@ type Z {
 #[test]
 fn multiple() {
     assert_format!(
-        "external type X
+        "type X
 
 @target(erlang)
 type Y {

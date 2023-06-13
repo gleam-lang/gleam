@@ -1098,7 +1098,7 @@ impl<'comments> Formatter<'comments> {
         location: &'a SrcSpan,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(location.start);
-        pub_(public)
+        let doc = pub_(public)
             .to_doc()
             .append(if opaque { "opaque type " } else { "type " })
             .append(if args.is_empty() {
@@ -1107,8 +1107,13 @@ impl<'comments> Formatter<'comments> {
                 name.to_doc()
                     .append(wrap_args(args.iter().map(|e| e.to_doc())))
                     .group()
-            })
-            .append(" {")
+            });
+
+        if constructors.is_empty() {
+            return doc;
+        }
+
+        doc.append(" {")
             .append(concat(constructors.iter().map(|c| {
                 if self.pop_empty_lines(c.location.start) {
                     lines(2)
