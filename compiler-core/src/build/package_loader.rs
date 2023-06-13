@@ -20,6 +20,7 @@ use crate::{
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     metadata, type_,
     uid::UniqueIdGenerator,
+    warning::WarningEmitter,
     Error, Result,
 };
 
@@ -51,6 +52,7 @@ pub struct PackageLoader<'a, IO> {
     ids: UniqueIdGenerator,
     mode: Mode,
     root: &'a Path,
+    warnings: &'a WarningEmitter,
     codegen: CodegenRequired,
     artefact_directory: &'a Path,
     package_name: &'a SmolStr,
@@ -67,6 +69,7 @@ where
         ids: UniqueIdGenerator,
         mode: Mode,
         root: &'a Path,
+        warnings: &'a WarningEmitter,
         codegen: CodegenRequired,
         artefact_directory: &'a Path,
         target: Target,
@@ -78,6 +81,7 @@ where
             ids,
             mode,
             root,
+            warnings,
             codegen,
             target,
             package_name,
@@ -152,6 +156,7 @@ where
         let src = self.root.join("src");
         let mut loader = ModuleLoader {
             io: self.io.clone(),
+            warnings: self.warnings,
             mode: self.mode,
             target: self.target,
             codegen: self.codegen,
@@ -186,6 +191,7 @@ where
         let mtime = self.io.modification_time(&cached.source_path)?;
         read_source(
             self.io.clone(),
+            self.warnings,
             self.target,
             cached.origin,
             cached.source_path,

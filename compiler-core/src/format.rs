@@ -22,14 +22,14 @@ use vec1::Vec1;
 const INDENT: isize = 2;
 
 pub fn pretty(writer: &mut impl Utf8Writer, src: &SmolStr, path: &Path) -> Result<()> {
-    let (module, extra) = crate::parse::parse_module(src).map_err(|error| Error::Parse {
+    let parsed = crate::parse::parse_module(src).map_err(|error| Error::Parse {
         path: path.to_path_buf(),
         src: src.clone(),
         error,
     })?;
-    let intermediate = Intermediate::from_extra(&extra, src);
+    let intermediate = Intermediate::from_extra(&parsed.extra, src);
     Formatter::with_comments(&intermediate)
-        .module(&module)
+        .module(&parsed.module)
         .pretty_print(80, writer)
 }
 

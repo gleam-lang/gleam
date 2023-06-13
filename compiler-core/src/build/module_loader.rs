@@ -18,6 +18,7 @@ use super::{
 use crate::{
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
+    warning::WarningEmitter,
     Error, Result,
 };
 
@@ -33,6 +34,7 @@ impl SourceFingerprint {
 #[derive(Debug)]
 pub(crate) struct ModuleLoader<'a, IO> {
     pub io: IO,
+    pub warnings: &'a WarningEmitter,
     pub mode: Mode,
     pub target: Target,
     pub codegen: CodegenRequired,
@@ -120,6 +122,7 @@ where
     ) -> Result<UncompiledModule, Error> {
         read_source(
             self.io.clone(),
+            self.warnings,
             self.target,
             self.origin,
             path,
@@ -141,6 +144,7 @@ where
 
 pub(crate) fn read_source<IO>(
     io: IO,
+    warnings: &WarningEmitter,
     target: Target,
     origin: Origin,
     path: PathBuf,
@@ -153,12 +157,21 @@ where
 {
     let code: SmolStr = io.read(&path)?.into();
 
-    let (mut ast, extra) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
+    let parsed = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
         path: path.clone(),
         src: code.clone(),
         error,
     })?;
+    for warning in parsed.warnings {
+        warnings.emit(crate::warning::Warning::Parse {
+            path: path.clone(),
+            src: code.clone(),
+            warning,
+        });
+    }
 
+    let mut ast = parsed.module;
+    let extra = parsed.extra;
     let dependencies = ast.dependencies(target);
 
     ast.name = name.clone();

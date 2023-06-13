@@ -11,7 +11,8 @@ fn no_cache_present() {
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let loader = make_loader(&name, &fs, src, artefact);
+    let warnings = WarningEmitter::null();
+    let loader = make_loader(&warnings, &name, &fs, src, artefact);
 
     fs.write(&Path::new("/src/main.gleam"), "const x = 1")
         .unwrap();
@@ -29,7 +30,8 @@ fn cache_present_and_fresh() {
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let loader = make_loader(&name, &fs, src, artefact);
+    let warnings = WarningEmitter::null();
+    let loader = make_loader(&warnings, &name, &fs, src, artefact);
 
     // The mtime of the source is older than that of the cache
     write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 0);
@@ -48,7 +50,8 @@ fn cache_present_and_stale() {
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let loader = make_loader(&name, &fs, src, artefact);
+    let warnings = WarningEmitter::null();
+    let loader = make_loader(&warnings, &name, &fs, src, artefact);
 
     // The mtime of the source is newer than that of the cache
     write_src(&fs, TEST_SOURCE_2, "/src/main.gleam", 2);
@@ -67,7 +70,8 @@ fn cache_present_and_stale_but_source_is_the_same() {
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let loader = make_loader(&name, &fs, src, artefact);
+    let warnings = WarningEmitter::null();
+    let loader = make_loader(&warnings, &name, &fs, src, artefact);
 
     // The mtime of the source is newer than that of the cache
     write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 2);
@@ -86,7 +90,8 @@ fn cache_present_without_codegen_when_required() {
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let mut loader = make_loader(&name, &fs, src, artefact);
+    let warnings = WarningEmitter::null();
+    let mut loader = make_loader(&warnings, &name, &fs, src, artefact);
     loader.codegen = CodegenRequired::Yes;
 
     // The mtime of the cache is newer than that of the source
@@ -106,7 +111,8 @@ fn cache_present_with_codegen_when_required() {
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let mut loader = make_loader(&name, &fs, src, artefact);
+    let warnings = WarningEmitter::null();
+    let mut loader = make_loader(&warnings, &name, &fs, src, artefact);
     loader.codegen = CodegenRequired::Yes;
 
     // The mtime of the cache is newer than that of the source
@@ -126,7 +132,8 @@ fn cache_present_without_codegen_when_not_required() {
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let mut loader = make_loader(&name, &fs, src, artefact);
+    let warnings = WarningEmitter::null();
+    let mut loader = make_loader(&warnings, &name, &fs, src, artefact);
     loader.codegen = CodegenRequired::No;
 
     // The mtime of the cache is newer than that of the source
@@ -167,12 +174,14 @@ fn write_src(fs: &InMemoryFileSystem, source: &str, path: &str, seconds: u64) {
 }
 
 fn make_loader<'a>(
+    warnings: &'a WarningEmitter,
     package_name: &'a SmolStr,
     fs: &InMemoryFileSystem,
     src: &'a Path,
     artefact: &'a Path,
 ) -> ModuleLoader<'a, InMemoryFileSystem> {
     ModuleLoader {
+        warnings,
         io: fs.clone(),
         mode: Mode::Dev,
         target: Target::Erlang,
