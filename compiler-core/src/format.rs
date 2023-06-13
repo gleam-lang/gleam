@@ -153,7 +153,7 @@ impl<'comments> Formatter<'comments> {
             let is_import = definition.inner().is_import();
 
             if documents.is_empty() {
-                ()
+                // We don't insert empty lines before the first definition
             } else if previous_was_import && is_import {
                 documents.push(lines(1));
             } else {
