@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 565
+expression: pub external type Dynamic
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export_type([dynamic_/0]).
+
+-type dynamic_() :: any().
+
+
+
