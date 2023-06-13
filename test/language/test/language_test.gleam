@@ -1059,23 +1059,21 @@ fn bit_string_tests() -> List(Test) {
   ]
 }
 
-if erlang {
-  fn bit_string_float_erlang() -> List(Test) {
-    [
-      "<<60,0>> == <<1.0:float-size(16)>>"
-      |> example(fn() { assert_equal(True, <<60, 0>> == <<1.0:float-16>>) }),
-      "<<63,128,0,0>> == <<1.0:float-32>>"
-      |> example(fn() {
-        assert_equal(True, <<63, 128, 0, 0>> == <<1.0:float-32>>)
-      }),
-    ]
-  }
+@target(erlang)
+fn bit_string_float_erlang() -> List(Test) {
+  [
+    "<<60,0>> == <<1.0:float-size(16)>>"
+    |> example(fn() { assert_equal(True, <<60, 0>> == <<1.0:float-16>>) }),
+    "<<63,128,0,0>> == <<1.0:float-32>>"
+    |> example(fn() {
+      assert_equal(True, <<63, 128, 0, 0>> == <<1.0:float-32>>)
+    }),
+  ]
 }
 
-if javascript {
-  fn bit_string_float_erlang() -> List(Test) {
-    []
-  }
+@target(javascript)
+fn bit_string_float_erlang() -> List(Test) {
+  []
 }
 
 fn sized_bit_string_tests() -> List(Test) {
@@ -1575,24 +1573,22 @@ fn string_pattern_matching_tests() {
   ]
 }
 
-if javascript {
-  fn typescript_file_included_tests() {
-    let path = "./build/dev/javascript/language/ffi_typescript.ts"
-    [
-      path
-      |> example(fn() { assert_equal(file_exists(path), True) }),
-    ]
-  }
+@target(javascript)
+fn typescript_file_included_tests() {
+  let path = "./build/dev/javascript/language/ffi_typescript.ts"
+  [
+    path
+    |> example(fn() { assert_equal(file_exists(path), True) }),
+  ]
 }
 
-if erlang {
-  fn typescript_file_included_tests() {
-    let path = "./build/dev/erlang/language/_gleam_artefacts/ffi_typescript.ts"
-    [
-      path
-      |> example(fn() { assert_equal(file_exists(path), True) }),
-    ]
-  }
+@target(erlang)
+fn typescript_file_included_tests() {
+  let path = "./build/dev/erlang/language/_gleam_artefacts/ffi_typescript.ts"
+  [
+    path
+    |> example(fn() { assert_equal(file_exists(path), True) }),
+  ]
 }
 
 type Cat {
