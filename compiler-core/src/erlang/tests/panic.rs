@@ -11,11 +11,12 @@ pub fn main() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/2176
 #[test]
 fn piped() {
     assert_erl!(
         r#"
-pub fn main(){
+pub fn main() {
   "lets"
   |> panic
 }

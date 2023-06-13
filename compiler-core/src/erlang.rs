@@ -1359,9 +1359,10 @@ fn docs_args_call<'a>(
             }
         }
 
-        TypedExpr::Call { .. }
-        | TypedExpr::Fn { .. }
+        TypedExpr::Fn { .. }
+        | TypedExpr::Call { .. }
         | TypedExpr::Todo { .. }
+        | TypedExpr::Panic { .. }
         | TypedExpr::RecordAccess { .. }
         | TypedExpr::TupleIndex { .. } => {
             let args = wrap_args(args);
