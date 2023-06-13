@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/erlang/tests/consts.rs
+assertion_line: 40
+expression: "\nfn identity(a: a) -> a {\n  a\n}\n\nconst id: fn(a) -> a = identity\n"
+---
+-module(my@mod).
+
