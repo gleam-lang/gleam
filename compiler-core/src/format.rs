@@ -139,7 +139,7 @@ impl<'comments> Formatter<'comments> {
         for statement in target_group.statements_ref() {
             let start = statement.location().start;
             match statement {
-                ModuleStatement::Import(Import { .. }) => {
+                Definition::Import(Import { .. }) => {
                     has_imports = true;
                     let comments = self.pop_comments(start);
                     let statement = self.module_statement(statement);
@@ -218,9 +218,9 @@ impl<'comments> Formatter<'comments> {
         join(non_empty, line()).append(line())
     }
 
-    fn module_statement<'a>(&mut self, statement: &'a UntypedModuleStatement) -> Document<'a> {
+    fn module_statement<'a>(&mut self, statement: &'a UntypedDefinition) -> Document<'a> {
         match statement {
-            ModuleStatement::Function(Function {
+            Definition::Function(Function {
                 name,
                 arguments: args,
                 body,
@@ -230,7 +230,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             }) => self.statement_fn(public, name, args, return_annotation, body, *end_position),
 
-            ModuleStatement::TypeAlias(TypeAlias {
+            Definition::TypeAlias(TypeAlias {
                 alias,
                 parameters: args,
                 type_ast: resolved_type,
@@ -238,7 +238,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             }) => self.type_alias(*public, alias, args, resolved_type),
 
-            ModuleStatement::CustomType(CustomType {
+            Definition::CustomType(CustomType {
                 name,
                 parameters,
                 public,
@@ -248,7 +248,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             }) => self.custom_type(*public, *opaque, name, parameters, constructors, location),
 
-            ModuleStatement::ExternalFunction(ExternalFunction {
+            Definition::ExternalFunction(ExternalFunction {
                 public,
                 arguments: args,
                 name,
@@ -266,14 +266,14 @@ impl<'comments> Formatter<'comments> {
                 .append(fun.as_str())
                 .append("\""),
 
-            ModuleStatement::ExternalType(ExternalType {
+            Definition::ExternalType(ExternalType {
                 public,
                 name,
                 arguments: args,
                 ..
             }) => self.external_type(*public, name, args),
 
-            ModuleStatement::Import(Import {
+            Definition::Import(Import {
                 module,
                 as_name,
                 unqualified,
@@ -304,7 +304,7 @@ impl<'comments> Formatter<'comments> {
                     nil()
                 }),
 
-            ModuleStatement::ModuleConstant(ModuleConstant {
+            Definition::ModuleConstant(ModuleConstant {
                 public,
                 name,
                 annotation,
@@ -428,7 +428,7 @@ impl<'comments> Formatter<'comments> {
             .append(self.const_expr(value))
     }
 
-    fn documented_statement<'a>(&mut self, s: &'a UntypedModuleStatement) -> Document<'a> {
+    fn documented_statement<'a>(&mut self, s: &'a UntypedDefinition) -> Document<'a> {
         let comments = self.doc_comments(s.location().start);
         comments.append(self.module_statement(s).group()).group()
     }

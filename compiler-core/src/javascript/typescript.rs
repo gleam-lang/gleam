@@ -20,9 +20,9 @@ use smol_str::SmolStr;
 use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{
-        CustomType, ExternalFunction, ExternalType, Function, Import, ModuleConstant,
-        ModuleStatement, TypeAlias, TypedArg, TypedConstant, TypedExternalFnArg, TypedModule,
-        TypedModuleStatement, TypedRecordConstructor,
+        CustomType, Definition, ExternalFunction, ExternalType, Function, Import, ModuleConstant,
+        TypeAlias, TypedArg, TypedConstant, TypedDefinition, TypedExternalFnArg, TypedModule,
+        TypedRecordConstructor,
     },
     docvec,
     pretty::{break_, Document, Documentable},
@@ -235,14 +235,14 @@ impl<'a> TypeScriptGenerator<'a> {
 
         for statement in &self.module.statements {
             match statement {
-                ModuleStatement::Function(Function { .. })
-                | ModuleStatement::TypeAlias(TypeAlias { .. })
-                | ModuleStatement::CustomType(CustomType { .. })
-                | ModuleStatement::ExternalType(ExternalType { .. })
-                | ModuleStatement::ExternalFunction(ExternalFunction { .. })
-                | ModuleStatement::ModuleConstant(ModuleConstant { .. }) => (),
+                Definition::Function(Function { .. })
+                | Definition::TypeAlias(TypeAlias { .. })
+                | Definition::CustomType(CustomType { .. })
+                | Definition::ExternalType(ExternalType { .. })
+                | Definition::ExternalFunction(ExternalFunction { .. })
+                | Definition::ModuleConstant(ModuleConstant { .. }) => (),
 
-                ModuleStatement::Import(Import {
+                Definition::Import(Import {
                     module,
                     package,
                     as_name,
@@ -291,27 +291,27 @@ impl<'a> TypeScriptGenerator<'a> {
         }
     }
 
-    fn statement(&mut self, statement: &'a TypedModuleStatement) -> Vec<Output<'a>> {
+    fn statement(&mut self, statement: &'a TypedDefinition) -> Vec<Output<'a>> {
         match statement {
-            ModuleStatement::TypeAlias(TypeAlias {
+            Definition::TypeAlias(TypeAlias {
                 alias,
                 public,
                 type_,
                 ..
             }) if *public => vec![self.type_alias(alias, type_)],
-            ModuleStatement::TypeAlias(TypeAlias { .. }) => vec![],
+            Definition::TypeAlias(TypeAlias { .. }) => vec![],
 
-            ModuleStatement::ExternalType(ExternalType {
+            Definition::ExternalType(ExternalType {
                 public,
                 name,
                 arguments,
                 ..
             }) if *public => vec![self.external_type(name, arguments)],
-            ModuleStatement::ExternalType(ExternalType { .. }) => vec![],
+            Definition::ExternalType(ExternalType { .. }) => vec![],
 
-            ModuleStatement::Import(Import { .. }) => vec![],
+            Definition::Import(Import { .. }) => vec![],
 
-            ModuleStatement::CustomType(CustomType {
+            Definition::CustomType(CustomType {
                 public,
                 constructors,
                 opaque,
@@ -321,33 +321,33 @@ impl<'a> TypeScriptGenerator<'a> {
             }) if *public => {
                 self.custom_type_definition(name, typed_parameters, constructors, *opaque)
             }
-            ModuleStatement::CustomType(CustomType { .. }) => vec![],
+            Definition::CustomType(CustomType { .. }) => vec![],
 
-            ModuleStatement::ModuleConstant(ModuleConstant {
+            Definition::ModuleConstant(ModuleConstant {
                 public,
                 name,
                 value,
                 ..
             }) if *public => vec![self.module_constant(name, value)],
-            ModuleStatement::ModuleConstant(ModuleConstant { .. }) => vec![],
+            Definition::ModuleConstant(ModuleConstant { .. }) => vec![],
 
-            ModuleStatement::Function(Function {
+            Definition::Function(Function {
                 arguments,
                 name,
                 public,
                 return_type,
                 ..
             }) if *public => vec![self.module_function(name, arguments, return_type)],
-            ModuleStatement::Function(Function { .. }) => vec![],
+            Definition::Function(Function { .. }) => vec![],
 
-            ModuleStatement::ExternalFunction(ExternalFunction {
+            Definition::ExternalFunction(ExternalFunction {
                 public,
                 name,
                 arguments,
                 return_type,
                 ..
             }) if *public => vec![self.external_function(name, arguments, return_type)],
-            ModuleStatement::ExternalFunction(ExternalFunction { .. }) => vec![],
+            Definition::ExternalFunction(ExternalFunction { .. }) => vec![],
         }
     }
 

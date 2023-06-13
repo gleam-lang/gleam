@@ -15,10 +15,10 @@ pub use self::project_compiler::{Built, CheckpointState, Options, ProjectCompile
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
-    CustomType, DefinitionLocation, TypedExpr, TypedModuleStatement, TypedPattern, TypedStatement,
+    CustomType, DefinitionLocation, TypedDefinition, TypedExpr, TypedPattern, TypedStatement,
 };
 use crate::{
-    ast::{ModuleStatement, SrcSpan, TypedModule},
+    ast::{Definition, SrcSpan, TypedModule},
     config::{self, PackageConfig},
     erlang,
     error::{Error, FileIoAction, FileKind},
@@ -230,7 +230,7 @@ impl Module {
                 statement.put_doc(doc);
             }
 
-            if let ModuleStatement::CustomType(CustomType { constructors, .. }) = statement {
+            if let Definition::CustomType(CustomType { constructors, .. }) = statement {
                 for constructor in constructors {
                     let docs: Vec<&str> =
                         comments_before(&mut doc_comments, constructor.location.start, &self.code);
@@ -265,7 +265,7 @@ pub enum Located<'a> {
     Pattern(&'a TypedPattern),
     Statement(&'a TypedStatement),
     Expression(&'a TypedExpr),
-    ModuleStatement(&'a TypedModuleStatement),
+    ModuleStatement(&'a TypedDefinition),
 }
 
 impl<'a> Located<'a> {

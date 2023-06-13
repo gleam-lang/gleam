@@ -31,7 +31,7 @@ pub trait HasLocation {
     fn location(&self) -> SrcSpan;
 }
 
-pub type TypedModule = Module<type_::ModuleInterface, TypedModuleStatement>;
+pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition>;
 
 pub type UntypedModule = Module<(), TargetGroup>;
 
@@ -51,22 +51,20 @@ impl TypedModule {
     }
 }
 
-/// An if is a grouping of statements that will only be compiled if
-/// compiling to the specified target. e.g.
+/// The `@target(erlang)` and `@target(javascript)` attributes can be used to
+/// mark a definition as only being for a specific target.
 ///
 /// ```gleam
 /// const x: Int = 1
 ///
-/// if erlang {
-///   pub external fn display(a) -> Bool = "erlang" "display"
-/// }
+/// @target(erlang)
+/// pub external fn display(a) -> Bool = "erlang" "display"
 /// ```
-/// Outside an if block is `Any`, inside is an `Only`.
 ///
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TargetGroup {
-    Any(Vec<UntypedModuleStatement>),
-    Only(Target, Vec<UntypedModuleStatement>),
+    Any(Vec<UntypedDefinition>),
+    Only(Target, Vec<UntypedDefinition>),
 }
 
 impl TargetGroup {
@@ -77,14 +75,14 @@ impl TargetGroup {
         }
     }
 
-    pub fn statements(self) -> Vec<UntypedModuleStatement> {
+    pub fn statements(self) -> Vec<UntypedDefinition> {
         match self {
             Self::Any(s) => s,
             Self::Only(_, s) => s,
         }
     }
 
-    pub fn statements_ref(&self) -> &[UntypedModuleStatement] {
+    pub fn statements_ref(&self) -> &[UntypedDefinition] {
         match self {
             Self::Any(s) => s,
             Self::Only(_, s) => s,
@@ -104,7 +102,7 @@ impl UntypedModule {
     pub fn dependencies(&self, target: Target) -> Vec<(SmolStr, SrcSpan)> {
         self.iter_statements(target)
             .flat_map(|s| match s {
-                ModuleStatement::Import(Import {
+                Definition::Import(Import {
                     module, location, ..
                 }) => Some((module.clone(), *location)),
                 _ => None,
@@ -112,17 +110,14 @@ impl UntypedModule {
             .collect()
     }
 
-    pub fn iter_statements(&self, target: Target) -> impl Iterator<Item = &UntypedModuleStatement> {
+    pub fn iter_statements(&self, target: Target) -> impl Iterator<Item = &UntypedDefinition> {
         self.statements
             .iter()
             .filter(move |group| group.is_for(target))
             .flat_map(|group| group.statements_ref())
     }
 
-    pub fn into_iter_statements(
-        self,
-        target: Target,
-    ) -> impl Iterator<Item = UntypedModuleStatement> {
+    pub fn into_iter_statements(self, target: Target) -> impl Iterator<Item = UntypedDefinition> {
         self.statements
             .into_iter()
             .filter(move |group| group.is_for(target))
@@ -539,11 +534,11 @@ pub struct TypeAlias<T> {
     pub documentation: Option<SmolStr>,
 }
 
-pub type TypedModuleStatement = ModuleStatement<Arc<Type>, TypedExpr, SmolStr, SmolStr>;
-pub type UntypedModuleStatement = ModuleStatement<(), UntypedExpr, (), ()>;
+pub type TypedDefinition = Definition<Arc<Type>, TypedExpr, SmolStr, SmolStr>;
+pub type UntypedDefinition = Definition<(), UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ModuleStatement<T, Expr, ConstantRecordTag, PackageName> {
+pub enum Definition<T, Expr, ConstantRecordTag, PackageName> {
     Function(Function<T, Expr>),
 
     TypeAlias(TypeAlias<T>),
@@ -559,10 +554,10 @@ pub enum ModuleStatement<T, Expr, ConstantRecordTag, PackageName> {
     ModuleConstant(ModuleConstant<T, ConstantRecordTag>),
 }
 
-impl TypedModuleStatement {
+impl TypedDefinition {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
-            ModuleStatement::Function(function) => {
+            Definition::Function(function) => {
                 if let Some(found) = function.body.iter().find_map(|s| s.find_node(byte_index)) {
                     return Some(found);
                 };
@@ -576,7 +571,7 @@ impl TypedModuleStatement {
                 }
             }
 
-            ModuleStatement::CustomType(custom) => {
+            Definition::CustomType(custom) => {
                 // Note that the custom type `.location` covers the function
                 // head, not the entire statement.
                 if custom.full_location().contains(byte_index) {
@@ -586,11 +581,11 @@ impl TypedModuleStatement {
                 }
             }
 
-            ModuleStatement::TypeAlias(_)
-            | ModuleStatement::ExternalFunction(_)
-            | ModuleStatement::ExternalType(_)
-            | ModuleStatement::Import(_)
-            | ModuleStatement::ModuleConstant(_) => {
+            Definition::TypeAlias(_)
+            | Definition::ExternalFunction(_)
+            | Definition::ExternalType(_)
+            | Definition::Import(_)
+            | Definition::ModuleConstant(_) => {
                 if self.location().contains(byte_index) {
                     Some(Located::ModuleStatement(self))
                 } else {
@@ -609,38 +604,39 @@ impl TypedModuleStatement {
     }
 }
 
-impl<A, B, C, E> ModuleStatement<A, B, C, E> {
+impl<A, B, C, E> Definition<A, B, C, E> {
     pub fn location(&self) -> SrcSpan {
         match self {
-            ModuleStatement::Function(Function { location, .. })
-            | ModuleStatement::Import(Import { location, .. })
-            | ModuleStatement::TypeAlias(TypeAlias { location, .. })
-            | ModuleStatement::CustomType(CustomType { location, .. })
-            | ModuleStatement::ExternalFunction(ExternalFunction { location, .. })
-            | ModuleStatement::ExternalType(ExternalType { location, .. })
-            | ModuleStatement::ModuleConstant(ModuleConstant { location, .. }) => *location,
+            Definition::Function(Function { location, .. })
+            | Definition::Import(Import { location, .. })
+            | Definition::TypeAlias(TypeAlias { location, .. })
+            | Definition::CustomType(CustomType { location, .. })
+            | Definition::ExternalFunction(ExternalFunction { location, .. })
+            | Definition::ExternalType(ExternalType { location, .. })
+            | Definition::ModuleConstant(ModuleConstant { location, .. }) => *location,
         }
     }
 
     pub fn put_doc(&mut self, new_doc: SmolStr) {
         match self {
-            ModuleStatement::Import(Import { .. }) => (),
-            ModuleStatement::Function(Function {
+            Definition::Import(Import { .. }) => (),
+
+            Definition::Function(Function {
                 documentation: doc, ..
             })
-            | ModuleStatement::TypeAlias(TypeAlias {
+            | Definition::TypeAlias(TypeAlias {
                 documentation: doc, ..
             })
-            | ModuleStatement::CustomType(CustomType {
+            | Definition::CustomType(CustomType {
                 documentation: doc, ..
             })
-            | ModuleStatement::ExternalFunction(ExternalFunction {
+            | Definition::ExternalFunction(ExternalFunction {
                 documentation: doc, ..
             })
-            | ModuleStatement::ExternalType(ExternalType {
+            | Definition::ExternalType(ExternalType {
                 documentation: doc, ..
             })
-            | ModuleStatement::ModuleConstant(ModuleConstant {
+            | Definition::ModuleConstant(ModuleConstant {
                 documentation: doc, ..
             }) => {
                 let _ = std::mem::replace(doc, Some(new_doc));
@@ -1501,7 +1497,7 @@ pub struct GroupedStatements {
 }
 
 impl GroupedStatements {
-    pub fn new(statements: impl IntoIterator<Item = UntypedModuleStatement>) -> Self {
+    pub fn new(statements: impl IntoIterator<Item = UntypedDefinition>) -> Self {
         let mut this = Self::default();
 
         for statement in statements {
@@ -1534,15 +1530,15 @@ impl GroupedStatements {
             + external_functions.len()
     }
 
-    fn add(&mut self, statement: UntypedModuleStatement) {
+    fn add(&mut self, statement: UntypedDefinition) {
         match statement {
-            ModuleStatement::Import(i) => self.imports.push(i),
-            ModuleStatement::Function(f) => self.functions.push(f),
-            ModuleStatement::TypeAlias(t) => self.type_aliases.push(t),
-            ModuleStatement::CustomType(c) => self.custom_types.push(c),
-            ModuleStatement::ExternalType(t) => self.external_types.push(t),
-            ModuleStatement::ModuleConstant(c) => self.constants.push(c),
-            ModuleStatement::ExternalFunction(f) => self.external_functions.push(f),
+            Definition::Import(i) => self.imports.push(i),
+            Definition::Function(f) => self.functions.push(f),
+            Definition::TypeAlias(t) => self.type_aliases.push(t),
+            Definition::CustomType(c) => self.custom_types.push(c),
+            Definition::ExternalType(t) => self.external_types.push(t),
+            Definition::ModuleConstant(c) => self.constants.push(c),
+            Definition::ExternalFunction(f) => self.external_functions.push(f),
         }
     }
 }
