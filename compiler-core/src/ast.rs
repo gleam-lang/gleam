@@ -501,24 +501,6 @@ impl<T> CustomType<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-/// Import a type defined in another language.
-/// Nothing is known about the runtime characteristics of the type, we only
-/// know that it exists and that we have given it this name.
-///
-/// # Example(s)
-///
-/// ```gleam
-/// pub external type Queue(a)
-/// ```
-pub struct ExternalType {
-    pub location: SrcSpan,
-    pub public: bool,
-    pub name: SmolStr,
-    pub arguments: Vec<SmolStr>,
-    pub documentation: Option<SmolStr>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 /// A new name for an existing type
 ///
 /// # Example(s)
@@ -549,8 +531,6 @@ pub enum Definition<T, Expr, ConstantRecordTag, PackageName> {
     CustomType(CustomType<T>),
 
     ExternalFunction(ExternalFunction<T>),
-
-    ExternalType(ExternalType),
 
     Import(Import<PackageName>),
 
@@ -586,7 +566,6 @@ impl TypedDefinition {
 
             Definition::TypeAlias(_)
             | Definition::ExternalFunction(_)
-            | Definition::ExternalType(_)
             | Definition::Import(_)
             | Definition::ModuleConstant(_) => {
                 if self.location().contains(byte_index) {
@@ -607,7 +586,6 @@ impl<A, B, C, E> Definition<A, B, C, E> {
             | Definition::TypeAlias(TypeAlias { location, .. })
             | Definition::CustomType(CustomType { location, .. })
             | Definition::ExternalFunction(ExternalFunction { location, .. })
-            | Definition::ExternalType(ExternalType { location, .. })
             | Definition::ModuleConstant(ModuleConstant { location, .. }) => *location,
         }
     }
@@ -642,9 +620,6 @@ impl<A, B, C, E> Definition<A, B, C, E> {
                 documentation: doc, ..
             })
             | Definition::ExternalFunction(ExternalFunction {
-                documentation: doc, ..
-            })
-            | Definition::ExternalType(ExternalType {
                 documentation: doc, ..
             })
             | Definition::ModuleConstant(ModuleConstant {
@@ -1503,7 +1478,6 @@ pub struct GroupedStatements {
     pub constants: Vec<UntypedModuleConstant>,
     pub custom_types: Vec<CustomType<()>>,
     pub imports: Vec<Import<()>>,
-    pub external_types: Vec<ExternalType>,
     pub type_aliases: Vec<TypeAlias<()>>,
 }
 
@@ -1529,13 +1503,11 @@ impl GroupedStatements {
             external_functions,
             constants,
             imports,
-            external_types,
             type_aliases,
         } = self;
         functions.len()
             + constants.len()
             + imports.len()
-            + external_types.len()
             + custom_types.len()
             + type_aliases.len()
             + external_functions.len()
@@ -1547,7 +1519,6 @@ impl GroupedStatements {
             Definition::Function(f) => self.functions.push(f),
             Definition::TypeAlias(t) => self.type_aliases.push(t),
             Definition::CustomType(c) => self.custom_types.push(c),
-            Definition::ExternalType(t) => self.external_types.push(t),
             Definition::ModuleConstant(c) => self.constants.push(c),
             Definition::ExternalFunction(f) => self.external_functions.push(f),
         }

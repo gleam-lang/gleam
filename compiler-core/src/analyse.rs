@@ -5,7 +5,7 @@ use crate::dep_tree;
 use crate::{
     ast::{
         self, BitStringSegmentOption, CustomType, Definition, DefinitionLocation, ExternalFunction,
-        ExternalType, Function, GroupedStatements, Import, Layer, ModuleConstant, ModuleFunction,
+        Function, GroupedStatements, Import, Layer, ModuleConstant, ModuleFunction,
         RecordConstructor, RecordConstructorArg, SrcSpan, TypeAlias, TypeAst, TypedDefinition,
         TypedModule, UnqualifiedImport, UntypedModule,
     },
@@ -96,10 +96,6 @@ pub fn infer_module(
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
-    // TODO: Extract a TypeRegistrar class to perform all this.
-    for t in &statements.external_types {
-        register_types_from_external_type(t, &mut type_names, &mut env, &name)?;
-    }
     for t in &statements.custom_types {
         register_types_from_custom_type(t, &mut type_names, &mut env, &name, &mut hydrators)?;
     }
@@ -131,10 +127,6 @@ pub fn infer_module(
     }
     for t in statements.custom_types {
         let statement = infer_custom_type(t, &mut env)?;
-        typed_statements.push(statement);
-    }
-    for t in statements.external_types {
-        let statement = hydrate_external_type(t, &mut env)?;
         typed_statements.push(statement);
     }
     for t in statements.type_aliases {
@@ -467,44 +459,6 @@ fn register_types_from_custom_type<'a>(
     )?;
     let constructor_names = constructors.iter().map(|c| c.name.clone()).collect();
     environment.insert_type_to_constructors(name.clone(), constructor_names);
-    if !public {
-        environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
-    };
-    Ok(())
-}
-
-fn register_types_from_external_type(
-    t: &ExternalType,
-    names: &mut HashMap<SmolStr, SrcSpan>,
-    environment: &mut Environment<'_>,
-    module: &SmolStr,
-) -> Result<(), Error> {
-    let ExternalType {
-        name,
-        public,
-        arguments: args,
-        location,
-        ..
-    } = t;
-    assert_unique_type_name(names, name, *location)?;
-    let mut hydrator = Hydrator::new();
-    let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
-    let typ = Arc::new(Type::App {
-        public: *public,
-        module: module.as_str().into(),
-        name: name.clone(),
-        args: parameters.clone(),
-    });
-    environment.insert_type_constructor(
-        name.clone(),
-        TypeConstructor {
-            origin: *location,
-            module: module.clone(),
-            public: *public,
-            parameters,
-            typ,
-        },
-    )?;
     if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
     };
@@ -954,35 +908,6 @@ fn infer_custom_type(
     }))
 }
 
-fn hydrate_external_type(
-    t: ExternalType,
-    environment: &mut Environment<'_>,
-) -> Result<TypedDefinition, Error> {
-    let ExternalType {
-        documentation: doc,
-        location,
-        public,
-        name,
-        arguments: args,
-    } = t;
-    // Check contained types are valid
-    let mut hydrator = Hydrator::new();
-    for arg in &args {
-        let var = TypeAst::Var {
-            location,
-            name: arg.clone(),
-        };
-        let _ = hydrator.type_from_ast(&var, environment)?;
-    }
-    Ok(Definition::ExternalType(ExternalType {
-        documentation: doc,
-        location,
-        public,
-        name,
-        arguments: args,
-    }))
-}
-
 fn record_imported_items_for_use_detection(
     i: Import<()>,
     environment: &mut Environment<'_>,
@@ -1146,7 +1071,6 @@ fn generalise_statement(
         statement @ (Definition::TypeAlias(TypeAlias { .. })
         | Definition::CustomType(CustomType { .. })
         | Definition::ExternalFunction(ExternalFunction { .. })
-        | Definition::ExternalType(ExternalType { .. })
         | Definition::Import(Import { .. })
         | Definition::ModuleConstant(ModuleConstant { .. })) => statement,
     }

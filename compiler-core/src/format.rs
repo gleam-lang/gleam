@@ -2,10 +2,7 @@
 mod tests;
 
 use crate::{
-    ast::{
-        CustomType, ExternalFunction, ExternalType, Function, Import, ModuleConstant, TypeAlias,
-        Use, *,
-    },
+    ast::{CustomType, ExternalFunction, Function, Import, ModuleConstant, TypeAlias, Use, *},
     build::Target,
     docvec,
     io::Utf8Writer,
@@ -248,13 +245,6 @@ impl<'comments> Formatter<'comments> {
                 .append("\" \"")
                 .append(fun.as_str())
                 .append("\""),
-
-            Definition::ExternalType(ExternalType {
-                public,
-                name,
-                arguments: args,
-                ..
-            }) => self.external_type(*public, name, args),
 
             Definition::Import(Import {
                 module,
@@ -1276,22 +1266,6 @@ impl<'comments> Formatter<'comments> {
         }
         .append(" ->")
         .append(self.case_clause_value(&clause.then))
-    }
-
-    pub fn external_type<'a>(
-        &mut self,
-        public: bool,
-        name: &'a str,
-        args: &'a [SmolStr],
-    ) -> Document<'a> {
-        pub_(public)
-            .append("external type ")
-            .append(name)
-            .append(if args.is_empty() {
-                nil()
-            } else {
-                wrap_args(args.iter().map(|e| e.to_doc()))
-            })
     }
 
     fn list<'a>(

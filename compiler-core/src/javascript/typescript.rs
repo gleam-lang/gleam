@@ -13,15 +13,14 @@
 
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use heck::ToUpperCamelCase;
 use itertools::Itertools;
 use smol_str::SmolStr;
 
 use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{
-        CustomType, Definition, ExternalFunction, ExternalType, Function, Import, ModuleConstant,
-        TypeAlias, TypedArg, TypedConstant, TypedDefinition, TypedExternalFnArg, TypedModule,
+        CustomType, Definition, ExternalFunction, Function, Import, ModuleConstant, TypeAlias,
+        TypedArg, TypedConstant, TypedDefinition, TypedExternalFnArg, TypedModule,
         TypedRecordConstructor,
     },
     docvec,
@@ -238,7 +237,6 @@ impl<'a> TypeScriptGenerator<'a> {
                 Definition::Function(Function { .. })
                 | Definition::TypeAlias(TypeAlias { .. })
                 | Definition::CustomType(CustomType { .. })
-                | Definition::ExternalType(ExternalType { .. })
                 | Definition::ExternalFunction(ExternalFunction { .. })
                 | Definition::ModuleConstant(ModuleConstant { .. }) => (),
 
@@ -301,14 +299,6 @@ impl<'a> TypeScriptGenerator<'a> {
             }) if *public => vec![self.type_alias(alias, type_)],
             Definition::TypeAlias(TypeAlias { .. }) => vec![],
 
-            Definition::ExternalType(ExternalType {
-                public,
-                name,
-                arguments,
-                ..
-            }) if *public => vec![self.external_type(name, arguments)],
-            Definition::ExternalType(ExternalType { .. }) => vec![],
-
             Definition::Import(Import { .. }) => vec![],
 
             Definition::CustomType(CustomType {
@@ -348,23 +338,6 @@ impl<'a> TypeScriptGenerator<'a> {
                 ..
             }) if *public => vec![self.external_function(name, arguments, return_type)],
             Definition::ExternalFunction(ExternalFunction { .. }) => vec![],
-        }
-    }
-
-    fn external_type(&self, name: &str, args: &'a [SmolStr]) -> Output<'a> {
-        let doc_name = Document::String(format!("{}$", ts_safe_type_name(name.to_string())));
-        if args.is_empty() {
-            Ok(docvec!["export type ", doc_name, " = any;"])
-        } else {
-            Ok(docvec![
-                "export type ",
-                doc_name,
-                wrap_generic_args(
-                    args.iter()
-                        .map(|x| Document::String(x.to_upper_camel_case()))
-                ),
-                " = any;",
-            ])
         }
     }
 
