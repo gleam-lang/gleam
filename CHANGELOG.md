@@ -4,7 +4,7 @@
 
 - The new `@target(erlang)` and `@target(javascript)` attribute syntax has been
   added for conditional compilation. The existing `if` conditional compilation
-  syntax has been deprecated.
+  syntax has been deprecated. Run `gleam format` to update your code.
 - Adding a new dependency now unlocks the target package. This helps avoid
   failing to find a suitable version for the package due to already being
   locked.
