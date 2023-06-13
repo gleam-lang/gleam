@@ -4,10 +4,10 @@ mod tests;
 use crate::dep_tree;
 use crate::{
     ast::{
-        self, BitStringSegmentOption, CustomType, DefinitionLocation, ExternalFunction,
+        self, BitStringSegmentOption, CustomType, Definition, DefinitionLocation, ExternalFunction,
         ExternalType, Function, GroupedStatements, Import, Layer, ModuleConstant, ModuleFunction,
-        ModuleStatement, RecordConstructor, RecordConstructorArg, SrcSpan, TypeAlias, TypeAst,
-        TypedModule, TypedModuleStatement, UnqualifiedImport, UntypedModule,
+        RecordConstructor, RecordConstructorArg, SrcSpan, TypeAlias, TypeAst, TypedDefinition,
+        TypedModule, UnqualifiedImport, UntypedModule,
     },
     build::{Origin, Target},
     call_graph::into_dependency_order,
@@ -722,7 +722,7 @@ fn infer_function(
     environment: &mut Environment<'_>,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
     module_name: &SmolStr,
-) -> Result<TypedModuleStatement, Error> {
+) -> Result<TypedDefinition, Error> {
     let Function {
         documentation: doc,
         location,
@@ -786,7 +786,7 @@ fn infer_function(
         type_
     };
 
-    Ok(ModuleStatement::Function(Function {
+    Ok(Definition::Function(Function {
         documentation: doc,
         location,
         name,
@@ -804,7 +804,7 @@ fn infer_function(
 fn infer_external_function(
     f: ExternalFunction<()>,
     environment: &mut Environment<'_>,
-) -> Result<TypedModuleStatement, Error> {
+) -> Result<TypedDefinition, Error> {
     let ExternalFunction {
         documentation: doc,
         location,
@@ -828,7 +828,7 @@ fn infer_external_function(
         .zip(&args_types)
         .map(|(a, t)| a.set_type(t.clone()))
         .collect();
-    Ok(ModuleStatement::ExternalFunction(ExternalFunction {
+    Ok(Definition::ExternalFunction(ExternalFunction {
         return_type,
         documentation: doc,
         location,
@@ -844,7 +844,7 @@ fn infer_external_function(
 fn insert_type_alias(
     t: TypeAlias<()>,
     environment: &mut Environment<'_>,
-) -> Result<TypedModuleStatement, Error> {
+) -> Result<TypedDefinition, Error> {
     let TypeAlias {
         documentation: doc,
         location,
@@ -859,7 +859,7 @@ fn insert_type_alias(
         .expect("Could not find existing type for type alias")
         .typ
         .clone();
-    Ok(ModuleStatement::TypeAlias(TypeAlias {
+    Ok(Definition::TypeAlias(TypeAlias {
         documentation: doc,
         location,
         public,
@@ -873,7 +873,7 @@ fn insert_type_alias(
 fn infer_custom_type(
     t: CustomType<()>,
     environment: &mut Environment<'_>,
-) -> Result<TypedModuleStatement, Error> {
+) -> Result<TypedDefinition, Error> {
     let CustomType {
         documentation: doc,
         location,
@@ -941,7 +941,7 @@ fn infer_custom_type(
         .parameters
         .clone();
 
-    Ok(ModuleStatement::CustomType(CustomType {
+    Ok(Definition::CustomType(CustomType {
         documentation: doc,
         location,
         end_position,
@@ -957,7 +957,7 @@ fn infer_custom_type(
 fn hydrate_external_type(
     t: ExternalType,
     environment: &mut Environment<'_>,
-) -> Result<TypedModuleStatement, Error> {
+) -> Result<TypedDefinition, Error> {
     let ExternalType {
         documentation: doc,
         location,
@@ -974,7 +974,7 @@ fn hydrate_external_type(
         };
         let _ = hydrator.type_from_ast(&var, environment)?;
     }
-    Ok(ModuleStatement::ExternalType(ExternalType {
+    Ok(Definition::ExternalType(ExternalType {
         documentation: doc,
         location,
         public,
@@ -986,7 +986,7 @@ fn hydrate_external_type(
 fn record_imported_items_for_use_detection(
     i: Import<()>,
     environment: &mut Environment<'_>,
-) -> Result<TypedModuleStatement, Error> {
+) -> Result<TypedDefinition, Error> {
     let Import {
         documentation,
         location,
@@ -1012,7 +1012,7 @@ fn record_imported_items_for_use_detection(
             import.layer = Layer::Type;
         }
     }
-    Ok(ModuleStatement::Import(Import {
+    Ok(Definition::Import(Import {
         documentation,
         location,
         module,
@@ -1026,7 +1026,7 @@ fn infer_module_constant(
     c: ModuleConstant<(), ()>,
     environment: &mut Environment<'_>,
     module_name: &SmolStr,
-) -> Result<TypedModuleStatement, Error> {
+) -> Result<TypedDefinition, Error> {
     let ModuleConstant {
         documentation: doc,
         location,
@@ -1056,7 +1056,7 @@ fn infer_module_constant(
         environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
     }
 
-    Ok(ModuleStatement::ModuleConstant(ModuleConstant {
+    Ok(Definition::ModuleConstant(ModuleConstant {
         documentation: doc,
         location,
         name,
@@ -1136,21 +1136,19 @@ where
 }
 
 fn generalise_statement(
-    s: TypedModuleStatement,
+    s: TypedDefinition,
     module_name: &SmolStr,
     environment: &mut Environment<'_>,
-) -> TypedModuleStatement {
+) -> TypedDefinition {
     match s {
-        ModuleStatement::Function(function) => {
-            generalise_function(function, environment, module_name)
-        }
+        Definition::Function(function) => generalise_function(function, environment, module_name),
 
-        statement @ (ModuleStatement::TypeAlias(TypeAlias { .. })
-        | ModuleStatement::CustomType(CustomType { .. })
-        | ModuleStatement::ExternalFunction(ExternalFunction { .. })
-        | ModuleStatement::ExternalType(ExternalType { .. })
-        | ModuleStatement::Import(Import { .. })
-        | ModuleStatement::ModuleConstant(ModuleConstant { .. })) => statement,
+        statement @ (Definition::TypeAlias(TypeAlias { .. })
+        | Definition::CustomType(CustomType { .. })
+        | Definition::ExternalFunction(ExternalFunction { .. })
+        | Definition::ExternalType(ExternalType { .. })
+        | Definition::Import(Import { .. })
+        | Definition::ModuleConstant(ModuleConstant { .. })) => statement,
     }
 }
 
@@ -1158,7 +1156,7 @@ fn generalise_function(
     function: Function<Arc<Type>, ast::TypedExpr>,
     environment: &mut Environment<'_>,
     module_name: &SmolStr,
-) -> TypedModuleStatement {
+) -> TypedDefinition {
     let Function {
         documentation: doc,
         location,
@@ -1202,7 +1200,7 @@ fn generalise_function(
         },
     );
 
-    ModuleStatement::Function(Function {
+    Definition::Function(Function {
         documentation: doc,
         location,
         name,

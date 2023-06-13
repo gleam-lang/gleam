@@ -57,13 +57,13 @@ mod token;
 use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitStringSegment,
-    BitStringSegmentOption, CallArg, Clause, ClauseGuard, Constant, CustomType, ExternalFnArg,
-    ExternalFunction, ExternalType, Function, HasLocation, Import, Module, ModuleConstant,
-    ModuleStatement, Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan,
+    BitStringSegmentOption, CallArg, Clause, ClauseGuard, Constant, CustomType, Definition,
+    ExternalFnArg, ExternalFunction, ExternalType, Function, HasLocation, Import, Module,
+    ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan,
     Statement, TargetGroup, TodoKind, TypeAlias, TypeAst, UnqualifiedImport, UntypedArg,
-    UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExternalFnArg,
-    UntypedModule, UntypedModuleStatement, UntypedPattern, UntypedRecordUpdateArg,
-    UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
+    UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
+    UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
+    Use, UseAssignment, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -207,16 +207,13 @@ where
                         let statement = self.expect_module_statement()?;
                         Ok(Some(TargetGroup::Only(target, vec![statement])))
                     }
-                    Some((_, Token::Name { .. }, _)) => {
-                        let (start, _, end) = self.maybe_name().expect("Expected a Name token.");
-                        parse_error(
-                            ParseErrorType::UnexpectedToken {
-                                expected: vec!["target".into()],
-                                hint: Some("Did you mean to write @target?".into()),
-                            },
-                            SrcSpan { start, end },
-                        )
-                    }
+                    Some((start, Token::Name { .. }, end)) => parse_error(
+                        ParseErrorType::UnexpectedToken {
+                            expected: vec!["target".into()],
+                            hint: Some("Did you mean @target?".into()),
+                        },
+                        SrcSpan::new(*start, *end),
+                    ),
                     _ => Ok(None),
                 }
             }
@@ -241,7 +238,7 @@ where
         }
     }
 
-    fn expect_module_statement(&mut self) -> Result<UntypedModuleStatement, ParseError> {
+    fn expect_module_statement(&mut self) -> Result<UntypedDefinition, ParseError> {
         match self.parse_module_statement()? {
             None => parse_error(
                 ParseErrorType::ExpectedStatement,
@@ -251,12 +248,12 @@ where
         }
     }
 
-    fn expect_module_statements(&mut self) -> Result<Vec<UntypedModuleStatement>, ParseError> {
+    fn expect_module_statements(&mut self) -> Result<Vec<UntypedDefinition>, ParseError> {
         let statements = Parser::series_of(self, &Parser::parse_module_statement, None);
         self.ensure_no_errors(statements)
     }
 
-    fn parse_module_statement(&mut self) -> Result<Option<UntypedModuleStatement>, ParseError> {
+    fn parse_module_statement(&mut self) -> Result<Option<UntypedDefinition>, ParseError> {
         match (self.tok0.take(), self.tok1.as_ref()) {
             // Imports
             (Some((_, Token::Import, _)), _) => {
@@ -542,7 +539,7 @@ where
             Some((start, Token::Fn, _)) => {
                 let _ = self.next_tok();
                 match self.parse_function(start, false, true)? {
-                    Some(ModuleStatement::Function(Function {
+                    Some(Definition::Function(Function {
                         location,
                         arguments: args,
                         body,
@@ -1403,7 +1400,7 @@ where
         start: u32,
         public: bool,
         is_anon: bool,
-    ) -> Result<Option<UntypedModuleStatement>, ParseError> {
+    ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = if is_anon {
             None
         } else {
@@ -1437,7 +1434,7 @@ where
             })],
             Some((body, _)) => body,
         };
-        Ok(Some(ModuleStatement::Function(Function {
+        Ok(Some(Definition::Function(Function {
             documentation,
             location: SrcSpan { start, end },
             end_position: rbr_e,
@@ -1459,7 +1456,7 @@ where
         &mut self,
         start: u32,
         public: bool,
-    ) -> Result<Option<UntypedModuleStatement>, ParseError> {
+    ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
         let (_, name, _) = self.expect_name()?;
         let _ = self.expect_one(&Token::LeftParen)?;
@@ -1472,7 +1469,7 @@ where
         let (_, fun, end) = self.expect_string()?;
 
         if let Some(retrn) = return_annotation {
-            Ok(Some(ModuleStatement::ExternalFunction(ExternalFunction {
+            Ok(Some(Definition::ExternalFunction(ExternalFunction {
                 documentation,
                 location: SrcSpan { start, end },
                 public,
@@ -1687,10 +1684,10 @@ where
         &mut self,
         start: u32,
         public: bool,
-    ) -> Result<Option<UntypedModuleStatement>, ParseError> {
+    ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
         let (_, name, args, end) = self.expect_type_name()?;
-        Ok(Some(ModuleStatement::ExternalType(ExternalType {
+        Ok(Some(Definition::ExternalType(ExternalType {
             location: SrcSpan { start, end },
             public,
             name,
@@ -1713,7 +1710,7 @@ where
         start: u32,
         public: bool,
         opaque: bool,
-    ) -> Result<Option<UntypedModuleStatement>, ParseError> {
+    ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
         let (_, name, parameters, end) = self.expect_type_name()?;
         if self.maybe_one(&Token::LeftBrace).is_some() {
@@ -1742,7 +1739,7 @@ where
             if constructors.is_empty() {
                 parse_error(ParseErrorType::NoConstructors, SrcSpan { start, end })
             } else {
-                Ok(Some(ModuleStatement::CustomType(CustomType {
+                Ok(Some(Definition::CustomType(CustomType {
                     documentation,
                     location: SrcSpan { start, end },
                     end_position: close_end,
@@ -1759,7 +1756,7 @@ where
             if !opaque {
                 if let Some(t) = self.parse_type(false)? {
                     let type_end = t.location().end;
-                    Ok(Some(ModuleStatement::TypeAlias(TypeAlias {
+                    Ok(Some(Definition::TypeAlias(TypeAlias {
                         documentation,
                         location: SrcSpan {
                             start,
@@ -2015,7 +2012,7 @@ where
     //   import a/b
     //   import a/b.{c}
     //   import a/b.{c as d} as e
-    fn parse_import(&mut self) -> Result<Option<UntypedModuleStatement>, ParseError> {
+    fn parse_import(&mut self) -> Result<Option<UntypedDefinition>, ParseError> {
         let mut start = 0;
         let mut end;
         let mut module = String::new();
@@ -2066,7 +2063,7 @@ where
             end = e;
         }
 
-        Ok(Some(ModuleStatement::Import(Import {
+        Ok(Some(Definition::Import(Import {
             documentation,
             location: SrcSpan { start, end },
             unqualified,
@@ -2139,7 +2136,7 @@ where
     fn parse_module_const(
         &mut self,
         public: bool,
-    ) -> Result<Option<UntypedModuleStatement>, ParseError> {
+    ) -> Result<Option<UntypedDefinition>, ParseError> {
         let (start, name, end) = self.expect_name()?;
         let documentation = self.take_documentation(start);
 
@@ -2147,7 +2144,7 @@ where
 
         let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
         if let Some(value) = self.parse_const_value()? {
-            Ok(Some(ModuleStatement::ModuleConstant(ModuleConstant {
+            Ok(Some(Definition::ModuleConstant(ModuleConstant {
                 documentation,
                 location: SrcSpan { start, end },
                 public,

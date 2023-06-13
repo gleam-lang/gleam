@@ -156,25 +156,25 @@ impl<'a> Generator<'a> {
         imports.register_module(path, [], [member]);
     }
 
-    pub fn statement(&mut self, statement: &'a TypedModuleStatement) -> Vec<Output<'a>> {
+    pub fn statement(&mut self, statement: &'a TypedDefinition) -> Vec<Output<'a>> {
         match statement {
-            ModuleStatement::TypeAlias(TypeAlias { .. })
-            | ModuleStatement::ExternalType(ExternalType { .. }) => vec![],
+            Definition::TypeAlias(TypeAlias { .. })
+            | Definition::ExternalType(ExternalType { .. }) => vec![],
 
             // Handled in collect_imports
-            ModuleStatement::Import(Import { .. }) => vec![],
+            Definition::Import(Import { .. }) => vec![],
 
             // Handled in collect_definitions
-            ModuleStatement::CustomType(CustomType { .. }) => vec![],
+            Definition::CustomType(CustomType { .. }) => vec![],
 
-            ModuleStatement::ModuleConstant(ModuleConstant {
+            Definition::ModuleConstant(ModuleConstant {
                 public,
                 name,
                 value,
                 ..
             }) => vec![self.module_constant(*public, name, value)],
 
-            ModuleStatement::Function(Function {
+            Definition::Function(Function {
                 arguments,
                 name,
                 body,
@@ -182,7 +182,7 @@ impl<'a> Generator<'a> {
                 ..
             }) => vec![self.module_function(*public, name, arguments, body)],
 
-            ModuleStatement::ExternalFunction(ExternalFunction {
+            Definition::ExternalFunction(ExternalFunction {
                 public,
                 name,
                 arguments,
@@ -193,7 +193,7 @@ impl<'a> Generator<'a> {
                 self.global_external_function(*public, name, arguments, fun)
             )],
 
-            ModuleStatement::ExternalFunction(ExternalFunction { .. }) => vec![],
+            Definition::ExternalFunction(ExternalFunction { .. }) => vec![],
         }
     }
 
@@ -269,19 +269,19 @@ impl<'a> Generator<'a> {
             .statements
             .iter()
             .flat_map(|statement| match statement {
-                ModuleStatement::CustomType(CustomType {
+                Definition::CustomType(CustomType {
                     public,
                     constructors,
                     opaque,
                     ..
                 }) => self.custom_type_definition(constructors, *public, *opaque),
 
-                ModuleStatement::Function(Function { .. })
-                | ModuleStatement::TypeAlias(TypeAlias { .. })
-                | ModuleStatement::ExternalFunction(ExternalFunction { .. })
-                | ModuleStatement::ExternalType(ExternalType { .. })
-                | ModuleStatement::Import(Import { .. })
-                | ModuleStatement::ModuleConstant(ModuleConstant { .. }) => vec![],
+                Definition::Function(Function { .. })
+                | Definition::TypeAlias(TypeAlias { .. })
+                | Definition::ExternalFunction(ExternalFunction { .. })
+                | Definition::ExternalType(ExternalType { .. })
+                | Definition::Import(Import { .. })
+                | Definition::ModuleConstant(ModuleConstant { .. }) => vec![],
             })
             .collect()
     }
@@ -291,15 +291,15 @@ impl<'a> Generator<'a> {
 
         for statement in &self.module.statements {
             match statement {
-                ModuleStatement::Function(Function { .. })
-                | ModuleStatement::TypeAlias(TypeAlias { .. })
-                | ModuleStatement::CustomType(CustomType { .. })
-                | ModuleStatement::ExternalType(ExternalType { .. })
-                | ModuleStatement::ModuleConstant(ModuleConstant { .. }) => (),
-                ModuleStatement::ExternalFunction(ExternalFunction { module, .. })
+                Definition::Function(Function { .. })
+                | Definition::TypeAlias(TypeAlias { .. })
+                | Definition::CustomType(CustomType { .. })
+                | Definition::ExternalType(ExternalType { .. })
+                | Definition::ModuleConstant(ModuleConstant { .. }) => (),
+                Definition::ExternalFunction(ExternalFunction { module, .. })
                     if module.is_empty() => {}
 
-                ModuleStatement::ExternalFunction(ExternalFunction {
+                Definition::ExternalFunction(ExternalFunction {
                     public,
                     name,
                     module,
@@ -307,7 +307,7 @@ impl<'a> Generator<'a> {
                     ..
                 }) => self.register_external_function(&mut imports, *public, name, module, fun),
 
-                ModuleStatement::Import(Import {
+                Definition::Import(Import {
                     module,
                     as_name,
                     unqualified,
@@ -480,17 +480,17 @@ impl<'a> Generator<'a> {
     fn register_module_definitions_in_scope(&mut self) {
         for statement in self.module.statements.iter() {
             match statement {
-                ModuleStatement::ExternalFunction(ExternalFunction { name, .. })
-                | ModuleStatement::ModuleConstant(ModuleConstant { name, .. })
-                | ModuleStatement::Function(Function { name, .. }) => self.register_in_scope(name),
+                Definition::ExternalFunction(ExternalFunction { name, .. })
+                | Definition::ModuleConstant(ModuleConstant { name, .. })
+                | Definition::Function(Function { name, .. }) => self.register_in_scope(name),
 
-                ModuleStatement::Import(Import { unqualified, .. }) => unqualified
+                Definition::Import(Import { unqualified, .. }) => unqualified
                     .iter()
                     .for_each(|unq_import| self.register_in_scope(unq_import.variable_name())),
 
-                ModuleStatement::TypeAlias(TypeAlias { .. })
-                | ModuleStatement::CustomType(CustomType { .. })
-                | ModuleStatement::ExternalType(ExternalType { .. }) => (),
+                Definition::TypeAlias(TypeAlias { .. })
+                | Definition::CustomType(CustomType { .. })
+                | Definition::ExternalType(ExternalType { .. }) => (),
             }
         }
     }
