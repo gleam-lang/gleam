@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added possibility to generate cli-completions for gleam
 - The new `@target(erlang)` and `@target(javascript)` attribute syntax has been
   added for conditional compilation. The existing `if` conditional compilation
   syntax has been deprecated. Run `gleam format` to update your code.
