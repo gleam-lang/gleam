@@ -274,6 +274,7 @@ fn register_imports(
             let phantom_vars: Vec<_> = type_var_usages
                 .keys()
                 .filter(|&id| !constructor_var_usages.contains_key(id))
+                .sorted()
                 .map(|&id| Type::Var {
                     type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id })),
                 })
