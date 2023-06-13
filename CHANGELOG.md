@@ -28,6 +28,7 @@
 - The new `gleam remove <package_name>` can be used to remove dependencies
   from a Gleam project.
 - Fixed a bug where the formatter could crash.
+- Fixed a bug where invalid Erlang would be generated when piping into `panic`.
 - The `gleam docs build` command gains the `--open` flag to open the docs after
   they are generated (#2188).
 - Updated font loading in generated HTML documentation to fix an issue with
