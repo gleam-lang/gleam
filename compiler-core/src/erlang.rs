@@ -354,13 +354,7 @@ fn module_statement<'a>(
         | Definition::ModuleConstant(ModuleConstant { .. })
         | Definition::ExternalFunction(ExternalFunction { public: false, .. }) => vec![],
 
-        Definition::Function(Function {
-            arguments: args,
-            name,
-            body,
-            return_type,
-            ..
-        }) => vec![mod_fun(name, args, body, module, return_type, line_numbers)],
+        Definition::Function(function) => vec![module_function(function, module, line_numbers)],
 
         Definition::ExternalFunction(ExternalFunction {
             fun,
@@ -380,33 +374,35 @@ fn module_statement<'a>(
     }
 }
 
-fn mod_fun<'a>(
-    name: &'a str,
-    args: &'a [TypedArg],
-    body: &'a [TypedStatement],
+fn module_function<'a>(
+    function: &'a TypedFunction,
     module: &'a str,
-    return_type: &'a Arc<Type>,
     line_numbers: &'a LineNumbers,
 ) -> Document<'a> {
-    let mut env = Env::new(module, name, line_numbers);
+    let mut env = Env::new(module, &function.name, line_numbers);
     let var_usages = collect_type_var_usages(
         HashMap::new(),
-        std::iter::once(return_type).chain(args.iter().map(|a| &a.type_)),
+        std::iter::once(&function.return_type).chain(function.arguments.iter().map(|a| &a.type_)),
     );
     let type_printer = TypePrinter::new(module).with_var_usages(&var_usages);
-    let args_spec = args.iter().map(|a| type_printer.print(&a.type_));
-    let return_spec = type_printer.print(return_type);
-    let spec = fun_spec(name, args_spec, return_spec);
+    let args_spec = function
+        .arguments
+        .iter()
+        .map(|a| type_printer.print(&a.type_));
+    let return_spec = type_printer.print(&function.return_type);
+    let spec = fun_spec(&function.name, args_spec, return_spec);
+    let arguments = fun_args(&function.arguments, &mut env);
 
-    spec.append(atom(name.to_string()))
-        .append(fun_args(args, &mut env))
+    let body = function
+        .external_erlang
+        .as_ref()
+        .map(|(module, function)| docvec![module, ":", function, arguments.clone()])
+        .unwrap_or_else(|| statement_sequence(&function.body, &mut env));
+
+    spec.append(atom(function.name.to_string()))
+        .append(arguments)
         .append(" ->")
-        .append(
-            line()
-                .append(statement_sequence(body, &mut env))
-                .nest(INDENT)
-                .group(),
-        )
+        .append(line().append(body).nest(INDENT).group())
         .append(".")
 }
 

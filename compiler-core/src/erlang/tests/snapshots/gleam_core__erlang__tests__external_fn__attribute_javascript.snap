@@ -1,15 +1,15 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 82
-expression: "\n@external(erlang, \"one\", \"one\")\npub fn one() -> Int {\n  todo\n}\n"
+assertion_line: 94
+expression: "\n@external(javascript, \"./one.mjs\", \"one\")\npub fn one(x: Int) -> Int {\n  todo\n}\n"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
 
--export([one/0]).
+-export([one/1]).
 
--spec one() -> integer().
-one() ->
+-spec one(integer()) -> integer().
+one(X) ->
     erlang:error(#{gleam_error => todo,
             message => <<"This has not yet been implemented"/utf8>>,
             module => <<"my/mod"/utf8>>,
