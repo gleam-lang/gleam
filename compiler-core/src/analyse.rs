@@ -686,6 +686,8 @@ fn infer_function(
         body,
         return_annotation,
         end_position: end_location,
+        external_erlang,
+        external_javascript,
         ..
     } = f;
     let preregistered_fn = environment
@@ -752,6 +754,8 @@ fn infer_function(
             .return_type()
             .expect("Could not find return type for fn"),
         body,
+        external_erlang,
+        external_javascript,
     }))
 }
 
@@ -1091,6 +1095,8 @@ fn generalise_function(
         return_annotation,
         end_position: end_location,
         return_type,
+        external_erlang,
+        external_javascript,
     } = function;
 
     // Lookup the inferred function information
@@ -1134,6 +1140,8 @@ fn generalise_function(
         return_annotation,
         return_type,
         body,
+        external_erlang,
+        external_javascript,
     })
 }
 
