@@ -87,9 +87,10 @@ pub struct Parsed {
     pub warnings: Vec<Warning>,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Warning {
     DeprecatedIf { location: SrcSpan, target: Target },
+    DeprecatedExternalType { location: SrcSpan, name: SmolStr },
 }
 
 //
@@ -1724,6 +1725,10 @@ where
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
         let (_, name, parameters, end) = self.expect_type_name()?;
+        self.warnings.push(Warning::DeprecatedExternalType {
+            location: SrcSpan::new(start, end),
+            name: name.clone(),
+        });
         Ok(Some(Definition::CustomType(CustomType {
             location: SrcSpan { start, end },
             public,
