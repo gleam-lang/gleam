@@ -12,6 +12,7 @@ mod bit_strings;
 mod case;
 mod conditional_compilation;
 mod consts;
+mod custom_types;
 mod external_fn;
 mod functions;
 mod guards;

@@ -295,7 +295,9 @@ fn register_imports(
             );
             // Type definitions
             let definition = if constructors.is_empty() {
-                "any()".to_doc()
+                let constructors =
+                    std::iter::once("any()".to_doc()).chain(phantom_vars_constructor);
+                concat(Itertools::intersperse(constructors, break_(" |", " | ")))
             } else {
                 let constructors = constructors
                     .iter()
@@ -310,10 +312,9 @@ fn register_imports(
                         }
                     })
                     .chain(phantom_vars_constructor);
-                let constructors =
-                    concat(Itertools::intersperse(constructors, break_(" |", " | ")));
-                constructors.nest(INDENT)
-            };
+                concat(Itertools::intersperse(constructors, break_(" |", " | ")))
+            }
+            .nest(INDENT);
             let type_printer = TypePrinter::new(module_name);
             let params = concat(Itertools::intersperse(
                 typed_parameters.iter().map(|a| type_printer.print(a)),
