@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1406
+assertion_line: 1420
 expression: "\npub type Media {\n    Audio(BitString)\n    Video(BitString)\n    Text(String)\n}\npub fn main(m) {\n    let Video(_) = m\n    Nil\n}\n"
 ---
 error: Not exhaustive pattern match
@@ -11,7 +11,7 @@ error: Not exhaustive pattern match
 
 This assignment does not match all possibilities.
 Either use a case expression with patterns for each possible
-value, or use `assert` rather than `let`.
+value, or use `let assert` rather than `let`.
 
 These values are not matched:
 
