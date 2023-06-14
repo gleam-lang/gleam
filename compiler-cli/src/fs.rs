@@ -52,7 +52,7 @@ impl FileSystemReader for ProjectIO {
             .filter_map(Result::ok)
             .filter(|e| e.file_type().is_file())
             .map(|d| d.into_path())
-            .filter(move |d| is_gleam_extension(d, dir.clone()))
+            .filter(move |d| is_gleam_extension(d))
             .collect()
     }
 
@@ -330,19 +330,8 @@ pub fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
     )
 }
 
-fn is_gleam_extension(path: &Path, dir: impl AsRef<Path>) -> bool {
-    use regex::Regex;
-    lazy_static! {
-        static ref RE: Regex =
-            Regex::new(&format!("^.*\\.gleam$",)).expect("is_gleam_extension() RE regex");
-    }
-
-    RE.is_match(
-        path.strip_prefix(dir)
-            .expect("is_gleam_extension(): strip_prefix")
-            .to_str()
-            .expect("is_gleam_extension(): to_str"),
-    )
+fn is_gleam_extension(path: &Path) -> bool {
+    path.extension() == Some(OsStr::new("gleam"))
 }
 
 pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {
