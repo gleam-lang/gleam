@@ -2822,6 +2822,9 @@ where
         start: u32,
         attributes: &mut Attributes,
     ) -> Result<(), ParseError> {
+        let duplicate_attribute_error =
+            |end| parse_error(ParseErrorType::DuplicateAttribute, SrcSpan { start, end });
+
         // Parse the name of the attribute. Later this will be a name token, but
         // for now we parse `external`, which is currently a keyword.
         let (_, end) = self.expect_one(&Token::External)?;
@@ -2837,7 +2840,10 @@ where
                 let _ = self.expect_one(&Token::Comma)?;
                 let (_, function, _) = self.expect_string()?;
                 let _ = self.maybe_one(&Token::Comma);
-                let _ = self.expect_one(&Token::RightParen)?;
+                let (_, end) = self.expect_one(&Token::RightParen)?;
+                if attributes.external_erlang.is_some() {
+                    return duplicate_attribute_error(end);
+                }
                 attributes.external_erlang = Some((module, function));
                 Ok(())
             }
@@ -2849,6 +2855,9 @@ where
                 let (_, function, _) = self.expect_string()?;
                 let _ = self.maybe_one(&Token::Comma);
                 let _ = self.expect_one(&Token::RightParen)?;
+                if attributes.external_javascript.is_some() {
+                    return duplicate_attribute_error(end);
+                }
                 attributes.external_javascript = Some((module, function));
                 Ok(())
             }

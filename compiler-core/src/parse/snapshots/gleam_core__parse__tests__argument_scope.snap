@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 400
+assertion_line: 421
 expression: "\n1 + let a = 5\na\n"
 ---
 error: Syntax error
   ┌─ /src/parse/error.gleam:2:3
   │
 2 │ 1 + let a = 5
-  │   ^ This operator has no value on its right side.
+  │   ^ This operator has no value on its right side
 
 Hint: Remove it or put a value after it.
 

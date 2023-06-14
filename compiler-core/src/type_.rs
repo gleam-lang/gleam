@@ -8,7 +8,7 @@ pub(crate) mod pipe;
 pub(crate) mod prelude;
 pub mod pretty;
 #[cfg(test)]
-mod tests;
+pub mod tests;
 
 pub use environment::*;
 pub use error::{Error, UnifyErrorSituation, Warning};
