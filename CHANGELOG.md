@@ -2,13 +2,14 @@
 
 ## Unreleased
 
-- Added possibility to generate cli-completions for gleam
+- The new `gleam shell-completions` command can be used to generate
+  completions for zsh, bash, fish, powershell and elvish.
 - The new `@target(erlang)` and `@target(javascript)` attribute syntax has been
   added for conditional compilation. The existing `if` conditional compilation
   syntax has been deprecated. Run `gleam format` to update your code.
 - The new `type TypeName` syntax syntax replaces the `external type TypeName`
-  syntax. The existing external type syntax has been deprecated. Run `gleam
-  format` to update your code.
+  syntax. The existing external type syntax has been deprecated. Run `gleam format`
+  to update your code.
 - Adding a new dependency now unlocks the target package. This helps avoid
   failing to find a suitable version for the package due to already being
   locked.
