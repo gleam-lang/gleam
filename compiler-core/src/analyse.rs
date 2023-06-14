@@ -642,7 +642,6 @@ fn register_value_from_function(
         ..
     } = f;
     assert_unique_name(names, name, *location)?;
-    let _ = environment.ungeneralised_functions.insert(name.clone());
     let mut builder = FieldMapBuilder::new(args.len() as u32);
     for arg in args.iter() {
         builder.add(arg.names.get_label(), arg.location)?;
@@ -724,7 +723,7 @@ fn infer_function(
     };
 
     // Infer the type using the preregistered args + return types as a starting point
-    let (type_, args, body, safe_to_generalise) = environment.in_new_scope(|environment| {
+    let (type_, args, body) = environment.in_new_scope(|environment| {
         let args_types = arguments
             .into_iter()
             .zip(&args_types)
@@ -739,31 +738,22 @@ fn infer_function(
             expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type))?;
         let args_types = args.iter().map(|a| a.type_.clone()).collect();
         let typ = fn_(args_types, body.last().type_());
-        let safe_to_generalise = !expr_typer.ungeneralised_function_used;
-        Ok((typ, args, body, safe_to_generalise))
+        Ok((typ, args, body))
     })?;
 
     // Assert that the inferred type matches the type of any recursive call
     unify(preregistered_type, type_.clone()).map_err(|e| convert_unify_error(e, location))?;
 
-    // TODO: remove this generalisation part, it is handled at the level above.
-    // Generalise the function if safe to do so
-    let type_ = if safe_to_generalise {
-        let _ = environment.ungeneralised_functions.remove(&name);
-        let type_ = type_::generalise(type_);
-        let variant = ValueConstructorVariant::ModuleFn {
-            documentation: doc.clone(),
-            name: impl_function,
-            field_map,
-            module: impl_module,
-            arity: args.len(),
-            location,
-        };
-        environment.insert_variable(name.clone(), variant, type_.clone(), public);
-        type_
-    } else {
-        type_
+    let type_ = type_::generalise(type_);
+    let variant = ValueConstructorVariant::ModuleFn {
+        documentation: doc.clone(),
+        name: impl_function,
+        field_map,
+        module: impl_module,
+        arity: args.len(),
+        location,
     };
+    environment.insert_variable(name.clone(), variant, type_.clone(), public);
 
     Ok(Definition::Function(Function {
         documentation: doc,
@@ -1159,12 +1149,7 @@ fn generalise_function(
     let field_map = function.field_map().cloned();
     let typ = function.type_.clone();
 
-    // Generalise the function if not already done so
-    let typ = if environment.ungeneralised_functions.remove(&name) {
-        type_::generalise(typ)
-    } else {
-        typ
-    };
+    let typ = type_::generalise(typ);
 
     // Insert the function into the module's interface
     environment.insert_module_value(
