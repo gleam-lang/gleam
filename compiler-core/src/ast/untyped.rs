@@ -119,9 +119,9 @@ pub enum UntypedExpr {
     /// A placeholder used when parsing is incomplete or when a function body is
     /// missing due to an external implementation being given for the function
     /// instead.
-    /// This variant should be removed in future, but it requires some rework of
-    /// the type inference code to be able to handle functions that do not have
-    /// a body.
+    /// TODO: This variant should be removed in future, but it requires some
+    /// rework of the type inference code to be able to handle functions that do
+    /// not have a body.
     Placeholder {
         location: SrcSpan,
     },
