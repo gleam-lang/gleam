@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::ast::UntypedArg;
+use crate::ast::{UntypedArg, UntypedStatement};
 use crate::dep_tree;
 use crate::type_::error::MissingAnnotation;
 use crate::{
@@ -30,6 +30,7 @@ use crate::{
 use itertools::Itertools;
 use smol_str::SmolStr;
 use std::{collections::HashMap, sync::Arc};
+use vec1::Vec1;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Inferred<T> {
@@ -712,7 +713,10 @@ fn infer_function(
         Target::JavaScript => &external_javascript,
     };
     let (impl_module, impl_function) = match external {
-        None => (module_name.clone(), name.clone()),
+        None => {
+            ensure_body_given(&body, location)?;
+            (module_name.clone(), name.clone())
+        }
         Some((m, f)) => {
             ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
             (m.clone(), f.clone())
@@ -776,6 +780,14 @@ fn infer_function(
         external_erlang,
         external_javascript,
     }))
+}
+
+fn ensure_body_given(body: &Vec1<UntypedStatement>, location: SrcSpan) -> Result<(), Error> {
+    if body.first().is_placeholder() {
+        Err(Error::NoImplementation { location })
+    } else {
+        Ok(())
+    }
 }
 
 fn ensure_annotations_present(

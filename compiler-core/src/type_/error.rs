@@ -265,6 +265,12 @@ pub enum Error {
         location: SrcSpan,
         kind: MissingAnnotation,
     },
+
+    // A function has been given without either a Gleam implementation or an
+    // external one.
+    NoImplementation {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
