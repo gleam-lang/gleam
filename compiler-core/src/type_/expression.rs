@@ -21,11 +21,6 @@ pub(crate) struct ExprTyper<'a, 'b> {
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
-
-    // We keep track of whether any ungeneralised functions have been used
-    // to determine whether it is safe to generalise this expression after
-    // it has been inferred.
-    pub(crate) ungeneralised_function_used: bool,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
@@ -35,7 +30,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Self {
             hydrator,
             environment,
-            ungeneralised_function_used: false,
         }
     }
 
@@ -1557,18 +1551,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             name: name.clone(),
                             variables: self.environment.local_value_names(),
                         })?;
-
-                // Note whether we are using an ungeneralised function so that we can
-                // tell if it is safe to generalise this function after inference has
-                // completed.
-                if matches!(
-                    &constructor.variant,
-                    ValueConstructorVariant::ModuleFn { .. }
-                ) {
-                    let is_ungeneralised = self.environment.ungeneralised_functions.contains(name);
-                    self.ungeneralised_function_used =
-                        self.ungeneralised_function_used || is_ungeneralised;
-                }
 
                 // Register the value as seen for detection of unused values
                 self.environment.increment_usage(name);

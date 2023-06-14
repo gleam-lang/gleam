@@ -41,11 +41,6 @@ pub struct Environment<'a> {
     /// Warnings
     pub warnings: &'a TypeWarningEmitter,
 
-    /// Functions that have not yet been inferred then generalised.
-    /// We use this to determine whether functions that call this one
-    /// can safely be generalised.
-    pub ungeneralised_functions: HashSet<SmolStr>,
-
     /// entity_usages is a stack of scopes. When an entity is created it is
     /// added to the top scope. When an entity is used we crawl down the scope
     /// stack for an entity with that name and mark it as used.
@@ -68,7 +63,6 @@ impl<'a> Environment<'a> {
             previous_id: ids.next(),
             ids,
             target,
-            ungeneralised_functions: HashSet::new(),
             module_types: prelude.types.clone(),
             module_types_constructors: prelude.types_constructors.clone(),
             module_values: HashMap::new(),
