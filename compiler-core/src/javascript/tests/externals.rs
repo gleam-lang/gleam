@@ -106,3 +106,101 @@ pub external fn one(TESTitem) -> TESTitem = "" "one"
 "#
     );
 }
+
+#[test]
+fn attribute_erlang() {
+    assert_js!(
+        r#"
+@external(erlang, "one", "one_erl")
+pub fn one(x: Int) -> Int {
+  todo
+}
+
+pub fn main() {
+  one(1)
+}
+"#
+    );
+}
+
+#[test]
+fn attribute_javascript() {
+    assert_js!(
+        r#"
+@external(javascript, "./one.mjs", "oneJs")
+pub fn one(x: Int) -> Int {
+  todo
+}
+
+pub fn main() {
+  one(1)
+}
+"#
+    );
+}
+
+#[test]
+fn erlang_and_javascript() {
+    assert_js!(
+        r#"
+@external(erlang, "one", "one")
+@external(javascript, "./one.mjs", "oneJs")
+pub fn one(x: Int) -> Int {
+  todo
+}
+
+pub fn main() {
+  one(1)
+}
+"#
+    );
+}
+
+#[test]
+fn private_attribute_erlang() {
+    assert_js!(
+        r#"
+@external(erlang, "one", "one_erl")
+fn one(x: Int) -> Int {
+  todo
+}
+
+pub fn main() {
+  one(1)
+}
+"#
+    );
+}
+
+#[test]
+fn private_attribute_javascript() {
+    assert_js!(
+        r#"
+@external(javascript, "./one.mjs", "oneJs")
+fn one(x: Int) -> Int {
+  todo
+}
+
+pub fn main() {
+  one(1)
+}
+"#
+    );
+}
+
+#[test]
+fn private_erlang_and_javascript() {
+    assert_js!(
+        r#"
+@external(erlang, "one", "one")
+@external(javascript, "./one.mjs", "oneJs")
+fn one(x: Int) -> Int {
+  todo
+}
+
+pub fn main() {
+  one(1)
+}
+"#
+    );
+}
