@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/erlang/tests/external_fn.rs
+assertion_line: 131
+expression: "\n@external(erlang, \"one\", \"one\")\npub fn one(x: Int) {\n  todo\n}\n"
+---
+error: Missing type annotation
+  ┌─ /src/one/two.gleam:3:1
+  │
+3 │ pub fn one(x: Int) {
+  │ ^^^^^^^^^^^^^^^^^^
+
+A return annotation is missing from this function.
+
+Functions with external implementations must have type annotations
+so we can tell what type of values they accept and return.
+
