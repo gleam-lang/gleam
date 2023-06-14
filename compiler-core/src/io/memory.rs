@@ -122,10 +122,10 @@ impl FileSystemWriter for InMemoryFileSystem {
 
 impl FileSystemReader for InMemoryFileSystem {
     fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
-        self.gleam_ext_files(dir)
+        self.gleam_extension_files(dir)
     }
 
-    fn gleam_ext_files(&self, dir: &Path) -> Vec<PathBuf> {
+    fn gleam_extension_files(&self, dir: &Path) -> Vec<PathBuf> {
         self.files
             .deref()
             .borrow()

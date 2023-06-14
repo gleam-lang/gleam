@@ -77,8 +77,8 @@ impl FileSystemReader for LanguageServerTestIO {
         self.io.gleam_source_files(dir)
     }
 
-    fn gleam_ext_files(&self, dir: &Path) -> Vec<PathBuf> {
-        self.io.gleam_ext_files(dir)
+    fn gleam_extension_files(&self, dir: &Path) -> Vec<PathBuf> {
+        self.io.gleam_extension_files(dir)
     }
 
     fn gleam_cache_files(&self, dir: &Path) -> Vec<PathBuf> {

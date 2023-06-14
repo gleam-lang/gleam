@@ -80,9 +80,9 @@ impl FileSystemReader for WasmFileSystem {
         self.imfs.gleam_source_files(dir)
     }
 
-    fn gleam_ext_files(&self, dir: &Path) -> Vec<PathBuf> {
-        tracing::trace!("gleam_ext_files   {:?}", dir);
-        self.imfs.gleam_ext_files(dir)
+    fn gleam_extension_files(&self, dir: &Path) -> Vec<PathBuf> {
+        tracing::trace!("gleam_extension_files   {:?}", dir);
+        self.imfs.gleam_extension_files(dir)
     }
 
     fn gleam_cache_files(&self, dir: &Path) -> Vec<PathBuf> {
