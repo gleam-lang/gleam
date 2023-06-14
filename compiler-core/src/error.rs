@@ -2117,6 +2117,28 @@ so we can tell what type of values they accept and return.",
                         }),
                     }
                 }
+
+                TypeError::NoImplementation { location } => {
+                    let text = "We can't compile this function as it doesn't have an
+implementation. Add a body or an external implementation
+using the `@external` attribute."
+                        .into();
+                    Diagnostic {
+                        title: "Function without an implementation".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
             },
 
             Error::Parse { path, src, error } => {

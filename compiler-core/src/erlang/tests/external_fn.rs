@@ -196,5 +196,11 @@ pub fn one(x: Int) -> Int
     );
 }
 
-// TODO: bodies absent is not an error if there is an external impl
-// TODO: without a body or a suitable external impl is an error
+#[test]
+fn no_body_or_implementation() {
+    assert_module_error!(
+        r#"
+pub fn one(x: Int) -> Int
+"#
+    );
+}
