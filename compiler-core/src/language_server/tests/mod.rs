@@ -77,10 +77,6 @@ impl FileSystemReader for LanguageServerTestIO {
         self.io.gleam_source_files(dir)
     }
 
-    fn gleam_extension_files(&self, dir: &Path) -> Vec<PathBuf> {
-        self.io.gleam_extension_files(dir)
-    }
-
     fn gleam_cache_files(&self, dir: &Path) -> Vec<PathBuf> {
         self.io.gleam_cache_files(dir)
     }
@@ -103,6 +99,10 @@ impl FileSystemReader for LanguageServerTestIO {
 
     fn is_file(&self, path: &Path) -> bool {
         self.io.is_file(path)
+    }
+
+    fn is_valid_module_path(&self, path: &Path, dir: &Path) -> bool {
+        self.io.is_valid_module_path(path, dir)
     }
 
     fn is_directory(&self, path: &Path) -> bool {

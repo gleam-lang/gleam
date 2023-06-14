@@ -41,25 +41,18 @@ impl ProjectIO {
 }
 
 impl FileSystemReader for ProjectIO {
-    fn gleam_extension_files(&self, dir: &Path) -> Vec<PathBuf> {
+    fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
         if !dir.is_dir() {
             return vec![];
         }
         let dir = dir.to_path_buf();
-        walkdir::WalkDir::new(dir.clone())
+        walkdir::WalkDir::new(dir)
             .follow_links(true)
             .into_iter()
             .filter_map(Result::ok)
             .filter(|e| e.file_type().is_file())
             .map(|d| d.into_path())
-            .filter(move |d| is_gleam_extension(d))
-            .collect()
-    }
-
-    fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
-        self.gleam_extension_files(dir)
-            .into_iter()
-            .filter(move |d| is_gleam_path(d, dir.clone()))
+            .filter(move |d| d.extension() == Some(OsStr::new("gleam")))
             .collect()
     }
 
@@ -88,6 +81,10 @@ impl FileSystemReader for ProjectIO {
 
     fn is_file(&self, path: &Path) -> bool {
         path.is_file()
+    }
+
+    fn is_valid_module_path(&self, path: &Path, dir: &Path) -> bool {
+        is_gleam_path(path, dir)
     }
 
     fn is_directory(&self, path: &Path) -> bool {
@@ -311,7 +308,7 @@ pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
+pub fn is_gleam_path(path: &Path, dir: &Path) -> bool {
     use regex::Regex;
     lazy_static! {
         static ref RE: Regex = Regex::new(&format!(
@@ -328,10 +325,6 @@ pub fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
             .to_str()
             .expect("is_gleam_path(): to_str"),
     )
-}
-
-fn is_gleam_extension(path: &Path) -> bool {
-    path.extension() == Some(OsStr::new("gleam"))
 }
 
 pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {

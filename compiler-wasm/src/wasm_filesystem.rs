@@ -80,11 +80,6 @@ impl FileSystemReader for WasmFileSystem {
         self.imfs.gleam_source_files(dir)
     }
 
-    fn gleam_extension_files(&self, dir: &Path) -> Vec<PathBuf> {
-        tracing::trace!("gleam_extension_files   {:?}", dir);
-        self.imfs.gleam_extension_files(dir)
-    }
-
     fn gleam_cache_files(&self, dir: &Path) -> Vec<PathBuf> {
         tracing::trace!("gleam_metadata_files {:?}", dir);
         self.imfs.gleam_cache_files(dir)
@@ -98,6 +93,10 @@ impl FileSystemReader for WasmFileSystem {
     fn is_file(&self, path: &Path) -> bool {
         tracing::info!("is_file {:?}", path);
         self.imfs.is_file(path)
+    }
+
+    fn is_valid_module_path(&self, path: &Path, dir: &Path) -> bool {
+        self.imfs.is_valid_module_path(path, dir)
     }
 
     fn is_directory(&self, path: &Path) -> bool {
