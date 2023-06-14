@@ -167,18 +167,18 @@ where
         };
 
         // Src
-        for path in self.io.gleam_extension_files(&src) {
-            if self.io.gleam_source_files(&src).contains(&path) {
-                let input = loader.load(path)?;
-                inputs.insert(input)?;
-            } else {
+        for path in self.io.gleam_source_files(&src) {
+            if !self.io.is_valid_module_path(&path, &src) {
                 self.warnings.emit(crate::Warning::InvalidSource {
                     name: path
                         .to_str()
                         .expect("read_source_files Emitting file warning")
                         .into(),
-                })
+                });
+                continue;
             }
+            let input = loader.load(path)?;
+            inputs.insert(input)?;
         }
 
         // Test

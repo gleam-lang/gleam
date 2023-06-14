@@ -189,7 +189,7 @@ impl Warning {
             },
 
             Warning::InvalidSource { name } => Diagnostic {
-                title: "Invalid gleam source filename.".into(),
+                title: "Invalid module name. Module names must begin with a lowercase letter and contain only lowercase alphanumeric characters or underscores.".into(),
                 text: "".into(),
                 level: diagnostic::Level::Warning,
                 location: None,
