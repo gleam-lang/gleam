@@ -117,3 +117,4 @@ pub fn one(x: Int) -> Int {
 // TODO: test duplicate externals for a single target are a compile error
 // TODO: bodies absent is not an error if there is an external impl
 // TODO: without a body or a suitable external impl is an error
+// TODO: without type annotations is an error

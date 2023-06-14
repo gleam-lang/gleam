@@ -76,7 +76,7 @@ pub fn infer_module(
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
-    let mut env = Environment::new(ids.clone(), &name, modules, warnings);
+    let mut env = Environment::new(ids.clone(), &name, target, modules, warnings);
     validate_module_name(&name)?;
 
     let mut type_names = HashMap::with_capacity(module.definitions.len());
@@ -724,19 +724,23 @@ fn infer_function(
     let type_ = if safe_to_generalise {
         let _ = environment.ungeneralised_functions.remove(&name);
         let type_ = type_::generalise(type_);
-        environment.insert_variable(
-            name.clone(),
-            ValueConstructorVariant::ModuleFn {
-                documentation: doc.clone(),
-                name: name.clone(),
-                field_map,
-                module: module_name.clone(),
-                arity: args.len(),
-                location,
-            },
-            type_.clone(),
-            public,
-        );
+        let external = match environment.target {
+            Target::Erlang => &external_erlang,
+            Target::JavaScript => &external_javascript,
+        };
+        let (impl_module, impl_function) = match external {
+            Some((m, f)) => (m.clone(), f.clone()),
+            None => (module_name.clone(), name.clone()),
+        };
+        let variant = ValueConstructorVariant::ModuleFn {
+            documentation: doc.clone(),
+            name: impl_function,
+            field_map,
+            module: impl_module,
+            arity: args.len(),
+            location,
+        };
+        environment.insert_variable(name.clone(), variant, type_.clone(), public);
         type_
     } else {
         type_

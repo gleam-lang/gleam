@@ -1,5 +1,6 @@
 use crate::{
-    analyse::Inferred, ast::PIPE_VARIABLE, uid::UniqueIdGenerator, warning::TypeWarningEmitter,
+    analyse::Inferred, ast::PIPE_VARIABLE, build::Target, uid::UniqueIdGenerator,
+    warning::TypeWarningEmitter,
 };
 
 use super::*;
@@ -8,6 +9,7 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct Environment<'a> {
     pub current_module: &'a str,
+    pub target: Target,
     pub ids: UniqueIdGenerator,
     previous_id: u64,
     /// Names of types or values that have been imported an unqualified fashion
@@ -55,6 +57,7 @@ impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
         current_module: &'a str,
+        target: Target,
         importable_modules: &'a im::HashMap<SmolStr, ModuleInterface>,
         warnings: &'a TypeWarningEmitter,
     ) -> Self {
@@ -64,6 +67,7 @@ impl<'a> Environment<'a> {
         Self {
             previous_id: ids.next(),
             ids,
+            target,
             ungeneralised_functions: HashSet::new(),
             module_types: prelude.types.clone(),
             module_types_constructors: prelude.types_constructors.clone(),

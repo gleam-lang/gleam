@@ -176,6 +176,7 @@ impl<'a> Generator<'a> {
                 name,
                 body,
                 public,
+                external_javascript: None,
                 ..
             }) => vec![self.module_function(*public, name, arguments, body)],
 
@@ -190,7 +191,7 @@ impl<'a> Generator<'a> {
                 self.global_external_function(*public, name, arguments, fun)
             )],
 
-            Definition::ExternalFunction(ExternalFunction { .. }) => vec![],
+            Definition::Function(_) | Definition::ExternalFunction(_) => vec![],
         }
     }
 
@@ -292,10 +293,6 @@ impl<'a> Generator<'a> {
 
         for statement in &self.module.definitions {
             match statement {
-                Definition::Function(Function { .. })
-                | Definition::TypeAlias(TypeAlias { .. })
-                | Definition::CustomType(CustomType { .. })
-                | Definition::ModuleConstant(ModuleConstant { .. }) => (),
                 Definition::ExternalFunction(ExternalFunction { module, .. })
                     if module.is_empty() => {}
 
@@ -316,6 +313,20 @@ impl<'a> Generator<'a> {
                 }) => {
                     self.register_import(&mut imports, package, module, as_name, unqualified);
                 }
+
+                Definition::Function(Function {
+                    name,
+                    public,
+                    external_javascript: Some((module, function)),
+                    ..
+                }) => {
+                    self.register_external_function(&mut imports, *public, name, module, function);
+                }
+
+                Definition::Function(Function { .. })
+                | Definition::TypeAlias(TypeAlias { .. })
+                | Definition::CustomType(CustomType { .. })
+                | Definition::ModuleConstant(ModuleConstant { .. }) => (),
             }
         }
 
