@@ -186,6 +186,15 @@ pub fn one(x: List(Int)) -> List(_) {
     );
 }
 
+#[test]
+fn no_body() {
+    assert_erl!(
+        r#"
+@external(erlang, "one", "one")
+pub fn one(x: Int) -> Int
+"#
+    );
+}
+
 // TODO: bodies absent is not an error if there is an external impl
 // TODO: without a body or a suitable external impl is an error
-// TODO: holes are an error if there is an external impl

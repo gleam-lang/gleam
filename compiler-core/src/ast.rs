@@ -1591,6 +1591,13 @@ impl UntypedStatement {
             Statement::Use(use_) => use_.location.start,
         }
     }
+
+    pub fn is_placeholder(&self) -> bool {
+        match self {
+            Statement::Expression(expression) => expression.is_placeholder(),
+            Statement::Assignment(_) | Statement::Use(_) => false,
+        }
+    }
 }
 
 impl TypedStatement {

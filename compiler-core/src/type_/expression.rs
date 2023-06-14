@@ -74,7 +74,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => Ok(self.infer_todo(location, kind, label)),
 
-            UntypedExpr::Panic { location } => Ok(self.infer_panic(location)),
+            UntypedExpr::Placeholder { location } | UntypedExpr::Panic { location } => {
+                Ok(self.infer_panic(location))
+            }
 
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 

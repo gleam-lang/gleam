@@ -200,15 +200,7 @@ impl<'comments> Formatter<'comments> {
 
     fn definition<'a>(&mut self, statement: &'a UntypedDefinition) -> Document<'a> {
         match statement {
-            Definition::Function(Function {
-                name,
-                arguments: args,
-                body,
-                public,
-                return_annotation,
-                end_position,
-                ..
-            }) => self.statement_fn(public, name, args, return_annotation, body, *end_position),
+            Definition::Function(function) => self.statement_fn(function),
 
             Definition::TypeAlias(TypeAlias {
                 alias,
@@ -502,33 +494,46 @@ impl<'comments> Formatter<'comments> {
         commented(doc, comments)
     }
 
-    fn statement_fn<'a>(
-        &mut self,
-        public: &'a bool,
-        name: &'a str,
-        args: &'a [UntypedArg],
-        return_annotation: &'a Option<TypeAst>,
-        body: &'a Vec1<UntypedStatement>,
-        end_location: u32,
-    ) -> Document<'a> {
+    fn statement_fn<'a>(&mut self, function: &'a Function<(), UntypedExpr>) -> Document<'a> {
+        let doc = docvec![];
+
+        // Attributes
+        let external = |t: &'static str, m: &'a str, f: &'a str| {
+            docvec!["@external(", t, ", \"", m, "\", \"", f, "\")", line()]
+        };
+        let doc = match function.external_erlang.as_ref() {
+            Some((m, f)) => doc.append(external("erlang", m, f)),
+            None => doc,
+        };
+        let doc = match function.external_javascript.as_ref() {
+            Some((m, f)) => doc.append(external("javascript", m, f)),
+            None => doc,
+        };
+
         // Fn name and args
-        let head = pub_(*public)
+        let head = doc
+            .append(pub_(function.public))
             .append("fn ")
-            .append(name)
-            .append(wrap_args(args.iter().map(|e| self.fn_arg(e))));
+            .append(&function.name)
+            .append(wrap_args(function.arguments.iter().map(|e| self.fn_arg(e))));
 
         // Add return annotation
-        let head = match return_annotation {
+        let head = match &function.return_annotation {
             Some(anno) => head.append(" -> ").append(self.type_ast(anno)),
             None => head,
         }
         .group();
 
+        let body = &function.body;
+        if body.len() == 1 && body.first().is_placeholder() {
+            return head;
+        }
+
         // Format body
         let body = self.statements(body);
 
         // Add any trailing comments
-        let body = match printed_comments(self.pop_comments(end_location), false) {
+        let body = match printed_comments(self.pop_comments(function.end_position), false) {
             Some(comments) => body.append(line()).append(comments),
             None => body,
         };
@@ -630,6 +635,8 @@ impl<'comments> Formatter<'comments> {
         let comments = self.pop_comments(expr.start_byte_index());
 
         let document = match expr {
+            UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
+
             UntypedExpr::Panic { .. } => "panic".to_doc(),
 
             UntypedExpr::Todo { label: None, .. } => "todo".to_doc(),
@@ -838,6 +845,8 @@ impl<'comments> Formatter<'comments> {
 
     fn call<'a>(&mut self, fun: &'a UntypedExpr, args: &'a [CallArg<UntypedExpr>]) -> Document<'a> {
         let expr = match fun {
+            UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
+
             UntypedExpr::PipeLine { .. } => break_block(self.expr(fun)),
 
             UntypedExpr::BinOp { .. }
@@ -1530,6 +1539,8 @@ impl<'comments> Formatter<'comments> {
 
     fn bit_string_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
+            UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
+
             UntypedExpr::BinOp { .. } => wrap_block(self.expr(expr)),
 
             UntypedExpr::Int { .. }
