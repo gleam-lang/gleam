@@ -1,4 +1,4 @@
-use crate::assert_erl;
+use crate::{assert_erl, assert_module_error};
 
 #[test]
 fn integration_test1_3() {
@@ -114,6 +114,30 @@ pub fn one(x: Int) -> Int {
     );
 }
 
+#[test]
+fn no_type_annotation_for_parameter() {
+    assert_module_error!(
+        r#"
+@external(erlang, "one", "one")
+pub fn one(x: Int, y) -> Int {
+  todo
+}
+"#
+    );
+}
+
+#[test]
+fn no_type_annotation_for_return() {
+    assert_module_error!(
+        r#"
+@external(erlang, "one", "one")
+pub fn one(x: Int) {
+  todo
+}
+"#
+    );
+}
+
 // TODO: bodies absent is not an error if there is an external impl
 // TODO: without a body or a suitable external impl is an error
-// TODO: without type annotations is an error
+// TODO: holes are an error if there is an external impl

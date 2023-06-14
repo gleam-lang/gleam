@@ -1,6 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Runtime, Target};
 use crate::diagnostic::{Diagnostic, Label, Location};
+use crate::type_::error::MissingAnnotation;
 use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{
@@ -2069,11 +2070,39 @@ value, or use `let assert` rather than `let`."
                     let mut text = "This type alias is defined in terms of itself.\n".into();
                     write_cycle(&mut text, cycle);
                     text.push_str(
-                        "If we tried to compile this recursive type it would expand forever
-in a loop, and we'd never get the final type.",
+                        "If we tried to compile this recursive type it would expand
+forever in a loop, and we'd never get the final type.",
                     );
                     Diagnostic {
                         title: "Type cycle".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::ExternalMissingAnnotation { location, kind } => {
+                    let kind = match kind {
+                        MissingAnnotation::Parameter => "parameter",
+                        MissingAnnotation::Return => "return",
+                    };
+                    let text = format!(
+                        "A {kind} annotation is missing from this function.
+
+Functions with external implementations must have type annotations
+so we can tell what type of values they accept and return.",
+                    );
+                    Diagnostic {
+                        title: "Missing type annotation".into(),
                         text,
                         hint: None,
                         level: Level::Error,
@@ -2327,8 +2356,8 @@ The error from the parser was:
 
             Error::DependencyResolutionFailed(error) => {
                 let text = format!(
-                    "An error occurred while determining what dependency packages and versions
-should be downloaded.
+                    "An error occurred while determining what dependency packages and
+versions should be downloaded.
 The error from the version resolver library was:
 
 {}",
@@ -2343,17 +2372,19 @@ The error from the version resolver library was:
                 }
             }
 
-            Error::GitDependencyUnsuported => {
-                Diagnostic {
-                    title: "Git dependencies are not currently supported".into(),
-                    text: "Please remove all git dependencies from the gleam.toml file".into(),
-                    hint: None,
-                    location: None,
-                    level: Level::Error,
-                }
-            }
+            Error::GitDependencyUnsuported => Diagnostic {
+                title: "Git dependencies are not currently supported".into(),
+                text: "Please remove all git dependencies from the gleam.toml file".into(),
+                hint: None,
+                location: None,
+                level: Level::Error,
+            },
 
-            Error::WrongDependencyProvided { path, expected, found } => {
+            Error::WrongDependencyProvided {
+                path,
+                expected,
+                found,
+            } => {
                 let text = format!(
                     "Expected package {} at path {} but found {} instead",
                     expected,
@@ -2370,12 +2401,14 @@ The error from the version resolver library was:
                 }
             }
 
-            Error::ProvidedDependencyConflict{package, source_1, source_2} => {
+            Error::ProvidedDependencyConflict {
+                package,
+                source_1,
+                source_2,
+            } => {
                 let text = format!(
                     "The package {} is provided as both {} nad {}",
-                    package,
-                    source_1,
-                    source_2
+                    package, source_1, source_2
                 );
 
                 Diagnostic {
@@ -2432,17 +2465,17 @@ licences = ["Apache-2.0"]"#
                 }
             }
 
-            Error::PublishNonHexDependencies {
-                package
-            } => {
-                Diagnostic {
-                    title: "Unblished dependencies".into(),
-                    text: wrap_format!("The package cannot be published to Hex because dependency {} is not a Hex dependency", package),
-                    hint: None,
-                    location: None,
-                    level: Level::Error
-                }
-            }
+            Error::PublishNonHexDependencies { package } => Diagnostic {
+                title: "Unblished dependencies".into(),
+                text: wrap_format!(
+                    "The package cannot be published to Hex \
+because dependency {} is not a Hex dependency",
+                    package
+                ),
+                hint: None,
+                location: None,
+                level: Level::Error,
+            },
 
             Error::UnsupportedBuildTool {
                 package,
@@ -2466,10 +2499,7 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                 }
             }
 
-            Error::FailedToOpenDocs {
-                path,
-                error,
-            } => {
+            Error::FailedToOpenDocs { path, error } => {
                 let error = format!("\nThe error message from the library was:\n\n    {error}\n");
                 let text = format!(
                     "An error occurred while trying to open the docs:
@@ -2491,21 +2521,19 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
             Error::IncompatibleCompilerVersion {
                 package,
                 required_version,
-                gleam_version
+                gleam_version,
             } => {
                 let text = format!(
                     "The package {} requires a Gleam version satisfying {} \
 but you are using v{}.",
-                    package,
-                    required_version,
-                    gleam_version
+                    package, required_version, gleam_version
                 );
                 Diagnostic {
                     title: "Incompatible Gleam version".into(),
                     text,
                     hint: None,
                     location: None,
-                    level: Level::Error
+                    level: Level::Error,
                 }
             }
 

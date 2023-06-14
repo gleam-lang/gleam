@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests;
 
+use crate::ast::UntypedArg;
 use crate::dep_tree;
+use crate::type_::error::MissingAnnotation;
 use crate::{
     ast::{
         self, BitStringSegmentOption, CustomType, Definition, DefinitionLocation, ExternalFunction,
@@ -682,7 +684,7 @@ fn infer_function(
         location,
         name,
         public,
-        arguments: args,
+        arguments,
         body,
         return_annotation,
         end_position: end_location,
@@ -699,9 +701,21 @@ fn infer_function(
         .fn_types()
         .expect("Preregistered type for fn was not a fn");
 
+    let external = match environment.target {
+        Target::Erlang => &external_erlang,
+        Target::JavaScript => &external_javascript,
+    };
+    let (impl_module, impl_function) = match external {
+        None => (module_name.clone(), name.clone()),
+        Some((m, f)) => {
+            ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
+            (m.clone(), f.clone())
+        }
+    };
+
     // Infer the type using the preregistered args + return types as a starting point
     let (type_, args, body, safe_to_generalise) = environment.in_new_scope(|environment| {
-        let args = args
+        let args_types = arguments
             .into_iter()
             .zip(&args_types)
             .map(|(a, t)| a.set_type(t.clone()))
@@ -710,7 +724,8 @@ fn infer_function(
         expr_typer.hydrator = hydrators
             .remove(&name)
             .expect("Could not find hydrator for fn");
-        let (args, body) = expr_typer.infer_fn_with_known_types(args, body, Some(return_type))?;
+        let (args, body) =
+            expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type))?;
         let args_types = args.iter().map(|a| a.type_.clone()).collect();
         let typ = fn_(args_types, body.last().type_());
         let safe_to_generalise = !expr_typer.ungeneralised_function_used;
@@ -720,18 +735,11 @@ fn infer_function(
     // Assert that the inferred type matches the type of any recursive call
     unify(preregistered_type, type_.clone()).map_err(|e| convert_unify_error(e, location))?;
 
+    // TODO: remove this generalisation part, it is handled at the level above.
     // Generalise the function if safe to do so
     let type_ = if safe_to_generalise {
         let _ = environment.ungeneralised_functions.remove(&name);
         let type_ = type_::generalise(type_);
-        let external = match environment.target {
-            Target::Erlang => &external_erlang,
-            Target::JavaScript => &external_javascript,
-        };
-        let (impl_module, impl_function) = match external {
-            Some((m, f)) => (m.clone(), f.clone()),
-            None => (module_name.clone(), name.clone()),
-        };
         let variant = ValueConstructorVariant::ModuleFn {
             documentation: doc.clone(),
             name: impl_function,
@@ -761,6 +769,28 @@ fn infer_function(
         external_erlang,
         external_javascript,
     }))
+}
+
+fn ensure_annotations_present(
+    arguments: &[UntypedArg],
+    return_annotation: Option<&TypeAst>,
+    location: SrcSpan,
+) -> Result<(), Error> {
+    for arg in arguments {
+        if arg.annotation.is_none() {
+            return Err(Error::ExternalMissingAnnotation {
+                location: arg.location,
+                kind: MissingAnnotation::Parameter,
+            });
+        }
+    }
+    if return_annotation.is_none() {
+        return Err(Error::ExternalMissingAnnotation {
+            location,
+            kind: MissingAnnotation::Return,
+        });
+    }
+    Ok(())
 }
 
 fn infer_external_function(
