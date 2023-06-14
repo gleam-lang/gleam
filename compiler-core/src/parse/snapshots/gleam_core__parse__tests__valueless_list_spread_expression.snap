@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 362
+assertion_line: 386
 expression: "let x = [1, 2, 3, ..]"
 ---
 error: Syntax error
   ┌─ /src/parse/error.gleam:1:21
   │
 1 │ let x = [1, 2, 3, ..]
-  │                     ^ I was expecting a value here.
+  │                     ^ I was expecting a value here
 
 If a list expression has a spread then a tail must also be given.
 

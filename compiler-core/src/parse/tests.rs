@@ -15,11 +15,28 @@ macro_rules! assert_error {
     };
 }
 
+macro_rules! assert_module_error {
+    ($src:expr) => {
+        let result = $crate::parse::tests::expect_module_error($src);
+        insta::assert_snapshot!(insta::internals::AutoName, result, $src);
+    };
+}
+
 macro_rules! assert_parse {
     ($src:expr) => {
         let result = crate::parse::parse_statement_sequence($src).expect("should parse");
         insta::assert_snapshot!(insta::internals::AutoName, &format!("{:#?}", result), $src);
     };
+}
+
+pub fn expect_module_error(src: &str) -> String {
+    let result = crate::parse::parse_module(src).expect_err("should not parse");
+    let error = crate::error::Error::Parse {
+        src: src.into(),
+        path: PathBuf::from("/src/parse/error.gleam"),
+        error: result,
+    };
+    error.pretty_string()
 }
 
 pub fn expect_error(src: &str) -> String {
@@ -406,5 +423,31 @@ fn argument_scope() {
 1 + let a = 5
 a
 "
+    );
+}
+
+#[test]
+fn multiple_external_for_same_project_erlang() {
+    assert_module_error!(
+        r#"
+@external(erlang, "one", "two")
+@external(erlang, "three", "four")
+pub fn one(x: Int) -> Int {
+  todo
+}
+"#
+    );
+}
+
+#[test]
+fn multiple_external_for_same_project_javascript() {
+    assert_module_error!(
+        r#"
+@external(javascript, "one", "two")
+@external(javascript, "three", "four")
+pub fn one(x: Int) -> Int {
+  todo
+}
+"#
     );
 }

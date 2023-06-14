@@ -32,42 +32,40 @@ impl ParseError {
     pub fn details(&self) -> (&'static str, Vec<String>) {
         match &self.error {
             ParseErrorType::ExpectedEqual => ("I was expecting a '=' after this", vec![]),
-            ParseErrorType::ExpectedExpr => ("I was expecting an expression after this.", vec![]),
-            ParseErrorType::ExpectedName => ("I was expecting a name here.", vec![]),
-            ParseErrorType::ExpectedPattern => ("I was expecting a pattern after this.", vec![]),
+            ParseErrorType::ExpectedExpr => ("I was expecting an expression after this", vec![]),
+            ParseErrorType::ExpectedName => ("I was expecting a name here", vec![]),
+            ParseErrorType::ExpectedPattern => ("I was expecting a pattern after this", vec![]),
             ParseErrorType::ExpectedType => (
-                "I was expecting a type after this.",
+                "I was expecting a type after this",
                 vec!["See: https://gleam.run/book/tour/let-bindings.html".into()],
             ),
-            ParseErrorType::ExpectedUpName => ("I was expecting a type name here.", vec![]),
-            ParseErrorType::ExpectedValue => ("I was expecting a value after this.", vec![]),
-            ParseErrorType::ExpectedStatement => {
-                ("I was expecting a statement after this.", vec![])
-            }
+            ParseErrorType::ExpectedUpName => ("I was expecting a type name here", vec![]),
+            ParseErrorType::ExpectedValue => ("I was expecting a value after this", vec![]),
+            ParseErrorType::ExpectedStatement => ("I was expecting a statement after this", vec![]),
             ParseErrorType::ExtraSeparator => (
-                "This is an extra delimiter.",
+                "This is an extra delimiter",
                 vec!["Hint: Try removing it?".into()],
             ),
             ParseErrorType::ExprLparStart => (
-                "This parenthesis cannot be understood here.",
+                "This parenthesis cannot be understood here",
                 vec!["Hint: To group expressions in gleam use \"{\" and \"}\"".into()],
             ),
             ParseErrorType::IncorrectName => (
-                "I'm expecting a lowercase name here.",
+                "I'm expecting a lowercase name here",
                 vec![wrap(
                     "Hint: Variable and module names start with a lowercase letter, \
 and can contain a-z, 0-9, or _.",
                 )],
             ),
             ParseErrorType::IncorrectUpName => (
-                "I'm expecting a type name here.",
+                "I'm expecting a type name here",
                 vec![wrap(
                     "Hint: Type names start with a uppercase letter, and can \
 contain a-z, A-Z, or 0-9.",
                 )],
             ),
             ParseErrorType::InvalidBitStringSegment => (
-                "This is not a valid BitString segment option.",
+                "This is not a valid BitString segment option",
                 vec![
                     "Hint: Valid BitString segment options are:".into(),
                     wrap(
@@ -78,18 +76,18 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ],
             ),
             ParseErrorType::InvalidBitStringUnit => (
-                "This is not a valid BitString unit value.",
+                "This is not a valid BitString unit value",
                 vec![
                     "Hint: unit must be an integer literal >= 1 and <= 256".into(),
                     "See: https://gleam.run/book/tour/bit-strings".into(),
                 ],
             ),
             ParseErrorType::InvalidTailPattern => (
-                "This part of a list pattern can only be a name or a discard.",
+                "This part of a list pattern can only be a name or a discard",
                 vec![],
             ),
             ParseErrorType::InvalidTupleAccess => (
-                "This integer is not valid for tuple access.",
+                "This integer is not valid for tuple access",
                 vec![
                     "Hint: Only non negative integer literals like 0, or 1_000 can be used."
                         .to_string(),
@@ -97,18 +95,18 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ),
             ParseErrorType::LexError { error: lex_err } => lex_err.to_parse_error_info(),
             ParseErrorType::NestedBitStringPattern => {
-                ("BitString patterns cannot be nested.", vec![])
+                ("BitString patterns cannot be nested", vec![])
             }
             ParseErrorType::NoCaseClause => (
-                "This case expression has no clauses.",
+                "This case expression has no clauses",
                 vec!["See: https://gleam.run/book/tour/case-expressions".into()],
             ),
             ParseErrorType::NotConstType => (
-                "This type is not allowed in module constants.",
+                "This type is not allowed in module constants",
                 vec!["See: https://gleam.run/book/tour/constants".into()],
             ),
             ParseErrorType::NoExpression => (
-                "There must be an expression in here.",
+                "There must be an expression in here",
                 vec!["Hint: Put an expression in there or remove the brackets.".into()],
             ),
             ParseErrorType::NoLetBinding => (
@@ -119,7 +117,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ],
             ),
             ParseErrorType::NoValueAfterEqual => (
-                "I was expecting to see a value after this equals sign.",
+                "I was expecting to see a value after this equals sign",
                 vec![],
             ),
             ParseErrorType::OpaqueTypeAlias => (
@@ -127,17 +125,17 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 vec!["See: https://gleam.run/book/tour/type-aliases".into()],
             ),
             ParseErrorType::OpNakedRight => (
-                "This operator has no value on its right side.",
+                "This operator has no value on its right side",
                 vec!["Hint: Remove it or put a value after it.".into()],
             ),
             ParseErrorType::TooManyArgHoles => (
-                "There is more than 1 argument hole in this function call.",
+                "There is more than 1 argument hole in this function call",
                 vec![
                     "Hint: Function calls can have at most one argument hole.".into(),
                     "See: https://gleam.run/book/tour/functions".into(),
                 ],
             ),
-            ParseErrorType::UnexpectedEof => ("The module ended unexpectedly.", vec![]),
+            ParseErrorType::UnexpectedEof => ("The module ended unexpectedly", vec![]),
             ParseErrorType::ListSpreadWithoutElements => (
                 "This spread does nothing",
                 vec![
@@ -146,7 +144,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ],
             ),
             ParseErrorType::UnexpectedReservedWord => (
-                "This is a reserved word.",
+                "This is a reserved word",
                 vec![
                     "Hint: I was expecting to see a name here.".into(),
                     "See: https://gleam.run/book/tour/reserved-words".into(),
@@ -160,7 +158,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ],
             ),
             ParseErrorType::UnexpectedLabel => (
-                "Argument labels are not allowed for anonymous functions.",
+                "Argument labels are not allowed for anonymous functions",
                 vec!["Please remove the argument label.".into()],
             ),
             ParseErrorType::UnexpectedToken { expected, hint } => {
@@ -192,18 +190,22 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ],
             ),
             ParseErrorType::UnexpectedFunction => (
-                "Functions can only be called within other functions.",
+                "Functions can only be called within other functions",
                 vec![],
             ),
             ParseErrorType::ListSpreadWithoutTail => (
-                "I was expecting a value here.",
+                "I was expecting a value here",
                 vec!["If a list expression has a spread then a tail must also be given.".into()],
             ),
             ParseErrorType::UnknownAttribute => (
                 "I was expecting a target name here",
                 vec!["Try `erlang` or `javascript` instead.".into()],
             ),
-            ParseErrorType::UnknownTarget => ("I don't know what this attribute is.", vec![]),
+            ParseErrorType::DuplicateAttribute => (
+                "Duplicate attribute",
+                vec!["This attribute has already been given.".into()],
+            ),
+            ParseErrorType::UnknownTarget => ("I don't know what this attribute is", vec![]),
         }
     }
 }
@@ -238,6 +240,7 @@ pub enum ParseErrorType {
     OpNakedRight, // Operator with no value to the right
     OpaqueTypeAlias, // Type aliases cannot be opaque
     TooManyArgHoles, // a function call can have at most 1 arg hole
+    DuplicateAttribute, // an attribute was used more than once
     UnknownAttribute, // an attribute was used that is not known
     UnknownTarget, // an unknown target was used
     ListSpreadWithoutElements, // Pointless spread: `[..xs]`
@@ -267,15 +270,15 @@ impl LexicalError {
                 ],
             ),
             LexicalErrorType::DigitOutOfRadix => {
-                ("This digit is too big for the specified radix.", vec![])
+                ("This digit is too big for the specified radix", vec![])
             }
             LexicalErrorType::NumTrailingUnderscore => (
-                "Numbers cannot have a trailing underscore.",
+                "Numbers cannot have a trailing underscore",
                 vec!["Hint: remove it.".into()],
             ),
-            LexicalErrorType::RadixIntNoValue => ("This integer has no value.", vec![]),
+            LexicalErrorType::RadixIntNoValue => ("This integer has no value", vec![]),
             LexicalErrorType::UnexpectedStringEnd => {
-                ("The string starting here was left open.", vec![])
+                ("The string starting here was left open", vec![])
             }
             LexicalErrorType::UnrecognizedToken { tok } if *tok == ';' => (
                 "Remove this semicolon",
@@ -285,11 +288,11 @@ impl LexicalError {
                 ],
             ),
             LexicalErrorType::UnrecognizedToken { .. } => (
-                "I can't figure out what to do with this character.",
+                "I can't figure out what to do with this character",
                 vec!["Hint: Is it a typo?".into()],
             ),
             LexicalErrorType::BadName { name } => (
-                "This is not a valid name.",
+                "This is not a valid name",
                 vec![
                     "Hint: Names start with a lowercase letter and contain a-z, 0-9, or _."
                         .to_string(),
@@ -297,14 +300,14 @@ impl LexicalError {
                 ],
             ),
             LexicalErrorType::BadDiscardName { name } => (
-                "This is not a valid discard name.",
+                "This is not a valid discard name",
                 vec![
                     "Hint: Discard names start with _ and contain a-z, 0-9, or _.".into(),
                     format!("Try: _{}", name.to_snake_case()),
                 ],
             ),
             LexicalErrorType::BadUpname { name } => (
-                "This is not a valid upname.",
+                "This is not a valid upname",
                 vec![
                     "Hint: Upnames start with an uppercase letter and contain".into(),
                     "only lowercase letters, numbers, and uppercase letters.".into(),

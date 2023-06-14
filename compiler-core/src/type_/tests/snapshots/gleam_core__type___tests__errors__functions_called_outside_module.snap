@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 354
+assertion_line: 316
 expression: "const first = list.at([1], 0)"
 ---
 error: Syntax error
   ┌─ /src/one/two.gleam:1:15
   │
 1 │ const first = list.at([1], 0)
-  │               ^^^^^^^^ Functions can only be called within other functions.
+  │               ^^^^^^^^ Functions can only be called within other functions
 
 
