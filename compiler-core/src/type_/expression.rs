@@ -68,6 +68,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => Ok(self.infer_todo(location, kind, label)),
 
+            // A placeholder is used when the author has not provided a function
+            // body, instead only giving an external implementation for this
+            // target. This placeholder implementation will never be used so we
+            // treat it as a `panic` expression during analysis.
             UntypedExpr::Placeholder { location } | UntypedExpr::Panic { location } => {
                 Ok(self.infer_panic(location))
             }

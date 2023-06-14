@@ -707,15 +707,21 @@ fn infer_function(
         .fn_types()
         .expect("Preregistered type for fn was not a fn");
 
+    // Find the external implementation for the current target, if one has been given.
     let external = match environment.target {
         Target::Erlang => &external_erlang,
         Target::JavaScript => &external_javascript,
     };
     let (impl_module, impl_function) = match external {
+        // There was no external implementation, so a Gleam one must be given.
         None => {
             ensure_body_given(&body, location)?;
             (module_name.clone(), name.clone())
         }
+        // There was an external implementation, so type annotations are
+        // mandatory as the Gleam implementation may be absent, and because we
+        // think you should always specify types for external functions for
+        // clarity + to avoid accidental mistakes.
         Some((m, f)) => {
             ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
             (m.clone(), f.clone())
