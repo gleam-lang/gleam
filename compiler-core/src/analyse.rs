@@ -636,6 +636,8 @@ fn register_value_from_function(
         return_annotation,
         public,
         documentation,
+        external_erlang,
+        external_javascript,
         ..
     } = f;
     assert_unique_name(names, name, *location)?;
@@ -646,7 +648,11 @@ fn register_value_from_function(
     }
     let field_map = builder.finish();
     let mut hydrator = Hydrator::new();
-    hydrator.permit_holes(true);
+
+    // When external implementations are present then the type annotations
+    // must be given in full, so we disallow holes in the annotations.
+    hydrator.permit_holes(external_erlang.is_none() && external_javascript.is_none());
+
     let arg_types = args
         .iter()
         .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
@@ -724,6 +730,7 @@ fn infer_function(
         expr_typer.hydrator = hydrators
             .remove(&name)
             .expect("Could not find hydrator for fn");
+
         let (args, body) =
             expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type))?;
         let args_types = args.iter().map(|a| a.type_.clone()).collect();

@@ -138,6 +138,54 @@ pub fn one(x: Int) {
     );
 }
 
+#[test]
+fn hole_parameter_erlang() {
+    assert_module_error!(
+        r#"
+@external(erlang, "one", "one")
+pub fn one(x: List(_)) -> Int {
+  todo
+}
+"#
+    );
+}
+
+#[test]
+fn hole_return_erlang() {
+    assert_module_error!(
+        r#"
+@external(erlang, "one", "one")
+pub fn one(x: List(Int)) -> List(_) {
+  todo
+}
+"#
+    );
+}
+
+#[test]
+fn hole_parameter_javascript() {
+    assert_module_error!(
+        r#"
+@external(javascript, "one", "one")
+pub fn one(x: List(_)) -> Int {
+  todo
+}
+"#
+    );
+}
+
+#[test]
+fn hole_return_javascript() {
+    assert_module_error!(
+        r#"
+@external(javascript, "one", "one")
+pub fn one(x: List(Int)) -> List(_) {
+  todo
+}
+"#
+    );
+}
+
 // TODO: bodies absent is not an error if there is an external impl
 // TODO: without a body or a suitable external impl is an error
 // TODO: holes are an error if there is an external impl
