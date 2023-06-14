@@ -231,7 +231,7 @@ enum Command {
     /// Outputs a completion script for given `shell`
     ///
     /// Output can be piped to the corresponding "completion-file" for your shell.
-    Completions {
+    ShellCompletions {
         /// Which shell to generate completions for
         #[clap(long, required = true, value_enum)]
         shell: Shell,
@@ -453,7 +453,7 @@ fn main() {
 
         Command::Export(ExportTarget::ErlangShipment) => export::erlang_shipment(),
         Command::Export(ExportTarget::HexTarball) => export::hex_tarball(),
-        Command::Completions { shell } => print_completions(shell),
+        Command::ShellCompletions { shell } => print_completions(shell),
     };
 
     match result {
