@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/erlang/tests/external_fn.rs
+assertion_line: 167
+expression: "\n@external(javascript, \"one\", \"one\")\npub fn one(x: List(_)) -> Int {\n  todo\n}\n"
+---
+error: Unexpected type hole
+  ┌─ /src/one/two.gleam:3:20
+  │
+3 │ pub fn one(x: List(_)) -> Int {
+  │                    ^ I need to know what this is
+
+We need to know the exact type here so type holes cannot be used.
+
