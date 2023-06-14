@@ -204,3 +204,13 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn no_body() {
+    assert_js!(
+        r#"
+@external(javascript, "one", "one")
+pub fn one(x: Int) -> Int
+"#
+    );
+}

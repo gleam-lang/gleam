@@ -1454,25 +1454,37 @@ where
         )?;
         let (_, rpar_e) = self.expect_one(&Token::RightParen)?;
         let return_annotation = self.parse_type_annotation(&Token::RArrow)?;
-        let _ = self.expect_one(&Token::LeftBrace)?;
-        let some_body = self.parse_statement_seq()?;
-        let (_, rbr_e) = self.expect_one(&Token::RightBrace)?;
-        let end = return_annotation
-            .as_ref()
-            .map(|l| l.location().end)
-            .unwrap_or_else(|| if is_anon { rbr_e } else { rpar_e });
-        let body = match some_body {
-            None => vec1![Statement::Expression(UntypedExpr::Todo {
-                kind: TodoKind::EmptyFunction,
-                location: SrcSpan { start, end },
-                label: None,
-            })],
-            Some((body, _)) => body,
+
+        let (body, end, end_position) = match self.maybe_one(&Token::LeftBrace) {
+            Some(_) => {
+                let some_body = self.parse_statement_seq()?;
+                let (_, rbr_e) = self.expect_one(&Token::RightBrace)?;
+                let end = return_annotation
+                    .as_ref()
+                    .map(|l| l.location().end)
+                    .unwrap_or_else(|| if is_anon { rbr_e } else { rpar_e });
+                let body = match some_body {
+                    None => vec1![Statement::Expression(UntypedExpr::Todo {
+                        kind: TodoKind::EmptyFunction,
+                        location: SrcSpan { start, end },
+                        label: None,
+                    })],
+                    Some((body, _)) => body,
+                };
+                (body, end, rbr_e)
+            }
+            None => {
+                let body = vec1![Statement::Expression(UntypedExpr::Placeholder {
+                    location: SrcSpan::new(start, rpar_e)
+                })];
+                (body, rpar_e, rpar_e)
+            }
         };
+
         Ok(Some(Definition::Function(Function {
             documentation,
             location: SrcSpan { start, end },
-            end_position: rbr_e,
+            end_position,
             public,
             name,
             arguments: args,

@@ -4,6 +4,7 @@ mod asignments;
 mod bit_string;
 mod blocks;
 mod conditional_compilation;
+mod external_fn;
 mod external_types;
 mod record_update;
 mod tuple;
