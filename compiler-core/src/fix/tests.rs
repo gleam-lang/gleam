@@ -141,7 +141,8 @@ if javascript {
   pub external fn main() -> Int = "wobble" "main"
 }
 "#),
-        r#"@external(javascript, "wobble", "main")
+        r#"@target(javascript)
+@external(javascript, "wobble", "main")
 pub fn main() -> Int
 "#
     )
@@ -155,7 +156,8 @@ if erlang {
   pub external fn main() -> Int = "wobble" "main"
 }
 "#),
-        r#"@external(erlang, "wobble", "main")
+        r#"@target(erlang)
+@external(erlang, "wobble", "main")
 pub fn main() -> Int
 "#
     )
