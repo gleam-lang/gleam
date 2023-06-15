@@ -346,15 +346,15 @@ fn module_statement<'a>(
     statement: &'a TypedDefinition,
     module: &'a str,
     line_numbers: &'a LineNumbers,
-) -> Vec<Document<'a>> {
+) -> Option<Document<'a>> {
     match statement {
         Definition::TypeAlias(TypeAlias { .. })
         | Definition::CustomType(CustomType { .. })
         | Definition::Import(Import { .. })
         | Definition::ModuleConstant(ModuleConstant { .. })
-        | Definition::ExternalFunction(ExternalFunction { public: false, .. }) => vec![],
+        | Definition::ExternalFunction(ExternalFunction { public: false, .. }) => None,
 
-        Definition::Function(function) => vec![module_function(function, module, line_numbers)],
+        Definition::Function(function) => module_function(function, module, line_numbers),
 
         Definition::ExternalFunction(ExternalFunction {
             fun,
@@ -363,14 +363,14 @@ fn module_statement<'a>(
             name,
             return_type,
             ..
-        }) => vec![external_fun(
+        }) => Some(external_fun(
             current_module,
             name,
             module,
             fun,
             args,
             return_type,
-        )],
+        )),
     }
 }
 
@@ -378,7 +378,13 @@ fn module_function<'a>(
     function: &'a TypedFunction,
     module: &'a str,
     line_numbers: &'a LineNumbers,
-) -> Document<'a> {
+) -> Option<Document<'a>> {
+    // Private external functions don't need to render anything, the underlying
+    // Erlang implementation is used directly at the call site.
+    if function.external_erlang.is_some() && !function.public {
+        return None;
+    }
+
     let mut env = Env::new(module, &function.name, line_numbers);
     let var_usages = collect_type_var_usages(
         HashMap::new(),
@@ -399,11 +405,13 @@ fn module_function<'a>(
         .map(|(module, function)| docvec![module, ":", function, arguments.clone()])
         .unwrap_or_else(|| statement_sequence(&function.body, &mut env));
 
-    spec.append(atom(function.name.to_string()))
+    let doc = spec
+        .append(atom(function.name.to_string()))
         .append(arguments)
         .append(" ->")
         .append(line().append(body).nest(INDENT).group())
-        .append(".")
+        .append(".");
+    Some(doc)
 }
 
 fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {

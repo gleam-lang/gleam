@@ -204,3 +204,17 @@ pub fn one(x: Int) -> Int
 "#
     );
 }
+
+#[test]
+fn private() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  do()
+}
+
+@external(erlang, "library", "main")
+fn do() -> Int
+"#
+    );
+}
