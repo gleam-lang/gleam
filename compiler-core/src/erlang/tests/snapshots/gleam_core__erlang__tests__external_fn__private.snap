@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/erlang/tests/external_fn.rs
+assertion_line: 210
+expression: "\npub fn main() {\n  do()\n}\n\n@external(erlang, \"library\", \"main\")\nfn do() -> Int\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([main/0]).
+
+-spec main() -> integer().
+main() ->
+    library:main().
+
