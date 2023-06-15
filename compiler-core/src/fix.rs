@@ -2,10 +2,7 @@
 mod tests;
 
 use smol_str::SmolStr;
-use std::{
-    collections::{HashMap, HashSet},
-    path::Path,
-};
+use std::{collections::HashMap, path::Path};
 use vec1::vec1;
 
 use crate::{
@@ -40,9 +37,34 @@ pub fn parse_fix_and_format(src: &SmolStr, path: &Path) -> Result<String> {
 }
 
 #[derive(Debug, Default)]
+struct Replacement {
+    both: Option<UntypedFunction>,
+    erlang: Option<UntypedFunction>,
+    javascript: Option<UntypedFunction>,
+}
+
+impl Replacement {
+    pub fn take_for(&mut self, target: Target) -> Option<TargettedDefinition> {
+        self.both
+            .take()
+            .map(Definition::Function)
+            .map(TargettedDefinition::Any)
+            .or_else(|| {
+                let function = match target {
+                    Target::Erlang => self.erlang.take(),
+                    Target::JavaScript => self.javascript.take(),
+                }?;
+                Some(TargettedDefinition::Only(
+                    target,
+                    Definition::Function(function),
+                ))
+            })
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct Fixer {
-    replacements: HashMap<SmolStr, UntypedFunction>,
-    replaced: HashSet<SmolStr>,
+    replacements: HashMap<SmolStr, Replacement>,
 }
 
 impl Fixer {
@@ -66,13 +88,14 @@ impl Fixer {
 
     fn replace(&mut self, definition: TargettedDefinition) -> Option<TargettedDefinition> {
         match definition {
-            TargettedDefinition::Only(_, Definition::ExternalFunction(f))
-            | TargettedDefinition::Any(Definition::ExternalFunction(f)) => {
-                if !self.replaced.insert(f.name.clone()) {
-                    return None;
-                }
-                let definition = self.replacements.remove(&f.name)?;
-                Some(TargettedDefinition::Any(Definition::Function(definition)))
+            TargettedDefinition::Only(t, Definition::ExternalFunction(f)) => {
+                self.replacements.get_mut(&f.name)?.take_for(t)
+            }
+
+            TargettedDefinition::Any(Definition::ExternalFunction(f)) => {
+                let replacement = self.replacements.get_mut(&f.name)?;
+                let function = replacement.both.take()?;
+                Some(TargettedDefinition::Any(Definition::Function(function)))
             }
 
             _ => Some(definition),
@@ -95,17 +118,17 @@ impl Fixer {
 
     fn convert_function(
         &mut self,
-        target: Option<Target>,
+        conditional_target: Option<Target>,
         external_function: &ExternalFunction<()>,
     ) {
-        let target = self.external_target(target, external_function);
-        let function = self.make_function(external_function);
+        let implementation_target = self.external_target(conditional_target, external_function);
+        let function = self.make_function(conditional_target, external_function);
 
         let external = Some((
             external_function.module.clone(),
             external_function.fun.clone(),
         ));
-        match target {
+        match implementation_target {
             Some(Target::Erlang) => function.external_erlang = external,
             Some(Target::JavaScript) => function.external_javascript = external,
             None => todo!("Handle unknown"),
@@ -114,26 +137,30 @@ impl Fixer {
 
     fn make_function(
         &mut self,
+        conditional_target: Option<Target>,
         external_function: &ExternalFunction<()>,
     ) -> &mut Function<(), UntypedExpr> {
-        self.replacements
+        let replacement = self
+            .replacements
             .entry(external_function.name.clone())
-            .or_insert_with(|| Function {
-                location: external_function.location,
-                end_position: external_function.location.end,
-                name: external_function.name.clone(),
-                body: vec1![Statement::Expression(UntypedExpr::Placeholder {
-                    location: external_function.location,
-                })],
-                public: external_function.public,
-                return_annotation: Some(external_function.return_.clone()),
-                return_type: (),
-                documentation: None,
-                external_erlang: None,
-                external_javascript: None,
-                // TODO: arguments
-                arguments: vec![],
-            })
+            .or_default();
+        let default = || function_from_external(external_function);
+
+        match conditional_target {
+            Some(Target::Erlang) if replacement.javascript.is_some() => {
+                let function = replacement.javascript.take().expect("Checked above");
+                replacement.both.insert(function)
+            }
+
+            Some(Target::JavaScript) if replacement.erlang.is_some() => {
+                let function = replacement.erlang.take().expect("Checked above");
+                replacement.both.insert(function)
+            }
+
+            Some(Target::Erlang) => replacement.erlang.get_or_insert_with(default),
+            Some(Target::JavaScript) => replacement.javascript.get_or_insert_with(default),
+            None => replacement.both.get_or_insert_with(default),
+        }
     }
 
     fn external_target(
@@ -160,5 +187,24 @@ impl Fixer {
         } else {
             None
         }
+    }
+}
+
+fn function_from_external(external_function: &ExternalFunction<()>) -> Function<(), UntypedExpr> {
+    Function {
+        location: external_function.location,
+        end_position: external_function.location.end,
+        name: external_function.name.clone(),
+        body: vec1![Statement::Expression(UntypedExpr::Placeholder {
+            location: external_function.location,
+        })],
+        public: external_function.public,
+        return_annotation: Some(external_function.return_.clone()),
+        return_type: (),
+        documentation: None,
+        external_erlang: None,
+        external_javascript: None,
+        // TODO: arguments
+        arguments: vec![],
     }
 }
