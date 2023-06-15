@@ -75,7 +75,7 @@ pub struct Fixer {
 impl Fixer {
     pub fn fix(assumed_target: Option<Target>, module: UntypedModule) -> UntypedModule {
         Self {
-            assumed_target: assumed_target,
+            assumed_target,
             ..Default::default()
         }
         .fix_module(module)
@@ -177,21 +177,18 @@ impl Fixer {
         target: Option<Target>,
         external_function: &ExternalFunction<()>,
     ) -> Option<Target> {
+        let module = &external_function.module;
         if let Some(target) = target {
             Some(target)
-        } else if external_function.module.ends_with(".jsx") {
+        } else if module.ends_with(".jsx")
+            || module.ends_with(".js")
+            || module.ends_with(".tsx")
+            || module.ends_with(".ts")
+            || module.ends_with(".mjs")
+            || module.contains('/')
+        {
             Some(Target::JavaScript)
-        } else if external_function.module.ends_with(".js") {
-            Some(Target::JavaScript)
-        } else if external_function.module.ends_with(".tsx") {
-            Some(Target::JavaScript)
-        } else if external_function.module.ends_with(".ts") {
-            Some(Target::JavaScript)
-        } else if external_function.module.ends_with(".mjs") {
-            Some(Target::JavaScript)
-        } else if external_function.module.contains("/") {
-            Some(Target::JavaScript)
-        } else if external_function.module.starts_with("Elixir.") {
+        } else if module.starts_with("Elixir.") {
             Some(Target::Erlang)
         } else {
             self.assumed_target
