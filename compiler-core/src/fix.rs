@@ -19,7 +19,7 @@ pub fn parse_fix_and_format(
     assumed_target: Option<Target>,
     src: &SmolStr,
     path: &Path,
-) -> Result<String> {
+) -> Result<(String, bool)> {
     // Parse
     let parsed = crate::parse::parse_module(src).map_err(|error| Error::Parse {
         path: path.to_path_buf(),
@@ -29,7 +29,7 @@ pub fn parse_fix_and_format(
     let intermediate = Intermediate::from_extra(&parsed.extra, src);
 
     // Fix
-    let module = Fixer::fix(assumed_target, parsed.module);
+    let (module, complete) = Fixer::fix(assumed_target, parsed.module);
 
     // Format
     let mut buffer = String::new();
@@ -37,7 +37,7 @@ pub fn parse_fix_and_format(
         .module(&module)
         .pretty_print(80, &mut buffer)?;
 
-    Ok(buffer)
+    Ok((buffer, complete))
 }
 
 #[derive(Debug, Default)]
@@ -45,6 +45,7 @@ struct Replacement {
     both: Option<UntypedFunction>,
     erlang: Option<UntypedFunction>,
     javascript: Option<UntypedFunction>,
+    no_change: bool,
 }
 
 impl Replacement {
@@ -70,15 +71,18 @@ impl Replacement {
 pub struct Fixer {
     assumed_target: Option<Target>,
     replacements: HashMap<SmolStr, Replacement>,
+    complete: bool,
 }
 
 impl Fixer {
-    pub fn fix(assumed_target: Option<Target>, module: UntypedModule) -> UntypedModule {
-        Self {
-            assumed_target,
-            ..Default::default()
-        }
-        .fix_module(module)
+    pub fn fix(assumed_target: Option<Target>, module: UntypedModule) -> (UntypedModule, bool) {
+        let mut fixer = Self {
+            assumed_target: assumed_target,
+            replacements: HashMap::new(),
+            complete: true,
+        };
+        let fixed = fixer.fix_module(module);
+        (fixed, fixer.complete)
     }
 
     fn fix_module(&mut self, mut module: UntypedModule) -> UntypedModule {
@@ -98,13 +102,23 @@ impl Fixer {
     fn replace(&mut self, definition: TargettedDefinition) -> Option<TargettedDefinition> {
         match definition {
             TargettedDefinition::Only(t, Definition::ExternalFunction(f)) => {
-                self.replacements.get_mut(&f.name)?.take_for(t)
+                let replacement = self.replacements.get_mut(&f.name)?;
+                if replacement.no_change {
+                    let external_function = Definition::ExternalFunction(f);
+                    Some(TargettedDefinition::Only(t, external_function))
+                } else {
+                    replacement.take_for(t)
+                }
             }
 
             TargettedDefinition::Any(Definition::ExternalFunction(f)) => {
                 let replacement = self.replacements.get_mut(&f.name)?;
-                let function = replacement.both.take()?;
-                Some(TargettedDefinition::Any(Definition::Function(function)))
+                if replacement.no_change {
+                    Some(TargettedDefinition::Any(Definition::ExternalFunction(f)))
+                } else {
+                    let function = replacement.both.take()?;
+                    Some(TargettedDefinition::Any(Definition::Function(function)))
+                }
             }
 
             _ => Some(definition),
@@ -130,7 +144,21 @@ impl Fixer {
         conditional_target: Option<Target>,
         external_function: &ExternalFunction<()>,
     ) {
-        let implementation_target = self.external_target(conditional_target, external_function);
+        let implementation_target =
+            match self.external_target(conditional_target, external_function) {
+                Some(target) => target,
+                // If we can't infer the target then we can't do anything with this
+                // function so we mark the module as incomplete and move on.
+                None => {
+                    self.complete = false;
+                    self.replacements
+                        .entry(external_function.name.clone())
+                        .or_default()
+                        .no_change = true;
+                    return;
+                }
+            };
+
         let function = self.make_function(conditional_target, external_function);
 
         let external = Some((
@@ -138,9 +166,8 @@ impl Fixer {
             external_function.fun.clone(),
         ));
         match implementation_target {
-            Some(Target::Erlang) => function.external_erlang = external,
-            Some(Target::JavaScript) => function.external_javascript = external,
-            None => todo!("Handle unknown"),
+            Target::Erlang => function.external_erlang = external,
+            Target::JavaScript => function.external_javascript = external,
         }
     }
 

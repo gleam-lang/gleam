@@ -1,7 +1,9 @@
 use super::*;
 
 fn fix(target: Option<Target>, src: &str) -> String {
-    parse_fix_and_format(target, &src.into(), Path::new("test")).unwrap()
+    let (out, complete) = parse_fix_and_format(target, &src.into(), Path::new("test")).unwrap();
+    assert!(complete);
+    out
 }
 
 #[test]
@@ -279,4 +281,14 @@ pub external fn main(wibble: Int, wobble: Float) -> Int = "app" "main"
 pub fn main(wibble wibble: Int, wobble wobble: Float) -> Int
 "#
     )
+}
+
+#[test]
+fn ambiguous_external() {
+    let src = r#"pub external fn main(wibble: Int, wobble: Float) -> Int =
+  "app" "main"
+"#;
+    let (out, complete) = parse_fix_and_format(None, &src.into(), Path::new("test")).unwrap();
+    assert!(!complete);
+    assert_eq!(out, src)
 }
