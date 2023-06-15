@@ -7,8 +7,8 @@ use vec1::vec1;
 
 use crate::{
     ast::{
-        Definition, ExternalFunction, Function, Statement, TargettedDefinition, UntypedExpr,
-        UntypedFunction, UntypedModule,
+        Arg, ArgNames, Definition, ExternalFunction, Function, Statement, TargettedDefinition,
+        UntypedExpr, UntypedFunction, UntypedModule,
     },
     build::Target,
     format::{Formatter, Intermediate},
@@ -191,6 +191,7 @@ impl Fixer {
 }
 
 fn function_from_external(external_function: &ExternalFunction<()>) -> Function<(), UntypedExpr> {
+    let mut i: u8 = 96;
     Function {
         location: external_function.location,
         end_position: external_function.location.end,
@@ -204,7 +205,26 @@ fn function_from_external(external_function: &ExternalFunction<()>) -> Function<
         documentation: None,
         external_erlang: None,
         external_javascript: None,
-        // TODO: arguments
-        arguments: vec![],
+        arguments: external_function
+            .arguments
+            .iter()
+            .map(|arg| Arg {
+                names: match arg.label.as_ref() {
+                    Some(label) => ArgNames::NamedLabelled {
+                        name: label.clone(),
+                        label: label.clone(),
+                    },
+                    None => {
+                        i += 1;
+                        ArgNames::Named {
+                            name: (i as char).to_string().into(),
+                        }
+                    }
+                },
+                location: arg.location,
+                annotation: Some(arg.annotation.clone()),
+                type_: (),
+            })
+            .collect(),
     }
 }

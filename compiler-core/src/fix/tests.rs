@@ -181,3 +181,27 @@ pub fn main() -> Int
 "#
     )
 }
+
+#[test]
+fn parameters() {
+    assert_eq!(
+        fix(r#"
+pub external fn main(Int, Float) -> Int = "app.js" "main"
+"#),
+        r#"@external(javascript, "app.js", "main")
+pub fn main(a: Int, b: Float) -> Int
+"#
+    )
+}
+
+#[test]
+fn labels() {
+    assert_eq!(
+        fix(r#"
+pub external fn main(wibble: Int, wobble: Float) -> Int = "app.js" "main"
+"#),
+        r#"@external(javascript, "app.js", "main")
+pub fn main(wibble wibble: Int, wobble wobble: Float) -> Int
+"#
+    )
+}
