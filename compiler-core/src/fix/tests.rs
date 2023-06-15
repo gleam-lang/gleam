@@ -138,12 +138,10 @@ fn if_javascript() {
     assert_eq!(
         fix(r#"
 if javascript {
-  // Hello
   pub external fn main() -> Int = "wobble" "main"
 }
 "#),
-        r#"// Hello
-@external(javascript, "wobble", "main")
+        r#"@external(javascript, "wobble", "main")
 pub fn main() -> Int
 "#
     )
@@ -154,12 +152,29 @@ fn if_erlang() {
     assert_eq!(
         fix(r#"
 if erlang {
-  // Hello
   pub external fn main() -> Int = "wobble" "main"
 }
 "#),
-        r#"// Hello
-@external(erlang, "wobble", "main")
+        r#"@external(erlang, "wobble", "main")
+pub fn main() -> Int
+"#
+    )
+}
+
+#[test]
+fn if_both() {
+    assert_eq!(
+        fix(r#"
+if erlang {
+  pub external fn main() -> Int = "wobble" "main"
+}
+
+if javascript {
+  pub external fn main() -> Int = "wobble" "main"
+}
+"#),
+        r#"@external(erlang, "wobble", "main")
+@external(javascript, "wobble", "main")
 pub fn main() -> Int
 "#
     )
