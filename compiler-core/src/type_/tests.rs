@@ -118,12 +118,10 @@ fn get_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> Vec<Warning> {
     warnings
         .take()
         .into_iter()
-        .map(|warning| match warning {
-            crate::Warning::Type { warning, .. } => warning,
-            crate::Warning::Parse { .. } => panic!("Unexpected parse warning"),
-            crate::Warning::InvalidSource { warning, .. } => warning,
         .filter_map(|warning| match warning {
-            _ => panic!("Unexpected warning."),
+            crate::Warning::Type { warning, .. } => Some(warning),
+            crate::Warning::Parse { .. } => panic!("Unexpected parse warning"),
+            crate::Warning::InvalidSource { .. } => None,
         })
         .collect_vec()
 }
