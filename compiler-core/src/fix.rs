@@ -1,12 +1,16 @@
 #[cfg(test)]
 mod tests;
 
-use std::path::Path;
-
 use smol_str::SmolStr;
+use std::path::Path;
+use vec1::vec1;
 
 use crate::{
-    ast::{Definition, TargettedDefinition, UntypedDefinition, UntypedModule},
+    ast::{
+        Definition, Function, Statement, TargettedDefinition, UntypedDefinition, UntypedExpr,
+        UntypedModule,
+    },
+    build::Target,
     format::{Formatter, Intermediate},
     Error, Result,
 };
@@ -44,21 +48,81 @@ impl Fixer {
     fn fix_module(&mut self, module: &mut UntypedModule) {
         for group in module.definitions.iter_mut() {
             match group {
-                TargettedDefinition::Any(definition) | TargettedDefinition::Only(_, definition) => {
-                    self.fix_definition(definition);
+                TargettedDefinition::Any(definition) => self.fix_definition(None, definition),
+                TargettedDefinition::Only(target, definition) => {
+                    self.fix_definition(Some(*target), definition)
                 }
             }
         }
     }
 
-    fn fix_definition(&mut self, definition: &mut UntypedDefinition) {
+    fn fix_definition(&mut self, target: Option<Target>, definition: &mut UntypedDefinition) {
         match definition {
             Definition::Function(_)
             | Definition::TypeAlias(_)
             | Definition::CustomType(_)
-            | Definition::ExternalFunction(_)
             | Definition::Import(_)
             | Definition::ModuleConstant(_) => (),
+
+            Definition::ExternalFunction(external_function) => {
+                let mut function = Function {
+                    location: external_function.location,
+                    end_position: external_function.location.end,
+                    name: external_function.name.clone(),
+                    body: vec1![Statement::Expression(UntypedExpr::Placeholder {
+                        location: external_function.location,
+                    })],
+                    public: external_function.public,
+                    return_annotation: Some(external_function.return_.clone()),
+                    return_type: (),
+                    documentation: None,
+                    external_erlang: None,
+                    external_javascript: None,
+                    // TODO: arguments
+                    arguments: vec![],
+                };
+
+                let external = Some((
+                    external_function.module.clone(),
+                    external_function.fun.clone(),
+                ));
+                match self.external_target(target, external_function) {
+                    Some(Target::Erlang) => function.external_erlang = external,
+                    Some(Target::JavaScript) => function.external_javascript = external,
+                    None => todo!("Handle unknown"),
+                }
+
+                drop(std::mem::replace(
+                    definition,
+                    Definition::Function(function),
+                ));
+            }
+        }
+    }
+
+    fn external_target(
+        &self,
+        target: Option<Target>,
+        external_function: &mut crate::ast::ExternalFunction<()>,
+    ) -> Option<Target> {
+        if let Some(target) = target {
+            Some(target)
+        } else if external_function.module.ends_with(".jsx") {
+            Some(Target::JavaScript)
+        } else if external_function.module.ends_with(".js") {
+            Some(Target::JavaScript)
+        } else if external_function.module.ends_with(".tsx") {
+            Some(Target::JavaScript)
+        } else if external_function.module.ends_with(".ts") {
+            Some(Target::JavaScript)
+        } else if external_function.module.ends_with(".mjs") {
+            Some(Target::JavaScript)
+        } else if external_function.module.contains("/") {
+            Some(Target::JavaScript)
+        } else if external_function.module.starts_with("Elixir.") {
+            Some(Target::Erlang)
+        } else {
+            None
         }
     }
 }
