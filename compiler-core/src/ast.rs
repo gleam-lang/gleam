@@ -407,6 +407,7 @@ pub struct Function<T, Expr> {
 }
 
 pub type TypedFunction = Function<Arc<Type>, TypedExpr>;
+pub type UntypedFunction = Function<(), UntypedExpr>;
 
 impl<T, E> Function<T, E> {
     fn full_location(&self) -> SrcSpan {
