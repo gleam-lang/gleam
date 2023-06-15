@@ -15,7 +15,11 @@ use crate::{
     Error, Result,
 };
 
-pub fn parse_fix_and_format(src: &SmolStr, path: &Path) -> Result<String> {
+pub fn parse_fix_and_format(
+    assumed_target: Option<Target>,
+    src: &SmolStr,
+    path: &Path,
+) -> Result<String> {
     // Parse
     let parsed = crate::parse::parse_module(src).map_err(|error| Error::Parse {
         path: path.to_path_buf(),
@@ -25,7 +29,7 @@ pub fn parse_fix_and_format(src: &SmolStr, path: &Path) -> Result<String> {
     let intermediate = Intermediate::from_extra(&parsed.extra, src);
 
     // Fix
-    let module = Fixer::fix(parsed.module);
+    let module = Fixer::fix(assumed_target, parsed.module);
 
     // Format
     let mut buffer = String::new();
@@ -64,12 +68,17 @@ impl Replacement {
 
 #[derive(Debug, Default)]
 pub struct Fixer {
+    assumed_target: Option<Target>,
     replacements: HashMap<SmolStr, Replacement>,
 }
 
 impl Fixer {
-    pub fn fix(module: UntypedModule) -> UntypedModule {
-        Self::default().fix_module(module)
+    pub fn fix(assumed_target: Option<Target>, module: UntypedModule) -> UntypedModule {
+        Self {
+            assumed_target: assumed_target,
+            ..Default::default()
+        }
+        .fix_module(module)
     }
 
     fn fix_module(&mut self, mut module: UntypedModule) -> UntypedModule {
@@ -185,7 +194,7 @@ impl Fixer {
         } else if external_function.module.starts_with("Elixir.") {
             Some(Target::Erlang)
         } else {
-            None
+            self.assumed_target
         }
     }
 }

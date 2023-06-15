@@ -161,6 +161,9 @@ enum Command {
         /// Files to fix
         #[clap(default_value = ".")]
         files: Vec<String>,
+
+        /// The target to use for external functions when it could not be inferred.
+        target: Option<Target>,
     },
 
     /// Start an Erlang shell
@@ -397,7 +400,7 @@ fn main() {
             check,
         } => format::run(stdin, check, files),
 
-        Command::Fix { files } => fix::run(files),
+        Command::Fix { files, target } => fix::run(target, files),
 
         Command::Deps(Dependencies::List) => dependencies::list(),
 

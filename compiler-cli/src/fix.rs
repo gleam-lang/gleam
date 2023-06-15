@@ -1,11 +1,11 @@
-use std::{path::PathBuf, str::FromStr};
-
 use gleam_core::{
+    build::Target,
     error::{FileIoAction, FileKind},
     Error, Result,
 };
+use std::{path::PathBuf, str::FromStr};
 
-pub fn run(files: Vec<String>) -> Result<()> {
+pub fn run(target: Option<Target>, files: Vec<String>) -> Result<()> {
     for file_path in files {
         let path = PathBuf::from_str(&file_path).map_err(|e| Error::FileIo {
             action: FileIoAction::Open,
@@ -16,18 +16,18 @@ pub fn run(files: Vec<String>) -> Result<()> {
 
         if path.is_dir() {
             for path in crate::fs::gleam_files_excluding_gitignore(&path) {
-                fix_file(path)?;
+                fix_file(target, path)?;
             }
         } else {
-            fix_file(path)?;
+            fix_file(target, path)?;
         }
     }
     Ok(())
 }
 
-fn fix_file(path: PathBuf) -> Result<()> {
+fn fix_file(target: Option<Target>, path: PathBuf) -> Result<()> {
     let src = crate::fs::read(&path)?;
-    let out = gleam_core::fix::parse_fix_and_format(&src.into(), &path)?;
+    let out = gleam_core::fix::parse_fix_and_format(target, &src.into(), &path)?;
     crate::fs::write(&path, &out)?;
     Ok(())
 }
