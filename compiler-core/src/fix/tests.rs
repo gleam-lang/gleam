@@ -132,3 +132,35 @@ pub fn main() -> Int
 "#
     )
 }
+
+#[test]
+fn if_javascript() {
+    assert_eq!(
+        fix(r#"
+if javascript {
+  // Hello
+  pub external fn main() -> Int = "wobble" "main"
+}
+"#),
+        r#"// Hello
+@external(javascript, "wobble", "main")
+pub fn main() -> Int
+"#
+    )
+}
+
+#[test]
+fn if_erlang() {
+    assert_eq!(
+        fix(r#"
+if erlang {
+  // Hello
+  pub external fn main() -> Int = "wobble" "main"
+}
+"#),
+        r#"// Hello
+@external(erlang, "wobble", "main")
+pub fn main() -> Int
+"#
+    )
+}
