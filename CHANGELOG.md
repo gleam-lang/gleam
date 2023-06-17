@@ -24,6 +24,7 @@
 - Type aliases can now refer to type aliases defined later in the same module.
 - Fixed a bug where unapplied record constructors in constant expressions would
   generate invalid Erlang.
+- Fixed a bug where the prescedence of `<>` and `|>` would clash.
 - Fixed a bug where `gleam docs build` would print an incorrect path upon
   completion.
 - Warnings from dependency packages are no longer surfaced in the language
