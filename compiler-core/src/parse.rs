@@ -2941,7 +2941,7 @@ fn handle_op<A>(
 
 fn precedence(t: &Token) -> Option<u8> {
     if t == &Token::Pipe {
-        return Some(5);
+        return Some(6);
     };
     tok_to_binop(t).map(|op| op.precedence())
 }
