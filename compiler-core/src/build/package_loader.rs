@@ -151,13 +151,13 @@ where
     pub fn is_gleam_path(&self, path: &Path, dir: &Path) -> bool {
         use regex::Regex;
         lazy_static! {
-        static ref RE: Regex = Regex::new(&format!(
-            "^({module}{slash})*{module}\\.gleam$",
-            module = "[a-z][_a-z0-9]*",
-            slash = "(/|\\\\)",
-        ))
-        .expect("is_gleam_path() RE regex");
-    }
+            static ref RE: Regex = Regex::new(&format!(
+                "^({module}{slash})*{module}\\.gleam$",
+                module = "[a-z][_a-z0-9]*",
+                slash = "(/|\\\\)",
+            ))
+            .expect("is_gleam_path() RE regex");
+        }
 
         RE.is_match(
             path.strip_prefix(dir)
