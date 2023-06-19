@@ -9,10 +9,6 @@ use crate::{
     warning::{NullWarningEmitterIO, TypeWarningEmitter},
     Warning,
 };
-use std::{
-    sync::{atomic::AtomicUsize, Arc},
-    time::Duration,
-};
 
 #[derive(Debug)]
 struct LoaderTestOutput {

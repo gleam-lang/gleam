@@ -1,7 +1,6 @@
-use lazy_static::{__Deref, lazy_static};
+use lazy_static::__Deref;
 
 use super::*;
-use regex::Regex;
 use std::{cell::RefCell, collections::HashMap, ffi::OsStr, rc::Rc, time::Duration};
 
 // An in memory sharable collection of pretend files that can be used in place
@@ -178,24 +177,6 @@ impl FileSystemReader for InMemoryFileSystem {
 
     fn is_file(&self, path: &Path) -> bool {
         self.files.deref().borrow().contains_key(path)
-    }
-
-    fn is_valid_module_path(&self, path: &Path, dir: &Path) -> bool {
-        lazy_static! {
-            static ref RE: Regex = Regex::new(&format!(
-                "^({module}{slash})*{module}\\.gleam$",
-                module = "[a-z][_a-z0-9]*",
-                slash = "(/|\\\\)",
-            ))
-            .expect("is_valid_module_path() RE regex");
-        }
-
-        RE.is_match(
-            path.strip_prefix(dir)
-                .expect("is_valid_module_path() strip_prefix")
-                .to_str()
-                .expect("is_valid_module_path(): to_str"),
-        )
     }
 
     fn is_directory(&self, path: &Path) -> bool {

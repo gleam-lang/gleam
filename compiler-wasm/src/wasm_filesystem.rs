@@ -95,10 +95,6 @@ impl FileSystemReader for WasmFileSystem {
         self.imfs.is_file(path)
     }
 
-    fn is_valid_module_path(&self, path: &Path, dir: &Path) -> bool {
-        self.imfs.is_valid_module_path(path, dir)
-    }
-
     fn is_directory(&self, path: &Path) -> bool {
         tracing::trace!("is_directory {:?}", path);
         false

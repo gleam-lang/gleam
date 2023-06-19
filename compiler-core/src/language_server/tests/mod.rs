@@ -101,10 +101,6 @@ impl FileSystemReader for LanguageServerTestIO {
         self.io.is_file(path)
     }
 
-    fn is_valid_module_path(&self, path: &Path, dir: &Path) -> bool {
-        self.io.is_valid_module_path(path, dir)
-    }
-
     fn is_directory(&self, path: &Path) -> bool {
         self.io.is_directory(path)
     }

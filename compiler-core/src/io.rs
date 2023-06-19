@@ -164,7 +164,6 @@ pub trait FileSystemReader {
     fn read_bytes(&self, path: &Path) -> Result<Vec<u8>, Error>;
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error>;
     fn is_file(&self, path: &Path) -> bool;
-    fn is_valid_module_path(&self, path: &Path, dir: &Path) -> bool;
     fn is_directory(&self, path: &Path) -> bool;
     fn modification_time(&self, path: &Path) -> Result<SystemTime, Error>;
 }

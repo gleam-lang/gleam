@@ -118,10 +118,10 @@ fn get_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> Vec<Warning> {
     warnings
         .take()
         .into_iter()
-        .filter_map(|warning| match warning {
-            crate::Warning::Type { warning, .. } => Some(warning),
+        .map(|warning| match warning {
+            crate::Warning::Type { warning, .. } => warning,
             crate::Warning::Parse { .. } => panic!("Unexpected parse warning"),
-            crate::Warning::InvalidSource { .. } => None,
+            crate::Warning::InvalidSource { .. } => panic!("Invalid module file name"),
         })
         .collect_vec()
 }

@@ -10,6 +10,7 @@ use std::{
 // TODO: emit warnings for cached modules even if they are not compiled again.
 
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use smol_str::SmolStr;
 
 use crate::{
@@ -147,6 +148,25 @@ where
         metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())
     }
 
+    pub fn is_gleam_path(&self, path: &Path, dir: &Path) -> bool {
+        use regex::Regex;
+        lazy_static! {
+        static ref RE: Regex = Regex::new(&format!(
+            "^({module}{slash})*{module}\\.gleam$",
+            module = "[a-z][_a-z0-9]*",
+            slash = "(/|\\\\)",
+        ))
+        .expect("is_gleam_path() RE regex");
+    }
+
+        RE.is_match(
+            path.strip_prefix(dir)
+                .expect("is_gleam_path(): strip_prefix")
+                .to_str()
+                .expect("is_gleam_path(): to_str"),
+        )
+    }
+
     fn read_source_files(&self) -> Result<HashMap<SmolStr, Input>> {
         let span = tracing::info_span!("load");
         let _enter = span.enter();
@@ -168,9 +188,9 @@ where
 
         // Src
         for path in self.io.gleam_source_files(&src) {
-            if !self.io.is_valid_module_path(&path, &src) {
+            if !self.is_gleam_path(&path, &src) {
                 self.warnings.emit(crate::Warning::InvalidSource {
-                    name: path
+                    path: path
                         .to_str()
                         .expect("read_source_files Emitting file warning")
                         .into(),
