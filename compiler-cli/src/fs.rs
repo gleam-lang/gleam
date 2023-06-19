@@ -304,7 +304,7 @@ pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn is_gleam_path(path: &Path, dir: &Path) -> bool {
+fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
     use regex::Regex;
     lazy_static! {
         static ref RE: Regex = Regex::new(&format!(

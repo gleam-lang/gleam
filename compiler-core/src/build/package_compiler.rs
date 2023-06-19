@@ -17,7 +17,6 @@ use crate::{
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, WarningEmitter},
     Error, Result, Warning,
-    Warning::InvalidSource,
 };
 use askama::Template;
 use smol_str::SmolStr;
