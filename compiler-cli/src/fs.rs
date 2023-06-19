@@ -83,10 +83,6 @@ impl FileSystemReader for ProjectIO {
         path.is_file()
     }
 
-    fn is_valid_module_path(&self, path: &Path, dir: &Path) -> bool {
-        is_gleam_path(path, dir)
-    }
-
     fn is_directory(&self, path: &Path) -> bool {
         path.is_dir()
     }

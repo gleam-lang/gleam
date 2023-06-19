@@ -135,10 +135,6 @@ where
         self.edit_cache.is_file(path) || self.io.is_file(path)
     }
 
-    fn is_valid_module_path(&self, path: &Path, dir: &Path) -> bool {
-        self.io.is_valid_module_path(path, dir)
-    }
-
     // Cache overides existence of directory
     fn is_directory(&self, path: &Path) -> bool {
         self.edit_cache.is_directory(path) || self.io.is_directory(path)

@@ -134,7 +134,7 @@ pub enum Warning {
         warning: crate::parse::Warning,
     },
     InvalidSource {
-        name: SmolStr,
+        path: PathBuf,
     },
 }
 
@@ -188,13 +188,14 @@ impl Warning {
                 }
             },
 
-            Warning::InvalidSource { name } => Diagnostic {
-                title: "Invalid module name. Module names must begin with a lowercase letter and contain only lowercase alphanumeric characters or underscores.".into(),
-                text: "".into(),
+            Warning::InvalidSource { path } => Diagnostic {
+                title: "Invalid module name.".into(),
+                text: "Module names must begin with a lowercase letter and contain only lowercase alphanumeric characters or underscores.".into(),
                 level: diagnostic::Level::Warning,
                 location: None,
                 hint: Some(format!(
-                    "Rename `{name}` to be valid, or remove this file from the project source."
+                    "Rename `{}` to be valid, or remove this file from the project source.",
+                    path.to_string_lossy().to_string()
                 )),
             },
             Self::Type { path, warning, src } => match warning {
