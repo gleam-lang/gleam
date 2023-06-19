@@ -195,7 +195,7 @@ impl Warning {
                 location: None,
                 hint: Some(format!(
                     "Rename `{}` to be valid, or remove this file from the project source.",
-                    path.to_string_lossy().to_string()
+                    path.to_string_lossy()
                 )),
             },
             Self::Type { path, warning, src } => match warning {
