@@ -255,6 +255,7 @@ p code {
 
 .content {
   margin-left: var(--sidebar-width);
+  margin-bottom: var(--large-gap);
   padding: calc(var(--header-height) + var(--gap)) var(--gap) 0 var(--gap);
   width: calc(100% - var(--sidebar-width));
   max-width: var(--content-width);
@@ -469,6 +470,10 @@ body.drawer-open .label-closed {
 
 .module-members {
   margin-top: var(--large-gap);
+}
+
+.module-members:last-of-type .member:last-of-type {
+  margin-bottom: 0;
 }
 
 .module-member-kind {
