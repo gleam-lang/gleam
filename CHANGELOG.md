@@ -2,8 +2,6 @@
 
 ## Unreleased
 
-- The new `gleam shell-completions` command can be used to generate
-  completions for zsh, bash, fish, powershell and elvish.
 - The new `@target(erlang)` and `@target(javascript)` attribute syntax has been
   added for conditional compilation. The existing `if` conditional compilation
   syntax has been deprecated. Run `gleam format` to update your code.

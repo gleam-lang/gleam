@@ -71,7 +71,6 @@ mod remove;
 mod run;
 mod shell;
 
-use clap_complete::Shell;
 use config::root_config;
 use dependencies::UseManifest;
 pub use gleam_core::{
@@ -89,7 +88,7 @@ use hex::ApiKeyCommand as _;
 
 use std::path::PathBuf;
 
-use clap::{Args, CommandFactory, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use strum::VariantNames;
 
 #[derive(Parser, Debug)]
@@ -225,17 +224,6 @@ enum Command {
     /// Export something useful from the Gleam project
     #[clap(subcommand)]
     Export(ExportTarget),
-
-    /// Print completion-script
-    ///
-    /// Outputs a completion script for given `shell`
-    ///
-    /// Output can be piped to the corresponding "completion-file" for your shell.
-    ShellCompletions {
-        /// Which shell to generate completions for
-        #[clap(long, required = true, value_enum)]
-        shell: Shell,
-    },
 }
 
 #[derive(Subcommand, Debug, Clone, Copy)]
@@ -453,7 +441,6 @@ fn main() {
 
         Command::Export(ExportTarget::ErlangShipment) => export::erlang_shipment(),
         Command::Export(ExportTarget::HexTarball) => export::hex_tarball(),
-        Command::ShellCompletions { shell } => print_completions(shell),
     };
 
     match result {
@@ -468,12 +455,6 @@ fn main() {
             std::process::exit(1);
         }
     }
-}
-
-fn print_completions(shell: Shell) -> Result<(), Error> {
-    let mut command = Command::command();
-    clap_complete::generate(shell, &mut command, "gleam", &mut std::io::stdout());
-    Ok(())
 }
 
 fn command_check() -> Result<(), Error> {
