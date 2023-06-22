@@ -86,6 +86,12 @@ impl WarningEmitter {
         _ = self.count.fetch_add(1, Ordering::Relaxed);
         self.emitter.emit_warning(warning);
     }
+
+    pub fn vector() -> (Self, Arc<VectorWarningEmitterIO>) {
+        let io = Arc::new(VectorWarningEmitterIO::default());
+        let emitter = Self::new(io.clone());
+        (emitter, Arc::clone(&io))
+    }
 }
 
 #[derive(Debug, Clone)]

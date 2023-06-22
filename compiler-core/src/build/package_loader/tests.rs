@@ -6,6 +6,7 @@ use crate::{
     io::{memory::InMemoryFileSystem, FileSystemWriter},
     parse::extra::ModuleExtra,
     warning::NullWarningEmitterIO,
+    Warning,
 };
 
 use std::time::Duration;
@@ -14,6 +15,7 @@ use std::time::Duration;
 struct LoaderTestOutput {
     to_compile: Vec<SmolStr>,
     cached: Vec<SmolStr>,
+    warnings: Vec<Warning>,
 }
 
 const TEST_SOURCE_1: &'static str = "const x = 1";
@@ -56,12 +58,14 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<Smol
 fn run_loader(fs: InMemoryFileSystem, root: &Path, artefact: &Path) -> LoaderTestOutput {
     let mut defined = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
+    let (emitter, warnings) = WarningEmitter::vector();
+
     let loader = PackageLoader {
         io: fs.clone(),
         ids,
         mode: Mode::Dev,
         root: &root,
-        warnings: &WarningEmitter::null(),
+        warnings: &emitter,
         codegen: CodegenRequired::Yes,
         artefact_directory: &artefact,
         package_name: &"my_package".into(),
@@ -73,6 +77,7 @@ fn run_loader(fs: InMemoryFileSystem, root: &Path, artefact: &Path) -> LoaderTes
     LoaderTestOutput {
         to_compile: loaded.to_compile.into_iter().map(|m| m.name).collect(),
         cached: loaded.cached.into_iter().map(|m| m.name).collect(),
+        warnings: warnings.take(),
     }
 }
 
@@ -187,4 +192,44 @@ fn module_is_stale_if_deps_are_stale() {
         vec![SmolStr::new("one"), SmolStr::new("two")]
     );
     assert_eq!(loaded.cached, vec![SmolStr::new("three")]);
+}
+
+#[test]
+fn invalid_module_name() {
+    let fs = InMemoryFileSystem::new();
+    let root = Path::new("/");
+    let artefact = Path::new("/artefact");
+
+    // Cache is stale
+    write_src(&fs, "/src/One.gleam", 1, TEST_SOURCE_2);
+
+    let loaded = run_loader(fs, root, artefact);
+    assert!(loaded.to_compile.is_empty());
+    assert!(loaded.cached.is_empty());
+    assert_eq!(
+        loaded.warnings,
+        vec![Warning::InvalidSource {
+            path: PathBuf::from("/src/One.gleam"),
+        }],
+    );
+}
+
+#[test]
+fn invalid_nested_module_name() {
+    let fs = InMemoryFileSystem::new();
+    let root = Path::new("/");
+    let artefact = Path::new("/artefact");
+
+    // Cache is stale
+    write_src(&fs, "/src/1/one.gleam", 1, TEST_SOURCE_2);
+
+    let loaded = run_loader(fs, root, artefact);
+    assert!(loaded.to_compile.is_empty());
+    assert!(loaded.cached.is_empty());
+    assert_eq!(
+        loaded.warnings,
+        vec![Warning::InvalidSource {
+            path: PathBuf::from("/src/1/one.gleam"),
+        }],
+    );
 }
