@@ -189,12 +189,7 @@ where
         // Src
         for path in self.io.gleam_source_files(&src) {
             if !self.is_gleam_path(&path, &src) {
-                self.warnings.emit(crate::Warning::InvalidSource {
-                    path: path
-                        .to_str()
-                        .expect("read_source_files Emitting file warning")
-                        .into(),
-                });
+                self.warnings.emit(crate::Warning::InvalidSource { path });
                 continue;
             }
             let input = loader.load(path)?;
