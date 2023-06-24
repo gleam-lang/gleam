@@ -113,6 +113,9 @@ where
             self.project_compiler.compile_dependencies()?;
             self.dependencies_compiled = true;
             self.checkpoint_state = None;
+            // Warnings from dependencies are not fixable by the programmer so
+            // we don't bother them with diagnostics for them.
+            let _ = self.take_warnings();
         }
 
         match &self.checkpoint_state {
