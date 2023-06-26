@@ -77,7 +77,7 @@ pub struct Fixer {
 impl Fixer {
     pub fn fix(assumed_target: Option<Target>, module: UntypedModule) -> (UntypedModule, bool) {
         let mut fixer = Self {
-            assumed_target: assumed_target,
+            assumed_target,
             replacements: HashMap::new(),
             complete: true,
         };
