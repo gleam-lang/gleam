@@ -6,7 +6,7 @@
   completions for zsh, bash, fish, powershell and elvish.
 - The new `@target(erlang)` and `@target(javascript)` attribute syntax has been
   added for conditional compilation. The existing `if` conditional compilation
-  syntax has been deprecated. Run `gleam format` to update your code.
+  syntax has been deprecated. Run `gleam fix` to update your code.
 - The new `type TypeName` syntax syntax replaces the `external type TypeName`
   syntax. The existing external type syntax has been deprecated. Run `gleam format`
   to update your code.
