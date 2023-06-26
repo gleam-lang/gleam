@@ -28,20 +28,7 @@ pub fn run(target: Option<Target>, files: Vec<String>) -> Result<()> {
     }
 
     if !complete {
-        println!(
-            "I wasn't able to determine what target should be used for all
-external functions so they were not all converted to the new
-syntax.
-
-If you know what target should be used for all these ambiguous
-functions run this command again with the --target flag set:
-
-    gleam fix --target erlang
-    gleam fix --target javascript
-"
-        );
-        todo!("replace this with an actual error");
-        std::process::exit(1);
+        return Err(Error::AmbiguousExternalFnTarget);
     }
 
     println!("All fixed!");

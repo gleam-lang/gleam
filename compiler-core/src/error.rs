@@ -234,6 +234,9 @@ pub enum Error {
         required_version: String,
         gleam_version: String,
     },
+
+    #[error("The target could not be determined for all external functions")]
+    AmbiguousExternalFnTarget,
 }
 
 impl Error {
@@ -423,6 +426,28 @@ of the Gleam dependency modules."
 
                 Diagnostic {
                     title: "Failed to decode module metadata".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                    hint: None,
+                }
+            }
+
+            Error::AmbiguousExternalFnTarget => {
+                let text = "I wasn't able to determine what target should be used for all
+external functions so they were not all converted to the new
+syntax.
+
+If you know what target should be used for all these ambiguous
+functions run this command again with the --target flag set:
+
+    gleam fix --target erlang
+    gleam fix --target javascript
+"
+                .into();
+
+                Diagnostic {
+                    title: "Could not convert all external functions".into(),
                     text,
                     level: Level::Error,
                     location: None,
