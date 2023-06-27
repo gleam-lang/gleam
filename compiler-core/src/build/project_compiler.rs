@@ -54,6 +54,7 @@ pub struct Options {
 pub struct Built {
     pub root_package: Package,
     module_interfaces: im::HashMap<SmolStr, type_::ModuleInterface>,
+    compiled_dependency_modules: Vec<Module>,
 }
 
 impl Built {
@@ -71,8 +72,8 @@ impl Built {
 #[derive(Debug)]
 pub struct ProjectCompiler<IO> {
     // The gleam.toml config for the root package of the project
-    config: PackageConfig,
-    packages: HashMap<String, ManifestPackage>,
+    pub(crate) config: PackageConfig,
+    pub(crate) packages: HashMap<String, ManifestPackage>,
     importable_modules: im::HashMap<SmolStr, type_::ModuleInterface>,
     defined_modules: im::HashMap<SmolStr, PathBuf>,
     stale_modules: StaleTracker,
@@ -81,7 +82,7 @@ pub struct ProjectCompiler<IO> {
     options: Options,
     paths: ProjectPaths,
     ids: UniqueIdGenerator,
-    io: IO,
+    pub(crate) io: IO,
     /// We may want to silence subprocess stdout if we are running in LSP mode.
     /// The language server talks over stdio so printing would break that.
     pub subprocess_stdio: Stdio,
@@ -128,20 +129,6 @@ where
         &self.importable_modules
     }
 
-    // TODO: test
-    pub fn checkpoint(&self) -> CheckpointState {
-        CheckpointState {
-            importable_modules: self.importable_modules.clone(),
-            defined_modules: self.defined_modules.clone(),
-        }
-    }
-
-    // TODO: test
-    pub fn restore(&mut self, checkpoint: CheckpointState) {
-        self.importable_modules = checkpoint.importable_modules;
-        self.defined_modules = checkpoint.defined_modules;
-    }
-
     pub fn mode(&self) -> Mode {
         self.options.mode
     }
@@ -164,7 +151,8 @@ where
         self.check_gleam_version()?;
 
         // Dependencies are compiled first.
-        self.compile_dependencies()?;
+        let compiled_dependency_modules = self.compile_dependencies()?;
+
         // We reset the warning count as we don't want to fail the build if a
         // dependency has warnings, only if the root package does.
         self.warnings.reset_count();
@@ -185,13 +173,13 @@ where
         Ok(Built {
             root_package,
             module_interfaces: self.importable_modules,
+            compiled_dependency_modules,
         })
     }
 
     pub fn compile_root_package(&mut self) -> Result<Package, Error> {
         let config = self.config.clone();
         let modules = self.compile_gleam_package(&config, true, self.paths.root().to_path_buf())?;
-
         Ok(Package { config, modules })
     }
 
@@ -227,36 +215,38 @@ where
             })
     }
 
-    pub fn compile_dependencies(&mut self) -> Result<(), Error> {
+    pub fn compile_dependencies(&mut self) -> Result<Vec<Module>, Error> {
         let sequence = order_packages(&self.packages)?;
+        let mut modules = vec![];
 
         for name in sequence {
-            let package = self
-                .packages
-                .remove(name.as_str())
-                .expect("Missing package config");
-            self.load_cache_or_compile_package(&package)?;
+            let compiled = self.load_cache_or_compile_package(&name)?;
+            modules.extend(compiled);
         }
 
-        Ok(())
+        Ok(modules)
     }
 
-    fn load_cache_or_compile_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
-        self.telemetry.compiling_package(&package.name);
-        let result = match usable_build_tool(package)? {
-            BuildTool::Gleam => self.compile_gleam_dep_package(package),
-            BuildTool::Rebar3 => self.compile_rebar3_dep_package(package),
-            BuildTool::Mix => self.compile_mix_dep_package(package),
+    fn load_cache_or_compile_package(&mut self, name: &str) -> Result<Vec<Module>, Error> {
+        self.telemetry.compiling_package(name);
+
+        // TODO: We could remove this clone if we split out the compilation of
+        // packages into their own classes and then only mutate self after we no
+        // longer need to have the package borrowed from self.packages.
+        let package = self.packages.get(name).expect("Missing package").clone();
+        let result = match usable_build_tool(&package)? {
+            BuildTool::Gleam => self.compile_gleam_dep_package(&package),
+            BuildTool::Rebar3 => self.compile_rebar3_dep_package(&package).map(|_| vec![]),
+            BuildTool::Mix => self.compile_mix_dep_package(&package).map(|_| vec![]),
         };
 
         // TODO: test. This one is not covered by the integration tests.
         if result.is_err() {
-            tracing::debug!(package=%package.name, "removing_failed_build");
-            self.io.delete(&self.paths.build_directory_for_package(
-                self.mode(),
-                self.target(),
-                &package.name,
-            ))?;
+            tracing::debug!(package=%name, "removing_failed_build");
+            let path = self
+                .paths
+                .build_directory_for_package(self.mode(), self.target(), name);
+            self.io.delete(&path)?;
         }
 
         result
@@ -419,7 +409,10 @@ where
         }
     }
 
-    fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
+    fn compile_gleam_dep_package(
+        &mut self,
+        package: &ManifestPackage,
+    ) -> Result<Vec<Module>, Error> {
         // TODO: Test
         let package_root = match &package.source {
             ManifestPackageSource::Local { path } => path.clone(),
@@ -427,8 +420,7 @@ where
         };
         let config_path = package_root.join("gleam.toml");
         let config = PackageConfig::read(config_path, &self.io)?;
-        _ = self.compile_gleam_package(&config, false, package_root)?;
-        Ok(())
+        self.compile_gleam_package(&config, false, package_root)
     }
 
     fn load_cached_package(
@@ -548,10 +540,4 @@ pub(crate) fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, 
         package: package.name.to_string(),
         build_tools: package.build_tools.clone(),
     })
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct CheckpointState {
-    importable_modules: im::HashMap<SmolStr, type_::ModuleInterface>,
-    defined_modules: im::HashMap<SmolStr, PathBuf>,
 }

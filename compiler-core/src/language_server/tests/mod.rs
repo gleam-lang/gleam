@@ -8,6 +8,8 @@ use std::{
     time::SystemTime,
 };
 
+use hexpm::version::Version;
+
 use crate::{
     config::PackageConfig,
     io::{
@@ -18,8 +20,9 @@ use crate::{
         engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
         DownloadDependencies, LockGuard, Locker, MakeLocker,
     },
-    manifest::Manifest,
+    manifest::{Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
+    requirement::Requirement,
     Result,
 };
 
@@ -55,17 +58,21 @@ impl LanguageServerTestIO {
         Arc::try_unwrap(self.actions).unwrap().into_inner().unwrap()
     }
 
+    pub fn module(&self, path: &Path, code: &str) {
+        self.io.write(&path, code).unwrap();
+        self.io.set_modification_time(&path, SystemTime::now());
+    }
+
     pub fn src_module(&self, name: &str, code: &str) {
         let src_dir = self.paths.src_directory();
         let path = src_dir.join(name).with_extension("gleam");
-        self.io.write(&path, code).unwrap();
-        self.io.set_modification_time(&path, SystemTime::now());
+        self.module(&path, code);
     }
 
     pub fn test_module(&self, name: &str, code: &str) {
         let test_dir = self.paths.test_directory();
         let path = test_dir.join(name).with_extension("gleam");
-        self.io.write(&path, code).unwrap()
+        self.module(&path, code);
     }
 
     fn record(&self, action: Action) {
@@ -229,6 +236,35 @@ impl ProgressReporter for LanguageServerTestIO {
     fn dependency_downloading_finished(&self) {
         self.record(Action::DependencyDownloadingFinished);
     }
+}
+
+fn add_path_dep<B>(
+    engine: &mut LanguageServerEngine<LanguageServerTestIO, B>,
+    name: &str,
+    path: &str,
+) {
+    let compiler = &mut engine.compiler.project_compiler;
+    _ = compiler
+        .config
+        .dependencies
+        .insert(name.into(), Requirement::path(path));
+    let path = PathBuf::from(path);
+    _ = compiler.packages.insert(
+        name.into(),
+        ManifestPackage {
+            name: name.into(),
+            version: Version::new(1, 0, 0),
+            build_tools: vec!["gleam".into()],
+            otp_app: None,
+            requirements: vec![],
+            source: ManifestPackageSource::Local { path: path.clone() },
+        },
+    );
+    let toml = format!(
+        r#"name = "{name}"
+version = "1.0.0""#
+    );
+    _ = compiler.io.write(&path.join("gleam.toml"), &toml);
 }
 
 fn setup_engine(
