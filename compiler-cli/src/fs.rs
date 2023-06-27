@@ -109,6 +109,10 @@ impl FileSystemReader for ProjectIO {
                 err: Some(e.to_string()),
             })
     }
+
+    fn canonicalise(&self, path: &Path) -> Result<PathBuf, Error> {
+        canonicalise(path)
+    }
 }
 
 impl FileSystemWriter for ProjectIO {

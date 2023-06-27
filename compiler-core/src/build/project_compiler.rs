@@ -415,8 +415,22 @@ where
     ) -> Result<Vec<Module>, Error> {
         // TODO: Test
         let package_root = match &package.source {
+            // If the path is relative it is relative to the root of the
+            // project, not to the current working directory. The language server
+            // could have the working directory and the project root in different
+            // places.
+            ManifestPackageSource::Local { path } if path.is_relative() => {
+                self.io.canonicalise(&self.paths.root().join(path))?
+            }
+
+            // If the path is absolute we can use it as-is.
             ManifestPackageSource::Local { path } => path.clone(),
-            _ => self.paths.build_packages_package(&package.name),
+
+            // Hex and Git packages are downloaded into the project's build
+            // directory.
+            ManifestPackageSource::Git { .. } | ManifestPackageSource::Hex { .. } => {
+                self.paths.build_packages_package(&package.name)
+            }
         };
         let config_path = package_root.join("gleam.toml");
         let config = PackageConfig::read(config_path, &self.io)?;

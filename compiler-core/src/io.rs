@@ -166,6 +166,7 @@ pub trait FileSystemReader {
     fn is_file(&self, path: &Path) -> bool;
     fn is_directory(&self, path: &Path) -> bool;
     fn modification_time(&self, path: &Path) -> Result<SystemTime, Error>;
+    fn canonicalise(&self, path: &Path) -> Result<PathBuf, Error>;
 }
 
 /// A trait used to run other programs.

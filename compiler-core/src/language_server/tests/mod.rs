@@ -125,6 +125,10 @@ impl FileSystemReader for LanguageServerTestIO {
     fn modification_time(&self, path: &Path) -> Result<SystemTime> {
         self.io.modification_time(path)
     }
+
+    fn canonicalise(&self, path: &Path) -> Result<PathBuf, crate::Error> {
+        self.io.canonicalise(path)
+    }
 }
 
 impl FileSystemWriter for LanguageServerTestIO {
