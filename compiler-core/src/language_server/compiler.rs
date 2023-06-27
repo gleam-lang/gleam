@@ -1,8 +1,9 @@
 use debug_ignore::DebugIgnore;
+use itertools::Itertools;
 use smol_str::SmolStr;
 
 use crate::{
-    build::{self, CheckpointState, Mode, Module, NullTelemetry, ProjectCompiler},
+    build::{self, Mode, Module, NullTelemetry, ProjectCompiler},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     language_server::Locker,
@@ -23,9 +24,6 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 pub struct LspProjectCompiler<IO> {
     pub project_compiler: ProjectCompiler<IO>,
 
-    /// Whether the dependencies have been compiled previously.
-    pub dependencies_compiled: bool,
-
     /// Information on compiled modules.
     pub modules: HashMap<SmolStr, Module>,
     pub sources: HashMap<SmolStr, ModuleSourceInformation>,
@@ -36,10 +34,6 @@ pub struct LspProjectCompiler<IO> {
     /// A lock to ensure that multiple instances of the LSP don't try and use
     /// build directory at the same time.
     pub locker: DebugIgnore<Box<dyn Locker>>,
-
-    /// The state of the compiler before the last compilation of the root
-    /// package, so we can reset to this state and recompile.
-    checkpoint_state: Option<CheckpointState>,
 }
 
 impl<IO> LspProjectCompiler<IO>
@@ -94,8 +88,6 @@ where
             project_compiler,
             modules: HashMap::new(),
             sources: HashMap::new(),
-            dependencies_compiled: false,
-            checkpoint_state: None,
         })
     }
 
@@ -108,23 +100,11 @@ where
         // directory as the cache files may be in a different format.
         self.project_compiler.check_gleam_version()?;
 
-        if !self.dependencies_compiled {
-            tracing::info!("compiling_dependencies");
-            self.project_compiler.compile_dependencies()?;
-            self.dependencies_compiled = true;
-            self.checkpoint_state = None;
-            // Warnings from dependencies are not fixable by the programmer so
-            // we don't bother them with diagnostics for them.
-            let _ = self.take_warnings();
-        }
+        let compiled_dependencies = self.project_compiler.compile_dependencies()?;
 
-        match &self.checkpoint_state {
-            // Restore the state so that later we can compile the root again
-            Some(checkpoint) => self.project_compiler.restore(checkpoint.clone()),
-
-            // Save the state prior to compilation of the root package
-            None => self.checkpoint_state = Some(self.project_compiler.checkpoint()),
-        }
+        // Warnings from dependencies are not fixable by the programmer so
+        // we don't bother them with diagnostics for them.
+        let _ = self.take_warnings();
 
         // Do that there compilation. We don't use `?` to return early in the
         // event of an error because we _always_ want to do the restoration of
@@ -133,7 +113,12 @@ where
 
         // Return any error
         let package = result?;
-        let mut compiled_modules = Vec::with_capacity(package.modules.len());
+
+        // Record the compiled dependency modules
+        let mut compiled_modules = compiled_dependencies
+            .into_iter()
+            .map(|m| m.input_path)
+            .collect_vec();
 
         // Store the compiled module information
         for module in package.modules {
