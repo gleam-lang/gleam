@@ -13,9 +13,8 @@
   locked.
 - Types named `Dynamic` are now called `dynamic_` in Erlang to avoid a clash
   with the new Erlang `dynamic` type introduced in OTP26.
-- Dependencies can now be loaded from paths. Path dependencies currently use
-  the same semantics as hex dependencies, and must be updated using the command
-  `gleam deps update` to load changes.
+- Dependencies can now be loaded from paths using the 
+  `packagename = { path = "..." }` syntax in `gleam.toml`.
 - The `javascript.deno.unstable` field in `gleam.toml` can now be used to
   enable Deno's unstable APIs when targeting JavaScript.
 - Blockquotes are now styled in rendered HTML documentation.
