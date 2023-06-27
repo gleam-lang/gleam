@@ -95,7 +95,10 @@ where
     }
 
     pub(crate) fn run(mut self) -> Result<Loaded> {
-        let mut inputs = self.read_source_files()?;
+        // First read the source files. This will use the `ModuleLoader`, which
+        // will check the mtimes and hashes of sources and caches to determine
+        // which should be loaded.
+        let mut inputs = self.read_sources_and_caches()?;
 
         // Determine order in which modules are to be processed
         let deps = inputs
@@ -104,6 +107,9 @@ where
             .collect();
         let sequence = dep_tree::toposort_deps(deps).map_err(convert_deps_tree_error)?;
 
+        // Now that we have loaded sources and caches we check to see if any of
+        // the caches need to be invalidated because their dependencies have
+        // changed.
         let mut loaded = Loaded::default();
         for name in sequence {
             let input = inputs
@@ -169,7 +175,7 @@ where
         )
     }
 
-    fn read_source_files(&self) -> Result<HashMap<SmolStr, Input>> {
+    fn read_sources_and_caches(&self) -> Result<HashMap<SmolStr, Input>> {
         let span = tracing::info_span!("load");
         let _enter = span.enter();
 
