@@ -150,12 +150,24 @@ where
         self.options.target.unwrap_or(self.config.target)
     }
 
-    /// Returns the compiled information from the root package
+    /// Compiles all packages in the project and returns the compiled
+    /// information from the root package
     pub fn compile(mut self) -> Result<Built> {
-        self.check_gleam_version()?;
-        self.compile_dependencies()?;
-        self.warnings.reset_count();
+        // We make sure the stale module tracker is empty before we start, to
+        // avoid mistakenly thinking a module is stale due to outdated state
+        // from a previous build. A ProjectCompiler instance is re-used by the
+        // LSP engine so state could be reused if we don't reset it.
         self.stale_modules.empty();
+
+        // Each package may specify a Gleam version that it supports, so we
+        // verify that this version is appropriate.
+        self.check_gleam_version()?;
+
+        // Dependencies are compiled first.
+        self.compile_dependencies()?;
+        // We reset the warning count as we don't want to fail the build if a
+        // dependency has warnings, only if the root package does.
+        self.warnings.reset_count();
 
         match self.options.codegen {
             Codegen::All => self.telemetry.compiling_package(&self.config.name),
@@ -408,14 +420,14 @@ where
     }
 
     fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
+        // TODO: Test
         let package_root = match &package.source {
             ManifestPackageSource::Local { path } => path.clone(),
             _ => self.paths.build_packages_package(&package.name),
         };
         let config_path = package_root.join("gleam.toml");
         let config = PackageConfig::read(config_path, &self.io)?;
-        self.compile_gleam_package(&config, false, package_root)
-            .map(|_| ())?;
+        _ = self.compile_gleam_package(&config, false, package_root)?;
         Ok(())
     }
 
