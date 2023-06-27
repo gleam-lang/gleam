@@ -58,21 +58,30 @@ impl LanguageServerTestIO {
         Arc::try_unwrap(self.actions).unwrap().into_inner().unwrap()
     }
 
-    pub fn module(&self, path: &Path, code: &str) {
-        self.io.write(&path, code).unwrap();
-        self.io.set_modification_time(&path, SystemTime::now());
-    }
-
-    pub fn src_module(&self, name: &str, code: &str) {
+    pub fn src_module(&self, name: &str, code: &str) -> PathBuf {
         let src_dir = self.paths.src_directory();
         let path = src_dir.join(name).with_extension("gleam");
         self.module(&path, code);
+        path
     }
 
-    pub fn test_module(&self, name: &str, code: &str) {
+    pub fn test_module(&self, name: &str, code: &str) -> PathBuf {
         let test_dir = self.paths.test_directory();
         let path = test_dir.join(name).with_extension("gleam");
         self.module(&path, code);
+        path
+    }
+
+    pub fn dep_module(&self, dep: &str, name: &str, code: &str) -> PathBuf {
+        let dep_dir = self.paths.root().join(dep).join("src");
+        let path = dep_dir.join(name).with_extension("gleam");
+        self.module(&path, code);
+        path
+    }
+
+    fn module(&self, path: &Path, code: &str) {
+        self.io.write(&path, code).unwrap();
+        self.io.set_modification_time(&path, SystemTime::now());
     }
 
     fn record(&self, action: Action) {
@@ -238,17 +247,13 @@ impl ProgressReporter for LanguageServerTestIO {
     }
 }
 
-fn add_path_dep<B>(
-    engine: &mut LanguageServerEngine<LanguageServerTestIO, B>,
-    name: &str,
-    path: &str,
-) {
+fn add_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, name: &str) {
+    let path = engine.paths.root().join(name);
     let compiler = &mut engine.compiler.project_compiler;
     _ = compiler
         .config
         .dependencies
-        .insert(name.into(), Requirement::path(path));
-    let path = PathBuf::from(path);
+        .insert(name.into(), Requirement::Path { path: path.clone() });
     _ = compiler.packages.insert(
         name.into(),
         ManifestPackage {

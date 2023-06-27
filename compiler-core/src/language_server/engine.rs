@@ -35,13 +35,13 @@ pub enum Compilation {
 
 #[derive(Debug)]
 pub struct LanguageServerEngine<IO, Reporter> {
-    paths: ProjectPaths,
+    pub(crate) paths: ProjectPaths,
 
     /// A compiler for the project that supports repeat compilation of the root
     /// package.
     /// In the event the the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
-    pub compiler: LspProjectCompiler<FileSystemProxy<IO>>,
+    pub(crate) compiler: LspProjectCompiler<FileSystemProxy<IO>>,
 
     modules_compiled_since_last_feedback: Vec<PathBuf>,
     compiled_since_last_feedback: bool,
