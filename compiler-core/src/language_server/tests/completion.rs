@@ -23,8 +23,8 @@ fn positioned_expression_completions(
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
 
-    io.src_module("dep", dep);
-    io.src_module("app", src);
+    _ = io.src_module("dep", dep);
+    _ = io.src_module("app", src);
     let response = engine.compile_please();
     assert!(response.result.is_ok());
 
