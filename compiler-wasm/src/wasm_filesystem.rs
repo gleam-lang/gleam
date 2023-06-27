@@ -117,4 +117,8 @@ impl FileSystemReader for WasmFileSystem {
     fn read_bytes(&self, path: &Path) -> Result<Vec<u8>, Error> {
         self.imfs.read_bytes(path)
     }
+
+    fn canonicalise(&self, path: &Path) -> Result<PathBuf, Error> {
+        self.imfs.canonicalise(path)
+    }
 }

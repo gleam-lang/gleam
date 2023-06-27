@@ -121,6 +121,10 @@ impl FileSystemWriter for InMemoryFileSystem {
 }
 
 impl FileSystemReader for InMemoryFileSystem {
+    fn canonicalise(&self, path: &Path) -> Result<PathBuf, Error> {
+        Ok(path.to_path_buf())
+    }
+
     fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
         self.files
             .deref()

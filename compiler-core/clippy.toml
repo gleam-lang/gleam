@@ -4,7 +4,6 @@ disallowed-methods = [
   { path = "std::path::Path::exists", reason = "IO is not permitted in core" },
   { path = "std::path::Path::is_dir", reason = "IO is not permitted in core" },
   { path = "std::path::Path::is_file", reason = "IO is not permitted in core" },
-  { path = "std::path::Path::is_relative", reason = "IO is not permitted in core" },
   { path = "std::path::Path::is_symlink", reason = "IO is not permitted in core" },
   { path = "std::path::Path::read_dir", reason = "IO is not permitted in core" },
   { path = "std::path::Path::read_link", reason = "IO is not permitted in core" },

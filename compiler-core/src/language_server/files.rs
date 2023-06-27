@@ -146,6 +146,10 @@ where
             Err(_) => self.io.modification_time(path),
         }
     }
+
+    fn canonicalise(&self, path: &Path) -> Result<PathBuf, crate::Error> {
+        self.io.canonicalise(path)
+    }
 }
 
 impl<IO> CommandExecutor for FileSystemProxy<IO>
