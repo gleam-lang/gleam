@@ -452,7 +452,7 @@ where
         let lib_path = self
             .paths
             .build_directory_for_target(self.mode(), self.target());
-        let mode = self.mode();
+        let mode = if is_root { self.mode() } else { Mode::Prod };
         let target = match self.target() {
             Target::Erlang => super::TargetCodegenConfiguration::Erlang {
                 app_file: Some(ErlangAppCodegenConfiguration {
