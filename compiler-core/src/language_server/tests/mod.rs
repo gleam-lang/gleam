@@ -58,7 +58,8 @@ impl LanguageServerTestIO {
     pub fn src_module(&self, name: &str, code: &str) {
         let src_dir = self.paths.src_directory();
         let path = src_dir.join(name).with_extension("gleam");
-        self.io.write(&path, code).unwrap()
+        self.io.write(&path, code).unwrap();
+        self.io.set_modification_time(&path, SystemTime::now());
     }
 
     pub fn test_module(&self, name: &str, code: &str) {
