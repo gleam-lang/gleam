@@ -116,12 +116,13 @@ pub enum TypedExpr {
     Todo {
         location: SrcSpan,
         label: Option<SmolStr>,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
     },
 
     Panic {
         location: SrcSpan,
-        typ: Arc<Type>,
+        message: Option<SmolStr>,
+        type_: Arc<Type>,
     },
 
     BitString {
@@ -351,12 +352,12 @@ impl TypedExpr {
             Self::Var { constructor, .. } => constructor.type_.clone(),
             Self::Fn { typ, .. }
             | Self::Int { typ, .. }
-            | Self::Todo { typ, .. }
+            | Self::Todo { type_: typ, .. }
             | Self::Case { typ, .. }
             | Self::List { typ, .. }
             | Self::Call { typ, .. }
             | Self::Float { typ, .. }
-            | Self::Panic { typ, .. }
+            | Self::Panic { type_: typ, .. }
             | Self::BinOp { typ, .. }
             | Self::Tuple { typ, .. }
             | Self::String { typ, .. }

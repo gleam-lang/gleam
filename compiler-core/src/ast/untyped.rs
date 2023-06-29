@@ -87,11 +87,12 @@ pub enum UntypedExpr {
     Todo {
         kind: TodoKind,
         location: SrcSpan,
-        label: Option<SmolStr>,
+        message: Option<SmolStr>,
     },
 
     Panic {
         location: SrcSpan,
+        message: Option<SmolStr>,
     },
 
     BitString {

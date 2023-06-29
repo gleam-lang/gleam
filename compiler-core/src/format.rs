@@ -637,11 +637,17 @@ impl<'comments> Formatter<'comments> {
         let document = match expr {
             UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
 
+            UntypedExpr::Panic {
+                message: Some(m), ..
+            } => docvec!["panic as \"", m, "\""],
+
             UntypedExpr::Panic { .. } => "panic".to_doc(),
 
-            UntypedExpr::Todo { label: None, .. } => "todo".to_doc(),
+            UntypedExpr::Todo { message: None, .. } => "todo".to_doc(),
 
-            UntypedExpr::Todo { label: Some(l), .. } => docvec!["todo as \"", l, "\""],
+            UntypedExpr::Todo {
+                message: Some(l), ..
+            } => docvec!["todo as \"", l, "\""],
 
             UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions),
 

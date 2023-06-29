@@ -491,14 +491,21 @@ where
                 UntypedExpr::Todo {
                     location: SrcSpan { start, end },
                     kind: TodoKind::Keyword,
-                    label,
+                    message: label,
                 }
             }
 
-            Some((start, Token::Panic, end)) => {
+            Some((start, Token::Panic, mut end)) => {
+                let mut label = None;
                 let _ = self.next_tok();
+                if self.maybe_one(&Token::As).is_some() {
+                    let (_, l, e) = self.expect_string()?;
+                    label = Some(l);
+                    end = e;
+                }
                 UntypedExpr::Panic {
                     location: SrcSpan { start, end },
+                    message: label,
                 }
             }
 
@@ -1472,7 +1479,7 @@ where
                     None => vec1![Statement::Expression(UntypedExpr::Todo {
                         kind: TodoKind::EmptyFunction,
                         location: SrcSpan { start, end },
-                        label: None,
+                        message: None,
                     })],
                     Some((body, _)) => body,
                 };
