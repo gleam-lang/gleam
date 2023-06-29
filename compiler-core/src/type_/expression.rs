@@ -63,7 +63,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         match expr {
             UntypedExpr::Todo {
                 location,
-                label,
+                message: label,
                 kind,
                 ..
             } => Ok(self.infer_todo(location, kind, label)),
@@ -72,9 +72,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // body, instead only giving an external implementation for this
             // target. This placeholder implementation will never be used so we
             // treat it as a `panic` expression during analysis.
-            UntypedExpr::Placeholder { location } | UntypedExpr::Panic { location } => {
-                Ok(self.infer_panic(location))
-            }
+            UntypedExpr::Placeholder { location } => Ok(self.infer_panic(location, None)),
+
+            UntypedExpr::Panic {
+                location, message, ..
+            } => Ok(self.infer_panic(location, message)),
 
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 
@@ -190,13 +192,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         TypedExpr::Todo {
             location,
             label,
-            typ,
+            type_: typ,
         }
     }
 
-    fn infer_panic(&mut self, location: SrcSpan) -> TypedExpr {
+    fn infer_panic(&mut self, location: SrcSpan, message: Option<SmolStr>) -> TypedExpr {
         let typ = self.new_unbound_var();
-        TypedExpr::Panic { location, typ }
+        TypedExpr::Panic {
+            location,
+            type_: typ,
+            message,
+        }
     }
 
     fn infer_string(&mut self, value: SmolStr, location: SrcSpan) -> TypedExpr {
@@ -309,7 +315,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if following_expressions.is_empty() {
             let todo = Statement::Expression(UntypedExpr::Todo {
                 location: use_.location,
-                label: None,
+                message: None,
                 kind: TodoKind::IncompleteUse,
             });
             statements.push(todo);

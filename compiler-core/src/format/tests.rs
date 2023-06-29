@@ -3208,6 +3208,16 @@ fn expr_panic() {
 }
 
 #[test]
+fn expr_panic_as() {
+    assert_format!(
+        r#"fn main() {
+  panic as "panicking"
+}
+"#
+    );
+}
+
+#[test]
 fn expr_todo() {
     assert_format!(
         "fn main() {

@@ -1411,8 +1411,9 @@ fn todo<'a>(message: &'a Option<SmolStr>, location: SrcSpan, env: &mut Env<'a>) 
     erlang_error("todo", message, location, vec![], env)
 }
 
-fn panic<'a>(location: SrcSpan, env: &mut Env<'a>) -> Document<'a> {
-    erlang_error("panic", "panic expression evaluated", location, vec![], env)
+fn panic<'a>(location: SrcSpan, message: Option<&'a str>, env: &mut Env<'a>) -> Document<'a> {
+    let message = message.unwrap_or("panic expression evaluated");
+    erlang_error("panic", message, location, vec![], env)
 }
 
 fn erlang_error<'a>(
@@ -1464,7 +1465,9 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             label, location, ..
         } => todo(label, *location, env),
 
-        TypedExpr::Panic { location, .. } => panic(*location, env),
+        TypedExpr::Panic {
+            location, message, ..
+        } => panic(*location, message.as_deref(), env),
 
         TypedExpr::Int { value, .. } => int(value),
         TypedExpr::Float { value, .. } => float(value),
