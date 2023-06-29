@@ -7,7 +7,6 @@ use crate::{
     warning::TypeWarningEmitter,
 };
 
-mod assert;
 mod bit_strings;
 mod case;
 mod conditional_compilation;
@@ -16,6 +15,7 @@ mod custom_types;
 mod external_fn;
 mod functions;
 mod guards;
+mod let_assert;
 mod numbers;
 mod panic;
 mod patterns;
