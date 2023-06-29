@@ -814,7 +814,7 @@ fn bin_op<'a>(
     }
 }
 
-fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
+fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
     let mut vars: Vec<&str> = vec![];
     let body = maybe_block_expr(value, env);
     let (subject_var, subject_definition) = if value.is_var() {
@@ -837,7 +837,7 @@ fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) ->
         docvec![
             line(),
             erlang_error(
-                "assert",
+                "let_assert",
                 "Assertion pattern match failed",
                 pat.location(),
                 vec![("value", env.local_var_name(ASSERT_FAIL_VARIABLE))],
@@ -1559,7 +1559,7 @@ fn pipeline<'a>(
 fn assignment<'a>(assignment: &'a TypedAssignment, env: &mut Env<'a>) -> Document<'a> {
     match assignment.kind {
         AssignmentKind::Let => let_(&assignment.value, &assignment.pattern, env),
-        AssignmentKind::Assert => assert(&assignment.value, &assignment.pattern, env),
+        AssignmentKind::Assert => let_assert(&assignment.value, &assignment.pattern, env),
     }
 }
 

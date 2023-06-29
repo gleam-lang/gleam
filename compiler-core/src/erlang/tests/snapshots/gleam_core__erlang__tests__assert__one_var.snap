@@ -14,7 +14,7 @@ go() ->
     {ok, Y} = case _assert_subject of
         {ok, _} -> _assert_subject;
         _assert_fail ->
-            erlang:error(#{gleam_error => assert,
+            erlang:error(#{gleam_error => let_assert,
                         message => <<"Assertion pattern match failed"/utf8>>,
                         value => _assert_fail,
                         module => <<"my/mod"/utf8>>,
