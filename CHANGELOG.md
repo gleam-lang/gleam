@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.30.0-rc1 - 2023-06-29
 
 - The new `@target(erlang)` and `@target(javascript)` attribute syntax has been
   added for conditional compilation. The existing `if` conditional compilation
