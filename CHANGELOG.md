@@ -11,6 +11,7 @@
 - Adding a new dependency now unlocks the target package. This helps avoid
   failing to find a suitable version for the package due to already being
   locked.
+- A custom message can now be specified for `panic` with `panic as "..."`.
 - The syntax for specifying a custom message for `todo` is now `todo as "..."`.
 - The Erlang error raised by `let assert` is now tagged `let_assert`.
 - Types named `Dynamic` are now called `dynamic_` in Erlang to avoid a clash
