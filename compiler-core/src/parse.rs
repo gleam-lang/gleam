@@ -483,6 +483,11 @@ where
                     let (_, e) = self.expect_one(&Token::RightParen)?;
                     end = e;
                 }
+                if self.maybe_one(&Token::As).is_some() {
+                    let (_, l, e) = self.expect_string()?;
+                    label = Some(l);
+                    end = e;
+                }
                 UntypedExpr::Todo {
                     location: SrcSpan { start, end },
                     kind: TodoKind::Keyword,

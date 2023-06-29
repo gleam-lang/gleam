@@ -46,3 +46,12 @@ fn variable_rewrites() {
 }
 
 // TODO: patterns that are just vars don't render a case expression
+// #[test]
+// fn just_pattern() {
+//     assert_erl!(
+//         r#"pub fn go() {
+//   let assert x = Ok(1)
+//   x
+// }"#
+//     );
+// }

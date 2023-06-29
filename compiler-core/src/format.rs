@@ -641,7 +641,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::Todo { label: None, .. } => "todo".to_doc(),
 
-            UntypedExpr::Todo { label: Some(l), .. } => docvec!["todo(\"", l, "\")"],
+            UntypedExpr::Todo { label: Some(l), .. } => docvec!["todo as \"", l, "\""],
 
             UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions),
 

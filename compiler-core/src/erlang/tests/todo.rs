@@ -12,6 +12,17 @@ pub fn main() {
 }
 
 #[test]
+fn todo_as() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  todo as "wibble"
+}
+"#
+    );
+}
+
+#[test]
 fn named() {
     assert_erl!(
         r#"
