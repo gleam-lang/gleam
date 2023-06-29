@@ -97,6 +97,7 @@ struct Attributes {
 pub enum Warning {
     DeprecatedIf { location: SrcSpan, target: Target },
     DeprecatedExternalType { location: SrcSpan, name: SmolStr },
+    DeprecatedTodo { location: SrcSpan, message: SmolStr },
 }
 
 //
@@ -476,22 +477,26 @@ where
 
             Some((start, Token::Todo, mut end)) => {
                 let _ = self.next_tok();
-                let mut label = None;
-                if self.maybe_one(&Token::LeftParen).is_some() {
-                    let (_, l, _) = self.expect_string()?;
-                    label = Some(l);
+                let mut message = None;
+                if let Some((start, __)) = self.maybe_one(&Token::LeftParen) {
+                    let (_, m, _) = self.expect_string()?;
+                    message = Some(m.clone());
                     let (_, e) = self.expect_one(&Token::RightParen)?;
                     end = e;
+                    self.warnings.push(Warning::DeprecatedTodo {
+                        location: SrcSpan::new(start, end),
+                        message: m,
+                    });
                 }
                 if self.maybe_one(&Token::As).is_some() {
                     let (_, l, e) = self.expect_string()?;
-                    label = Some(l);
+                    message = Some(l);
                     end = e;
                 }
                 UntypedExpr::Todo {
                     location: SrcSpan { start, end },
                     kind: TodoKind::Keyword,
-                    message: label,
+                    message,
                 }
             }
 
