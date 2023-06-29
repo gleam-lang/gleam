@@ -11,6 +11,7 @@
 - Adding a new dependency now unlocks the target package. This helps avoid
   failing to find a suitable version for the package due to already being
   locked.
+- The Erlang error raised by `let assert` is now tagged `let_assert`.
 - Types named `Dynamic` are now called `dynamic_` in Erlang to avoid a clash
   with the new Erlang `dynamic` type introduced in OTP26.
 - Dependencies can now be loaded from paths using the 
