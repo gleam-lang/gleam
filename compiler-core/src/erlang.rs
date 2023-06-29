@@ -1462,7 +1462,9 @@ fn erlang_error<'a>(
 fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     match expression {
         TypedExpr::Todo {
-            label, location, ..
+            message: label,
+            location,
+            ..
         } => todo(label, *location, env),
 
         TypedExpr::Panic {

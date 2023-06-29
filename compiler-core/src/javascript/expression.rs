@@ -179,10 +179,12 @@ impl<'module> Generator<'module> {
             } => self.bin_op(name, left, right),
 
             TypedExpr::Todo {
-                label, location, ..
-            } => Ok(self.todo(label, location)),
+                message, location, ..
+            } => Ok(self.todo(message, location)),
 
-            TypedExpr::Panic { location, .. } => Ok(self.panic(location)),
+            TypedExpr::Panic {
+                location, message, ..
+            } => Ok(self.panic(location, message.as_deref())),
 
             TypedExpr::BitString { segments, .. } => self.bit_string(segments),
 
@@ -966,11 +968,12 @@ impl<'module> Generator<'module> {
         doc
     }
 
-    fn panic<'a>(&mut self, location: &'a SrcSpan) -> Document<'a> {
+    fn panic<'a>(&mut self, location: &'a SrcSpan, message: Option<&'a str>) -> Document<'a> {
         let scope_position = self.scope_position;
         self.scope_position = Position::NotTail;
+        let message = message.unwrap_or("panic expression evaluated");
 
-        let doc = self.throw_error("todo", "panic expression evaluated", *location, vec![]);
+        let doc = self.throw_error("todo", message, *location, vec![]);
 
         // Reset tail position so later values are returned as needed. i.e.
         // following clauses in a case expression.

@@ -27,6 +27,17 @@ fn with_message() {
     assert_js!(
         r#"
 fn go() {
+  todo as "I should do this"
+}
+"#,
+    );
+}
+
+#[test]
+fn with_message_deprecated() {
+    assert_js!(
+        r#"
+fn go() {
   todo("I should do this")
 }
 "#,

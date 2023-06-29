@@ -191,7 +191,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         TypedExpr::Todo {
             location,
-            label,
+            message: label,
             type_: typ,
         }
     }
