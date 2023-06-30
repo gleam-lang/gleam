@@ -284,6 +284,214 @@ pub fn main(wibble wibble: Int, wobble wobble: Float) -> Int
 }
 
 #[test]
+fn incompatible_returns() {
+    assert_eq!(
+        fix(
+            None,
+            r#"
+if erlang {
+  pub external fn main() -> List(Int) = "wobble" "main"
+}
+
+if javascript {
+  pub external fn main() -> List(Float) = "wobble" "main"
+}
+"#
+        ),
+        r#"@target(erlang)
+@external(erlang, "wobble", "main")
+pub fn main() -> List(Int)
+
+@target(javascript)
+@external(javascript, "wobble", "main")
+pub fn main() -> List(Float)
+"#
+    )
+}
+
+#[test]
+fn incompatible_returns_qualified() {
+    assert_eq!(
+        fix(
+            None,
+            r#"
+if erlang {
+  pub external fn main() -> Int = "wobble" "main"
+}
+
+if javascript {
+  pub external fn main() -> some.Int = "wobble" "main"
+}
+"#
+        ),
+        r#"@target(erlang)
+@external(erlang, "wobble", "main")
+pub fn main() -> Int
+
+@target(javascript)
+@external(javascript, "wobble", "main")
+pub fn main() -> some.Int
+"#
+    )
+}
+
+#[test]
+fn incompatible_arguments() {
+    assert_eq!(
+        fix(
+            None,
+            r#"
+if erlang {
+  pub external fn main(Int, List(Int)) -> Nil = "wobble" "main"
+}
+
+if javascript {
+  pub external fn main(Int, List(Float)) -> Nil = "wobble" "main"
+}
+"#
+        ),
+        r#"@target(erlang)
+@external(erlang, "wobble", "main")
+pub fn main(a: Int, b: List(Int)) -> Nil
+
+@target(javascript)
+@external(javascript, "wobble", "main")
+pub fn main(a: Int, b: List(Float)) -> Nil
+"#
+    )
+}
+
+#[test]
+fn incompatible_arguments_tuple() {
+    assert_eq!(
+        fix(
+            None,
+            r#"
+if erlang {
+  pub external fn main(Int, #(Int, Int)) -> Nil = "wobble" "main"
+}
+
+if javascript {
+  pub external fn main(Int, #(Int, Float)) -> Nil = "wobble" "main"
+}
+"#
+        ),
+        r#"@target(erlang)
+@external(erlang, "wobble", "main")
+pub fn main(a: Int, b: #(Int, Int)) -> Nil
+
+@target(javascript)
+@external(javascript, "wobble", "main")
+pub fn main(a: Int, b: #(Int, Float)) -> Nil
+"#
+    )
+}
+
+#[test]
+fn incompatible_arguments_fn() {
+    assert_eq!(
+        fix(
+            None,
+            r#"
+if erlang {
+  pub external fn main(Int, fn(Int, Int) -> Int) -> Nil = "wobble" "main"
+}
+
+if javascript {
+  pub external fn main(Int, fn(Int, Float) -> Int) -> Nil = "wobble" "main"
+}
+"#
+        ),
+        r#"@target(erlang)
+@external(erlang, "wobble", "main")
+pub fn main(a: Int, b: fn(Int, Int) -> Int) -> Nil
+
+@target(javascript)
+@external(javascript, "wobble", "main")
+pub fn main(a: Int, b: fn(Int, Float) -> Int) -> Nil
+"#
+    )
+}
+
+#[test]
+fn incompatible_arguments_fn_length() {
+    assert_eq!(
+        fix(
+            None,
+            r#"
+if erlang {
+  pub external fn main(Int, fn(Int) -> Int) -> Nil = "wobble" "main"
+}
+
+if javascript {
+  pub external fn main(Int, fn(Int, Float) -> Int) -> Nil = "wobble" "main"
+}
+"#
+        ),
+        r#"@target(erlang)
+@external(erlang, "wobble", "main")
+pub fn main(a: Int, b: fn(Int) -> Int) -> Nil
+
+@target(javascript)
+@external(javascript, "wobble", "main")
+pub fn main(a: Int, b: fn(Int, Float) -> Int) -> Nil
+"#
+    )
+}
+
+#[test]
+fn incompatible_arguments_fn_return() {
+    assert_eq!(
+        fix(
+            None,
+            r#"
+if erlang {
+  pub external fn main(Int, fn(Int) -> Int) -> Nil = "wobble" "main"
+}
+
+if javascript {
+  pub external fn main(Int, fn(Int) -> Float) -> Nil = "wobble" "main"
+}
+"#
+        ),
+        r#"@target(erlang)
+@external(erlang, "wobble", "main")
+pub fn main(a: Int, b: fn(Int) -> Int) -> Nil
+
+@target(javascript)
+@external(javascript, "wobble", "main")
+pub fn main(a: Int, b: fn(Int) -> Float) -> Nil
+"#
+    )
+}
+
+#[test]
+fn incompatible_arguments_tuple_length() {
+    assert_eq!(
+        fix(
+            None,
+            r#"
+if erlang {
+  pub external fn main(Int, #(Int)) -> Nil = "wobble" "main"
+}
+
+if javascript {
+  pub external fn main(Int, #(Int, Float)) -> Nil = "wobble" "main"
+}
+"#
+        ),
+        r#"@target(erlang)
+@external(erlang, "wobble", "main")
+pub fn main(a: Int, b: #(Int)) -> Nil
+
+@target(javascript)
+@external(javascript, "wobble", "main")
+pub fn main(a: Int, b: #(Int, Float)) -> Nil
+"#
+    )
+}
+
+#[test]
 fn ambiguous_external() {
     let src = r#"pub external fn main(wibble: Int, wobble: Float) -> Int =
   "app" "main"

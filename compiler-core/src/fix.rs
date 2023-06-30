@@ -8,7 +8,7 @@ use vec1::vec1;
 use crate::{
     ast::{
         Arg, ArgNames, Definition, ExternalFunction, Function, Statement, TargettedDefinition,
-        UntypedExpr, UntypedFunction, UntypedModule,
+        TypeAst, UntypedExpr, UntypedFunction, UntypedModule,
     },
     build::Target,
     format::{Formatter, Intermediate},
@@ -64,6 +64,13 @@ impl Replacement {
                     Definition::Function(function),
                 ))
             })
+    }
+
+    fn mut_for(&mut self, target: Target) -> &mut Option<UntypedFunction> {
+        match target {
+            Target::Erlang => &mut self.erlang,
+            Target::JavaScript => &mut self.javascript,
+        }
     }
 }
 
@@ -176,26 +183,33 @@ impl Fixer {
         conditional_target: Option<Target>,
         external_function: &ExternalFunction<()>,
     ) -> &mut Function<(), UntypedExpr> {
-        let replacement = self
+        let replacements = self
             .replacements
             .entry(external_function.name.clone())
             .or_default();
         let default = || function_from_external(external_function);
 
-        match conditional_target {
-            Some(Target::Erlang) if replacement.javascript.is_some() => {
-                let function = replacement.javascript.take().expect("Checked above");
-                replacement.both.insert(function)
-            }
+        let target = match conditional_target {
+            Some(target) => target,
+            None => return replacements.both.get_or_insert_with(default),
+        };
 
-            Some(Target::JavaScript) if replacement.erlang.is_some() => {
-                let function = replacement.erlang.take().expect("Checked above");
-                replacement.both.insert(function)
-            }
+        let other = replacements.mut_for(match target {
+            Target::Erlang => Target::JavaScript,
+            Target::JavaScript => Target::Erlang,
+        });
 
-            Some(Target::Erlang) => replacement.erlang.get_or_insert_with(default),
-            Some(Target::JavaScript) => replacement.javascript.get_or_insert_with(default),
-            None => replacement.both.get_or_insert_with(default),
+        let existing_replacement = match other.take() {
+            Some(f) => f,
+            None => return replacements.mut_for(target).get_or_insert_with(default),
+        };
+
+        // TODO: ensure they have compatible types
+        if has_compatible_types(&existing_replacement, external_function) {
+            replacements.both.insert(existing_replacement)
+        } else {
+            _ = other.insert(existing_replacement);
+            replacements.mut_for(target).get_or_insert(default())
         }
     }
 
@@ -223,7 +237,117 @@ impl Fixer {
     }
 }
 
-fn function_from_external(external_function: &ExternalFunction<()>) -> Function<(), UntypedExpr> {
+#[derive(Debug, Default)]
+struct TypeComparison {
+    left_variables: HashMap<SmolStr, usize>,
+    right_variables: HashMap<SmolStr, usize>,
+}
+
+impl TypeComparison {
+    fn reset(&mut self) {
+        self.left_variables.clear();
+        self.right_variables.clear();
+    }
+
+    fn equal(&mut self, left: &TypeAst, right: &TypeAst) -> bool {
+        match (left, right) {
+            (
+                TypeAst::Constructor {
+                    module: left_m,
+                    name: left_n,
+                    arguments: left_a,
+                    ..
+                },
+                TypeAst::Constructor {
+                    module: right_m,
+                    name: right_n,
+                    arguments: right_a,
+                    ..
+                },
+            ) if left_m == right_m && left_n == right_n && left_a.len() == right_a.len() => {
+                for (left, right) in left_a.iter().zip(right_a.iter()) {
+                    if !self.equal(left, right) {
+                        return false;
+                    }
+                }
+                true
+            }
+
+            (
+                TypeAst::Fn {
+                    arguments: left_a,
+                    return_: left_r,
+                    ..
+                },
+                TypeAst::Fn {
+                    arguments: right_a,
+                    return_: right_r,
+                    ..
+                },
+            ) if left_a.len() == right_a.len() && self.equal(left_r, right_r) => {
+                for (left, right) in left_a.iter().zip(right_a.iter()) {
+                    if !self.equal(left, right) {
+                        return false;
+                    }
+                }
+                true
+            }
+
+            (TypeAst::Var { name: left_n, .. }, TypeAst::Var { name: right_n, .. }) => {
+                self.equal_parameters(left_n, right_n)
+            }
+
+            (TypeAst::Tuple { elems: left_e, .. }, TypeAst::Tuple { elems: right_e, .. })
+                if left_e.len() == right_e.len() =>
+            {
+                for (left, right) in left_e.iter().zip(right_e.iter()) {
+                    if !self.equal(left, right) {
+                        return false;
+                    }
+                }
+                true
+            }
+
+            (TypeAst::Hole { .. }, TypeAst::Hole { .. }) => true,
+
+            _ => false,
+        }
+    }
+
+    fn equal_parameters(&mut self, left: &SmolStr, right: &SmolStr) -> bool {
+        let lefts = self.left_variables.len();
+        let rights = self.right_variables.len();
+        let left = self.left_variables.entry(left.clone()).or_insert(lefts);
+        let right = self.right_variables.entry(right.clone()).or_insert(rights);
+        left == right
+    }
+
+    fn optional_equal(&mut self, left: Option<&TypeAst>, right: &TypeAst) -> bool {
+        let left = match left {
+            None => return false,
+            Some(left) => left,
+        };
+        self.equal(left, right)
+    }
+}
+
+fn has_compatible_types(left: &UntypedFunction, right: &ExternalFunction<()>) -> bool {
+    let mut compare = TypeComparison::default();
+    if !compare.optional_equal(left.return_annotation.as_ref(), &right.return_) {
+        return false;
+    }
+
+    for (left, right) in left.arguments.iter().zip(right.arguments.iter()) {
+        compare.reset();
+        if !compare.optional_equal(left.annotation.as_ref(), &right.annotation) {
+            return false;
+        }
+    }
+
+    true
+}
+
+pub fn function_from_external(external_function: &ExternalFunction<()>) -> UntypedFunction {
     let mut i: u8 = 96;
     Function {
         location: external_function.location,
