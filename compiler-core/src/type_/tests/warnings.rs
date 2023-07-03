@@ -823,3 +823,14 @@ fn allow_list_length_gt_1() {
         "#
     );
 }
+
+#[test]
+fn unused_external_function_arguments() {
+    // https://github.com/gleam-lang/gleam/issues/2259
+    assert_no_warnings!(
+        r#"
+@external(erlang, "go", "go")
+pub fn go(a: item_a) -> Nil
+"#,
+    );
+}

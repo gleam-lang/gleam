@@ -2071,13 +2071,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             .environment
                             .insert_local_variable(name.clone(), arg.location, t);
 
-                        // Register the variable in the usage tracker so that we
-                        // can identify if it is unused
-                        body_typer.environment.init_usage(
-                            name.clone(),
-                            EntityKind::Variable,
-                            arg.location,
-                        );
+                        if !body.first().is_placeholder() {
+                            // Register the variable in the usage tracker so that we
+                            // can identify if it is unused
+                            body_typer.environment.init_usage(
+                                name.clone(),
+                                EntityKind::Variable,
+                                arg.location,
+                            );
+                        }
                     }
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
                 };
