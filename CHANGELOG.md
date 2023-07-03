@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.30.0-rc2 - Unreleased
+## v0.30.0-rc2 - 2023-07-03
 
 - Fixed a bug where `gleam fix` would merge external functions of the same name
   but incompatible types.
