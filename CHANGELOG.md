@@ -4,6 +4,8 @@
 
 - Fixed a bug where `gleam fix` would merge external functions of the same name
   but incompatible types.
+- Fixed a bug where external function arguments would incorrectly be marked as
+  unused.
 
 ## v0.30.0-rc1 - 2023-06-29
 
