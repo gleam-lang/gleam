@@ -118,6 +118,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Matthias Benkort](https://github.com/KtorZ)
  - [max-tern](https://github.com/max-tern)
  - [Michael Chris Lopez](https://github.com/mcchrish)
+ - [Michael Duffy](https://github.com/stunthamster)
  - [Michael Jones](https://github.com/michaeljones)
  - [Michael Kumm](https://github.com/mkumm)
  - [Mike Roach](https://github.com/mroach)
