@@ -162,6 +162,7 @@ enum Command {
         #[clap(default_value = ".")]
         files: Vec<String>,
 
+        #[clap(short, long)]
         /// The target to use for external functions when it could not be inferred.
         target: Option<Target>,
     },

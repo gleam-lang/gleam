@@ -445,8 +445,8 @@ compilation for a specific target, and the module doesn't include
 If you know what target should be used for all ambiguous functions
 run this command again with the --target flag set:
 
-    gleam fix -- --target erlang
-    gleam fix -- --target javascript
+    gleam fix --target erlang
+    gleam fix --target javascript
 "
                 .into();
 

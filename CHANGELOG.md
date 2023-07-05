@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.30.0-rc3 - Unreleased
+
+- Fixed a bug where `gleam fix` would fail to parse command line flags.
+
 ## v0.30.0-rc2 - 2023-07-03
 
 - Fixed a bug where `gleam fix` would merge external functions of the same name
