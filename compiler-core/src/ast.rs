@@ -850,6 +850,12 @@ pub struct Clause<Expr, Type, RecordTag> {
     pub then: Expr,
 }
 
+impl<A, B, C> Clause<A, B, C> {
+    pub fn pattern_count(&self) -> usize {
+        1 + self.alternative_patterns.len()
+    }
+}
+
 impl TypedClause {
     pub fn location(&self) -> SrcSpan {
         SrcSpan {

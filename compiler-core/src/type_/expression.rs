@@ -10,7 +10,9 @@ use crate::{
         UntypedExprBitStringSegment, UntypedMultiPattern, UntypedStatement, Use, UseAssignment,
         USE_ASSIGNMENT_VARIABLE,
     },
+    exhaustiveness,
 };
+use id_arena::Arena;
 use im::hashmap;
 use itertools::Itertools;
 use vec1::Vec1;
@@ -900,6 +902,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             });
         }
 
+        self.check_case_exhaustiveness_new(&subject_types, &typed_clauses)?;
+
         Ok(TypedExpr::Case {
             location,
             typ: return_type,
@@ -1462,6 +1466,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // We can only update a record if it is the only variant of its type.
         // If a record has multiple variants it cannot be safely updated as it
         // could be one of the other variants.
+        assert!(
+            constructors_count > 0,
+            "The value constructor is inferred above, so there must be at least one"
+        );
         if constructors_count != 1 {
             return Err(Error::UpdateMultiConstructorType {
                 location: constructor.location(),
@@ -2156,6 +2164,53 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
             })
         })
+    }
+
+    // TODO: hook it all up!!!
+    fn check_case_exhaustiveness_new(
+        &self,
+        subject_types: &[Arc<Type>],
+        clauses: &[Clause<TypedExpr, Arc<Type>, SmolStr>],
+    ) -> Result<(), Error> {
+        use exhaustiveness::{Body, Column, Compiler, PatternArena, Row};
+
+        let mut compiler = Compiler::new(self.environment.importable_modules, Arena::new());
+        let mut arena = PatternArena::new();
+
+        let subject_variables = subject_types
+            .iter()
+            .map(|t| compiler.new_variable(t.clone()))
+            .collect_vec();
+
+        let mut rows = Vec::with_capacity(clauses.iter().map(Clause::pattern_count).sum::<usize>());
+
+        for (clause_index, clause) in clauses.iter().enumerate() {
+            let mut add = |multi_pattern: &[TypedPattern]| {
+                for (subject_index, pattern) in multi_pattern.iter().enumerate() {
+                    let pattern = arena.register(pattern);
+                    let column = Column::new(subject_variables[subject_index].clone(), pattern);
+                    // TODO: add guard (replace None)
+                    // TODO: test guard
+                    let guard = None;
+                    let body = Body::new(clause_index as u16);
+                    let row = Row::new(vec![column], guard, body);
+                    rows.push(row);
+                }
+            };
+
+            add(&clause.pattern);
+            for multi_pattern in &clause.alternative_patterns {
+                add(multi_pattern);
+            }
+        }
+
+        compiler.set_pattern_arena(arena.into_inner());
+        let _output = compiler.compile(rows);
+
+        // TODO: use result
+        // dbg!(output);
+
+        Ok(())
     }
 }
 

@@ -86,11 +86,11 @@ impl Constructor {
 }
 
 #[derive(Debug, Default)]
-pub struct Patterns {
+pub struct PatternArena {
     arena: Arena<Pattern>,
 }
 
-impl Patterns {
+impl PatternArena {
     pub fn new() -> Self {
         Self::default()
     }
@@ -161,9 +161,18 @@ impl Patterns {
                 type_,
                 ..
             } => {
-                // TODO: Implement constructor
-                let constructor = todo!();
-                let arguments = todo!("Convert arguments to patterns. Need to handle labels");
+                // TODO: This is using the arguments to get the arity. This may
+                // not be correct as it could be using a spread. Will need to
+                // get it either from the field map or the type.
+                let constructor = Constructor::Variant(type_.clone(), arguments.len());
+                // TODO: The arguments may not be given in the same order as the
+                // definition if labels are used. We need to check if that is
+                // the case (or if it has been expanded during earlier type
+                // checking) and then reorder the arguments if needed.
+                let arguments = arguments
+                    .iter()
+                    .map(|argument| self.register(&argument.value))
+                    .collect_vec();
                 self.insert(Pattern::Constructor {
                     constructor,
                     arguments,
@@ -202,7 +211,6 @@ impl Patterns {
         self.arena.alloc(pattern)
     }
 
-    #[cfg(test)]
     pub fn into_inner(self) -> Arena<Pattern> {
         self.arena
     }

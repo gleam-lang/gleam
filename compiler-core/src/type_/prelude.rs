@@ -3,7 +3,8 @@ use strum::{EnumIter, IntoEnumIterator};
 use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 
 use super::{
-    ModuleInterface, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant,
+    ModuleInterface, NamedTypeInfo, Type, TypeConstructor, TypeVar, ValueConstructor,
+    ValueConstructorVariant,
 };
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
@@ -181,7 +182,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         package: "".into(),
         origin: Origin::Src,
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -202,9 +203,12 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
             }
 
             PreludeType::Bool => {
-                let _ = prelude
-                    .types_constructors
-                    .insert(BOOL.into(), vec!["True".into(), "False".into()]);
+                let _ = prelude.types_value_constructors.insert(
+                    BOOL.into(),
+                    NamedTypeInfo {
+                        constructors: vec![("True".into(), vec![]), ("False".into(), vec![])],
+                    },
+                );
                 let _ = prelude.values.insert(
                     "True".into(),
                     value(
@@ -323,14 +327,20 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     TypeConstructor {
                         origin: Default::default(),
                         parameters: vec![result_value.clone(), result_error.clone()],
-                        typ: result(result_value, result_error),
+                        typ: result(result_value.clone(), result_error.clone()),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
                     },
                 );
-                let _ = prelude
-                    .types_constructors
-                    .insert(RESULT.into(), vec!["Ok".into(), "Error".into()]);
+                let _ = prelude.types_value_constructors.insert(
+                    RESULT.into(),
+                    NamedTypeInfo {
+                        constructors: vec![
+                            ("Ok".into(), vec![result_value]),
+                            ("Error".into(), vec![result_error]),
+                        ],
+                    },
+                );
                 let ok = generic_var(ids.next());
                 let error = generic_var(ids.next());
                 let _ = prelude.values.insert(

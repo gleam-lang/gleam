@@ -4,6 +4,7 @@ mod tests;
 use crate::ast::{UntypedArg, UntypedStatement};
 use crate::dep_tree;
 use crate::type_::error::MissingAnnotation;
+use crate::type_::NamedTypeInfo;
 use crate::{
     ast::{
         self, BitStringSegmentOption, CustomType, Definition, DefinitionLocation, ExternalFunction,
@@ -212,7 +213,7 @@ pub fn infer_module(
         type_info: ModuleInterface {
             name,
             types,
-            types_constructors,
+            types_value_constructors: types_constructors,
             values,
             accessors,
             origin,
@@ -437,7 +438,6 @@ fn register_types_from_custom_type<'a>(
         public,
         parameters,
         location,
-        constructors,
         ..
     } = t;
     assert_unique_type_name(names, name, *location)?;
@@ -460,8 +460,18 @@ fn register_types_from_custom_type<'a>(
             typ,
         },
     )?;
-    let constructor_names = constructors.iter().map(|c| c.name.clone()).collect();
-    environment.insert_type_to_constructors(name.clone(), constructor_names);
+    let constructors = t
+        .constructors
+        .iter()
+        .map(|c| {
+            // For now we use an empty vec for the constructor's parameters'
+            // types as we don't know them until we hydrate the constructor in
+            // `register_values_from_custom_type`.
+            let types = vec![];
+            (c.name.clone(), types)
+        })
+        .collect();
+    environment.insert_type_to_constructors(name.clone(), NamedTypeInfo { constructors });
     if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
     };
@@ -480,7 +490,6 @@ fn register_values_from_custom_type(
         public,
         opaque,
         name,
-        constructors,
         ..
     } = t;
     let mut hydrator = hydrators
@@ -493,7 +502,7 @@ fn register_values_from_custom_type(
         .expect("Type for custom type not found in register_values")
         .typ
         .clone();
-    if let Some(accessors) = custom_type_accessors(constructors, &mut hydrator, environment)? {
+    if let Some(accessors) = custom_type_accessors(&t.constructors, &mut hydrator, environment)? {
         let map = AccessorsMap {
             public: (*public && !*opaque),
             accessors,
@@ -503,7 +512,10 @@ fn register_values_from_custom_type(
         };
         environment.insert_accessors(name.clone(), map)
     }
-    for constructor in constructors {
+
+    let mut constructors_info = Vec::with_capacity(t.constructors.len());
+
+    for constructor in &t.constructors {
         assert_unique_name(names, &constructor.name, constructor.location)?;
 
         let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
@@ -525,11 +537,11 @@ fn register_values_from_custom_type(
         // Insert constructor function into module scope
         let typ = match constructor.arguments.len() {
             0 => typ.clone(),
-            _ => fn_(args_types, typ.clone()),
+            _ => fn_(args_types.clone(), typ.clone()),
         };
         let constructor_info = ValueConstructorVariant::Record {
             documentation: constructor.documentation.clone(),
-            constructors_count: constructors.len() as u16,
+            constructors_count: t.constructors.len() as u16,
             name: constructor.name.clone(),
             arity: constructor.arguments.len() as u16,
             field_map: field_map.clone(),
@@ -546,6 +558,8 @@ fn register_values_from_custom_type(
             },
         );
 
+        constructors_info.push((constructor.name.clone(), args_types));
+
         if !public {
             environment.init_usage(
                 constructor.name.clone(),
@@ -556,6 +570,13 @@ fn register_values_from_custom_type(
 
         environment.insert_variable(constructor.name.clone(), constructor_info, typ, *public);
     }
+
+    environment.insert_type_to_constructors(
+        name.clone(),
+        NamedTypeInfo {
+            constructors: constructors_info,
+        },
+    );
     Ok(())
 }
 

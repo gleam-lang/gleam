@@ -38,10 +38,11 @@ mod pattern_tests;
 #[cfg(test)]
 mod tests;
 
-use self::pattern::{Constructor, Pattern, PatternId};
+pub use self::pattern::{Constructor, Pattern, PatternArena, PatternId};
+
 use crate::{
     ast::AssignName,
-    type_::{collapse_links, is_prelude_module, Type},
+    type_::{collapse_links, is_prelude_module, ModuleInterface, NamedTypeInfo, Type},
 };
 use id_arena::Arena;
 use itertools::Itertools;
@@ -63,6 +64,15 @@ pub struct Body {
     clause_index: u16,
 }
 
+impl Body {
+    pub fn new(clause_index: u16) -> Self {
+        Self {
+            bindings: vec![],
+            clause_index,
+        }
+    }
+}
+
 /// A variable used in a match expression.
 ///
 /// In a real compiler these would probably be registers or some other kind of
@@ -82,7 +92,7 @@ pub struct Row {
 }
 
 impl Row {
-    fn new(columns: Vec<Column>, guard: Option<usize>, body: Body) -> Self {
+    pub fn new(columns: Vec<Column>, guard: Option<usize>, body: Body) -> Self {
         Self {
             columns,
             guard,
@@ -110,7 +120,7 @@ pub struct Column {
 }
 
 impl Column {
-    fn new(variable: Variable, pattern: PatternId) -> Self {
+    pub fn new(variable: Variable, pattern: PatternId) -> Self {
         Self { variable, pattern }
     }
 }
@@ -211,39 +221,38 @@ pub struct Diagnostics {
 }
 
 /// The result of compiling a pattern match expression.
-pub struct Match {
+#[derive(Debug)]
+pub struct Match<'modules> {
     pub tree: Decision,
     pub diagnostics: Diagnostics,
-    pub modules: HashMap<SmolStr, ModuleInfo>,
+    pub modules: &'modules im::HashMap<SmolStr, ModuleInterface>,
 }
 
-impl Match {
+impl Match<'_> {
     pub fn missing_patterns(&self) -> Vec<SmolStr> {
         missing_patterns::missing_patterns(self)
     }
 }
 
-#[derive(Debug)]
-pub struct CustomTypeInfo {
-    pub constructors: Vec<(SmolStr, Vec<Arc<Type>>)>,
-}
-
 #[derive(Debug, Default)]
 pub struct ModuleInfo {
-    pub custom_types: HashMap<SmolStr, CustomTypeInfo>,
+    pub custom_types: HashMap<SmolStr, NamedTypeInfo>,
 }
 
 /// The `match` compiler itself (shocking, I know).
 #[derive(Debug)]
-pub struct Compiler {
+pub struct Compiler<'modules> {
     variable_id: usize,
     diagnostics: Diagnostics,
     patterns: Arena<Pattern>,
-    modules: HashMap<SmolStr, ModuleInfo>,
+    modules: &'modules im::HashMap<SmolStr, ModuleInterface>,
 }
 
-impl Compiler {
-    pub fn new(modules: HashMap<SmolStr, ModuleInfo>, patterns: Arena<Pattern>) -> Self {
+impl<'modules> Compiler<'modules> {
+    pub fn new(
+        modules: &'modules im::HashMap<SmolStr, ModuleInterface>,
+        patterns: Arena<Pattern>,
+    ) -> Self {
         Self {
             modules,
             patterns,
@@ -255,12 +264,16 @@ impl Compiler {
         }
     }
 
-    pub fn compile(mut self, rows: Vec<Row>) -> Match {
+    pub fn compile(mut self, rows: Vec<Row>) -> Match<'modules> {
         Match {
             tree: self.compile_rows(rows),
             diagnostics: self.diagnostics,
             modules: self.modules,
         }
+    }
+
+    pub fn set_pattern_arena(&mut self, arena: Arena<Pattern>) {
+        self.patterns = arena;
     }
 
     fn pattern(&self, id: PatternId) -> &Pattern {
@@ -724,8 +737,9 @@ impl Compiler {
             },
 
             Type::Named { module, name, .. } => {
+                dbg!(module, name);
                 let constructors = self
-                    .custom_type_info(module, name)
+                    .named_type_info(module, name)
                     .expect("Custom type variants must exist")
                     .constructors
                     .clone();
@@ -750,7 +764,7 @@ impl Compiler {
     ///
     /// In a real compiler you'd have to ensure these variables don't conflict
     /// with other variables.
-    fn new_variable(&mut self, type_: Arc<Type>) -> Variable {
+    pub fn new_variable(&mut self, type_: Arc<Type>) -> Variable {
         let var = Variable {
             id: self.variable_id,
             type_,
@@ -767,8 +781,10 @@ impl Compiler {
             .collect()
     }
 
-    fn custom_type_info(&self, module: &str, name: &str) -> Option<&CustomTypeInfo> {
-        self.modules.get(module)?.custom_types.get(name)
+    fn named_type_info(&self, module: &str, name: &str) -> Option<&NamedTypeInfo> {
+        dbg!(&self.modules.keys().collect_vec());
+        dbg!(&self.modules.get(module)?.types_value_constructors);
+        self.modules.get(module)?.types_value_constructors.get(name)
     }
 }
 

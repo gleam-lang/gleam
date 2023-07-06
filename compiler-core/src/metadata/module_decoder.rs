@@ -1,6 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] // Needed for macro
 
-use itertools::Itertools;
 use smol_str::SmolStr;
 
 use crate::{
@@ -11,8 +10,8 @@ use crate::{
     build::Origin,
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, FieldMap, ModuleInterface, RecordAccessor, Type, TypeConstructor,
-        ValueConstructor, ValueConstructorVariant,
+        self, AccessorsMap, FieldMap, ModuleInterface, NamedTypeInfo, RecordAccessor, Type,
+        TypeConstructor, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     Result,
@@ -68,10 +67,10 @@ impl ModuleDecoder {
             package: reader.get_package()?.into(),
             origin: Origin::Src,
             types: read_hashmap!(reader.get_types()?, self, type_constructor),
-            types_constructors: read_hashmap!(
+            types_value_constructors: read_hashmap!(
                 reader.get_types_constructors()?,
                 self,
-                constructors_list
+                named_type_infos
             ),
             values: read_hashmap!(reader.get_values()?, self, value_constructor),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
@@ -138,8 +137,16 @@ impl ModuleDecoder {
         Ok(type_::generic_var(id))
     }
 
-    fn constructors_list(&mut self, reader: &capnp::text_list::Reader<'_>) -> Result<Vec<SmolStr>> {
-        Ok(reader.iter().map_ok(SmolStr::new).try_collect()?)
+    fn named_type_infos(&mut self, reader: &named_type_info::Reader<'_>) -> Result<NamedTypeInfo> {
+        let reader = reader.get_constructors()?;
+        let mut constructors = Vec::with_capacity(reader.len() as usize);
+        for reader in reader.into_iter() {
+            let name = reader.get_key()?.into();
+            let types = read_vec!(reader.get_value()?, self, type_);
+            constructors.push((name, types));
+        }
+
+        Ok(NamedTypeInfo { constructors })
     }
 
     fn value_constructor(

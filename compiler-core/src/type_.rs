@@ -450,12 +450,17 @@ pub struct ModuleFunction {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NamedTypeInfo {
+    pub constructors: Vec<(SmolStr, Vec<Arc<Type>>)>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModuleInterface {
     pub name: SmolStr,
     pub origin: Origin,
     pub package: SmolStr,
     pub types: HashMap<SmolStr, TypeConstructor>,
-    pub types_constructors: HashMap<SmolStr, Vec<SmolStr>>,
+    pub types_value_constructors: HashMap<SmolStr, NamedTypeInfo>,
     pub values: HashMap<SmolStr, ValueConstructor>,
     pub accessors: HashMap<SmolStr, AccessorsMap>,
 }

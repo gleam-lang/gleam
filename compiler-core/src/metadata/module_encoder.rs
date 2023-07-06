@@ -7,8 +7,8 @@ use crate::{
     },
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, FieldMap, RecordAccessor, Type, TypeConstructor, TypeVar,
-        ValueConstructor, ValueConstructorVariant,
+        self, AccessorsMap, FieldMap, NamedTypeInfo, RecordAccessor, Type, TypeConstructor,
+        TypeVar, ValueConstructor, ValueConstructorVariant,
     },
 };
 use std::{collections::HashMap, ops::Deref, sync::Arc};
@@ -98,13 +98,13 @@ impl<'a> ModuleEncoder<'a> {
         tracing::trace!("Writing module metadata types to constructors mapping");
         let mut types_constructors = module
             .reborrow()
-            .init_types_constructors(self.data.types_constructors.len() as u32);
-        for (i, (name, constructors)) in self.data.types_constructors.iter().enumerate() {
+            .init_types_constructors(self.data.types_value_constructors.len() as u32);
+        for (i, (name, info)) in self.data.types_value_constructors.iter().enumerate() {
             let mut property = types_constructors.reborrow().get(i as u32);
             property.set_key(name);
             self.build_types_constructors_mapping(
-                property.initn_value(constructors.len() as u32),
-                constructors,
+                property.initn_value(info.constructors.len() as u32),
+                info,
             )
         }
     }
@@ -138,11 +138,14 @@ impl<'a> ModuleEncoder<'a> {
 
     fn build_types_constructors_mapping(
         &mut self,
-        mut builder: capnp::text_list::Builder<'_>,
-        constructors: &[SmolStr],
+        builder: named_type_info::Builder<'_>,
+        info: &NamedTypeInfo,
     ) {
-        for (i, s) in constructors.iter().enumerate() {
-            builder.set(i as u32, s);
+        let mut builder = builder.init_constructors(info.constructors.len() as u32);
+        for (i, (name, types)) in info.constructors.iter().enumerate() {
+            let mut builder = builder.reborrow().get(i as u32);
+            builder.set_key(name);
+            self.build_types(builder.init_value(), types);
         }
     }
 

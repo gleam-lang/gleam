@@ -7,7 +7,7 @@ use super::pattern::*;
 
 #[test]
 fn register_int() {
-    let mut patterns = Patterns::new();
+    let mut patterns = PatternArena::new();
     let input = TypedPattern::Int {
         location: SrcSpan::default(),
         value: "123".into(),
@@ -23,7 +23,7 @@ fn register_int() {
 
 #[test]
 fn register_float() {
-    let mut patterns = Patterns::new();
+    let mut patterns = PatternArena::new();
     let input = TypedPattern::Float {
         location: SrcSpan::default(),
         value: "1.1".into(),
@@ -39,7 +39,7 @@ fn register_float() {
 
 #[test]
 fn register_string() {
-    let mut patterns = Patterns::new();
+    let mut patterns = PatternArena::new();
     let input = TypedPattern::String {
         location: SrcSpan::default(),
         value: "Hello, Joe!".into(),
@@ -55,7 +55,7 @@ fn register_string() {
 
 #[test]
 fn register_bit_string() {
-    let mut patterns = Patterns::new();
+    let mut patterns = PatternArena::new();
     let input = TypedPattern::BitString {
         location: SrcSpan::new(123, 456),
         segments: vec![],
@@ -71,7 +71,7 @@ fn register_bit_string() {
 
 #[test]
 fn register_variable() {
-    let mut patterns = Patterns::new();
+    let mut patterns = PatternArena::new();
     let input = TypedPattern::Variable {
         location: SrcSpan::new(123, 456),
         name: "wibble".into(),
@@ -88,7 +88,7 @@ fn register_variable() {
 
 #[test]
 fn register_assign() {
-    let mut patterns = Patterns::new();
+    let mut patterns = PatternArena::new();
     let input = TypedPattern::Assign {
         name: "wibble".into(),
         location: SrcSpan::default(),
@@ -113,7 +113,7 @@ fn register_assign() {
 
 #[test]
 fn register_tuple() {
-    let mut patterns = Patterns::new();
+    let mut patterns = PatternArena::new();
     let input = TypedPattern::Tuple {
         location: SrcSpan::default(),
         elems: vec![

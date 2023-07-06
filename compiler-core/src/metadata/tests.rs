@@ -9,7 +9,8 @@ use crate::{
     },
     build::Origin,
     type_::{
-        self, ModuleInterface, Type, TypeConstructor, ValueConstructor, ValueConstructorVariant,
+        self, ModuleInterface, NamedTypeInfo, Type, TypeConstructor, ValueConstructor,
+        ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
 };
@@ -31,7 +32,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -74,7 +75,7 @@ fn empty_module() {
         origin: Origin::Src,
         name: "one/two".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -98,7 +99,7 @@ fn module_with_private_type() {
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -122,7 +123,7 @@ fn module_with_app_type() {
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -146,7 +147,7 @@ fn module_with_fn_type() {
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -170,7 +171,7 @@ fn module_with_tuple_type() {
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -200,7 +201,7 @@ fn module_with_generic_type() {
                 },
             )]
             .into(),
-            types_constructors: HashMap::new(),
+            types_value_constructors: HashMap::new(),
             values: HashMap::new(),
             accessors: HashMap::new(),
         }
@@ -230,7 +231,7 @@ fn module_with_type_links() {
                 },
             )]
             .into(),
-            types_constructors: HashMap::new(),
+            types_value_constructors: HashMap::new(),
             values: HashMap::new(),
             accessors: HashMap::new(),
         }
@@ -246,7 +247,13 @@ fn module_type_to_constructors_mapping() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: [("SomeType".into(), vec!["One".into()])].into(),
+        types_value_constructors: [(
+            "SomeType".into(),
+            NamedTypeInfo {
+                constructors: vec![("One".into(), vec![type_::int()])],
+            },
+        )]
+        .into(),
         accessors: HashMap::new(),
         values: HashMap::new(),
     };
@@ -261,7 +268,7 @@ fn module_fn_value() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -293,7 +300,7 @@ fn private_module_fn_value() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -327,7 +334,7 @@ fn module_fn_value_regression() {
         origin: Origin::Src,
         name: "a/b/c".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -360,7 +367,7 @@ fn module_fn_value_with_field_map() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -395,7 +402,7 @@ fn record_value() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -431,7 +438,7 @@ fn record_value_with_field_map() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -468,7 +475,7 @@ fn accessors() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: [
             (
@@ -669,7 +676,7 @@ fn constant_var() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [
             (

@@ -5,10 +5,10 @@ use smol_str::SmolStr;
 
 use crate::type_::Type;
 
-use super::{Constructor, CustomTypeInfo, Decision, Match, Variable};
+use super::{Constructor, Decision, Match, NamedTypeInfo, Variable};
 
 /// Returns a list of patterns not covered by the match expression.
-pub fn missing_patterns(matches: &Match) -> Vec<SmolStr> {
+pub fn missing_patterns(matches: &Match<'_>) -> Vec<SmolStr> {
     let mut names = HashSet::new();
     let mut steps = Vec::new();
 
@@ -129,7 +129,7 @@ impl Term {
 }
 
 fn add_missing_patterns(
-    matches: &Match,
+    matches: &Match<'_>,
     node: &Decision,
     terms: &mut Vec<Term>,
     missing: &mut HashSet<SmolStr>,
@@ -238,7 +238,11 @@ fn add_missing_patterns(
     }
 }
 
-fn custom_type_info<'a>(matches: &'a Match, type_: &Type) -> Option<&'a CustomTypeInfo> {
+fn custom_type_info<'a>(matches: &'a Match<'_>, type_: &Type) -> Option<&'a NamedTypeInfo> {
     let (module, name) = type_.named_type_name()?;
-    matches.modules.get(&module)?.custom_types.get(&name)
+    matches
+        .modules
+        .get(&module)?
+        .types_value_constructors
+        .get(&name)
 }

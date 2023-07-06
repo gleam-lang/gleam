@@ -298,7 +298,17 @@ fn unused_private_type_warnings_test7() {
 
 #[test]
 fn unused_private_type_warnings_test8() {
-    assert_no_warnings!("type X { X } pub fn a() { let b = X case b { X -> 1 } }");
+    assert_no_warnings!(
+        "
+type X { X }
+pub fn a() {
+  let b = X
+  case b {
+    X -> 1
+  }
+}
+"
+    );
 }
 
 #[test]
