@@ -41,7 +41,7 @@ mod tests;
 use self::pattern::{Constructor, Pattern, PatternId};
 use crate::{
     ast::AssignName,
-    type_::{collapse_links, Type},
+    type_::{collapse_links, is_prelude_module, Type},
 };
 use id_arena::Arena;
 use itertools::Itertools;
@@ -707,7 +707,7 @@ impl Compiler {
 
         match collapse_links(variable.type_.clone()).as_ref() {
             Type::Named { module, name, .. }
-                if module.is_empty()
+                if is_prelude_module(module)
                     && (name == "Int"
                         || name == "Float"
                         || name == "String"
@@ -718,7 +718,7 @@ impl Compiler {
 
             Type::Named {
                 module, name, args, ..
-            } if module.is_empty() && name == "List" => BranchMode::List {
+            } if is_prelude_module(module) && name == "List" => BranchMode::List {
                 variable,
                 element_type: args.get(0).expect("Lists have 1 argument").clone(),
             },

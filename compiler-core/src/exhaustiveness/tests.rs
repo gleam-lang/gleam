@@ -43,13 +43,13 @@ impl Setup {
             .insert(name.into(), CustomTypeInfo { constructors });
     }
 
-    fn insert_list_type(&mut self, element_type: Arc<Type>) -> Arc<Type> {
-        let list_type = type_::named("gleam", "List", true, vec![element_type.clone()]);
+    fn insert_custom_list_type(&mut self, element_type: Arc<Type>) -> Arc<Type> {
+        let list_type = type_::named("wibble", "List", true, vec![element_type.clone()]);
         let constructors = vec![
             ("Empty".into(), Vec::new()),
             ("NonEmpty".into(), vec![element_type, list_type.clone()]),
         ];
-        self.insert_constructors("gleam", "List", constructors);
+        self.insert_constructors("wibble", "List", constructors);
         list_type
     }
 
@@ -1758,7 +1758,7 @@ fn exhaustive_list_pattern() {
 fn exhaustive_custom_list_empty() {
     let mut setup = Setup::new();
     let int_type = type_::int();
-    let list_type = setup.insert_list_type(int_type.clone());
+    let list_type = setup.insert_custom_list_type(int_type.clone());
     let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type.clone());
     let input = setup.new_variable(list_type.clone());
@@ -1823,7 +1823,7 @@ fn exhaustive_list_just_empty_pattern() {
 fn exhaustive_custom_list_non_empty() {
     let mut setup = Setup::new();
     let int_type = type_::int();
-    let list_type = setup.insert_list_type(int_type.clone());
+    let list_type = setup.insert_custom_list_type(int_type.clone());
     let discard = setup.discard();
     let var_1 = setup.var(1, int_type);
     let var_2 = setup.var(2, list_type.clone());
