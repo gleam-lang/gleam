@@ -3,11 +3,9 @@ use std::convert::TryInto;
 use async_trait::async_trait;
 use gleam_core::{Error, Result};
 use http::{Request, Response};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    static ref REQWEST_CLIENT: reqwest::Client = reqwest::Client::new();
-}
+pub static REQWEST_CLIENT: Lazy<reqwest::Client> = Lazy::new(|| reqwest::Client::new());
 
 #[derive(Debug)]
 pub struct HttpClient;

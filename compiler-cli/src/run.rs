@@ -6,7 +6,6 @@ use gleam_core::{
     paths::ProjectPaths,
     type_::ModuleFunction,
 };
-use lazy_static::lazy_static;
 use std::path::PathBuf;
 
 use crate::fs::ProjectIO;
@@ -259,15 +258,17 @@ fn add_deno_flag(args: &mut Vec<String>, flag: &str, flags: &DenoFlag) {
 
 /// Check if a module name is a valid gleam module name.
 fn is_gleam_module(module: &str) -> bool {
+    use once_cell::sync::Lazy;
     use regex::Regex;
-    lazy_static! {
-        static ref RE: Regex = Regex::new(&format!(
+
+    static RE: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(&format!(
             "^({module}{slash})*{module}$",
             module = "[a-z][_a-z0-9]*",
             slash = "/",
         ))
-        .expect("is_gleam_module() RE regex");
-    }
+        .expect("is_gleam_module() RE regex")
+    });
 
     RE.is_match(module)
 }

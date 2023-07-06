@@ -1,8 +1,6 @@
 use super::*;
 use crate::type_::{bool, HasType, Type};
 
-use lazy_static::lazy_static;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypedExpr {
     Int {
@@ -242,10 +240,10 @@ impl TypedExpr {
     }
 
     pub fn non_zero_compile_time_number(&self) -> bool {
+        use once_cell::sync::Lazy;
         use regex::Regex;
-        lazy_static! {
-            static ref NON_ZERO: Regex = Regex::new(r"[1-9]").expect("NON_ZERO regex");
-        }
+
+        static NON_ZERO: Lazy<Regex> = Lazy::new(|| Regex::new(r"[1-9]").expect("NON_ZERO regex"));
 
         matches!(
             self,
