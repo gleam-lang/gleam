@@ -20,7 +20,6 @@ use crate::{
 };
 use heck::ToSnakeCase;
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use pattern::pattern;
 use smol_str::SmolStr;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
@@ -459,10 +458,11 @@ fn atom(value: String) -> Document<'static> {
 }
 
 fn escape_atom(value: String) -> String {
+    use once_cell::sync::Lazy;
     use regex::Regex;
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").expect("atom RE regex");
-    }
+
+    static RE: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"^[a-z][a-z0-9_@]*$").expect("atom RE regex"));
 
     if is_erlang_reserved_word(&value) {
         // Escape because of keyword collision

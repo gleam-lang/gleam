@@ -3,13 +3,12 @@ use crate::{
     analyse::Inferred,
     type_::{FieldMap, PatternConstructor},
 };
-use lazy_static::lazy_static;
+
+use once_cell::sync::Lazy;
 
 pub static ASSIGNMENT_VAR: &str = "$";
 
-lazy_static! {
-    pub static ref ASSIGNMENT_VAR_SMOL_STR: SmolStr = ASSIGNMENT_VAR.into();
-}
+pub static ASSIGNMENT_VAR_SMOL_STR: Lazy<SmolStr> = Lazy::new(|| ASSIGNMENT_VAR.into());
 
 #[derive(Debug)]
 enum Index<'a> {

@@ -3,17 +3,17 @@ use crate::{
     build::native_file_copier::CopiedNativeFiles,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
 };
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
+
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-lazy_static! {
-    static ref ROOT: PathBuf = PathBuf::from("/");
-    static ref OUT: PathBuf = PathBuf::from("/out");
-}
+static ROOT: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("/"));
+
+static OUT: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("/out"));
 
 #[test]
 fn javascript_files_are_copied_from_src() {

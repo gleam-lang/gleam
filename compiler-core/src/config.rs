@@ -781,15 +781,13 @@ mod uri_serde {
 }
 
 mod package_name {
-    use lazy_static::lazy_static;
+    use once_cell::sync::Lazy;
     use regex::Regex;
     use serde::Deserializer;
     use smol_str::SmolStr;
 
-    lazy_static! {
-        static ref PACKAGE_NAME_PATTERN: Regex =
-            Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex");
-    }
+    static PACKAGE_NAME_PATTERN: Lazy<Regex> =
+        Lazy::new(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"));
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<SmolStr, D::Error>
     where

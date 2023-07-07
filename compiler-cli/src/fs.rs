@@ -11,7 +11,7 @@ use gleam_core::{
     warning::WarningEmitterIO,
     Result, Warning,
 };
-use lazy_static::lazy_static;
+
 use std::{
     ffi::OsStr,
     fmt::Debug,
@@ -309,15 +309,17 @@ pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), Error> {
 }
 
 fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
+    use once_cell::sync::Lazy;
     use regex::Regex;
-    lazy_static! {
-        static ref RE: Regex = Regex::new(&format!(
+
+    static RE: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(&format!(
             "^({module}{slash})*{module}\\.gleam$",
             module = "[a-z][_a-z0-9]*",
             slash = "(/|\\\\)",
         ))
-        .expect("is_gleam_path() RE regex");
-    }
+        .expect("is_gleam_path() RE regex")
+    });
 
     RE.is_match(
         path.strip_prefix(dir)
