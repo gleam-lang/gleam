@@ -256,10 +256,17 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 left_location,
                 right_location,
                 left_side_string,
+                left_side_assignment,
                 right_side_assignment,
             } => {
                 // The entire concatenate pattern must be a string
                 unify(type_, string()).map_err(|e| convert_unify_error(e, location))?;
+
+                // The left hand side may assign a variable, which is the prefix of the string
+                if let Some((name, name_location)) = &left_side_assignment {
+                    self.insert_variable(name.as_ref(), string(), *name_location)
+                        .map_err(|e| convert_unify_error(e, location))?;
+                }
 
                 // The right hand side may assign a variable, which is the suffix of the string
                 if let AssignName::Variable(right) = &right_side_assignment {
@@ -272,6 +279,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     left_location,
                     right_location,
                     left_side_string,
+                    left_side_assignment,
                     right_side_assignment,
                 })
             }

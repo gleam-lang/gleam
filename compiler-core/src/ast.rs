@@ -1098,6 +1098,7 @@ pub enum Pattern<Type> {
     Concatenate {
         location: SrcSpan,
         left_location: SrcSpan,
+        left_side_assignment: Option<(SmolStr, SrcSpan)>,
         right_location: SrcSpan,
         left_side_string: SmolStr,
         /// The variable on the right hand side of the `<>`.
