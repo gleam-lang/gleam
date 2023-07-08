@@ -924,32 +924,78 @@ where
 
             Some((start, Token::String { value }, end)) => {
                 let _ = self.next_tok();
-                let location = SrcSpan { start, end };
 
-                // String prefix matching
-                // "Hello, " <> name -> ...
-                if let Some((_, Token::LtGt, _)) = self.tok0 {
-                    let _ = self.next_tok();
-                    let (r_start, right, r_end) = self.expect_assign_name()?;
+                match self.tok0 {
+                    // String matching with assignment, it could either be a
+                    // String prefix matching: "Hello, " as greeting <> name -> ...
+                    // or a full string matching: "Hello, World!" as greeting -> ...
+                    Some((_, Token::As, _)) => {
+                        let _ = self.next_tok();
+                        let (name_start, name, name_end) = self.expect_name()?;
+                        let name_span = SrcSpan {
+                            start: name_start,
+                            end: name_end,
+                        };
 
-                    Pattern::Concatenate {
-                        location: SrcSpan {
-                            start: location.start,
-                            end: r_end,
-                        },
-                        left_location: location,
-                        right_location: SrcSpan {
-                            start: r_start,
-                            end: r_end,
-                        },
-                        left_side_string: value,
-                        right_side_assignment: right,
+                        match self.tok0 {
+                            // String prefix matching with assignment
+                            // "Hello, " as greeting <> name -> ...
+                            Some((_, Token::LtGt, _)) => {
+                                let _ = self.next_tok();
+                                let (r_start, right, r_end) = self.expect_assign_name()?;
+                                Pattern::Concatenate {
+                                    location: SrcSpan { start, end: r_end },
+                                    left_location: SrcSpan {
+                                        start,
+                                        end: name_end,
+                                    },
+                                    right_location: SrcSpan {
+                                        start: r_start,
+                                        end: r_end,
+                                    },
+                                    left_side_string: value,
+                                    left_side_assignment: Some((name, name_span)),
+                                    right_side_assignment: right,
+                                }
+                            }
+                            // Full string matching with assignment
+                            _ => {
+                                return Ok(Some(Pattern::Assign {
+                                    name,
+                                    location: name_span,
+                                    pattern: Box::new(Pattern::String {
+                                        location: SrcSpan { start, end },
+                                        value,
+                                    }),
+                                }));
+                            }
+                        }
                     }
 
-                // Full string matching
-                // "Hello, World!" -> ...
-                } else {
-                    Pattern::String { location, value }
+                    // String prefix matching with no left side assignment
+                    // "Hello, " <> name -> ...
+                    Some((_, Token::LtGt, _)) => {
+                        let _ = self.next_tok();
+                        let (r_start, right, r_end) = self.expect_assign_name()?;
+                        Pattern::Concatenate {
+                            location: SrcSpan { start, end: r_end },
+                            left_location: SrcSpan { start, end },
+                            right_location: SrcSpan {
+                                start: r_start,
+                                end: r_end,
+                            },
+                            left_side_string: value,
+                            left_side_assignment: None,
+                            right_side_assignment: right,
+                        }
+                    }
+
+                    // Full string matching
+                    // "Hello, World!" -> ...
+                    _ => Pattern::String {
+                        location: SrcSpan { start, end },
+                        value,
+                    },
                 }
             }
             Some((start, Token::Int { value }, end)) => {
