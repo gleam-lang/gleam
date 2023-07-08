@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 #[test]
 fn new() {
     let tmp = tempfile::tempdir().unwrap();
@@ -138,4 +140,84 @@ fn invalid_name() {
         "1.0.0-gleam",
     )
     .is_err());
+}
+
+#[test]
+fn existing_directory_no_files() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("my_project");
+
+    crate::fs::mkdir(&path).unwrap();
+
+    let creator = super::Creator::new(
+        super::NewOptions {
+            project_root: path.to_str().unwrap().to_string(),
+            template: super::Template::Lib,
+            name: None,
+            description: "Wibble wobble".into(),
+            skip_git: true,
+            skip_github: true,
+        },
+        "1.0.0-gleam",
+    )
+    .unwrap();
+
+    creator.run().unwrap();
+
+    assert!(path.join("README.md").exists());
+}
+
+#[test]
+fn existing_directory_with_one_existing_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("my_project");
+
+    crate::fs::mkdir(&path).unwrap();
+
+    let _ = std::fs::File::create(PathBuf::from(&path).join("README.md"));
+    let _ = std::fs::File::create(PathBuf::from(&path).join("my_project.gleam"));
+
+    assert!(super::Creator::new(
+        super::NewOptions {
+            project_root: path.to_str().unwrap().to_string(),
+            template: super::Template::Lib,
+            name: None,
+            description: "Wibble wobble".into(),
+            skip_git: true,
+            skip_github: true,
+        },
+        "1.0.0-gleam",
+    )
+    .is_err());
+}
+
+#[test]
+fn existing_directory_with_non_generated_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("my_project");
+
+    crate::fs::mkdir(&path).unwrap();
+    let file_path = PathBuf::from(&path).join("some_fake_thing_that_is_not_generated.md");
+
+    let _ = std::fs::File::create(&file_path);
+
+    let creator = super::Creator::new(
+        super::NewOptions {
+            project_root: path.to_str().unwrap().to_string(),
+            template: super::Template::Lib,
+            name: None,
+            description: "Wibble wobble".into(),
+            skip_git: true,
+            skip_github: true,
+        },
+        "1.0.0-gleam",
+    )
+    .unwrap();
+
+    creator.run().unwrap();
+
+    assert!(path.join("README.md").exists());
+    assert!(path
+        .join("some_fake_thing_that_is_not_generated.md")
+        .exists());
 }

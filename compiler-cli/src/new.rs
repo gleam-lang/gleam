@@ -4,8 +4,8 @@ use gleam_core::{
     parse, Result,
 };
 use serde::{Deserialize, Serialize};
-use std::fs::File;
 use std::path::{Path, PathBuf};
+use std::{collections::HashMap, fs::File};
 use std::{env, io::Write};
 use strum::{Display, EnumString, EnumVariantNames};
 
@@ -36,6 +36,16 @@ pub struct Creator {
     gleam_version: &'static str,
     options: NewOptions,
     project_name: String,
+    files_to_create: HashMap<FileToCreate, String>,
+}
+
+#[derive(PartialEq, Eq, Debug, Hash)]
+enum FileToCreate {
+    Readme,
+    Gitignore,
+    ProjectGleam,
+    TestGleam,
+    ConfigToml,
 }
 
 impl Creator {
@@ -48,8 +58,22 @@ impl Creator {
         .trim()
         .to_string();
 
+        let files_to_create = HashMap::from([
+            (FileToCreate::Readme, "README.md".to_string()),
+            (FileToCreate::Gitignore, ".gitignore".to_string()),
+            (
+                FileToCreate::ProjectGleam,
+                format!("{}.gleam", project_name),
+            ),
+            (
+                FileToCreate::TestGleam,
+                format!("{}_test.gleam", project_name),
+            ),
+            (FileToCreate::ConfigToml, "gleam.toml".to_string()),
+        ]);
+
         validate_name(&project_name)?;
-        validate_root_folder(&options.project_root)?;
+        validate_root_folder(&options.project_root, &files_to_create)?;
 
         let root = PathBuf::from(&options.project_root);
         let src = root.join("src");
@@ -65,6 +89,7 @@ impl Creator {
             gleam_version,
             options,
             project_name,
+            files_to_create,
         })
     }
 
@@ -103,7 +128,11 @@ impl Creator {
 
     fn src_module(&self) -> Result<()> {
         write(
-            self.src.join(format!("{}.gleam", self.project_name)),
+            self.src.join(
+                self.files_to_create
+                    .get(&FileToCreate::ProjectGleam)
+                    .unwrap(),
+            ),
             &format!(
                 r#"import gleam/io
 
@@ -118,7 +147,8 @@ pub fn main() {{
 
     fn gitignore(&self) -> Result<()> {
         write(
-            self.root.join(".gitignore"),
+            self.root
+                .join(self.files_to_create.get(&FileToCreate::Gitignore).unwrap()),
             "*.beam
 *.ez
 build
@@ -129,7 +159,8 @@ erl_crash.dump
 
     fn readme(&self) -> Result<()> {
         write(
-            self.root.join("README.md"),
+            self.root
+                .join(self.files_to_create.get(&FileToCreate::Readme).unwrap()),
             &format!(
                 r#"# {name}
 
@@ -197,7 +228,8 @@ jobs:
 
     fn gleam_toml(&self) -> Result<()> {
         write(
-            self.root.join("gleam.toml"),
+            self.root
+                .join(self.files_to_create.get(&FileToCreate::ConfigToml).unwrap()),
             &format!(
                 r#"name = "{name}"
 version = "0.1.0"
@@ -284,14 +316,28 @@ fn write(path: PathBuf, contents: &str) -> Result<()> {
     Ok(())
 }
 
-fn validate_root_folder(name: &str) -> Result<(), Error> {
-    if Path::new(name).exists() {
-        Err(Error::ProjectRootAlreadyExist {
-            path: name.to_string(),
-        })
-    } else {
-        Ok(())
+fn validate_root_folder(
+    directory_name: &str,
+    files_to_create: &HashMap<FileToCreate, String>,
+) -> Result<(), Error> {
+    let mut duplicate_files = Vec::new();
+
+    for file_name in files_to_create.values() {
+        let full_path = PathBuf::from(directory_name).join(file_name);
+
+        if full_path.exists() {
+            duplicate_files.push(file_name.clone());
+        }
     }
+
+    if !duplicate_files.is_empty() {
+        return Err(Error::OutputFilesAlreadyExist {
+            path: directory_name.to_string(),
+            file_names: duplicate_files,
+        });
+    }
+
+    Ok(())
 }
 
 fn validate_name(name: &str) -> Result<(), Error> {
