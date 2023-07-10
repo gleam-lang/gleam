@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.30.0-rc4 - Unreleased
+
+- An error is now emitted for invalid JavaScript external implementations.
+
 ## v0.30.0-rc3 - 2023-07-05
 
 - Fixed a bug where `gleam fix` would fail to parse command line flags.
