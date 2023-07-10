@@ -1,4 +1,4 @@
-use crate::{assert_js, assert_ts_def};
+use crate::{assert_js, assert_module_error, assert_ts_def};
 
 #[test]
 fn type_() {
@@ -211,6 +211,30 @@ fn no_body() {
         r#"
 @external(javascript, "one", "one")
 pub fn one(x: Int) -> Int
+"#
+    );
+}
+
+#[test]
+fn no_module() {
+    assert_module_error!(
+        r#"
+@external(javascript, "", "one")
+pub fn one(x: Int) -> Int {
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn inline_function() {
+    assert_module_error!(
+        r#"
+@external(javascript, "blah", "(x => x)")
+pub fn one(x: Int) -> Int {
+  1
+}
 "#
     );
 }

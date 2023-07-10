@@ -2168,6 +2168,60 @@ using the `@external` attribute."
                         }),
                     }
                 }
+
+                TypeError::InvalidExternalJavascriptModule {
+                    location,
+                    name,
+                    module,
+                } => {
+                    let text = wrap_format!(
+                        "The function `{name}` has an external JavaScript \
+implementation but the module path `{module}` is not valid."
+                    )
+                    .into();
+                    Diagnostic {
+                        title: "Invalid JavaScript module".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::InvalidExternalJavascriptFunction {
+                    location,
+                    name,
+                    function,
+                } => {
+                    let text = wrap_format!(
+                        "The function `{name}` has an external JavaScript \
+implementation but the function name `{function}` is not valid."
+                    )
+                    .into();
+                    Diagnostic {
+                        title: "Invalid JavaScript function".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
             },
 
             Error::Parse { path, src, error } => {

@@ -392,7 +392,6 @@ impl<'a> Generator<'a> {
         fun: &'a str,
     ) {
         let needs_escaping = !is_usable_js_identifier(name);
-        // TODO: handle the escaping here!!!!!!!!!!!
         let member = Member {
             name: fun.to_doc(),
             alias: if name == fun && !needs_escaping {

@@ -271,6 +271,22 @@ pub enum Error {
     NoImplementation {
         location: SrcSpan,
     },
+
+    // A function's JavaScript implementation has been given but it does not
+    // have a valid module name.
+    InvalidExternalJavascriptModule {
+        location: SrcSpan,
+        module: SmolStr,
+        name: SmolStr,
+    },
+
+    // A function's JavaScript implementation has been given but it does not
+    // have a valid function name.
+    InvalidExternalJavascriptFunction {
+        location: SrcSpan,
+        function: SmolStr,
+        name: SmolStr,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

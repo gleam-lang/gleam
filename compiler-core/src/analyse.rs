@@ -642,6 +642,8 @@ fn register_value_from_function(
         ..
     } = f;
     assert_unique_name(names, name, *location)?;
+    assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
+
     let mut builder = FieldMapBuilder::new(args.len() as u32);
     for arg in args.iter() {
         builder.add(arg.names.get_label(), arg.location)?;
@@ -676,6 +678,38 @@ fn register_value_from_function(
     if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
     };
+    Ok(())
+}
+
+fn assert_valid_javascript_external(
+    function_name: &SmolStr,
+    external_javascript: Option<&(SmolStr, SmolStr)>,
+    location: SrcSpan,
+) -> Result<(), Error> {
+    use regex::Regex;
+    lazy_static::lazy_static! {
+        static ref MODULE: Regex = Regex::new("^[a-zA-Z0-9\\./_-]+$").expect("regex");
+        static ref FUNCTION: Regex = Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$").expect("regex");
+    }
+
+    let (module, function) = match external_javascript {
+        None => return Ok(()),
+        Some(external) => external,
+    };
+    if !MODULE.is_match(module) {
+        return Err(Error::InvalidExternalJavascriptModule {
+            location,
+            module: module.clone(),
+            name: function_name.clone(),
+        });
+    }
+    if !FUNCTION.is_match(function) {
+        return Err(Error::InvalidExternalJavascriptFunction {
+            location,
+            function: function.clone(),
+            name: function_name.clone(),
+        });
+    }
     Ok(())
 }
 
