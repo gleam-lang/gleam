@@ -50,11 +50,11 @@ enum FileToCreate {
 impl FileToCreate {
     pub fn location(&self, project_name: &str) -> PathBuf {
         match self {
-            FileToCreate::Readme => PathBuf::from("README.md"),
-            FileToCreate::Gitignore => PathBuf::from(".gitignore"),
-            FileToCreate::ProjectGleam => PathBuf::from(format!("{}.gleam", project_name)),
-            FileToCreate::TestGleam => PathBuf::from(format!("{}_test.gleam", project_name)),
-            FileToCreate::ConfigToml => PathBuf::from("gleam.toml"),
+            Self::Readme => PathBuf::from("README.md"),
+            Self::Gitignore => PathBuf::from(".gitignore"),
+            Self::ProjectGleam => PathBuf::from(format!("{}.gleam", project_name)),
+            Self::TestGleam => PathBuf::from(format!("{}_test.gleam", project_name)),
+            Self::ConfigToml => PathBuf::from("gleam.toml"),
         }
     }
 }
