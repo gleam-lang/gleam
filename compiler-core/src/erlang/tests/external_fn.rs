@@ -232,3 +232,13 @@ fn do() -> Int
 "#
     );
 }
+
+#[test]
+fn public_elixir() {
+    assert_erl!(
+        r#"
+@external(erlang, "Elixir.String", "main")
+pub fn do() -> Int
+"#
+    );
+}

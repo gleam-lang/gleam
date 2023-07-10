@@ -107,10 +107,10 @@ fn tag_tuple_pattern<'a>(
     env: &mut Env<'a>,
 ) -> Document<'a> {
     if args.is_empty() {
-        atom(name.to_snake_case())
+        atom_string(name.to_snake_case())
     } else {
         tuple(
-            [atom(name.to_snake_case())].into_iter().chain(
+            [atom_string(name.to_snake_case())].into_iter().chain(
                 args.iter()
                     .map(|p| print(&p.value, vars, define_variables, env)),
             ),

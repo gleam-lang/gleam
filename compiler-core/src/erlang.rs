@@ -22,6 +22,7 @@ use heck::ToSnakeCase;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use pattern::pattern;
+use regex::Regex;
 use smol_str::SmolStr;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
@@ -34,7 +35,7 @@ fn module_name_to_erlang(module: &str) -> Document<'_> {
 }
 
 fn module_name_atom(module: &str) -> Document<'static> {
-    atom(module.replace('/', "@"))
+    atom_string(module.replace('/', "@"))
 }
 
 #[derive(Debug, Clone)]
@@ -124,7 +125,7 @@ pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     let type_printer = TypePrinter::new("").var_as_any();
     let fields = fields.iter().map(move |(name, type_)| {
         let type_ = type_printer.print(type_);
-        docvec!(atom((*name).to_string()), " :: ", type_.group())
+        docvec!(atom_string((*name).to_string()), " :: ", type_.group())
     });
     let fields = break_("", "")
         .append(concat(Itertools::intersperse(fields, break_(",", ", "))))
@@ -133,7 +134,7 @@ pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
         .group();
     docvec!(
         "-record(",
-        atom(name.to_string()),
+        atom_string(name.to_string()),
         ", {",
         fields,
         "}).",
@@ -244,14 +245,14 @@ fn register_imports(
             name,
             arguments: args,
             ..
-        }) => exports.push(atom(name.to_string()).append("/").append(args.len())),
+        }) => exports.push(atom_string(name.to_string()).append("/").append(args.len())),
 
         Definition::ExternalFunction(ExternalFunction {
             public: true,
             name,
             arguments: args,
             ..
-        }) => exports.push(atom(name.to_string()).append("/").append(args.len())),
+        }) => exports.push(atom_string(name.to_string()).append("/").append(args.len())),
 
         Definition::CustomType(CustomType {
             name,
@@ -303,7 +304,7 @@ fn register_imports(
                 let constructors = constructors
                     .iter()
                     .map(|c| {
-                        let name = atom(c.name.to_snake_case());
+                        let name = atom_string(c.name.to_snake_case());
                         if c.arguments.is_empty() {
                             name
                         } else {
@@ -402,11 +403,11 @@ fn module_function<'a>(
     let body = function
         .external_erlang
         .as_ref()
-        .map(|(module, function)| docvec![module, ":", function, arguments.clone()])
+        .map(|(module, function)| docvec![atom(module), ":", atom(function), arguments.clone()])
         .unwrap_or_else(|| statement_sequence(&function.body, &mut env));
 
     let doc = spec
-        .append(atom(function.name.to_string()))
+        .append(atom_string(function.name.to_string()))
         .append(arguments)
         .append(" ->")
         .append(line().append(body).nest(INDENT).group())
@@ -439,13 +440,13 @@ where
 }
 
 fn fun_spec<'a>(
-    name: &str,
+    name: &'a str,
     args: impl IntoIterator<Item = Document<'a>>,
     retrn: Document<'a>,
 ) -> Document<'a> {
     "-spec "
         .to_doc()
-        .append(atom(name.to_string()))
+        .append(atom(name))
         .append(wrap_args(args))
         .append(" -> ")
         .append(retrn)
@@ -454,20 +455,32 @@ fn fun_spec<'a>(
         .group()
 }
 
-fn atom(value: String) -> Document<'static> {
-    Document::String(escape_atom(value))
+fn atom_string(value: String) -> Document<'static> {
+    Document::String(escape_atom_string(value))
 }
 
-fn escape_atom(value: String) -> String {
-    use regex::Regex;
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").expect("atom RE regex");
-    }
+lazy_static! {
+    static ref ATOM_PATTERN: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").expect("atom RE regex");
+}
 
+fn atom(value: &str) -> Document<'_> {
+    if is_erlang_reserved_word(value) {
+        // Escape because of keyword collision
+        Document::String(format!("'{value}'"))
+    } else if ATOM_PATTERN.is_match(&value) {
+        // No need to escape
+        Document::Str(value)
+    } else {
+        // Escape because of characters contained
+        Document::String(format!("'{value}'"))
+    }
+}
+
+fn escape_atom_string(value: String) -> String {
     if is_erlang_reserved_word(&value) {
         // Escape because of keyword collision
         format!("'{value}'")
-    } else if RE.is_match(&value) {
+    } else if ATOM_PATTERN.is_match(&value) {
         // No need to escape
         value
     } else {
@@ -905,12 +918,12 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
                     .to_doc()
                     .append(Document::String(chars.clone()))
                     .append(") -> {")
-                    .append(atom(record_name.to_snake_case()))
+                    .append(atom_string(record_name.to_snake_case()))
                     .append(", ")
                     .append(Document::String(chars))
                     .append("} end")
             }
-            _ => atom(record_name.to_snake_case()),
+            _ => atom_string(record_name.to_snake_case()),
         },
 
         ValueConstructorVariant::LocalVariable { .. } => env.local_var_name(name),
@@ -921,7 +934,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
             arity, ref module, ..
         } if module == env.module => "fun "
             .to_doc()
-            .append(atom(name.to_string()))
+            .append(atom(name))
             .append("/")
             .append(*arity),
 
@@ -934,7 +947,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
             .to_doc()
             .append(module_name_atom(module))
             .append(":")
-            .append(atom(name.to_string()))
+            .append(atom(name))
             .append("/")
             .append(*arity),
     }
@@ -973,12 +986,12 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
 
         Constant::Record { tag, typ, args, .. } if args.is_empty() => match typ.deref() {
             Type::Fn { args, .. } => record_constructor_function(tag, args.len()),
-            _ => atom(tag.to_snake_case()),
+            _ => atom_string(tag.to_snake_case()),
         },
 
         Constant::Record { tag, args, .. } => {
             let args = args.iter().map(|a| const_inline(&a.value, env));
-            let tag = atom(tag.to_snake_case());
+            let tag = atom_string(tag.to_snake_case());
             tuple(std::iter::once(tag).chain(args))
         }
 
@@ -1000,7 +1013,7 @@ fn record_constructor_function(tag: &SmolStr, arity: usize) -> Document<'_> {
         .to_doc()
         .append(Document::String(chars.clone()))
         .append(") -> {")
-        .append(atom(tag.to_snake_case()))
+        .append(atom_string(tag.to_snake_case()))
         .append(", ")
         .append(Document::String(chars))
         .append("} end")
@@ -1219,11 +1232,11 @@ fn module_fn_with_args<'a>(
 ) -> Document<'a> {
     let args = wrap_args(args);
     if module == env.module {
-        atom(name.to_string()).append(args)
+        atom(name).append(args)
     } else {
-        atom(module.replace('/', "@"))
+        atom_string(module.replace('/', "@"))
             .append(":")
-            .append(atom(name.to_string()))
+            .append(atom(name))
             .append(args)
     }
 }
@@ -1245,7 +1258,7 @@ fn docs_args_call<'a>(
                     ..
                 },
             ..
-        } => tuple(std::iter::once(atom(name.to_snake_case())).chain(args)),
+        } => tuple(std::iter::once(atom_string(name.to_snake_case())).chain(args)),
 
         TypedExpr::Var {
             constructor:
@@ -1295,9 +1308,9 @@ fn docs_args_call<'a>(
             // This also enables an optimisation in the Erlang compiler in which
             // some Erlang BIFs can be replaced with literals if their arguments
             // are literals, such as `binary_to_atom`.
-            atom(module.replace('/', "@"))
+            atom_string(module.replace('/', "@"))
                 .append(":")
-                .append(atom(name.to_string()))
+                .append(atom_string(name.to_string()))
                 .append(args)
         }
 
@@ -1502,7 +1515,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity: 0, .. },
             ..
-        } => atom(name.to_snake_case()),
+        } => atom_string(name.to_snake_case()),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Constant { literal, .. },
@@ -1586,13 +1599,13 @@ fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a str, label: &'a str) ->
             .to_doc()
             .append(module_name_to_erlang(module_name))
             .append(":")
-            .append(atom(label.to_string()))
+            .append(atom(label))
             .append("/")
             .append(args.len()),
 
         _ => module_name_to_erlang(module_name)
             .append(":")
-            .append(atom(label.to_string()))
+            .append(atom(label))
             .append("()"),
     }
 }
@@ -1639,12 +1652,12 @@ fn external_fun<'a>(
     let return_spec = type_printer.print(return_type);
     let spec = fun_spec(name, args_spec, return_spec);
 
-    spec.append(atom(name.to_string())).append(
+    spec.append(atom(name)).append(
         Document::String(format!("({chars}) ->"))
             .append(line())
-            .append(atom(module.to_string()))
+            .append(atom(module))
             .append(":")
-            .append(atom(fun.to_string()))
+            .append(atom(fun))
             .append(Document::String(format!("({chars}).")))
             .nest(INDENT)
             .group(),
@@ -1876,7 +1889,7 @@ fn erl_safe_type_name(mut name: String) -> String {
         name.push('_');
         name
     } else {
-        escape_atom(name)
+        escape_atom_string(name)
     }
 }
 
