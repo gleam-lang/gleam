@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.30.0-rc4 - Unreleased
+## v0.30.0-rc4 - 2023-07-10
 
 - An error is now emitted for invalid JavaScript external implementations.
 - Fixed a bug where Erlang external implementations could generate invalid code.

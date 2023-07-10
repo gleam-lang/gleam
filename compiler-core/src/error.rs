@@ -2177,8 +2177,7 @@ using the `@external` attribute."
                     let text = wrap_format!(
                         "The function `{name}` has an external JavaScript \
 implementation but the module path `{module}` is not valid."
-                    )
-                    .into();
+                    );
                     Diagnostic {
                         title: "Invalid JavaScript module".into(),
                         text,
@@ -2204,8 +2203,7 @@ implementation but the module path `{module}` is not valid."
                     let text = wrap_format!(
                         "The function `{name}` has an external JavaScript \
 implementation but the function name `{function}` is not valid."
-                    )
-                    .into();
+                    );
                     Diagnostic {
                         title: "Invalid JavaScript function".into(),
                         text,

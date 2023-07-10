@@ -467,7 +467,7 @@ fn atom(value: &str) -> Document<'_> {
     if is_erlang_reserved_word(value) {
         // Escape because of keyword collision
         Document::String(format!("'{value}'"))
-    } else if ATOM_PATTERN.is_match(&value) {
+    } else if ATOM_PATTERN.is_match(value) {
         // No need to escape
         Document::Str(value)
     } else {
