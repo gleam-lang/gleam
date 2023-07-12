@@ -168,10 +168,9 @@ impl Warning {
                     }
                 }
 
-                crate::parse::Warning::DeprecatedExternalFn { location, } =>{
-                    let text = format!(
-"This syntax has been replaced by the `@external` attribute.\n"
-                    );
+                crate::parse::Warning::DeprecatedExternalFn { location } => {
+                    let text =
+                        "This syntax has been replaced by the `@external` attribute.\n".into();
                     Diagnostic {
                         title: "Deprecated external fn syntax".into(),
                         text,
@@ -235,7 +234,9 @@ impl Warning {
 
             Warning::InvalidSource { path } => Diagnostic {
                 title: "Invalid module name.".into(),
-                text: "Module names must begin with a lowercase letter and contain only lowercase alphanumeric characters or underscores.".into(),
+                text: "Module names must begin with a lowercase letter and contain\
+ only lowercase alphanumeric characters or underscores."
+                    .into(),
                 level: diagnostic::Level::Warning,
                 location: None,
                 hint: Some(format!(
