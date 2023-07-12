@@ -96,6 +96,7 @@ struct Attributes {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Warning {
     DeprecatedIf { location: SrcSpan, target: Target },
+    DeprecatedExternalFn { location: SrcSpan },
     DeprecatedExternalType { location: SrcSpan, name: SmolStr },
     DeprecatedTodo { location: SrcSpan, message: SmolStr },
 }
@@ -1533,6 +1534,10 @@ where
         let _ = self.expect_one(&Token::Equal)?;
         let (_, module, _) = self.expect_string()?;
         let (_, fun, end) = self.expect_string()?;
+
+        self.warnings.push(Warning::DeprecatedExternalFn {
+            location: SrcSpan::new(start, end),
+        });
 
         if let Some(retrn) = return_annotation {
             Ok(Some(Definition::ExternalFunction(ExternalFunction {

@@ -168,6 +168,27 @@ impl Warning {
                     }
                 }
 
+                crate::parse::Warning::DeprecatedExternalFn { location, } =>{
+                    let text = format!(
+"This syntax has been replaced by the `@external` attribute.\n"
+                    );
+                    Diagnostic {
+                        title: "Deprecated external fn syntax".into(),
+                        text,
+                        hint: Some("Run `gleam fix` to auto-fix your code.".into()),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            path: path.to_path_buf(),
+                            src: src.clone(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
                 crate::parse::Warning::DeprecatedTodo { location, message } => {
                     let text = format!(
                         "The `todo()` syntax has been replaced by this syntax:

@@ -4,6 +4,7 @@
 
 - An error is now emitted for invalid JavaScript external implementations.
 - Fixed a bug where Erlang external implementations could generate invalid code.
+- A warning is now emitted for the deprecated external fn syntax.
 
 ## v0.30.0-rc3 - 2023-07-05
 

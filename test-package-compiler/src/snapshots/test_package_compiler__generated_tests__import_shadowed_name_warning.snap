@@ -1,5 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 153
 expression: "./cases/import_shadowed_name_warning"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
@@ -48,6 +49,20 @@ use_type(Field@0) ->
                two]},
     {registered, []}
 ]}.
+
+
+//// Warning
+
+warning: Deprecated external fn syntax
+   ┌─ src/two.gleam:13:1
+   │  
+13 │ ╭ pub external fn use_type(Port) -> Nil =
+14 │ │   "wibble" "wobble"
+   │ ╰───────────────────^
+
+This syntax has been replaced by the `@external` attribute.
+
+Hint: Run `gleam fix` to auto-fix your code.
 
 
 //// Warning
