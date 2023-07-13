@@ -80,8 +80,8 @@ impl LanguageServerTestIO {
     }
 
     fn module(&self, path: &Path, code: &str) {
-        self.io.write(&path, code).unwrap();
-        self.io.set_modification_time(&path, SystemTime::now());
+        self.io.write(path, code).unwrap();
+        self.io.set_modification_time(path, SystemTime::now());
     }
 
     fn record(&self, action: Action) {
