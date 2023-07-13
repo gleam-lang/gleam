@@ -921,7 +921,7 @@ fn provided_is_absolute() {
     );
     let package = provided.get("hello_world").unwrap().clone();
     if let ProvidedPackageSource::Local { path } = package.source {
-        assert!(!path.is_absolute())
+        assert!(path.is_absolute())
     } else {
         panic!("Provide_local_package provided a package that is not local!")
     }
