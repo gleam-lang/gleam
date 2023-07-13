@@ -642,6 +642,7 @@ fn resolve_versions<Telem: Telemetry>(
             Requirement::Path { path } => provide_local_package(
                 SmolStr::from(&name),
                 &path,
+                project_paths.root(),
                 project_paths,
                 &mut provided_packages,
                 &mut vec![],
@@ -689,12 +690,18 @@ fn resolve_versions<Telem: Telemetry>(
 fn provide_local_package(
     package_name: SmolStr,
     package_path: &Path,
+    parent_path: &Path,
     project_paths: &ProjectPaths,
     provided: &mut HashMap<SmolStr, ProvidedPackage>,
     parents: &mut Vec<SmolStr>,
 ) -> Result<hexpm::version::Range> {
+    let package_path = if package_path.is_absolute() {
+        package_path.to_path_buf()
+    } else {
+        fs::canonicalise(&parent_path.join(package_path))?
+    };
     let package_source = ProvidedPackageSource::Local {
-        path: package_path.to_path_buf(),
+        path: package_path.clone(),
     };
     provide_package(
         package_name,
@@ -723,7 +730,7 @@ fn provide_git_package(
 /// Adds a gleam project located at a specific path to the list of "provided packages"
 fn provide_package(
     package_name: SmolStr,
-    package_path: &Path,
+    package_path: PathBuf,
     package_source: ProvidedPackageSource,
     project_paths: &ProjectPaths,
     provided: &mut HashMap<SmolStr, ProvidedPackage>,
@@ -776,15 +783,11 @@ fn provide_package(
         let version = match requirement {
             Requirement::Hex { version } => version,
             Requirement::Path { path } => {
-                let resolved_path = if path.is_absolute() {
-                    path
-                } else {
-                    package_path.join(path)
-                };
                 // Recursively walk local packages
                 provide_local_package(
                     name.clone(),
-                    &resolved_path,
+                    &path,
+                    &package_path,
                     project_paths,
                     provided,
                     parents,
@@ -818,6 +821,7 @@ fn provide_wrong_package() {
     let result = provide_local_package(
         "wrong_name".into(),
         Path::new("./test/hello_world"),
+        Path::new("./"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -841,6 +845,7 @@ fn provide_existing_package() {
     let result = provide_local_package(
         "hello_world".into(),
         Path::new("./test/hello_world"),
+        Path::new("./"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -853,6 +858,7 @@ fn provide_existing_package() {
     let result = provide_local_package(
         "hello_world".into(),
         Path::new("./test/hello_world"),
+        Path::new("./"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -870,6 +876,7 @@ fn provide_conflicting_package() {
     let result = provide_local_package(
         "hello_world".into(),
         Path::new("./test/hello_world"),
+        Path::new("./"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -881,7 +888,7 @@ fn provide_conflicting_package() {
 
     let result = provide_package(
         "hello_world".into(),
-        Path::new("./test/other"),
+        PathBuf::from("./test/other"),
         ProvidedPackageSource::Local {
             path: Path::new("./test/other").to_path_buf(),
         },
@@ -903,6 +910,7 @@ fn provided_is_absolute() {
     let result = provide_local_package(
         "hello_world".into(),
         Path::new("./test/hello_world"),
+        Path::new("./"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -926,6 +934,7 @@ fn provided_recursive() {
     let result = provide_local_package(
         "hello_world".into(),
         Path::new("./test/hello_world"),
+        Path::new("./"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "hello_world".into(), "subpackage".into()],
