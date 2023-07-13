@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.30.1 - 2023-07-13
+
+- Fixed a bug where the language server could fail to import path dependencies
+  in monorepos.
+
 ## v0.30.0 - 2023-07-12
 
 - A warning is now emitted for the deprecated external fn syntax.
