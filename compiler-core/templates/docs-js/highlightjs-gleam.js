@@ -7,6 +7,11 @@ hljs.registerLanguage("gleam", function (hljs) {
     contains: [hljs.BACKSLASH_ESCAPE],
     relevance: 0,
   };
+  const NAME = {
+    className: "variable",
+    begin: "\\b[a-z][a-z0-9_]*\\b",
+    relevance: 0,
+  };
   const DISCARD_NAME = {
     className: "comment",
     begin: "\\b_[a-z][a-z0-9_]*\\b",
@@ -100,6 +105,7 @@ hljs.registerLanguage("gleam", function (hljs) {
         begin: "[+\\-*/%!=<>&|.]+",
         relevance: 0,
       },
+      NAME,
       DISCARD_NAME,
       NUMBER,
     ],
