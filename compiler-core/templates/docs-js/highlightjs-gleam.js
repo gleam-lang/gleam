@@ -60,6 +60,7 @@ hljs.registerLanguage("gleam", function (hljs) {
           },
           KEYWORDS,
           STRING,
+          NAME,
           DISCARD_NAME,
           NUMBER,
         ],
