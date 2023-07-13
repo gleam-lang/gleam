@@ -1,16 +1,10 @@
 hljs.registerLanguage("gleam", function (hljs) {
   const KEYWORDS =
-    "as assert case const external fn if import let " +
-    "panic use opaque pub todo tuple type";
+    "as assert case const fn if import let panic use opaque pub todo type";
   const STRING = {
     className: "string",
     variants: [{ begin: /"/, end: /"/ }],
     contains: [hljs.BACKSLASH_ESCAPE],
-    relevance: 0,
-  };
-  const NAME = {
-    className: "variable",
-    begin: "\\b[a-z][a-z0-9_]*\\b",
     relevance: 0,
   };
   const DISCARD_NAME = {
@@ -61,7 +55,6 @@ hljs.registerLanguage("gleam", function (hljs) {
           },
           KEYWORDS,
           STRING,
-          NAME,
           DISCARD_NAME,
           NUMBER,
         ],
@@ -81,8 +74,20 @@ hljs.registerLanguage("gleam", function (hljs) {
         ],
       },
       {
+        className: "attribute",
+        begin: "@",
+        end: "\\(",
+        excludeEnd: true,
+      },
+      {
         className: "keyword",
         beginKeywords: KEYWORDS,
+      },
+      {
+        // Attributes
+        className: "title",
+        begin: "\\b@[a-z][a-za-z0-9_]*\\b",
+        relevance: 0,
       },
       {
         // Type names and constructors
@@ -95,7 +100,6 @@ hljs.registerLanguage("gleam", function (hljs) {
         begin: "[+\\-*/%!=<>&|.]+",
         relevance: 0,
       },
-      NAME,
       DISCARD_NAME,
       NUMBER,
     ],
