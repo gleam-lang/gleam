@@ -1050,6 +1050,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             }
 
+            ClauseGuard::FieldAccess {
+                location,
+                label,
+                container,
+                ..
+            } => {
+                let container = self.infer_clause_guard(*container)?;
+                // NO IDEA HOW TO CONTINUE!
+            }
+
             ClauseGuard::And {
                 location,
                 left,
