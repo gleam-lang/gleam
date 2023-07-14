@@ -345,6 +345,8 @@ impl<'a> CallGraphBuilder<'a> {
 
             ClauseGuard::TupleIndex { tuple, .. } => self.guard(tuple),
 
+            ClauseGuard::FieldAccess { container, .. } => self.guard(container),
+
             ClauseGuard::Constant(constant) => self.constant(constant),
         }
     }
