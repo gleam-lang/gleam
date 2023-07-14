@@ -197,11 +197,6 @@ pub enum Error {
         given: Arc<Type>,
     },
 
-    NotAVar {
-        location: SrcSpan,
-        given: Arc<Type>,
-    },
-
     NotATupleUnbound {
         location: SrcSpan,
     },

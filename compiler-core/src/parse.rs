@@ -1216,6 +1216,7 @@ where
                                     start: dot_s,
                                     end: int_e,
                                 },
+                                index: None,
                                 label,
                                 type_: (),
                                 container: Box::new(ClauseGuard::Var {

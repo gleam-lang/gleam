@@ -910,6 +910,7 @@ pub enum ClauseGuard<Type, RecordTag> {
 
     FieldAccess {
         location: SrcSpan,
+        index: Option<u64>,
         label: SmolStr,
         type_: Type,
         container: Box<Self>,
