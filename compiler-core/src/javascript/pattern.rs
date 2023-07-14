@@ -271,7 +271,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             ClauseGuard::FieldAccess {
                 label, container, ..
             } => {
-                docvec!(self.guard(container)?, "[", label, "]")
+                docvec!(self.guard(container)?, ".", label)
             }
 
             ClauseGuard::Constant(constant) => {
