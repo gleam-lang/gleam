@@ -1816,6 +1816,31 @@ tuple has {} elements so the highest valid index is {}.",
                     }
                 }
 
+                TypeError::NotAVar { location, given } => {
+                    let mut printer = Printer::new();
+                    let text = format!(
+                        "To index into this value it needs to be a tuple, however it has this type:
+
+{}",
+                        printer.pretty_print(given, 4),
+                    );
+                    Diagnostic {
+                        title: "Type mismatch".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("This is not a tuple".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
                 TypeError::NotATupleUnbound { location } => {
                     let text = "To index into a tuple we need to know it size, but we don't know
 anything about this type yet. Please add some type annotations so

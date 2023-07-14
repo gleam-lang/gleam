@@ -1057,7 +1057,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 let container = self.infer_clause_guard(*container)?;
-                // NO IDEA HOW TO CONTINUE!
+                match container.type_().as_ref() {
+                    Type::Var { .. } => Ok(ClauseGuard::FieldAccess {
+                        location,
+                        label,
+                        type_: container.type_(),
+                        container: Box::new(container),
+                    }),
+
+                    typ if typ.is_unbound() => Err(Error::NotATupleUnbound {
+                        location: container.location(),
+                    }),
+
+                    _ => Err(Error::NotAVar {
+                        location,
+                        given: container.type_(),
+                    }),
+                }
             }
 
             ClauseGuard::And {
