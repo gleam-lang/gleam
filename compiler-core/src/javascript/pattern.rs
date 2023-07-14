@@ -268,6 +268,12 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 docvec!(self.guard(tuple)?, "[", index, "]")
             }
 
+            ClauseGuard::FieldAccess {
+                label, container, ..
+            } => {
+                docvec!(self.guard(container)?, "[", label, "]")
+            }
+
             ClauseGuard::Constant(constant) => {
                 return expression::guard_constant_expression(
                     &mut self.assignments,
