@@ -1058,18 +1058,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => {
                 let container = self.infer_clause_guard(*container)?;
                 match container.type_().as_ref() {
-                    Type::Var { .. } => Ok(ClauseGuard::FieldAccess {
-                        location,
-                        label,
-                        type_: container.type_(),
-                        container: Box::new(container),
-                    }),
+                    Type::App { .. } => {
+                        let ClauseGuard::Var { location,  name ,..} = container.clone() else { todo!() };
+                        let container_expr = UntypedExpr::Var {
+                            location,
+                            name: name.clone(),
+                        };
+                        let TypedExpr::RecordAccess { index, typ, .. } = self.infer_field_access(
+                            container_expr,
+                            label.clone(),
+                            location,
+                            FieldAccessUsage::Other,
+                        )? else { todo!() };
+
+                        Ok(ClauseGuard::FieldAccess {
+                            location,
+                            label,
+                            index: Some(index),
+                            type_: typ,
+                            container: Box::new(container),
+                        })
+                    }
 
                     typ if typ.is_unbound() => Err(Error::NotATupleUnbound {
                         location: container.location(),
                     }),
 
-                    _ => Err(Error::NotAVar {
+                    _ => Err(Error::NotATuple {
                         location,
                         given: container.type_(),
                     }),
