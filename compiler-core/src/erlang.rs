@@ -1117,7 +1117,7 @@ fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Docu
 
         ClauseGuard::FieldAccess {
             container, index, ..
-        } => tuple_index_inline(&container, index.unwrap(), env),
+        } => tuple_index_inline(container, index.expect("Unable to find index"), env),
 
         ClauseGuard::Constant(constant) => const_inline(constant, env),
     }
