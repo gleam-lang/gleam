@@ -908,6 +908,13 @@ pub enum ClauseGuard<Type, RecordTag> {
         tuple: Box<Self>,
     },
 
+    FieldAccess {
+        location: SrcSpan,
+        label: SmolStr,
+        type_: Type,
+        container: Box<Self>,
+    },
+
     Constant(Constant<Type, RecordTag>),
 }
 
@@ -928,6 +935,7 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::GtFloat { location, .. }
             | ClauseGuard::GtEqFloat { location, .. }
             | ClauseGuard::LtFloat { location, .. }
+            | ClauseGuard::FieldAccess { location, .. }
             | ClauseGuard::LtEqFloat { location, .. } => *location,
         }
     }
@@ -949,9 +957,10 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::LtFloat { .. }
             | ClauseGuard::LtEqFloat { .. } => 4,
 
-            ClauseGuard::Constant(_) | ClauseGuard::Var { .. } | ClauseGuard::TupleIndex { .. } => {
-                5
-            }
+            ClauseGuard::Constant(_)
+            | ClauseGuard::Var { .. }
+            | ClauseGuard::TupleIndex { .. }
+            | ClauseGuard::FieldAccess { .. } => 5,
         }
     }
 }
@@ -961,6 +970,7 @@ impl TypedClauseGuard {
         match self {
             ClauseGuard::Var { type_, .. } => type_.clone(),
             ClauseGuard::TupleIndex { type_, .. } => type_.clone(),
+            ClauseGuard::FieldAccess { type_, .. } => type_.clone(),
             ClauseGuard::Constant(constant) => constant.type_(),
 
             ClauseGuard::Or { .. }

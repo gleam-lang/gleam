@@ -1210,6 +1210,22 @@ where
                             }
                         }
 
+                        Some((_, Token::Name { name: label }, int_e)) => {
+                            Ok(Some(ClauseGuard::FieldAccess {
+                                location: SrcSpan {
+                                    start: dot_s,
+                                    end: int_e,
+                                },
+                                label,
+                                type_: (),
+                                container: Box::new(ClauseGuard::Var {
+                                    location: SrcSpan { start, end },
+                                    type_: (),
+                                    name,
+                                }),
+                            }))
+                        }
+
                         Some((start, _, end)) => {
                             parse_error(ParseErrorType::InvalidTupleAccess, SrcSpan { start, end })
                         }
