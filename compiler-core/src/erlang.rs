@@ -1151,9 +1151,10 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
             .append(")"),
 
         // Values are not wrapped
-        ClauseGuard::Constant(_) | ClauseGuard::Var { .. } | ClauseGuard::TupleIndex { .. } => {
-            bare_clause_guard(guard, env)
-        }
+        ClauseGuard::Constant(_)
+        | ClauseGuard::Var { .. }
+        | ClauseGuard::TupleIndex { .. }
+        | ClauseGuard::FieldAccess { .. } => bare_clause_guard(guard, env),
     }
 }
 

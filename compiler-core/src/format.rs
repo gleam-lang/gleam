@@ -1451,6 +1451,14 @@ impl<'comments> Formatter<'comments> {
                 self.clause_guard(tuple).append(".").append(*index).to_doc()
             }
 
+            ClauseGuard::FieldAccess {
+                container, label, ..
+            } => self
+                .clause_guard(container)
+                .append(".")
+                .append(label.clone())
+                .to_doc(),
+
             ClauseGuard::Constant(constant) => self.const_expr(constant),
         }
     }
