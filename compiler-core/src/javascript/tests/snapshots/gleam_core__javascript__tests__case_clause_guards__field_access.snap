@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+assertion_line: 202
+expression: "\n        type Person {\n          Person(username: String, name: String, age: Int)\n        }\n        \n        pub fn main() {\n          let given_name = \"jill\"\n          let person = Person(\"credo\",\"jack\", 32)\n        \n          case given_name {\n            name if name == person.name -> \"it's jack\"\n            name -> \"it's \" <> name\n          }\n        }"
+---
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+class Person extends $CustomType {
+  constructor(username, name, age) {
+    super();
+    this.username = username;
+    this.name = name;
+    this.age = age;
+  }
+}
+
+export function main() {
+  let given_name = "jill";
+  let person = new Person("credo", "jack", 32);
+  if (given_name === person.name) {
+    let name = given_name;
+    return "it's jack";
+  } else {
+    let name = given_name;
+    return "it's " + name;
+  }
+}
+
