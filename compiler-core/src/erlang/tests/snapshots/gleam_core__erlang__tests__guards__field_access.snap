@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/erlang/tests/case.rs
+assertion_line: 23
+expression: "\npub fn myfun(mt) {\n  case mt {\n    1 | _ ->\n      1\n      |> Ok\n  }\n  1\n  |> Ok\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([main/0]).
+-export_type([person/0]).
+
+-type person() :: {person, binary(), binary(), integer()}.
+
+-spec main() -> binary().
+main() ->
+    Given_name = <<"jill"/utf8>>,
+    Person = {person, <<"credo"/utf8>>, <<"jack"/utf8>>, 32},
+    case Given_name of
+        Name when Name =:= erlang:element(2, Person) ->
+            <<"it's jack"/utf8>>;
+
+        Name@1 ->
+            <<"it's "/utf8, Name@1/binary>>
+    end.

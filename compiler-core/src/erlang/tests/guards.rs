@@ -440,3 +440,23 @@ pub fn main(arg) {
 "#
     );
 }
+
+#[test]
+fn field_access() {
+    assert_erl!(
+        "
+        type Person {
+          Person(username: String, name: String, age: Int)
+        }
+        
+        pub fn main() {
+          let given_name = \"jill\"
+          let person = Person(\"credo\",\"jack\", 32)
+        
+          case given_name {
+            name if name == person.name -> \"it's jack\"
+            name -> \"it's \" <> name
+          }
+        }"
+    )
+}
