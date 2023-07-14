@@ -1059,17 +1059,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let container = self.infer_clause_guard(*container)?;
                 match container.type_().as_ref() {
                     Type::App { .. } => {
-                        let ClauseGuard::Var { location,  name ,..} = container.clone() else { todo!() };
-                        let container_expr = UntypedExpr::Var {
-                            location,
-                            name: name.clone(),
-                        };
+                        let ClauseGuard::Var { location,  name ,..} = container.clone() else { panic!("Expected Var") };
+                        let container_expr = UntypedExpr::Var { location, name };
                         let TypedExpr::RecordAccess { index, typ, .. } = self.infer_field_access(
                             container_expr,
                             label.clone(),
                             location,
                             FieldAccessUsage::Other,
-                        )? else { todo!() };
+                        )? else { panic!("Expected RecordAccess") };
 
                         Ok(ClauseGuard::FieldAccess {
                             location,
