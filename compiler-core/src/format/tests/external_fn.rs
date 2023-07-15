@@ -61,3 +61,17 @@ fn one(x: Int) -> Int {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2259
+#[test]
+fn break_external_fn_arguments() {
+    assert_format!(
+        r#"@external(erlang, "ffi", "improper_list_append")
+fn improper_list_append(
+  a: item_a,
+  b: item_b,
+  c: improper_tail,
+) -> List(anything)
+"#
+    );
+}

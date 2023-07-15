@@ -495,34 +495,35 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn statement_fn<'a>(&mut self, function: &'a Function<(), UntypedExpr>) -> Document<'a> {
-        let doc = docvec![];
+        let attributes = docvec![];
 
         // Attributes
         let external = |t: &'static str, m: &'a str, f: &'a str| {
             docvec!["@external(", t, ", \"", m, "\", \"", f, "\")", line()]
         };
-        let doc = match function.external_erlang.as_ref() {
-            Some((m, f)) => doc.append(external("erlang", m, f)),
-            None => doc,
+        let attributes = match function.external_erlang.as_ref() {
+            Some((m, f)) => attributes.append(external("erlang", m, f)),
+            None => attributes,
         };
-        let doc = match function.external_javascript.as_ref() {
-            Some((m, f)) => doc.append(external("javascript", m, f)),
-            None => doc,
+        let attributes = match function.external_javascript.as_ref() {
+            Some((m, f)) => attributes.append(external("javascript", m, f)),
+            None => attributes,
         };
 
         // Fn name and args
-        let head = doc
-            .append(pub_(function.public))
+        let signature = pub_(function.public)
             .append("fn ")
             .append(&function.name)
             .append(wrap_args(function.arguments.iter().map(|e| self.fn_arg(e))));
 
         // Add return annotation
-        let head = match &function.return_annotation {
-            Some(anno) => head.append(" -> ").append(self.type_ast(anno)),
-            None => head,
+        let signature = match &function.return_annotation {
+            Some(anno) => signature.append(" -> ").append(self.type_ast(anno)),
+            None => signature,
         }
         .group();
+
+        let head = attributes.append(signature);
 
         let body = &function.body;
         if body.len() == 1 && body.first().is_placeholder() {
