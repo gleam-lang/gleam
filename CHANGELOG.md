@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where the formatter would incorrectly format external functions
+  by breaking the return annotation instead of the function arguments.
+
 ## v0.30.1 - 2023-07-13
 
 - Fixed a bug where the language server could fail to import path dependencies
@@ -41,7 +46,7 @@
 - The Erlang error raised by `let assert` is now tagged `let_assert`.
 - Types named `Dynamic` are now called `dynamic_` in Erlang to avoid a clash
   with the new Erlang `dynamic` type introduced in OTP26.
-- Dependencies can now be loaded from paths using the 
+- Dependencies can now be loaded from paths using the
   `packagename = { path = "..." }` syntax in `gleam.toml`.
 - The `javascript.deno.unstable` field in `gleam.toml` can now be used to
   enable Deno's unstable APIs when targeting JavaScript.
