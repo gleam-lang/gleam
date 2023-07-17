@@ -3,12 +3,13 @@ mod completion;
 
 use std::{
     collections::HashMap,
-    path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::SystemTime,
 };
 
 use hexpm::version::Version;
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::{
     config::PackageConfig,
@@ -58,28 +59,28 @@ impl LanguageServerTestIO {
         Arc::try_unwrap(self.actions).unwrap().into_inner().unwrap()
     }
 
-    pub fn src_module(&self, name: &str, code: &str) -> PathBuf {
+    pub fn src_module(&self, name: &str, code: &str) -> Utf8PathBuf {
         let src_dir = self.paths.src_directory();
         let path = src_dir.join(name).with_extension("gleam");
         self.module(&path, code);
         path
     }
 
-    pub fn test_module(&self, name: &str, code: &str) -> PathBuf {
+    pub fn test_module(&self, name: &str, code: &str) -> Utf8PathBuf {
         let test_dir = self.paths.test_directory();
         let path = test_dir.join(name).with_extension("gleam");
         self.module(&path, code);
         path
     }
 
-    pub fn dep_module(&self, dep: &str, name: &str, code: &str) -> PathBuf {
+    pub fn dep_module(&self, dep: &str, name: &str, code: &str) -> Utf8PathBuf {
         let dep_dir = self.paths.root().join(dep).join("src");
         let path = dep_dir.join(name).with_extension("gleam");
         self.module(&path, code);
         path
     }
 
-    fn module(&self, path: &Path, code: &str) {
+    fn module(&self, path: &Utf8Path, code: &str) {
         self.io.write(path, code).unwrap();
         self.io.set_modification_time(path, SystemTime::now());
     }
@@ -90,81 +91,81 @@ impl LanguageServerTestIO {
 }
 
 impl FileSystemReader for LanguageServerTestIO {
-    fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
+    fn gleam_source_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
         self.io.gleam_source_files(dir)
     }
 
-    fn gleam_cache_files(&self, dir: &Path) -> Vec<PathBuf> {
+    fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
         self.io.gleam_cache_files(dir)
     }
 
-    fn read_dir(&self, path: &Path) -> Result<ReadDir> {
+    fn read_dir(&self, path: &Utf8Path) -> Result<ReadDir> {
         self.io.read_dir(path)
     }
 
-    fn read(&self, path: &Path) -> Result<String> {
+    fn read(&self, path: &Utf8Path) -> Result<String> {
         self.io.read(path)
     }
 
-    fn read_bytes(&self, path: &Path) -> Result<Vec<u8>> {
+    fn read_bytes(&self, path: &Utf8Path) -> Result<Vec<u8>> {
         self.io.read_bytes(path)
     }
 
-    fn reader(&self, path: &Path) -> Result<WrappedReader> {
+    fn reader(&self, path: &Utf8Path) -> Result<WrappedReader> {
         self.io.reader(path)
     }
 
-    fn is_file(&self, path: &Path) -> bool {
+    fn is_file(&self, path: &Utf8Path) -> bool {
         self.io.is_file(path)
     }
 
-    fn is_directory(&self, path: &Path) -> bool {
+    fn is_directory(&self, path: &Utf8Path) -> bool {
         self.io.is_directory(path)
     }
 
-    fn modification_time(&self, path: &Path) -> Result<SystemTime> {
+    fn modification_time(&self, path: &Utf8Path) -> Result<SystemTime> {
         self.io.modification_time(path)
     }
 
-    fn canonicalise(&self, path: &Path) -> Result<PathBuf, crate::Error> {
+    fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, crate::Error> {
         self.io.canonicalise(path)
     }
 }
 
 impl FileSystemWriter for LanguageServerTestIO {
-    fn mkdir(&self, path: &Path) -> Result<()> {
+    fn mkdir(&self, path: &Utf8Path) -> Result<()> {
         self.io.mkdir(path)
     }
 
-    fn delete(&self, path: &Path) -> Result<()> {
+    fn delete(&self, path: &Utf8Path) -> Result<()> {
         self.io.delete(path)
     }
 
-    fn copy(&self, from: &Path, to: &Path) -> Result<()> {
+    fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
         self.io.copy(from, to)
     }
 
-    fn copy_dir(&self, from: &Path, to: &Path) -> Result<()> {
+    fn copy_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
         self.io.copy_dir(from, to)
     }
 
-    fn hardlink(&self, from: &Path, to: &Path) -> Result<()> {
+    fn hardlink(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
         self.io.hardlink(from, to)
     }
 
-    fn symlink_dir(&self, from: &Path, to: &Path) -> Result<()> {
+    fn symlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
         self.io.symlink_dir(from, to)
     }
 
-    fn delete_file(&self, path: &Path) -> Result<()> {
+    fn delete_file(&self, path: &Utf8Path) -> Result<()> {
         self.io.delete_file(path)
     }
 
-    fn write(&self, path: &Path, content: &str) -> Result<(), crate::Error> {
+    fn write(&self, path: &Utf8Path, content: &str) -> Result<(), crate::Error> {
         self.io.write(path, content)
     }
 
-    fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<(), crate::Error> {
+    fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<(), crate::Error> {
         self.io.write_bytes(path, content)
     }
 }
@@ -185,7 +186,7 @@ impl CommandExecutor for LanguageServerTestIO {
         program: &str,
         args: &[String],
         env: &[(&str, String)],
-        cwd: Option<&Path>,
+        cwd: Option<&Utf8Path>,
         stdio: crate::io::Stdio,
     ) -> Result<i32> {
         panic!(

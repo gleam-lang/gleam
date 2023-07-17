@@ -1,4 +1,5 @@
-use std::{collections::HashMap, ffi::OsStr, path::Path, sync::Arc};
+use camino::Utf8Path;
+use std::{collections::HashMap, sync::Arc};
 
 use gleam_core::{
     build::{Built, Codegen, Mode, Options, ProjectCompiler, Target},
@@ -60,7 +61,7 @@ pub fn compile_(options: CompileOptions) -> Result<HashMap<String, String>, Stri
     Ok(gather_compiled_files(&paths, &wfs, options.target).unwrap())
 }
 
-fn write_source_file<P: AsRef<Path>>(source: &str, path: P, wfs: &mut WasmFileSystem) {
+fn write_source_file<P: AsRef<Utf8Path>>(source: &str, path: P, wfs: &mut WasmFileSystem) {
     wfs.write(path.as_ref(), source)
         .expect("should always succeed with the virtual file system");
 }
@@ -127,8 +128,8 @@ fn gather_compiled_files(
     let mut files: HashMap<String, String> = HashMap::new();
 
     let extension_to_search_for = match target {
-        Target::Erlang => OsStr::new("erl"),
-        Target::JavaScript => OsStr::new("mjs"),
+        Target::Erlang => "erl",
+        Target::JavaScript => "mjs",
     };
 
     wfs.read_dir(&paths.build_directory())
@@ -139,7 +140,7 @@ fn gather_compiled_files(
         .for_each(|dir_entry| {
             let path = dir_entry.as_path();
             let contents: String = wfs.read(path).expect("iterated dir entries should exist");
-            let path = path.to_str().unwrap().replace('\\', "/");
+            let path = path.as_str().replace('\\', "/");
 
             files.insert(path, contents);
         });

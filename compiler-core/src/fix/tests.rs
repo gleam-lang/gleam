@@ -1,7 +1,9 @@
 use super::*;
 
+use camino::Utf8Path;
+
 fn fix(target: Option<Target>, src: &str) -> String {
-    let (out, complete) = parse_fix_and_format(target, &src.into(), Path::new("test")).unwrap();
+    let (out, complete) = parse_fix_and_format(target, &src.into(), Utf8Path::new("test")).unwrap();
     assert!(complete);
     out
 }
@@ -496,7 +498,7 @@ fn ambiguous_external() {
     let src = r#"pub external fn main(wibble: Int, wobble: Float) -> Int =
   "app" "main"
 "#;
-    let (out, complete) = parse_fix_and_format(None, &src.into(), Path::new("test")).unwrap();
+    let (out, complete) = parse_fix_and_format(None, &src.into(), Utf8Path::new("test")).unwrap();
     assert!(!complete);
     assert_eq!(out, src)
 }

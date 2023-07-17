@@ -4,13 +4,14 @@ use crate::{
     diagnostic::{self, Diagnostic, Location},
     type_,
 };
+use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
 use smol_str::SmolStr;
+use std::sync::atomic::AtomicUsize;
 use std::{
     io::Write,
     sync::{atomic::Ordering, Arc},
 };
-use std::{path::PathBuf, sync::atomic::AtomicUsize};
 use termcolor::Buffer;
 
 pub trait WarningEmitterIO {
@@ -91,13 +92,13 @@ impl WarningEmitter {
 
 #[derive(Debug, Clone)]
 pub struct TypeWarningEmitter {
-    module_path: PathBuf,
+    module_path: Utf8PathBuf,
     module_src: SmolStr,
     emitter: WarningEmitter,
 }
 
 impl TypeWarningEmitter {
-    pub fn new(module_path: PathBuf, module_src: SmolStr, emitter: WarningEmitter) -> Self {
+    pub fn new(module_path: Utf8PathBuf, module_src: SmolStr, emitter: WarningEmitter) -> Self {
         Self {
             module_path,
             module_src,
@@ -107,7 +108,7 @@ impl TypeWarningEmitter {
 
     pub fn null() -> Self {
         Self {
-            module_path: PathBuf::new(),
+            module_path: Utf8PathBuf::new(),
             module_src: SmolStr::new(""),
             emitter: WarningEmitter::new(Arc::new(NullWarningEmitterIO)),
         }
@@ -125,17 +126,17 @@ impl TypeWarningEmitter {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Warning {
     Type {
-        path: PathBuf,
+        path: Utf8PathBuf,
         src: SmolStr,
         warning: crate::type_::Warning,
     },
     Parse {
-        path: PathBuf,
+        path: Utf8PathBuf,
         src: SmolStr,
         warning: crate::parse::Warning,
     },
     InvalidSource {
-        path: PathBuf,
+        path: Utf8PathBuf,
     },
 }
 
@@ -241,7 +242,7 @@ impl Warning {
                 location: None,
                 hint: Some(format!(
                     "Rename `{}` to be valid, or remove this file from the project source.",
-                    path.to_string_lossy()
+                    path
                 )),
             },
             Self::Type { path, warning, src } => match warning {

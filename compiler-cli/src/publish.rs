@@ -1,3 +1,4 @@
+use camino::{Utf8Path, Utf8PathBuf};
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
     build::{Codegen, Mode, Options, Package, Target},
@@ -10,11 +11,7 @@ use gleam_core::{
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
-use std::{
-    io::Write,
-    path::{Path, PathBuf},
-    time::Instant,
-};
+use std::{io::Write, time::Instant};
 
 use crate::{build, cli, docs, fs, hex::ApiKeyCommand, http::HttpClient};
 
@@ -48,12 +45,12 @@ impl PublishCommand {
         if !generated_files_added.is_empty() {
             println!("\nGenerated files:");
             for file in generated_files_added.iter().sorted() {
-                println!("  - {}", file.0.to_string_lossy());
+                println!("  - {}", file.0);
             }
         }
         println!("\nSource files:");
         for file in src_files_added.iter().sorted() {
-            println!("  - {}", file.to_string_lossy());
+            println!("  - {}", file);
         }
         println!("\nName: {}", config.name);
         println!("Version: {}", config.version);
@@ -115,8 +112,8 @@ impl ApiKeyCommand for PublishCommand {
 struct Tarball {
     compile_result: Package,
     data: Vec<u8>,
-    src_files_added: Vec<PathBuf>,
-    generated_files_added: Vec<(PathBuf, String)>,
+    src_files_added: Vec<Utf8PathBuf>,
+    generated_files_added: Vec<(Utf8PathBuf, String)>,
 }
 
 pub fn build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<Vec<u8>> {
@@ -189,8 +186,8 @@ fn check_config_for_publishing(config: &PackageConfig) -> Result<()> {
 
 fn metadata_config<'a>(
     config: &'a PackageConfig,
-    source_files: &[PathBuf],
-    generated_files: &[(PathBuf, String)],
+    source_files: &[Utf8PathBuf],
+    generated_files: &[(Utf8PathBuf, String)],
 ) -> Result<String> {
     let repo_url = http::Uri::try_from(config.repository.url().unwrap_or_default()).ok();
     let requirements: Result<Vec<ReleaseRequirement<'a>>> = config
@@ -227,7 +224,10 @@ fn metadata_config<'a>(
     Ok(metadata)
 }
 
-fn contents_tarball(files: &[PathBuf], data_files: &[(PathBuf, String)]) -> Result<Vec<u8>, Error> {
+fn contents_tarball(
+    files: &[Utf8PathBuf],
+    data_files: &[(Utf8PathBuf, String)],
+) -> Result<Vec<u8>, Error> {
     let mut contents_tar_gz = Vec::new();
     {
         let mut tarball =
@@ -246,16 +246,17 @@ fn contents_tarball(files: &[PathBuf], data_files: &[(PathBuf, String)]) -> Resu
 
 // TODO: test
 // TODO: Don't include git-ignored native files
-fn project_files() -> Result<Vec<PathBuf>> {
-    let src = Path::new("src");
-    let mut files: Vec<PathBuf> = fs::gleam_files_excluding_gitignore(src)
+fn project_files() -> Result<Vec<Utf8PathBuf>> {
+    let src = Utf8Path::new("src");
+    let mut files: Vec<Utf8PathBuf> = fs::gleam_files_excluding_gitignore(src)
         .chain(fs::native_files(src)?)
         .collect();
-    let private = Path::new("priv");
-    let mut private_files: Vec<PathBuf> = fs::private_files_excluding_gitignore(private).collect();
+    let private = Utf8Path::new("priv");
+    let mut private_files: Vec<Utf8PathBuf> =
+        fs::private_files_excluding_gitignore(private).collect();
     files.append(&mut private_files);
     let mut add = |path| {
-        let path = PathBuf::from(path);
+        let path = Utf8PathBuf::from(path);
         if path.exists() {
             files.push(path);
         }
@@ -277,7 +278,7 @@ fn project_files() -> Result<Vec<PathBuf>> {
 }
 
 // TODO: test
-fn generated_files(paths: &ProjectPaths, package: &Package) -> Result<Vec<(PathBuf, String)>> {
+fn generated_files(paths: &ProjectPaths, package: &Package) -> Result<Vec<(Utf8PathBuf, String)>> {
     let mut files = vec![];
 
     let dir = paths.build_directory_for_package(Mode::Prod, Target::Erlang, &package.config.name);
@@ -285,8 +286,8 @@ fn generated_files(paths: &ProjectPaths, package: &Package) -> Result<Vec<(PathB
     let build = dir.join(paths::ARTEFACT_DIRECTORY_NAME);
     let include = dir.join("include");
 
-    let tar_src = Path::new("src");
-    let tar_include = Path::new("include");
+    let tar_src = Utf8Path::new("src");
+    let tar_include = Utf8Path::new("include");
 
     // Erlang modules
     for module in &package.modules {
@@ -315,7 +316,7 @@ fn generated_files(paths: &ProjectPaths, package: &Package) -> Result<Vec<(PathB
 
 fn add_to_tar<P, W>(tarball: &mut tar::Builder<W>, path: P, data: &[u8]) -> Result<()>
 where
-    P: AsRef<Path>,
+    P: AsRef<Utf8Path>,
     W: Write,
 {
     let path = path.as_ref();
@@ -331,7 +332,7 @@ where
 
 fn add_path_to_tar<P, W>(tarball: &mut tar::Builder<W>, path: P) -> Result<()>
 where
-    P: AsRef<Path>,
+    P: AsRef<Utf8Path>,
     W: Write,
 {
     let path = path.as_ref();
@@ -346,8 +347,8 @@ pub struct ReleaseMetadata<'a> {
     name: &'a str,
     version: &'a Version,
     description: &'a str,
-    source_files: &'a [PathBuf],
-    generated_files: &'a [(PathBuf, String)],
+    source_files: &'a [Utf8PathBuf],
+    generated_files: &'a [(Utf8PathBuf, String)],
     licenses: &'a Vec<SpdxLicense>,
     links: Vec<(&'a str, http::Uri)>,
     requirements: Vec<ReleaseRequirement<'a>>,
@@ -365,8 +366,8 @@ impl<'a> ReleaseMetadata<'a> {
                 url = link.1
             )
         }
-        fn file(name: impl AsRef<Path>) -> String {
-            format!("\n  <<\"{name}\">>", name = name.as_ref().to_string_lossy())
+        fn file(name: impl AsRef<Utf8Path>) -> String {
+            format!("\n  <<\"{name}\">>", name = name.as_ref())
         }
 
         format!(
@@ -448,14 +449,14 @@ fn release_metadata_as_erlang() {
         version: &version,
         description: "description goes here",
         source_files: &[
-            PathBuf::from("gleam.toml"),
-            PathBuf::from("src/thingy.gleam"),
-            PathBuf::from("src/whatever.gleam"),
+            Utf8PathBuf::from("gleam.toml"),
+            Utf8PathBuf::from("src/thingy.gleam"),
+            Utf8PathBuf::from("src/whatever.gleam"),
         ],
         generated_files: &[
-            (PathBuf::from("src/myapp.app"), "".into()),
-            (PathBuf::from("src/thingy.erl"), "".into()),
-            (PathBuf::from("src/whatever.erl"), "".into()),
+            (Utf8PathBuf::from("src/myapp.app"), "".into()),
+            (Utf8PathBuf::from("src/thingy.erl"), "".into()),
+            (Utf8PathBuf::from("src/whatever.erl"), "".into()),
         ],
         licenses: &licences,
         links: vec![("homepage", homepage), ("github", github)],

@@ -79,8 +79,8 @@ the entrypoint.sh script.
 
     {entrypoint}
 ",
-        path = out.to_string_lossy(),
-        entrypoint = entrypoint.to_string_lossy(),
+        path = out,
+        entrypoint = entrypoint,
     );
 
     Ok(())
@@ -97,7 +97,7 @@ pub fn hex_tarball() -> Result<()> {
         "
 Your hex tarball has been generated in {}.
 ",
-        &path.display()
+        &path
     );
     Ok(())
 }

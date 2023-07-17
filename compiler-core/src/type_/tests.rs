@@ -9,8 +9,10 @@ use crate::{
 };
 use itertools::Itertools;
 use smol_str::SmolStr;
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 use vec1::Vec1;
+
+use camino::Utf8PathBuf;
 
 mod assert;
 mod assignments;
@@ -80,7 +82,7 @@ macro_rules! assert_error {
             .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
             src: $src.into(),
-            path: std::path::PathBuf::from("/src/one/two.gleam"),
+            path: camino::Utf8PathBuf::from("/src/one/two.gleam"),
             error,
         };
         let output = error.pretty_string();
@@ -130,7 +132,7 @@ fn get_printed_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
     let warnings = get_warnings(src, deps);
     let mut nocolor = termcolor::Buffer::no_color();
     for warning in warnings {
-        let path = std::path::PathBuf::from("/src/warning/wrn.gleam");
+        let path = Utf8PathBuf::from("/src/warning/wrn.gleam");
         let warning = warning.into_warning(path, src.into());
         warning.pretty(&mut nocolor);
     }
@@ -245,7 +247,7 @@ pub fn compile_module(
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
     let warnings = TypeWarningEmitter::new(
-        PathBuf::new(),
+        Utf8PathBuf::new(),
         "".into(),
         WarningEmitter::new(
             warnings.unwrap_or_else(|| Arc::new(VectorWarningEmitterIO::default())),
@@ -292,7 +294,7 @@ pub fn module_error(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
     let error = compile_module(src, None, deps).expect_err("should infer an error");
     let error = Error::Type {
         src: src.into(),
-        path: PathBuf::from("/src/one/two.gleam"),
+        path: Utf8PathBuf::from("/src/one/two.gleam"),
         error,
     };
     error.pretty_string()
@@ -302,7 +304,7 @@ pub fn syntax_error(src: &str) -> String {
     let error = crate::parse::parse_module(src).expect_err("should trigger an error when parsing");
     let error = Error::Parse {
         src: src.into(),
-        path: PathBuf::from("/src/one/two.gleam"),
+        path: Utf8PathBuf::from("/src/one/two.gleam"),
         error,
     };
     error.pretty_string()

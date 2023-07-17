@@ -1,8 +1,8 @@
 use std::fmt;
-use std::path::PathBuf;
 use std::str::FromStr;
 
 use crate::error::Result;
+use camino::Utf8PathBuf;
 use hexpm::version::Range;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
@@ -13,7 +13,7 @@ use smol_str::SmolStr;
 #[serde(untagged, remote = "Self")]
 pub enum Requirement {
     Hex { version: Range },
-    Path { path: PathBuf },
+    Path { path: Utf8PathBuf },
     Git { git: SmolStr },
 }
 
@@ -37,7 +37,7 @@ impl Requirement {
             Requirement::Hex { version: range } => {
                 format!(r#"{{ version = "{}" }}"#, range)
             }
-            Requirement::Path { path } => format!(r#"{{ path = "{}" }}"#, path.display()),
+            Requirement::Path { path } => format!(r#"{{ path = "{}" }}"#, path),
             Requirement::Git { git: url } => format!(r#"{{ git = "{}" }}"#, url),
         }
     }

@@ -4,6 +4,7 @@ use crate::manifest::Manifest;
 use crate::requirement::Requirement;
 use crate::version::COMPILER_VERSION;
 use crate::{Error, Result};
+use camino::{Utf8Path, Utf8PathBuf};
 use globset::{Glob, GlobSetBuilder};
 use hexpm::version::Version;
 use http::Uri;
@@ -12,7 +13,6 @@ use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::marker::PhantomData;
-use std::path::{Path, PathBuf};
 
 #[cfg(test)]
 use crate::manifest::ManifestPackage;
@@ -119,7 +119,7 @@ impl PackageConfig {
         Ok(deps)
     }
 
-    pub fn read<FS: FileSystemReader, P: AsRef<Path>>(
+    pub fn read<FS: FileSystemReader, P: AsRef<Utf8Path>>(
         path: P,
         fs: &FS,
     ) -> Result<PackageConfig, Error> {
@@ -750,7 +750,7 @@ pub struct Docs {
 pub struct DocsPage {
     pub title: String,
     pub path: String,
-    pub source: PathBuf,
+    pub source: Utf8PathBuf,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]

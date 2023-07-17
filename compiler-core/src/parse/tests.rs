@@ -1,6 +1,6 @@
 use crate::ast::SrcSpan;
 use crate::parse::error::{LexicalError, LexicalErrorType, ParseError, ParseErrorType};
-use std::path::PathBuf;
+use camino::Utf8PathBuf;
 
 use pretty_assertions::assert_eq;
 
@@ -33,7 +33,7 @@ pub fn expect_module_error(src: &str) -> String {
     let result = crate::parse::parse_module(src).expect_err("should not parse");
     let error = crate::error::Error::Parse {
         src: src.into(),
-        path: PathBuf::from("/src/parse/error.gleam"),
+        path: Utf8PathBuf::from("/src/parse/error.gleam"),
         error: result,
     };
     error.pretty_string()
@@ -43,7 +43,7 @@ pub fn expect_error(src: &str) -> String {
     let result = crate::parse::parse_statement_sequence(src).expect_err("should not parse");
     let error = crate::error::Error::Parse {
         src: src.into(),
-        path: PathBuf::from("/src/parse/error.gleam"),
+        path: Utf8PathBuf::from("/src/parse/error.gleam"),
         error: result,
     };
     error.pretty_string()

@@ -11,9 +11,9 @@ use crate::{
     type_::{pretty::Printer, PreludeType, ValueConstructorVariant},
     Error, Result, Warning,
 };
+use camino::Utf8PathBuf;
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
 use smol_str::SmolStr;
-use std::path::PathBuf;
 use strum::IntoEnumIterator;
 
 use super::{src_span_to_lsp_range, DownloadDependencies, MakeLocker};
@@ -28,7 +28,7 @@ pub struct Response<T> {
 #[derive(Debug, PartialEq, Eq)]
 pub enum Compilation {
     /// Compilation was attempted and succeeded for these modules.
-    Yes(Vec<PathBuf>),
+    Yes(Vec<Utf8PathBuf>),
     /// Compilation was not attempted for this operation.
     No,
 }
@@ -43,7 +43,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
     /// discarded and reloaded to handle any changes to dependencies.
     pub(crate) compiler: LspProjectCompiler<FileSystemProxy<IO>>,
 
-    modules_compiled_since_last_feedback: Vec<PathBuf>,
+    modules_compiled_since_last_feedback: Vec<Utf8PathBuf>,
     compiled_since_last_feedback: bool,
 
     // Used to publish progress notifications to the client without waiting for
@@ -283,7 +283,7 @@ where
         let path = uri.to_file_path().expect("URL file");
 
         #[cfg(not(any(unix, windows, target_os = "redox", target_os = "wasi")))]
-        let path: PathBuf = uri.path().into();
+        let path: Utf8PathBuf = uri.path().into();
 
         let components = path
             .strip_prefix(self.paths.root())

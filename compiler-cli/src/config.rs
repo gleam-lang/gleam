@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use camino::Utf8PathBuf;
 
 use gleam_core::{
     config::PackageConfig,
@@ -8,7 +8,10 @@ use gleam_core::{
 };
 
 pub fn root_config() -> Result<PackageConfig, Error> {
-    let current_dir = std::env::current_dir().expect("Could not get current directory");
+    let current_dir = Utf8PathBuf::from_path_buf(
+        std::env::current_dir().expect("Could not get current directory"),
+    )
+    .expect("Non Utf-8 Path");
     let paths = ProjectPaths::new(current_dir);
     read(paths.root_config())
 }
@@ -53,7 +56,7 @@ pub fn find_package_config_for_module(
     }
 }
 
-pub fn read(config_path: PathBuf) -> Result<PackageConfig, Error> {
+pub fn read(config_path: Utf8PathBuf) -> Result<PackageConfig, Error> {
     let toml = crate::fs::read(&config_path)?;
     let config: PackageConfig = toml::from_str(&toml).map_err(|e| Error::FileIo {
         action: FileIoAction::Parse,

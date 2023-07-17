@@ -1,3 +1,4 @@
+use camino::Utf8PathBuf;
 use gleam_core::{
     build::{Codegen, Mode, Options, Runtime, Target},
     config::{DenoFlag, PackageConfig},
@@ -7,7 +8,6 @@ use gleam_core::{
     type_::ModuleFunction,
 };
 use lazy_static::lazy_static;
-use std::path::PathBuf;
 
 use crate::fs::ProjectIO;
 
@@ -165,13 +165,13 @@ fn write_javascript_entrypoint(
         .strip_prefix(paths.root())
         .expect("Failed to strip prefix from path")
         .to_path_buf();
-    let entrypoint = format!("./{}/gleam.main.mjs", entry.to_string_lossy());
+    let entrypoint = format!("./{}/gleam.main.mjs", entry);
     let module = format!(
         r#"import {{ main }} from "./{module}.mjs";
 main();
 "#,
     );
-    crate::fs::write(&PathBuf::from(&entrypoint), &module)?;
+    crate::fs::write(&Utf8PathBuf::from(&entrypoint), &module)?;
     Ok(entrypoint)
 }
 

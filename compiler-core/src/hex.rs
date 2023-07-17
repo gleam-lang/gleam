@@ -1,8 +1,8 @@
+use camino::Utf8Path;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
 use hexpm::version::Version;
-use std::path::Path;
 use tar::Archive;
 
 use crate::{
@@ -209,7 +209,7 @@ impl Downloader {
 
     // It would be really nice if this was async but the library is sync
     pub fn extract_package_from_cache(&self, name: &str, version: &Version) -> Result<bool> {
-        let contents_path = Path::new("contents.tar.gz");
+        let contents_path = Utf8Path::new("contents.tar.gz");
         let destination = self.paths.build_packages_package(name);
 
         // If the directory already exists then there's nothing for us to do

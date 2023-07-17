@@ -211,6 +211,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 
 [[package]]
+name = "camino"
+version = "1.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c59e92b5a388f549b863a7bea62612c09f24c8393560709a54558a9abdfb3b9c"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "capnp"
 version = "0.14.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -708,6 +717,7 @@ dependencies = [
  "atty",
  "base16",
  "bytes",
+ "camino",
  "clap",
  "ctrlc",
  "debug-ignore",
@@ -757,6 +767,7 @@ dependencies = [
  "base16",
  "bincode",
  "bytes",
+ "camino",
  "capnp",
  "capnpc",
  "codespan-reporting",
@@ -801,6 +812,7 @@ dependencies = [
 name = "gleam-wasm"
 version = "0.30.1"
 dependencies = [
+ "camino",
  "console_error_panic_hook",
  "gleam-core",
  "hexpm",
@@ -2107,6 +2119,7 @@ dependencies = [
 name = "test-package-compiler"
 version = "0.30.1"
 dependencies = [
+ "camino",
  "gleam-core",
  "im",
  "insta",

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use camino::Utf8PathBuf;
 
 pub use codespan_reporting::diagnostic::{LabelStyle, Severity};
 use codespan_reporting::{diagnostic::Label as CodespanLabel, files::SimpleFile};
@@ -22,7 +22,7 @@ pub struct Label {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Location {
     pub src: SmolStr,
-    pub path: PathBuf,
+    pub path: Utf8PathBuf,
     pub label: Label,
     pub extra_labels: Vec<Label>,
 }
@@ -61,10 +61,7 @@ impl Diagnostic {
     }
 
     fn write_span(&self, location: &Location, buffer: &mut Buffer) {
-        let file = SimpleFile::new(
-            location.path.to_string_lossy().to_string(),
-            location.src.as_str(),
-        );
+        let file = SimpleFile::new(location.path.to_string(), location.src.as_str());
         let labels = location
             .labels()
             .map(|l| {

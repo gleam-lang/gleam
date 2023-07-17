@@ -3,18 +3,20 @@ use crate::{
     line_numbers::LineNumbers, Result,
 };
 use itertools::Itertools;
-use std::{fmt::Debug, path::Path};
+use std::fmt::Debug;
+
+use camino::Utf8Path;
 
 /// A code generator that creates a .erl Erlang module and record header files
 /// for each Gleam module in the package.
 #[derive(Debug)]
 pub struct Erlang<'a> {
-    build_directory: &'a Path,
-    include_directory: &'a Path,
+    build_directory: &'a Utf8Path,
+    include_directory: &'a Utf8Path,
 }
 
 impl<'a> Erlang<'a> {
-    pub fn new(build_directory: &'a Path, include_directory: &'a Path) -> Self {
+    pub fn new(build_directory: &'a Utf8Path, include_directory: &'a Utf8Path) -> Self {
         Self {
             build_directory,
             include_directory,
@@ -66,12 +68,12 @@ impl<'a> Erlang<'a> {
 /// A code generator that creates a .app Erlang application file for the package
 #[derive(Debug)]
 pub struct ErlangApp<'a> {
-    output_directory: &'a Path,
+    output_directory: &'a Utf8Path,
     include_dev_deps: bool,
 }
 
 impl<'a> ErlangApp<'a> {
-    pub fn new(output_directory: &'a Path, include_dev_deps: bool) -> Self {
+    pub fn new(output_directory: &'a Utf8Path, include_dev_deps: bool) -> Self {
         Self {
             output_directory,
             include_dev_deps,
@@ -147,12 +149,12 @@ pub enum TypeScriptDeclarations {
 
 #[derive(Debug)]
 pub struct JavaScript<'a> {
-    output_directory: &'a Path,
+    output_directory: &'a Utf8Path,
     typescript: TypeScriptDeclarations,
 }
 
 impl<'a> JavaScript<'a> {
-    pub fn new(output_directory: &'a Path, typescript: TypeScriptDeclarations) -> Self {
+    pub fn new(output_directory: &'a Utf8Path, typescript: TypeScriptDeclarations) -> Self {
         Self {
             output_directory,
             typescript,

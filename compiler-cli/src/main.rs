@@ -87,7 +87,7 @@ use gleam_core::{
 };
 use hex::ApiKeyCommand as _;
 
-use std::path::PathBuf;
+use camino::Utf8PathBuf;
 
 use clap::{Args, Parser, Subcommand};
 use strum::VariantNames;
@@ -283,15 +283,15 @@ pub struct CompilePackage {
 
     /// The directory of the Gleam package
     #[clap(long = "package")]
-    package_directory: PathBuf,
+    package_directory: Utf8PathBuf,
 
     /// A directory to write compiled package to
     #[clap(long = "out")]
-    output_directory: PathBuf,
+    output_directory: Utf8PathBuf,
 
     /// A directories of precompiled Gleam projects
     #[clap(long = "lib")]
-    libraries_directory: PathBuf,
+    libraries_directory: Utf8PathBuf,
 
     /// Skip Erlang to BEAM bytecode compilation if given
     #[clap(long = "no-beam")]
@@ -520,7 +520,10 @@ fn initialise_logger() {
 }
 
 fn project_paths_at_current_directory() -> ProjectPaths {
-    let current_dir = std::env::current_dir().expect("Could not get current directory");
+    let current_dir = Utf8PathBuf::from_path_buf(
+        std::env::current_dir().expect("Could not get current directory"),
+    )
+    .expect("Non Utf-8 Path");
     ProjectPaths::new(current_dir)
 }
 

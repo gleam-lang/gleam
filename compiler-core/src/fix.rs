@@ -2,8 +2,10 @@
 mod tests;
 
 use smol_str::SmolStr;
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 use vec1::vec1;
+
+use camino::Utf8Path;
 
 use crate::{
     ast::{
@@ -18,7 +20,7 @@ use crate::{
 pub fn parse_fix_and_format(
     assumed_target: Option<Target>,
     src: &SmolStr,
-    path: &Path,
+    path: &Utf8Path,
 ) -> Result<(String, bool)> {
     // Parse
     let parsed = crate::parse::parse_module(src).map_err(|error| Error::Parse {

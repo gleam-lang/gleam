@@ -1,10 +1,9 @@
 #[cfg(test)]
 mod tests;
 
-use std::{
-    collections::HashSet,
-    path::{Path, PathBuf},
-};
+use std::collections::HashSet;
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::{
     io::{FileSystemReader, FileSystemWriter},
@@ -14,15 +13,15 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CopiedNativeFiles {
     pub any_elixir: bool,
-    pub to_compile: Vec<PathBuf>,
+    pub to_compile: Vec<Utf8PathBuf>,
 }
 
 pub(crate) struct NativeFileCopier<'a, IO> {
     io: IO,
-    root: &'a Path,
-    destination_dir: &'a Path,
-    seen_native_files: HashSet<PathBuf>,
-    to_compile: Vec<PathBuf>,
+    root: &'a Utf8Path,
+    destination_dir: &'a Utf8Path,
+    seen_native_files: HashSet<Utf8PathBuf>,
+    to_compile: Vec<Utf8PathBuf>,
     elixir_files_copied: bool,
 }
 
@@ -30,7 +29,7 @@ impl<'a, IO> NativeFileCopier<'a, IO>
 where
     IO: FileSystemReader + FileSystemWriter + Clone,
 {
-    pub(crate) fn new(io: IO, root: &'a Path, out: &'a Path) -> Self {
+    pub(crate) fn new(io: IO, root: &'a Utf8Path, out: &'a Utf8Path) -> Self {
         Self {
             io,
             root,
@@ -64,7 +63,7 @@ where
         })
     }
 
-    fn copy_files(&mut self, src_root: &Path) -> Result<()> {
+    fn copy_files(&mut self, src_root: &Utf8Path) -> Result<()> {
         let mut check_elixir_libs = true;
 
         for entry in self.io.read_dir(src_root)? {
@@ -74,12 +73,8 @@ where
         Ok(())
     }
 
-    fn copy(&mut self, file: PathBuf, src_root: &Path) -> Result<()> {
-        let extension = file
-            .extension()
-            .unwrap_or_default()
-            .to_str()
-            .unwrap_or_default();
+    fn copy(&mut self, file: Utf8PathBuf, src_root: &Utf8Path) -> Result<()> {
+        let extension = file.extension().unwrap_or_default();
 
         // Skip unknown file formats that are not supported native files
         if !matches!(extension, "mjs" | "js" | "ts" | "hrl" | "erl" | "ex") {
@@ -119,10 +114,10 @@ where
         Ok(())
     }
 
-    fn check_for_duplicate(&mut self, relative_path: &PathBuf) -> Result<(), Error> {
+    fn check_for_duplicate(&mut self, relative_path: &Utf8PathBuf) -> Result<(), Error> {
         if !self.seen_native_files.insert(relative_path.clone()) {
             return Err(Error::DuplicateSourceFile {
-                file: relative_path.to_string_lossy().to_string(),
+                file: relative_path.to_string(),
             });
         }
         Ok(())
