@@ -1,7 +1,7 @@
 use crate::{diagnostic::Diagnostic, Error, Warning};
 use std::collections::{HashMap, HashSet};
 
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8PathBuf;
 
 use super::engine::Compilation;
 
@@ -354,7 +354,7 @@ mod tests {
         let file1 = Utf8PathBuf::from("src/file1.gleam");
         let file2 = Utf8PathBuf::from("src/file2.gleam");
 
-        let error = |file: &Utf8Path| Error::Parse {
+        let error = |file: &camino::Utf8Path| Error::Parse {
             path: file.to_path_buf(),
             src: "blah".into(),
             error: ParseError {

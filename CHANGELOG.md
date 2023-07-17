@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Replaced std::path::{Path, PathBuf} with camino::{Utf8Path, Utf8PathBuf}
 - Fixed a bug where the formatter would incorrectly format external functions
   by breaking the return annotation instead of the function arguments.
 
