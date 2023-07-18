@@ -1184,60 +1184,62 @@ where
         match self.tok0.take() {
             Some((start, Token::Name { name }, end)) => {
                 let _ = self.next_tok();
-                if let Some((dot_s, _)) = self.maybe_one(&Token::Dot) {
-                    match self.next_tok() {
-                        Some((_, Token::Int { value }, int_e)) => {
-                            let v = value.replace('_', "");
-                            if let Ok(index) = u64::from_str(&v) {
-                                Ok(Some(ClauseGuard::TupleIndex {
+                let mut unit = ClauseGuard::Var {
+                    location: SrcSpan { start, end },
+                    type_: (),
+                    name,
+                };
+
+                loop {
+                    if let Some((dot_s, _)) = self.maybe_one(&Token::Dot) {
+                        match self.next_tok() {
+                            Some((_, Token::Int { value }, int_e)) => {
+                                let v = value.replace('_', "");
+                                if let Ok(index) = u64::from_str(&v) {
+                                    unit = ClauseGuard::TupleIndex {
+                                        location: SrcSpan {
+                                            start: dot_s,
+                                            end: int_e,
+                                        },
+                                        index,
+                                        type_: (),
+                                        tuple: Box::new(unit),
+                                    };
+                                } else {
+                                    return parse_error(
+                                        ParseErrorType::InvalidTupleAccess,
+                                        SrcSpan { start, end },
+                                    );
+                                }
+                            }
+
+                            Some((_, Token::Name { name: label }, int_e)) => {
+                                unit = ClauseGuard::FieldAccess {
                                     location: SrcSpan {
                                         start: dot_s,
                                         end: int_e,
                                     },
-                                    index,
+                                    index: None,
+                                    label,
                                     type_: (),
-                                    tuple: Box::new(ClauseGuard::Var {
-                                        location: SrcSpan { start, end },
-                                        type_: (),
-                                        name,
-                                    }),
-                                }))
-                            } else {
-                                parse_error(
+                                    container: Box::new(unit),
+                                };
+                            }
+
+                            Some((start, _, end)) => {
+                                return parse_error(
                                     ParseErrorType::InvalidTupleAccess,
                                     SrcSpan { start, end },
                                 )
                             }
-                        }
 
-                        Some((_, Token::Name { name: label }, int_e)) => {
-                            Ok(Some(ClauseGuard::FieldAccess {
-                                location: SrcSpan {
-                                    start: dot_s,
-                                    end: int_e,
-                                },
-                                index: None,
-                                label,
-                                type_: (),
-                                container: Box::new(ClauseGuard::Var {
-                                    location: SrcSpan { start, end },
-                                    type_: (),
-                                    name,
-                                }),
-                            }))
+                            _ => {
+                                return self.next_tok_unexpected(vec!["A positive integer".into()])
+                            }
                         }
-
-                        Some((start, _, end)) => {
-                            parse_error(ParseErrorType::InvalidTupleAccess, SrcSpan { start, end })
-                        }
-                        _ => self.next_tok_unexpected(vec!["A positive integer".into()]),
+                    } else {
+                        break Ok(Some(unit));
                     }
-                } else {
-                    Ok(Some(ClauseGuard::Var {
-                        location: SrcSpan { start, end },
-                        type_: (),
-                        name,
-                    }))
                 }
             }
             Some((_, Token::LeftBrace, _)) => {
