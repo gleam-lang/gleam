@@ -1055,11 +1055,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 label,
                 container,
                 ..
-            } => loop {
-                let container = self.infer_clause_guard(*container.clone())?;
+            } => {
+                let typed_container = self.infer_clause_guard(*container.clone())?;
 
-                match container.type_().as_ref() {
-                    Type::App { .. } => match container.clone() {
+                match typed_container.type_().as_ref() {
+                    Type::App { .. } => match typed_container.clone() {
                         ClauseGuard::Var { location, name, .. } => {
                             let container_expr = UntypedExpr::Var { location, name };
                             match self.infer_field_access(
@@ -1069,12 +1069,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                 FieldAccessUsage::Other,
                             )? {
                                 TypedExpr::RecordAccess { index, typ, .. } => {
-                                    break Ok(ClauseGuard::FieldAccess {
+                                    Ok(ClauseGuard::FieldAccess {
                                         location,
                                         label,
                                         index: Some(index + 1),
                                         type_: typ,
-                                        container: Box::new(container),
+                                        container: Box::new(typed_container),
                                     })
                                 }
 
@@ -1082,56 +1082,24 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             }
                         }
 
-                        ClauseGuard::FieldAccess {
+                        ClauseGuard::FieldAccess { .. } => self.infer_clause_guard(*container),
+
+                        _ => Err(Error::NotATuple {
                             location,
-                            index,
-                            label,
-                            type_,
-                            container,
-                        } => {
-                            let container_expr = UntypedExpr::Var { location, name };
-                            match self.infer_field_access(
-                                container_expr,
-                                label.clone(),
-                                location,
-                                FieldAccessUsage::Other,
-                            )? {
-                                TypedExpr::RecordAccess { index, typ, .. } => {
-                                    container = Box::new(ClauseGuard::FieldAccess {
-                                        location,
-                                        label,
-                                        index: Some(index + 1),
-                                        type_: typ,
-                                        container: Box::new(*container),
-                                    })
-                                }
-
-                                _ => panic!("Expected RecordAccess"),
-                            }
-                        }
-
-                        _ => {
-                            break Err(Error::NotATuple {
-                                location,
-                                given: container.type_(),
-                            })
-                        }
+                            given: typed_container.type_(),
+                        }),
                     },
 
-                    typ if typ.is_unbound() => {
-                        break Err(Error::NotATupleUnbound {
-                            location: container.location(),
-                        })
-                    }
+                    typ if typ.is_unbound() => Err(Error::NotATupleUnbound {
+                        location: typed_container.location(),
+                    }),
 
-                    _ => {
-                        break Err(Error::NotATuple {
-                            location,
-                            given: container.type_(),
-                        })
-                    }
+                    _ => Err(Error::NotATuple {
+                        location,
+                        given: typed_container.type_(),
+                    }),
                 }
-            },
+            }
 
             ClauseGuard::And {
                 location,
