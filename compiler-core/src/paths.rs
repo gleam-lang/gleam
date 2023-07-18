@@ -1,4 +1,7 @@
-use crate::{build::{Mode, Target}, io::utf8_or_panic};
+use crate::{
+    build::{Mode, Target},
+    io::utf8_or_panic,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 

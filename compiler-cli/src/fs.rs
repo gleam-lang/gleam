@@ -20,7 +20,7 @@ use std::{
     time::SystemTime,
 };
 
-use camino::{Utf8Path, Utf8PathBuf, ReadDirUtf8};
+use camino::{ReadDirUtf8, Utf8Path, Utf8PathBuf};
 
 use crate::{dependencies::UseManifest, lsp::LspLocker};
 
@@ -97,13 +97,7 @@ impl FileSystemReader for ProjectIO {
     fn read_dir(&self, path: &Utf8Path) -> Result<ReadDir> {
         read_dir(path).map(|entries| {
             entries
-                .map(|result| {
-                    result.map(|entry| {
-                        DirEntry::from_path(
-                           entry.path()
-                        )
-                    })
-                })
+                .map(|result| result.map(|entry| DirEntry::from_path(entry.path())))
                 .collect()
         })
     }

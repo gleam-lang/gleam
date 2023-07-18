@@ -3,14 +3,14 @@ use camino::Utf8PathBuf;
 use gleam_core::{
     config::PackageConfig,
     error::{Error, FileIoAction, FileKind},
+    io::utf8_or_panic,
     manifest::Manifest,
-    paths::ProjectPaths, io::utf8_or_panic,
+    paths::ProjectPaths,
 };
 
 pub fn root_config() -> Result<PackageConfig, Error> {
-    let current_dir = utf8_or_panic(
-        std::env::current_dir().expect("Could not get current directory"),
-    );
+    let current_dir =
+        utf8_or_panic(std::env::current_dir().expect("Could not get current directory"));
     let paths = ProjectPaths::new(current_dir);
     read(paths.root_config())
 }

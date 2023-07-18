@@ -1,6 +1,6 @@
 use crate::{
     diagnostic::{Diagnostic, Level},
-    io::{CommandExecutor, FileSystemReader, FileSystemWriter, utf8_or_panic},
+    io::{utf8_or_panic, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         engine::{self, LanguageServerEngine},
         feedback::{Feedback, FeedbackBookKeeper},

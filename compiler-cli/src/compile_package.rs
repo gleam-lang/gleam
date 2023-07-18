@@ -11,7 +11,7 @@ use gleam_core::{
     type_::ModuleInterface,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
-    Result
+    Result,
 };
 use smol_str::SmolStr;
 use std::sync::Arc;

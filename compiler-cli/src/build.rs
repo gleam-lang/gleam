@@ -2,9 +2,10 @@ use std::{sync::Arc, time::Instant};
 
 use gleam_core::{
     build::{Built, Codegen, Options, ProjectCompiler},
+    io::utf8_or_panic,
     manifest::Manifest,
     paths::ProjectPaths,
-    Result, io::utf8_or_panic,
+    Result,
 };
 
 use crate::{
@@ -31,9 +32,8 @@ pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
         options.mode,
         options.target.unwrap_or(root_config.target),
     )?;
-    let current_dir = utf8_or_panic(
-        std::env::current_dir().expect("Failed to get current directory"),
-    );
+    let current_dir =
+        utf8_or_panic(std::env::current_dir().expect("Failed to get current directory"));
 
     tracing::info!("Compiling packages");
     let compiled = {
