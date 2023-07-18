@@ -36,7 +36,7 @@ impl BuildLock {
         crate::fs::mkdir(&self.directory).expect("Could not create lock directory");
 
         let lock_path = self.directory.join("gleam.lock");
-        let mut file = fslock::LockFile::open(&lock_path.to_string()).expect("LockFile creation");
+        let mut file = fslock::LockFile::open(lock_path.as_str()).expect("LockFile creation");
 
         if !file.try_lock_with_pid().expect("Trying build locking") {
             telemetry.waiting_for_build_directory_lock();

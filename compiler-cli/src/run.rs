@@ -116,7 +116,7 @@ fn run_erlang(
 
     for entry in crate::fs::read_dir(packages)?.filter_map(Result::ok) {
         args.push("-pa".into());
-        args.push(entry.path().join("ebin").to_string_lossy().into());
+        args.push(entry.path().join("ebin").into());
     }
 
     // gleam modules are seperated by `/`. Erlang modules are seperated by `@`.

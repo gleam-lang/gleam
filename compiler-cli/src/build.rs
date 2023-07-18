@@ -1,11 +1,10 @@
-use camino::Utf8PathBuf;
 use std::{sync::Arc, time::Instant};
 
 use gleam_core::{
     build::{Built, Codegen, Options, ProjectCompiler},
     manifest::Manifest,
     paths::ProjectPaths,
-    Result,
+    Result, io::utf8_or_panic,
 };
 
 use crate::{
@@ -32,10 +31,9 @@ pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
         options.mode,
         options.target.unwrap_or(root_config.target),
     )?;
-    let current_dir = Utf8PathBuf::from_path_buf(
+    let current_dir = utf8_or_panic(
         std::env::current_dir().expect("Failed to get current directory"),
-    )
-    .expect("Non Utf-8 Path");
+    );
 
     tracing::info!("Compiling packages");
     let compiled = {

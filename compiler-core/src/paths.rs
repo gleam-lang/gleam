@@ -1,4 +1,4 @@
-use crate::build::{Mode, Target};
+use crate::{build::{Mode, Target}, io::utf8_or_panic};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -127,12 +127,11 @@ fn global_packages_cache() -> Utf8PathBuf {
 }
 
 pub fn default_global_gleam_cache() -> Utf8PathBuf {
-    Utf8PathBuf::from_path_buf(
+    utf8_or_panic(
         dirs_next::cache_dir()
             .expect("Failed to determine user cache directory")
             .join("gleam"),
     )
-    .expect("Non Utf8-Path")
 }
 
 pub fn unnest(within: &Utf8Path) -> Utf8PathBuf {

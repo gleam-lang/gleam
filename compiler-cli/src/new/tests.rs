@@ -1,13 +1,13 @@
-use camino::Utf8PathBuf;
+use gleam_core::io::utf8_or_panic;
 
 #[test]
 fn new() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("my_project");
+    let path = utf8_or_panic(tmp.path().join("my_project"));
 
     let creator = super::Creator::new(
         super::NewOptions {
-            project_root: path.to_str().unwrap().to_string(),
+            project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
             description: "Wibble wobble".into(),
@@ -28,7 +28,7 @@ fn new() {
     assert!(path.join(".github/workflows/test.yml").exists());
 
     let toml =
-        crate::fs::read(Utf8PathBuf::from_path_buf(path.join("gleam.toml")).unwrap()).unwrap();
+        crate::fs::read(path.join("gleam.toml")).unwrap();
     assert!(toml.contains("name = \"my_project\""));
     assert!(toml.contains("description = \"Wibble wobble\""));
 }
@@ -36,11 +36,11 @@ fn new() {
 #[test]
 fn new_with_skip_git() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("my_project");
+    let path = utf8_or_panic(tmp.path().join("my_project"));
 
     let creator = super::Creator::new(
         super::NewOptions {
-            project_root: path.to_str().unwrap().to_string(),
+            project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
             description: "Wibble wobble".into(),
@@ -58,11 +58,11 @@ fn new_with_skip_git() {
 #[test]
 fn new_with_skip_github() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("my_project");
+    let path = utf8_or_panic(tmp.path().join("my_project"));
 
     let creator = super::Creator::new(
         super::NewOptions {
-            project_root: path.to_str().unwrap().to_string(),
+            project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
             description: "Wibble wobble".into(),
@@ -83,11 +83,11 @@ fn new_with_skip_github() {
 #[test]
 fn new_with_skip_git_and_github() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("my_project");
+    let path = utf8_or_panic(tmp.path().join("my_project"));
 
     let creator = super::Creator::new(
         super::NewOptions {
-            project_root: path.to_str().unwrap().to_string(),
+            project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
             description: "Wibble wobble".into(),
@@ -108,11 +108,11 @@ fn new_with_skip_git_and_github() {
 #[test]
 fn invalid_path() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("-------");
+    let path = utf8_or_panic(tmp.path().join("-------"));
 
     assert!(super::Creator::new(
         super::NewOptions {
-            project_root: path.to_str().unwrap().to_string(),
+            project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
             description: "Wibble wobble".into(),
@@ -127,11 +127,11 @@ fn invalid_path() {
 #[test]
 fn invalid_name() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("projec");
+    let path = utf8_or_panic(tmp.path().join("projec"));
 
     assert!(super::Creator::new(
         super::NewOptions {
-            project_root: path.to_str().unwrap().to_string(),
+            project_root: path.to_string(),
             template: super::Template::Lib,
             name: Some("-".into()),
             description: "Wibble wobble".into(),

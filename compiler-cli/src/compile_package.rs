@@ -3,7 +3,7 @@ use crate::{
     fs::{self, ConsoleWarningEmitter, ProjectIO},
     CompilePackage,
 };
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8Path;
 use gleam_core::{
     build::{Mode, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration},
     metadata,
@@ -11,7 +11,7 @@ use gleam_core::{
     type_::ModuleInterface,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
-    Result,
+    Result
 };
 use smol_str::SmolStr;
 use std::sync::Arc;
@@ -62,8 +62,7 @@ fn load_libraries(
     tracing::info!("Reading precompiled module metadata files");
     let mut manifests = im::HashMap::new();
     for lib in fs::read_dir(lib)?.filter_map(Result::ok) {
-        let path = Utf8PathBuf::from_path_buf(lib.path().join(paths::ARTEFACT_DIRECTORY_NAME))
-            .expect("Non Utf-8 Path");
+        let path = lib.path().join(paths::ARTEFACT_DIRECTORY_NAME);
         if !path.is_dir() {
             continue;
         }
@@ -73,5 +72,6 @@ fn load_libraries(
             let _ = manifests.insert(module.name.clone(), module);
         }
     }
+
     Ok(manifests)
 }

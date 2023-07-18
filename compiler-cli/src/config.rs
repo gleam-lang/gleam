@@ -4,14 +4,13 @@ use gleam_core::{
     config::PackageConfig,
     error::{Error, FileIoAction, FileKind},
     manifest::Manifest,
-    paths::ProjectPaths,
+    paths::ProjectPaths, io::utf8_or_panic,
 };
 
 pub fn root_config() -> Result<PackageConfig, Error> {
-    let current_dir = Utf8PathBuf::from_path_buf(
+    let current_dir = utf8_or_panic(
         std::env::current_dir().expect("Could not get current directory"),
-    )
-    .expect("Non Utf-8 Path");
+    );
     let paths = ProjectPaths::new(current_dir);
     read(paths.root_config())
 }

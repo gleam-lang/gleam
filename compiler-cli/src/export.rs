@@ -46,9 +46,9 @@ pub(crate) fn erlang_shipment() -> Result<()> {
             continue;
         }
 
-        let name = path.file_name().expect("Directory name").to_string_lossy();
-        let build = build.join(name.as_ref());
-        let out = out.join(name.as_ref());
+        let name = path.file_name().expect("Directory name");
+        let build = build.join(name);
+        let out = out.join(name);
         crate::fs::mkdir(&out)?;
 
         // Copy desired package subdirectories

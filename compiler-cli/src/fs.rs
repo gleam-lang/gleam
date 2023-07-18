@@ -20,7 +20,7 @@ use std::{
     time::SystemTime,
 };
 
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::{Utf8Path, Utf8PathBuf, ReadDirUtf8};
 
 use crate::{dependencies::UseManifest, lsp::LspLocker};
 
@@ -100,7 +100,7 @@ impl FileSystemReader for ProjectIO {
                 .map(|result| {
                     result.map(|entry| {
                         DirEntry::from_path(
-                            Utf8PathBuf::from_path_buf(entry.path()).expect("Non Utf-8 Path"),
+                           entry.path()
                         )
                     })
                 })
@@ -350,8 +350,7 @@ pub fn gleam_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = U
 pub fn native_files(dir: &Utf8Path) -> Result<impl Iterator<Item = Utf8PathBuf> + '_> {
     Ok(read_dir(dir)?
         .flat_map(Result::ok)
-        .map(|e| e.path())
-        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
+        .map(|e| e.into_path())
         .filter(|path| {
             let extension = path.extension().unwrap_or_default();
             matches!(extension, "erl" | "hrl" | "ex" | "js" | "mjs" | "ts")
@@ -372,8 +371,7 @@ pub fn private_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item =
 pub fn erlang_files(dir: &Utf8Path) -> Result<impl Iterator<Item = Utf8PathBuf> + '_> {
     Ok(read_dir(dir)?
         .flat_map(Result::ok)
-        .map(|e| e.path())
-        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
+        .map(|e| e.into_path())
         .filter(|path| {
             let extension = path.extension().unwrap_or_default();
             extension == "erl" || extension == "hrl"
@@ -424,10 +422,10 @@ pub fn mkdir(path: impl AsRef<Utf8Path> + Debug) -> Result<(), Error> {
     })
 }
 
-pub fn read_dir(path: impl AsRef<Utf8Path> + Debug) -> Result<std::fs::ReadDir, Error> {
+pub fn read_dir(path: impl AsRef<Utf8Path> + Debug) -> Result<ReadDirUtf8, Error> {
     tracing::trace!(path=?path,"reading_directory");
 
-    std::fs::read_dir(path.as_ref()).map_err(|e| Error::FileIo {
+    Utf8Path::read_dir_utf8(path.as_ref()).map_err(|e| Error::FileIo {
         action: FileIoAction::Read,
         kind: FileKind::Directory,
         path: Utf8PathBuf::from(path.as_ref()),
@@ -440,8 +438,7 @@ pub fn module_caches_paths(
 ) -> Result<impl Iterator<Item = Utf8PathBuf>, Error> {
     Ok(read_dir(path)?
         .filter_map(Result::ok)
-        .map(|f| f.path())
-        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
+        .map(|f| f.into_path())
         .filter(|p| p.extension() == Some("cache")))
 }
 
