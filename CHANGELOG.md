@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed a bug where the compiler could infer incorrect generic type parameters
+  when analysing a module without type annotations with self recursive
+  functions.
 - Fixed a bug where the formatter would incorrectly format external functions
   by breaking the return annotation instead of the function arguments.
 
