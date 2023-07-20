@@ -209,7 +209,7 @@ fn record_access() {
     ];
     assert_eq!(
         parse_and_order(&functions).unwrap(),
-        vec![vec!["a"], vec!["c"], vec!["b"]]
+        vec![vec!["a"], vec!["b"], vec!["c"]]
     );
 }
 
@@ -222,7 +222,7 @@ fn binop() {
     ];
     assert_eq!(
         parse_and_order(&functions).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
 
@@ -616,5 +616,18 @@ fn function_argument_shadowing() {
     assert_eq!(
         parse_and_order(&functions).unwrap(),
         vec![vec!["a"], vec!["b"]]
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2275
+#[test]
+fn bug_2275() {
+    let functions = [
+        Input::Internal("one", &[], r#"two one"#),
+        Input::Internal("two", &[], r#"two"#),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["two"], vec!["one"]]
     );
 }
