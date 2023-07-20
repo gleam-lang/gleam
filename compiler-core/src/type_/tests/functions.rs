@@ -60,3 +60,35 @@ fn call(f: fn() -> a) {
         vec![(r#"main"#, r#"fn() -> String"#)]
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2275
+#[test]
+fn bug_2275() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+  []
+  |> one([])
+}
+
+fn one(commands, dirs) {
+  case commands {
+    [_, ..rest] -> {
+      let dirs2 = two(rest, Nil)
+      one(commands, dirs2)
+    }
+
+    _ -> dirs
+  }
+}
+
+fn two(contents, dir) {
+  case contents {
+    [] -> [dir]
+    _ -> two(contents, Nil)
+  }
+}
+"#,
+        vec![(r#"main"#, r#"fn() -> List(Nil)"#)]
+    );
+}
