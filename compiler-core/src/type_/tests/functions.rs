@@ -67,28 +67,21 @@ fn bug_2275() {
     assert_module_infer!(
         r#"
 pub fn main() {
-  []
-  |> one([])
+  one
+  Nil
 }
 
-fn one(commands, dirs) {
-  case commands {
-    [_, ..rest] -> {
-      let dirs2 = two(rest, Nil)
-      one(commands, dirs2)
-    }
-
-    _ -> dirs
-  }
+fn one() {
+  one
+  two
+  Nil
 }
 
-fn two(contents, dir) {
-  case contents {
-    [] -> [dir]
-    _ -> two(contents, Nil)
-  }
+fn two() {
+  two
+  Nil
 }
 "#,
-        vec![(r#"main"#, r#"fn() -> List(Nil)"#)]
+        vec![(r#"main"#, r#"fn() -> Nil"#)]
     );
 }
