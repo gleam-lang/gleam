@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.30.2 - 2023-07-20
 
 - Fixed a bug where the compiler could infer incorrect generic type parameters
   when analysing a module without type annotations with self recursive
