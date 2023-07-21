@@ -444,19 +444,20 @@ pub fn main(arg) {
 #[test]
 fn field_access() {
     assert_erl!(
-        "
-        type Person {
+        r#"
+        pub type Person {
           Person(username: String, name: String, age: Int)
         }
         
         pub fn main() {
-          let given_name = \"jill\"
-          let person = Person(\"credo\",\"jack\", 32)
+          let given_name = "jack"
+          let raiden = Person("raiden", "jack", 31)
         
           case given_name {
-            name if name == person.name -> \"it's jack\"
-            name -> \"it's \" <> name
+            name if name == raiden.name -> "it's jack"
+            _ -> "It's not jack"
           }
-        }"
+        }
+        "#
     )
 }
