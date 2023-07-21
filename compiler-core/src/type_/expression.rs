@@ -1056,29 +1056,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 container,
                 ..
             } => {
-                let typed_container = self.infer_clause_guard(*container.clone())?;
-                if let ClauseGuard::Var { location, name, .. } = typed_container.clone() {
-                    let container_expr = UntypedExpr::Var { location, name };
+                if let ClauseGuard::Var { location, name, .. } = *container.clone() {
+                    let var_expr = UntypedExpr::Var { location, name };
                     match self.infer_field_access(
-                        container_expr,
+                        var_expr,
                         label.clone(),
                         location,
                         FieldAccessUsage::Other,
                     )? {
                         TypedExpr::RecordAccess { index, typ, .. } => {
+                            let var = self.infer_clause_guard(*container)?;
                             Ok(ClauseGuard::FieldAccess {
                                 location,
                                 label,
                                 index: Some(index + 1),
                                 type_: typ,
-                                container: Box::new(typed_container),
+                                container: Box::new(var),
                             })
                         }
 
                         _ => panic!("Expected RecordAccess"),
                     }
                 } else {
-                    self.infer_clause_guard(*container)
+                    // I can't figure out how to turn the `ClauseGuard::FieldAccess` to a `UntypedExpr::FieldAccess` so that I can use `infer_field_access` like above
+                    todo!()
                 }
             }
 
