@@ -1057,34 +1057,28 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 let typed_container = self.infer_clause_guard(*container.clone())?;
-
-                match typed_container.clone() {
-                    ClauseGuard::Var { location, name, .. } => {
-                        let container_expr = UntypedExpr::Var { location, name };
-                        match self.infer_field_access(
-                            container_expr,
-                            label.clone(),
-                            location,
-                            FieldAccessUsage::Other,
-                        )? {
-                            TypedExpr::RecordAccess { index, typ, .. } => {
-                                Ok(ClauseGuard::FieldAccess {
-                                    location,
-                                    label,
-                                    index: Some(index + 1),
-                                    type_: typ,
-                                    container: Box::new(typed_container),
-                                })
-                            }
-
-                            _ => panic!("Expected RecordAccess"),
+                if let ClauseGuard::Var { location, name, .. } = typed_container.clone() {
+                    let container_expr = UntypedExpr::Var { location, name };
+                    match self.infer_field_access(
+                        container_expr,
+                        label.clone(),
+                        location,
+                        FieldAccessUsage::Other,
+                    )? {
+                        TypedExpr::RecordAccess { index, typ, .. } => {
+                            Ok(ClauseGuard::FieldAccess {
+                                location,
+                                label,
+                                index: Some(index + 1),
+                                type_: typ,
+                                container: Box::new(typed_container),
+                            })
                         }
+
+                        _ => panic!("Expected RecordAccess"),
                     }
-
-                    ClauseGuard::FieldAccess { .. } => self.infer_clause_guard(*container),
-
-                    // Not necessary! but how can we satisfy exhaustiveness without it?
-                    _ => todo!(),
+                } else {
+                    self.infer_clause_guard(*container)
                 }
             }
 
