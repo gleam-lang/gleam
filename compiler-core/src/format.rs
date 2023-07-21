@@ -1456,7 +1456,7 @@ impl<'comments> Formatter<'comments> {
             } => self
                 .clause_guard(container)
                 .append(".")
-                .append(label.clone())
+                .append(label)
                 .to_doc(),
 
             ClauseGuard::Constant(constant) => self.const_expr(constant),

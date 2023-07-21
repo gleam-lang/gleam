@@ -1191,54 +1191,53 @@ where
                 };
 
                 loop {
-                    if let Some((dot_s, _)) = self.maybe_one(&Token::Dot) {
-                        match self.next_tok() {
-                            Some((_, Token::Int { value }, int_e)) => {
-                                let v = value.replace('_', "");
-                                if let Ok(index) = u64::from_str(&v) {
-                                    unit = ClauseGuard::TupleIndex {
-                                        location: SrcSpan {
-                                            start: dot_s,
-                                            end: int_e,
-                                        },
-                                        index,
-                                        type_: (),
-                                        tuple: Box::new(unit),
-                                    };
-                                } else {
-                                    return parse_error(
-                                        ParseErrorType::InvalidTupleAccess,
-                                        SrcSpan { start, end },
-                                    );
-                                }
-                            }
+                    let dot_s = match self.maybe_one(&Token::Dot) {
+                        Some((dot_s, _)) => dot_s,
+                        None => return Ok(Some(unit)),
+                    };
 
-                            Some((_, Token::Name { name: label }, int_e)) => {
-                                unit = ClauseGuard::FieldAccess {
+                    match self.next_tok() {
+                        Some((_, Token::Int { value }, int_e)) => {
+                            let v = value.replace('_', "");
+                            if let Ok(index) = u64::from_str(&v) {
+                                unit = ClauseGuard::TupleIndex {
                                     location: SrcSpan {
                                         start: dot_s,
                                         end: int_e,
                                     },
-                                    index: None,
-                                    label,
+                                    index,
                                     type_: (),
-                                    container: Box::new(unit),
+                                    tuple: Box::new(unit),
                                 };
-                            }
-
-                            Some((start, _, end)) => {
+                            } else {
                                 return parse_error(
                                     ParseErrorType::InvalidTupleAccess,
                                     SrcSpan { start, end },
-                                )
-                            }
-
-                            _ => {
-                                return self.next_tok_unexpected(vec!["A positive integer".into()])
+                                );
                             }
                         }
-                    } else {
-                        break Ok(Some(unit));
+
+                        Some((_, Token::Name { name: label }, int_e)) => {
+                            unit = ClauseGuard::FieldAccess {
+                                location: SrcSpan {
+                                    start: dot_s,
+                                    end: int_e,
+                                },
+                                index: None,
+                                label,
+                                type_: (),
+                                container: Box::new(unit),
+                            };
+                        }
+
+                        Some((start, _, end)) => {
+                            return parse_error(
+                                ParseErrorType::IncorrectName,
+                                SrcSpan { start, end },
+                            )
+                        }
+
+                        _ => return self.next_tok_unexpected(vec!["A positive integer".into()]),
                     }
                 }
             }
