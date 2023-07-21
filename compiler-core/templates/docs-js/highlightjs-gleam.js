@@ -90,12 +90,6 @@ hljs.registerLanguage("gleam", function (hljs) {
         beginKeywords: KEYWORDS,
       },
       {
-        // Attributes
-        className: "title",
-        begin: "\\b@[a-z][a-za-z0-9_]*\\b",
-        relevance: 0,
-      },
-      {
         // Type names and constructors
         className: "title",
         begin: "\\b[A-Z][A-Za-z0-9]*\\b",
