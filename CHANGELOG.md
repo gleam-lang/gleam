@@ -39,8 +39,8 @@
   added for conditional compilation. The existing `if` conditional compilation
   syntax has been deprecated. Run `gleam fix` to update your code.
 - The new `type TypeName` syntax syntax replaces the `external type TypeName`
-  syntax. The existing external type syntax has been deprecated. Run `gleam format`
-  to update your code.
+  syntax. The existing external type syntax has been deprecated. Run
+  `gleam format` to update your code.
 - Adding a new dependency now unlocks the target package. This helps avoid
   failing to find a suitable version for the package due to already being
   locked.
@@ -99,9 +99,9 @@
   JavaScript.
 - A warning is now emitted for double unary negation on ints (`--`) and bools
   (`!!`) as this does nothing but return the original value.
-- Previously the build tool would discard the entire build directory when dependencies
-  were changed. Now it will only discard the build artefacts for removed
-  dependencies.
+- Previously the build tool would discard the entire build directory when
+  dependencies were changed. Now it will only discard the build artefacts for
+  removed dependencies.
 - The errors emitted when a name is reused in a module have been made clearer.
 - Fixed an incorrect URL in the error message for failing to parse a let binding
   with a type annotation.
@@ -115,7 +115,8 @@
   it was created by a different version of Gleam.
 - New Gleam projects are created with `erlef/setup-beam@v1.15.4` in their GitHub
   actions CI configuration.
-- Running a module now uses the dependency's target and runtime in its `gleam.toml`.
+- Running a module now uses the dependency's target and runtime in its
+  `gleam.toml`.
 
 ## v0.28.3 - 2023-04-17
 
@@ -319,7 +320,8 @@
 - Fixed `int` and `float` formatting in `const`s and patterns.
 - Fixed a bug where piping into a function capture expression with a pipe as one
   of the arguments would produce invalid Erlang code.
-- Formatter no longer removes new lines in expression blocks within case branches
+- Formatter no longer removes new lines in expression blocks within case
+  branches
 
 ## v0.25.3 - 2022-12-16
 
@@ -346,8 +348,8 @@
   GitHub actions erlef/setup-beam.
 - A better error message is now shown when attempting to use a function within a
   constant expression.
-- Changed float size limit in bitstring expressions to 16, 32 or 64, when static.
-  Also allowed dynamic size.
+- Changed float size limit in bitstring expressions to 16, 32 or 64, when
+  static. Also allowed dynamic size.
 - New Gleam projects are created using GitHub actions erlef/setup-beam@v1.15.0.
 - Fixed a bug where returning an anonymous function from a pipeline and calling
   it immediately without assigning it to a variable would produce invalid Erlang
@@ -385,7 +387,8 @@
 - Fixed a bug where `try` expressions inside blocks could generate incorrect
   JavaScript.
 - Generated HTML documentation now includes all static assets (but the web
-  fonts), so that it can be accessed offline or in far future once CDNs would 404.
+  fonts), so that it can be accessed offline or in far future once CDNs would
+  404.
 - New Gleam projects are created using GitHub actions erlef/setup-beam@v1.14.0
 - The `javascript.typescript_declarations` field in `gleam.toml` now applies to
   the entire project rather than just the top level package.
@@ -495,7 +498,8 @@
 ## v0.22.1 - 2022-06-27
 
 - The `gleam publish` confirmation prompt now accepts both "Y" and "y".
-- Fixed a bug where `todo` would not emit the correct line number to the LSP while.
+- Fixed a bug where `todo` would not emit the correct line number to the LSP
+  while.
 
 ## v0.22.0 - 2022-06-12
 
@@ -507,13 +511,15 @@
 
 - Fixed a bug where doc comments would dissociate from their statements when
   generating html documentation.
-- You are now allowed to use named accessors on types with multiple constructors if the
-  accessor's name, position and type match (among the constructors) (#1610).
+- You are now allowed to use named accessors on types with multiple constructors
+  if the accessor's name, position and type match (among the constructors)
+  (#1610).
 - Added the ability to replace a release up to one hour after it is published
   using `gleam publish --replace`.
-- `gleam publish`, `gleam docs publish`, `gleam docs remove`, `gleam hex retire`,
-  and `gleam hex unretire` now have access to environment variables for
-  username (default key `HEXPM_USER`) and password (default key `HEXPM_PASS`)
+- `gleam publish`, `gleam docs publish`, `gleam docs remove`,
+  `gleam hex retire`, and `gleam hex unretire` now have access to environment
+  variables for username (default key `HEXPM_USER`) and password (default key
+  `HEXPM_PASS`).
 - The `gleam publish` command gains the `-y/--yes` flag to disable the "are you
   sure" prompt.
 - Clear outdated files from the build directory after compilation.
@@ -610,8 +616,8 @@
 - Corrected the hint given with certain int and float binary operator type
   errors.
 - Add support for `int` and `float` bitstring type when compiling to JavaScript.
-- Add support for specifying size of integers in a bitstring. Supports only exact binaries,
-  i.e. length is a multiple of 8.
+- Add support for specifying size of integers in a bitstring. Supports only
+  exact binaries, i.e. length is a multiple of 8.
 - Fixed compilation of rebar3 based dependencies on Windows.
 
 ## v0.20.1 - 2022-02-24
@@ -866,7 +872,7 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 
 ## v0.16.0 - 2021-06-17
 
-[Release Blog Post](https://gleam.run/news/gleam-v0.16-released/)
+[Release Blog Post](https://gleam.run/news/v0.16-gleam-compiles-to-javascript/)
 
 ## v0.16.0-rc4 - 2021-06-17
 
@@ -879,7 +885,8 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 
 ## v0.16.0-rc2 - 2021-06-08
 
-- Gleam now supports alternative patterns in case expressions for the JavaScript target.
+- Gleam now supports alternative patterns in case expressions for the JavaScript
+  target.
 - The `gleam` prelude module can now be imported when compiling to JavaScript.
 - Fixed a bug where the prelude module could not be imported when using the old
   build compiler API.
@@ -938,7 +945,8 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
   type tuple in some circumstances.
 - Glean `new` command now checks if target folder exists, if so it returns
   an error.
-- A compile time error is now raised if a module is defined with the name `gleam`.
+- A compile time error is now raised if a module is defined with the name
+  `gleam`.
 - A compile time error is now raised if a module is defined with the a keyword
   in the name.
 - New projects are generated using `gleam_stdlib` v0.15.0.
@@ -1264,14 +1272,15 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 - Fixed bug where a doing an unqualified import of a type constructor and
   giving it an alias would use the wrong name if it contained any values.
 - Fixed a bug trying to access an imported constructor which contained values.
-- Fixed a compiler crash that occurred when trying to unify a tuple with something
-  other than another tuple or a variable.
+- Fixed a compiler crash that occurred when trying to unify a tuple with
+  something other than another tuple or a variable.
 - Added support for tuple literals in guards.
 
 ## v0.8.0-rc1 - 2020-04-28
 
 - Strings are now encoded as utf8 binaries in the generated Erlang.
-- HTML documentation can now be generated from Gleam code by running `gleam build --doc`.
+- HTML documentation can now be generated from Gleam code by running
+  `gleam build --doc`.
 - Gleam code can be formatted using the `gleam format` command.
 - The pipe operator `|>` will now attempt to insert the left hand side as the
   first argument to the right hand side if the right hand side is a call,
@@ -1336,7 +1345,8 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
   write the new project to the file system.
 - A friendly error message is rendered when there is a cycle formed by module
   imports.
-- Top level types are now printed in error messages for type parameter mismatches.
+- Top level types are now printed in error messages for type parameter
+  mismatches.
 - The `gen` directory is now deleted before each compilation.
 - `gleam new` now includes installation instructions for Hex packages in the
   generated README.
