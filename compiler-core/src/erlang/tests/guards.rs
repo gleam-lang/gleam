@@ -454,7 +454,7 @@ fn field_access() {
           let raiden = Person("raiden", "jack", 31)
         
           case given_name {
-            name if name == raiden.name -> "it's jack"
+            name if name == raiden.name -> "It's jack"
             _ -> "It's not jack"
           }
         }
