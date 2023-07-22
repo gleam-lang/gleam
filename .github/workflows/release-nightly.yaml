@@ -116,6 +116,7 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
+          DAY=$(date +"%y%m%d")
           VERSION="${GITHUB_REF#refs/tags/}-nightly-${{ github.run_number }}"
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
