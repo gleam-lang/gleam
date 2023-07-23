@@ -13,7 +13,7 @@
           "parameters": 0,
           "constructors": ["One", "Two"]
         },
-        // pub external type MyType2
+        // pub type MyType2
         "MyType2": {
           "documentation": "...",
           "parameters": 0,
@@ -25,7 +25,7 @@
           "parameters": 1,
           "constructors": ["One"]
         },
-        // pub external type MyType4(a, b)
+        // pub type MyType4(a, b)
         "MyType4": {
           "documentation": "...",
           "parameters": 2,
@@ -95,7 +95,7 @@
         "custom_type_constant1": {
           "documentation": "...",
           "type": {
-            "kind": "Custom",
+            "kind": "Named",
             "package": "my_package",
             "module": "my_module",
             "parameters": []
@@ -106,7 +106,7 @@
         "custom_type_constant2": {
           "documentation": "...",
           "type": {
-            "kind": "Custom",
+            "kind": "Named",
             "package": "my_package",
             "module": "my_module",
             "parameters": [
@@ -119,7 +119,7 @@
         "imported_custom_type": {
           "documentation": "...",
           "type": {
-            "kind": "Custom",
+            "kind": "Named",
             "package": "other_package",
             "module": "some/module",
             "parameters": []
