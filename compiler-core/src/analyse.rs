@@ -662,19 +662,19 @@ fn register_value_from_function(
     let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
     let typ = fn_(arg_types, return_type);
     let _ = hydrators.insert(name.clone(), hydrator);
-    environment.insert_variable(
-        name.clone(),
-        ValueConstructorVariant::ModuleFn {
-            documentation: documentation.clone(),
-            name: name.clone(),
-            field_map,
-            module: module_name.clone(),
-            arity: args.len(),
-            location: *location,
-        },
-        typ,
-        *public,
-    );
+
+    let external =
+        target_function_implementation(environment.target, &external_erlang, &external_javascript);
+    let (impl_module, impl_function) = implementation_names(external, module_name, &name);
+    let variant = ValueConstructorVariant::ModuleFn {
+        documentation: documentation.clone(),
+        name: impl_function,
+        field_map,
+        module: impl_module,
+        arity: args.len(),
+        location: *location,
+    };
+    environment.insert_variable(name.clone(), variant, typ, *public);
     if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
     };
@@ -742,25 +742,20 @@ fn infer_function(
         .expect("Preregistered type for fn was not a fn");
 
     // Find the external implementation for the current target, if one has been given.
-    let external = match environment.target {
-        Target::Erlang => &external_erlang,
-        Target::JavaScript => &external_javascript,
-    };
-    let (impl_module, impl_function) = match external {
-        // There was no external implementation, so a Gleam one must be given.
-        None => {
-            ensure_body_given(&body, location)?;
-            (module_name.clone(), name.clone())
-        }
+    let external =
+        target_function_implementation(environment.target, &external_erlang, &external_javascript);
+    let (impl_module, impl_function) = implementation_names(external, module_name, &name);
+
+    if external.is_some() {
         // There was an external implementation, so type annotations are
         // mandatory as the Gleam implementation may be absent, and because we
         // think you should always specify types for external functions for
         // clarity + to avoid accidental mistakes.
-        Some((m, f)) => {
-            ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
-            (m.clone(), f.clone())
-        }
-    };
+        ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
+    } else {
+        // There was no external implementation, so a Gleam one must be given.
+        ensure_body_given(&body, location)?;
+    }
 
     // Infer the type using the preregistered args + return types as a starting point
     let (type_, args, body) = environment.in_new_scope(|environment| {
@@ -810,6 +805,32 @@ fn infer_function(
         external_erlang,
         external_javascript,
     }))
+}
+
+/// Returns the the module name and function name of the implementation of a
+/// function. If the function is implemented as a Gleam function then it is the
+/// same as the name of the module and function. If the function has an external
+/// implementation then it is the name of the external module and function.
+fn implementation_names(
+    external: &Option<(SmolStr, SmolStr)>,
+    module_name: &SmolStr,
+    name: &SmolStr,
+) -> (SmolStr, SmolStr) {
+    match external {
+        None => (module_name.clone(), name.clone()),
+        Some((m, f)) => (m.clone(), f.clone()),
+    }
+}
+
+fn target_function_implementation<'a>(
+    target: Target,
+    external_erlang: &'a Option<(SmolStr, SmolStr)>,
+    external_javascript: &'a Option<(SmolStr, SmolStr)>,
+) -> &'a Option<(SmolStr, SmolStr)> {
+    match target {
+        Target::Erlang => external_erlang,
+        Target::JavaScript => external_javascript,
+    }
 }
 
 fn ensure_body_given(body: &Vec1<UntypedStatement>, location: SrcSpan) -> Result<(), Error> {
@@ -1192,6 +1213,9 @@ fn generalise_function(
     let typ = type_::generalise(typ);
 
     // Insert the function into the module's interface
+    let external =
+        target_function_implementation(environment.target, &external_erlang, &external_javascript);
+    let (impl_module, impl_function) = implementation_names(external, module_name, &name);
     environment.insert_module_value(
         name.clone(),
         ValueConstructor {
@@ -1199,9 +1223,9 @@ fn generalise_function(
             type_: typ,
             variant: ValueConstructorVariant::ModuleFn {
                 documentation: doc.clone(),
-                name: name.clone(),
+                name: impl_function,
                 field_map,
-                module: module_name.clone(),
+                module: impl_module,
                 arity: args.len(),
                 location,
             },

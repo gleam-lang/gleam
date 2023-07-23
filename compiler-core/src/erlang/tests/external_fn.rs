@@ -2,14 +2,22 @@ use crate::{assert_erl, assert_module_error};
 
 #[test]
 fn integration_test1_3() {
-    assert_erl!(r#"pub external fn run() -> Int = "Elixir.MyApp" "run""#);
+    assert_erl!(
+        r#"
+@external(erlang, "Elixir.MyApp", "run")
+pub fn run() -> Int 
+"#
+    );
 }
 
 #[test]
 fn integration_test7() {
     assert_erl!(
-        r#"pub external fn receive() -> Int = "try" "and"
-                    pub fn catch(x) { receive() }"#
+        r#"
+@external(erlang, "try", "and")
+pub fn receive() -> Int
+pub fn catch(x) { receive() }
+"#
     );
 }
 
@@ -17,7 +25,10 @@ fn integration_test7() {
 fn private_external_function_calls() {
     // Private external function calls are inlined
     assert_erl!(
-        r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
+        r#"
+@external(erlang, "m", "f")
+fn go(x x: Int, y y: Int) -> Int
+
 pub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#
     );
 }

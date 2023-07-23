@@ -45,11 +45,11 @@ the_consts() ->
 
 -spec fn_reference_qualified() -> fun(() -> nil).
 fn_reference_qualified() ->
-    fun one:thing/0.
+    fun thing:new/0.
 
 -spec fn_reference_qualified_aliased() -> fun(() -> nil).
 fn_reference_qualified_aliased() ->
-    fun one:thing/0.
+    fun thing:new/0.
 
 -spec fn_reference_unqualified() -> fun(() -> nil).
 fn_reference_unqualified() ->
@@ -85,20 +85,6 @@ fn_call_unqualified_aliased() ->
                two]},
     {registered, []}
 ]}.
-
-
-//// Warning
-
-warning: Deprecated external fn syntax
-  ┌─ src/one.gleam:1:1
-  │  
-1 │ ╭ pub external fn thing() -> Nil =
-2 │ │   "thing" "new"
-  │ ╰───────────────^
-
-This syntax has been replaced by the `@external` attribute.
-
-Hint: Run `gleam fix` to auto-fix your code.
 
 
 

@@ -1529,11 +1529,9 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::ModuleSelect {
             typ,
-            label,
-            module_name,
-            constructor: ModuleValueConstructor::Fn { .. },
+            constructor: ModuleValueConstructor::Fn { module, name, .. },
             ..
-        } => module_select_fn(typ.clone(), module_name, label),
+        } => module_select_fn(typ.clone(), module, name),
 
         TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
 

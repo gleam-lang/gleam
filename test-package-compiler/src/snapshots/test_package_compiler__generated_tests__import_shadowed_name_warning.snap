@@ -36,8 +36,8 @@ expression: "./cases/import_shadowed_name_warning"
 -type shadowing() :: port.
 
 -spec use_type(one:port_()) -> nil.
-use_type(Field@0) ->
-    wibble:wobble(Field@0).
+use_type(Port) ->
+    wibble:wobble(Port).
 
 
 //// /out/lib/the_package/ebin/importy.app
@@ -49,20 +49,6 @@ use_type(Field@0) ->
                two]},
     {registered, []}
 ]}.
-
-
-//// Warning
-
-warning: Deprecated external fn syntax
-   ┌─ src/two.gleam:13:1
-   │  
-13 │ ╭ pub external fn use_type(Port) -> Nil =
-14 │ │   "wibble" "wobble"
-   │ ╰───────────────────^
-
-This syntax has been replaced by the `@external` attribute.
-
-Hint: Run `gleam fix` to auto-fix your code.
 
 
 //// Warning
