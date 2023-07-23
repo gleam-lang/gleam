@@ -2,7 +2,6 @@ use std::{sync::Arc, time::Instant};
 
 use gleam_core::{
     build::{Built, Codegen, Options, ProjectCompiler},
-    io::utf8_or_panic,
     manifest::Manifest,
     paths::ProjectPaths,
     Result,
@@ -12,7 +11,7 @@ use crate::{
     build_lock::BuildLock,
     cli,
     dependencies::UseManifest,
-    fs::{self, ConsoleWarningEmitter},
+    fs::{self, utf8_or_panic, ConsoleWarningEmitter},
 };
 
 pub fn download_dependencies() -> Result<Manifest> {

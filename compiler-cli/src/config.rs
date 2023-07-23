@@ -3,10 +3,11 @@ use camino::Utf8PathBuf;
 use gleam_core::{
     config::PackageConfig,
     error::{Error, FileIoAction, FileKind},
-    io::utf8_or_panic,
     manifest::Manifest,
     paths::ProjectPaths,
 };
+
+use crate::fs::utf8_or_panic;
 
 pub fn root_config() -> Result<PackageConfig, Error> {
     let current_dir =

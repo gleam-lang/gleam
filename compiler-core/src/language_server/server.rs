@@ -1,6 +1,6 @@
 use crate::{
     diagnostic::{Diagnostic, Level},
-    io::{utf8_or_panic, CommandExecutor, FileSystemReader, FileSystemWriter},
+    io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         engine::{self, LanguageServerEngine},
         feedback::{Feedback, FeedbackBookKeeper},
@@ -588,8 +588,9 @@ fn path_to_uri(path: Utf8PathBuf) -> Url {
 fn path(uri: &Url) -> Utf8PathBuf {
     // The to_file_path method is available on these platforms
     #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
-    return utf8_or_panic(uri.to_file_path().expect("URL file"));
+    return Utf8PathBuf::from_path_buf(uri.to_file_path().expect("URL file"))
+        .expect("Non Utf8 Path");
 
     #[cfg(not(any(unix, windows, target_os = "redox", target_os = "wasi")))]
-    return utf8_or_panic(uri.path().into());
+    return Utf8PathBuf::from_path_buf(uri.path().into()).expect("Non Utf8 Path");
 }

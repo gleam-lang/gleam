@@ -1,4 +1,4 @@
-use gleam_core::io::utf8_or_panic;
+use crate::fs::utf8_or_panic;
 
 #[test]
 fn new() {

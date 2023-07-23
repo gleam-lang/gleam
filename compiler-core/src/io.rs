@@ -9,10 +9,6 @@ use tar::{Archive, Entry};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-pub fn utf8_or_panic(input: std::path::PathBuf) -> Utf8PathBuf {
-    Utf8PathBuf::from_path_buf(input).expect("Non Utf8 Path")
-}
-
 pub trait Reader: std::io::Read {
     /// A wrapper around `std::io::Read` that has Gleam's error handling.
     fn read_bytes(&mut self, buffer: &mut [u8]) -> Result<usize> {

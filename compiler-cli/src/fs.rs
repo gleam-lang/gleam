@@ -27,6 +27,13 @@ use crate::{dependencies::UseManifest, lsp::LspLocker};
 #[cfg(test)]
 mod tests;
 
+/// This is a helper function for converting from `PathBuf` to `Utf8PathBuf`.
+/// We simply panic on non-utf8 paths.
+///
+pub fn utf8_or_panic(input: std::path::PathBuf) -> Utf8PathBuf {
+    Utf8PathBuf::from_path_buf(input).expect("Non Utf8 Path")
+}
+
 /// A `FileWriter` implementation that writes to the file system.
 #[derive(Debug, Clone, Copy)]
 pub struct ProjectIO;
