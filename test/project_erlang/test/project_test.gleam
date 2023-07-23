@@ -24,17 +24,17 @@ pub fn mix_dep_function_test() {
   mix_dep_function()
 }
 
-external fn erlang_function() -> String =
-  "erlang_test_file" "main"
+@external(erlang, "erlang_test_file", "main")
+fn erlang_function() -> String
 
-external fn rebar3_dep_function() -> Dynamic =
-  "certifi" "cacertfile"
+@external(erlang, "certifi", "cacertfile")
+fn rebar3_dep_function() -> Dynamic
 
-external fn elixir_function() -> String =
-  "Elixir.ElixirTestFile" "main"
+@external(erlang, "Elixir.ElixirTestFile", "main")
+fn elixir_function() -> String
 
-external fn mix_dep_function() -> Dynamic =
-  "Elixir.Countries" "all"
+@external(erlang, "Elixir.Countries", "all")
+fn mix_dep_function() -> Dynamic
 
 // Testing for this bug in metadata encoding.
 // https://github.com/gleam-lang/gleam/commit/c8f3bd0ddbf61c27ea35f37297058ecca7515f6c

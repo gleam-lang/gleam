@@ -1,2 +1,2 @@
-pub external fn thing() -> Nil =
-  "thing" "new"
+@external(erlang, "thing", "new")
+pub fn thing() -> Nil

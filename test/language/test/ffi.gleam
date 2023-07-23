@@ -1,57 +1,29 @@
 pub type Dynamic
 
-@target(javascript)
-pub external fn print(String) -> Nil =
-  "./ffi_javascript.mjs" "print"
+@external(erlang, "ffi_erlang", "print")
+@external(javascript, "./ffi_javascript.mjs", "print")
+pub fn print(a: String) -> Nil
 
-@target(javascript)
-pub external fn append(String, String) -> String =
-  "./ffi_javascript.mjs" "append"
+@external(erlang, "ffi_erlang", "append")
+@external(javascript, "./ffi_javascript.mjs", "append")
+pub fn append(a: String, b: String) -> String
 
-@target(javascript)
-pub external fn to_string(anything) -> String =
-  "./ffi_javascript.mjs" "toString"
+@external(erlang, "ffi_erlang", "to_string")
+@external(javascript, "./ffi_javascript.mjs", "toString")
+pub fn to_string(a: anything) -> String
 
-@target(javascript)
-pub external fn ansi_green(String) -> String =
-  "./ffi_javascript.mjs" "ansiGreen"
+@external(erlang, "ffi_erlang", "ansi_green")
+@external(javascript, "./ffi_javascript.mjs", "ansiGreen")
+pub fn ansi_green(a: String) -> String
 
-@target(javascript)
-pub external fn file_exists(String) -> Bool =
-  "./ffi_javascript.mjs" "fileExists"
+@external(erlang, "ffi_erlang", "file_exists")
+@external(javascript, "./ffi_javascript.mjs", "fileExists")
+pub fn file_exists(a: String) -> Bool
 
-@target(javascript)
-pub external fn halt(Int) -> Nil =
-  "./ffi_javascript.mjs" "halt"
+@external(erlang, "ffi_erlang", "halt")
+@external(javascript, "./ffi_javascript.mjs", "halt")
+pub fn halt(a: Int) -> Nil
 
-@target(javascript)
-pub external fn to_dynamic(x) -> Dynamic =
-  "./ffi_javascript.mjs" "toDynamic"
-
-@target(erlang)
-pub external fn print(String) -> Nil =
-  "ffi_erlang" "print"
-
-@target(erlang)
-pub external fn append(String, String) -> String =
-  "ffi_erlang" "append"
-
-@target(erlang)
-pub external fn to_string(anything) -> String =
-  "ffi_erlang" "to_string"
-
-@target(erlang)
-pub external fn ansi_green(String) -> String =
-  "ffi_erlang" "ansi_green"
-
-@target(erlang)
-pub external fn file_exists(String) -> Bool =
-  "ffi_erlang" "file_exists"
-
-@target(erlang)
-pub external fn halt(Int) -> Nil =
-  "ffi_erlang" "halt"
-
-@target(erlang)
-pub external fn to_dynamic(x) -> Dynamic =
-  "ffi_erlang" "to_dynamic"
+@external(erlang, "ffi_erlang", "to_dynamic")
+@external(javascript, "./ffi_javascript.mjs", "toDynamic")
+pub fn to_dynamic(a: x) -> Dynamic

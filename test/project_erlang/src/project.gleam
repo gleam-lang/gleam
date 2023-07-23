@@ -7,11 +7,11 @@ pub fn main() {
   io.println(another_elixir_function())
 }
 
-external fn erlang_function() -> String =
-  "erlang_file" "main"
+@external(erlang, "erlang_file", "main")
+fn erlang_function() -> String
 
-external fn elixir_function() -> String =
-  "Elixir.ElixirFile" "main"
+@external(erlang, "Elixir.ElixirFile", "main")
+fn elixir_function() -> String
 
-external fn another_elixir_function() -> String =
-  "Elixir.ElixirFileAgain" "main"
+@external(erlang, "Elixir.ElixirFileAgain", "main")
+fn another_elixir_function() -> String

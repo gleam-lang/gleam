@@ -393,14 +393,15 @@ pub enum ModuleValueConstructor {
         /// The name of the module and the function
         /// Typically this will be the module that this constructor belongs to
         /// and the name that was used for the function. However it could also
-        /// point to some other module and function when this is an `external fn`.
+        /// point to some other module and function when this is an `external`
+        /// function.
         ///
         /// This function has module "themodule" and name "wibble"
         ///     pub fn wibble() { Nil }
         ///
         /// This function has module "other" and name "whoop"
-        ///     pub external fn wibble() -> Nil =
-        ///       "other" "whoop"
+        ///     @external(erlang, "other", "whoop")
+        ///     pub fn wibble() -> Nil
         ///
         module: SmolStr,
         name: SmolStr,

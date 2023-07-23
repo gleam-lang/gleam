@@ -10,5 +10,5 @@ type Shadowing {
 }
 
 // Here the type is used.
-pub external fn use_type(Port) -> Nil =
-  "wibble" "wobble"
+@external(erlang, "wibble", "wobble")
+pub fn use_type(port: Port) -> Nil

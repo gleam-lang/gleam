@@ -58,7 +58,7 @@ impl TypedModule {
 /// const x: Int = 1
 ///
 /// @target(erlang)
-/// pub external fn display(a) -> Bool = "erlang" "display"
+/// pub fn main(a) { ...}
 /// ```
 ///
 #[derive(Debug, Clone, PartialEq, Eq)]
