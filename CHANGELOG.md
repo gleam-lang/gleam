@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- External implementations are always referenced directly in generated code, to
+  avoid the overhead of an extra function call.
+
 ## v0.30.3 - 2023-07-23
 
 - Fixed a bug where JavaScript module path such as `node:fs` would be rejected.
