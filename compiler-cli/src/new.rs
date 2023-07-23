@@ -14,11 +14,11 @@ mod tests;
 
 use crate::NewOptions;
 
-const GLEAM_STDLIB_VERSION: &str = "0.29";
+const GLEAM_STDLIB_VERSION: &str = "0.30";
 const GLEEUNIT_VERSION: &str = "0.10";
-const ERLANG_OTP_VERSION: &str = "25.2";
+const ERLANG_OTP_VERSION: &str = "26.0.2";
 const REBAR3_VERSION: &str = "3";
-const ELIXIR_VERSION: &str = "1.14.2";
+const ELIXIR_VERSION: &str = "1.15.4";
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
 #[strum(serialize_all = "kebab_case")]
@@ -179,8 +179,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3.5.1
-      - uses: erlef/setup-beam@v1.15.4
+      - uses: actions/checkout@v3.5.3
+      - uses: erlef/setup-beam@v1.16.0
         with:
           otp-version: "{}"
           gleam-version: "{}"
