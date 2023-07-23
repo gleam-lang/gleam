@@ -664,8 +664,8 @@ fn register_value_from_function(
     let _ = hydrators.insert(name.clone(), hydrator);
 
     let external =
-        target_function_implementation(environment.target, &external_erlang, &external_javascript);
-    let (impl_module, impl_function) = implementation_names(external, module_name, &name);
+        target_function_implementation(environment.target, external_erlang, external_javascript);
+    let (impl_module, impl_function) = implementation_names(external, module_name, name);
     let variant = ValueConstructorVariant::ModuleFn {
         documentation: documentation.clone(),
         name: impl_function,
