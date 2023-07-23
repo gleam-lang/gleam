@@ -1,9 +1,12 @@
 # Changelog
 
-## v0.30.2 - 2023-07-20
+## Unreleased
 
 - New Gleam projects are created with `gleam_stdlib` v0.30, Erlang OTP v26.0.2,
   Elixir v1.15.4, actions/checkout v3.5.1, and erlef/setup-beam v1.16.0.
+
+## v0.30.2 - 2023-07-20
+
 - Fixed a bug where the compiler could infer incorrect generic type parameters
   when analysing a module without type annotations with self recursive
   functions.
