@@ -688,7 +688,7 @@ fn assert_valid_javascript_external(
 ) -> Result<(), Error> {
     use regex::Regex;
     lazy_static::lazy_static! {
-        static ref MODULE: Regex = Regex::new("^[a-zA-Z0-9\\./_-]+$").expect("regex");
+        static ref MODULE: Regex = Regex::new("^[a-zA-Z0-9\\./:_-]+$").expect("regex");
         static ref FUNCTION: Regex = Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$").expect("regex");
     }
 
