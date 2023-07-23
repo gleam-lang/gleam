@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed a bug where JavaScript module path such as `node:fs` would be rejected.
 - New Gleam projects are created with `gleam_stdlib` v0.30, Erlang OTP v26.0.2,
   Elixir v1.15.4, actions/checkout v3.5.1, and erlef/setup-beam v1.16.0.
 
