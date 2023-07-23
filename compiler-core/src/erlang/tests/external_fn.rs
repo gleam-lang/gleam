@@ -38,8 +38,11 @@ fn public_local_function_calls() {
     // Public external function calls are inlined but the wrapper function is
     // also printed in the erlang output and exported
     assert_erl!(
-        r#"pub external fn go(x: Int, y: Int) -> Int = "m" "f"
-                    fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#
+        r#"
+@external(erlang, "m", "f")
+pub fn go(x x: Int, y y: Int) -> Int
+fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }
+"#
     );
 }
 
@@ -47,38 +50,47 @@ fn public_local_function_calls() {
 fn private_local_function_references() {
     // Private external function references are inlined
     assert_erl!(
-        r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
-pub fn x() { go }"#
+        r#"
+@external(erlang, "m", "f")
+fn go(x: Int, y: Int) -> Int
+pub fn x() { go }
+"#
     );
 }
 
-// TODO: link to the issue
 #[test]
 fn inlining_external_functions_from_another_module() {
     assert_erl!(
         (
             "lib",
             "atom",
-            "pub external type Atom
-pub external fn make(String) -> String = \"erlang\" \"binary_to_atom\""
+            r#"
+pub type Atom
+
+@external(erlang, "erlang", "binary_to_atom")
+pub fn make(x: String) -> String
+"#
         ),
-        "import atom
+        r#"import atom
 pub fn main() {
-  atom.make(\"ok\")
+  atom.make("ok")
 }
-"
+"#
     );
 }
 
-// TODO: link to the issue
 #[test]
 fn unqualified_inlining_external_functions_from_another_module() {
     assert_erl!(
         (
             "lib",
             "atom",
-            "pub external type Atom
-pub external fn make(String) -> String = \"erlang\" \"binary_to_atom\""
+            r#"
+pub type Atom
+
+@external(erlang, "erlang", "binary_to_atom")
+pub fn make(x: String) -> String
+"#
         ),
         "import atom.{make}
 pub fn main() {

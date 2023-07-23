@@ -68,7 +68,9 @@ fn discarded() {
 fn anon_external_fun_name_escaping() {
     // https://github.com/gleam-lang/gleam/issues/1418
     assert_erl!(
-        r#"external fn func() -> Nil = "one.two" "three.four"
+        r#"
+@external(erlang, "one.two", "three.four")
+fn func() -> Nil
 
 pub fn main() {
   func

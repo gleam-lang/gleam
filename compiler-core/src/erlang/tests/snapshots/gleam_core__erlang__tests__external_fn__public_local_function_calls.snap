@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 29
-expression: "pub external fn go(x: Int, y: Int) -> Int = \"m\" \"f\"\n                    fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"
+assertion_line: 40
+expression: "\n@external(erlang, \"m\", \"f\")\npub fn go(x x: Int, y y: Int) -> Int\nfn x() { go(x: 1, y: 2) go(y: 3, x: 4) }\n"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).
@@ -9,8 +9,8 @@ expression: "pub external fn go(x: Int, y: Int) -> Int = \"m\" \"f\"\n          
 -export([go/2]).
 
 -spec go(integer(), integer()) -> integer().
-go(Field@0, Field@1) ->
-    m:f(Field@0, Field@1).
+go(X, Y) ->
+    m:f(X, Y).
 
 -spec x() -> integer().
 x() ->

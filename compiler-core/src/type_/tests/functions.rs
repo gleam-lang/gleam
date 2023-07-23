@@ -24,8 +24,9 @@ fn unlabelled_after_labelled_with_type() {
 #[test]
 fn unlabelled_after_labelled_external() {
     assert_module_error!(
-        r#"external fn main(wibble: Int, Int) -> Int =
-  "" ""
+        r#"
+@external(erlang, "", "")
+fn main(wibble x: Int, y: Int) -> Int
 "#
     );
 }

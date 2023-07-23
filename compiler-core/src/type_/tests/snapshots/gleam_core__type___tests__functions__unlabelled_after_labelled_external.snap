@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/type_/tests/functions.rs
 assertion_line: 26
-expression: "external fn main(wibble: Int, Int) -> Int =\n  \"\" \"\"\n"
+expression: "\n@external(erlang, \"\", \"\")\nfn main(wibble x: Int, y: Int) -> Int\n"
 ---
 error: Unlabelled argument after labelled argument
-  ┌─ /src/one/two.gleam:1:31
+  ┌─ /src/one/two.gleam:3:24
   │
-1 │ external fn main(wibble: Int, Int) -> Int =
-  │                               ^^^
+3 │ fn main(wibble x: Int, y: Int) -> Int
+  │                        ^^^^^^
 
 All unlabelled arguments must come before any labelled arguments.
 

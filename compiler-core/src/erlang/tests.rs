@@ -44,7 +44,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         let mut ast = parsed.module;
         ast.name = dep_name.into();
         let dep = crate::analyse::infer_module(
-            Target::JavaScript,
+            Target::Erlang,
             &ids,
             ast,
             Origin::Src,
