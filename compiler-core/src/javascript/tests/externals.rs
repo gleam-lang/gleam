@@ -2,49 +2,54 @@ use crate::{assert_js, assert_module_error, assert_ts_def};
 
 #[test]
 fn type_() {
-    assert_js!(r#"pub external type Thing"#,);
+    assert_js!(r#"pub type Thing"#,);
 }
 
 #[test]
 fn module_fn() {
-    assert_js!(r#"external fn show(anything) -> Nil = "utils" "inspect""#,);
+    assert_js!(
+        r#"
+@external(javascript, "utils", "inspect")
+fn show(x: anything) -> Nil"#,
+    );
 }
 
 #[test]
 fn pub_module_fn() {
-    assert_js!(r#"pub external fn show(anything) -> Nil = "utils" "inspect""#,);
+    assert_js!(
+        r#"
+@external(javascript, "utils", "inspect")
+pub fn show(x: anything) -> Nil"#,
+    );
 }
 
 #[test]
 fn pub_module_fn_typescript() {
-    assert_ts_def!(r#"pub external fn show(anything) -> Nil = "utils" "inspect""#,);
+    assert_ts_def!(
+        r#"
+@external(javascript, "utils", "inspect")
+pub fn show(x: anything) -> Nil"#,
+    );
 }
 
 #[test]
-fn global_fn() {
-    assert_js!(r#"external fn down(Float) -> Float = "" "Math.floor""#,);
-}
-
-#[test]
-fn pub_global_fn() {
-    assert_js!(r#"pub external fn down(Float) -> Float = "" "Math.floor""#,);
-}
-
-#[test]
-fn pub_global_fn_typescript() {
-    assert_ts_def!(r#"pub external fn down(Float) -> Float = "" "Math.floor""#,);
-}
-
-#[test]
-fn same_name_global_external() {
-    assert_js!(r#"pub external fn fetch(Nil) -> Nil = "" "fetch""#,);
+fn same_name_external() {
+    assert_js!(
+        r#"
+@external(javascript, "thingy", "fetch")
+pub fn fetch(request: Nil) -> Nil"#,
+    );
 }
 
 #[test]
 fn same_module_multiple_imports() {
     assert_js!(
-        r#"pub external fn one() -> Nil = "./the/module.mjs" "one"
-pub external fn two() -> Nil = "./the/module.mjs" "two"
+        r#"
+@external(javascript, "./the/module.mjs", "one")
+pub fn one() -> Nil
+
+@external(javascript, "./the/module.mjs", "two")
+pub fn two() -> Nil
 "#,
     );
 }
@@ -52,8 +57,12 @@ pub external fn two() -> Nil = "./the/module.mjs" "two"
 #[test]
 fn duplicate_import() {
     assert_js!(
-        r#"pub external fn one() -> Nil = "./the/module.mjs" "dup"
-pub external fn two() -> Nil = "./the/module.mjs" "dup"
+        r#"
+@external(javascript, "./the/module.mjs", "dup")
+pub fn one() -> Nil
+
+@external(javascript, "./the/module.mjs", "dup")
+pub fn two() -> Nil
 "#,
     );
 }
@@ -61,7 +70,9 @@ pub external fn two() -> Nil = "./the/module.mjs" "dup"
 #[test]
 fn name_to_escape() {
     assert_js!(
-        r#"pub external fn class() -> Nil = "./the/module.mjs" "one"
+        r#"
+@external(javascript, "./the/module.mjs", "one")
+pub fn class() -> Nil
 "#,
     );
 }
@@ -69,8 +80,10 @@ fn name_to_escape() {
 #[test]
 fn external_type_typescript() {
     assert_ts_def!(
-        r#"pub external type Queue(a)
-pub external fn new() -> Queue(a) = "queue" "new"
+        r#"pub type Queue(a)
+
+@external(javascript, "queue", "new")
+pub fn new() -> Queue(a)
 "#,
     );
 }
@@ -78,7 +91,11 @@ pub external fn new() -> Queue(a) = "queue" "new"
 // https://github.com/gleam-lang/gleam/issues/1636
 #[test]
 fn external_fn_escaping() {
-    assert_js!(r#"pub external fn then(a) -> b = "./ffi.js" "then""#,);
+    assert_js!(
+        r#"
+@external(javascript, "./ffi.js", "then")
+pub fn then(a: a) -> b"#,
+    );
 }
 
 // https://github.com/gleam-lang/gleam/issues/1954
@@ -86,7 +103,8 @@ fn external_fn_escaping() {
 fn pipe_variable_shadow() {
     assert_js!(
         r#"
-external fn name() -> String = "module" "string"
+@external(javascript, "module", "string")
+fn name() -> String
 
 pub fn main() {
   let name = name()
@@ -101,8 +119,10 @@ pub fn main() {
 fn tf_type_name_usage() {
     assert_ts_def!(
         r#"
-pub external type TESTitem
-pub external fn one(TESTitem) -> TESTitem = "" "one"
+pub type TESTitem
+
+@external(javascript, "it", "one")
+pub fn one(a: TESTitem) -> TESTitem
 "#
     );
 }
