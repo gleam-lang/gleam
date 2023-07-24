@@ -3,5 +3,5 @@ pub fn main() {
 }
 
 @external(erlang, "erlang", "display")
-@external(javascript, "", "globalThis.console.log")
+@external(javascript, "./project_ffi.mjs", "log")
 fn println(a: String) -> Nil
