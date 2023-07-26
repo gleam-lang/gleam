@@ -67,15 +67,13 @@ fn call(f: fn() -> a) {
 fn bug_2275() {
     assert_module_infer!(
         r#"
-pub fn main() {
-  one
-  Nil
+pub fn zero() {
+  one()
 }
 
 fn one() {
-  one
-  two
-  Nil
+  one()
+  two()
 }
 
 fn two() {
@@ -83,6 +81,30 @@ fn two() {
   Nil
 }
 "#,
-        vec![(r#"main"#, r#"fn() -> Nil"#)]
+        vec![(r#"zero"#, r#"fn() -> Nil"#)]
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2275
+#[test]
+fn bug_2275_2_self_references() {
+    assert_module_infer!(
+        r#"
+pub fn zero() {
+  one()
+}
+
+fn one() {
+  one()
+  two()
+}
+
+fn two() {
+  two
+  two
+  Nil
+}
+"#,
+        vec![(r#"zero"#, r#"fn() -> Nil"#)]
     );
 }

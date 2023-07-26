@@ -48,16 +48,15 @@ pub fn leaf_or_cycle<N, E>(graph: &StableGraph<N, E>) -> Vec<NodeIndex> {
     // Find a leaf, returning one if found.
     for node in graph.node_indices() {
         let mut outgoing = graph.neighbors_directed(node, Direction::Outgoing);
-        let first = outgoing.next();
-        let second = outgoing.next();
+        let mut referenced = outgoing.next();
 
-        // This is a leaf.
-        if first.is_none() {
-            return vec![node];
+        // Self referencing nodes are still considered leaves.
+        while referenced == Some(node) {
+            referenced = outgoing.next();
         }
 
-        // This is a node that only references itself.
-        if first == Some(node) && second.is_none() {
+        // This is a leaf.
+        if referenced.is_none() {
             return vec![node];
         }
     }
@@ -245,6 +244,31 @@ mod tests {
 
         // Here there are no true leafs, only cycles. However, b is in a loop
         // with itself so counts as a leaf as far as we are concerned.
+
+        assert_eq!(
+            [
+                pop_leaf_or_cycle(&mut graph),
+                pop_leaf_or_cycle(&mut graph),
+                pop_leaf_or_cycle(&mut graph),
+            ],
+            [vec![b], vec![a], vec![]]
+        );
+    }
+    #[test]
+    fn leaf_or_cycle_8() {
+        let mut graph: StableGraph<(), ()> = StableGraph::new();
+        let a = graph.add_node(());
+        let b = graph.add_node(());
+        _ = graph.add_edge(a, a, ());
+        _ = graph.add_edge(a, b, ());
+        _ = graph.add_edge(b, b, ());
+        _ = graph.add_edge(b, b, ());
+        _ = graph.add_edge(b, b, ());
+
+        // Here there are no true leafs, only cycles. However, b is in a loop
+        // with itself so counts as a leaf as far as we are concerned.
+        // This is different from the previous test as there are multiple self
+        // references for node b.
 
         assert_eq!(
             [
