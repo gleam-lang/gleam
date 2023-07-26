@@ -4,6 +4,9 @@
 
 - External implementations are always referenced directly in generated code, to
   avoid the overhead of an extra function call.
+- Fixed a bug where the compiler could infer incorrect generic type parameters
+  when analysing a module without type annotations with self recursive
+  functions that reference themselves multiple times.
 
 ## v0.30.3 - 2023-07-23
 
