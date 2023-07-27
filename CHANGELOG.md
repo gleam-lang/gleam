@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where mutually recursive functions could be incorrectly inferred
+  as having an overly general type.
+
 ## v0.30.4 - 2023-07-26
 
 - External implementations are always referenced directly in generated code, to
