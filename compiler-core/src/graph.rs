@@ -12,6 +12,12 @@ use petgraph::{prelude::NodeIndex, stable_graph::StableGraph, Direction};
 pub fn into_dependency_order<N, E>(mut graph: StableGraph<N, E>) -> Vec<Vec<NodeIndex>> {
     let mut items = vec![];
 
+    // Remove all self-edges from the graph.
+    graph.retain_edges(|graph, edge| match graph.edge_endpoints(edge) {
+        Some((a, b)) => a != b,
+        None => false,
+    });
+
     loop {
         let current = pop_leaf_or_cycle(&mut graph);
         if current.is_empty() {
@@ -25,7 +31,11 @@ pub fn into_dependency_order<N, E>(mut graph: StableGraph<N, E>) -> Vec<Vec<Node
 /// The same as `leaf_or_cycle` but removes the nodes from the graph.
 /// See the docs there for more details.
 ///
-pub fn pop_leaf_or_cycle<N, E>(graph: &mut StableGraph<N, E>) -> Vec<NodeIndex> {
+/// # Panics
+///
+/// Panics if the graph contains a self-edge.
+///
+fn pop_leaf_or_cycle<N, E>(graph: &mut StableGraph<N, E>) -> Vec<NodeIndex> {
     let nodes = leaf_or_cycle(graph);
     for node in &nodes {
         _ = graph.remove_node(*node);
@@ -40,7 +50,11 @@ pub fn pop_leaf_or_cycle<N, E>(graph: &mut StableGraph<N, E>) -> Vec<NodeIndex> 
 ///
 /// The nodes returned are not removed from the graph.
 ///
-pub fn leaf_or_cycle<N, E>(graph: &StableGraph<N, E>) -> Vec<NodeIndex> {
+/// # Panics
+///
+/// Panics if the graph contains a self-edge.
+///
+fn leaf_or_cycle<N, E>(graph: &StableGraph<N, E>) -> Vec<NodeIndex> {
     if graph.node_count() == 0 {
         return vec![];
     }
@@ -48,11 +62,10 @@ pub fn leaf_or_cycle<N, E>(graph: &StableGraph<N, E>) -> Vec<NodeIndex> {
     // Find a leaf, returning one if found.
     for node in graph.node_indices() {
         let mut outgoing = graph.neighbors_directed(node, Direction::Outgoing);
-        let mut referenced = outgoing.next();
+        let referenced = outgoing.next();
 
-        // Self referencing nodes are still considered leaves.
-        while referenced == Some(node) {
-            referenced = outgoing.next();
+        if referenced == Some(node) {
+            panic!("Self edge found in graph");
         }
 
         // This is a leaf.
@@ -130,10 +143,7 @@ mod tests {
     fn leaf_or_cycle_1() {
         let mut graph: StableGraph<(), ()> = StableGraph::new();
         let a = graph.add_node(());
-        assert_eq!(
-            [pop_leaf_or_cycle(&mut graph), pop_leaf_or_cycle(&mut graph)],
-            [vec![a], vec![]]
-        );
+        assert_eq!(into_dependency_order(graph), vec![vec![a]]);
     }
 
     #[test]
@@ -142,14 +152,7 @@ mod tests {
         let a = graph.add_node(());
         let b = graph.add_node(());
 
-        assert_eq!(
-            [
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-            ],
-            [vec![a], vec![b], vec![]]
-        );
+        assert_eq!(into_dependency_order(graph), vec![vec![a], vec![b]]);
     }
 
     #[test]
@@ -162,13 +165,8 @@ mod tests {
         _ = graph.add_edge(a, b, ());
 
         assert_eq!(
-            [
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-            ],
-            [vec![b], vec![a], vec![c], vec![]]
+            into_dependency_order(graph),
+            vec![vec![b], vec![a], vec![c]]
         );
     }
 
@@ -182,13 +180,8 @@ mod tests {
         _ = graph.add_edge(a, c, ());
 
         assert_eq!(
-            [
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-            ],
-            [vec![b], vec![c], vec![a], vec![]]
+            into_dependency_order(graph),
+            vec![vec![b], vec![c], vec![a]]
         );
     }
 
@@ -201,14 +194,7 @@ mod tests {
         _ = graph.add_edge(a, b, ());
         _ = graph.add_edge(b, a, ());
 
-        assert_eq!(
-            [
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-            ],
-            [vec![c], vec![b, a], vec![]]
-        );
+        assert_eq!(into_dependency_order(graph), vec![vec![c], vec![b, a]]);
     }
 
     #[test]
@@ -223,14 +209,7 @@ mod tests {
         _ = graph.add_edge(c, a, ());
         _ = graph.add_edge(d, a, ());
 
-        assert_eq!(
-            [
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-            ],
-            [vec![c, a, b], vec![d], vec![]]
-        );
+        assert_eq!(into_dependency_order(graph), vec![vec![c, a, b], vec![d]]);
     }
 
     #[test]
@@ -245,15 +224,9 @@ mod tests {
         // Here there are no true leafs, only cycles. However, b is in a loop
         // with itself so counts as a leaf as far as we are concerned.
 
-        assert_eq!(
-            [
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-            ],
-            [vec![b], vec![a], vec![]]
-        );
+        assert_eq!(into_dependency_order(graph), vec![vec![b], vec![a]]);
     }
+
     #[test]
     fn leaf_or_cycle_8() {
         let mut graph: StableGraph<(), ()> = StableGraph::new();
@@ -270,13 +243,30 @@ mod tests {
         // This is different from the previous test as there are multiple self
         // references for node b.
 
-        assert_eq!(
-            [
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-                pop_leaf_or_cycle(&mut graph),
-            ],
-            [vec![b], vec![a], vec![]]
-        );
+        assert_eq!(into_dependency_order(graph), vec![vec![b], vec![a]]);
+    }
+
+    #[test]
+    fn leaf_or_cycle_9() {
+        let mut graph: StableGraph<(), ()> = StableGraph::new();
+        let a = graph.add_node(());
+        let b = graph.add_node(());
+        let c = graph.add_node(());
+
+        _ = graph.add_edge(a, a, ());
+        _ = graph.add_edge(a, b, ());
+
+        _ = graph.add_edge(b, b, ());
+        _ = graph.add_edge(b, c, ());
+
+        _ = graph.add_edge(c, b, ());
+        _ = graph.add_edge(c, c, ());
+
+        // Here there are no true leafs, only cycles. However, b is in a loop
+        // with itself so counts as a leaf as far as we are concerned.
+        // This is different from the previous test as there are multiple self
+        // references for node b.
+
+        assert_eq!(into_dependency_order(graph), vec![vec![c, b], vec![a]]);
     }
 }

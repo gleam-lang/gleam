@@ -108,3 +108,35 @@ fn two() {
         vec![(r#"zero"#, r#"fn() -> Nil"#)]
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2275
+#[test]
+fn bug_2275_again() {
+    assert_module_infer!(
+        r#"
+pub fn aaa(input) {
+  case [] {
+    [] -> input
+
+    _ -> {
+      let input2 = bbb()
+      aaa(input2)
+    }
+  }
+}
+
+pub fn bbb() {
+  ccc() + bbb()
+}
+
+pub fn ccc() {
+  ccc() + bbb()
+}
+"#,
+        vec![
+            (r#"aaa"#, r#"fn(Int) -> Int"#),
+            (r#"bbb"#, r#"fn() -> Int"#),
+            (r#"ccc"#, r#"fn() -> Int"#),
+        ]
+    );
+}
