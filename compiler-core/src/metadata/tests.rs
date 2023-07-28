@@ -9,8 +9,8 @@ use crate::{
     },
     build::Origin,
     type_::{
-        self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
-        ValueConstructorVariant,
+        self, Deprecation, ModuleInterface, Type, TypeConstructor, TypeValueConstructor,
+        ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
 };
@@ -32,7 +32,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
@@ -77,7 +77,7 @@ fn empty_module() {
         origin: Origin::Src,
         name: "one/two".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
@@ -104,7 +104,7 @@ fn module_with_private_type() {
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
@@ -120,7 +120,7 @@ fn module_with_unused_import() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         unused_imports: vec![
             SrcSpan { start: 0, end: 10 },
             SrcSpan { start: 13, end: 42 },
@@ -150,7 +150,7 @@ fn module_with_app_type() {
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
@@ -177,7 +177,7 @@ fn module_with_fn_type() {
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
@@ -204,7 +204,7 @@ fn module_with_tuple_type() {
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
@@ -237,7 +237,7 @@ fn module_with_generic_type() {
                 },
             )]
             .into(),
-            types_constructors: HashMap::new(),
+            types_value_constructors: HashMap::new(),
             values: HashMap::new(),
             unused_imports: Vec::new(),
             accessors: HashMap::new(),
@@ -270,7 +270,7 @@ fn module_with_type_links() {
                 },
             )]
             .into(),
-            types_constructors: HashMap::new(),
+            types_value_constructors: HashMap::new(),
             values: HashMap::new(),
             unused_imports: Vec::new(),
             accessors: HashMap::new(),
@@ -288,8 +288,15 @@ fn module_type_to_constructors_mapping() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: [("SomeType".into(), vec!["One".into()])].into(),
-        unused_imports: Vec::new(),
+        types_value_constructors: [(
+            "SomeType".into(),
+            vec![TypeValueConstructor {
+                name: "One".into(),
+                parameters: vec![],
+            }],
+        )]
+        .into(),
+        unused_imports: Default::default(),
         accessors: HashMap::new(),
         values: HashMap::new(),
     };
@@ -305,8 +312,8 @@ fn module_fn_value() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
         unused_imports: Vec::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -340,7 +347,7 @@ fn deprecated_module_fn_value() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
@@ -377,8 +384,8 @@ fn private_module_fn_value() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
         unused_imports: Vec::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -414,7 +421,7 @@ fn module_fn_value_regression() {
         origin: Origin::Src,
         name: "a/b/c".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
@@ -450,7 +457,7 @@ fn module_fn_value_with_field_map() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
@@ -488,7 +495,7 @@ fn record_value() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
@@ -508,6 +515,7 @@ fn record_value() {
                         start: random.gen(),
                         end: random.gen(),
                     },
+                    constructor_index: random.gen(),
                 },
             },
         )]
@@ -527,7 +535,7 @@ fn record_value_with_field_map() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
@@ -546,6 +554,7 @@ fn record_value_with_field_map() {
                     }),
                     arity: random.gen(),
                     constructors_count: random.gen(),
+                    constructor_index: random.gen(),
                     location: SrcSpan {
                         start: random.gen(),
                         end: random.gen(),
@@ -567,7 +576,7 @@ fn accessors() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: [
@@ -771,7 +780,7 @@ fn constant_var() {
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [
@@ -987,7 +996,7 @@ fn deprecated_type() {
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
         accessors: HashMap::new(),

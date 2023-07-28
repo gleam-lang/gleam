@@ -163,6 +163,14 @@ impl Type {
         }
     }
 
+    pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
+        match self {
+            Self::Named { module, name, .. } => Some((module.clone(), name.clone())),
+            Self::Var { type_ } => type_.borrow().named_type_name(),
+            _ => None,
+        }
+    }
+
     /// Get the args for the type if the type is a specific `Type::App`.
     /// Returns None if the type is not a `Type::App` or is an incorrect `Type:App`
     ///
@@ -254,7 +262,7 @@ impl Type {
 pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
     if let Type::Var { type_: typ } = t.deref() {
         if let TypeVar::Link { type_: typ } = typ.borrow().deref() {
-            return typ.clone();
+            return collapse_links(typ.clone());
         }
     }
     t
@@ -311,6 +319,7 @@ pub enum ValueConstructorVariant {
         location: SrcSpan,
         module: EcoString,
         constructors_count: u16,
+        constructor_index: u16,
         documentation: Option<EcoString>,
     },
 }
@@ -470,14 +479,34 @@ pub struct ModuleInterface {
     pub origin: Origin,
     pub package: EcoString,
     pub types: HashMap<EcoString, TypeConstructor>,
-    pub types_constructors: HashMap<EcoString, Vec<EcoString>>,
+    pub types_value_constructors: HashMap<EcoString, Vec<TypeValueConstructor>>,
     pub values: HashMap<EcoString, ValueConstructor>,
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
     pub type_only_unqualified_imports: Vec<EcoString>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeValueConstructor {
+    pub name: EcoString,
+    pub parameters: Vec<Arc<Type>>,
+}
+
 impl ModuleInterface {
+    pub fn new(name: EcoString, origin: Origin, package: EcoString) -> Self {
+        Self {
+            name,
+            origin,
+            package,
+            types: Default::default(),
+            types_value_constructors: Default::default(),
+            values: Default::default(),
+            accessors: Default::default(),
+            unused_imports: Default::default(),
+            type_only_unqualified_imports: Default::default(),
+        }
+    }
+
     pub fn get_public_value(&self, name: &str) -> Option<&ValueConstructor> {
         let value = self.values.get(name)?;
         if value.public {
@@ -537,31 +566,25 @@ impl ModuleInterface {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PatternConstructor {
-    Record {
-        name: EcoString,
-        field_map: Option<FieldMap>,
-        documentation: Option<EcoString>,
-        module: Option<EcoString>,
-        location: SrcSpan,
-    },
+pub struct PatternConstructor {
+    pub name: EcoString,
+    pub field_map: Option<FieldMap>,
+    pub documentation: Option<EcoString>,
+    pub module: Option<EcoString>,
+    pub location: SrcSpan,
+    pub constructor_index: u16,
 }
+
 impl PatternConstructor {
     pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
-        match self {
-            PatternConstructor::Record {
-                module, location, ..
-            } => Some(DefinitionLocation {
-                module: Some(module.as_deref()?),
-                span: *location,
-            }),
-        }
+        Some(DefinitionLocation {
+            module: Some(self.module.as_deref()?),
+            span: self.location,
+        })
     }
 
     pub fn get_documentation(&self) -> Option<&str> {
-        match self {
-            PatternConstructor::Record { documentation, .. } => documentation.as_deref(),
-        }
+        self.documentation.as_deref()
     }
 }
 
@@ -633,6 +656,13 @@ impl TypeVar {
         match self {
             Self::Link { type_ } => type_.is_string(),
             _ => false,
+        }
+    }
+
+    pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
+        match self {
+            Self::Link { type_ } => type_.named_type_name(),
+            _ => None,
         }
     }
 }

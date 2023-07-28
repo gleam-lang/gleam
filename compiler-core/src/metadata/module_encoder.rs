@@ -7,8 +7,8 @@ use crate::{
     },
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, Deprecation, FieldMap, RecordAccessor, Type, TypeConstructor, TypeVar,
-        ValueConstructor, ValueConstructorVariant,
+        self, AccessorsMap, Deprecation, FieldMap, RecordAccessor, Type, TypeConstructor,
+        TypeValueConstructor, TypeVar, ValueConstructor, ValueConstructorVariant,
     },
 };
 use std::{collections::HashMap, ops::Deref, sync::Arc};
@@ -109,8 +109,8 @@ impl<'a> ModuleEncoder<'a> {
         tracing::trace!("Writing module metadata types to constructors mapping");
         let mut types_constructors = module
             .reborrow()
-            .init_types_constructors(self.data.types_constructors.len() as u32);
-        for (i, (name, constructors)) in self.data.types_constructors.iter().enumerate() {
+            .init_types_constructors(self.data.types_value_constructors.len() as u32);
+        for (i, (name, constructors)) in self.data.types_value_constructors.iter().enumerate() {
             let mut property = types_constructors.reborrow().get(i as u32);
             property.set_key(name);
             self.build_types_constructors_mapping(
@@ -153,12 +153,26 @@ impl<'a> ModuleEncoder<'a> {
 
     fn build_types_constructors_mapping(
         &mut self,
-        mut builder: capnp::text_list::Builder<'_>,
-        constructors: &[EcoString],
+        mut builder: capnp::struct_list::Builder<'_, type_value_constructor::Owned>,
+        constructors: &[TypeValueConstructor],
     ) {
-        for (i, s) in constructors.iter().enumerate() {
-            builder.set(i as u32, s);
+        for (i, constructor) in constructors.iter().enumerate() {
+            self.build_type_value_constructor(builder.reborrow().get(i as u32), constructor);
         }
+    }
+
+    fn build_type_value_constructor(
+        &mut self,
+        mut builder: type_value_constructor::Builder<'_>,
+        constructor: &TypeValueConstructor,
+    ) {
+        builder.set_name(&constructor.name);
+        self.build_types(
+            builder
+                .reborrow()
+                .init_parameters(constructor.parameters.len() as u32),
+            &constructor.parameters,
+        )
     }
 
     fn build_value_constructor(
@@ -214,6 +228,7 @@ impl<'a> ModuleEncoder<'a> {
                 location,
                 module,
                 constructors_count,
+                constructor_index,
                 documentation: doc,
             } => {
                 let mut builder = builder.init_record();
@@ -222,6 +237,7 @@ impl<'a> ModuleEncoder<'a> {
                 builder.set_arity(*arity);
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 builder.set_constructors_count(*constructors_count);
+                builder.set_constructor_index(*constructor_index);
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 self.build_src_span(builder.init_location(), *location);
             }
