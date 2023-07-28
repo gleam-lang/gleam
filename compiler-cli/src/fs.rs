@@ -27,11 +27,9 @@ use crate::{dependencies::UseManifest, lsp::LspLocker};
 #[cfg(test)]
 mod tests;
 
-/// This is a helper function for converting from `PathBuf` to `Utf8PathBuf`.
-/// We simply panic on non-utf8 paths.
-///
-pub fn utf8_or_panic(input: std::path::PathBuf) -> Utf8PathBuf {
-    Utf8PathBuf::from_path_buf(input).expect("Non Utf8 Path")
+pub fn get_current_directory() -> Result<Utf8PathBuf, &'static str> {
+    let curr_dir = std::env::current_dir().map_err(|_| "Failed to get current directory")?;
+    Utf8PathBuf::from_path_buf(curr_dir).map_err(|_| "Non Utf8 Path")
 }
 
 /// A `FileWriter` implementation that writes to the file system.

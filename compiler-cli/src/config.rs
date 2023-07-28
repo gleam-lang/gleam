@@ -7,11 +7,10 @@ use gleam_core::{
     paths::ProjectPaths,
 };
 
-use crate::fs::utf8_or_panic;
+use crate::fs::get_current_directory;
 
 pub fn root_config() -> Result<PackageConfig, Error> {
-    let current_dir =
-        utf8_or_panic(std::env::current_dir().expect("Could not get current directory"));
+    let current_dir = get_current_directory().expect("Failed to get current directory");
     let paths = ProjectPaths::new(current_dir);
     read(paths.root_config())
 }

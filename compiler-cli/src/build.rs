@@ -11,7 +11,7 @@ use crate::{
     build_lock::BuildLock,
     cli,
     dependencies::UseManifest,
-    fs::{self, utf8_or_panic, ConsoleWarningEmitter},
+    fs::{self, get_current_directory, ConsoleWarningEmitter},
 };
 
 pub fn download_dependencies() -> Result<Manifest> {
@@ -31,8 +31,7 @@ pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
         options.mode,
         options.target.unwrap_or(root_config.target),
     )?;
-    let current_dir =
-        utf8_or_panic(std::env::current_dir().expect("Failed to get current directory"));
+    let current_dir = get_current_directory().expect("Failed to get current directory");
 
     tracing::info!("Compiling packages");
     let compiled = {
