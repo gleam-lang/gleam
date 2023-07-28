@@ -3,7 +3,8 @@ use strum::{EnumIter, IntoEnumIterator};
 use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 
 use super::{
-    ModuleInterface, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant,
+    ModuleInterface, Type, TypeConstructor, TypeValueConstructor, TypeVar, ValueConstructor,
+    ValueConstructorVariant,
 };
 use crate::type_::Deprecation::NotDeprecated;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
@@ -125,6 +126,15 @@ pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Fn { retrn, args })
 }
 
+pub fn named(module: &str, name: &str, public: bool, args: Vec<Arc<Type>>) -> Arc<Type> {
+    Arc::new(Type::Named {
+        public,
+        module: module.into(),
+        name: name.into(),
+        args,
+    })
+}
+
 pub fn bits() -> Arc<Type> {
     Arc::new(Type::Named {
         args: vec![],
@@ -176,7 +186,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         package: "".into(),
         origin: Origin::Src,
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
         unused_imports: Vec::new(),
@@ -198,9 +208,19 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
             }
 
             PreludeType::Bool => {
-                let _ = prelude
-                    .types_constructors
-                    .insert(BOOL.into(), vec!["True".into(), "False".into()]);
+                let _ = prelude.types_value_constructors.insert(
+                    BOOL.into(),
+                    vec![
+                        TypeValueConstructor {
+                            name: "True".into(),
+                            parameters: vec![],
+                        },
+                        TypeValueConstructor {
+                            name: "False".into(),
+                            parameters: vec![],
+                        },
+                    ],
+                );
                 let _ = prelude.values.insert(
                     "True".into(),
                     value(
@@ -212,6 +232,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             arity: 0,
                             location: SrcSpan::default(),
                             constructors_count: 2,
+                            constructor_index: 0,
                         },
                         bool(),
                     ),
@@ -227,6 +248,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             arity: 0,
                             location: SrcSpan::default(),
                             constructors_count: 2,
+                            constructor_index: 1,
                         },
                         bool(),
                     ),
@@ -299,6 +321,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             field_map: None,
                             location: SrcSpan::default(),
                             constructors_count: 1,
+                            constructor_index: 0,
                         },
                         nil(),
                     ),
@@ -314,6 +337,13 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         deprecation: NotDeprecated,
                     },
                 );
+                let _ = prelude.types_value_constructors.insert(
+                    NIL.into(),
+                    vec![TypeValueConstructor {
+                        name: "Nil".into(),
+                        parameters: vec![],
+                    }],
+                );
             }
 
             PreludeType::Result => {
@@ -324,15 +354,25 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     TypeConstructor {
                         origin: Default::default(),
                         parameters: vec![result_value.clone(), result_error.clone()],
-                        typ: result(result_value, result_error),
+                        typ: result(result_value.clone(), result_error.clone()),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
                         deprecation: NotDeprecated,
                     },
                 );
-                let _ = prelude
-                    .types_constructors
-                    .insert(RESULT.into(), vec!["Ok".into(), "Error".into()]);
+                let _ = prelude.types_value_constructors.insert(
+                    RESULT.into(),
+                    vec![
+                        TypeValueConstructor {
+                            name: "Ok".into(),
+                            parameters: vec![result_value],
+                        },
+                        TypeValueConstructor {
+                            name: "Error".into(),
+                            parameters: vec![result_error],
+                        },
+                    ],
+                );
                 let ok = generic_var(ids.next());
                 let error = generic_var(ids.next());
                 let _ = prelude.values.insert(
@@ -346,6 +386,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             arity: 1,
                             location: SrcSpan::default(),
                             constructors_count: 2,
+                            constructor_index: 0,
                         },
                         fn_(vec![ok.clone()], result(ok, error)),
                     ),
@@ -363,6 +404,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             arity: 1,
                             location: SrcSpan::default(),
                             constructors_count: 2,
+                            constructor_index: 1,
                         },
                         fn_(vec![error.clone()], result(ok, error)),
                     ),

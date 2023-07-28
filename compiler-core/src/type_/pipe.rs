@@ -183,7 +183,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             location,
             annotation: None,
             kind: AssignmentKind::Let,
-            pattern: Pattern::Var {
+            pattern: Pattern::Variable {
                 location,
                 name: PIPE_VARIABLE.into(),
                 type_: expression.type_(),

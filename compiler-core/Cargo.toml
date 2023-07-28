@@ -81,6 +81,8 @@ pubgrub = "0.2"
 camino = { version = "1.1.6", features = ["serde1"] }
 # Used for converting absolute path to relative path
 pathdiff = { version = "0.2.1", features = ["camino"] }
+# Memory arena using ids rather than references
+id-arena = "2.1"
 
 [build-dependencies]
 # Data (de)serialisation

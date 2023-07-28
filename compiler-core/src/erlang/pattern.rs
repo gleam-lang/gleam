@@ -46,12 +46,12 @@ fn print<'a>(
             }
         }
 
-        Pattern::Var { name, .. } if define_variables => {
+        Pattern::Variable { name, .. } if define_variables => {
             vars.push(name);
             env.next_local_var_name(name)
         }
 
-        Pattern::Var { .. } => "_".to_doc(),
+        Pattern::Variable { .. } => "_".to_doc(),
 
         Pattern::Int { value, .. } => int(value),
 
@@ -61,7 +61,7 @@ fn print<'a>(
 
         Pattern::Constructor {
             arguments: args,
-            constructor: Inferred::Known(PatternConstructor::Record { name, .. }),
+            constructor: Inferred::Known(PatternConstructor { name, .. }),
             ..
         } => tag_tuple_pattern(name, args, vars, define_variables, env),
 
@@ -82,7 +82,7 @@ fn print<'a>(
                 .map(|s| pattern_segment(&s.value, &s.options, vars, define_variables, env)),
         ),
 
-        Pattern::Concatenate {
+        Pattern::StringPrefix {
             left_side_string: left,
             right_side_assignment: right,
             ..
@@ -144,7 +144,7 @@ fn pattern_segment<'a>(
 
         // As normal
         Pattern::Discard { .. }
-        | Pattern::Var { .. }
+        | Pattern::Variable { .. }
         | Pattern::Int { .. }
         | Pattern::Float { .. } => print(value, vars, define_variables, env),
 

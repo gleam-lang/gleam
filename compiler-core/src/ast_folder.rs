@@ -1004,7 +1004,7 @@ pub trait PatternFolder {
 
             Pattern::String { location, value } => self.fold_pattern_string(location, value),
 
-            Pattern::Var {
+            Pattern::Variable {
                 location,
                 name,
                 type_: (),
@@ -1052,14 +1052,14 @@ pub trait PatternFolder {
                 self.fold_pattern_bit_array(location, segments)
             }
 
-            Pattern::Concatenate {
+            Pattern::StringPrefix {
                 location,
                 left_location,
                 left_side_assignment,
                 right_location,
                 left_side_string,
                 right_side_assignment,
-            } => self.fold_pattern_concatenate(
+            } => self.fold_pattern_string_prefix(
                 location,
                 left_location,
                 left_side_assignment,
@@ -1083,7 +1083,7 @@ pub trait PatternFolder {
     }
 
     fn fold_pattern_var(&mut self, location: SrcSpan, name: EcoString) -> UntypedPattern {
-        Pattern::Var {
+        Pattern::Variable {
             location,
             name,
             type_: (),
@@ -1169,7 +1169,7 @@ pub trait PatternFolder {
         Pattern::BitArray { location, segments }
     }
 
-    fn fold_pattern_concatenate(
+    fn fold_pattern_string_prefix(
         &mut self,
         location: SrcSpan,
         left_location: SrcSpan,
@@ -1178,7 +1178,7 @@ pub trait PatternFolder {
         left_side_string: EcoString,
         right_side_assignment: AssignName,
     ) -> UntypedPattern {
-        Pattern::Concatenate {
+        Pattern::StringPrefix {
             location,
             left_location,
             left_side_assignment,
@@ -1192,12 +1192,12 @@ pub trait PatternFolder {
     fn walk_pattern(&mut self, m: UntypedPattern) -> UntypedPattern {
         match m {
             Pattern::Int { .. }
-            | Pattern::Var { .. }
+            | Pattern::Variable { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
             | Pattern::Discard { .. }
             | Pattern::VarUsage { .. }
-            | Pattern::Concatenate { .. } => m,
+            | Pattern::StringPrefix { .. } => m,
 
             Pattern::Assign {
                 name,

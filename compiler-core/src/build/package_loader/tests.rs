@@ -43,7 +43,7 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<EcoS
         origin: Origin::Src,
         package: "my_package".into(),
         types: Default::default(),
-        types_constructors: Default::default(),
+        types_value_constructors: Default::default(),
         values: Default::default(),
         accessors: Default::default(),
         unused_imports: Vec::new(),
