@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The highlight.js grammar included with generated HTML documentation has been
+  updated for the latest syntax.
 - Fixed a bug where mutually recursive functions could be incorrectly inferred
   as having an overly general type.
 
