@@ -4,14 +4,10 @@ use crate::error::{Error, FileIoAction, FileKind, Result};
 use async_trait::async_trait;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
-use std::{
-    fmt::Debug,
-    io,
-    path::{Path, PathBuf},
-    time::SystemTime,
-    vec::IntoIter,
-};
+use std::{fmt::Debug, io, time::SystemTime, vec::IntoIter};
 use tar::{Archive, Entry};
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 pub trait Reader: std::io::Read {
     /// A wrapper around `std::io::Read` that has Gleam's error handling.
@@ -36,7 +32,7 @@ impl Utf8Writer for String {
         Error::FileIo {
             action: FileIoAction::WriteTo,
             kind: FileKind::File,
-            path: PathBuf::from("<in memory>"),
+            path: Utf8PathBuf::from("<in memory>"),
             err: Some(error.to_string()),
         }
     }
@@ -93,7 +89,7 @@ impl From<&str> for Content {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct OutputFile {
     pub content: Content,
-    pub path: PathBuf,
+    pub path: Utf8PathBuf,
 }
 
 #[derive(Debug)]
@@ -130,25 +126,25 @@ impl IntoIterator for ReadDir {
 
 #[derive(Debug, Clone)]
 pub struct DirEntry {
-    pub pathbuf: PathBuf,
+    pub pathbuf: Utf8PathBuf,
 }
 
 impl DirEntry {
-    pub fn from_path<P: AsRef<Path>>(path: P) -> DirEntry {
+    pub fn from_path<P: AsRef<Utf8Path>>(path: P) -> DirEntry {
         DirEntry {
             pathbuf: path.as_ref().to_path_buf(),
         }
     }
 
-    pub fn from_pathbuf(pathbuf: PathBuf) -> DirEntry {
+    pub fn from_pathbuf(pathbuf: Utf8PathBuf) -> DirEntry {
         DirEntry { pathbuf }
     }
 
-    pub fn as_path(&self) -> &Path {
+    pub fn as_path(&self) -> &Utf8Path {
         self.pathbuf.as_path()
     }
 
-    pub fn into_path(self) -> PathBuf {
+    pub fn into_path(self) -> Utf8PathBuf {
         self.pathbuf
     }
 }
@@ -157,16 +153,16 @@ impl DirEntry {
 /// Typically we use an implementation that reads from the file system,
 /// but in tests and in other places other implementations may be used.
 pub trait FileSystemReader {
-    fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf>;
-    fn gleam_cache_files(&self, dir: &Path) -> Vec<PathBuf>;
-    fn read_dir(&self, path: &Path) -> Result<ReadDir>;
-    fn read(&self, path: &Path) -> Result<String, Error>;
-    fn read_bytes(&self, path: &Path) -> Result<Vec<u8>, Error>;
-    fn reader(&self, path: &Path) -> Result<WrappedReader, Error>;
-    fn is_file(&self, path: &Path) -> bool;
-    fn is_directory(&self, path: &Path) -> bool;
-    fn modification_time(&self, path: &Path) -> Result<SystemTime, Error>;
-    fn canonicalise(&self, path: &Path) -> Result<PathBuf, Error>;
+    fn gleam_source_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf>;
+    fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf>;
+    fn read_dir(&self, path: &Utf8Path) -> Result<ReadDir>;
+    fn read(&self, path: &Utf8Path) -> Result<String, Error>;
+    fn read_bytes(&self, path: &Utf8Path) -> Result<Vec<u8>, Error>;
+    fn reader(&self, path: &Utf8Path) -> Result<WrappedReader, Error>;
+    fn is_file(&self, path: &Utf8Path) -> bool;
+    fn is_directory(&self, path: &Utf8Path) -> bool;
+    fn modification_time(&self, path: &Utf8Path) -> Result<SystemTime, Error>;
+    fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, Error>;
 }
 
 /// A trait used to run other programs.
@@ -176,7 +172,7 @@ pub trait CommandExecutor {
         program: &str,
         args: &[String],
         env: &[(&str, String)],
-        cwd: Option<&Path>,
+        cwd: Option<&Utf8Path>,
         stdio: Stdio,
     ) -> Result<i32, Error>;
 }
@@ -200,26 +196,26 @@ impl Stdio {
 /// Typically we use an implementation that writes to the file system,
 /// but in tests and in other places other implementations may be used.
 pub trait FileSystemWriter {
-    fn mkdir(&self, path: &Path) -> Result<(), Error>;
-    fn write(&self, path: &Path, content: &str) -> Result<(), Error>;
-    fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<(), Error>;
-    fn delete(&self, path: &Path) -> Result<(), Error>;
-    fn copy(&self, from: &Path, to: &Path) -> Result<(), Error>;
-    fn copy_dir(&self, from: &Path, to: &Path) -> Result<(), Error>;
-    fn hardlink(&self, from: &Path, to: &Path) -> Result<(), Error>;
-    fn symlink_dir(&self, from: &Path, to: &Path) -> Result<(), Error>;
-    fn delete_file(&self, path: &Path) -> Result<(), Error>;
+    fn mkdir(&self, path: &Utf8Path) -> Result<(), Error>;
+    fn write(&self, path: &Utf8Path, content: &str) -> Result<(), Error>;
+    fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<(), Error>;
+    fn delete(&self, path: &Utf8Path) -> Result<(), Error>;
+    fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
+    fn copy_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
+    fn hardlink(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
+    fn symlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
+    fn delete_file(&self, path: &Utf8Path) -> Result<(), Error>;
 }
 
 #[derive(Debug)]
 /// A wrapper around a Read implementing object that has Gleam's error handling.
 pub struct WrappedReader {
-    path: PathBuf,
+    path: Utf8PathBuf,
     inner: DebugIgnore<Box<dyn std::io::Read>>,
 }
 
 impl WrappedReader {
-    pub fn new(path: &Path, inner: Box<dyn std::io::Read>) -> Self {
+    pub fn new(path: &Utf8Path, inner: Box<dyn std::io::Read>) -> Self {
         Self {
             path: path.to_path_buf(),
             inner: DebugIgnore(inner),
@@ -275,13 +271,13 @@ pub trait TarUnpacker {
 
     fn io_result_unpack(
         &self,
-        path: &Path,
+        path: &Utf8Path,
         archive: Archive<GzDecoder<Entry<'_, WrappedReader>>>,
     ) -> io::Result<()>;
 
     fn unpack(
         &self,
-        path: &Path,
+        path: &Utf8Path,
         archive: Archive<GzDecoder<Entry<'_, WrappedReader>>>,
     ) -> Result<()> {
         tracing::debug!(path = ?path, "unpacking tar archive");

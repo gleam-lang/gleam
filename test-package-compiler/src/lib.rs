@@ -13,16 +13,12 @@ use gleam_core::{
 };
 use itertools::Itertools;
 use regex::Regex;
-use std::{
-    collections::HashMap,
-    ffi::OsStr,
-    fmt::Write,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{collections::HashMap, fmt::Write, sync::Arc};
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 pub fn prepare(path: &str) -> String {
-    let root = PathBuf::from(path).canonicalize().unwrap();
+    let root = Utf8PathBuf::from(path).canonicalize_utf8().unwrap();
 
     let toml = std::fs::read_to_string(root.join("gleam.toml")).unwrap();
     let config: PackageConfig = toml::from_str(&toml).unwrap();
@@ -44,9 +40,9 @@ pub fn prepare(path: &str) -> String {
     let warning_emitter = WarningEmitter::new(Arc::new(warnings.clone()));
     let filesystem = to_in_memory_filesystem(&root);
     let initial_files = filesystem.paths();
-    let root = PathBuf::from("");
-    let out = PathBuf::from("/out/lib/the_package");
-    let lib = PathBuf::from("/out/lib");
+    let root = Utf8PathBuf::from("");
+    let out = Utf8PathBuf::from("/out/lib/the_package");
+    let lib = Utf8PathBuf::from("/out/lib");
     let mut compiler = gleam_core::build::PackageCompiler::new(
         &config,
         Mode::Dev,
@@ -94,7 +90,7 @@ fn normalise_diagnostic(text: &str) -> String {
 
 #[derive(Debug)]
 pub struct TestCompileOutput {
-    files: HashMap<PathBuf, Content>,
+    files: HashMap<Utf8PathBuf, Content>,
     warnings: Vec<gleam_core::Warning>,
 }
 
@@ -103,10 +99,10 @@ impl TestCompileOutput {
         let mut buffer = String::new();
         for (path, content) in self.files.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
             buffer.push_str("//// ");
-            buffer.push_str(&path.to_str().unwrap().replace('\\', "/"));
+            buffer.push_str(&path.as_str().replace('\\', "/"));
             buffer.push('\n');
 
-            let extension = path.extension().and_then(OsStr::to_str);
+            let extension = path.extension();
             match content {
                 _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
 
@@ -132,7 +128,7 @@ impl TestCompileOutput {
     }
 }
 
-fn to_in_memory_filesystem(path: &Path) -> InMemoryFileSystem {
+fn to_in_memory_filesystem(path: &Utf8Path) -> InMemoryFileSystem {
     let fs = InMemoryFileSystem::new();
 
     let files = walkdir::WalkDir::new(path)
@@ -145,7 +141,8 @@ fn to_in_memory_filesystem(path: &Path) -> InMemoryFileSystem {
     for fullpath in files {
         let content = std::fs::read(&fullpath).unwrap();
         let path = fullpath.strip_prefix(path).unwrap();
-        fs.write_bytes(path, &content).unwrap();
+        fs.write_bytes(Utf8Path::from_path(path).unwrap(), &content)
+            .unwrap();
     }
 
     fs

@@ -3,9 +3,10 @@ mod tests;
 
 use std::{
     collections::{HashMap, HashSet},
-    path::{Path, PathBuf},
     time::{Duration, SystemTime},
 };
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 // TODO: emit warnings for cached modules even if they are not compiled again.
 
@@ -52,14 +53,14 @@ pub struct PackageLoader<'a, IO> {
     io: IO,
     ids: UniqueIdGenerator,
     mode: Mode,
-    root: &'a Path,
+    root: &'a Utf8Path,
     warnings: &'a WarningEmitter,
     codegen: CodegenRequired,
-    artefact_directory: &'a Path,
+    artefact_directory: &'a Utf8Path,
     package_name: &'a SmolStr,
     target: Target,
     stale_modules: &'a mut StaleTracker,
-    already_defined_modules: &'a mut im::HashMap<SmolStr, PathBuf>,
+    already_defined_modules: &'a mut im::HashMap<SmolStr, Utf8PathBuf>,
 }
 
 impl<'a, IO> PackageLoader<'a, IO>
@@ -70,14 +71,14 @@ where
         io: IO,
         ids: UniqueIdGenerator,
         mode: Mode,
-        root: &'a Path,
+        root: &'a Utf8Path,
         warnings: &'a WarningEmitter,
         codegen: CodegenRequired,
-        artefact_directory: &'a Path,
+        artefact_directory: &'a Utf8Path,
         target: Target,
         package_name: &'a SmolStr,
         stale_modules: &'a mut StaleTracker,
-        already_defined_modules: &'a mut im::HashMap<SmolStr, PathBuf>,
+        already_defined_modules: &'a mut im::HashMap<SmolStr, Utf8PathBuf>,
     ) -> Self {
         Self {
             io,
@@ -156,7 +157,7 @@ where
         metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())
     }
 
-    pub fn is_gleam_path(&self, path: &Path, dir: &Path) -> bool {
+    pub fn is_gleam_path(&self, path: &Utf8Path, dir: &Utf8Path) -> bool {
         use regex::Regex;
         lazy_static! {
             static ref RE: Regex = Regex::new(&format!(
@@ -170,8 +171,7 @@ where
         RE.is_match(
             path.strip_prefix(dir)
                 .expect("is_gleam_path(): strip_prefix")
-                .to_str()
-                .expect("is_gleam_path(): to_str"),
+                .as_str(),
         )
     }
 
@@ -260,11 +260,11 @@ impl StaleTracker {
 #[derive(Debug)]
 pub struct Inputs<'a> {
     collection: HashMap<SmolStr, Input>,
-    already_defined_modules: &'a im::HashMap<SmolStr, PathBuf>,
+    already_defined_modules: &'a im::HashMap<SmolStr, Utf8PathBuf>,
 }
 
 impl<'a> Inputs<'a> {
-    fn new(already_defined_modules: &'a im::HashMap<SmolStr, PathBuf>) -> Self {
+    fn new(already_defined_modules: &'a im::HashMap<SmolStr, Utf8PathBuf>) -> Self {
         Self {
             collection: Default::default(),
             already_defined_modules,

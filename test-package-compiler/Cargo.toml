@@ -17,6 +17,7 @@ itertools = "0.10.1"
 walkdir = "2.3.2"
 # Regular expressions
 regex = "*"
+camino = "1.1.6"
 
 [dev-dependencies]
 # Snapshot testing to make test maintenance easier

@@ -3,7 +3,8 @@ use crate::{
     type_::Type,
 };
 
-use std::{path::PathBuf, sync::Arc};
+use camino::Utf8PathBuf;
+use std::sync::Arc;
 
 #[cfg(test)]
 use pretty_assertions::assert_eq;
@@ -410,7 +411,7 @@ impl Error {
 }
 
 impl Warning {
-    pub fn into_warning(self, path: PathBuf, src: SmolStr) -> crate::Warning {
+    pub fn into_warning(self, path: Utf8PathBuf, src: SmolStr) -> crate::Warning {
         crate::Warning::Type {
             path,
             src,

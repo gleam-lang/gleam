@@ -1,6 +1,8 @@
 mod source_links;
 
-use std::{path::PathBuf, time::SystemTime};
+use std::time::SystemTime;
+
+use camino::Utf8PathBuf;
 
 use crate::{
     ast::{
@@ -112,7 +114,7 @@ pub fn generate_html(
         };
 
         files.push(OutputFile {
-            path: PathBuf::from(&page.path),
+            path: Utf8PathBuf::from(&page.path),
             content: Content::Text(temp.render().expect("Page template rendering")),
         });
 
@@ -245,7 +247,7 @@ pub fn generate_html(
         };
 
         files.push(OutputFile {
-            path: PathBuf::from(format!("{}.html", module.name)),
+            path: Utf8PathBuf::from(format!("{}.html", module.name)),
             content: Content::Text(
                 template
                     .render()
@@ -257,63 +259,63 @@ pub fn generate_html(
     // Render static assets
 
     files.push(OutputFile {
-        path: PathBuf::from("css/atom-one-light.min.css"),
+        path: Utf8PathBuf::from("css/atom-one-light.min.css"),
         content: Content::Text(
             std::include_str!("../templates/docs-css/atom-one-light.min.css").to_string(),
         ),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("css/atom-one-dark.min.css"),
+        path: Utf8PathBuf::from("css/atom-one-dark.min.css"),
         content: Content::Text(
             std::include_str!("../templates/docs-css/atom-one-dark.min.css").to_string(),
         ),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("css/index.css"),
+        path: Utf8PathBuf::from("css/index.css"),
         content: Content::Text(std::include_str!("../templates/docs-css/index.css").to_string()),
     });
 
     // highlightjs:
 
     files.push(OutputFile {
-        path: PathBuf::from("js/highlight.min.js"),
+        path: Utf8PathBuf::from("js/highlight.min.js"),
         content: Content::Text(
             std::include_str!("../templates/docs-js/highlight.min.js").to_string(),
         ),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("js/highlightjs-gleam.js"),
+        path: Utf8PathBuf::from("js/highlightjs-gleam.js"),
         content: Content::Text(
             std::include_str!("../templates/docs-js/highlightjs-gleam.js").to_string(),
         ),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("js/highlightjs-erlang.min.js"),
+        path: Utf8PathBuf::from("js/highlightjs-erlang.min.js"),
         content: Content::Text(
             std::include_str!("../templates/docs-js/highlightjs-erlang.min.js").to_string(),
         ),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("js/highlightjs-elixir.min.js"),
+        path: Utf8PathBuf::from("js/highlightjs-elixir.min.js"),
         content: Content::Text(
             std::include_str!("../templates/docs-js/highlightjs-elixir.min.js").to_string(),
         ),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("js/highlightjs-javascript.min.js"),
+        path: Utf8PathBuf::from("js/highlightjs-javascript.min.js"),
         content: Content::Text(
             std::include_str!("../templates/docs-js/highlightjs-javascript.min.js").to_string(),
         ),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("js/highlightjs-typescript.min.js"),
+        path: Utf8PathBuf::from("js/highlightjs-typescript.min.js"),
         content: Content::Text(
             std::include_str!("../templates/docs-js/highlightjs-typescript.min.js").to_string(),
         ),
@@ -322,12 +324,12 @@ pub fn generate_html(
     // lunr.min.js, search-data.js and index.js:
 
     files.push(OutputFile {
-        path: PathBuf::from("js/lunr.min.js"),
+        path: Utf8PathBuf::from("js/lunr.min.js"),
         content: Content::Text(std::include_str!("../templates/docs-js/lunr.min.js").to_string()),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("search-data.js"),
+        path: Utf8PathBuf::from("search-data.js"),
         content: Content::Text(format!(
             "window.Gleam.initSearch({});",
             serde_to_string(&escape_html_contents(search_indexes))
@@ -336,42 +338,42 @@ pub fn generate_html(
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("js/index.js"),
+        path: Utf8PathBuf::from("js/index.js"),
         content: Content::Text(std::include_str!("../templates/docs-js/index.js").to_string()),
     });
 
     // web fonts:
 
     files.push(OutputFile {
-        path: PathBuf::from("fonts/karla-v23-regular-latin-ext.woff2"),
+        path: Utf8PathBuf::from("fonts/karla-v23-regular-latin-ext.woff2"),
         content: Content::Binary(
             include_bytes!("../templates/docs-fonts/karla-v23-regular-latin-ext.woff2").to_vec(),
         ),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("fonts/karla-v23-regular-latin.woff2"),
+        path: Utf8PathBuf::from("fonts/karla-v23-regular-latin.woff2"),
         content: Content::Binary(
             include_bytes!("../templates/docs-fonts/karla-v23-regular-latin.woff2").to_vec(),
         ),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("fonts/karla-v23-bold-latin-ext.woff2"),
+        path: Utf8PathBuf::from("fonts/karla-v23-bold-latin-ext.woff2"),
         content: Content::Binary(
             include_bytes!("../templates/docs-fonts/karla-v23-bold-latin-ext.woff2").to_vec(),
         ),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("fonts/karla-v23-bold-latin.woff2"),
+        path: Utf8PathBuf::from("fonts/karla-v23-bold-latin.woff2"),
         content: Content::Binary(
             include_bytes!("../templates/docs-fonts/karla-v23-bold-latin.woff2").to_vec(),
         ),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("fonts/ubuntu-mono-v15-regular-cyrillic-ext.woff2"),
+        path: Utf8PathBuf::from("fonts/ubuntu-mono-v15-regular-cyrillic-ext.woff2"),
         content: Content::Binary(
             include_bytes!("../templates/docs-fonts/ubuntu-mono-v15-regular-cyrillic-ext.woff2")
                 .to_vec(),
@@ -379,7 +381,7 @@ pub fn generate_html(
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("fonts/ubuntu-mono-v15-regular-cyrillic.woff2"),
+        path: Utf8PathBuf::from("fonts/ubuntu-mono-v15-regular-cyrillic.woff2"),
         content: Content::Binary(
             include_bytes!("../templates/docs-fonts/ubuntu-mono-v15-regular-cyrillic.woff2")
                 .to_vec(),
@@ -387,7 +389,7 @@ pub fn generate_html(
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("fonts/ubuntu-mono-v15-regular-greek-ext.woff2"),
+        path: Utf8PathBuf::from("fonts/ubuntu-mono-v15-regular-greek-ext.woff2"),
         content: Content::Binary(
             include_bytes!("../templates/docs-fonts/ubuntu-mono-v15-regular-greek-ext.woff2")
                 .to_vec(),
@@ -395,14 +397,14 @@ pub fn generate_html(
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("fonts/ubuntu-mono-v15-regular-greek.woff2"),
+        path: Utf8PathBuf::from("fonts/ubuntu-mono-v15-regular-greek.woff2"),
         content: Content::Binary(
             include_bytes!("../templates/docs-fonts/ubuntu-mono-v15-regular-greek.woff2").to_vec(),
         ),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("fonts/ubuntu-mono-v15-regular-latin-ext.woff2"),
+        path: Utf8PathBuf::from("fonts/ubuntu-mono-v15-regular-latin-ext.woff2"),
         content: Content::Binary(
             include_bytes!("../templates/docs-fonts/ubuntu-mono-v15-regular-latin-ext.woff2")
                 .to_vec(),
@@ -410,7 +412,7 @@ pub fn generate_html(
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("fonts/ubuntu-mono-v15-regular-latin.woff2"),
+        path: Utf8PathBuf::from("fonts/ubuntu-mono-v15-regular-latin.woff2"),
         content: Content::Binary(
             include_bytes!("../templates/docs-fonts/ubuntu-mono-v15-regular-latin.woff2").to_vec(),
         ),

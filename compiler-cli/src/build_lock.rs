@@ -1,14 +1,14 @@
+use camino::Utf8PathBuf;
 use gleam_core::{
     build::{Mode, Target, Telemetry},
     paths::ProjectPaths,
     Result,
 };
-use std::path::PathBuf;
 use strum::IntoEnumIterator;
 
 #[derive(Debug)]
 pub(crate) struct BuildLock {
-    directory: PathBuf,
+    directory: Utf8PathBuf,
 }
 
 impl BuildLock {
@@ -36,7 +36,7 @@ impl BuildLock {
         crate::fs::mkdir(&self.directory).expect("Could not create lock directory");
 
         let lock_path = self.directory.join("gleam.lock");
-        let mut file = fslock::LockFile::open(&lock_path).expect("LockFile creation");
+        let mut file = fslock::LockFile::open(lock_path.as_str()).expect("LockFile creation");
 
         if !file.try_lock_with_pid().expect("Trying build locking") {
             telemetry.waiting_for_build_directory_lock();

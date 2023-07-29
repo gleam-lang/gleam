@@ -27,13 +27,12 @@ use crate::{
     parse::extra::{Comment, ModuleExtra},
     type_,
 };
+use camino::Utf8PathBuf;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 use std::time::SystemTime;
-use std::{
-    collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, path::PathBuf, process,
-};
+use std::{collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, process};
 use strum::{Display, EnumIter, EnumString, EnumVariantNames, VariantNames};
 
 #[derive(
@@ -185,7 +184,7 @@ pub struct Module {
     pub name: SmolStr,
     pub code: SmolStr,
     pub mtime: SystemTime,
-    pub input_path: PathBuf,
+    pub input_path: Utf8PathBuf,
     pub origin: Origin,
     pub ast: TypedModule,
     pub extra: ModuleExtra,
@@ -193,10 +192,10 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn compiled_erlang_path(&self) -> PathBuf {
+    pub fn compiled_erlang_path(&self) -> Utf8PathBuf {
         let mut path = self.name.replace("/", "@");
         path.push_str(".erl");
-        PathBuf::from(path)
+        Utf8PathBuf::from(path)
     }
 
     pub fn is_test(&self) -> bool {

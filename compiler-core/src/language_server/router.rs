@@ -8,10 +8,9 @@ use crate::{
     paths::ProjectPaths,
     Error, Result,
 };
-use std::{
-    collections::{hash_map::Entry, HashMap},
-    path::{Path, PathBuf},
-};
+use std::collections::{hash_map::Entry, HashMap};
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 use super::feedback::FeedbackBookKeeper;
 
@@ -25,7 +24,7 @@ use super::feedback::FeedbackBookKeeper;
 #[derive(Debug)]
 pub struct Router<IO, Reporter> {
     io: FileSystemProxy<IO>,
-    engines: HashMap<PathBuf, Project<IO, Reporter>>,
+    engines: HashMap<Utf8PathBuf, Project<IO, Reporter>>,
     progress_reporter: Reporter,
 }
 
@@ -49,7 +48,10 @@ where
         }
     }
 
-    pub fn project_for_path(&mut self, path: &Path) -> Result<Option<&mut Project<IO, Reporter>>> {
+    pub fn project_for_path(
+        &mut self,
+        path: &Utf8Path,
+    ) -> Result<Option<&mut Project<IO, Reporter>>> {
         let path = match find_gleam_project_parent(&self.io, path) {
             Some(x) => x,
             None => return Ok(None),
@@ -84,7 +86,7 @@ where
         Ok(Some(entry.insert(project)))
     }
 
-    pub fn delete_engine_for_path(&mut self, path: &Path) {
+    pub fn delete_engine_for_path(&mut self, path: &Utf8Path) {
         if let Some(path) = find_gleam_project_parent(&self.io, path) {
             _ = self.engines.remove(&path);
         }
@@ -96,7 +98,7 @@ where
 ///
 /// The file must be in either the `src` or `test` directory if it is not a
 /// `.gleam` file.
-fn find_gleam_project_parent<IO>(io: &IO, path: &Path) -> Option<PathBuf>
+fn find_gleam_project_parent<IO>(io: &IO, path: &Utf8Path) -> Option<Utf8PathBuf>
 where
     IO: FileSystemReader,
 {
@@ -135,14 +137,14 @@ mod find_gleam_project_parent_tests {
     #[test]
     fn root() {
         let io = InMemoryFileSystem::new();
-        assert_eq!(find_gleam_project_parent(&io, Path::new("/")), None);
+        assert_eq!(find_gleam_project_parent(&io, Utf8Path::new("/")), None);
     }
 
     #[test]
     fn outside_a_project() {
         let io = InMemoryFileSystem::new();
         assert_eq!(
-            find_gleam_project_parent(&io, Path::new("/app/src/one.gleam")),
+            find_gleam_project_parent(&io, Utf8Path::new("/app/src/one.gleam")),
             None
         );
     }
@@ -150,30 +152,30 @@ mod find_gleam_project_parent_tests {
     #[test]
     fn gleam_toml_itself() {
         let io = InMemoryFileSystem::new();
-        io.write(Path::new("/app/gleam.toml"), "").unwrap();
+        io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
         assert_eq!(
-            find_gleam_project_parent(&io, Path::new("/app/gleam.toml")),
-            Some(PathBuf::from("/app"))
+            find_gleam_project_parent(&io, Utf8Path::new("/app/gleam.toml")),
+            Some(Utf8PathBuf::from("/app"))
         );
     }
 
     #[test]
     fn test_module() {
         let io = InMemoryFileSystem::new();
-        io.write(Path::new("/app/gleam.toml"), "").unwrap();
+        io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
         assert_eq!(
-            find_gleam_project_parent(&io, Path::new("/app/test/one/two/three.gleam")),
-            Some(PathBuf::from("/app"))
+            find_gleam_project_parent(&io, Utf8Path::new("/app/test/one/two/three.gleam")),
+            Some(Utf8PathBuf::from("/app"))
         );
     }
 
     #[test]
     fn src_module() {
         let io = InMemoryFileSystem::new();
-        io.write(Path::new("/app/gleam.toml"), "").unwrap();
+        io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
         assert_eq!(
-            find_gleam_project_parent(&io, Path::new("/app/src/one/two/three.gleam")),
-            Some(PathBuf::from("/app"))
+            find_gleam_project_parent(&io, Utf8Path::new("/app/src/one/two/three.gleam")),
+            Some(Utf8PathBuf::from("/app"))
         );
     }
 
@@ -181,9 +183,9 @@ mod find_gleam_project_parent_tests {
     #[test]
     fn module_in_project_but_not_src_or_test() {
         let io = InMemoryFileSystem::new();
-        io.write(Path::new("/app/gleam.toml"), "").unwrap();
+        io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
         assert_eq!(
-            find_gleam_project_parent(&io, Path::new("/app/other/one/two/three.gleam")),
+            find_gleam_project_parent(&io, Utf8Path::new("/app/other/one/two/three.gleam")),
             None,
         );
     }
@@ -191,16 +193,16 @@ mod find_gleam_project_parent_tests {
     #[test]
     fn nested_projects() {
         let io = InMemoryFileSystem::new();
-        io.write(Path::new("/app/gleam.toml"), "").unwrap();
-        io.write(Path::new("/app/examples/wibble/gleam.toml"), "")
+        io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
+        io.write(Utf8Path::new("/app/examples/wibble/gleam.toml"), "")
             .unwrap();
         assert_eq!(
-            find_gleam_project_parent(&io, Path::new("/app/src/one.gleam")),
-            Some(PathBuf::from("/app"))
+            find_gleam_project_parent(&io, Utf8Path::new("/app/src/one.gleam")),
+            Some(Utf8PathBuf::from("/app"))
         );
         assert_eq!(
-            find_gleam_project_parent(&io, Path::new("/app/examples/wibble/src/one.gleam")),
-            Some(PathBuf::from("/app/examples/wibble"))
+            find_gleam_project_parent(&io, Utf8Path::new("/app/examples/wibble/src/one.gleam")),
+            Some(Utf8PathBuf::from("/app/examples/wibble"))
         );
     }
 }

@@ -24,7 +24,9 @@ use lsp_types::{
     InitializeParams, PublishDiagnosticsParams,
 };
 use serde_json::Value as Json;
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
+
+use camino::Utf8PathBuf;
 
 use super::progress::ConnectionProgressReporter;
 
@@ -185,7 +187,7 @@ where
         self.publish_messages(feedback.messages);
     }
 
-    fn publish_diagnostics(&self, diagnostics: HashMap<PathBuf, Vec<Diagnostic>>) {
+    fn publish_diagnostics(&self, diagnostics: HashMap<Utf8PathBuf, Vec<Diagnostic>>) {
         for (path, diagnostics) in diagnostics {
             let diagnostics = diagnostics
                 .into_iter()
@@ -277,7 +279,7 @@ where
 
     fn respond_with_engine<T, Handler>(
         &mut self,
-        path: PathBuf,
+        path: Utf8PathBuf,
         handler: Handler,
     ) -> (Json, Feedback)
     where
@@ -314,7 +316,7 @@ where
 
     fn notified_with_engine(
         &mut self,
-        path: PathBuf,
+        path: Utf8PathBuf,
         handler: impl FnOnce(
             &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
         ) -> engine::Response<()>,
@@ -577,17 +579,18 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
     }
 }
 
-fn path_to_uri(path: PathBuf) -> Url {
+fn path_to_uri(path: Utf8PathBuf) -> Url {
     let mut file: String = "file://".into();
     file.push_str(&path.as_os_str().to_string_lossy());
     Url::parse(&file).expect("path_to_uri URL parse")
 }
 
-fn path(uri: &Url) -> PathBuf {
+fn path(uri: &Url) -> Utf8PathBuf {
     // The to_file_path method is available on these platforms
     #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
-    return uri.to_file_path().expect("URL file");
+    return Utf8PathBuf::from_path_buf(uri.to_file_path().expect("URL file"))
+        .expect("Non Utf8 Path");
 
     #[cfg(not(any(unix, windows, target_os = "redox", target_os = "wasi")))]
-    return uri.path().into();
+    return Utf8PathBuf::from_path_buf(uri.path().into()).expect("Non Utf8 Path");
 }

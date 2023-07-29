@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use camino::{Utf8Path, Utf8PathBuf};
 
 use gleam_core::{
     error::{FileIoAction, FileKind},
@@ -14,7 +14,7 @@ pub fn command(packages: Vec<String>) -> Result<()> {
         .map_err(|e| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Parse,
-            path: PathBuf::from("gleam.toml"),
+            path: Utf8PathBuf::from("gleam.toml"),
             err: Some(e.to_string()),
         })?;
 
@@ -31,7 +31,7 @@ pub fn command(packages: Vec<String>) -> Result<()> {
     }
 
     // Write the updated config
-    fs::write(Path::new("gleam.toml"), &toml.to_string())?;
+    fs::write(Utf8Path::new("gleam.toml"), &toml.to_string())?;
     let paths = crate::project_paths_at_current_directory();
     _ = crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
     for package_to_remove in packages {

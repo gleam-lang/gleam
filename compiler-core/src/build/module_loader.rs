@@ -1,11 +1,9 @@
 #[cfg(test)]
 mod tests;
 
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-    time::SystemTime,
-};
+use std::{collections::HashMap, time::SystemTime};
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
@@ -39,8 +37,8 @@ pub(crate) struct ModuleLoader<'a, IO> {
     pub target: Target,
     pub codegen: CodegenRequired,
     pub package_name: &'a SmolStr,
-    pub source_directory: &'a Path,
-    pub artefact_directory: &'a Path,
+    pub source_directory: &'a Utf8Path,
+    pub artefact_directory: &'a Utf8Path,
     pub origin: Origin,
 }
 
@@ -56,7 +54,7 @@ where
     /// Whether the module has changed or not is determined by comparing the
     /// modification time of the source file with the value recorded in the
     /// `.timestamp` file in the artefact directory.
-    pub fn load(&self, path: PathBuf) -> Result<Input> {
+    pub fn load(&self, path: Utf8PathBuf) -> Result<Input> {
         let name = module_name(self.source_directory, &path);
         let artefact = name.replace("/", "@");
         let source_mtime = self.io.modification_time(&path)?;
@@ -116,7 +114,7 @@ where
 
     fn read_source(
         &self,
-        path: PathBuf,
+        path: Utf8PathBuf,
         name: SmolStr,
         mtime: SystemTime,
     ) -> Result<UncompiledModule, Error> {
@@ -147,7 +145,7 @@ pub(crate) fn read_source<IO>(
     warnings: &WarningEmitter,
     target: Target,
     origin: Origin,
-    path: PathBuf,
+    path: Utf8PathBuf,
     name: SmolStr,
     package_name: SmolStr,
     mtime: SystemTime,

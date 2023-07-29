@@ -9,4 +9,18 @@ disallowed-methods = [
   { path = "std::path::Path::read_link", reason = "IO is not permitted in core" },
   { path = "std::path::Path::symlink_metadata", reason = "IO is not permitted in core" },
   { path = "std::path::Path::try_exists", reason = "IO is not permitted in core" },
+  
+  { path = "camino::Utf8Path::canonicalize", reason = "IO is not permitted in core" },
+  { path = "camino::Utf8Path::exists", reason = "IO is not permitted in core" },
+  { path = "camino::Utf8Path::is_dir", reason = "IO is not permitted in core" },
+  { path = "camino::Utf8Path::is_file", reason = "IO is not permitted in core" },
+  { path = "camino::Utf8Path::is_symlink", reason = "IO is not permitted in core" },
+  { path = "camino::Utf8Path::read_dir", reason = "IO is not permitted in core" },
+  { path = "camino::Utf8Path::read_link", reason = "IO is not permitted in core" },
+  { path = "camino::Utf8Path::symlink_metadata", reason = "IO is not permitted in core" },
+  { path = "camino::Utf8Path::try_exists", reason = "IO is not permitted in core" },
+
+
+  { path = "std::path::Path::new", reason = "Manually constructed paths should use camino::Utf8Path" },
+  { path = "std::path::PathBuf::new", reason = "Manually constructed pathbufs should use camino::Utf8Path" },
 ]

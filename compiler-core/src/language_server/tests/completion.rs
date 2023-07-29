@@ -28,7 +28,7 @@ fn positioned_expression_completions(
     let response = engine.compile_please();
     assert!(response.result.is_ok());
 
-    let path = PathBuf::from(if cfg!(target_family = "windows") {
+    let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
         r#"\\?\C:\src\app.gleam"#
     } else {
         "/src/app.gleam"

@@ -14,7 +14,9 @@ use crate::{
     warning::VectorWarningEmitterIO,
     Error, Result, Warning,
 };
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
+
+use camino::Utf8PathBuf;
 
 /// A wrapper around the project compiler which makes it possible to repeatedly
 /// recompile the top level package, reusing the information about the already
@@ -91,7 +93,7 @@ where
         })
     }
 
-    pub fn compile(&mut self) -> Result<Vec<PathBuf>, Error> {
+    pub fn compile(&mut self) -> Result<Vec<Utf8PathBuf>, Error> {
         // Lock the build directory to ensure to ensure we are the only one compiling
         let _lock_guard = self.locker.lock_for_build();
 

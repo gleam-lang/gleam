@@ -5,7 +5,7 @@ mod pattern;
 mod tests;
 mod typescript;
 
-use std::path::Path;
+use camino::Utf8Path;
 
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
@@ -522,7 +522,7 @@ fn external_fn_args<T>(arguments: &[ExternalFnArg<T>]) -> Document<'_> {
 pub fn module(
     module: &TypedModule,
     line_numbers: &LineNumbers,
-    path: &Path,
+    path: &Utf8Path,
     src: &SmolStr,
 ) -> Result<String, crate::Error> {
     let document = Generator::new(line_numbers, module)
@@ -537,7 +537,7 @@ pub fn module(
 
 pub fn ts_declaration(
     module: &TypedModule,
-    path: &Path,
+    path: &Utf8Path,
     src: &SmolStr,
 ) -> Result<String, crate::Error> {
     let document = typescript::TypeScriptGenerator::new(module)

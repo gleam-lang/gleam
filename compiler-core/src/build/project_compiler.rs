@@ -23,12 +23,13 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
     io::BufReader,
-    path::{Path, PathBuf},
     sync::Arc,
     time::Instant,
 };
 
 use super::{Codegen, ErlangAppCodegenConfiguration};
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 // On Windows we have to call rebar3 via a little wrapper script.
 //
@@ -75,7 +76,7 @@ pub struct ProjectCompiler<IO> {
     pub(crate) config: PackageConfig,
     pub(crate) packages: HashMap<String, ManifestPackage>,
     importable_modules: im::HashMap<SmolStr, type_::ModuleInterface>,
-    defined_modules: im::HashMap<SmolStr, PathBuf>,
+    defined_modules: im::HashMap<SmolStr, Utf8PathBuf>,
     stale_modules: StaleTracker,
     warnings: WarningEmitter,
     telemetry: Box<dyn Telemetry>,
@@ -281,7 +282,7 @@ where
         let package = self.paths.build_packages_package(name);
         let build_packages = self.paths.build_directory_for_target(mode, target);
         let ebins = self.paths.build_packages_ebins_glob(mode, target);
-        let rebar3_path = |path: &Path| format!("../{}", path.to_str().expect("Build path"));
+        let rebar3_path = |path: &Utf8Path| format!("../{}", path);
 
         tracing::debug!("copying_package_to_build");
         self.io.mkdir(&build_packages)?;
@@ -348,7 +349,7 @@ where
         let mix_build_dir = project_dir.join("_build").join(mix_target);
         let mix_build_lib_dir = mix_build_dir.join("lib");
         let up = paths::unnest(&project_dir);
-        let mix_path = |path: &Path| up.join(path).to_str().unwrap_or_default().to_string();
+        let mix_path = |path: &Utf8Path| up.join(path).to_string();
         let ebins = self.paths.build_packages_ebins_glob(mode, target);
 
         // Elixir core libs must be loaded
@@ -439,7 +440,7 @@ where
 
     fn load_cached_package(
         &mut self,
-        build_dir: PathBuf,
+        build_dir: Utf8PathBuf,
         package: &ManifestPackage,
     ) -> Result<(), Error> {
         for path in self.io.gleam_cache_files(&build_dir) {
@@ -458,7 +459,7 @@ where
         &mut self,
         config: &PackageConfig,
         is_root: bool,
-        root_path: PathBuf,
+        root_path: Utf8PathBuf,
     ) -> Result<Vec<Module>, Error> {
         let out_path =
             self.paths

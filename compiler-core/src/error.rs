@@ -16,9 +16,10 @@ use itertools::Itertools;
 use smol_str::SmolStr;
 use std::env;
 use std::fmt::Debug;
-use std::path::{Path, PathBuf};
 use termcolor::Buffer;
 use thiserror::Error;
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 pub type Name = SmolStr;
 
@@ -34,7 +35,7 @@ macro_rules! wrap_format {
 pub struct UnknownImportDetails {
     pub module: Name,
     pub location: crate::ast::SrcSpan,
-    pub path: PathBuf,
+    pub path: Utf8PathBuf,
     pub src: SmolStr,
     pub modules: Vec<SmolStr>,
 }
@@ -43,14 +44,14 @@ pub struct UnknownImportDetails {
 pub enum Error {
     #[error("failed to parse Gleam source code")]
     Parse {
-        path: PathBuf,
+        path: Utf8PathBuf,
         src: SmolStr,
         error: crate::parse::error::ParseError,
     },
 
     #[error("type checking failed")]
     Type {
-        path: PathBuf,
+        path: Utf8PathBuf,
         src: SmolStr,
         error: crate::type_::Error,
     },
@@ -65,8 +66,8 @@ pub enum Error {
     #[error("duplicate module {module}")]
     DuplicateModule {
         module: Name,
-        first: PathBuf,
-        second: PathBuf,
+        first: Utf8PathBuf,
+        second: Utf8PathBuf,
     },
 
     #[error("duplicate source file {file}")]
@@ -82,7 +83,7 @@ pub enum Error {
     FileIo {
         kind: FileKind,
         action: FileIoAction,
-        path: PathBuf,
+        path: Utf8PathBuf,
         err: Option<String>,
     },
 
@@ -105,7 +106,7 @@ pub enum Error {
     ExpandTar { error: String },
 
     #[error("{err}")]
-    AddTar { path: PathBuf, err: String },
+    AddTar { path: Utf8PathBuf, err: String },
 
     #[error("{0}")]
     TarFinish(String),
@@ -163,7 +164,7 @@ pub enum Error {
 
     #[error("javascript codegen failed")]
     JavaScript {
-        path: PathBuf,
+        path: Utf8PathBuf,
         src: SmolStr,
         error: crate::javascript::Error,
     },
@@ -198,7 +199,7 @@ pub enum Error {
 
     #[error("Expected package {expected} at path {path} but found {found} instead")]
     WrongDependencyProvided {
-        path: PathBuf,
+        path: Utf8PathBuf,
         expected: String,
         found: String,
     },
@@ -226,7 +227,7 @@ pub enum Error {
     },
 
     #[error("Opening docs at {path} failed: {error}")]
-    FailedToOpenDocs { path: PathBuf, error: String },
+    FailedToOpenDocs { path: Utf8PathBuf, error: String },
 
     #[error("The package {package} requires a Gleam version satisfying {required_version} and you are using v{gleam_version}")]
     IncompatibleCompilerVersion {
@@ -256,7 +257,7 @@ impl Error {
 
     pub fn add_tar<P, E>(path: P, error: E) -> Error
     where
-        P: AsRef<Path>,
+        P: AsRef<Utf8Path>,
         E: std::error::Error,
     {
         Self::AddTar {
@@ -672,8 +673,7 @@ to a tar archive.
 This was error from the tar library:
 
     {}",
-                    path.to_str().unwrap(),
-                    err
+                    path, err
                 );
                 Diagnostic {
                     title: "Failure creating tar archive".into(),
@@ -745,9 +745,7 @@ This was error from the Hex client library:
 
 First:  {}
 Second: {}",
-                    module,
-                    first.to_str().expect("pretty error print PathBuf to_str"),
-                    second.to_str().expect("pretty error print PathBuf to_str"),
+                    module, first, second,
                 );
 
                 Diagnostic {
@@ -786,7 +784,7 @@ Second: {}",
 {}",
                     action.text(),
                     kind.text(),
-                    path.to_string_lossy(),
+                    path,
                     err,
                 );
                 Diagnostic {
@@ -2343,7 +2341,7 @@ but it cannot be found."
             Error::Format { problem_files } => {
                 let files: Vec<_> = problem_files
                     .iter()
-                    .flat_map(|formatted| formatted.source.to_str())
+                    .map(|formatted| formatted.source.as_str())
                     .map(|p| format!("  - {p}"))
                     .sorted()
                     .collect();
@@ -2490,9 +2488,7 @@ The error from the version resolver library was:
             } => {
                 let text = format!(
                     "Expected package {} at path {} but found {} instead",
-                    expected,
-                    path.to_string_lossy(),
-                    found
+                    expected, path, found
                 );
 
                 Diagnostic {
@@ -2609,8 +2605,7 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
 
     {}
 {}",
-                    path.to_string_lossy(),
-                    error,
+                    path, error,
                 );
                 Diagnostic {
                     title: "Failed to open docs".into(),
@@ -2750,8 +2745,8 @@ functions from the `gleam/string` module",
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unformatted {
-    pub source: PathBuf,
-    pub destination: PathBuf,
+    pub source: Utf8PathBuf,
+    pub destination: Utf8PathBuf,
     pub input: SmolStr,
     pub output: String,
 }

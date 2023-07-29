@@ -82,6 +82,7 @@ smol_str = "0.1"
 same-file = "1.0.6"
 # Open generated docs in browser
 opener = "0.6"
+camino = { version = "1.1.6", features = ["serde1"] }
 
 [dev-dependencies]
 # Test assertion errors with diffs

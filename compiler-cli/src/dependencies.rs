@@ -1,9 +1,9 @@
 use std::{
     collections::{HashMap, HashSet},
-    path::{Path, PathBuf},
     time::Instant,
 };
 
+use camino::{Utf8Path, Utf8PathBuf};
 use flate2::read::GzDecoder;
 use futures::future;
 use gleam_core::{
@@ -522,7 +522,7 @@ struct ProvidedPackage {
 #[derive(Clone, Eq, Debug)]
 enum ProvidedPackageSource {
     Git { repo: SmolStr, commit: SmolStr },
-    Local { path: PathBuf },
+    Local { path: Utf8PathBuf },
 }
 
 impl ProvidedPackage {
@@ -587,7 +587,7 @@ impl ProvidedPackageSource {
                 format!(r#"{{ repo: "{}", commit: "{}" }}"#, repo, commit)
             }
             Self::Local { path } => {
-                format!(r#"{{ path: "{}" }}"#, path.to_string_lossy())
+                format!(r#"{{ path: "{}" }}"#, path)
             }
         }
     }
@@ -689,8 +689,8 @@ fn resolve_versions<Telem: Telemetry>(
 /// Provide a package from a local project
 fn provide_local_package(
     package_name: SmolStr,
-    package_path: &Path,
-    parent_path: &Path,
+    package_path: &Utf8Path,
+    parent_path: &Utf8Path,
     project_paths: &ProjectPaths,
     provided: &mut HashMap<SmolStr, ProvidedPackage>,
     parents: &mut Vec<SmolStr>,
@@ -730,7 +730,7 @@ fn provide_git_package(
 /// Adds a gleam project located at a specific path to the list of "provided packages"
 fn provide_package(
     package_name: SmolStr,
-    package_path: PathBuf,
+    package_path: Utf8PathBuf,
     package_source: ProvidedPackageSource,
     project_paths: &ProjectPaths,
     provided: &mut HashMap<SmolStr, ProvidedPackage>,
@@ -820,8 +820,8 @@ fn provide_wrong_package() {
     let project_paths = crate::project_paths_at_current_directory();
     let result = provide_local_package(
         "wrong_name".into(),
-        Path::new("./test/hello_world"),
-        Path::new("./"),
+        Utf8Path::new("./test/hello_world"),
+        Utf8Path::new("./"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -844,8 +844,8 @@ fn provide_existing_package() {
 
     let result = provide_local_package(
         "hello_world".into(),
-        Path::new("./test/hello_world"),
-        Path::new("./"),
+        Utf8Path::new("./test/hello_world"),
+        Utf8Path::new("./"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -857,8 +857,8 @@ fn provide_existing_package() {
 
     let result = provide_local_package(
         "hello_world".into(),
-        Path::new("./test/hello_world"),
-        Path::new("./"),
+        Utf8Path::new("./test/hello_world"),
+        Utf8Path::new("./"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -875,8 +875,8 @@ fn provide_conflicting_package() {
     let project_paths = crate::project_paths_at_current_directory();
     let result = provide_local_package(
         "hello_world".into(),
-        Path::new("./test/hello_world"),
-        Path::new("./"),
+        Utf8Path::new("./test/hello_world"),
+        Utf8Path::new("./"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -888,9 +888,9 @@ fn provide_conflicting_package() {
 
     let result = provide_package(
         "hello_world".into(),
-        PathBuf::from("./test/other"),
+        Utf8PathBuf::from("./test/other"),
         ProvidedPackageSource::Local {
-            path: Path::new("./test/other").to_path_buf(),
+            path: Utf8Path::new("./test/other").to_path_buf(),
         },
         &project_paths,
         &mut provided,
@@ -909,8 +909,8 @@ fn provided_is_absolute() {
     let project_paths = crate::project_paths_at_current_directory();
     let result = provide_local_package(
         "hello_world".into(),
-        Path::new("./test/hello_world"),
-        Path::new("./"),
+        Utf8Path::new("./test/hello_world"),
+        Utf8Path::new("./"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
@@ -933,8 +933,8 @@ fn provided_recursive() {
     let project_paths = crate::project_paths_at_current_directory();
     let result = provide_local_package(
         "hello_world".into(),
-        Path::new("./test/hello_world"),
-        Path::new("./"),
+        Utf8Path::new("./test/hello_world"),
+        Utf8Path::new("./"),
         &project_paths,
         &mut provided,
         &mut vec!["root".into(), "hello_world".into(), "subpackage".into()],
@@ -1006,7 +1006,7 @@ impl TarUnpacker for Untar {
 
     fn io_result_unpack(
         &self,
-        path: &Path,
+        path: &Utf8Path,
         mut archive: tar::Archive<GzDecoder<tar::Entry<'_, WrappedReader>>>,
     ) -> std::io::Result<()> {
         archive.unpack(path)

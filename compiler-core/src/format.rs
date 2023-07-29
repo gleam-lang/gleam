@@ -13,12 +13,14 @@ use crate::{
 };
 use itertools::Itertools;
 use smol_str::SmolStr;
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 use vec1::Vec1;
+
+use camino::Utf8Path;
 
 const INDENT: isize = 2;
 
-pub fn pretty(writer: &mut impl Utf8Writer, src: &SmolStr, path: &Path) -> Result<()> {
+pub fn pretty(writer: &mut impl Utf8Writer, src: &SmolStr, path: &Utf8Path) -> Result<()> {
     let parsed = crate::parse::parse_module(src).map_err(|error| Error::Parse {
         path: path.to_path_buf(),
         src: src.clone(),

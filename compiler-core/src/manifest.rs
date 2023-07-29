@@ -1,8 +1,8 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use crate::requirement::Requirement;
 use crate::Result;
+use camino::Utf8PathBuf;
 use hexpm::version::Version;
 use itertools::Itertools;
 use smol_str::SmolStr;
@@ -92,7 +92,7 @@ impl Manifest {
                 }
                 ManifestPackageSource::Local { path } => {
                     buffer.push_str(r#", source = "local", path = ""#);
-                    buffer.push_str(path.to_str().expect("local path non utf-8"));
+                    buffer.push_str(path.as_str());
                     buffer.push('"');
                 }
             };
@@ -309,7 +309,7 @@ pub enum ManifestPackageSource {
     #[serde(rename = "git")]
     Git { repo: SmolStr, commit: SmolStr },
     #[serde(rename = "local")]
-    Local { path: PathBuf }, // should be the canonical path
+    Local { path: Utf8PathBuf }, // should be the canonical path
 }
 
 fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>

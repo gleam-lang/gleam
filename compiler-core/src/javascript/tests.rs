@@ -4,7 +4,7 @@ use crate::{
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
 };
-use std::path::Path;
+use camino::Utf8Path;
 
 mod assignments;
 mod bit_strings;
@@ -118,10 +118,10 @@ pub fn compile(src: &str, dep: Option<(&str, &str, &str)>) -> TypedModule {
 pub fn compile_js(src: &str, dep: Option<(&str, &str, &str)>) -> String {
     let ast = compile(src, dep);
     let line_numbers = LineNumbers::new(src);
-    module(&ast, &line_numbers, Path::new(""), &"".into()).unwrap()
+    module(&ast, &line_numbers, Utf8Path::new(""), &"".into()).unwrap()
 }
 
 pub fn compile_ts(src: &str, dep: Option<(&str, &str, &str)>) -> String {
     let ast = compile(src, dep);
-    ts_declaration(&ast, Path::new(""), &src.into()).unwrap()
+    ts_declaration(&ast, Utf8Path::new(""), &src.into()).unwrap()
 }

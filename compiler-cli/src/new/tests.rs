@@ -1,11 +1,13 @@
+use camino::Utf8PathBuf;
+
 #[test]
 fn new() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("my_project");
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
 
     let creator = super::Creator::new(
         super::NewOptions {
-            project_root: path.to_str().unwrap().to_string(),
+            project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
             description: "Wibble wobble".into(),
@@ -33,11 +35,11 @@ fn new() {
 #[test]
 fn new_with_skip_git() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("my_project");
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
 
     let creator = super::Creator::new(
         super::NewOptions {
-            project_root: path.to_str().unwrap().to_string(),
+            project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
             description: "Wibble wobble".into(),
@@ -55,11 +57,11 @@ fn new_with_skip_git() {
 #[test]
 fn new_with_skip_github() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("my_project");
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
 
     let creator = super::Creator::new(
         super::NewOptions {
-            project_root: path.to_str().unwrap().to_string(),
+            project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
             description: "Wibble wobble".into(),
@@ -80,11 +82,11 @@ fn new_with_skip_github() {
 #[test]
 fn new_with_skip_git_and_github() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("my_project");
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
 
     let creator = super::Creator::new(
         super::NewOptions {
-            project_root: path.to_str().unwrap().to_string(),
+            project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
             description: "Wibble wobble".into(),
@@ -105,11 +107,11 @@ fn new_with_skip_git_and_github() {
 #[test]
 fn invalid_path() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("-------");
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("-------")).expect("Non Utf8 Path");
 
     assert!(super::Creator::new(
         super::NewOptions {
-            project_root: path.to_str().unwrap().to_string(),
+            project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
             description: "Wibble wobble".into(),
@@ -124,11 +126,11 @@ fn invalid_path() {
 #[test]
 fn invalid_name() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("projec");
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("projec")).expect("Non Utf8 Path");
 
     assert!(super::Creator::new(
         super::NewOptions {
-            project_root: path.to_str().unwrap().to_string(),
+            project_root: path.to_string(),
             template: super::Template::Lib,
             name: Some("-".into()),
             description: "Wibble wobble".into(),

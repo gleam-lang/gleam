@@ -3,6 +3,7 @@ use crate::{
     fs::{self, ConsoleWarningEmitter, ProjectIO},
     CompilePackage,
 };
+use camino::Utf8Path;
 use gleam_core::{
     build::{Mode, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration},
     metadata,
@@ -13,7 +14,7 @@ use gleam_core::{
     Result,
 };
 use smol_str::SmolStr;
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
 pub fn command(options: CompilePackage) -> Result<()> {
     let ids = UniqueIdGenerator::new();
@@ -56,7 +57,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
 
 fn load_libraries(
     ids: &UniqueIdGenerator,
-    lib: &Path,
+    lib: &Utf8Path,
 ) -> Result<im::HashMap<SmolStr, ModuleInterface>> {
     tracing::info!("Reading precompiled module metadata files");
     let mut manifests = im::HashMap::new();
@@ -71,5 +72,6 @@ fn load_libraries(
             let _ = manifests.insert(module.name.clone(), module);
         }
     }
+
     Ok(manifests)
 }

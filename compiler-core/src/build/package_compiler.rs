@@ -20,11 +20,10 @@ use crate::{
 };
 use askama::Template;
 use smol_str::SmolStr;
+use std::collections::HashSet;
 use std::{collections::HashMap, fmt::write, time::SystemTime};
-use std::{
-    collections::HashSet,
-    path::{Path, PathBuf},
-};
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration};
 
@@ -36,9 +35,9 @@ const ELIXIR_EXECUTABLE: &str = "elixir.bat";
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
     pub io: IO,
-    pub out: &'a Path,
-    pub lib: &'a Path,
-    pub root: &'a Path,
+    pub out: &'a Utf8Path,
+    pub lib: &'a Utf8Path,
+    pub root: &'a Utf8Path,
     pub mode: Mode,
     pub target: &'a TargetCodegenConfiguration,
     pub config: &'a PackageConfig,
@@ -58,9 +57,9 @@ where
     pub fn new(
         config: &'a PackageConfig,
         mode: Mode,
-        root: &'a Path,
-        out: &'a Path,
-        lib: &'a Path,
+        root: &'a Utf8Path,
+        out: &'a Utf8Path,
+        lib: &'a Utf8Path,
         target: &'a TargetCodegenConfiguration,
         ids: UniqueIdGenerator,
         io: IO,
@@ -91,7 +90,7 @@ where
         mut self,
         warnings: &WarningEmitter,
         existing_modules: &mut im::HashMap<SmolStr, type_::ModuleInterface>,
-        already_defined_modules: &mut im::HashMap<SmolStr, PathBuf>,
+        already_defined_modules: &mut im::HashMap<SmolStr, Utf8PathBuf>,
         stale_modules: &mut StaleTracker,
     ) -> Result<Vec<Module>, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
@@ -144,7 +143,7 @@ where
         Ok(modules)
     }
 
-    fn compile_erlang_to_beam(&mut self, modules: &HashSet<PathBuf>) -> Result<(), Error> {
+    fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
         if modules.is_empty() {
             tracing::debug!("no_erlang_to_compile");
             return Ok(());
@@ -162,18 +161,18 @@ where
         }
 
         let mut args = vec![
-            escript_path.to_string_lossy().to_string(),
+            escript_path.to_string(),
             // Tell the compiler where to find other libraries
             "--lib".into(),
-            self.lib.to_string_lossy().to_string(),
+            self.lib.to_string(),
             // Write compiled .beam to ./ebin
             "--out".into(),
-            self.out.join("ebin").to_string_lossy().to_string(),
+            self.out.join("ebin").to_string(),
         ];
         // Add the list of modules to compile
         for module in modules {
             let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(module);
-            args.push(path.to_string_lossy().to_string());
+            args.push(path.to_string());
         }
         // Compile Erlang and Elixir modules
         let status = self
@@ -192,8 +191,8 @@ where
 
     fn copy_project_native_files(
         &mut self,
-        destination_dir: &Path,
-        to_compile_modules: &mut HashSet<PathBuf>,
+        destination_dir: &Utf8Path,
+        to_compile_modules: &mut HashSet<Utf8PathBuf>,
     ) -> Result<(), Error> {
         tracing::debug!("copying_native_source_files");
 
@@ -342,8 +341,8 @@ where
 
     fn render_erlang_entrypoint_module(
         &mut self,
-        out: &Path,
-        modules_to_compile: &mut HashSet<PathBuf>,
+        out: &Utf8Path,
+        modules_to_compile: &mut HashSet<Utf8PathBuf>,
     ) -> Result<(), Error> {
         let name = format!("{name}@@main.erl", name = self.config.name);
         let path = out.join(&name);
@@ -435,7 +434,7 @@ fn analyse(
 
 pub fn maybe_link_elixir_libs<IO>(
     io: &IO,
-    build_dir: &PathBuf,
+    build_dir: &Utf8PathBuf,
     subprocess_stdio: Stdio,
 ) -> Result<(), Error>
 where
@@ -490,7 +489,7 @@ where
     // Each pathfinder line is a system path for an Elixir core library
     let read_pathfinder = io.read(&pathfinder)?;
     for lib_path in read_pathfinder.split('\n') {
-        let source = PathBuf::from(lib_path);
+        let source = Utf8PathBuf::from(lib_path);
         let name = source
             .as_path()
             .file_name()
@@ -507,17 +506,14 @@ where
             // Delete the existing link
             io.delete(&dest)?;
         }
-        tracing::debug!(
-            "linking_{}_to_build",
-            name.to_str().unwrap_or("elixir_core_lib"),
-        );
+        tracing::debug!("linking_{}_to_build", name,);
         io.symlink_dir(&source, &dest)?;
     }
 
     Ok(())
 }
 
-pub(crate) fn module_name(package_path: &Path, full_module_path: &Path) -> SmolStr {
+pub(crate) fn module_name(package_path: &Utf8Path, full_module_path: &Utf8Path) -> SmolStr {
     // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
 
     // my/module.gleam
@@ -530,10 +526,7 @@ pub(crate) fn module_name(package_path: &Path, full_module_path: &Path) -> SmolS
     let _ = module_path.set_extension("");
 
     // Stringify
-    let name = module_path
-        .to_str()
-        .expect("Module name path to str")
-        .to_string();
+    let name = module_path.to_string();
 
     // normalise windows paths
     name.replace("\\", "/").into()
@@ -553,7 +546,7 @@ impl Input {
         }
     }
 
-    pub fn source_path(&self) -> &Path {
+    pub fn source_path(&self) -> &Utf8Path {
         match self {
             Input::New(m) => &m.path,
             Input::Cached(m) => &m.source_path,
@@ -589,7 +582,7 @@ pub(crate) struct CachedModule {
     pub name: SmolStr,
     pub origin: Origin,
     pub dependencies: Vec<SmolStr>,
-    pub source_path: PathBuf,
+    pub source_path: Utf8PathBuf,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -618,7 +611,7 @@ pub(crate) struct Loaded {
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct UncompiledModule {
-    pub path: PathBuf,
+    pub path: Utf8PathBuf,
     pub name: SmolStr,
     pub code: SmolStr,
     pub mtime: SystemTime,

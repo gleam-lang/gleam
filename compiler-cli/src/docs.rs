@@ -1,5 +1,6 @@
-use std::path::Path;
 use std::time::Instant;
+
+use camino::Utf8Path;
 
 use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
@@ -84,7 +85,7 @@ pub fn build(options: BuildOptions) -> Result<()> {
     println!(
         "\nThe documentation for {package} has been rendered to \n{index_html}",
         package = config.name,
-        index_html = index_html.to_string_lossy()
+        index_html = index_html
     );
 
     if options.open {
@@ -99,7 +100,7 @@ pub fn build(options: BuildOptions) -> Result<()> {
 ///
 /// For the docs this will generally be a browser (unless some other program is
 /// configured as the default for `.html` files).
-fn open_docs(path: &Path) -> Result<()> {
+fn open_docs(path: &Utf8Path) -> Result<()> {
     opener::open(path).map_err(|error| Error::FailedToOpenDocs {
         path: path.to_path_buf(),
         error: error.to_string(),

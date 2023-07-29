@@ -1,7 +1,9 @@
 use lazy_static::__Deref;
 
 use super::*;
-use std::{cell::RefCell, collections::HashMap, ffi::OsStr, rc::Rc, time::Duration};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Duration};
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 // An in memory sharable collection of pretend files that can be used in place
 // of a real file system. It is a shared reference to a set of buffer than can
@@ -17,7 +19,7 @@ use std::{cell::RefCell, collections::HashMap, ffi::OsStr, rc::Rc, time::Duratio
 //
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct InMemoryFileSystem {
-    files: Rc<RefCell<HashMap<PathBuf, InMemoryFile>>>,
+    files: Rc<RefCell<HashMap<Utf8PathBuf, InMemoryFile>>>,
 }
 
 impl InMemoryFileSystem {
@@ -29,7 +31,7 @@ impl InMemoryFileSystem {
     ///
     /// Panics if this is not the only reference to the underlying files.
     ///
-    pub fn into_contents(self) -> HashMap<PathBuf, Content> {
+    pub fn into_contents(self) -> HashMap<Utf8PathBuf, Content> {
         Rc::try_unwrap(self.files)
             .expect("InMemoryFileSystem::into_files called on a clone")
             .into_inner()
@@ -38,7 +40,7 @@ impl InMemoryFileSystem {
             .collect()
     }
 
-    pub fn paths(&self) -> Vec<PathBuf> {
+    pub fn paths(&self) -> Vec<Utf8PathBuf> {
         self.files.borrow().keys().cloned().collect()
     }
 
@@ -47,7 +49,7 @@ impl InMemoryFileSystem {
     ///
     /// Panics if the file does not exist.
     ///
-    pub fn set_modification_time(&self, path: &Path, time: SystemTime) {
+    pub fn set_modification_time(&self, path: &Utf8Path, time: SystemTime) {
         self.files
             .deref()
             .borrow_mut()
@@ -56,7 +58,11 @@ impl InMemoryFileSystem {
             .modification_time = time;
     }
 
-    pub fn try_set_modification_time(&self, path: &Path, time: SystemTime) -> Result<(), Error> {
+    pub fn try_set_modification_time(
+        &self,
+        path: &Utf8Path,
+        time: SystemTime,
+    ) -> Result<(), Error> {
         self.files
             .deref()
             .borrow_mut()
@@ -73,42 +79,42 @@ impl InMemoryFileSystem {
 }
 
 impl FileSystemWriter for InMemoryFileSystem {
-    fn delete(&self, path: &Path) -> Result<(), Error> {
+    fn delete(&self, path: &Utf8Path) -> Result<(), Error> {
         let mut files = self.files.deref().borrow_mut();
         let _ = files.remove(path);
         Ok(())
     }
 
-    fn copy(&self, from: &Path, to: &Path) -> Result<(), Error> {
+    fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error> {
         self.write_bytes(to, &self.read_bytes(from)?)
     }
 
-    fn copy_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
+    fn copy_dir(&self, _: &Utf8Path, _: &Utf8Path) -> Result<(), Error> {
         panic!("unimplemented") // TODO
     }
 
-    fn mkdir(&self, _: &Path) -> Result<(), Error> {
+    fn mkdir(&self, _: &Utf8Path) -> Result<(), Error> {
         Ok(())
     }
 
-    fn hardlink(&self, _: &Path, _: &Path) -> Result<(), Error> {
+    fn hardlink(&self, _: &Utf8Path, _: &Utf8Path) -> Result<(), Error> {
         panic!("unimplemented") // TODO
     }
 
-    fn symlink_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
+    fn symlink_dir(&self, _: &Utf8Path, _: &Utf8Path) -> Result<(), Error> {
         panic!("unimplemented") // TODO
     }
 
-    fn delete_file(&self, path: &Path) -> Result<(), Error> {
+    fn delete_file(&self, path: &Utf8Path) -> Result<(), Error> {
         let _ = self.files.deref().borrow_mut().remove(path);
         Ok(())
     }
 
-    fn write(&self, path: &Path, content: &str) -> Result<(), Error> {
+    fn write(&self, path: &Utf8Path, content: &str) -> Result<(), Error> {
         self.write_bytes(path, content.as_bytes())
     }
 
-    fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<(), Error> {
+    fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<(), Error> {
         let mut file = InMemoryFile::default();
         _ = io::Write::write(&mut file, content).expect("channel buffer write");
         _ = self
@@ -121,33 +127,33 @@ impl FileSystemWriter for InMemoryFileSystem {
 }
 
 impl FileSystemReader for InMemoryFileSystem {
-    fn canonicalise(&self, path: &Path) -> Result<PathBuf, Error> {
+    fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, Error> {
         Ok(path.to_path_buf())
     }
 
-    fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
+    fn gleam_source_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
         self.files
             .deref()
             .borrow()
             .iter()
             .map(|(file_path, _)| file_path.to_path_buf())
             .filter(|file_path| file_path.starts_with(dir))
-            .filter(|file_path| file_path.extension() == Some(OsStr::new("gleam")))
+            .filter(|file_path| file_path.extension() == Some("gleam"))
             .collect()
     }
 
-    fn gleam_cache_files(&self, dir: &Path) -> Vec<PathBuf> {
+    fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
         self.files
             .deref()
             .borrow()
             .iter()
             .map(|(file_path, _)| file_path.to_path_buf())
             .filter(|file_path| file_path.starts_with(dir))
-            .filter(|file_path| file_path.extension() == Some(OsStr::new("cache")))
+            .filter(|file_path| file_path.extension() == Some("cache"))
             .collect()
     }
 
-    fn read(&self, path: &Path) -> Result<String, Error> {
+    fn read(&self, path: &Utf8Path) -> Result<String, Error> {
         let path = path.to_path_buf();
         let files = self.files.deref().borrow();
         let file = files.get(&path).ok_or_else(|| Error::FileIo {
@@ -166,7 +172,7 @@ impl FileSystemReader for InMemoryFileSystem {
         Ok(unicode)
     }
 
-    fn read_bytes(&self, path: &Path) -> Result<Vec<u8>, Error> {
+    fn read_bytes(&self, path: &Utf8Path) -> Result<Vec<u8>, Error> {
         let path = path.to_path_buf();
         let files = self.files.deref().borrow();
         let file = files.get(&path).ok_or_else(|| Error::FileIo {
@@ -179,11 +185,11 @@ impl FileSystemReader for InMemoryFileSystem {
         Ok(bytes)
     }
 
-    fn is_file(&self, path: &Path) -> bool {
+    fn is_file(&self, path: &Utf8Path) -> bool {
         self.files.deref().borrow().contains_key(path)
     }
 
-    fn is_directory(&self, path: &Path) -> bool {
+    fn is_directory(&self, path: &Utf8Path) -> bool {
         self.files
             .deref()
             .borrow()
@@ -191,12 +197,12 @@ impl FileSystemReader for InMemoryFileSystem {
             .any(|file_path| file_path.starts_with(path))
     }
 
-    fn reader(&self, _path: &Path) -> Result<WrappedReader, Error> {
+    fn reader(&self, _path: &Utf8Path) -> Result<WrappedReader, Error> {
         // TODO
         unreachable!("Memory reader unimplemented")
     }
 
-    fn read_dir(&self, path: &Path) -> Result<ReadDir> {
+    fn read_dir(&self, path: &Utf8Path) -> Result<ReadDir> {
         let read_dir = ReadDir::from_iter(
             self.files
                 .deref()
@@ -211,7 +217,7 @@ impl FileSystemReader for InMemoryFileSystem {
         Ok(read_dir)
     }
 
-    fn modification_time(&self, path: &Path) -> Result<SystemTime, Error> {
+    fn modification_time(&self, path: &Utf8Path) -> Result<SystemTime, Error> {
         let files = self.files.deref().borrow();
         let file = files.get(path).ok_or_else(|| Error::FileIo {
             kind: FileKind::File,
@@ -283,7 +289,7 @@ impl CommandExecutor for InMemoryFileSystem {
         _program: &str,
         _args: &[String],
         _env: &[(&str, String)],
-        _cwd: Option<&Path>,
+        _cwd: Option<&Utf8Path>,
         _stdio: Stdio,
     ) -> Result<i32, Error> {
         Ok(0) // Always succeed.

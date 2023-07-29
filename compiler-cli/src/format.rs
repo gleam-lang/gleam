@@ -3,11 +3,9 @@ use gleam_core::{
     io::Content,
     io::OutputFile,
 };
-use std::{
-    io::Read,
-    path::{Path, PathBuf},
-    str::FromStr,
-};
+use std::{io::Read, str::FromStr};
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 pub fn run(stdin: bool, check: bool, files: Vec<String>) -> Result<()> {
     if stdin {
@@ -20,7 +18,7 @@ pub fn run(stdin: bool, check: bool, files: Vec<String>) -> Result<()> {
 fn process_stdin(check: bool) -> Result<()> {
     let src = read_stdin()?.into();
     let mut out = String::new();
-    gleam_core::format::pretty(&mut out, &src, Path::new("<stdin>"))?;
+    gleam_core::format::pretty(&mut out, &src, Utf8Path::new("<stdin>"))?;
 
     if !check {
         print!("{out}");
@@ -30,8 +28,8 @@ fn process_stdin(check: bool) -> Result<()> {
     if src != out {
         return Err(Error::Format {
             problem_files: vec![Unformatted {
-                source: PathBuf::from("<standard input>"),
-                destination: PathBuf::from("<standard output>"),
+                source: Utf8PathBuf::from("<standard input>"),
+                destination: Utf8PathBuf::from("<standard output>"),
                 input: src,
                 output: out,
             }],
@@ -73,10 +71,10 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
     let mut problem_files = Vec::with_capacity(files.len());
 
     for file_path in files {
-        let path = PathBuf::from_str(&file_path).map_err(|e| Error::FileIo {
+        let path = Utf8PathBuf::from_str(&file_path).map_err(|e| Error::FileIo {
             action: FileIoAction::Open,
             kind: FileKind::File,
-            path: PathBuf::from(file_path),
+            path: Utf8PathBuf::from(file_path),
             err: Some(e.to_string()),
         })?;
 
@@ -92,7 +90,7 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
     Ok(problem_files)
 }
 
-fn format_file(problem_files: &mut Vec<Unformatted>, path: PathBuf) -> Result<()> {
+fn format_file(problem_files: &mut Vec<Unformatted>, path: Utf8PathBuf) -> Result<()> {
     let src = crate::fs::read(&path)?.into();
     let mut output = String::new();
     gleam_core::format::pretty(&mut output, &src, &path)?;

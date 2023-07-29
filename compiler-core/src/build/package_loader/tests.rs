@@ -22,7 +22,7 @@ const TEST_SOURCE_1: &'static str = "const x = 1";
 const TEST_SOURCE_2: &'static str = "const x = 2";
 
 fn write_src(fs: &InMemoryFileSystem, path: &str, seconds: u64, src: &str) {
-    let path = Path::new(path);
+    let path = Utf8Path::new(path);
     fs.write(&path, src).unwrap();
     fs.set_modification_time(&path, SystemTime::UNIX_EPOCH + Duration::from_secs(seconds));
 }
@@ -35,7 +35,7 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<Smol
         dependencies: deps,
         fingerprint: SourceFingerprint::new(src),
     };
-    let path = Path::new("/artefact").join(format!("{name}.cache_meta"));
+    let path = Utf8Path::new("/artefact").join(format!("{name}.cache_meta"));
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
 
     let cache = crate::type_::ModuleInterface {
@@ -47,7 +47,7 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<Smol
         values: Default::default(),
         accessors: Default::default(),
     };
-    let path = Path::new("/artefact").join(format!("{name}.cache"));
+    let path = Utf8Path::new("/artefact").join(format!("{name}.cache"));
     fs.write_bytes(
         &path,
         &metadata::ModuleEncoder::new(&cache).encode().unwrap(),
@@ -55,7 +55,7 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<Smol
     .unwrap();
 }
 
-fn run_loader(fs: InMemoryFileSystem, root: &Path, artefact: &Path) -> LoaderTestOutput {
+fn run_loader(fs: InMemoryFileSystem, root: &Utf8Path, artefact: &Utf8Path) -> LoaderTestOutput {
     let mut defined = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
     let (emitter, warnings) = WarningEmitter::vector();
@@ -85,8 +85,8 @@ fn run_loader(fs: InMemoryFileSystem, root: &Path, artefact: &Path) -> LoaderTes
 #[test]
 fn no_modules() {
     let fs = InMemoryFileSystem::new();
-    let root = Path::new("/");
-    let artefact = Path::new("/artefact");
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
 
     let loaded = run_loader(fs, root, artefact);
     assert!(loaded.to_compile.is_empty());
@@ -96,8 +96,8 @@ fn no_modules() {
 #[test]
 fn one_src_module() {
     let fs = InMemoryFileSystem::new();
-    let root = Path::new("/");
-    let artefact = Path::new("/artefact");
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
 
     write_src(&fs, "/src/main.gleam", 0, "const x = 1");
 
@@ -109,8 +109,8 @@ fn one_src_module() {
 #[test]
 fn one_test_module() {
     let fs = InMemoryFileSystem::new();
-    let root = Path::new("/");
-    let artefact = Path::new("/artefact");
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
 
     write_src(&fs, "/test/main.gleam", 0, "const x = 1");
 
@@ -122,8 +122,8 @@ fn one_test_module() {
 #[test]
 fn importing() {
     let fs = InMemoryFileSystem::new();
-    let root = Path::new("/");
-    let artefact = Path::new("/artefact");
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
 
     write_src(&fs, "/src/three.gleam", 0, "import two");
     write_src(&fs, "/src/one.gleam", 0, "");
@@ -144,8 +144,8 @@ fn importing() {
 #[test]
 fn reading_cache() {
     let fs = InMemoryFileSystem::new();
-    let root = Path::new("/");
-    let artefact = Path::new("/artefact");
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
 
     write_src(&fs, "/src/one.gleam", 0, TEST_SOURCE_1);
     write_cache(&fs, "one", 0, vec![], TEST_SOURCE_1);
@@ -158,8 +158,8 @@ fn reading_cache() {
 #[test]
 fn module_is_stale_if_cache_older() {
     let fs = InMemoryFileSystem::new();
-    let root = Path::new("/");
-    let artefact = Path::new("/artefact");
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
 
     write_src(&fs, "/src/one.gleam", 1, TEST_SOURCE_2);
     write_cache(&fs, "one", 0, vec![], TEST_SOURCE_1);
@@ -172,8 +172,8 @@ fn module_is_stale_if_cache_older() {
 #[test]
 fn module_is_stale_if_deps_are_stale() {
     let fs = InMemoryFileSystem::new();
-    let root = Path::new("/");
-    let artefact = Path::new("/artefact");
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
 
     // Cache is stale
     write_src(&fs, "/src/one.gleam", 1, TEST_SOURCE_2);
@@ -198,8 +198,8 @@ fn module_is_stale_if_deps_are_stale() {
 #[test]
 fn invalid_module_name() {
     let fs = InMemoryFileSystem::new();
-    let root = Path::new("/");
-    let artefact = Path::new("/artefact");
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
 
     // Cache is stale
     write_src(&fs, "/src/One.gleam", 1, TEST_SOURCE_2);
@@ -210,7 +210,7 @@ fn invalid_module_name() {
     assert_eq!(
         loaded.warnings,
         vec![Warning::InvalidSource {
-            path: PathBuf::from("/src/One.gleam"),
+            path: Utf8PathBuf::from("/src/One.gleam"),
         }],
     );
 }
@@ -218,8 +218,8 @@ fn invalid_module_name() {
 #[test]
 fn invalid_nested_module_name() {
     let fs = InMemoryFileSystem::new();
-    let root = Path::new("/");
-    let artefact = Path::new("/artefact");
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
 
     // Cache is stale
     write_src(&fs, "/src/1/one.gleam", 1, TEST_SOURCE_2);
@@ -230,7 +230,7 @@ fn invalid_nested_module_name() {
     assert_eq!(
         loaded.warnings,
         vec![Warning::InvalidSource {
-            path: PathBuf::from("/src/1/one.gleam"),
+            path: Utf8PathBuf::from("/src/1/one.gleam"),
         }],
     );
 }

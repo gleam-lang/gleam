@@ -8,17 +8,17 @@ use std::time::Duration;
 #[test]
 fn no_cache_present() {
     let name = "package".into();
-    let src = Path::new("/src");
-    let artefact = Path::new("/artefact");
+    let src = Utf8Path::new("/src");
+    let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
     let loader = make_loader(&warnings, &name, &fs, src, artefact);
 
-    fs.write(&Path::new("/src/main.gleam"), "const x = 1")
+    fs.write(&Utf8Path::new("/src/main.gleam"), "const x = 1")
         .unwrap();
 
     let result = loader
-        .load(Path::new("/src/main.gleam").to_path_buf())
+        .load(Utf8Path::new("/src/main.gleam").to_path_buf())
         .unwrap();
 
     assert!(result.is_new());
@@ -27,8 +27,8 @@ fn no_cache_present() {
 #[test]
 fn cache_present_and_fresh() {
     let name = "package".into();
-    let src = Path::new("/src");
-    let artefact = Path::new("/artefact");
+    let src = Utf8Path::new("/src");
+    let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
     let loader = make_loader(&warnings, &name, &fs, src, artefact);
@@ -38,7 +38,7 @@ fn cache_present_and_fresh() {
     write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
 
     let result = loader
-        .load(Path::new("/src/main.gleam").to_path_buf())
+        .load(Utf8Path::new("/src/main.gleam").to_path_buf())
         .unwrap();
 
     assert!(result.is_cached());
@@ -47,8 +47,8 @@ fn cache_present_and_fresh() {
 #[test]
 fn cache_present_and_stale() {
     let name = "package".into();
-    let src = Path::new("/src");
-    let artefact = Path::new("/artefact");
+    let src = Utf8Path::new("/src");
+    let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
     let loader = make_loader(&warnings, &name, &fs, src, artefact);
@@ -58,7 +58,7 @@ fn cache_present_and_stale() {
     write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
 
     let result = loader
-        .load(Path::new("/src/main.gleam").to_path_buf())
+        .load(Utf8Path::new("/src/main.gleam").to_path_buf())
         .unwrap();
 
     assert!(result.is_new());
@@ -67,8 +67,8 @@ fn cache_present_and_stale() {
 #[test]
 fn cache_present_and_stale_but_source_is_the_same() {
     let name = "package".into();
-    let src = Path::new("/src");
-    let artefact = Path::new("/artefact");
+    let src = Utf8Path::new("/src");
+    let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
     let loader = make_loader(&warnings, &name, &fs, src, artefact);
@@ -78,7 +78,7 @@ fn cache_present_and_stale_but_source_is_the_same() {
     write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
 
     let result = loader
-        .load(Path::new("/src/main.gleam").to_path_buf())
+        .load(Utf8Path::new("/src/main.gleam").to_path_buf())
         .unwrap();
 
     assert!(result.is_cached());
@@ -87,8 +87,8 @@ fn cache_present_and_stale_but_source_is_the_same() {
 #[test]
 fn cache_present_without_codegen_when_required() {
     let name = "package".into();
-    let src = Path::new("/src");
-    let artefact = Path::new("/artefact");
+    let src = Utf8Path::new("/src");
+    let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
     let mut loader = make_loader(&warnings, &name, &fs, src, artefact);
@@ -99,7 +99,7 @@ fn cache_present_without_codegen_when_required() {
     write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
 
     let result = loader
-        .load(Path::new("/src/main.gleam").to_path_buf())
+        .load(Utf8Path::new("/src/main.gleam").to_path_buf())
         .unwrap();
 
     assert!(result.is_new());
@@ -108,8 +108,8 @@ fn cache_present_without_codegen_when_required() {
 #[test]
 fn cache_present_with_codegen_when_required() {
     let name = "package".into();
-    let src = Path::new("/src");
-    let artefact = Path::new("/artefact");
+    let src = Utf8Path::new("/src");
+    let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
     let mut loader = make_loader(&warnings, &name, &fs, src, artefact);
@@ -120,7 +120,7 @@ fn cache_present_with_codegen_when_required() {
     write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, true);
 
     let result = loader
-        .load(Path::new("/src/main.gleam").to_path_buf())
+        .load(Utf8Path::new("/src/main.gleam").to_path_buf())
         .unwrap();
 
     assert!(result.is_cached());
@@ -129,8 +129,8 @@ fn cache_present_with_codegen_when_required() {
 #[test]
 fn cache_present_without_codegen_when_not_required() {
     let name = "package".into();
-    let src = Path::new("/src");
-    let artefact = Path::new("/artefact");
+    let src = Utf8Path::new("/src");
+    let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
     let mut loader = make_loader(&warnings, &name, &fs, src, artefact);
@@ -141,7 +141,7 @@ fn cache_present_without_codegen_when_not_required() {
     write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
 
     let result = loader
-        .load(Path::new("/src/main.gleam").to_path_buf())
+        .load(Utf8Path::new("/src/main.gleam").to_path_buf())
         .unwrap();
 
     assert!(result.is_cached());
@@ -163,12 +163,12 @@ fn write_cache(
         dependencies: vec![],
         fingerprint: SourceFingerprint::new(source),
     };
-    let path = Path::new(path);
+    let path = Utf8Path::new(path);
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
 }
 
 fn write_src(fs: &InMemoryFileSystem, source: &str, path: &str, seconds: u64) {
-    let path = Path::new(path);
+    let path = Utf8Path::new(path);
     fs.write(&path, source).unwrap();
     fs.set_modification_time(&path, SystemTime::UNIX_EPOCH + Duration::from_secs(seconds));
 }
@@ -177,8 +177,8 @@ fn make_loader<'a>(
     warnings: &'a WarningEmitter,
     package_name: &'a SmolStr,
     fs: &InMemoryFileSystem,
-    src: &'a Path,
-    artefact: &'a Path,
+    src: &'a Utf8Path,
+    artefact: &'a Utf8Path,
 ) -> ModuleLoader<'a, InMemoryFileSystem> {
     ModuleLoader {
         warnings,

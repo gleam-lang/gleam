@@ -5,7 +5,8 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
 };
-use std::path::{Component, Path};
+
+use camino::{Utf8Component, Utf8Path};
 
 pub struct SourceLinker {
     line_numbers: LineNumbers,
@@ -69,15 +70,11 @@ impl SourceLinker {
     }
 }
 
-fn to_url_path(path: &Path) -> Option<String> {
+fn to_url_path(path: &Utf8Path) -> Option<String> {
     let mut buf = String::new();
     for c in path.components() {
-        if let Component::Normal(s) = c {
-            if let Some(s) = s.to_str() {
-                buf.push_str(s);
-            } else {
-                return None;
-            }
+        if let Utf8Component::Normal(s) = c {
+            buf.push_str(s);
         }
         buf.push('/');
     }

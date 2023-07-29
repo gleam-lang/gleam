@@ -1,7 +1,4 @@
-use std::{
-    path::{Path, PathBuf},
-    time::SystemTime,
-};
+use std::time::SystemTime;
 
 use debug_ignore::DebugIgnore;
 
@@ -12,6 +9,8 @@ use crate::{
     },
     Result,
 };
+
+use camino::{Utf8Path, Utf8PathBuf};
 
 // A proxy intended for `LanguageServer` to use when files are modified in
 // memory but not yet saved to disc by the client.
@@ -42,14 +41,14 @@ where
         &self.io
     }
 
-    pub fn write_mem_cache(&mut self, path: &Path, content: &str) -> Result<()> {
+    pub fn write_mem_cache(&mut self, path: &Utf8Path, content: &str) -> Result<()> {
         let write_result = self.edit_cache.write(path, content);
         self.edit_cache
             .try_set_modification_time(path, SystemTime::now())?;
         write_result
     }
 
-    pub fn delete_mem_cache(&self, path: &Path) -> Result<()> {
+    pub fn delete_mem_cache(&self, path: &Utf8Path) -> Result<()> {
         self.edit_cache.delete(path)
     }
 }
@@ -59,39 +58,39 @@ impl<IO> FileSystemWriter for FileSystemProxy<IO>
 where
     IO: FileSystemWriter,
 {
-    fn mkdir(&self, path: &Path) -> Result<()> {
+    fn mkdir(&self, path: &Utf8Path) -> Result<()> {
         self.io.mkdir(path)
     }
 
-    fn write(&self, path: &Path, content: &str) -> Result<()> {
+    fn write(&self, path: &Utf8Path, content: &str) -> Result<()> {
         self.io.write(path, content)
     }
 
-    fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<()> {
+    fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<()> {
         self.io.write_bytes(path, content)
     }
 
-    fn delete(&self, path: &Path) -> Result<()> {
+    fn delete(&self, path: &Utf8Path) -> Result<()> {
         self.io.delete(path)
     }
 
-    fn copy(&self, from: &Path, to: &Path) -> Result<()> {
+    fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
         self.io.copy(from, to)
     }
 
-    fn copy_dir(&self, from: &Path, to: &Path) -> Result<()> {
+    fn copy_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
         self.io.copy_dir(from, to)
     }
 
-    fn hardlink(&self, from: &Path, to: &Path) -> Result<()> {
+    fn hardlink(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
         self.io.hardlink(from, to)
     }
 
-    fn symlink_dir(&self, from: &Path, to: &Path) -> Result<()> {
+    fn symlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
         self.io.symlink_dir(from, to)
     }
 
-    fn delete_file(&self, path: &Path) -> Result<()> {
+    fn delete_file(&self, path: &Utf8Path) -> Result<()> {
         self.io.delete_file(path)
     }
 }
@@ -100,54 +99,54 @@ impl<IO> FileSystemReader for FileSystemProxy<IO>
 where
     IO: FileSystemReader,
 {
-    fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
+    fn gleam_source_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
         self.io.gleam_source_files(dir)
     }
 
-    fn gleam_cache_files(&self, dir: &Path) -> Vec<PathBuf> {
+    fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
         self.io.gleam_cache_files(dir)
     }
 
-    fn read_dir(&self, path: &Path) -> Result<ReadDir> {
+    fn read_dir(&self, path: &Utf8Path) -> Result<ReadDir> {
         self.io.read_dir(path)
     }
 
-    fn read(&self, path: &Path) -> Result<String> {
+    fn read(&self, path: &Utf8Path) -> Result<String> {
         match self.edit_cache.read(path) {
             result @ Ok(_) => result,
             Err(_) => self.io.read(path),
         }
     }
 
-    fn read_bytes(&self, path: &Path) -> Result<Vec<u8>> {
+    fn read_bytes(&self, path: &Utf8Path) -> Result<Vec<u8>> {
         match self.edit_cache.read_bytes(path) {
             result @ Ok(_) => result,
             Err(_) => self.io.read_bytes(path),
         }
     }
 
-    fn reader(&self, path: &Path) -> Result<WrappedReader> {
+    fn reader(&self, path: &Utf8Path) -> Result<WrappedReader> {
         self.io.reader(path)
     }
 
     // Cache overides existence of file
-    fn is_file(&self, path: &Path) -> bool {
+    fn is_file(&self, path: &Utf8Path) -> bool {
         self.edit_cache.is_file(path) || self.io.is_file(path)
     }
 
     // Cache overides existence of directory
-    fn is_directory(&self, path: &Path) -> bool {
+    fn is_directory(&self, path: &Utf8Path) -> bool {
         self.edit_cache.is_directory(path) || self.io.is_directory(path)
     }
 
-    fn modification_time(&self, path: &Path) -> Result<SystemTime> {
+    fn modification_time(&self, path: &Utf8Path) -> Result<SystemTime> {
         match self.edit_cache.modification_time(path) {
             result @ Ok(_) => result,
             Err(_) => self.io.modification_time(path),
         }
     }
 
-    fn canonicalise(&self, path: &Path) -> Result<PathBuf, crate::Error> {
+    fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, crate::Error> {
         self.io.canonicalise(path)
     }
 }
@@ -161,7 +160,7 @@ where
         _program: &str,
         _args: &[String],
         _env: &[(&str, String)],
-        _cwd: Option<&Path>,
+        _cwd: Option<&Utf8Path>,
         _stdio: Stdio,
     ) -> Result<i32> {
         panic!("The language server is not permitted to create subprocesses")

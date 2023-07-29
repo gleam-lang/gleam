@@ -1,25 +1,24 @@
 use crate::{diagnostic::Diagnostic, Error, Warning};
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use std::collections::{HashMap, HashSet};
+
+use camino::Utf8PathBuf;
 
 use super::engine::Compilation;
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Feedback {
-    pub diagnostics: HashMap<PathBuf, Vec<Diagnostic>>,
+    pub diagnostics: HashMap<Utf8PathBuf, Vec<Diagnostic>>,
     pub messages: Vec<Diagnostic>,
 }
 
 impl Feedback {
     /// Set the diagnostics for a file to an empty vector. This will overwrite
     /// any existing diagnostics on the client.
-    pub fn unset_existing_diagnostics(&mut self, path: PathBuf) {
+    pub fn unset_existing_diagnostics(&mut self, path: Utf8PathBuf) {
         _ = self.diagnostics.insert(path, vec![]);
     }
 
-    pub fn append_diagnostic(&mut self, path: PathBuf, diagnostic: Diagnostic) {
+    pub fn append_diagnostic(&mut self, path: Utf8PathBuf, diagnostic: Diagnostic) {
         self.diagnostics
             .entry(path)
             .or_insert_with(Vec::new)
@@ -44,8 +43,8 @@ impl Feedback {
 ///
 #[derive(Debug, Default)]
 pub struct FeedbackBookKeeper {
-    files_with_warnings: HashSet<PathBuf>,
-    files_with_errors: HashSet<PathBuf>,
+    files_with_warnings: HashSet<Utf8PathBuf>,
+    files_with_errors: HashSet<Utf8PathBuf>,
 }
 
 impl FeedbackBookKeeper {
@@ -137,7 +136,6 @@ impl FeedbackBookKeeper {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
 
     use super::*;
     use crate::{
@@ -149,9 +147,9 @@ mod tests {
     #[test]
     fn feedback() {
         let mut book_keeper = FeedbackBookKeeper::default();
-        let file1 = PathBuf::from("src/file1.gleam");
-        let file2 = PathBuf::from("src/file2.gleam");
-        let file3 = PathBuf::from("src/file3.gleam");
+        let file1 = Utf8PathBuf::from("src/file1.gleam");
+        let file2 = Utf8PathBuf::from("src/file2.gleam");
+        let file3 = Utf8PathBuf::from("src/file3.gleam");
 
         let warning1 = Warning::Type {
             path: file1.clone(),
@@ -212,7 +210,7 @@ mod tests {
         // location.
 
         let mut book_keeper = FeedbackBookKeeper::default();
-        let file1 = PathBuf::from("src/file1.gleam");
+        let file1 = Utf8PathBuf::from("src/file1.gleam");
 
         let warning1 = Warning::Type {
             path: file1.clone(),
@@ -245,8 +243,8 @@ mod tests {
         // location.
 
         let mut book_keeper = FeedbackBookKeeper::default();
-        let file1 = PathBuf::from("src/file1.gleam");
-        let file3 = PathBuf::from("src/file2.gleam");
+        let file1 = Utf8PathBuf::from("src/file1.gleam");
+        let file3 = Utf8PathBuf::from("src/file2.gleam");
 
         let warning1 = Warning::Type {
             path: file1.clone(),
@@ -312,8 +310,8 @@ mod tests {
         // when a successful compilation occurs.
 
         let mut book_keeper = FeedbackBookKeeper::default();
-        let file1 = PathBuf::from("src/file1.gleam");
-        let file2 = PathBuf::from("src/file2.gleam");
+        let file1 = Utf8PathBuf::from("src/file1.gleam");
+        let file2 = Utf8PathBuf::from("src/file2.gleam");
 
         let error = Error::Parse {
             path: file1.clone(),
@@ -353,10 +351,10 @@ mod tests {
     #[test]
     fn second_failure_unsets_previous_error() {
         let mut book_keeper = FeedbackBookKeeper::default();
-        let file1 = PathBuf::from("src/file1.gleam");
-        let file2 = PathBuf::from("src/file2.gleam");
+        let file1 = Utf8PathBuf::from("src/file1.gleam");
+        let file2 = Utf8PathBuf::from("src/file2.gleam");
 
-        let error = |file: &Path| Error::Parse {
+        let error = |file: &camino::Utf8Path| Error::Parse {
             path: file.to_path_buf(),
             src: "blah".into(),
             error: ParseError {
@@ -397,7 +395,7 @@ mod tests {
     #[test]
     fn successful_non_compilation_does_not_remove_error_diagnostic() {
         let mut book_keeper = FeedbackBookKeeper::default();
-        let file1 = PathBuf::from("src/file1.gleam");
+        let file1 = Utf8PathBuf::from("src/file1.gleam");
 
         let error = Error::Parse {
             path: file1.clone(),
