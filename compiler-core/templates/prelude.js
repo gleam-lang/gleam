@@ -116,6 +116,9 @@ export class BitString {
   }
 
   constructor(buffer) {
+    if (buffer instanceof ArrayBuffer) {
+      buffer = new Uint8Array(buffer);
+    }
     this.buffer = buffer;
   }
 
