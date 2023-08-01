@@ -31,7 +31,18 @@ fn print<'a>(
 
         Pattern::Discard { .. } => "_".to_doc(),
 
-        Pattern::VarUsage { name, .. } => env.local_var_name(name),
+        Pattern::VarUsage { name, constructor, .. } => {
+            let v = &constructor.as_ref().unwrap().variant;
+            match v {
+                ValueConstructorVariant::ModuleConstant{literal, ..} => {
+                    match literal {
+                        Constant::Int { value, .. } => int(&value),
+                        _ => env.local_var_name(name),
+                    }
+                },
+                _ => env.local_var_name(name)
+            }
+        }
 
         Pattern::Var { name, .. } if define_variables => {
             vars.push(name);
