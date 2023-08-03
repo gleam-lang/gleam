@@ -91,7 +91,7 @@ impl Manifest {
                     buffer.push('"');
                 }
                 ManifestPackageSource::Local { path } => {
-                    buffer.push_str(r#", source = "local", path = ""#);
+                    buffer.push_str(r#", source = "local", path = "../"#);
                     let relative_path = pathdiff::diff_utf8_paths(path, &curr_dir);
                     // We can unwrap relative_path because we know the curr_dir being passed is an absolute path
                     buffer.push_str(relative_path.expect("compiler bug").as_str());
@@ -206,7 +206,7 @@ fn manifest_toml_format() {
 
 packages = [
   { name = "aaa", version = "0.4.0", build_tools = ["rebar3", "make"], requirements = ["zzz", "gleam_stdlib"], otp_app = "aaa_app", source = "hex", outer_checksum = "0316" },
-  { name = "awsome_local1", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "local", path = "../path/to/package" },
+  { name = "awsome_local1", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "local", path = "../../path/to/package" },
   { name = "awsome_local2", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "git", repo = "https://github.com/gleam-lang/gleam.git", commit = "bd9fe02f72250e6a136967917bcb1bdccaffa3c8" },
   { name = "gleam_stdlib", version = "0.17.1", build_tools = ["gleam"], requirements = [], source = "hex", outer_checksum = "0116" },
   { name = "gleeunit", version = "0.4.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], source = "hex", outer_checksum = "032E" },
