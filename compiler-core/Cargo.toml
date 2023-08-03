@@ -80,6 +80,7 @@ lsp-types = "0.92"
 # Pubgrub dependency resolution algorithm
 pubgrub = "0.2"
 camino = { version = "1.1.6", features = ["serde1"] }
+pathdiff = { version = "0.2.1", features = ["camino"] }
 
 [build-dependencies]
 # Data (de)serialisation
