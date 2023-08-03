@@ -4,6 +4,8 @@
 
 - The highlight.js grammar included with generated HTML documentation has been
   updated for the latest syntax.
+- Packages are no longer precompiled to Erlang when publishing to Hex if the
+  package target is set to JavaScript.
 - Fixed a bug where mutually recursive functions could be incorrectly inferred
   as having an overly general type.
 
