@@ -108,7 +108,7 @@ impl Manifest {
         for (name, requirement) in requirements.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
             buffer.push_str(name);
             buffer.push_str(" = ");
-            buffer.push_str(&requirement.to_toml());
+            buffer.push_str(&requirement.to_toml(&curr_dir));
             buffer.push('\n');
         }
 
