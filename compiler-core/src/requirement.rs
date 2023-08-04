@@ -8,6 +8,7 @@ use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 use serde::Deserialize;
 use smol_str::SmolStr;
+use tracing::debug;
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(untagged, remote = "Self")]
@@ -32,14 +33,13 @@ impl Requirement {
         Requirement::Git { git: url.into() }
     }
 
-    pub fn to_toml(&self, curr_dir: &Utf8Path) -> String {
+    pub fn to_toml(&self, path_resolver: impl FnOnce(&Utf8Path) -> Utf8PathBuf) -> String {
         match self {
             Requirement::Hex { version: range } => {
                 format!(r#"{{ version = "{}" }}"#, range)
             }
-            Requirement::Path { path } => match pathdiff::diff_utf8_paths(path, &curr_dir) {
-                Some(rel_path) => format!(r#"{{ path = "../{}" }}"#, rel_path.as_str()),
-                None => format!(r#"{{ path = "{}" }}"#, path.as_str()),
+            Requirement::Path { path } => {
+                format!(r#"{{ path = "{}" }}"#, path_resolver(path).as_str())
             },
             Requirement::Git { git: url } => format!(r#"{{ git = "{}" }}"#, url),
         }

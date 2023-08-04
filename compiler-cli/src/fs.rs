@@ -12,6 +12,7 @@ use gleam_core::{
     Result, Warning,
 };
 use lazy_static::lazy_static;
+use tracing_subscriber::fmt::format;
 use std::{
     ffi::OsStr,
     fmt::Debug,
@@ -30,6 +31,14 @@ mod tests;
 pub fn get_current_directory() -> Result<Utf8PathBuf, &'static str> {
     let curr_dir = std::env::current_dir().map_err(|_| "Failed to get current directory")?;
     Utf8PathBuf::from_path_buf(curr_dir).map_err(|_| "Non Utf8 Path")
+}
+
+pub fn path_resolver(curr_dir: Utf8PathBuf) -> impl FnOnce(&Utf8Path) -> Utf8PathBuf + Clone {
+    |path: &Utf8Path| {
+        pathdiff::diff_utf8_paths(path, curr_dir).map(|p| {
+            Utf8PathBuf::from(format!("../{}", p.as_str()))
+        }).unwrap_or(path.into())
+    }
 }
 
 /// A `FileWriter` implementation that writes to the file system.

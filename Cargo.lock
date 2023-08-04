@@ -736,6 +736,7 @@ dependencies = [
  "lsp-server",
  "lsp-types",
  "opener",
+ "pathdiff",
  "pretty_assertions",
  "regex",
  "reqwest",
