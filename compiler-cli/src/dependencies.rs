@@ -27,7 +27,7 @@ use strum::IntoEnumIterator;
 use crate::{
     build_lock::BuildLock,
     cli,
-    fs::{self, get_current_directory, ProjectIO},
+    fs::{self, get_current_directory, path_resolver, ProjectIO},
     http::HttpClient,
 };
 
@@ -277,9 +277,10 @@ fn read_manifest_from_disc(paths: &ProjectPaths) -> Result<Manifest> {
 
 fn write_manifest_to_disc(paths: &ProjectPaths, manifest: &Manifest) -> Result<()> {
     let path = paths.manifest();
+    let curr_dir = get_current_directory().expect("Could not get the current directory");
     fs::write(
         &path,
-        &manifest.to_toml(get_current_directory().expect("Could not get the current directory")),
+        &manifest.to_toml(path_resolver(get_current_directory().expect("Could not get current directory"))),
     )
 }
 
