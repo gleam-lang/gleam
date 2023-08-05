@@ -35,10 +35,7 @@ fn print<'a>(
             let v = &constructor.as_ref().unwrap().variant;
             match v {
                 ValueConstructorVariant::ModuleConstant{literal, ..} => {
-                    match literal {
-                        Constant::Int { value, .. } => int(&value),
-                        _ => env.local_var_name(name),
-                    }
+                    const_inline(literal, env)
                 },
                 _ => env.local_var_name(name)
             }
