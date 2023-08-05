@@ -2,13 +2,13 @@ use std::fmt;
 use std::str::FromStr;
 
 use crate::error::Result;
+use crate::io::MakeRelative;
 use camino::{Utf8Path, Utf8PathBuf};
 use hexpm::version::Range;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 use serde::Deserialize;
 use smol_str::SmolStr;
-use tracing::debug;
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(untagged, remote = "Self")]
@@ -33,14 +33,14 @@ impl Requirement {
         Requirement::Git { git: url.into() }
     }
 
-    pub fn to_toml(&self, path_resolver: impl FnOnce(&Utf8Path) -> Utf8PathBuf) -> String {
+    pub fn to_toml(&self, path_resolver: impl MakeRelative) -> String {
         match self {
             Requirement::Hex { version: range } => {
                 format!(r#"{{ version = "{}" }}"#, range)
             }
             Requirement::Path { path } => {
-                format!(r#"{{ path = "{}" }}"#, path_resolver(path).as_str())
-            },
+                format!(r#"{{ path = "{}" }}"#, path_resolver.make_relative(path).as_str())
+            }
             Requirement::Git { git: url } => format!(r#"{{ git = "{}" }}"#, url),
         }
     }

@@ -3,7 +3,7 @@ use gleam_core::{
     error::{Error, FileIoAction, FileKind},
     io::{
         CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter, OutputFile,
-        ReadDir, Stdio, WrappedReader,
+        ReadDir, Stdio, WrappedReader, MakeRelative,
     },
     language_server::{DownloadDependencies, Locker, MakeLocker},
     manifest::Manifest,
@@ -12,7 +12,6 @@ use gleam_core::{
     Result, Warning,
 };
 use lazy_static::lazy_static;
-use tracing_subscriber::fmt::format;
 use std::{
     ffi::OsStr,
     fmt::Debug,
@@ -33,11 +32,28 @@ pub fn get_current_directory() -> Result<Utf8PathBuf, &'static str> {
     Utf8PathBuf::from_path_buf(curr_dir).map_err(|_| "Non Utf8 Path")
 }
 
-pub fn path_resolver(curr_dir: Utf8PathBuf) -> impl FnOnce(&Utf8Path) -> Utf8PathBuf + Clone {
-    |path: &Utf8Path| {
-        pathdiff::diff_utf8_paths(path, curr_dir).map(|p| {
-            Utf8PathBuf::from(format!("../{}", p.as_str()))
-        }).unwrap_or(path.into())
+#[derive(Debug, Clone)]
+pub struct MakeRelativeToCurrentDir {
+    curr_dir: Utf8PathBuf
+}
+
+impl MakeRelativeToCurrentDir {
+    pub fn new() -> Self {
+        let curr_dir = get_current_directory().expect("Could not get current directory");
+        Self {
+            curr_dir
+        }
+    }
+}
+
+impl MakeRelative for MakeRelativeToCurrentDir {
+    fn make_relative(&self, path: &Utf8Path) -> Utf8PathBuf {
+        match path.is_absolute() {
+            true => pathdiff::diff_utf8_paths(path, &self.curr_dir)
+                .expect("Should not fail on two absolute paths"),
+    
+            false => path.into(),
+        }
     }
 }
 

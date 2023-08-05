@@ -9,6 +9,13 @@ use tar::{Archive, Entry};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
+pub trait MakeRelative: Clone {
+
+    /// Takes a path and makes it a relative path from some base
+    /// directory.
+    fn make_relative(&self, path: &Utf8Path) -> Utf8PathBuf;
+}
+
 pub trait Reader: std::io::Read {
     /// A wrapper around `std::io::Read` that has Gleam's error handling.
     fn read_bytes(&mut self, buffer: &mut [u8]) -> Result<usize> {
