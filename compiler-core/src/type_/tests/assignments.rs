@@ -134,6 +134,11 @@ fn let_24() {
     assert_infer!("let assert Ok(..) = Ok(10)", "Result(Int, a)");
 }
 
+#[test]
+fn let_25() {
+    assert_infer!("let \"hello\" as a <> _ = \"\" a", "String");
+}
+
 // // https://github.com/gleam-lang/gleam/issues/1991
 // #[test]
 // fn block() {
