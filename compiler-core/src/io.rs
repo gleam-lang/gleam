@@ -10,9 +10,10 @@ use tar::{Archive, Entry};
 use camino::{Utf8Path, Utf8PathBuf};
 
 pub trait MakeRelative: Clone {
-
     /// Takes a path and makes it a relative path from some base
     /// directory.
+    /// We do it this way so the base path (probably the current directory)
+    /// can be determined outside compiler-core in case it requires side effects.
     fn make_relative(&self, path: &Utf8Path) -> Utf8PathBuf;
 }
 

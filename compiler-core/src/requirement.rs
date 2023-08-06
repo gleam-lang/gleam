@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use crate::error::Result;
 use crate::io::MakeRelative;
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8PathBuf;
 use hexpm::version::Range;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
@@ -39,7 +39,10 @@ impl Requirement {
                 format!(r#"{{ version = "{}" }}"#, range)
             }
             Requirement::Path { path } => {
-                format!(r#"{{ path = "{}" }}"#, path_resolver.make_relative(path).as_str())
+                format!(
+                    r#"{{ path = "{}" }}"#,
+                    path_resolver.make_relative(path).as_str()
+                )
             }
             Requirement::Git { git: url } => format!(r#"{{ git = "{}" }}"#, url),
         }

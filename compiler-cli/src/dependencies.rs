@@ -27,7 +27,7 @@ use strum::IntoEnumIterator;
 use crate::{
     build_lock::BuildLock,
     cli,
-    fs::{self, ProjectIO, MakeRelativeToCurrentDir},
+    fs::{self, MakeRelativeToCurrentDir, ProjectIO},
     http::HttpClient,
 };
 
