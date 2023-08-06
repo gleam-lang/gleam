@@ -82,7 +82,9 @@ smol_str = "0.1"
 same-file = "1.0.6"
 # Open generated docs in browser
 opener = "0.6"
+# Drop in replacement for std::path but with only utf-8
 camino = { version = "1.1.6", features = ["serde1"] }
+# Used for converting absolute path to a relative path
 pathdiff = { version = "0.2.1", features = ["camino"] }
 
 [dev-dependencies]
