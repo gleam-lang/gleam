@@ -567,3 +567,19 @@ pub type Box {
 fn dynamic() {
     assert_erl!("pub external type Dynamic")
 }
+
+// https://github.com/gleam-lang/gleam/issues/2166
+#[test]
+fn inline_const_pattern_option() {
+    assert_erl!(
+        "pub fn main() {
+            let fifteen = 15
+            let x = <<5:size(sixteen)>>
+            case x {
+              <<5:size(sixteen)>> -> <<5:size(sixteen)>>
+              <<6:size(fifteen)>> -> <<5:size(fifteen)>>
+            }
+          }
+          
+          pub const sixteen = 16")
+}
