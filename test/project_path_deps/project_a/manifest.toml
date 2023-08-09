@@ -2,11 +2,11 @@
 # You typically do not need to edit this file
 
 packages = [
-  { name = "gleam_stdlib", version = "0.29.2", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "B296BF9B8AA384A6B64CD49F333016A9DCA6AC73A95400D17F2271E072EFF986" },
-  { name = "gleeunit", version = "0.10.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "ECEA2DE4BE6528D36AFE74F42A21CDF99966EC36D7F25DEB34D47DD0F7977BAF" },
-  { name = "project_b", version = "0.1.0", build_tools = ["gleam"], requirements = ["project_d"], source = "local", path = "../project_c/../project_b" },
+  { name = "gleam_stdlib", version = "0.30.1", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "704258528887F95075FFED7AAE1CCF836A9B88E3AADA2F69F9DA15815F94A4F9" },
+  { name = "gleeunit", version = "0.11.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "1397E5C4AC4108769EE979939AC39BF7870659C5AFB714630DEEEE16B8272AD5" },
+  { name = "project_b", version = "0.1.0", build_tools = ["gleam"], requirements = ["project_d"], source = "local", path = "../project_b" },
   { name = "project_c", version = "0.1.0", build_tools = ["gleam"], requirements = ["project_b"], source = "local", path = "../project_c" },
-  { name = "project_d", version = "1.0.0", build_tools = ["gleam"], requirements = [], source = "local", path = "../project_c/../project_b/../project_d" },
+  { name = "project_d", version = "1.0.0", build_tools = ["gleam"], requirements = [], source = "local", path = "../project_d" },
 ]
 
 [requirements]

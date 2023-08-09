@@ -213,6 +213,12 @@ mod tests {
     use super::*;
     use camino::Utf8Path;
 
+    #[cfg(windows)]
+    const HOME: &'static str = "C:\\home\\louis\\packages\\some_folder";
+
+    #[cfg(not(windows))]
+    const HOME: &'static str = "/home/louis/packages/some_folder";
+
     #[derive(Debug, Clone)]
     pub struct TestMakeRelative {
         curr_dir: Utf8PathBuf,
@@ -314,7 +320,7 @@ mod tests {
         };
 
         let buffer = manifest.to_toml(TestMakeRelative {
-            curr_dir: "/home/louis/packages/some_folder".into(),
+            curr_dir: HOME.into(),
         });
         assert_eq!(
             buffer,
