@@ -216,8 +216,14 @@ mod tests {
     #[cfg(windows)]
     const HOME: &'static str = "C:\\home\\louis\\packages\\some_folder";
 
+    #[cfg(windows)]
+    const PACKAGE: &'static str = "C:\\home\\louis\\packages\\path\\to\\package";
+
     #[cfg(not(windows))]
     const HOME: &'static str = "/home/louis/packages/some_folder";
+
+    #[cfg(not(windows))]
+    const PACKAGE: &'static str = "/home/louis/packages/path/to/package";
 
     #[derive(Debug, Clone)]
     pub struct TestMakeRelative {
@@ -303,7 +309,7 @@ mod tests {
                     otp_app: None,
                     requirements: vec![],
                     source: ManifestPackageSource::Local {
-                        path: "/home/louis/packages/path/to/package".into(),
+                        path: PACKAGE.into(),
                     },
                 },
                 ManifestPackage {
