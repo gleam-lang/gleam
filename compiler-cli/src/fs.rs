@@ -27,6 +27,10 @@ use crate::{dependencies::UseManifest, lsp::LspLocker};
 #[cfg(test)]
 mod tests;
 
+/// Return the current directory as a UTF-8 Path
+/// # Panics
+/// This function will panic if it fails to determine the current directory,
+/// or if your current directory is not a UTF8 Path.
 pub fn get_current_directory() -> Result<Utf8PathBuf, &'static str> {
     let curr_dir = std::env::current_dir().map_err(|_| "Failed to get current directory")?;
     Utf8PathBuf::from_path_buf(curr_dir).map_err(|_| "Non Utf8 Path")
