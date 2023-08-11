@@ -238,9 +238,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         variables: self.environment.local_value_names(),
                     })?;
                 self.environment.increment_usage(&name);
-                let typ = self
-                    .environment
-                    .instantiate(vc.type_.clone(), &mut hashmap![], self.hydrator);
+                let typ =
+                    self.environment
+                        .instantiate(vc.type_.clone(), &mut hashmap![], self.hydrator);
                 unify(int(), typ.clone()).map_err(|e| convert_unify_error(e, location))?;
 
                 Ok(Pattern::VarUsage {

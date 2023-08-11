@@ -31,13 +31,15 @@ fn print<'a>(
 
         Pattern::Discard { .. } => "_".to_doc(),
 
-        Pattern::VarUsage { name, constructor, .. } => {
+        Pattern::VarUsage {
+            name, constructor, ..
+        } => {
             let v = &constructor.as_ref().unwrap().variant;
             match v {
-                ValueConstructorVariant::ModuleConstant{literal, ..} => {
+                ValueConstructorVariant::ModuleConstant { literal, .. } => {
                     const_inline(literal, env)
-                },
-                _ => env.local_var_name(name)
+                }
+                _ => env.local_var_name(name),
             }
         }
 
