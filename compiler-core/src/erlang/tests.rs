@@ -581,5 +581,6 @@ fn inline_const_pattern_option() {
             }
           }
           
-          pub const sixteen = 16")
+          pub const sixteen = 16"
+    )
 }
