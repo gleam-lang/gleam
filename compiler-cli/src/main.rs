@@ -103,7 +103,7 @@ enum Command {
         warnings_as_errors: bool,
 
         /// The platform to target
-        #[clap(long, ignore_case = true)]
+        #[clap(short, long, ignore_case = true, possible_values = Target::VARIANTS)]
         target: Option<Target>,
     },
 
@@ -163,7 +163,7 @@ enum Command {
         #[clap(default_value = ".")]
         files: Vec<String>,
 
-        #[clap(short, long)]
+        #[clap(short, long, ignore_case = true, possible_values = Target::VARIANTS)]
         /// The target to use for external functions when it could not be inferred.
         target: Option<Target>,
     },
