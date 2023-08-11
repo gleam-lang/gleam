@@ -83,6 +83,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Filip Figiel](https://github.com/megapctr)
  - [Florian Kraft](https://github.com/floriank)
  - [fly.io](https://github.com/superfly)
+ - [Giacomo Cavalieri](https://github.com/giacomocavalieri)
  - [Graeme Coupar](https://github.com/obmarg)
  - [Guilherme de Maio](https://github.com/nirev)
  - [Gustavo Villa](https://github.com/gfvcastro)
