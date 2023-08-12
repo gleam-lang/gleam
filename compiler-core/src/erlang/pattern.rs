@@ -37,7 +37,7 @@ fn print<'a>(
             let v = &constructor
                 .as_ref()
                 .expect(
-                    "Expected some constructor since this is a variable but instead none was found",
+                    "Expected Some constructor since this is a variable, instead None was found",
                 )
                 .variant;
             match v {
