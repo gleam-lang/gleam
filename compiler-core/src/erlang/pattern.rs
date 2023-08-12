@@ -36,9 +36,7 @@ fn print<'a>(
         } => {
             let v = &constructor
                 .as_ref()
-                .expect(
-                    "Expected Some constructor since this is a variable, instead None was found",
-                )
+                .expect("Constructor not found for variable usage")
                 .variant;
             match v {
                 ValueConstructorVariant::ModuleConstant { literal, .. } => {
