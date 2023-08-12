@@ -34,7 +34,12 @@ fn print<'a>(
         Pattern::VarUsage {
             name, constructor, ..
         } => {
-            let v = &constructor.as_ref().unwrap().variant;
+            let v = &constructor
+                .as_ref()
+                .expect(
+                    "Expected some constructor since this is a variable but instead none was found",
+                )
+                .variant;
             match v {
                 ValueConstructorVariant::ModuleConstant { literal, .. } => {
                     const_inline(literal, env)
