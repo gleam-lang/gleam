@@ -287,6 +287,7 @@ pub fn get_package_response(
     match parts.status {
         StatusCode::OK => (),
         StatusCode::FORBIDDEN => return Err(ApiError::NotFound), // Oddly this is the not-found code
+        StatusCode::NOT_FOUND => return Err(ApiError::NotFound),
         status => {
             return Err(ApiError::unexpected_response(status, body));
         }
@@ -342,6 +343,7 @@ pub fn get_package_tarball_response(
     match parts.status {
         StatusCode::OK => (),
         StatusCode::FORBIDDEN => return Err(ApiError::NotFound),
+        StatusCode::NOT_FOUND => return Err(ApiError::NotFound),
         status => {
             return Err(ApiError::unexpected_response(status, body));
         }
