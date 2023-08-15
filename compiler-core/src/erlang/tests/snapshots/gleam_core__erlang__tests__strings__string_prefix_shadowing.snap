@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" as x <> name -> x\n    _ -> \"Unknown\"\n  }\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([go/1]).
+
+-spec go(binary()) -> binary().
+go(X) ->
+    case X of
+        <<"Hello, "/utf8, Name/binary>> ->
+            <<"Hello, "/utf8>>;
+
+        _ ->
+            <<"Unknown"/utf8>>
+    end.
+
