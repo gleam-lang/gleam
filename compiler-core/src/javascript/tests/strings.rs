@@ -115,3 +115,31 @@ pub fn go(x) {
 "#,
     );
 }
+
+#[test]
+fn string_prefix_assignment() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    "Hello, " as greeting <> name -> greeting
+    _ -> "Unknown"
+  }
+}
+"#,
+    )
+}
+
+#[test]
+fn string_prefix_shadowing() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    "Hello, " as x <> name -> x
+    _ -> "Unknown"
+  }
+}
+"#,
+    )
+}
