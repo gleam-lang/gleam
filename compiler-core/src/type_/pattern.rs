@@ -96,8 +96,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 let _ = self.initial_pattern_vars.insert(name.into());
                 // And now insert the variable for use in the code that comes
                 // after the pattern.
-                self.environment
-                    .insert_local_constant(name.into(), location, literal);
+                self.environment.insert_local_constant(name.into(), literal);
                 Ok(())
             }
 
@@ -568,6 +567,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         location: *location,
                     },
                     ValueConstructorVariant::LocalVariable { .. }
+                    | ValueConstructorVariant::LocalConstant { .. }
                     | ValueConstructorVariant::ModuleConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. } => {
                         panic!("Unexpected value constructor type for a constructor pattern.")

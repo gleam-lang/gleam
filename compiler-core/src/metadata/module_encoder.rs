@@ -175,6 +175,10 @@ impl<'a> ModuleEncoder<'a> {
                 panic!("Unexpected local variable value constructor in module interface",)
             }
 
+            ValueConstructorVariant::LocalConstant { .. } => {
+                panic!("Unexpected local constant value constructor in module interface",)
+            }
+
             ValueConstructorVariant::ModuleConstant {
                 literal,
                 location,
