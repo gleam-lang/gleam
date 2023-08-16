@@ -1007,7 +1007,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         return Err(Error::NonLocalClauseGuardVariable { location, name });
                     }
 
-                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                    ValueConstructorVariant::ModuleConstant { literal, .. }
+                    | ValueConstructorVariant::LocalConstant { literal } => {
                         return Ok(ClauseGuard::Constant(literal.clone()))
                     }
                 };
@@ -1350,6 +1351,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             variant @ (ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::LocalConstant { .. }
             | ValueConstructorVariant::Record { .. }) => {
                 variant.to_module_value_constructor(Arc::clone(&type_), &module_name, &label)
             }
@@ -1716,7 +1718,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
 
                     // TODO: remove this clone. Could use an rc instead
-                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                    ValueConstructorVariant::ModuleConstant { literal, .. }
+                    | ValueConstructorVariant::LocalConstant { literal } => {
                         return Ok(literal.clone())
                     }
                 };
@@ -1758,7 +1761,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
 
                     // TODO: remove this clone. Could be an rc instead
-                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                    ValueConstructorVariant::ModuleConstant { literal, .. }
+                    | ValueConstructorVariant::LocalConstant { literal } => {
                         return Ok(literal.clone())
                     }
                 };
@@ -1871,6 +1875,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
                 match constructor.variant {
                     ValueConstructorVariant::ModuleConstant { .. }
+                    | ValueConstructorVariant::LocalConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable { .. } => Ok(Constant::Var {
                         location,

@@ -177,20 +177,12 @@ impl<'a> Environment<'a> {
     }
 
     /// Insert a constant in the current scope
-    pub fn insert_local_constant(
-        &mut self,
-        name: SmolStr,
-        location: SrcSpan,
-        literal: Constant<Arc<Type>, SmolStr>,
-    ) {
+    pub fn insert_local_constant(&mut self, name: SmolStr, literal: Constant<Arc<Type>, SmolStr>) {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
                 public: false,
-                variant: ValueConstructorVariant::ModuleConstant {
-                    documentation: None,
-                    location,
-                    module: self.current_module.into(),
+                variant: ValueConstructorVariant::LocalConstant {
                     literal: literal.clone(),
                 },
                 type_: literal.type_(),

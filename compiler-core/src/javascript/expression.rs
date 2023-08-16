@@ -359,12 +359,34 @@ impl<'module> Generator<'module> {
         constructor: &'a ValueConstructor,
     ) -> Document<'a> {
         match &constructor.variant {
+            ValueConstructorVariant::LocalConstant { literal } => self.inlinable_constant(literal),
             ValueConstructorVariant::Record { arity, .. } => {
                 self.record_constructor(constructor.type_.clone(), None, name, *arity)
             }
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
             | ValueConstructorVariant::LocalVariable { .. } => self.local_var(name),
+        }
+    }
+
+    fn inlinable_constant<'a>(&mut self, value: &'a Constant<Arc<Type>, SmolStr>) -> Document<'a> {
+        match &value {
+            Constant::Int { value, .. }
+            | Constant::Float { value, .. }
+            | Constant::String { value, .. } => value.to_doc(),
+            Constant::Tuple { elements, .. } => todo!("What should go here?"),
+            Constant::List { elements, .. } => todo!("What should go here?"),
+            Constant::Record {
+                location,
+                module,
+                name,
+                args,
+                tag,
+                typ,
+                field_map,
+            } => todo!("What should go here?"),
+            Constant::BitString { segments, .. } => todo!("What should go here?"),
+            Constant::Var { name, .. } => self.local_var(name),
         }
     }
 

@@ -274,6 +274,11 @@ pub enum ValueConstructorVariant {
         literal: Constant<Arc<Type>, SmolStr>,
     },
 
+    /// A constant defined locally, for example when pattern matching on string literals
+    LocalConstant {
+        literal: Constant<Arc<Type>, SmolStr>,
+    },
+
     /// A function belonging to the module
     ModuleFn {
         name: SmolStr,
@@ -332,6 +337,12 @@ impl ValueConstructorVariant {
                 documentation: documentation.clone(),
             },
 
+            Self::LocalConstant { literal } => ModuleValueConstructor::Constant {
+                literal: literal.clone(),
+                location: literal.location(),
+                documentation: None,
+            },
+
             Self::LocalVariable { location, .. } => ModuleValueConstructor::Fn {
                 name: function_name.clone(),
                 module: module_name.clone(),
@@ -360,6 +371,7 @@ impl ValueConstructorVariant {
             | ValueConstructorVariant::ModuleConstant { location, .. }
             | ValueConstructorVariant::ModuleFn { location, .. }
             | ValueConstructorVariant::Record { location, .. } => *location,
+            ValueConstructorVariant::LocalConstant { literal } => literal.location(),
         }
     }
 
@@ -665,6 +677,11 @@ impl ValueConstructor {
                 span: *location,
             },
 
+            ValueConstructorVariant::LocalConstant { literal } => DefinitionLocation {
+                module: None,
+                span: literal.location(),
+            },
+
             ValueConstructorVariant::ModuleFn { location, .. }
             | ValueConstructorVariant::LocalVariable { location } => DefinitionLocation {
                 module: None,
@@ -676,6 +693,7 @@ impl ValueConstructor {
     pub(crate) fn get_documentation(&self) -> Option<&str> {
         match &self.variant {
             ValueConstructorVariant::LocalVariable { .. } => Some("A locally defined variable."),
+            ValueConstructorVariant::LocalConstant { .. } => Some("A locally defined constant."),
 
             ValueConstructorVariant::ModuleFn { documentation, .. }
             | ValueConstructorVariant::Record { documentation, .. }

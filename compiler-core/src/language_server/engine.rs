@@ -435,6 +435,7 @@ fn value_completion(
     let kind = Some(match value.variant {
         ValueConstructorVariant::LocalVariable { .. } => lsp::CompletionItemKind::VARIABLE,
         ValueConstructorVariant::ModuleConstant { .. } => lsp::CompletionItemKind::CONSTANT,
+        ValueConstructorVariant::LocalConstant { .. } => lsp::CompletionItemKind::CONSTANT,
         ValueConstructorVariant::ModuleFn { .. } => lsp::CompletionItemKind::FUNCTION,
         ValueConstructorVariant::Record { arity: 0, .. } => lsp::CompletionItemKind::ENUM_MEMBER,
         ValueConstructorVariant::Record { .. } => lsp::CompletionItemKind::CONSTRUCTOR,
