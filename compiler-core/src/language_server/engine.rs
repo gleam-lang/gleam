@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     ast::{Definition, Import, TypedDefinition, TypedExpr, TypedPattern},
     build::{Located, Module},
@@ -8,7 +10,7 @@ use crate::{
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
-    type_::{pretty::Printer, PreludeType, ValueConstructorVariant},
+    type_::{pretty::Printer, PreludeType, Type, ValueConstructorVariant},
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
@@ -248,7 +250,7 @@ where
 
             Ok(match found {
                 Located::Statement(_) => None, // TODO: hover for statement
-                Located::ModuleStatement(_) => None,
+                Located::ModuleStatement(statement) => hover_for_module_statement(statement, lines),
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::Expression(expression) => Some(hover_for_expression(expression, lines)),
             })
@@ -469,6 +471,26 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(pattern.location(), &line_numbers)),
+    }
+}
+
+fn hover_for_module_statement(
+    statement: &Definition<Arc<Type>, TypedExpr, SmolStr, SmolStr>,
+    line_numbers: LineNumbers,
+) -> Option<Hover> {
+    match statement {
+        Definition::Function(fun) => {
+            let function_type = Type::Fn {
+                args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
+                retrn: fun.return_type.clone(),
+            };
+            let contents = Printer::new().pretty_print(&function_type, 0);
+            Some(Hover {
+                contents: HoverContents::Scalar(MarkedString::String(contents)),
+                range: Some(src_span_to_lsp_range(statement.location(), &line_numbers)),
+            })
+        }
+        _ => None,
     }
 }
 
