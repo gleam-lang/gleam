@@ -490,6 +490,13 @@ fn hover_for_module_statement(
                 range: Some(src_span_to_lsp_range(statement.location(), &line_numbers)),
             })
         }
+        Definition::ModuleConstant(constant) => {
+            let contents = Printer::new().pretty_print(&constant.type_, 0);
+            Some(Hover {
+                contents: HoverContents::Scalar(MarkedString::String(contents)),
+                range: Some(src_span_to_lsp_range(statement.location(), &line_numbers)),
+            })
+        }
         _ => None,
     }
 }
