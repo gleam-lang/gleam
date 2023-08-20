@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use crate::{
-    ast::{Definition, Import, TypedDefinition, TypedExpr, TypedPattern},
+    ast::{
+        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern,
+    },
     build::{Located, Module},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -250,9 +252,27 @@ where
 
             Ok(match found {
                 Located::Statement(_) => None, // TODO: hover for statement
-                Located::ModuleStatement(statement) => {
-                    hover_for_module_statement(statement, byte_index, lines)
+                Located::ModuleStatement(Definition::Function(fun)) => {
+                    if !fun.location.contains(byte_index) {
+                        // `fun.location` is just the head of the function, so this ensures that
+                        // hovering over the body doesn't produce any results.
+                        None
+                    } else {
+                        if let Some(arg) = fun
+                            .arguments
+                            .iter()
+                            .find(|arg| arg.location.contains(byte_index))
+                        {
+                            Some(hover_for_function_argument(arg, lines))
+                        } else {
+                            Some(hover_for_function_head(fun, lines))
+                        }
+                    }
                 }
+                Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
+                    Some(hover_for_module_constant(constant, lines))
+                }
+                Located::ModuleStatement(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::Expression(expression) => Some(hover_for_expression(expression, lines)),
             })
@@ -476,49 +496,45 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover
     }
 }
 
-fn hover_for_module_statement(
-    statement: &Definition<Arc<Type>, TypedExpr, SmolStr, SmolStr>,
-    byte_index: u32,
+fn hover_for_function_head(
+    fun: &Function<Arc<Type>, TypedExpr>,
     line_numbers: LineNumbers,
-) -> Option<Hover> {
-    match statement {
-        Definition::Function(fun) => {
-            if !fun.location.contains(byte_index) {
-                // `fun.location` is just the head of the function, so this ensures that
-                // hovering over the body doesn't produce any results.
-                return None;
-            }
+) -> Hover {
+    let empty_smolstr = SmolStr::from("");
+    let documentation = fun.documentation.as_ref().unwrap_or(&empty_smolstr);
+    let function_type = Type::Fn {
+        args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
+        retrn: fun.return_type.clone(),
+    };
+    let formatted_type = Printer::new().pretty_print(&function_type, 0);
+    let contents = format!(
+        "```gleam
+{formatted_type}
+```
+{documentation}"
+    );
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(fun.location, &line_numbers)),
+    }
+}
 
-            // Show the type of the hovered argument to the user
-            for arg in &fun.arguments {
-                if arg.location.contains(byte_index) {
-                    let contents = Printer::new().pretty_print(&arg.type_, 0);
-                    return Some(Hover {
-                        contents: HoverContents::Scalar(MarkedString::String(contents)),
-                        range: Some(src_span_to_lsp_range(arg.location, &line_numbers)),
-                    });
-                }
-            }
+fn hover_for_function_argument(argument: &Arg<Arc<Type>>, line_numbers: LineNumbers) -> Hover {
+    let contents = Printer::new().pretty_print(&argument.type_, 0);
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(argument.location, &line_numbers)),
+    }
+}
 
-            // Otherwise show the whole function signature
-            let function_type = Type::Fn {
-                args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
-                retrn: fun.return_type.clone(),
-            };
-            let contents = Printer::new().pretty_print(&function_type, 0);
-            Some(Hover {
-                contents: HoverContents::Scalar(MarkedString::String(contents)),
-                range: Some(src_span_to_lsp_range(statement.location(), &line_numbers)),
-            })
-        }
-        Definition::ModuleConstant(constant) => {
-            let contents = Printer::new().pretty_print(&constant.type_, 0);
-            Some(Hover {
-                contents: HoverContents::Scalar(MarkedString::String(contents)),
-                range: Some(src_span_to_lsp_range(statement.location(), &line_numbers)),
-            })
-        }
-        _ => None,
+fn hover_for_module_constant(
+    constant: &ModuleConstant<Arc<Type>, SmolStr>,
+    line_numbers: LineNumbers,
+) -> Hover {
+    let contents = Printer::new().pretty_print(&constant.type_, 0);
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(constant.location, &line_numbers)),
     }
 }
 
