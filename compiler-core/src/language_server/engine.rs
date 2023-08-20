@@ -140,7 +140,7 @@ where
     ) -> Response<Option<lsp::Location>> {
         self.respond(|this| {
             let params = params.text_document_position_params;
-            let (line_numbers, node) = match this.node_at_position(&params) {
+            let (line_numbers, _, node) = match this.node_at_position(&params) {
                 Some(location) => location,
                 None => return Ok(None),
             };
@@ -243,14 +243,16 @@ where
         self.respond(|this| {
             let params = params.text_document_position_params;
 
-            let (lines, found) = match this.node_at_position(&params) {
+            let (lines, byte_index, found) = match this.node_at_position(&params) {
                 Some(value) => value,
                 None => return Ok(None),
             };
 
             Ok(match found {
                 Located::Statement(_) => None, // TODO: hover for statement
-                Located::ModuleStatement(statement) => hover_for_module_statement(statement, lines),
+                Located::ModuleStatement(statement) => {
+                    hover_for_module_statement(statement, byte_index, lines)
+                }
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::Expression(expression) => Some(hover_for_expression(expression, lines)),
             })
@@ -261,18 +263,18 @@ where
         &self,
         params: &lsp::TextDocumentPositionParams,
         module: &'a Module,
-    ) -> Option<(LineNumbers, Located<'a>)> {
+    ) -> Option<(LineNumbers, u32, Located<'a>)> {
         let line_numbers = LineNumbers::new(&module.code);
         let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
         let node = module.find_node(byte_index);
         let node = node?;
-        Some((line_numbers, node))
+        Some((line_numbers, byte_index, node))
     }
 
     fn node_at_position(
         &self,
         params: &lsp::TextDocumentPositionParams,
-    ) -> Option<(LineNumbers, Located<'_>)> {
+    ) -> Option<(LineNumbers, u32, Located<'_>)> {
         let module = self.module_for_uri(&params.text_document.uri)?;
         self.module_node_at_position(params, module)
     }
@@ -476,10 +478,29 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover
 
 fn hover_for_module_statement(
     statement: &Definition<Arc<Type>, TypedExpr, SmolStr, SmolStr>,
+    byte_index: u32,
     line_numbers: LineNumbers,
 ) -> Option<Hover> {
     match statement {
         Definition::Function(fun) => {
+            if !fun.location.contains(byte_index) {
+                // `fun.location` is just the head of the function, so this ensures that
+                // hovering over the body doesn't produce any results.
+                return None;
+            }
+
+            // Show the type of the hovered argument to the user
+            for arg in &fun.arguments {
+                if arg.location.contains(byte_index) {
+                    let contents = Printer::new().pretty_print(&arg.type_, 0);
+                    return Some(Hover {
+                        contents: HoverContents::Scalar(MarkedString::String(contents)),
+                        range: Some(src_span_to_lsp_range(arg.location, &line_numbers)),
+                    });
+                }
+            }
+
+            // Otherwise show the whole function signature
             let function_type = Type::Fn {
                 args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
                 retrn: fun.return_type.clone(),
