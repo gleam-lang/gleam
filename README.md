@@ -89,6 +89,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Gustavo Villa](https://github.com/gfvcastro)
  - [Harry Bairstow](https://github.com/HarryET)
  - [Hayleigh Thompson](https://github.com/hayleigh-dot-dev)
+ - [Hazel Bachrach](https://github.com/hibachrach)
  - [Henry Warren](https://github.com/henrysdev)
  - [Hex](https://github.com/hexpm)
  - [Ian González](https://github.com/Ian-GL)
