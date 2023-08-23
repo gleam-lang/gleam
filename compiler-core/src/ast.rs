@@ -550,6 +550,14 @@ impl TypedDefinition {
                     return Some(found);
                 };
 
+                if let Some(found_arg) = function
+                    .arguments
+                    .iter()
+                    .find(|arg| arg.location.contains(byte_index))
+                {
+                    return Some(Located::Arg(found_arg));
+                };
+
                 // Note that the fn `.location` covers the function head, not
                 // the entire statement.
                 if function.full_location().contains(byte_index) {

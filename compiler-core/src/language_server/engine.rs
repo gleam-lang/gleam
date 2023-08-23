@@ -217,6 +217,8 @@ where
                 Located::ModuleStatement(Definition::Import(_) | Definition::ModuleConstant(_)) => {
                     None
                 }
+
+                Located::Arg(_) => None,
             };
 
             Ok(completions)
@@ -253,20 +255,11 @@ where
             Ok(match found {
                 Located::Statement(_) => None, // TODO: hover for statement
                 Located::ModuleStatement(Definition::Function(fun)) => {
-                    if !fun.location.contains(byte_index) {
-                        // `fun.location` is just the head of the function, so this ensures that
-                        // hovering over the body doesn't produce any results.
-                        None
+                    if fun.location.contains(byte_index) {
+                        Some(hover_for_function_head(fun, lines))
                     } else {
-                        if let Some(arg) = fun
-                            .arguments
-                            .iter()
-                            .find(|arg| arg.location.contains(byte_index))
-                        {
-                            Some(hover_for_function_argument(arg, lines))
-                        } else {
-                            Some(hover_for_function_head(fun, lines))
-                        }
+                        // Don't show hover info for function body
+                        None
                     }
                 }
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
@@ -275,6 +268,7 @@ where
                 Located::ModuleStatement(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::Expression(expression) => Some(hover_for_expression(expression, lines)),
+                Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
             })
         })
     }
