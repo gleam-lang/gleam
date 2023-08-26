@@ -93,7 +93,12 @@ impl Manifest {
                 ManifestPackageSource::Local { path } => {
                     buffer.push_str(r#", source = "local", path = ""#);
                     let path_resolver = path_resolver.clone();
-                    buffer.push_str(path_resolver.make_relative(path).as_str());
+                    buffer.push_str(
+                        &path_resolver
+                            .make_relative(path)
+                            .as_str()
+                            .replace('\\', "/"),
+                    );
                     buffer.push('"');
                 }
             };
