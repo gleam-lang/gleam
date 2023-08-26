@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 201
+assertion_line: 224
 expression: "\npub fn one(x: Int) -> Int\n"
 ---
 error: Function without an implementation

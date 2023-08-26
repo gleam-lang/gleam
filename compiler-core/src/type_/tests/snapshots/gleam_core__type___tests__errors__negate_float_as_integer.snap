@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1892
 expression: "\nfn() {\n  let a = 3.0\n  let b = -a\n}\n"
 ---
 error: Type mismatch

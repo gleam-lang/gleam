@@ -115,7 +115,7 @@ impl FromIterator<io::Result<DirEntry>> for ReadDir {
 
 impl ReadDir {
     pub fn extend(mut self, other: ReadDir) -> Self {
-        self.entries.extend(other.into_iter());
+        self.entries.extend(other);
 
         ReadDir {
             entries: self.entries,

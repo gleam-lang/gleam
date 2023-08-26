@@ -16,7 +16,7 @@ impl ProjectPaths {
 
     pub fn at_filesystem_root() -> Self {
         let path = if cfg!(target_family = "windows") {
-            r#"C:\"#
+            r"C:\"
         } else {
             "/"
         };

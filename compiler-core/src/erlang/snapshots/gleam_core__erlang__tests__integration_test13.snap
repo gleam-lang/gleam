@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 234
+assertion_line: 242
 expression: "pub type State{ Start(Int) End(Int) }\n            pub fn build(constructor : fn(Int) -> a) -> a { constructor(1) }\n            pub fn main() { build(End) }"
 ---
 -module(my@mod).

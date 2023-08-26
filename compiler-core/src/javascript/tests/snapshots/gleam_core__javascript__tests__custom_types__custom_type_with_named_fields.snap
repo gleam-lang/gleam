@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 211
+assertion_line: 238
 expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\ntype Box {\n  Box(occupant: Cat)\n}\n\nconst felix = Cat(\"Felix\", 12)\nconst tom = Cat(cuteness: 1, name: \"Tom\")\n\nfn go() {\n  Cat(\"Nubi\", 1)\n  Cat(2, name: \"Nubi\")\n  Cat(cuteness: 3, name: \"Nubi\")\n}\n\nfn update(cat) {\n  Cat(..cat, name: \"Sid\")\n  Cat(..cat, name: \"Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!\")\n  Cat(..new_cat(), name: \"Molly\")\n  let box = Box(occupant: cat)\n  Cat(..box.occupant, cuteness: box.occupant.cuteness + 1)\n}\n\nfn access(cat: Cat) {\n  cat.cuteness\n}\n\nfn new_cat() {\n  Cat(name: \"Beau\", cuteness: 11)\n}\n"
 ---
 import { CustomType as $CustomType } from "../gleam.mjs";

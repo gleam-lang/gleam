@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/variables.rs
-assertion_line: 98
+assertion_line: 100
 expression: "\npub fn main() {\n  let x = 1\n  {\n    let x = 2\n  }\n  x\n}\n"
 ---
 -module(my@mod).

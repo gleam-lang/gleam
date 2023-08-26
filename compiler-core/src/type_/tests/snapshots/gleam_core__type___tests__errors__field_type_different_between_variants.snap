@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 879
+assertion_line: 603
 expression: "\npub type Shape {\n    Square(x: Int, y: Int)\n    Rectangle(x: String, y: String)\n}\npub fn get_x(shape: Shape) { shape.x }\npub fn get_y(shape: Shape) { shape.y }"
 ---
 error: Unknown record field

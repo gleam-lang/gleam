@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1917
+assertion_line: 1750
 expression: "\n        import one.{fn1} as two\n        import two.{fn2}\n        "
 ---
 error: Duplicate import

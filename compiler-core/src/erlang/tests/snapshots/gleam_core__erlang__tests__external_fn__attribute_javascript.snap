@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 94
+assertion_line: 117
 expression: "\n@external(javascript, \"./one.mjs\", \"one\")\npub fn one(x: Int) -> Int {\n  todo\n}\n"
 ---
 -module(my@mod).

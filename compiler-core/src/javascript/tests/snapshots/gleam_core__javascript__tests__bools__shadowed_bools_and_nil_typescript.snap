@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
 assertion_line: 81
-expression: "\npub type True { True False Nil }\npub fn go(x, y) {\n  assert True = x\n  assert False = x\n  assert Nil = y\n}\n"
+expression: "\npub type True { True False Nil }\npub fn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
 ---
 import * as _ from "../gleam.d.ts";
 

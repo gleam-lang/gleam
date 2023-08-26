@@ -3,11 +3,11 @@
 
 packages = [
   { name = "gleam_module_javascript_test", version = "0.2.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_module_javascript_test", source = "hex", outer_checksum = "EB67B6423078E8A37FCB172EC5342BAA1CF45A235F3A9C890532E7487E606E91" },
-  { name = "gleam_stdlib", version = "0.28.1", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "73F0A89FADE5022CBEF6D6C3551F9ADCE7054AFCE0CB1DC4C6D5AB4CA62D0111" },
-  { name = "gleeunit", version = "0.10.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "ECEA2DE4BE6528D36AFE74F42A21CDF99966EC36D7F25DEB34D47DD0F7977BAF" },
+  { name = "gleam_stdlib", version = "0.30.1", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "704258528887F95075FFED7AAE1CCF836A9B88E3AADA2F69F9DA15815F94A4F9" },
+  { name = "gleeunit", version = "0.11.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "1397E5C4AC4108769EE979939AC39BF7870659C5AFB714630DEEEE16B8272AD5" },
 ]
 
 [requirements]
-gleam_module_javascript_test = "~> 0.2.0"
-gleam_stdlib = "~> 0.27"
-gleeunit = "~> 0.10"
+gleam_module_javascript_test = { version = "~> 0.2.0" }
+gleam_stdlib = { version = "~> 0.27" }
+gleeunit = { version = "~> 0.10" }

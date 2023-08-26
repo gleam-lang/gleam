@@ -1,5 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 321
 expression: "./cases/variable_or_module"
 ---
 //// /out/lib/the_package/_gleam_artefacts/main.cache

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 547
+assertion_line: 302
 expression: "pub fn main() -> String {\n            1\n            |> add_two\n         }\n          \n         fn add_two(i: Int) -> Int {\n            i + 2\n         }"
 ---
 error: Type mismatch

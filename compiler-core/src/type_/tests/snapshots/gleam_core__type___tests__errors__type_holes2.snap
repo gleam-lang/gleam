@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1536
-expression: "external fn main() -> List(_) = \"\" \"\""
+assertion_line: 1371
+expression: "\n@external(erlang, \"a\", \"b\")\nfn main() -> List(_)\n"
 ---
 error: Unexpected type hole
-  ┌─ /src/one/two.gleam:1:28
+  ┌─ /src/one/two.gleam:3:19
   │
-1 │ external fn main() -> List(_) = "" ""
-  │                            ^ I need to know what this is
+3 │ fn main() -> List(_)
+  │                   ^ I need to know what this is
 
 We need to know the exact type here so type holes cannot be used.
 

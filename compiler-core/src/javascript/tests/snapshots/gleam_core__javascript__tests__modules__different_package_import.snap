@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
-assertion_line: 127
+assertion_line: 136
 expression: "import one\npub fn go() { one.go() }\n"
 ---
 import * as $one from "../../other_package/one.mjs";

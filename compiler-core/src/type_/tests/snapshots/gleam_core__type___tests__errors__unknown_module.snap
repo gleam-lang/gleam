@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 444
+assertion_line: 236
 expression: import xpto
 ---
 error: Unknown module

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 300
+assertion_line: 292
 expression: "pub fn main() {\n  let x = 1\n}\n"
 ---
 export function main() {

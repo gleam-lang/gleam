@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/use_.rs
-assertion_line: 127
+assertion_line: 151
 expression: "\npub fn main() {\n  use <- wibble()\n}\n\nfn wibble(f) {\n  f()\n}\n"
 ---
 

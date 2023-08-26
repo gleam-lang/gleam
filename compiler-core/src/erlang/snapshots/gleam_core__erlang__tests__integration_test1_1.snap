@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 134
+assertion_line: 142
 expression: "pub type Money { Pound(Int) }\n                    fn pound(x) { Pound(x) }"
 ---
 -module(my@mod).

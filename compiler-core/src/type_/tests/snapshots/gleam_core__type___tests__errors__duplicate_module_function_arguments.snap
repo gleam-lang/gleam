@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1811
+assertion_line: 1858
 expression: "\npub fn main(x, x) {\n  Nil\n}\n"
 ---
 error: Argument name already used
