@@ -1,9 +1,0 @@
----
-source: compiler-core/src/javascript/tests/externals.rs
-assertion_line: 40
-expression: "pub external fn fetch(Nil) -> Nil = \"\" \"fetch\""
----
-export function fetch(arg0) {
-  return globalThis.fetch(arg0)
-}
-

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 904
+assertion_line: 628
 expression: "\npub type Person {\n    Teacher(title: String, age: Int, name: String)\n    Student(name: String, age: Int)\n}\npub fn get_name(person: Person) { person.name }\npub fn get_age(person: Person) { person.age }"
 ---
 error: Unknown record field

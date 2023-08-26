@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
+assertion_line: 165
 expression: "\nfn go(x, y) {\n  let z = False\n  case True {\n    x if #(x, z) == #(True, False) -> x\n    _ -> False\n  }\n}\n"
 ---
 import { isEqual } from "../gleam.mjs";

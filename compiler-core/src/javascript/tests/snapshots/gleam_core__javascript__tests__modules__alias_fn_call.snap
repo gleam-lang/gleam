@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
-assertion_line: 86
+assertion_line: 107
 expression: "\nimport rocket_ship as boop\npub fn go() { boop.go() }\n"
 ---
 import * as $boop from "../rocket_ship.mjs";

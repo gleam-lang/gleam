@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
+assertion_line: 168
 expression: "\nfn go() {\n  5 % 0 // => 0\n}\n"
 ---
 import { remainderInt } from "../gleam.mjs";

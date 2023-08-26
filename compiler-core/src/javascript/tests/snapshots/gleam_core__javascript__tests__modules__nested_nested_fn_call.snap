@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
-assertion_line: 114
+assertion_line: 127
 expression: "import one/two/three\npub fn go() { three.go() }"
 ---
 import * as $three from "../one/two/three.mjs";

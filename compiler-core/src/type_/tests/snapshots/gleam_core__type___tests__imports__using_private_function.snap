@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/imports.rs
-assertion_line: 55
+assertion_line: 67
 expression: "import one\n\npub fn main() {\n  one.two\n}"
 ---
 error: Unknown module field

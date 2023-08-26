@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1521
-expression: "type A(a) { A };\ntype B = a"
+assertion_line: 1356
+expression: "type A(a) { A }\ntype B = a"
 ---
 error: Unknown type
   ┌─ /src/one/two.gleam:2:10

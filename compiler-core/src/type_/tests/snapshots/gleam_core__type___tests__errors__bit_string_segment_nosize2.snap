@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 267
+assertion_line: 59
 expression: "case <<1>> { <<_:bit_string, _:binary>> -> 1 }"
 ---
 error: Invalid bit string segment

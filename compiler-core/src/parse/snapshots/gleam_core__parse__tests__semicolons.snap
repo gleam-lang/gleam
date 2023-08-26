@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 354
+assertion_line: 392
 expression: "{ 2 + 3; - -5; }"
 ---
 error: Syntax error

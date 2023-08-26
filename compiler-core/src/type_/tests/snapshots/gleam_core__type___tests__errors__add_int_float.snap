@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 409
+assertion_line: 201
 expression: 1 + 1.0
 ---
 error: Type mismatch

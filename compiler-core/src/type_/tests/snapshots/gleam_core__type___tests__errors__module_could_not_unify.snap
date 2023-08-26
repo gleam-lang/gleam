@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 917
+assertion_line: 641
 expression: "fn go() { 1 + 2.0 }"
 ---
 error: Type mismatch

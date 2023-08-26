@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1071
-expression: "external type PrivateType\npub type LeakType { Variant(PrivateType) }"
+assertion_line: 803
+expression: "type PrivateType\npub type LeakType { Variant(PrivateType) }"
 ---
 error: Private type used in public interface
   ┌─ /src/one/two.gleam:2:21

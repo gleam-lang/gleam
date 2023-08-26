@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1829
+assertion_line: 1662
 expression: "\n        import one\n        import two as one\n        "
 ---
 error: Duplicate import

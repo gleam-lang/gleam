@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1962
+assertion_line: 1795
 expression: "\npub type Point {\n  Point2(a: Int, b: Int)\n  Point3(a: Int, b: Int, c: Int)\n}\n\npub fn main() {\n  Point3(..Point2(a: 1, b: 2))\n}"
 ---
 error: Unsafe record update
