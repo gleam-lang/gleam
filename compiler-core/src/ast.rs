@@ -62,38 +62,26 @@ impl TypedModule {
 /// ```
 ///
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TargettedDefinition {
-    Any(UntypedDefinition),
-    Only(Target, UntypedDefinition),
+pub struct TargettedDefinition {
+    pub definition: UntypedDefinition,
+    pub target: Option<Target>,
 }
 
 impl TargettedDefinition {
     pub fn is_for(&self, target: Target) -> bool {
-        match self {
-            Self::Any(_) => true,
-            Self::Only(t, _) => *t == target,
-        }
+        self.target.map(|t| t == target).unwrap_or(true)
     }
 
     pub fn into_inner(self) -> UntypedDefinition {
-        match self {
-            Self::Any(s) => s,
-            Self::Only(_, s) => s,
-        }
+        self.definition
     }
 
     pub fn inner(&self) -> &UntypedDefinition {
-        match self {
-            Self::Any(s) => s,
-            Self::Only(_, s) => s,
-        }
+        &self.definition
     }
 
     pub fn target(&self) -> Option<Target> {
-        match self {
-            Self::Any(_) => None,
-            Self::Only(t, _) => Some(*t),
-        }
+        self.target
     }
 }
 

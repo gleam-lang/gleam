@@ -238,17 +238,26 @@ where
                     let target = self.expect_target()?;
                     let _ = self.expect_one(&Token::RightParen)?;
                     let definition = self.expect_definition()?;
-                    Ok(Some(vec![TargettedDefinition::Only(target, definition)]))
+                    Ok(Some(vec![TargettedDefinition {
+                        target: Some(target),
+                        definition,
+                    }]))
                 }
                 _ => {
                     let definition = self.expect_definition()?;
-                    Ok(Some(vec![TargettedDefinition::Any(definition)]))
+                    Ok(Some(vec![TargettedDefinition {
+                        definition,
+                        target: None,
+                    }]))
                 }
             },
 
-            Some(_) => Ok(self
-                .parse_definition()?
-                .map(|d| vec![TargettedDefinition::Any(d)])),
+            Some(_) => Ok(self.parse_definition()?.map(|d| {
+                vec![TargettedDefinition {
+                    definition: d,
+                    target: None,
+                }]
+            })),
 
             None => Ok(None),
         }
