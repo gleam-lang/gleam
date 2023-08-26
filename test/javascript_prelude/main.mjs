@@ -47,6 +47,15 @@ function assertNotEqual(a, b) {
   }
 }
 
+function assertThrows(msg, callable) {
+  try {
+    callable();
+    fail(msg);
+  } catch (error) {
+    pass();
+  }
+}
+
 class ExampleRecordImpl extends CustomType {
   constructor(first, detail, boop) {
     super();
@@ -603,10 +612,11 @@ assertEqual(
   new ExampleRecordImpl(6, 5, 4)
 );
 
-// Test BitString can be constructed from Uint8Array or ArrayBuffer
-const bs1 = new BitString(new Uint8Array(new ArrayBuffer(8)))
-const bs2 = new BitString(new ArrayBuffer(8))
-assertEqual(bs1, bs2)
+// Test BitString can only be constructed from Uint8Array, not ArrayBuffer
+const bs1 = new BitString(new Uint8Array(new ArrayBuffer(8)));
+assertThrows("Should only construct bitstring from Uint8Array", () => {
+  const bs = new BitString(new ArrayBuffer(8));
+});
 
 //
 // Summary
