@@ -1,7 +1,6 @@
 import gleam/io
 import gleam/dynamic.{Dynamic}
 import project
-import first_gleam_publish_package
 import gleeunit
 import gleam/erlang/atom.{from_string as atom_from_string}
 
@@ -10,7 +9,6 @@ pub fn main() {
   io.println("Hello, from the Gleam test module!")
   io.println(erlang_function())
   io.println(elixir_function())
-  first_gleam_publish_package.main()
   gleeunit.main()
 }
 
