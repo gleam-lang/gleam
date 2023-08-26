@@ -1067,8 +1067,10 @@ fn foo() -> Float
 #[test]
 fn duplicate_extfn_fn() {
     assert_module_error!(
-        "external fn foo() -> Float =
-  \"module1\" \"function1\"
+        "
+@external(erlang, \"module1\", \"function1\")
+fn foo() -> Float
+
 fn foo() { 2 }"
     );
 }
@@ -1077,8 +1079,10 @@ fn foo() { 2 }"
 fn duplicate_fn_extfn() {
     assert_module_error!(
         "fn foo() { 1 }
-external fn foo() -> Float =
-  \"module2\" \"function2\""
+
+@external(erlang, \"module2\", \"function2\")
+fn foo() -> Float
+"
     );
 }
 
@@ -1086,16 +1090,20 @@ external fn foo() -> Float =
 fn duplicate_const_extfn() {
     assert_module_error!(
         "const foo = 1
-external fn foo() -> Float =
-  \"module2\" \"function2\""
+
+@external(erlang, \"module2\", \"function2\")
+fn foo() -> Float
+"
     );
 }
 
 #[test]
 fn duplicate_extfn_const() {
     assert_module_error!(
-        "external fn foo() -> Float =
-  \"module1\" \"function1\"
+        "
+@external(erlang, \"module1\", \"function1\")
+fn foo() -> Float
+
 const foo = 2"
     );
 }
@@ -1360,13 +1368,23 @@ fn type_holes1() {
 #[test]
 fn type_holes2() {
     // Type holes cannot be used when decaring types or external functions
-    assert_module_error!(r#"external fn main() -> List(_) = "" """#);
+    assert_module_error!(
+        r#"
+@external(erlang, "a", "b")
+fn main() -> List(_)
+"#
+    );
 }
 
 #[test]
 fn type_holes3() {
     // Type holes cannot be used when decaring types or external functions
-    assert_module_error!(r#"external fn main(List(_)) -> Nil = "" """#);
+    assert_module_error!(
+        r#"
+@external(erlang, "a", "b")
+fn main(List(_)) -> Nil
+"#
+    );
 }
 
 #[test]
