@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 439
+assertion_line: 231
 expression: x
 ---
 error: Unknown variable

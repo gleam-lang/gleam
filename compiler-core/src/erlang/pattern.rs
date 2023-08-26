@@ -31,7 +31,20 @@ fn print<'a>(
 
         Pattern::Discard { .. } => "_".to_doc(),
 
-        Pattern::VarUsage { name, .. } => env.local_var_name(name),
+        Pattern::VarUsage {
+            name, constructor, ..
+        } => {
+            let v = &constructor
+                .as_ref()
+                .expect("Constructor not found for variable usage")
+                .variant;
+            match v {
+                ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                    const_inline(literal, env)
+                }
+                _ => env.local_var_name(name),
+            }
+        }
 
         Pattern::Var { name, .. } if define_variables => {
             vars.push(name);

@@ -16,11 +16,11 @@ use camino::Utf8PathBuf;
 
 mod assert;
 mod assignments;
+mod conditional_compilation;
 mod errors;
 mod functions;
 mod imports;
 mod pretty;
-mod statement_if;
 mod type_alias;
 mod use_;
 mod warnings;
@@ -722,7 +722,10 @@ fn infer_module_test() {
          }",
         vec![("repeat", "fn(Int, a) -> List(a)")],
     );
+}
 
+#[test]
+fn infer_module_test1() {
     assert_module_infer!(
         "pub fn length(list) {
            case list {
@@ -732,13 +735,19 @@ fn infer_module_test() {
         }",
         vec![("length", "fn(List(a)) -> Int")],
     );
+}
 
+#[test]
+fn infer_module_test2() {
     assert_module_infer!(
         "fn private() { 1 }
          pub fn public() { 1 }",
         vec![("public", "fn() -> Int")],
     );
+}
 
+#[test]
+fn infer_module_test3() {
     assert_module_infer!(
         "pub type Is { Yes No }
          pub fn yes() { Yes }
@@ -750,13 +759,19 @@ fn infer_module_test() {
             ("yes", "fn() -> Is"),
         ],
     );
+}
 
+#[test]
+fn infer_module_test4() {
     assert_module_infer!(
         "pub type Num { I(Int) }
          pub fn one() { I(1) }",
         vec![("I", "fn(Int) -> Num"), ("one", "fn() -> Num")],
     );
+}
 
+#[test]
+fn infer_module_test5() {
     assert_module_infer!(
         "pub type Box(a) { Box(a) }
         pub fn int() { Box(1) }
@@ -767,73 +782,136 @@ fn infer_module_test() {
             ("int", "fn() -> Box(Int)"),
         ],
     );
+}
 
+#[test]
+fn infer_module_test6() {
     assert_module_infer!(
         "pub type Singleton { Singleton }
         pub fn go(x) { let Singleton = x 1 }",
         vec![("Singleton", "Singleton"), ("go", "fn(Singleton) -> Int")],
     );
+}
 
+#[test]
+fn infer_module_test7() {
     assert_module_infer!(
         "pub type Box(a) { Box(a) }
         pub fn unbox(x) { let Box(a) = x a }",
         vec![("Box", "fn(a) -> Box(a)"), ("unbox", "fn(Box(a)) -> a")],
     );
+}
 
+#[test]
+fn infer_module_test8() {
     assert_module_infer!(
         "pub type I { I(Int) }
         pub fn open(x) { case x { I(i) -> i  } }",
         vec![("I", "fn(Int) -> I"), ("open", "fn(I) -> Int")],
     );
+}
 
+#[test]
+fn infer_module_test9() {
     assert_module_infer!(
         "pub fn status() { 1 } pub fn list_of(x) { [x] }",
         vec![("list_of", "fn(a) -> List(a)"), ("status", "fn() -> Int")],
     );
+}
 
+#[test]
+fn infer_module_test10() {
     assert_module_infer!(
-        "pub external fn go(String) -> String = \"\" \"\"",
+        "
+@external(erlang, \"\", \"\")
+pub fn go(x: String) -> String
+",
         vec![("go", "fn(String) -> String")],
     );
+}
 
+#[test]
+fn infer_module_test11() {
     assert_module_infer!(
-        "pub external fn go(Int) -> Float = \"\" \"\"",
+        "
+@external(erlang, \"\", \"\")
+pub fn go(x: Int) -> Float
+",
         vec![("go", "fn(Int) -> Float")],
     );
+}
 
+#[test]
+fn infer_module_test12() {
     assert_module_infer!(
-        "pub external fn go(Int) -> Int = \"\" \"\"",
+        "
+@external(erlang, \"\", \"\")
+pub fn go(x: Int) -> Int
+",
         vec![("go", "fn(Int) -> Int")],
     );
+}
 
+#[test]
+fn infer_module_test13() {
     assert_module_infer!(
-        "pub external fn ok() -> fn(Int) -> Int = \"\" \"\"",
+        "
+@external(erlang, \"\", \"\")
+pub fn ok() -> fn(Int) -> Int
+",
         vec![("ok", "fn() -> fn(Int) -> Int")],
     );
+}
 
+#[test]
+fn infer_module_test14() {
     assert_module_infer!(
-        "pub external fn go(Int) -> b = \"\" \"\"",
+        "
+@external(erlang, \"\", \"\")
+pub fn go(x: Int) -> b
+",
         vec![("go", "fn(Int) -> a")],
     );
+}
 
+#[test]
+fn infer_module_test15() {
     assert_module_infer!(
-        "pub external fn go(Bool) -> b = \"\" \"\"",
+        "
+@external(erlang, \"\", \"\")
+pub fn go(x: Bool) -> b
+",
         vec![("go", "fn(Bool) -> a")],
     );
+}
 
+#[test]
+fn infer_module_test16() {
     assert_module_infer!(
-        "pub external fn go(List(a)) -> a = \"\" \"\"",
+        "
+@external(erlang, \"\", \"\")
+pub fn go(x: List(a)) -> a
+",
         vec![("go", "fn(List(a)) -> a")],
     );
+}
 
+#[test]
+fn infer_module_test17() {
     assert_module_infer!(
-        "external fn go(Int) -> b = \"\" \"\"
+        "
+@external(erlang, \"\", \"\")
+fn go(x: Int) -> b
         pub fn x() { go(1) }",
         vec![("x", "fn() -> a")],
     );
+}
 
+#[test]
+fn infer_module_test18() {
     assert_module_infer!(
-        "external fn id(a) -> a = \"\" \"\"
+        "@external(erlang, \"\", \"\")
+        fn id(a: a) -> a
         pub fn i(x) { id(x) }
         pub fn a() { id(1) }
         pub fn b() { id(1.0) }",
@@ -843,24 +921,43 @@ fn infer_module_test() {
             ("i", "fn(a) -> a"),
         ],
     );
+}
 
+#[test]
+fn infer_module_test19() {
     assert_module_infer!(
-        "pub external fn len(List(a)) -> Int = \"\" \"\"",
+        "
+@external(erlang, \"\", \"\")
+pub fn len(a: List(a)) -> Int
+",
         vec![("len", "fn(List(a)) -> Int")],
     );
+}
 
+#[test]
+fn infer_module_test20() {
     assert_module_infer!(
-        "pub external type Connection\n
-         pub external fn is_open(Connection) -> Bool = \"\" \"\"",
+        "pub type Connection\n
+@external(erlang, \"\", \"\")
+pub fn is_open(x: Connection) -> Bool
+",
         vec![("is_open", "fn(Connection) -> Bool")],
     );
+}
 
+#[test]
+fn infer_module_test21() {
     assert_module_infer!(
-        "pub external type Pair(thing, thing)\n
-         pub external fn pair(a) -> Pair(a, a) = \"\" \"\"",
+        "pub type Pair(thing, thing)\n
+@external(erlang, \"\", \"\")
+pub fn pair(x: a) -> Pair(a, a)
+",
         vec![("pair", "fn(a) -> Pair(a, a)")],
     );
+}
 
+#[test]
+fn infer_module_test22() {
     assert_module_infer!(
         "pub fn one() { 1 }
          pub fn zero() { one() - 1 }
@@ -871,7 +968,10 @@ fn infer_module_test() {
             ("zero", "fn() -> Int"),
         ],
     );
+}
 
+#[test]
+fn infer_module_test23() {
     assert_module_infer!(
         "pub fn one() { 1 }
          pub fn zero() { one() - 1 }
@@ -882,16 +982,27 @@ fn infer_module_test() {
             ("zero", "fn() -> Int"),
         ],
     );
+}
 
+#[test]
+fn infer_module_test24() {
     // Structs
     assert_module_infer!(
         "pub type Box { Box(boxed: Int) }",
         vec![("Box", "fn(Int) -> Box")]
     );
+}
+
+#[test]
+fn infer_module_test25() {
     assert_module_infer!(
         "pub type Tup(a, b) { Tup(first: a, second: b) }",
         vec![("Tup", "fn(a, b) -> Tup(a, b)")]
     );
+}
+
+#[test]
+fn infer_module_test26() {
     assert_module_infer!(
         "pub type Tup(a, b, c) { Tup(first: a, second: b, third: c) }
          pub fn third(t) { let Tup(_ , _, third: a) = t a }",
@@ -900,37 +1011,61 @@ fn infer_module_test() {
             ("third", "fn(Tup(a, b, c)) -> c"),
         ],
     );
+}
 
+#[test]
+fn infer_module_test27() {
     // Anon structs
     assert_module_infer!(
         "pub fn ok(x) { #(1, x) }",
         vec![("ok", "fn(a) -> #(Int, a)")],
     );
+}
 
+#[test]
+fn infer_module_test28() {
     assert_module_infer!(
-        "pub external fn ok(Int) -> #(Int, Int) = \"\" \"\"",
+        "
+@external(erlang, \"\", \"\")
+pub fn ok(a: Int) -> #(Int, Int)
+",
         vec![("ok", "fn(Int) -> #(Int, Int)")],
     );
+}
 
+#[test]
+fn infer_module_test29() {
     assert_module_infer!(
-        "pub external fn go(#(a, c)) -> c = \"\" \"\"",
+        "
+@external(erlang, \"\", \"\")
+pub fn go(a: #(a, c)) -> c
+",
         vec![("go", "fn(#(a, b)) -> b")],
     );
+}
 
+#[test]
+fn infer_module_test30() {
     assert_module_infer!(
         "pub fn always(ignore _a, return b) { b }",
         vec![("always", "fn(a, b) -> b")],
     );
+}
 
+#[test]
+fn infer_module_test31() {
     // Using types before they are defined
 
     assert_module_infer!(
         "pub type I { I(Num) } pub type Num { Num }",
         vec![("I", "fn(Num) -> I"), ("Num", "Num")]
     );
+}
 
+#[test]
+fn infer_module_test32() {
     assert_module_infer!(
-        "pub type I { I(Num) } pub external type Num",
+        "pub type I { I(Num) } pub type Num",
         vec![("I", "fn(Num) -> I")]
     );
 }
@@ -1371,31 +1506,34 @@ fn functions_used_before_definition() {
          pub fn b() { 1 }",
         vec![("a", "fn() -> Int"), ("b", "fn() -> Int")],
     );
+}
 
+#[test]
+fn functions_used_before_definition1() {
     assert_module_infer!(
         "pub fn a() { b() + c() }
          fn b() { 1 }
          fn c() { 1 }",
         vec![("a", "fn() -> Int")],
     );
+}
 
+#[test]
+fn functions_used_before_definition2() {
     assert_module_infer!(
         "fn b() { 1 }
          pub fn a() { b() + c() }
          fn c() { 1 }",
         vec![("a", "fn() -> Int")],
     );
+}
 
+#[test]
+fn functions_used_before_definition3() {
     assert_module_infer!(
         "pub fn a() { Thing }
          pub type Thing { Thing }",
         vec![("Thing", "Thing"), ("a", "fn() -> Thing"),],
-    );
-
-    assert_module_infer!(
-        "pub fn a() { b()  }
-         external fn b() -> Int = \"\" \"\"",
-        vec![("a", "fn() -> Int")],
     );
 }
 
@@ -1403,13 +1541,16 @@ fn functions_used_before_definition() {
 fn types_used_before_definition() {
     assert_module_infer!(
         "pub type Y { Y(X) }
-         pub external type X",
+         pub type X",
         vec![("Y", "fn(X) -> Y")],
     );
+}
 
+#[test]
+fn types_used_before_definition1() {
     assert_module_infer!(
         "pub type Y { Y(x: X) }
-         pub external type X",
+         pub type X",
         vec![("Y", "fn(X) -> Y")],
     );
 }

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1084
+assertion_line: 816
 expression: "type X { X(a: Int, b: Int, c: Int) }\nfn x() { X(b: 1, a: 1, 1) }"
 ---
 error: Unexpected positional argument

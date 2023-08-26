@@ -157,6 +157,10 @@ pub const compound: #(Int, Int) = #(int, int_alias)
 pub fn use_compound() { compound.0 + compound.1 }
 "#
     );
+}
+
+#[test]
+fn module_const_var1() {
     assert_ts_def!(
         r#"
 pub const int = 42

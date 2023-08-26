@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1041
 expression: "const foo = 1\nconst foo = 2"
 ---
 error: Duplicate definition

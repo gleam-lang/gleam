@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1054
-expression: "external type PrivateType\nexternal fn go() -> PrivateType = \"\" \"\"\npub fn leak_type() { [go()] }"
+assertion_line: 784
+expression: "type PrivateType\n@external(erlang, \"a\", \"b\")\nfn go() -> PrivateType\npub fn leak_type() { [go()] }"
 ---
 error: Private type used in public interface
-  ┌─ /src/one/two.gleam:3:1
+  ┌─ /src/one/two.gleam:4:1
   │
-3 │ pub fn leak_type() { [go()] }
+4 │ pub fn leak_type() { [go()] }
   │ ^^^^^^^^^^^^^^^^^^
 
 The following type is private, but is being used by this public export.

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
-assertion_line: 200
+assertion_line: 197
 expression: "import one/two/three.{Thingy}\n\ntype Dup { Thingy }\n\npub fn go(x: Thingy) -> List(Thingy) { [x, x] }\n"
 ---
 import { toList, CustomType as $CustomType } from "../gleam.mjs";

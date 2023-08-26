@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
 assertion_line: 5
-expression: "pub external fn run() -> Int = \"Elixir.MyApp\" \"run\""
+expression: "\n@external(erlang, \"Elixir.MyApp\", \"run\")\npub fn run() -> Int \n"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).

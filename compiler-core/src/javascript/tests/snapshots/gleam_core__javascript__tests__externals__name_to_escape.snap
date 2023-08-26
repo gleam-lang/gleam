@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
-assertion_line: 63
-expression: "pub external fn class() -> Nil = \"./the/module.mjs\" \"one\"\n"
+assertion_line: 72
+expression: "\n@external(javascript, \"./the/module.mjs\", \"one\")\npub fn class() -> Nil\n"
 ---
 import { one as class$ } from "./the/module.mjs";
 

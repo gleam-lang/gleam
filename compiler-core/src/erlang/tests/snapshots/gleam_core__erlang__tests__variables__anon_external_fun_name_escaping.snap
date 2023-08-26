@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/variables.rs
 assertion_line: 70
-expression: "external fn func() -> Nil = \"one.two\" \"three.four\"\n\npub fn main() {\n  func\n}"
+expression: "\n@external(erlang, \"one.two\", \"three.four\")\nfn func() -> Nil\n\npub fn main() {\n  func\n}"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1023
 expression: "const duplicate = 1\npub const duplicate = 1"
 ---
 error: Duplicate definition

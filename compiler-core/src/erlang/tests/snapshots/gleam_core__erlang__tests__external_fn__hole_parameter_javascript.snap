@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 167
+assertion_line: 190
 expression: "\n@external(javascript, \"one\", \"one\")\npub fn one(x: List(_)) -> Int {\n  todo\n}\n"
 ---
 error: Unexpected type hole

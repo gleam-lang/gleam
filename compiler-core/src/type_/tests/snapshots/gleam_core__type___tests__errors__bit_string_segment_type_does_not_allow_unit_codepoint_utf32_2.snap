@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 347
+assertion_line: 139
 expression: "case <<1>> { <<1:utf32_codepoint-size(5)>> -> a }"
 ---
 error: Invalid bit string segment

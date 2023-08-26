@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
+assertion_line: 16
 expression: "\nfn go(x) {\n  let \"Hello\" = x\n}\n"
 ---
 import { makeError } from "../gleam.mjs";

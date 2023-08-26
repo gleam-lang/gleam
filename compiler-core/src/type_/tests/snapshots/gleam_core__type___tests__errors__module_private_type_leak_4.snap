@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1063
-expression: "external type PrivateType\npub external fn go(PrivateType) -> Int = \"\" \"\""
+assertion_line: 794
+expression: "type PrivateType\n@external(erlang, \"a\", \"b\")\npub fn go(x: PrivateType) -> Int"
 ---
 error: Private type used in public interface
-  ┌─ /src/one/two.gleam:2:1
+  ┌─ /src/one/two.gleam:3:1
   │
-2 │ pub external fn go(PrivateType) -> Int = "" ""
-  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+3 │ pub fn go(x: PrivateType) -> Int
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The following type is private, but is being used by this public export.
 

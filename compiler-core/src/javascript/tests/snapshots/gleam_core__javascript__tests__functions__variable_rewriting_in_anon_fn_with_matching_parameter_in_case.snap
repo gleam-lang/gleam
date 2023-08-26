@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 346
+assertion_line: 338
 expression: "pub fn bad() {\n  fn(state) {\n    let state = case Nil {\n      _ -> state\n    }\n    state\n  }\n}\n"
 ---
 export function bad() {

@@ -2,10 +2,16 @@
 
 ## Unreleased
 
+- The `if` conditional compilation, `external fn`, and `external type` syntaxes
+  have been removed.
 - The highlight.js grammar included with generated HTML documentation has been
   updated for the latest syntax.
+- Packages are no longer precompiled to Erlang when publishing to Hex if the
+  package target is set to JavaScript.
 - Fixed a bug where mutually recursive functions could be incorrectly inferred
   as having an overly general type.
+- Fix a bug where constants where not being correctly inlined when used in the 
+  size option of a bitstring pattern match.
 
 ## v0.30.4 - 2023-07-26
 

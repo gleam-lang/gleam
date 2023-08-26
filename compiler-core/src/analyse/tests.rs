@@ -10,13 +10,9 @@ fn module_name_validation() {
 
     assert!(validate_module_name(&"ok/gleam".into()).is_ok());
 
-    assert!(validate_module_name(&"external".into()).is_err());
-
     assert!(validate_module_name(&"type".into()).is_err());
 
     assert!(validate_module_name(&"pub".into()).is_err());
-
-    assert!(validate_module_name(&"ok/external".into()).is_err());
 
     assert!(validate_module_name(&"ok/type".into()).is_err());
 

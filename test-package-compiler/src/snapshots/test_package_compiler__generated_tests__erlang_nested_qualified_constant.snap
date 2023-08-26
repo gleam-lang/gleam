@@ -1,5 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 117
 expression: "./cases/erlang_nested_qualified_constant"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache

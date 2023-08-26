@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 345
+assertion_line: 363
 expression: "\n        case \"\" {\n          _ <> rest -> rest\n        }\n        "
 ---
 error: Syntax error

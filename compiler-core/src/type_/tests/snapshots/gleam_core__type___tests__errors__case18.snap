@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 754
+assertion_line: 503
 expression: "case 1 { x if x == \"x\" -> 1 }"
 ---
 error: Type mismatch

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 474
+assertion_line: 266
 expression: "case 1.0 { 1 -> 1 }"
 ---
 error: Type mismatch

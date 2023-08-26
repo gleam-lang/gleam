@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 220
+assertion_line: 228
 expression: "type Point { Point(x: Int, y: Int) }\n                fn x() { Point(x: 4, y: 6) Point(y: 1, x: 9) }"
 ---
 -module(my@mod).

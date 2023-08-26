@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
-assertion_line: 71
-expression: "pub external type Queue(a)\npub external fn new() -> Queue(a) = \"queue\" \"new\"\n"
+assertion_line: 82
+expression: "pub type Queue(a)\n\n@external(javascript, \"queue\", \"new\")\npub fn new() -> Queue(a)\n"
 ---
 export type Queue$<I> = any;
 

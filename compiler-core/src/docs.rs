@@ -5,10 +5,7 @@ use std::time::SystemTime;
 use camino::Utf8PathBuf;
 
 use crate::{
-    ast::{
-        CustomType, Definition, ExternalFunction, Function, ModuleConstant, TypeAlias,
-        TypedDefinition,
-    },
+    ast::{CustomType, Definition, Function, ModuleConstant, TypeAlias, TypedDefinition},
     build::Module,
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
@@ -481,22 +478,6 @@ fn function<'a>(
     let mut formatter = format::Formatter::new();
 
     match statement {
-        Definition::ExternalFunction(ExternalFunction {
-            public: true,
-            name,
-            documentation: doc,
-            return_: retrn,
-            arguments: args,
-            location,
-            ..
-        }) => Some(DocsFunction {
-            name,
-            documentation: markdown_documentation(doc),
-            text_documentation: text_documentation(doc),
-            signature: print(formatter.external_fn_signature(true, name, args, retrn)),
-            source_url: source_links.url(location),
-        }),
-
         Definition::Function(Function {
             public: true,
             name,

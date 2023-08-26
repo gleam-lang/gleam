@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 224
+assertion_line: 247
 expression: "\npub fn main() {\n  #(do, do())\n}\n\n@external(erlang, \"Elixir.String\", \"main\")\nfn do() -> Int\n"
 ---
 -module(my@mod).

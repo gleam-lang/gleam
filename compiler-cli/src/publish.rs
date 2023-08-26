@@ -132,13 +132,16 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
         Options {
             warnings_as_errors: false,
             mode: Mode::Prod,
-            target: Some(Target::Erlang),
+            target: Some(config.target),
             codegen: Codegen::All,
         },
         build::download_dependencies()?,
     )?;
 
-    let generated_files = generated_files(paths, &built.root_package)?;
+    let generated_files = match config.target {
+        Target::Erlang => generated_erlang_files(paths, &built.root_package)?,
+        Target::JavaScript => vec![],
+    };
     let src_files = project_files()?;
     let contents_tar_gz = contents_tarball(&src_files, &generated_files)?;
     let version = "3";
@@ -278,7 +281,10 @@ fn project_files() -> Result<Vec<Utf8PathBuf>> {
 }
 
 // TODO: test
-fn generated_files(paths: &ProjectPaths, package: &Package) -> Result<Vec<(Utf8PathBuf, String)>> {
+fn generated_erlang_files(
+    paths: &ProjectPaths,
+    package: &Package,
+) -> Result<Vec<(Utf8PathBuf, String)>> {
     let mut files = vec![];
 
     let dir = paths.build_directory_for_package(Mode::Prod, Target::Erlang, &package.config.name);

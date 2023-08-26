@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 320
+assertion_line: 338
 expression: "foo:Int = 4"
 ---
 error: Syntax error

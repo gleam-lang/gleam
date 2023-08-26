@@ -59,7 +59,6 @@ mod config;
 mod dependencies;
 mod docs;
 mod export;
-mod fix;
 mod format;
 mod fs;
 mod hex;
@@ -103,7 +102,7 @@ enum Command {
         warnings_as_errors: bool,
 
         /// The platform to target
-        #[clap(long, ignore_case = true)]
+        #[clap(short, long, ignore_case = true, possible_values = Target::VARIANTS)]
         target: Option<Target>,
     },
 
@@ -155,17 +154,6 @@ enum Command {
         /// Check if inputs are formatted without changing them
         #[clap(long)]
         check: bool,
-    },
-
-    /// Rewrite deprecated Gleam code
-    Fix {
-        /// Files to fix
-        #[clap(default_value = ".")]
-        files: Vec<String>,
-
-        #[clap(short, long)]
-        /// The target to use for external functions when it could not be inferred.
-        target: Option<Target>,
     },
 
     /// Start an Erlang shell
@@ -401,8 +389,6 @@ fn main() {
             files,
             check,
         } => format::run(stdin, check, files),
-
-        Command::Fix { files, target } => fix::run(target, files),
 
         Command::Deps(Dependencies::List) => dependencies::list(),
 

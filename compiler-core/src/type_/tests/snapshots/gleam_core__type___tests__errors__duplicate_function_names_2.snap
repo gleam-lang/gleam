@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1217
+assertion_line: 949
 expression: "fn dupe() { 1 }\nfn dupe() { 2.0 }"
 ---
 error: Duplicate definition

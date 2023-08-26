@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
-assertion_line: 128
+assertion_line: 148
 expression: "\n@external(javascript, \"./one.mjs\", \"oneJs\")\npub fn one(x: Int) -> Int {\n  todo\n}\n\npub fn main() {\n  one(1)\n}\n"
 ---
 import { oneJs as one } from "./one.mjs";

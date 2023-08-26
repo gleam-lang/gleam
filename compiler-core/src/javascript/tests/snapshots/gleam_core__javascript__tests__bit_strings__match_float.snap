@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_strings.rs
+assertion_line: 214
 expression: "\nfn go(x) {\n  let <<a:float, b:int>> = x\n}\n"
 ---
 import { makeError } from "../gleam.mjs";

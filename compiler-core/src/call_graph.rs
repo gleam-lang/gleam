@@ -6,8 +6,8 @@ mod into_dependency_order_tests;
 
 use crate::{
     ast::{
-        AssignName, BitStringSegmentOption, ClauseGuard, Constant, ModuleFunction, Pattern,
-        SrcSpan, Statement, UntypedExpr, UntypedPattern, UntypedStatement,
+        AssignName, BitStringSegmentOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
+        UntypedExpr, UntypedFunction, UntypedPattern, UntypedStatement,
     },
     type_::Error,
     Result,
@@ -32,10 +32,10 @@ impl<'a> CallGraphBuilder<'a> {
     /// name of the function.
     fn register_module_function_existance(
         &mut self,
-        function: &'a ModuleFunction,
+        function: &'a UntypedFunction,
     ) -> Result<(), Error> {
-        let name = function.name();
-        let location = function.location();
+        let name = &function.name;
+        let location = function.location;
 
         let index = self.graph.add_node(());
         let previous = self.names.insert(name, Some((index, location)));
@@ -50,31 +50,32 @@ impl<'a> CallGraphBuilder<'a> {
         Ok(())
     }
 
-    fn register_references(&mut self, function: &'a ModuleFunction) {
-        match function {
-            ModuleFunction::Internal(f) => {
-                let names = self.names.clone();
-                self.current_function = self
-                    .names
-                    .get(f.name.as_str())
-                    .expect("Function must already have been registered as existing")
-                    .expect("Function must not be shadowed at module level")
-                    .0;
-                for name in f.arguments.iter().flat_map(|a| a.get_variable_name()) {
-                    self.define(name);
-                }
-                self.statements(&f.body);
-                self.names = names;
-            }
-            ModuleFunction::External(_) => {}
+    fn register_references(&mut self, function: &'a UntypedFunction) {
+        let names = self.names.clone();
+        self.current_function = self
+            .names
+            .get(function.name.as_str())
+            .expect("Function must already have been registered as existing")
+            .expect("Function must not be shadowed at module level")
+            .0;
+        for name in function
+            .arguments
+            .iter()
+            .flat_map(|a| a.get_variable_name())
+        {
+            self.define(name);
         }
+        self.statements(&function.body);
+        self.names = names;
     }
 
     fn referenced(&mut self, name: &str) {
         // If we don't know what the target is then it's either a programmer
         // error to be detected later, or it's not a module function and as such
         // is not a value we are tracking.
-        let Some(target) = self.names.get(name) else { return };
+        let Some(target) = self.names.get(name) else {
+            return;
+        };
 
         // If the target is known but registered as None then it's local value
         // that shadows a module function.
@@ -389,8 +390,8 @@ impl<'a> CallGraphBuilder<'a> {
 /// mutually recursive functions need to be compiled together.
 ///
 pub fn into_dependency_order(
-    functions: Vec<ModuleFunction>,
-) -> Result<Vec<Vec<ModuleFunction>>, Error> {
+    functions: Vec<UntypedFunction>,
+) -> Result<Vec<Vec<UntypedFunction>>, Error> {
     let mut grapher = CallGraphBuilder::default();
 
     for function in &functions {

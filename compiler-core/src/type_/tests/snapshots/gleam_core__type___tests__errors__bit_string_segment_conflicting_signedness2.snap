@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 292
+assertion_line: 84
 expression: "case <<1>> { <<1:unsigned-signed>> -> 1 }"
 ---
 error: Invalid bit string segment

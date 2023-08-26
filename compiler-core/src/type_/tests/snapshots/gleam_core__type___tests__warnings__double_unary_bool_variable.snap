@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 557
 expression: "\n        pub fn main() { \n            let x = True\n            let _ = !!x \n        }\n        "
 ---
 
