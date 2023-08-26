@@ -526,8 +526,10 @@ fn hover_for_module_constant(
     constant: &ModuleConstant<Arc<Type>, SmolStr>,
     line_numbers: LineNumbers,
 ) -> Hover {
+    let empty_smolstr = SmolStr::from("");
     let type_ = Printer::new().pretty_print(&constant.type_, 0);
-    let contents = format!("```gleam\n{type_}\n```");
+    let documentation = constant.documentation.as_ref().unwrap_or(&empty_smolstr);
+    let contents = format!("```gleam\n{type_}\n```\n{documentation}");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constant.location, &line_numbers)),

@@ -1,20 +1,9 @@
-use itertools::Itertools;
 use lsp_types::{
-    CompletionItem, CompletionItemKind, Documentation, Hover, HoverContents, HoverParams,
-    MarkedString, MarkupContent, MarkupKind, Position, Range, TextDocumentIdentifier,
+    Hover, HoverContents, HoverParams, MarkedString, Position, Range, TextDocumentIdentifier,
     TextDocumentPositionParams, Url,
 };
 
 use super::*;
-
-// fn expression_completions(src: &str, dep: &str) -> Vec<CompletionItem> {
-//     let src = format!("fn typing_in_here() {{\n  0\n}}\n {src}");
-//     let position = Position::new(1, 0);
-//     positioned_expression_completions(&src, dep, position)
-//         .into_iter()
-//         .filter(|c| c.label != "typing_in_here")
-//         .collect_vec()
-// }
 
 fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
     let io = LanguageServerTestIO::new();
@@ -153,4 +142,38 @@ fn append(x, y) {
 ";
 
     assert_eq!(positioned_hover(&code, Position::new(4, 1)), None);
+}
+
+#[test]
+fn hover_module_constant() {
+    let code = "
+/// Exciting documentation
+/// Maybe even multiple lines
+const one = 1
+";
+
+    assert_eq!(
+        positioned_hover(&code, Position::new(3, 6)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+Int
+```
+ Exciting documentation
+ Maybe even multiple lines
+"
+                .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 3,
+                    character: 6
+                },
+                end: Position {
+                    line: 3,
+                    character: 9
+                },
+            }),
+        })
+    );
 }
