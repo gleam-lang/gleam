@@ -2571,6 +2571,7 @@ where
             Some((start, Token::Name { name }, end)) => Ok(Pattern::VarUsage {
                 location: SrcSpan { start, end },
                 name,
+                constructor: None,
                 type_: (),
             }),
             Some((start, Token::Int { value }, end)) => Ok(Pattern::Int {
