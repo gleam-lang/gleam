@@ -481,7 +481,7 @@ fn string_concatenate<'a>(
 ) -> Document<'a> {
     let left = string_concatenate_argument(left, env);
     let right = string_concatenate_argument(right, env);
-    bit_string([left, right].into_iter())
+    bit_string([left, right])
 }
 
 fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {

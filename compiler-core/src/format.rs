@@ -1667,7 +1667,7 @@ fn bit_string<'a>(
         break_(",", ", ")
     };
     break_("<<", "<<")
-        .append(join(segments.into_iter(), comma))
+        .append(join(segments, comma))
         .nest(INDENT)
         .append(break_(",", ""))
         .append(">>")
