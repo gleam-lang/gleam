@@ -1,4 +1,8 @@
 // TODO: move TestCompileOutput to a test helper crate
+#![allow(
+    // TODO: fix
+    clippy::arc_with_non_send_sync,
+)]
 
 #[cfg(test)]
 mod generated_tests;

@@ -2660,7 +2660,7 @@ where
         match name.as_str() {
             "external" => self.parse_external_attribute(start, end, attributes),
             "target" => self.parse_target_attribute(start, end, attributes),
-            _ => todo!(),
+            _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan { start, end }),
         }
     }
 

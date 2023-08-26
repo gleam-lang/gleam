@@ -45,7 +45,12 @@
     unstable_features,
     unused_results
 )]
-#![allow(clippy::match_single_binding, clippy::inconsistent_struct_constructor)]
+#![allow(
+    clippy::match_single_binding,
+    clippy::inconsistent_struct_constructor,
+    // TODO: fix
+    clippy::arc_with_non_send_sync,
+)]
 
 #[cfg(test)]
 #[macro_use]
