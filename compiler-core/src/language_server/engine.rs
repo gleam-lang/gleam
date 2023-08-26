@@ -105,8 +105,7 @@ where
         self.progress_reporter.compilation_finished();
 
         let modules = result?;
-        self.modules_compiled_since_last_feedback
-            .extend(modules.into_iter());
+        self.modules_compiled_since_last_feedback.extend(modules);
 
         Ok(())
     }

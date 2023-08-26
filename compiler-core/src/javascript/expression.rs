@@ -1249,7 +1249,7 @@ pub(crate) fn constant_expression<'a>(
 
 pub fn string(value: &str) -> Document<'_> {
     if value.contains('\n') {
-        Document::String(value.replace('\n', r#"\n"#)).surround("\"", "\"")
+        Document::String(value.replace('\n', r"\n")).surround("\"", "\"")
     } else {
         value.to_doc().surround("\"", "\"")
     }
