@@ -514,7 +514,8 @@ fn hover_for_function_head(
 }
 
 fn hover_for_function_argument(argument: &Arg<Arc<Type>>, line_numbers: LineNumbers) -> Hover {
-    let contents = Printer::new().pretty_print(&argument.type_, 0);
+    let type_ = Printer::new().pretty_print(&argument.type_, 0);
+    let contents = format!("```gleam\n{type_}\n```");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(argument.location, &line_numbers)),
@@ -525,7 +526,8 @@ fn hover_for_module_constant(
     constant: &ModuleConstant<Arc<Type>, SmolStr>,
     line_numbers: LineNumbers,
 ) -> Hover {
-    let contents = Printer::new().pretty_print(&constant.type_, 0);
+    let type_ = Printer::new().pretty_print(&constant.type_, 0);
+    let contents = format!("```gleam\n{type_}\n```");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constant.location, &line_numbers)),

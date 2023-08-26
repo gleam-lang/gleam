@@ -1,5 +1,6 @@
 mod compilation;
 mod completion;
+mod hover;
 
 use std::{
     collections::HashMap,
