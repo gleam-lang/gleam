@@ -52,7 +52,7 @@ fn empty() {
 #[test]
 fn no_deps() {
     let functions = [
-        ("a", [].as_slice(), ""),
+        ("a", [].as_slice(), "1"),
         ("b", [].as_slice(), r#""ok""#),
         ("c", [].as_slice(), r#"1"#),
         ("d", [].as_slice(), r#"1.0"#),
@@ -67,7 +67,7 @@ fn no_deps() {
 #[test]
 fn one_dep() {
     let functions = [
-        ("a", [].as_slice(), ""),
+        ("a", [].as_slice(), "1"),
         ("b", [].as_slice(), r#"c"#),
         ("c", [].as_slice(), r#"0"#),
     ];
@@ -80,7 +80,7 @@ fn one_dep() {
 #[test]
 fn unknown_vars() {
     let functions = [
-        ("a", [].as_slice(), ""),
+        ("a", [].as_slice(), "1"),
         ("b", [].as_slice(), r#"Nil"#),
         ("c", [].as_slice(), r#"Ok"#),
     ];
@@ -95,7 +95,7 @@ fn calling_function() {
     let functions = [
         ("a", [].as_slice(), r#"b()"#),
         ("b", [].as_slice(), r#"c(1, 2)"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -108,7 +108,7 @@ fn ref_in_call_argument() {
     let functions = [
         ("a", [].as_slice(), r#"c(1, b())"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -121,7 +121,7 @@ fn sequence() {
     let functions = [
         ("a", [].as_slice(), r#"c({ 1 2 b })"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -134,7 +134,7 @@ fn tuple() {
     let functions = [
         ("a", [].as_slice(), r#"#(b, c, 1)"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -147,7 +147,7 @@ fn pipeline() {
     let functions = [
         ("a", [].as_slice(), r#"1 |> b |> c"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -160,7 +160,7 @@ fn list() {
     let functions = [
         ("a", [].as_slice(), r#"[b, b, c, 1]"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -173,7 +173,7 @@ fn list_spread() {
     let functions = [
         ("a", [].as_slice(), r#"[b, b, ..c]"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -184,7 +184,7 @@ fn list_spread() {
 #[test]
 fn record_access() {
     let functions = [
-        ("a", [].as_slice(), ""),
+        ("a", [].as_slice(), "1"),
         ("b", [].as_slice(), r#"b().wibble"#),
         ("c", [].as_slice(), r#"123"#),
     ];
@@ -199,7 +199,7 @@ fn binop() {
     let functions = [
         ("a", [].as_slice(), r#"1 + a() + 2 / b() * 4"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -212,7 +212,7 @@ fn bit_strings() {
     let functions = [
         ("a", [].as_slice(), r#"<<b, c>>"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -225,7 +225,7 @@ fn tuple_index() {
     let functions = [
         ("a", [].as_slice(), r#"b.0"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -238,7 +238,7 @@ fn record_update() {
     let functions = [
         ("a", [].as_slice(), r#"Wibble(..b, wobble: c())"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -251,7 +251,7 @@ fn negate() {
     let functions = [
         ("a", [].as_slice(), r#"!c()"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -264,7 +264,7 @@ fn use_() {
     let functions = [
         ("a", [].as_slice(), r#"use x <- c"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -277,7 +277,7 @@ fn use_shadowing() {
     let functions = [
         ("a", [].as_slice(), r#"123"#),
         ("b", [].as_slice(), r#"{ use c <- a c }"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -290,7 +290,7 @@ fn fn_argument_shadowing() {
     let functions = &[
         ("a", [].as_slice(), r#"fn(b) { c b }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -303,7 +303,7 @@ fn fn_argument_shadowing_then_not() {
     let functions = [
         ("a", [].as_slice(), r#"{ fn(b) { c b } b }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -316,7 +316,7 @@ fn let_var() {
     let functions = [
         ("a", [].as_slice(), r#"{ let c = b c }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -365,7 +365,7 @@ fn pattern_concat() {
     let functions = [
         ("a", [].as_slice(), r#"{ let "a" <> c = b c }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -378,7 +378,7 @@ fn pattern_tuple() {
     let functions = [
         ("a", [].as_slice(), r#"{ let #(a, c) = b a c }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -391,7 +391,7 @@ fn pattern_list() {
     let functions = [
         ("a", [].as_slice(), r#"{ let [a, c] = b a c }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -404,7 +404,7 @@ fn pattern_list_spread() {
     let functions = [
         ("a", [].as_slice(), r#"{ let [a, ..c] = b a c }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -421,7 +421,7 @@ fn pattern_bit_string_segment_size_var_usage() {
             r#"{ let <<y:size(b), _:unit(3)>> = c y }"#,
         ),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -434,7 +434,7 @@ fn pattern_assign() {
     let functions = [
         ("a", [].as_slice(), r#"{ let 1 as b = c b }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -447,7 +447,7 @@ fn pattern_constructor() {
     let functions = [
         ("a", [].as_slice(), r#"{ let Ok(b) = c b }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -460,7 +460,7 @@ fn scope_reset() {
     let functions = [
         ("a", [].as_slice(), r#"{ let x = { let b = 1 b } b }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -473,7 +473,7 @@ fn case_subject() {
     let functions = [
         ("a", [].as_slice(), r#"case b { _ -> 1 }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -486,7 +486,7 @@ fn case_subjects() {
     let functions = [
         ("a", [].as_slice(), r#"case b, c { _, _ -> 1 }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -499,7 +499,7 @@ fn case_pattern_shadow() {
     let functions = [
         ("a", [].as_slice(), r#"case 1 { b -> b }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -512,7 +512,7 @@ fn case_use_in_clause() {
     let functions = [
         ("a", [].as_slice(), r#"case 1 { _ -> b }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -525,7 +525,7 @@ fn case_clause_doesnt_shadow_later_clauses() {
     let functions = [
         ("a", [].as_slice(), r#"case 1 { b -> 1 _ -> b }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -538,7 +538,7 @@ fn case_clause_doesnt_shadow_after() {
     let functions = [
         ("a", [].as_slice(), r#"{ case 1 { b -> 1 } b }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -551,7 +551,7 @@ fn guard() {
     let functions = [
         ("a", [].as_slice(), r#"case 1 { _ if b -> 1 }"#),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -568,7 +568,7 @@ fn big_guard() {
             r#"case 1 { _ if 1 == 2 || x != #(Ok(b), 123) -> 1 }"#,
         ),
         ("b", [].as_slice(), r#"123"#),
-        ("c", [].as_slice(), ""),
+        ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
@@ -578,7 +578,7 @@ fn big_guard() {
 
 #[test]
 fn duplicate_external_function_name() {
-    let functions = [("c", [].as_slice(), ""), ("c", [].as_slice(), "")];
+    let functions = [("c", [].as_slice(), "1"), ("c", [].as_slice(), "1")];
     _ = parse_and_order(functions.as_slice()).unwrap_err();
 }
 
