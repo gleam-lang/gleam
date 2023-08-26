@@ -25,6 +25,4 @@ ssl_verify_fun = "~> 1.1"
 bcrypt = "~> 1.1"
 
 [dev-dependencies]
-# These are Gleam deps
-first_gleam_publish_package = "> 0.0.0"
 gleeunit = "~> 0.1"

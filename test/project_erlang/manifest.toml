@@ -7,7 +7,6 @@ packages = [
   { name = "countries", version = "1.6.0", build_tools = ["mix"], requirements = ["yamerl"], otp_app = "countries", source = "hex", outer_checksum = "A1E4D0FDD2A799F16A95AE2E842EDEAABD9AC7639624AC5E139C54DA7A6BCCB0" },
   { name = "cowboy", version = "2.10.0", build_tools = ["make", "rebar3"], requirements = ["cowlib", "ranch"], otp_app = "cowboy", source = "hex", outer_checksum = "3AFDCCB7183CC6F143CB14D3CF51FA00E53DB9EC80CDCD525482F5E99BC41D6B" },
   { name = "cowlib", version = "2.12.1", build_tools = ["make", "rebar3"], requirements = [], otp_app = "cowlib", source = "hex", outer_checksum = "163B73F6367A7341B33C794C4E88E7DBFE6498AC42DCD69EF44C5BC5507C8DB0" },
-  { name = "first_gleam_publish_package", version = "2.2.2", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "first_gleam_publish_package", source = "hex", outer_checksum = "5C8F611B3B8A2F640F7668A710759F549D6104AC1D5E702465E001A73DBCF2D4" },
   { name = "gleam_erlang", version = "0.21.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_erlang", source = "hex", outer_checksum = "A502A9DE61CEBC94B9D55A1FD41D0EA735A82D74E926E3D874CBA69F3705BDB2" },
   { name = "gleam_stdlib", version = "0.30.1", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "704258528887F95075FFED7AAE1CCF836A9B88E3AADA2F69F9DA15815F94A4F9" },
   { name = "gleeunit", version = "0.11.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "1397E5C4AC4108769EE979939AC39BF7870659C5AFB714630DEEEE16B8272AD5" },
@@ -22,7 +21,6 @@ bcrypt = { version = "~> 1.1" }
 certifi = { version = "~> 2.8" }
 countries = { version = "~> 1.6" }
 cowboy = { version = "~> 2.9" }
-first_gleam_publish_package = { version = "> 0.0.0" }
 gleam_erlang = { version = "~> 0.5" }
 gleam_stdlib = { version = "~> 0.18" }
 gleeunit = { version = "~> 0.1" }
