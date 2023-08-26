@@ -62,10 +62,7 @@ impl MakeRelative for MakeRelativeToCurrentDir {
     fn make_relative(&self, path: &Utf8Path) -> Utf8PathBuf {
         match path.is_absolute() {
             true => pathdiff::diff_utf8_paths(path, &self.curr_dir)
-                .expect("Should not fail on two absolute paths")
-                .as_str()
-                .replace('\\', "/")
-                .into(),
+                .expect("Should not fail on two absolute paths"),
 
             false => path.into(),
         }

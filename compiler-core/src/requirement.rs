@@ -39,7 +39,13 @@ impl Requirement {
                 format!(r#"{{ version = "{}" }}"#, range)
             }
             Requirement::Path { path } => {
-                format!(r#"{{ path = "{}" }}"#, path_resolver.make_relative(path))
+                format!(
+                    r#"{{ path = "{}" }}"#,
+                    path_resolver
+                        .make_relative(path)
+                        .as_str()
+                        .replace('\\', "/")
+                )
             }
             Requirement::Git { git: url } => format!(r#"{{ git = "{}" }}"#, url),
         }
