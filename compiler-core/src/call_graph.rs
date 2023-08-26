@@ -74,7 +74,9 @@ impl<'a> CallGraphBuilder<'a> {
         // If we don't know what the target is then it's either a programmer
         // error to be detected later, or it's not a module function and as such
         // is not a value we are tracking.
-        let Some(target) = self.names.get(name) else { return };
+        let Some(target) = self.names.get(name) else {
+            return;
+        };
 
         // If the target is known but registered as None then it's local value
         // that shadows a module function.
