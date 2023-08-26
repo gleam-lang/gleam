@@ -1095,6 +1095,7 @@ pub enum Pattern<Type> {
     VarUsage {
         location: SrcSpan,
         name: SmolStr,
+        constructor: Option<ValueConstructor>,
         type_: Type,
     },
 

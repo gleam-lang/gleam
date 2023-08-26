@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 574
+expression: "pub fn main() {\n            let x = <<5:size(sixteen)>>\n            case x {\n              <<5:size(sixteen)>> -> <<5:size(sixteen)>>\n              <<6:size(15)>> -> <<5:size(15)>>\n            }\n          }\n          \n          pub const sixteen = 16"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([main/0]).
+
+-spec main() -> bitstring().
+main() ->
+    Fifteen = 15,
+    X = <<5:(lists:max([(16), 0]))>>,
+    case X of
+        <<5:16>> ->
+            <<5:(lists:max([(16), 0]))>>;
+
+        <<6:Fifteen>> ->
+            <<5:(lists:max([(Fifteen), 0]))>>
+    end.
+
