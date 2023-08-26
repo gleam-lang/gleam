@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1723
+assertion_line: 1568
 expression: "\npub fn main(b) {\n    case b {\n        b if b == True -> Nil\n        b if b != True -> Nil\n    }\n}\n"
 ---
 error: Not exhaustive pattern match
@@ -20,4 +20,5 @@ These values are not matched:
 
   - False
   - True
+
 

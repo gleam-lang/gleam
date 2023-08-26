@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 322
+assertion_line: 330
 expression: "\npub fn main(args) {\n  case args {\n    _ -> {\n      let a = 1\n      a\n    }\n  }\n  let a = 2\n  a\n}\n"
 ---
 -module(my@mod).

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 795
+assertion_line: 544
 expression: "case [3.33], 1 { x, x if x > x -> 1 }"
 ---
 error: Duplicate variable in pattern

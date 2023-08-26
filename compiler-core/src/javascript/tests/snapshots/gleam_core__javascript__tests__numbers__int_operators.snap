@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 37
+assertion_line: 55
 expression: "\nfn go() {\n    1 + 1 // => 2\n    5 - 1 // => 4\n    5 / 2 // => 2\n    3 * 3 // => 9\n    5 % 2 // => 1\n    2 > 1  // => True\n    2 < 1  // => False\n    2 >= 1 // => True\n    2 <= 1 // => False\n}\n"
 ---
 import { remainderInt, divideInt } from "../gleam.mjs";

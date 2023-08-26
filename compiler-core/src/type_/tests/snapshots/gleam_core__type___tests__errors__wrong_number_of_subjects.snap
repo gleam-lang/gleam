@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 609
+assertion_line: 358
 expression: "case 1 { _, _ -> 1 }"
 ---
 error: Incorrect number of patterns

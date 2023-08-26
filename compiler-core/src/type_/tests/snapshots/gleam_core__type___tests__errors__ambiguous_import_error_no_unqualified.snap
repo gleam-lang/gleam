@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1769
+assertion_line: 1614
 expression: "\n        import foo/sub\n        import foo2/sub\n        pub fn main() {\n            sub.bar()\n        }\n        "
 ---
 error: Duplicate import

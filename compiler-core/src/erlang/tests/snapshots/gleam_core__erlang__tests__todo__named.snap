@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/todo.rs
-assertion_line: 16
+assertion_line: 27
 expression: "\npub fn main() {\n  todo(\"testing\")\n}\n"
 ---
 -module(my@mod).

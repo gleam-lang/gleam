@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-assertion_line: 82
+assertion_line: 107
 expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" <> _ -> Nil\n    _ -> Nil\n  }\n}\n"
 ---
 export function go(x) {

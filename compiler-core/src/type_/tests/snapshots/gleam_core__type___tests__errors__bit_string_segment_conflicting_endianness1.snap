@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 297
+assertion_line: 89
 expression: "let x = <<1:big-little>> x"
 ---
 error: Invalid bit string segment

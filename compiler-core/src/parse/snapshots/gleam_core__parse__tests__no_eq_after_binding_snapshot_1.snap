@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 333
+assertion_line: 351
 expression: let foo
 ---
 error: Syntax error

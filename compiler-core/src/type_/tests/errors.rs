@@ -623,7 +623,10 @@ pub type Person {
 pub fn get_name(person: Person) { person.name }
 pub fn get_age(person: Person) { person.age }"
     );
+}
 
+#[test]
+fn accessor_multiple_variants_multiple_positions2() {
     // We cannot access fields on custom types with multiple variants where they are in different positions e.g. 1st and 3rd
     assert_module_error!(
         "

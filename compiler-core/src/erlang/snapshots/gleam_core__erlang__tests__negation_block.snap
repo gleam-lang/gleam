@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 497
+assertion_line: 505
 expression: "pub fn negate(x) {\n  !{\n    123\n    x\n  }\n}"
 ---
 -module(my@mod).

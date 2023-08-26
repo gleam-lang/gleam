@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 113
+assertion_line: 93
 expression: "import other.{Two as Three}\npub fn main() {\n  Three\n}"
 ---
 import * as other from "../other.d.ts";

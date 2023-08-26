@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 221
+assertion_line: 58
 expression: "\npub fn foo() { Ok(5) }\npub fn main() { let five = foo() }"
 ---
 

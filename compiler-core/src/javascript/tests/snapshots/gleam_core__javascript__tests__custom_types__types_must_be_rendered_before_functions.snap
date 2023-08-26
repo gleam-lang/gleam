@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 665
+assertion_line: 674
 expression: "\npub fn one() { One }\npub type One { One }\n"
 ---
 import { CustomType as $CustomType } from "../gleam.mjs";

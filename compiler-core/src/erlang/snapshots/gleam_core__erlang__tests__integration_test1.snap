@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 129
+assertion_line: 137
 expression: "pub fn t() { True }"
 ---
 -module(my@mod).

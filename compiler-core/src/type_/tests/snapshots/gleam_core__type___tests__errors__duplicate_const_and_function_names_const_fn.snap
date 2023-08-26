@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1033
 expression: "const duplicate = 1\nfn duplicate() { 2 }"
 ---
 error: Duplicate definition

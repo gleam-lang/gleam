@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/panic.rs
 assertion_line: 62
-expression: "\nfn go(x) {\n  case x {\n    _ -> panic\n  }\n};\n"
+expression: "\nfn go(x) {\n  case x {\n    _ -> panic\n  }\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
 

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 235
+assertion_line: 72
 expression: "\nfn main() { let five = 5 }"
 ---
 

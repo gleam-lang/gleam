@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
-assertion_line: 232
+assertion_line: 252
 expression: "\n@external(javascript, \"blah\", \"(x => x)\")\npub fn one(x: Int) -> Int {\n  1\n}\n"
 ---
 error: Invalid JavaScript function

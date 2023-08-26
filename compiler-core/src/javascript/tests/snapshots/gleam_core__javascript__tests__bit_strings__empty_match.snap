@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bit_strings.rs
-expression: "\nfn go(x) {\n  assert <<>> = x\n}\n"
+assertion_line: 159
+expression: "\nfn go(x) {\n  let assert <<>> = x\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
 

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 163
+assertion_line: 171
 expression: "pub fn and(x, y) { x && y }\npub fn or(x, y) { x || y }\npub fn remainder(x, y) { x % y }\npub fn fdiv(x, y) { x /. y }\n            "
 ---
 -module(my@mod).
