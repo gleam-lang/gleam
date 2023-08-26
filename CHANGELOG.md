@@ -8,6 +8,8 @@
   package target is set to JavaScript.
 - Fixed a bug where mutually recursive functions could be incorrectly inferred
   as having an overly general type.
+- Hovering over a function definition will now display the function signature,
+  or the type of the hovered argument.
 
 ## v0.30.4 - 2023-07-26
 
