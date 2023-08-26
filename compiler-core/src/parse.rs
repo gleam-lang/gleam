@@ -228,6 +228,8 @@ where
     fn parse_target_group(&mut self) -> Result<Option<Vec<TargettedDefinition>>, ParseError> {
         match &self.tok0 {
             // Attribute-syntax
+            // TODO: move this up into the parsing of the definition, such that
+            // each has attributes.
             Some((_, Token::At, _)) => match &self.tok1 {
                 Some((_, Token::Name { name }, _)) if name == "target" => {
                     let _ = self.next_tok();
@@ -243,25 +245,6 @@ where
                     Ok(Some(vec![TargettedDefinition::Any(definition)]))
                 }
             },
-
-            // If-syntax
-            Some((start, Token::If, _)) => {
-                let start = *start;
-                let _ = self.next_tok();
-                let target = self.expect_target()?;
-                let (_, end) = self.expect_one(&Token::LeftBrace)?;
-                self.warnings.push(Warning::DeprecatedIf {
-                    target,
-                    location: SrcSpan::new(start, end),
-                });
-                let statements = self.expect_definitions()?;
-                let (_, _) = self.expect_one(&Token::RightBrace)?;
-                let statements = statements
-                    .into_iter()
-                    .map(|s| TargettedDefinition::Only(target, s))
-                    .collect();
-                Ok(Some(statements))
-            }
 
             Some(_) => Ok(self
                 .parse_definition()?
@@ -279,11 +262,6 @@ where
             ),
             Some(statement) => self.ensure_no_errors(Ok(statement)),
         }
-    }
-
-    fn expect_definitions(&mut self) -> Result<Vec<UntypedDefinition>, ParseError> {
-        let statements = Parser::series_of(self, &Parser::parse_definition, None);
-        self.ensure_no_errors(statements)
     }
 
     fn parse_definition(&mut self) -> Result<Option<UntypedDefinition>, ParseError> {

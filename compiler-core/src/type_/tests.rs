@@ -16,11 +16,11 @@ use camino::Utf8PathBuf;
 
 mod assert;
 mod assignments;
+mod conditional_compilation;
 mod errors;
 mod functions;
 mod imports;
 mod pretty;
-mod statement_if;
 mod type_alias;
 mod use_;
 mod warnings;

@@ -22,7 +22,6 @@ mod patterns;
 mod pipes;
 mod records;
 mod reserved;
-mod statement_if;
 mod strings;
 mod todo;
 mod use_;
