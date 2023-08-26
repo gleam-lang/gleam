@@ -451,3 +451,11 @@ pub fn one(x: Int) -> Int {
 "#
     );
 }
+
+#[test]
+fn unknown_attribute() {
+    assert_module_error!(
+        r#"@go_faster()
+pub fn main() { 1 }"#
+    );
+}
