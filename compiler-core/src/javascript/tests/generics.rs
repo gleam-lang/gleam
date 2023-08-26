@@ -38,7 +38,7 @@ fn tuple_generics_typescript() {
 #[test]
 fn externals_generics_typescript() {
     assert_ts_def!(
-        r#"pub external type Queue(a)
+        r#"pub type Queue(a)
 
 pub external fn new() -> Queue(a) = "queue" "new"
 
@@ -64,7 +64,7 @@ fn result_typescript() {
 #[test]
 fn task_typescript() {
     assert_ts_def!(
-        r#"pub external type Promise(value)
+        r#"pub type Promise(value)
     pub type Task(a) = fn() -> Promise(a)"#,
     );
 }

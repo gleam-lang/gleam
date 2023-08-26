@@ -23,7 +23,6 @@ pub fn str_to_keyword(word: &str) -> Option<Token> {
         "assert" => Some(Token::Assert),
         "case" => Some(Token::Case),
         "const" => Some(Token::Const),
-        "external" => Some(Token::External),
         "fn" => Some(Token::Fn),
         "if" => Some(Token::If),
         "import" => Some(Token::Import),

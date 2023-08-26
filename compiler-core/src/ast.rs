@@ -127,8 +127,6 @@ fn module_dependencies_test() {
 
 pub type TypedArg = Arg<Arc<Type>>;
 pub type UntypedArg = Arg<()>;
-pub type TypedExternalFnArg = ExternalFnArg<Arc<Type>>;
-pub type UntypedExternalFnArg = ExternalFnArg<()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Arg<T> {
@@ -150,17 +148,6 @@ impl<A> Arg<A> {
 
     pub fn get_variable_name(&self) -> Option<&SmolStr> {
         self.names.get_variable_name()
-    }
-}
-
-impl<A> ExternalFnArg<A> {
-    pub fn set_type<B>(self, t: B) -> ExternalFnArg<B> {
-        ExternalFnArg {
-            location: self.location,
-            label: self.label,
-            annotation: self.annotation,
-            type_: t,
-        }
     }
 }
 
@@ -339,29 +326,6 @@ impl TypeAst {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-/// Import a function defined outside of Gleam code.
-/// When compiling to Erlang the function could be implemented in Erlang
-/// or Elixir, when compiling to JavaScript it might be implemented in
-/// JavaScript or TypeScript.
-///
-/// # Example(s)
-///
-/// ```gleam
-/// pub external fn random_float() -> Float = "rand" "uniform"
-/// ```
-pub struct ExternalFunction<T> {
-    pub location: SrcSpan,
-    pub public: bool,
-    pub arguments: Vec<ExternalFnArg<T>>,
-    pub name: SmolStr,
-    pub return_: TypeAst,
-    pub return_type: T,
-    pub module: SmolStr,
-    pub fun: SmolStr,
-    pub documentation: Option<SmolStr>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 /// A function definition
 ///
 /// # Example(s)
@@ -515,8 +479,6 @@ pub enum Definition<T, Expr, ConstantRecordTag, PackageName> {
 
     CustomType(CustomType<T>),
 
-    ExternalFunction(ExternalFunction<T>),
-
     Import(Import<PackageName>),
 
     ModuleConstant(ModuleConstant<T, ConstantRecordTag>),
@@ -549,10 +511,7 @@ impl TypedDefinition {
                 }
             }
 
-            Definition::TypeAlias(_)
-            | Definition::ExternalFunction(_)
-            | Definition::Import(_)
-            | Definition::ModuleConstant(_) => {
+            Definition::TypeAlias(_) | Definition::Import(_) | Definition::ModuleConstant(_) => {
                 if self.location().contains(byte_index) {
                     Some(Located::ModuleStatement(self))
                 } else {
@@ -570,7 +529,6 @@ impl<A, B, C, E> Definition<A, B, C, E> {
             | Definition::Import(Import { location, .. })
             | Definition::TypeAlias(TypeAlias { location, .. })
             | Definition::CustomType(CustomType { location, .. })
-            | Definition::ExternalFunction(ExternalFunction { location, .. })
             | Definition::ModuleConstant(ModuleConstant { location, .. }) => *location,
         }
     }
@@ -602,9 +560,6 @@ impl<A, B, C, E> Definition<A, B, C, E> {
                 documentation: doc, ..
             })
             | Definition::CustomType(CustomType {
-                documentation: doc, ..
-            })
-            | Definition::ExternalFunction(ExternalFunction {
                 documentation: doc, ..
             })
             | Definition::ModuleConstant(ModuleConstant {
@@ -646,14 +601,6 @@ impl Layer {
     pub fn is_value(&self) -> bool {
         matches!(self, Self::Value)
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ExternalFnArg<T> {
-    pub location: SrcSpan,
-    pub label: Option<SmolStr>,
-    pub annotation: TypeAst,
-    pub type_: T,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1460,7 +1407,6 @@ pub enum TodoKind {
 #[derive(Debug, Default)]
 pub struct GroupedStatements {
     pub functions: Vec<Function<(), UntypedExpr>>,
-    pub external_functions: Vec<ExternalFunction<()>>,
     pub constants: Vec<UntypedModuleConstant>,
     pub custom_types: Vec<CustomType<()>>,
     pub imports: Vec<Import<()>>,
@@ -1486,17 +1432,11 @@ impl GroupedStatements {
         let Self {
             custom_types,
             functions,
-            external_functions,
             constants,
             imports,
             type_aliases,
         } = self;
-        functions.len()
-            + constants.len()
-            + imports.len()
-            + custom_types.len()
-            + type_aliases.len()
-            + external_functions.len()
+        functions.len() + constants.len() + imports.len() + custom_types.len() + type_aliases.len()
     }
 
     fn add(&mut self, statement: UntypedDefinition) {
@@ -1506,29 +1446,6 @@ impl GroupedStatements {
             Definition::TypeAlias(t) => self.type_aliases.push(t),
             Definition::CustomType(c) => self.custom_types.push(c),
             Definition::ModuleConstant(c) => self.constants.push(c),
-            Definition::ExternalFunction(f) => self.external_functions.push(f),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum ModuleFunction {
-    Internal(Function<(), UntypedExpr>),
-    External(ExternalFunction<()>),
-}
-
-impl ModuleFunction {
-    pub fn name(&self) -> &SmolStr {
-        match self {
-            Self::Internal(f) => &f.name,
-            Self::External(f) => &f.name,
-        }
-    }
-
-    pub fn location(&self) -> SrcSpan {
-        match self {
-            Self::Internal(f) => f.location,
-            Self::External(f) => f.location,
         }
     }
 }

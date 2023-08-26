@@ -8,7 +8,7 @@ mod tests;
 
 use crate::type_::is_prelude_module;
 use crate::{
-    ast::{CustomType, ExternalFunction, Function, Import, ModuleConstant, TypeAlias, *},
+    ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -219,7 +219,7 @@ fn module_document<'a>(
         module
             .definitions
             .iter()
-            .flat_map(|s| module_statement(&module.name, s, &module.name, line_numbers)),
+            .flat_map(|s| module_statement(s, &module.name, line_numbers)),
         lines(2),
     ));
 
@@ -241,13 +241,6 @@ fn register_imports(
 ) {
     match s {
         Definition::Function(Function {
-            public: true,
-            name,
-            arguments: args,
-            ..
-        }) => exports.push(atom_string(name.to_string()).append("/").append(args.len())),
-
-        Definition::ExternalFunction(ExternalFunction {
             public: true,
             name,
             arguments: args,
@@ -337,13 +330,11 @@ fn register_imports(
         Definition::Function(Function { .. })
         | Definition::Import(Import { .. })
         | Definition::TypeAlias(TypeAlias { .. })
-        | Definition::ExternalFunction(ExternalFunction { .. })
         | Definition::ModuleConstant(ModuleConstant { .. }) => (),
     }
 }
 
 fn module_statement<'a>(
-    current_module: &'a str,
     statement: &'a TypedDefinition,
     module: &'a str,
     line_numbers: &'a LineNumbers,
@@ -352,26 +343,9 @@ fn module_statement<'a>(
         Definition::TypeAlias(TypeAlias { .. })
         | Definition::CustomType(CustomType { .. })
         | Definition::Import(Import { .. })
-        | Definition::ModuleConstant(ModuleConstant { .. })
-        | Definition::ExternalFunction(ExternalFunction { public: false, .. }) => None,
+        | Definition::ModuleConstant(ModuleConstant { .. }) => None,
 
         Definition::Function(function) => module_function(function, module, line_numbers),
-
-        Definition::ExternalFunction(ExternalFunction {
-            fun,
-            module,
-            arguments: args,
-            name,
-            return_type,
-            ..
-        }) => Some(external_fun(
-            current_module,
-            name,
-            module,
-            fun,
-            args,
-            return_type,
-        )),
     }
 }
 
@@ -1628,38 +1602,6 @@ fn fun<'a>(args: &'a [TypedArg], body: &'a [TypedStatement], env: &mut Env<'a>) 
 fn incrementing_args_list(arity: usize) -> String {
     let arguments = (0..arity).map(|c| format!("Field@{c}"));
     Itertools::intersperse(arguments, ", ".into()).collect()
-}
-
-fn external_fun<'a>(
-    current_module: &'a str,
-    name: &'a str,
-    module: &'a str,
-    fun: &'a str,
-    args: &'a [TypedExternalFnArg],
-    return_type: &'a Arc<Type>,
-) -> Document<'a> {
-    let chars: String = incrementing_args_list(args.len());
-    let var_usages = collect_type_var_usages(
-        HashMap::new(),
-        [return_type]
-            .into_iter()
-            .chain(args.iter().map(|a| &a.type_)),
-    );
-    let type_printer = TypePrinter::new(current_module).with_var_usages(&var_usages);
-    let args_spec = args.iter().map(|a| type_printer.print(&a.type_));
-    let return_spec = type_printer.print(return_type);
-    let spec = fun_spec(name, args_spec, return_spec);
-
-    spec.append(atom(name)).append(
-        Document::String(format!("({chars}) ->"))
-            .append(line())
-            .append(atom(module))
-            .append(":")
-            .append(atom(fun))
-            .append(Document::String(format!("({chars}).")))
-            .nest(INDENT)
-            .group(),
-    )
 }
 
 fn variable_name(name: &str) -> String {

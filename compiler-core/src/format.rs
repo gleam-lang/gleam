@@ -2,7 +2,7 @@
 mod tests;
 
 use crate::{
-    ast::{CustomType, ExternalFunction, Function, Import, ModuleConstant, TypeAlias, Use, *},
+    ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, Use, *},
     build::Target,
     docvec,
     io::Utf8Writer,
@@ -221,24 +221,6 @@ impl<'comments> Formatter<'comments> {
                 opaque,
                 ..
             }) => self.custom_type(*public, *opaque, name, parameters, constructors, location),
-
-            Definition::ExternalFunction(ExternalFunction {
-                public,
-                arguments: args,
-                name,
-                return_: retrn,
-                module,
-                fun,
-                ..
-            }) => self
-                .external_fn_signature(*public, name, args, retrn)
-                .append(" =")
-                .append(line())
-                .append("  \"")
-                .append(module.as_str())
-                .append("\" \"")
-                .append(fun.as_str())
-                .append("\""),
 
             Definition::Import(Import {
                 module,
@@ -546,22 +528,6 @@ impl<'comments> Formatter<'comments> {
             .append(line().append(body).nest(INDENT).group())
             .append(line())
             .append("}")
-    }
-
-    pub fn external_fn_signature<'a, A>(
-        &mut self,
-        public: bool,
-        name: &'a str,
-        args: &'a [ExternalFnArg<A>],
-        retrn: &'a TypeAst,
-    ) -> Document<'a> {
-        pub_(public)
-            .to_doc()
-            .append("external fn ")
-            .append(name)
-            .append(self.external_fn_args(args))
-            .append(" -> ".to_doc().append(self.type_ast(retrn)))
-            .group()
     }
 
     fn expr_fn<'a>(
@@ -1186,16 +1152,6 @@ impl<'comments> Formatter<'comments> {
         }))
     }
 
-    fn external_fn_arg<'a, A>(&mut self, arg: &'a ExternalFnArg<A>) -> Document<'a> {
-        let comments = self.pop_comments(arg.location.start);
-        let doc = label(&arg.label).append(self.type_ast(&arg.annotation));
-        commented(doc.group(), comments)
-    }
-
-    fn external_fn_args<'a, A>(&mut self, args: &'a [ExternalFnArg<A>]) -> Document<'a> {
-        wrap_args(args.iter().map(|e| self.external_fn_arg(e)))
-    }
-
     fn call_arg<'a>(&mut self, arg: &'a CallArg<UntypedExpr>) -> Document<'a> {
         match &arg.label {
             Some(s) => commented(
@@ -1618,13 +1574,6 @@ impl<'a> Documentable<'a> for &'a UnqualifiedImport {
             None => nil(),
             Some(s) => " as ".to_doc().append(s.as_str()),
         })
-    }
-}
-
-fn label(label: &Option<SmolStr>) -> Document<'_> {
-    match label {
-        Some(s) => s.to_doc().append(": "),
-        None => nil(),
     }
 }
 

@@ -1,15 +1,16 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1233
-expression: "fn dupe() { 1 }\nexternal fn dupe(x) -> x = \"\" \"\""
+assertion_line: 965
+expression: "fn dupe() { 1 }\n@external(erlang, \"a\", \"b\")\nfn dupe(x) -> x\n"
 ---
 error: Duplicate definition
   ┌─ /src/one/two.gleam:1:1
   │
 1 │ fn dupe() { 1 }
   │ ^^^^^^^^^ First defined here
-2 │ external fn dupe(x) -> x = "" ""
-  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Redefined here
+2 │ @external(erlang, "a", "b")
+3 │ fn dupe(x) -> x
+  │ ^^^^^^^^^^ Redefined here
 
 `dupe` has been defined multiple times.
 Names in a Gleam module must be unique so one will need to be renamed.

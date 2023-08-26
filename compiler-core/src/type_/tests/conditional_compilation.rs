@@ -91,3 +91,17 @@ const x = 1
         vec![("main", "fn() -> Int")],
     );
 }
+
+#[test]
+fn target_does_not_need_to_be_the_first_attribute() {
+    // In previous versions of Gleam the `@target` attribute had to be the
+    // first attribute.
+    assert_module_infer!(
+        r#"
+@external(erlang, "blah", "wub")
+@target(erlang)
+pub fn main() -> Int
+"#,
+        vec![("main", "fn() -> Int")],
+    );
+}

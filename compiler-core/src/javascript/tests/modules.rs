@@ -154,11 +154,7 @@ pub fn go() { three.go() }
 #[test]
 fn imported_external_types_dont_get_rendered() {
     assert_js!(
-        (
-            CURRENT_PACKAGE,
-            "one/two/three",
-            r#"pub external type External"#
-        ),
+        (CURRENT_PACKAGE, "one/two/three", r#"pub type External"#),
         r#"import one/two/three.{External}
 
 pub fn go() { 1 }
@@ -199,11 +195,7 @@ pub fn go() -> List(Custom) { [One, Two] }
 #[test]
 fn imported_external_types_dont_get_rendered_with_value_of_same_name() {
     assert_js!(
-        (
-            CURRENT_PACKAGE,
-            "one/two/three",
-            r#"pub external type Thingy"#
-        ),
+        (CURRENT_PACKAGE, "one/two/three", r#"pub type Thingy"#),
         r#"import one/two/three.{Thingy}
 
 type Dup { Thingy }

@@ -9,7 +9,7 @@ use camino::Utf8Path;
 
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
-    ast::{CustomType, ExternalFunction, Function, Import, ModuleConstant, TypeAlias, *},
+    ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -180,18 +180,7 @@ impl<'a> Generator<'a> {
                 ..
             }) => vec![self.module_function(*public, name, arguments, body)],
 
-            Definition::ExternalFunction(ExternalFunction {
-                public,
-                name,
-                arguments,
-                module,
-                fun,
-                ..
-            }) if module.is_empty() => vec![Ok(
-                self.global_external_function(*public, name, arguments, fun)
-            )],
-
-            Definition::Function(_) | Definition::ExternalFunction(_) => vec![],
+            Definition::Function(_) => vec![],
         }
     }
 
@@ -281,7 +270,6 @@ impl<'a> Generator<'a> {
 
                 Definition::Function(Function { .. })
                 | Definition::TypeAlias(TypeAlias { .. })
-                | Definition::ExternalFunction(ExternalFunction { .. })
                 | Definition::Import(Import { .. })
                 | Definition::ModuleConstant(ModuleConstant { .. }) => vec![],
             })
@@ -293,17 +281,6 @@ impl<'a> Generator<'a> {
 
         for statement in &self.module.definitions {
             match statement {
-                Definition::ExternalFunction(ExternalFunction { module, .. })
-                    if module.is_empty() => {}
-
-                Definition::ExternalFunction(ExternalFunction {
-                    public,
-                    name,
-                    module,
-                    fun,
-                    ..
-                }) => self.register_external_function(&mut imports, *public, name, module, fun),
-
                 Definition::Import(Import {
                     module,
                     as_name,
@@ -464,34 +441,10 @@ impl<'a> Generator<'a> {
         ])
     }
 
-    fn global_external_function<T>(
-        &mut self,
-        public: bool,
-        name: &'a str,
-        arguments: &'a [ExternalFnArg<T>],
-        fun: &'a str,
-    ) -> Document<'a> {
-        let head = if public {
-            "export function "
-        } else {
-            "function "
-        };
-        let args = external_fn_args(arguments);
-        let fun = if name == fun {
-            docvec!["globalThis.", fun]
-        } else {
-            fun.to_doc()
-        };
-        let body = docvec!["return ", fun, args.clone()];
-        let body = docvec![line(), body].nest(INDENT).group();
-        docvec![head, name, args, " {", body, line(), "}"]
-    }
-
     fn register_module_definitions_in_scope(&mut self) {
         for statement in self.module.definitions.iter() {
             match statement {
-                Definition::ExternalFunction(ExternalFunction { name, .. })
-                | Definition::ModuleConstant(ModuleConstant { name, .. })
+                Definition::ModuleConstant(ModuleConstant { name, .. })
                 | Definition::Function(Function { name, .. }) => self.register_in_scope(name),
 
                 Definition::Import(Import { unqualified, .. }) => unqualified
@@ -503,20 +456,6 @@ impl<'a> Generator<'a> {
             }
         }
     }
-}
-
-fn external_fn_args<T>(arguments: &[ExternalFnArg<T>]) -> Document<'_> {
-    wrap_args(
-        arguments
-            .iter()
-            .enumerate()
-            .map(|(index, ExternalFnArg { label, .. })| {
-                label
-                    .as_ref()
-                    .map(|l| l.to_doc())
-                    .unwrap_or_else(|| Document::String(format!("arg{index}")))
-            }),
-    )
 }
 
 pub fn module(

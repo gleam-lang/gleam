@@ -6,10 +6,10 @@ use crate::dep_tree;
 use crate::type_::error::MissingAnnotation;
 use crate::{
     ast::{
-        self, BitStringSegmentOption, CustomType, Definition, DefinitionLocation, ExternalFunction,
-        Function, GroupedStatements, Import, Layer, ModuleConstant, ModuleFunction,
-        RecordConstructor, RecordConstructorArg, SrcSpan, TypeAlias, TypeAst, TypedDefinition,
-        TypedModule, UnqualifiedImport, UntypedModule,
+        self, BitStringSegmentOption, CustomType, Definition, DefinitionLocation, Function,
+        GroupedStatements, Import, Layer, ModuleConstant, RecordConstructor, RecordConstructorArg,
+        SrcSpan, TypeAlias, TypeAst, TypedDefinition, TypedModule, UnqualifiedImport,
+        UntypedModule,
     },
     build::{Origin, Target},
     call_graph::into_dependency_order,
@@ -115,9 +115,6 @@ pub fn infer_module(
     for f in &statements.functions {
         register_value_from_function(f, &mut value_names, &mut env, &mut hydrators, &name)?;
     }
-    for ef in &statements.external_functions {
-        register_external_function(ef, &mut value_names, &mut env)?;
-    }
     for t in &statements.custom_types {
         register_values_from_custom_type(t, &mut hydrators, &mut env, &mut value_names, &name)?;
     }
@@ -144,26 +141,14 @@ pub fn infer_module(
     // Sort the functions into dependency order for inference. Functions that do
     // not depend on other functions are inferred first, then ones that depend
     // on those, etc.
-    let functions = statements
-        .functions
-        .into_iter()
-        .map(ModuleFunction::Internal);
-    let external_functions = statements
-        .external_functions
-        .into_iter()
-        .map(ModuleFunction::External);
-    let functions = functions.chain(external_functions).collect_vec();
-    let function_groups = into_dependency_order(functions)?;
+    let function_groups = into_dependency_order(statements.functions)?;
     let mut working_group = vec![];
 
     for group in function_groups {
         // A group may have multiple functions that depend on each other through
         // mutual recursion.
         for function in group {
-            let inferred = match function {
-                ModuleFunction::Internal(f) => infer_function(f, &mut env, &mut hydrators, &name)?,
-                ModuleFunction::External(f) => infer_external_function(f, &mut env)?,
-            };
+            let inferred = infer_function(function, &mut env, &mut hydrators, &name)?;
             working_group.push(inferred);
         }
 
@@ -559,70 +544,6 @@ fn register_values_from_custom_type(
     Ok(())
 }
 
-fn register_external_function(
-    f: &ExternalFunction<()>,
-    names: &mut HashMap<SmolStr, SrcSpan>,
-    environment: &mut Environment<'_>,
-) -> Result<(), Error> {
-    let ExternalFunction {
-        location,
-        name,
-        public,
-        arguments: args,
-        return_: retrn,
-        module,
-        fun,
-        documentation,
-        ..
-    } = f;
-    assert_unique_name(names, name, *location)?;
-    let mut hydrator = Hydrator::new();
-    let (typ, field_map) = environment.in_new_scope(|environment| {
-        let return_type = hydrator.type_from_ast(retrn, environment)?;
-        let mut args_types = Vec::with_capacity(args.len());
-        let mut builder = FieldMapBuilder::new(args.len() as u32);
-
-        for arg in args.iter() {
-            args_types.push(hydrator.type_from_ast(&arg.annotation, environment)?);
-            builder.add(arg.label.as_ref(), arg.location)?;
-        }
-        let typ = fn_(args_types, return_type);
-        Ok((typ, builder.finish()))
-    })?;
-    environment.insert_module_value(
-        name.clone(),
-        ValueConstructor {
-            public: *public,
-            type_: typ.clone(),
-            variant: ValueConstructorVariant::ModuleFn {
-                documentation: documentation.clone(),
-                name: fun.clone(),
-                field_map: field_map.clone(),
-                module: module.clone(),
-                arity: args.len(),
-                location: *location,
-            },
-        },
-    );
-    environment.insert_variable(
-        name.clone(),
-        ValueConstructorVariant::ModuleFn {
-            documentation: documentation.clone(),
-            name: fun.clone(),
-            module: module.clone(),
-            arity: args.len(),
-            field_map,
-            location: *location,
-        },
-        typ,
-        *public,
-    );
-    if !public {
-        environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
-    };
-    Ok(())
-}
-
 fn register_value_from_function(
     f: &Function<(), ast::UntypedExpr>,
     names: &mut HashMap<SmolStr, SrcSpan>,
@@ -861,46 +782,6 @@ fn ensure_annotations_present(
         });
     }
     Ok(())
-}
-
-fn infer_external_function(
-    f: ExternalFunction<()>,
-    environment: &mut Environment<'_>,
-) -> Result<TypedDefinition, Error> {
-    let ExternalFunction {
-        documentation: doc,
-        location,
-        name,
-        public,
-        arguments: args,
-        return_: retrn,
-        module,
-        fun,
-        ..
-    } = f;
-    let preregistered_fn = environment
-        .get_variable(&name)
-        .expect("Could not find preregistered type value function");
-    let preregistered_type = preregistered_fn.type_.clone();
-    let (args_types, return_type) = preregistered_type
-        .fn_types()
-        .expect("Preregistered type for fn was not a fn");
-    let args = args
-        .into_iter()
-        .zip(&args_types)
-        .map(|(a, t)| a.set_type(t.clone()))
-        .collect();
-    Ok(Definition::ExternalFunction(ExternalFunction {
-        return_type,
-        documentation: doc,
-        location,
-        name,
-        public,
-        arguments: args,
-        return_: retrn,
-        module,
-        fun,
-    }))
 }
 
 fn insert_type_alias(
@@ -1178,7 +1059,6 @@ fn generalise_statement(
 
         statement @ (Definition::TypeAlias(TypeAlias { .. })
         | Definition::CustomType(CustomType { .. })
-        | Definition::ExternalFunction(ExternalFunction { .. })
         | Definition::Import(Import { .. })
         | Definition::ModuleConstant(ModuleConstant { .. })) => statement,
     }
