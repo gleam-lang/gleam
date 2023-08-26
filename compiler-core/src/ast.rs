@@ -128,8 +128,12 @@ impl UntypedModule {
 fn module_dependencies_test() {
     let parsed = crate::parse::parse_module(
         "import one 
-         if erlang { import two } 
-         if javascript { import three } 
+         @target(erlang)
+         import two
+
+         @target(javascript)
+         import three
+
          import four",
     )
     .expect("syntax error");
@@ -138,8 +142,8 @@ fn module_dependencies_test() {
     assert_eq!(
         vec![
             ("one".into(), SrcSpan::new(7, 10)),
-            ("two".into(), SrcSpan::new(40, 43)),
-            ("four".into(), SrcSpan::new(104, 108)),
+            ("two".into(), SrcSpan::new(53, 56)),
+            ("four".into(), SrcSpan::new(126, 130)),
         ],
         module.dependencies(Target::Erlang)
     );
