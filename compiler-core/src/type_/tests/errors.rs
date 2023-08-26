@@ -753,7 +753,7 @@ fn module_could_not_unify12() {
 
 #[test]
 fn module_arity_error() {
-    assert_module_error!("fn go(List(a, b)) -> Int { 1 }");
+    assert_module_error!("fn go(x: List(a, b)) -> Int { 1 }");
 }
 
 #[test]
@@ -794,7 +794,7 @@ fn module_private_type_leak_4() {
     assert_module_error!(
         r#"type PrivateType
 @external(erlang, "a", "b")
-pub fn go(PrivateType) -> Int"#
+pub fn go(x: PrivateType) -> Int"#
     );
 }
 
@@ -1382,7 +1382,7 @@ fn type_holes3() {
     assert_module_error!(
         r#"
 @external(erlang, "a", "b")
-fn main(List(_)) -> Nil
+fn main(x: List(_)) -> Nil
 "#
     );
 }

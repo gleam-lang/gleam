@@ -1,14 +1,4 @@
-use crate::{assert_format, assert_format_rewrite};
-
-#[test]
-fn old_syntax() {
-    assert_format_rewrite!("external type One\n", "type One\n");
-}
-
-#[test]
-fn old_syntax_pub() {
-    assert_format_rewrite!("pub type One\n", "pub type One\n");
-}
+use crate::assert_format;
 
 #[test]
 fn example1() {
