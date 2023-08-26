@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 457
+expression: "@go_faster()\npub fn main() { 1 }"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:1
+  │
+1 │ @go_faster()
+  │ ^^^^^^^^^^ I don't recognise this attribute
+
+Try `external` or `target` instead.
+
