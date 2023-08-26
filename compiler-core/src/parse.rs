@@ -2674,6 +2674,10 @@ where
         if attributes.target.is_some() {
             return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan { start, end });
         }
+        let (_, end) = self.expect_one(&Token::RightParen)?;
+        if attributes.target.is_some() {
+            return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan { start, end });
+        }
         attributes.target = Some(target);
         Ok(())
     }

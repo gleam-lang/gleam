@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1032
-expression: "external fn go(List(a, b)) -> a = \"\" \"\""
+assertion_line: 756
+expression: "fn go(x: List(a, b)) -> Int { 1 }"
 ---
 error: Incorrect arity
-  ┌─ /src/one/two.gleam:1:16
+  ┌─ /src/one/two.gleam:1:10
   │
-1 │ external fn go(List(a, b)) -> a = "" ""
-  │                ^^^^^^^^^^ Expected 1 argument, got 2
+1 │ fn go(x: List(a, b)) -> Int { 1 }
+  │          ^^^^^^^^^^ Expected 1 argument, got 2
 
 Functions and constructors have to be called with their expected
 number of arguments.

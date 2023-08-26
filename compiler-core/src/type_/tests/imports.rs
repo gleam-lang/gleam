@@ -101,7 +101,7 @@ pub fn main() {
 #[test]
 fn using_private_external_type() {
     assert_with_module_error!(
-        ("one", "external type X"),
+        ("one", "type X"),
         "import one
 
 pub fn main() {
@@ -113,7 +113,7 @@ pub fn main() {
 #[test]
 fn using_private_unqualified_external_type() {
     assert_with_module_error!(
-        ("one", "external type X"),
+        ("one", "type X"),
         "import one.{X}
 
 pub fn main() {
