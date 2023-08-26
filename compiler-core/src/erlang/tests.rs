@@ -564,7 +564,7 @@ pub type Box {
 // https://github.com/gleam-lang/gleam/issues/2156
 #[test]
 fn dynamic() {
-    assert_erl!("pub external type Dynamic")
+    assert_erl!("pub type Dynamic")
 }
 
 // https://github.com/gleam-lang/gleam/issues/2166

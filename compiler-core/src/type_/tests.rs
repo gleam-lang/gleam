@@ -850,13 +850,13 @@ fn infer_module_test() {
     );
 
     assert_module_infer!(
-        "pub external type Connection\n
+        "pub type Connection\n
          pub external fn is_open(Connection) -> Bool = \"\" \"\"",
         vec![("is_open", "fn(Connection) -> Bool")],
     );
 
     assert_module_infer!(
-        "pub external type Pair(thing, thing)\n
+        "pub type Pair(thing, thing)\n
          pub external fn pair(a) -> Pair(a, a) = \"\" \"\"",
         vec![("pair", "fn(a) -> Pair(a, a)")],
     );
@@ -930,7 +930,7 @@ fn infer_module_test() {
     );
 
     assert_module_infer!(
-        "pub type I { I(Num) } pub external type Num",
+        "pub type I { I(Num) } pub type Num",
         vec![("I", "fn(Num) -> I")]
     );
 }
@@ -1403,13 +1403,13 @@ fn functions_used_before_definition() {
 fn types_used_before_definition() {
     assert_module_infer!(
         "pub type Y { Y(X) }
-         pub external type X",
+         pub type X",
         vec![("Y", "fn(X) -> Y")],
     );
 
     assert_module_infer!(
         "pub type Y { Y(x: X) }
-         pub external type X",
+         pub type X",
         vec![("Y", "fn(X) -> Y")],
     );
 }

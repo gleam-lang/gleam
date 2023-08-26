@@ -753,22 +753,28 @@ fn module_could_not_unify12() {
 
 #[test]
 fn module_arity_error() {
-    assert_module_error!("external fn go(List(a, b)) -> a = \"\" \"\"");
+    assert_module_error!("fn go(List(a, b)) -> Int { 1 }");
 }
 
 #[test]
 fn module_private_type_leak_1() {
     assert_module_error!(
-        r#"external type PrivateType
-pub external fn leak_type() -> PrivateType = "" """#
+        r#"type PrivateType
+
+@external(erlang, "a", "b")
+pub fn leak_type() -> PrivateType
+"#
     );
 }
 
 #[test]
 fn module_private_type_leak_2() {
     assert_module_error!(
-        r#"external type PrivateType
-external fn go() -> PrivateType = "" ""
+        r#"type PrivateType
+
+@external(erlang, "a", "b")
+fn go() -> PrivateType
+
 pub fn leak_type() { go() }"#
     );
 }
@@ -776,8 +782,9 @@ pub fn leak_type() { go() }"#
 #[test]
 fn module_private_type_leak_3() {
     assert_module_error!(
-        r#"external type PrivateType
-external fn go() -> PrivateType = "" ""
+        r#"type PrivateType
+@external(erlang, "a", "b")
+fn go() -> PrivateType
 pub fn leak_type() { [go()] }"#
     );
 }
@@ -785,15 +792,16 @@ pub fn leak_type() { [go()] }"#
 #[test]
 fn module_private_type_leak_4() {
     assert_module_error!(
-        r#"external type PrivateType
-pub external fn go(PrivateType) -> Int = "" """#
+        r#"type PrivateType
+@external(erlang, "a", "b")
+pub fn go(PrivateType) -> Int"#
     );
 }
 
 #[test]
 fn module_private_type_leak_5() {
     assert_module_error!(
-        r#"external type PrivateType
+        r#"type PrivateType
 pub type LeakType { Variant(PrivateType) }"#
     );
 }
@@ -955,16 +963,21 @@ fn dupe(x) { x }"
 #[test]
 fn duplicate_function_names_4() {
     assert_module_error!(
-        "fn dupe() { 1 }
-external fn dupe(x) -> x = \"\" \"\""
+        r#"fn dupe() { 1 }
+@external(erlang, "a", "b")
+fn dupe(x) -> x
+"#
     );
 }
 
 #[test]
 fn duplicate_function_names_5() {
     assert_module_error!(
-        "external fn dupe(x) -> x = \"\" \"\"
-fn dupe() { 1 }"
+        r#"
+@external(erlang, "a", "b")
+fn dupe(x) -> x
+fn dupe() { 1 }
+"#
     );
 }
 
@@ -1042,10 +1055,12 @@ fn foo() { 2 }"
 #[test]
 fn duplicate_extfn_extfn() {
     assert_module_error!(
-        "external fn foo() -> Float =
-  \"module1\" \"function1\"
-external fn foo() -> Float =
-  \"module2\" \"function2\""
+        r#"
+@external(erlang, "module1", "function1")
+fn foo() -> Float
+@external(erlang, "module2", "function2")
+fn foo() -> Float
+"#
     );
 }
 

@@ -2,7 +2,7 @@ use crate::assert_erl;
 
 #[test]
 fn build_in_erlang_type_escaping() {
-    assert_erl!("pub external type Map");
+    assert_erl!("pub type Map");
 }
 
 #[test]

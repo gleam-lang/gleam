@@ -204,11 +204,9 @@ where
                     }
                 }
 
-                Located::ModuleStatement(
-                    Definition::ExternalFunction(_)
-                    | Definition::TypeAlias(_)
-                    | Definition::CustomType(_),
-                ) => Some(this.completion_types(module)),
+                Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_)) => {
+                    Some(this.completion_types(module))
+                }
 
                 Located::ModuleStatement(Definition::Import(_) | Definition::ModuleConstant(_)) => {
                     None

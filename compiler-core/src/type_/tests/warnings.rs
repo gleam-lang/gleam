@@ -241,10 +241,10 @@ fn record_update_warnings_test3() {
 fn unused_private_type_warnings_test() {
     // External type
     assert_warning!(
-        "external type X",
+        "type X",
         Warning::UnusedType {
             name: "X".into(),
-            location: SrcSpan { start: 0, end: 15 },
+            location: SrcSpan { start: 0, end: 6 },
             imported: false
         }
     );
@@ -252,7 +252,7 @@ fn unused_private_type_warnings_test() {
 
 #[test]
 fn unused_private_type_warnings_test2() {
-    assert_no_warnings!("pub external type Y");
+    assert_no_warnings!("pub type Y");
 }
 
 #[test]

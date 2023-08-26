@@ -7,7 +7,7 @@ fn old_syntax() {
 
 #[test]
 fn old_syntax_pub() {
-    assert_format_rewrite!("pub external type One\n", "pub type One\n");
+    assert_format_rewrite!("pub type One\n", "pub type One\n");
 }
 
 #[test]
