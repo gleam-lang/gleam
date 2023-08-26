@@ -131,8 +131,8 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn targetted_definition<'a>(&mut self, definition: &'a TargettedDefinition) -> Document<'a> {
-        let target = definition.target();
-        let definition = definition.inner();
+        let target = definition.target;
+        let definition = &definition.definition;
         let start = definition.location().start;
         let comments = self.pop_comments(start);
         let document = self.documented_definition(definition);
@@ -149,7 +149,7 @@ impl<'comments> Formatter<'comments> {
         let mut previous_was_import = false;
 
         for definition in &module.definitions {
-            let is_import = definition.inner().is_import();
+            let is_import = definition.definition.is_import();
 
             if documents.is_empty() {
                 // We don't insert empty lines before the first definition

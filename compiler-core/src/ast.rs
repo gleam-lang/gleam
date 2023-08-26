@@ -71,18 +71,6 @@ impl TargettedDefinition {
     pub fn is_for(&self, target: Target) -> bool {
         self.target.map(|t| t == target).unwrap_or(true)
     }
-
-    pub fn into_inner(self) -> UntypedDefinition {
-        self.definition
-    }
-
-    pub fn inner(&self) -> &UntypedDefinition {
-        &self.definition
-    }
-
-    pub fn target(&self) -> Option<Target> {
-        self.target
-    }
 }
 
 impl UntypedModule {
@@ -100,15 +88,15 @@ impl UntypedModule {
     pub fn iter_statements(&self, target: Target) -> impl Iterator<Item = &UntypedDefinition> {
         self.definitions
             .iter()
-            .filter(move |group| group.is_for(target))
-            .map(|group| group.inner())
+            .filter(move |def| def.is_for(target))
+            .map(|def| &def.definition)
     }
 
     pub fn into_iter_statements(self, target: Target) -> impl Iterator<Item = UntypedDefinition> {
         self.definitions
             .into_iter()
-            .filter(move |group| group.is_for(target))
-            .map(|group| group.into_inner())
+            .filter(move |def| def.is_for(target))
+            .map(|def| def.definition)
     }
 }
 
