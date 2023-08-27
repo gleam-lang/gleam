@@ -243,10 +243,6 @@ pub struct NewOptions {
     #[clap(long)]
     pub name: Option<String>,
 
-    /// Description of the project
-    #[clap(long, default_value = "A Gleam project")]
-    pub description: String,
-
     #[clap(
         long,
         possible_values = new::Template::VARIANTS,
