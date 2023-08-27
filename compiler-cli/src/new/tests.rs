@@ -10,7 +10,6 @@ fn new() {
             project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
-            description: "Wibble wobble".into(),
             skip_git: false,
             skip_github: false,
         },
@@ -29,7 +28,6 @@ fn new() {
 
     let toml = crate::fs::read(path.join("gleam.toml")).unwrap();
     assert!(toml.contains("name = \"my_project\""));
-    assert!(toml.contains("description = \"Wibble wobble\""));
 }
 
 #[test]
@@ -42,7 +40,6 @@ fn new_with_skip_git() {
             project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
-            description: "Wibble wobble".into(),
             skip_git: true,
             skip_github: false,
         },
@@ -64,7 +61,6 @@ fn new_with_skip_github() {
             project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
-            description: "Wibble wobble".into(),
             skip_git: false,
             skip_github: true,
         },
@@ -89,7 +85,6 @@ fn new_with_skip_git_and_github() {
             project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
-            description: "Wibble wobble".into(),
             skip_git: true,
             skip_github: true,
         },
@@ -114,7 +109,6 @@ fn invalid_path() {
             project_root: path.to_string(),
             template: super::Template::Lib,
             name: None,
-            description: "Wibble wobble".into(),
             skip_git: false,
             skip_github: false,
         },
@@ -133,7 +127,6 @@ fn invalid_name() {
             project_root: path.to_string(),
             template: super::Template::Lib,
             name: Some("-".into()),
-            description: "Wibble wobble".into(),
             skip_git: false,
             skip_github: false,
         },
