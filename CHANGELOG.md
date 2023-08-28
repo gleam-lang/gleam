@@ -11,7 +11,9 @@
   package target is set to JavaScript.
 - Fixed a bug where mutually recursive functions could be incorrectly inferred
   as having an overly general type.
-- Fix a bug where constants where not being correctly inlined when used in the 
+- Fixed a bug where recursive type constructors could incorrectly infer a type
+  error.
+- Fixs a bug where constants where not being correctly inlined when used in the 
   size option of a bitstring pattern match.
 
 ## v0.30.4 - 2023-07-26
