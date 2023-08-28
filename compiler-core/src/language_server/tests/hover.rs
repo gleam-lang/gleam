@@ -145,6 +145,38 @@ fn append(x, y) {
 }
 
 #[test]
+fn hover_expressions_in_function_body() {
+    let code = "
+fn append(x, y) {
+  x <> y
+}
+";
+
+    assert_eq!(
+        positioned_hover(&code, Position::new(2, 2)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+String
+```
+A locally defined variable."
+                    .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 2,
+                    character: 2
+                },
+                end: Position {
+                    line: 2,
+                    character: 3
+                }
+            }),
+        })
+    );
+}
+
+#[test]
 fn hover_module_constant() {
     let code = "
 /// Exciting documentation

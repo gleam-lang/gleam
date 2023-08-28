@@ -142,7 +142,7 @@ where
     ) -> Response<Option<lsp::Location>> {
         self.respond(|this| {
             let params = params.text_document_position_params;
-            let (line_numbers, _, node) = match this.node_at_position(&params) {
+            let (line_numbers, node) = match this.node_at_position(&params) {
                 Some(location) => location,
                 None => return Ok(None),
             };
@@ -199,14 +199,11 @@ where
                     Some(this.completion_values(module))
                 }
 
-                Located::ModuleStatement(Definition::Function(function)) => {
-                    // The location of a function refers to the head, not the body
-                    if function.location.contains(byte_index) {
-                        Some(this.completion_types(module))
-                    } else {
-                        Some(this.completion_values(module))
-                    }
+                Located::ModuleStatement(Definition::Function(_)) => {
+                    Some(this.completion_types(module))
                 }
+
+                Located::FunctionBody(_) => Some(this.completion_values(module)),
 
                 Located::ModuleStatement(
                     Definition::ExternalFunction(_)
@@ -247,7 +244,7 @@ where
         self.respond(|this| {
             let params = params.text_document_position_params;
 
-            let (lines, byte_index, found) = match this.node_at_position(&params) {
+            let (lines, found) = match this.node_at_position(&params) {
                 Some(value) => value,
                 None => return Ok(None),
             };
@@ -255,12 +252,7 @@ where
             Ok(match found {
                 Located::Statement(_) => None, // TODO: hover for statement
                 Located::ModuleStatement(Definition::Function(fun)) => {
-                    if fun.location.contains(byte_index) {
-                        Some(hover_for_function_head(fun, lines))
-                    } else {
-                        // Don't show hover info for function body
-                        None
-                    }
+                    Some(hover_for_function_head(fun, lines))
                 }
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
                     Some(hover_for_module_constant(constant, lines))
@@ -269,6 +261,7 @@ where
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::Expression(expression) => Some(hover_for_expression(expression, lines)),
                 Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
+                Located::FunctionBody(_) => None,
             })
         })
     }
@@ -277,18 +270,18 @@ where
         &self,
         params: &lsp::TextDocumentPositionParams,
         module: &'a Module,
-    ) -> Option<(LineNumbers, u32, Located<'a>)> {
+    ) -> Option<(LineNumbers, Located<'a>)> {
         let line_numbers = LineNumbers::new(&module.code);
         let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
         let node = module.find_node(byte_index);
         let node = node?;
-        Some((line_numbers, byte_index, node))
+        Some((line_numbers, node))
     }
 
     fn node_at_position(
         &self,
         params: &lsp::TextDocumentPositionParams,
-    ) -> Option<(LineNumbers, u32, Located<'_>)> {
+    ) -> Option<(LineNumbers, Located<'_>)> {
         let module = self.module_for_uri(&params.text_document.uri)?;
         self.module_node_at_position(params, module)
     }
