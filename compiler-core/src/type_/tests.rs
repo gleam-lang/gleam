@@ -17,6 +17,7 @@ use camino::Utf8PathBuf;
 mod assert;
 mod assignments;
 mod conditional_compilation;
+mod custom_types;
 mod errors;
 mod functions;
 mod imports;

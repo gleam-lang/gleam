@@ -211,4 +211,8 @@ impl Hydrator {
             }),
         }
     }
+
+    pub fn clear_ridgid_type_names(&mut self) {
+        self.rigid_type_names.clear();
+    }
 }
