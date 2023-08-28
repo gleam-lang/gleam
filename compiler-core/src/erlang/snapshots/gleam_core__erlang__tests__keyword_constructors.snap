@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 453
+assertion_line: 461
 expression: "pub type X { Div }"
 ---
 -module(my@mod).

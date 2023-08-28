@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
-assertion_line: 81
-expression: "pub external fn then(a) -> b = \"./ffi.js\" \"then\""
+assertion_line: 94
+expression: "\n@external(javascript, \"./ffi.js\", \"then\")\npub fn then(a: a) -> b"
 ---
 import { then as then$ } from "./ffi.js";
 

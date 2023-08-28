@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 572
+assertion_line: 321
 expression: "pub fn main() -> String {\n            Orange\n            |> eat_veggie\n         }\n          \n         type Fruit{ Orange }\n         type Veg{ Lettuce }\n          \n         fn eat_veggie(v: Veg) -> String {\n            \"Ok\"\n         }"
 ---
 error: Type mismatch

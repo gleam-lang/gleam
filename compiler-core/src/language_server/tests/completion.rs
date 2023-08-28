@@ -29,7 +29,7 @@ fn positioned_expression_completions(
     assert!(response.result.is_ok());
 
     let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-        r#"\\?\C:\src\app.gleam"#
+        r"\\?\C:\src\app.gleam"
     } else {
         "/src/app.gleam"
     });
@@ -613,21 +613,6 @@ pub type Wibble = Result(
 }
 
 #[test]
-fn for_external_function() {
-    let code = "
-pub external fn wibble(
-  String,
-) -> String =
-  \"ok\" \"ok\"
-";
-
-    assert_eq!(
-        positioned_expression_completions(code, "", Position::new(2, 0)),
-        prelude_type_completions(),
-    );
-}
-
-#[test]
 fn for_function_arguments() {
     let code = "
 pub fn wibble(
@@ -719,10 +704,11 @@ fn local_private_type() {
     let code = "
 type Zoo = Int
 
-pub external fn wibble(
-  String,
-) -> String =
-  \"ok\" \"ok\"
+pub fn wibble(
+  x: String,
+) -> String {
+  \"ok\"
+}
 ";
 
     assert_eq!(

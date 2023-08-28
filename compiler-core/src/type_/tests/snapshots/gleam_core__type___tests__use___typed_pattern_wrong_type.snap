@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/use_.rs
+assertion_line: 246
 expression: "\npub fn main() {\n  use Box(x): Box(Bool), Box(y), Box(z) <- apply(Box(1))\n  x + y + z\n}\n\ntype Box(a) {\n  Box(a)\n}\n\nfn apply(arg, fun) {\n  fun(arg, arg, arg)\n}\n"
 ---
 error: Type mismatch

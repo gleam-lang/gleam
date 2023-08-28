@@ -9,7 +9,10 @@ fn go() {
 }
 "#,
     );
+}
 
+#[test]
+fn tuple1() {
     assert_js!(
         r#"
 fn go() {
@@ -60,7 +63,10 @@ fn go() {
 }
 "#,
     );
+}
 
+#[test]
+fn tuple_with_block_element1() {
     assert_js!(
         r#"
 fn go() {
@@ -84,7 +90,10 @@ const c = 2.0
 const e = #("bob", "dug")
         "#,
     );
+}
 
+#[test]
+fn constant_tuples1() {
     assert_js!(
         r#"
 const e = #(

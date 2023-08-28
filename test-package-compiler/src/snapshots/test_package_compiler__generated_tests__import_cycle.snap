@@ -1,6 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 184
+assertion_line: 141
 expression: "./cases/import_cycle"
 ---
 error: Import cycle

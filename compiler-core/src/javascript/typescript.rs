@@ -19,9 +19,8 @@ use smol_str::SmolStr;
 use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{
-        CustomType, Definition, ExternalFunction, Function, Import, ModuleConstant, TypeAlias,
-        TypedArg, TypedConstant, TypedDefinition, TypedExternalFnArg, TypedModule,
-        TypedRecordConstructor,
+        CustomType, Definition, Function, Import, ModuleConstant, TypeAlias, TypedArg,
+        TypedConstant, TypedDefinition, TypedModule, TypedRecordConstructor,
     },
     docvec,
     pretty::{break_, Document, Documentable},
@@ -237,7 +236,6 @@ impl<'a> TypeScriptGenerator<'a> {
                 Definition::Function(Function { .. })
                 | Definition::TypeAlias(TypeAlias { .. })
                 | Definition::CustomType(CustomType { .. })
-                | Definition::ExternalFunction(ExternalFunction { .. })
                 | Definition::ModuleConstant(ModuleConstant { .. }) => (),
 
                 Definition::Import(Import {
@@ -329,15 +327,6 @@ impl<'a> TypeScriptGenerator<'a> {
                 ..
             }) if *public => vec![self.module_function(name, arguments, return_type)],
             Definition::Function(Function { .. }) => vec![],
-
-            Definition::ExternalFunction(ExternalFunction {
-                public,
-                name,
-                arguments,
-                return_type,
-                ..
-            }) if *public => vec![self.external_function(name, arguments, return_type)],
-            Definition::ExternalFunction(ExternalFunction { .. }) => vec![],
         }
     }
 
@@ -511,52 +500,6 @@ impl<'a> TypeScriptGenerator<'a> {
                         ],
                     }),
             ),
-            ": ",
-            self.print_type_with_generic_usages(return_type, &generic_usages),
-            ";",
-        ])
-    }
-
-    fn external_function(
-        &mut self,
-        name: &'a str,
-        args: &'a [TypedExternalFnArg],
-        return_type: &'a Arc<Type>,
-    ) -> Output<'a> {
-        let generic_usages = collect_generic_usages(
-            HashMap::new(),
-            std::iter::once(return_type).chain(args.iter().map(|a| &a.type_)),
-        );
-        let generic_names: Vec<Document<'_>> = generic_usages
-            .iter()
-            .filter(|(_id, use_count)| **use_count > 1)
-            .sorted_by_key(|x| x.0)
-            .map(|(id, _use_count)| id_to_type_var(*id))
-            .collect();
-
-        Ok(docvec![
-            "export function ",
-            super::maybe_escape_identifier_doc(name),
-            if generic_names.is_empty() {
-                super::nil()
-            } else {
-                wrap_generic_args(generic_names)
-            },
-            wrap_args(args.iter().enumerate().map(|(i, a)| match &a.label {
-                None => {
-                    docvec![
-                        "x",
-                        i,
-                        ": ",
-                        self.print_type_with_generic_usages(&a.type_, &generic_usages)
-                    ]
-                }
-                Some(name) => docvec![
-                    super::maybe_escape_identifier_doc(name),
-                    ": ",
-                    self.print_type_with_generic_usages(&a.type_, &generic_usages)
-                ],
-            })),
             ": ",
             self.print_type_with_generic_usages(return_type, &generic_usages),
             ";",

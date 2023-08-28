@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 403
+assertion_line: 411
 expression: "\nfn id(x) {\n  x\n}\n\npub fn main() {\n  id(id)\n}\n"
 ---
 -module(my@mod).

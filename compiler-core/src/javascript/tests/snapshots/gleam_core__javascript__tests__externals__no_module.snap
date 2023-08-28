@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
-assertion_line: 220
+assertion_line: 240
 expression: "\n@external(javascript, \"\", \"one\")\npub fn one(x: Int) -> Int {\n  1\n}\n"
 ---
 error: Invalid JavaScript module

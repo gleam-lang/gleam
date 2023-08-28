@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/panic.rs
-assertion_line: 16
+assertion_line: 28
 expression: "\npub fn main() {\n  \"lets\"\n  |> panic\n}\n    "
 ---
 -module(my@mod).

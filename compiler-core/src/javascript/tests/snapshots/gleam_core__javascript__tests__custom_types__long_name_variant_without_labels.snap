@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 227
+assertion_line: 209
 expression: "\ntype TypeWithALongNameAndSeveralArguments{\n  TypeWithALongNameAndSeveralArguments(String, String, String, String, String)\n}\n\n\nfn go() {\n  TypeWithALongNameAndSeveralArguments\n}\n"
 ---
 import { CustomType as $CustomType } from "../gleam.mjs";

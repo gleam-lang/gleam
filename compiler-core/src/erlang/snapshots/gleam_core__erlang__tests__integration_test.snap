@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 84
+assertion_line: 92
 expression: "pub fn go() {\nlet x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 6000000000)\n  x\n}"
 ---
 -module(my@mod).

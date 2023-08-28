@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 38
-expression: "external fn go(x: Int, y: Int) -> Int = \"m\" \"f\"\npub fn x() { go }"
+assertion_line: 52
+expression: "\n@external(erlang, \"m\", \"f\")\nfn go(x: Int, y: Int) -> Int\npub fn x() { go }\n"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars]).

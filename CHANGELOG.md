@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The `if` conditional compilation, `external fn`, and `external type` syntaxes
+  have been removed.
+- The `description` flag for the `gleam new` command has been removed.
 - The highlight.js grammar included with generated HTML documentation has been
   updated for the latest syntax.
 - Packages are no longer precompiled to Erlang when publishing to Hex if the

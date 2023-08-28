@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 614
+assertion_line: 363
 expression: "let id = fn(x) { x(x) } 1"
 ---
 error: Recursive type

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 47
+assertion_line: 63
 expression: "import atom\npub fn main() {\n  atom.make(\"ok\")\n}\n"
 ---
 -module(my@mod).

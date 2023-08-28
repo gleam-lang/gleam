@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/use_.rs
-assertion_line: 92
+assertion_line: 116
 expression: "\nlet x = fn(f) { f() + 1 }\nuse <- x()\nNil\n"
 ---
 error: Type mismatch

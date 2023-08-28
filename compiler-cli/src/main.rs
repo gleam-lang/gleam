@@ -59,7 +59,6 @@ mod config;
 mod dependencies;
 mod docs;
 mod export;
-mod fix;
 mod format;
 mod fs;
 mod hex;
@@ -157,17 +156,6 @@ enum Command {
         check: bool,
     },
 
-    /// Rewrite deprecated Gleam code
-    Fix {
-        /// Files to fix
-        #[clap(default_value = ".")]
-        files: Vec<String>,
-
-        #[clap(short, long, ignore_case = true, possible_values = Target::VARIANTS)]
-        /// The target to use for external functions when it could not be inferred.
-        target: Option<Target>,
-    },
-
     /// Start an Erlang shell
     Shell,
 
@@ -254,10 +242,6 @@ pub struct NewOptions {
     /// Name of the project
     #[clap(long)]
     pub name: Option<String>,
-
-    /// Description of the project
-    #[clap(long, default_value = "A Gleam project")]
-    pub description: String,
 
     #[clap(
         long,
@@ -401,8 +385,6 @@ fn main() {
             files,
             check,
         } => format::run(stdin, check, files),
-
-        Command::Fix { files, target } => fix::run(target, files),
 
         Command::Deps(Dependencies::List) => dependencies::list(),
 

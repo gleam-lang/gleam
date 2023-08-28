@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
+assertion_line: 114
 expression: "\nfn go(a) {\n  case a {\n    True -> 1\n    False -> 0\n  }\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
