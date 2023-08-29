@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 assertion_line: 195
 expression: "\npub type Ip{\n    Ip(String)\n}\n\npub const local = Ip(\"0.0.0.0\")\n\n"
 ---
-import type * as _ from "../gleam.d.ts";
+import type * as _ from "../gleam.d.mts";
 
 export class Ip extends _.CustomType {
   constructor(argument$0: string);

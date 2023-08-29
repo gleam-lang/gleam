@@ -92,7 +92,7 @@ impl<'a> Import<'a> {
 
     pub fn into_doc(self) -> Document<'a> {
         let path = Document::String(self.path.clone());
-        let import_modifier = if self.path.ends_with(".d.ts") {
+        let import_modifier = if self.path.ends_with(".d.mts") {
             "type "
         } else {
             ""
@@ -218,7 +218,7 @@ fn into_doc() {
     );
 
     imports.register_module(
-        "./type.d.ts".into(),
+        "./type.d.mts".into(),
         ["typea".into()],
         [Member {
             name: "typeu".to_doc(),
@@ -240,8 +240,8 @@ import {
   three,
   four,
 } from "./other";
-import type * as typea from "./type.d.ts";
-import type { typeu } from "./type.d.ts";
+import type * as typea from "./type.d.mts";
+import type { typeu } from "./type.d.mts";
 import { one, two } from "./zzz";
 "#
         .to_string()

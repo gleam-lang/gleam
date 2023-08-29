@@ -1,6 +1,6 @@
 .PHONY: test
 test:
 	@echo test/javascript_prelude
-	@cp ../../compiler-core/templates/prelude.js prelude.mjs
+	@cp ../../compiler-core/templates/prelude.mjs prelude.mjs
 	@node main.mjs
 	@rm prelude.mjs
