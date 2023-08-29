@@ -23,6 +23,7 @@ use crate::{
         TypedConstant, TypedDefinition, TypedModule, TypedRecordConstructor,
     },
     docvec,
+    javascript::JavaScriptCodegenTarget,
     pretty::{break_, Document, Documentable},
     type_::{Type, TypeVar},
 };
@@ -222,9 +223,14 @@ impl<'a> TypeScriptGenerator<'a> {
             statements.push(line());
             Ok(statements.to_doc())
         } else if statements.is_empty() {
-            Ok(imports.into_doc())
+            Ok(imports.into_doc(JavaScriptCodegenTarget::TypeScriptDeclarations))
         } else {
-            Ok(docvec![imports.into_doc(), line(), statements, line()])
+            Ok(docvec![
+                imports.into_doc(JavaScriptCodegenTarget::TypeScriptDeclarations),
+                line(),
+                statements,
+                line()
+            ])
         }
     }
 

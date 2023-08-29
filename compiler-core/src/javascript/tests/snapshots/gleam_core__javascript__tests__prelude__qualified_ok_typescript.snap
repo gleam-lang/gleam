@@ -3,8 +3,8 @@ source: compiler-core/src/javascript/tests/prelude.rs
 assertion_line: 14
 expression: "import gleam\npub fn go() { gleam.Ok(1) }\n"
 ---
-import * as _ from "../gleam.d.ts";
-import * as gleam from "../gleam.d.ts";
+import type * as _ from "../gleam.d.ts";
+import type * as gleam from "../gleam.d.ts";
 
 export function go(): _.Result<number, any>;
 

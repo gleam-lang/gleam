@@ -4,7 +4,7 @@ use itertools::Itertools;
 
 use crate::{
     docvec,
-    javascript::INDENT,
+    javascript::{JavaScriptCodegenTarget, INDENT},
     pretty::{break_, concat, line, Document, Documentable},
 };
 
@@ -28,24 +28,24 @@ impl<'a> Imports<'a> {
 
     pub fn register_module(
         &mut self,
-        js_path: String,
+        path: String,
         aliases: impl IntoIterator<Item = String>,
         unqualified_imports: impl IntoIterator<Item = Member<'a>>,
     ) {
         let import = self
             .imports
-            .entry(js_path.clone())
-            .or_insert_with(|| Import::new(js_path.clone()));
+            .entry(path.clone())
+            .or_insert_with(|| Import::new(path.clone()));
         import.aliases.extend(aliases);
         import.unqualified.extend(unqualified_imports)
     }
 
-    pub fn into_doc(self) -> Document<'a> {
+    pub fn into_doc(self, codegen_target: JavaScriptCodegenTarget) -> Document<'a> {
         let imports = concat(
             self.imports
                 .into_values()
                 .sorted_by(|a, b| a.path.cmp(&b.path))
-                .map(Import::into_doc),
+                .map(|import| Import::into_doc(import, codegen_target)),
         );
 
         if self.exports.is_empty() {
@@ -90,11 +90,18 @@ impl<'a> Import<'a> {
         }
     }
 
-    pub fn into_doc(self) -> Document<'a> {
+    pub fn into_doc(self, codegen_target: JavaScriptCodegenTarget) -> Document<'a> {
         let path = Document::String(self.path.clone());
+        let import_modifier = if codegen_target == JavaScriptCodegenTarget::TypeScriptDeclarations {
+            "type "
+        } else {
+            ""
+        };
         let alias_imports = concat(self.aliases.into_iter().sorted().map(|alias| {
             docvec![
-                "import * as ",
+                "import ",
+                import_modifier,
+                "* as ",
                 Document::String(alias),
                 " from \"",
                 path.clone(),
@@ -114,7 +121,9 @@ impl<'a> Import<'a> {
             .group();
             docvec![
                 alias_imports,
-                "import {",
+                "import ",
+                import_modifier,
+                "{",
                 members,
                 "} from \"",
                 path,
@@ -209,7 +218,9 @@ fn into_doc() {
     );
 
     assert_eq!(
-        line().append(imports.into_doc()).to_pretty_string(40),
+        line()
+            .append(imports.into_doc(JavaScriptCodegenTarget::JavaScript))
+            .to_pretty_string(40),
         r#"
 import * as wibble from "./multiple/times";
 import * as wobble from "./multiple/times";
