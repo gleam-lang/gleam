@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 assertion_line: 93
 expression: "import other.{Two as Three}\npub fn main() {\n  Three\n}"
 ---
-import type * as other from "../other.d.ts";
+import type * as other from "../other.d.mts";
 
 export function main(): other.One$;
 

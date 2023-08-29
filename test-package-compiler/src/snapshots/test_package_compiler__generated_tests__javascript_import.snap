@@ -15,14 +15,14 @@ expression: "./cases/javascript_import"
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
 <44 byte binary>
 
-//// /out/lib/the_package/gleam.d.ts
+//// /out/lib/the_package/gleam.d.mts
 <prelude>
 
 //// /out/lib/the_package/gleam.mjs
 <prelude>
 
-//// /out/lib/the_package/one/two.d.ts
-import type * as _ from "../gleam.d.ts";
+//// /out/lib/the_package/one/two.d.mts
+import type * as _ from "../gleam.d.mts";
 
 export class A extends _.CustomType {}
 
@@ -35,8 +35,8 @@ import { CustomType as $CustomType } from "../gleam.mjs";
 export class A extends $CustomType {}
 
 
-//// /out/lib/the_package/two.d.ts
-import type * as two from "./one/two.d.ts";
+//// /out/lib/the_package/two.d.mts
+import type * as two from "./one/two.d.mts";
 
 export const x: two.A$;
 

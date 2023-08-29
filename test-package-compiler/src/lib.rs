@@ -110,7 +110,7 @@ impl TestCompileOutput {
             match content {
                 _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
 
-                _ if path.ends_with("gleam.mjs") || path.ends_with("gleam.d.ts") => {
+                _ if path.ends_with("gleam.mjs") || path.ends_with("gleam.d.mts") => {
                     buffer.push_str("<prelude>")
                 }
 
