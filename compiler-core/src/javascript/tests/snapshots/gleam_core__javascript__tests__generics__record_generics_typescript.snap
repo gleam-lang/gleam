@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/generics.rs
 assertion_line: 15
 expression: "pub type Animal(t) {\n  Cat(type_: t)\n  Dog(type_: t)\n}\n\npub fn main() {\n  Cat(type_: 6)\n}\n"
 ---
-import * as _ from "../gleam.d.ts";
+import type * as _ from "../gleam.d.ts";
 
 export class Cat<I> extends _.CustomType {
   constructor(type_: I);

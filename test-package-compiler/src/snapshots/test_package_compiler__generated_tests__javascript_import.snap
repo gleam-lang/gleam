@@ -22,7 +22,7 @@ expression: "./cases/javascript_import"
 <prelude>
 
 //// /out/lib/the_package/one/two.d.ts
-import * as _ from "../gleam.d.ts";
+import type * as _ from "../gleam.d.ts";
 
 export class A extends _.CustomType {}
 
@@ -36,7 +36,7 @@ export class A extends $CustomType {}
 
 
 //// /out/lib/the_package/two.d.ts
-import * as two from "./one/two.d.ts";
+import type * as two from "./one/two.d.ts";
 
 export const x: two.A$;
 

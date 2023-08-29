@@ -25,6 +25,7 @@
   that doesn't type check.
 - Hovering over a function definition will now display the function signature,
   or the type of the hovered argument.
+- Use `import type` for importing types from typescript declarations.
 
 ## v0.30.4 - 2023-07-26
 

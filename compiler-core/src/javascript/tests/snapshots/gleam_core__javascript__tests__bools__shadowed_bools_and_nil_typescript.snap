@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/bools.rs
 assertion_line: 81
 expression: "\npub type True { True False Nil }\npub fn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
 ---
-import * as _ from "../gleam.d.ts";
+import type * as _ from "../gleam.d.ts";
 
 export class True extends _.CustomType {}
 
