@@ -174,3 +174,4 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Yasuo Higano](https://github.com/Yasuo-Higano)
  - [Yu Matsuzawa](https://github.com/ymtszw)
  - [Zsombor Gasparin](https://github.com/gasparinzsombor)
+ - [Šárka Slavětínská](https://github.com/sarkasl)
