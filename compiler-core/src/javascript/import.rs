@@ -92,9 +92,16 @@ impl<'a> Import<'a> {
 
     pub fn into_doc(self) -> Document<'a> {
         let path = Document::String(self.path.clone());
+        let import_modifier = if self.path.ends_with(".d.ts") {
+            "type "
+        } else {
+            ""
+        };
         let alias_imports = concat(self.aliases.into_iter().sorted().map(|alias| {
             docvec![
-                "import * as ",
+                "import ",
+                import_modifier,
+                "* as ",
                 Document::String(alias),
                 " from \"",
                 path.clone(),
@@ -114,7 +121,9 @@ impl<'a> Import<'a> {
             .group();
             docvec![
                 alias_imports,
-                "import {",
+                "import ",
+                import_modifier,
+                "{",
                 members,
                 "} from \"",
                 path,
@@ -208,6 +217,15 @@ fn into_doc() {
         ],
     );
 
+    imports.register_module(
+        "./type.d.ts".into(),
+        ["typea".into()],
+        [Member {
+            name: "typeu".to_doc(),
+            alias: None,
+        }],
+    );
+
     assert_eq!(
         line().append(imports.into_doc()).to_pretty_string(40),
         r#"
@@ -222,6 +240,8 @@ import {
   three,
   four,
 } from "./other";
+import type * as typea from "./type.d.ts";
+import type { typeu } from "./type.d.ts";
 import { one, two } from "./zzz";
 "#
         .to_string()

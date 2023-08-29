@@ -16,7 +16,7 @@ expression: "./cases/javascript_d_ts"
 <prelude>
 
 //// /out/lib/the_package/hello.d.ts
-import * as _ from "./gleam.d.ts";
+import type * as _ from "./gleam.d.ts";
 
 export class Woo extends _.CustomType {}
 
