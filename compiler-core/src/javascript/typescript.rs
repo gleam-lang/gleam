@@ -361,7 +361,12 @@ impl<'a> TypeScriptGenerator<'a> {
             .collect();
 
         let definition = if constructors.is_empty() {
-            "any".to_doc()
+            self.tracker.prelude_used = true;
+            docvec![
+                "{ [_.OpaqueType]: ",
+                name_with_generics(Document::String(format!("{name}$")), typed_parameters),
+                " }",
+            ]
         } else {
             let constructors = constructors.iter().map(|x| {
                 name_with_generics(

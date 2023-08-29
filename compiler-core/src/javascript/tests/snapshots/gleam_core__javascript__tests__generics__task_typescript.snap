@@ -3,7 +3,9 @@ source: compiler-core/src/javascript/tests/generics.rs
 assertion_line: 52
 expression: "pub type Promise(value)\n    pub type Task(a) = fn() -> Promise(a)"
 ---
-export type Promise$<I> = any;
+import type * as _ from "../gleam.d.mts";
+
+export type Promise$<I> = { [_.OpaqueType]: Promise$<I> };
 
 export type Task = () => Promise$<any>;
 

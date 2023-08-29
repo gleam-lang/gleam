@@ -3,7 +3,9 @@ source: compiler-core/src/javascript/tests/externals.rs
 assertion_line: 82
 expression: "pub type Queue(a)\n\n@external(javascript, \"queue\", \"new\")\npub fn new() -> Queue(a)\n"
 ---
-export type Queue$<I> = any;
+import type * as _ from "../gleam.d.mts";
+
+export type Queue$<I> = { [_.OpaqueType]: Queue$<I> };
 
 export function new$(): Queue$<any>;
 

@@ -3,6 +3,8 @@ export class CustomType {
   withFields<K extends keyof this>(fields: { [P in K]: this[P] }): this;
 }
 
+export declare const OpaqueType: unique symbol;
+
 export interface ListStatic {
   fromArray<T>(array: Array<T>): List<T>;
   isList(value: unknown): boolean;
