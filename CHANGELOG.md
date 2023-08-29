@@ -26,6 +26,7 @@
 - Hovering over a function definition will now display the function signature,
   or the type of the hovered argument.
 - Use `import type` for importing types from typescript declarations.
+- Use `.d.mts` extension for typescript declarations to match `.mjs`.
 
 ## v0.30.4 - 2023-07-26
 

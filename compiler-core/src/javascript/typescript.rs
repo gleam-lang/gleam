@@ -280,16 +280,16 @@ impl<'a> TypeScriptGenerator<'a> {
         if package == self.module.type_info.package || package.is_empty() {
             // Same package
             match self.current_module_name_segments_count {
-                1 => format!("./{module}.d.ts"),
+                1 => format!("./{module}.d.mts"),
                 _ => {
                     let prefix = "../".repeat(self.current_module_name_segments_count - 1);
-                    format!("{prefix}{module}.d.ts")
+                    format!("{prefix}{module}.d.mts")
                 }
             }
         } else {
             // Different package
             let prefix = "../".repeat(self.current_module_name_segments_count);
-            format!("{prefix}{package}/{module}.d.ts")
+            format!("{prefix}{package}/{module}.d.mts")
         }
     }
 

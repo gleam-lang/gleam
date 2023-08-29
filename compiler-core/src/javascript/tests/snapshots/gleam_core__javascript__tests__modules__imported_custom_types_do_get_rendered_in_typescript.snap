@@ -3,8 +3,8 @@ source: compiler-core/src/javascript/tests/modules.rs
 assertion_line: 182
 expression: "import one/two/three.{Custom, One, Two}\n\npub fn go() -> List(Custom) { [One, Two] }\n"
 ---
-import type * as _ from "../gleam.d.ts";
-import type * as three from "../one/two/three.d.ts";
+import type * as _ from "../gleam.d.mts";
+import type * as three from "../one/two/three.d.mts";
 
 export function go(): _.List<three.Custom$>;
 

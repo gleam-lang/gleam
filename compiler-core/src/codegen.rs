@@ -181,7 +181,7 @@ impl<'a> JavaScript<'a> {
         tracing::debug!("Generated JS prelude");
         if self.typescript == TypeScriptDeclarations::Emit {
             writer.write(
-                &self.output_directory.join("gleam.d.ts"),
+                &self.output_directory.join("gleam.d.mts"),
                 javascript::PRELUDE_TS_DEF,
             )?;
             tracing::debug!("Generated TS prelude");
@@ -195,7 +195,7 @@ impl<'a> JavaScript<'a> {
         module: &Module,
         js_name: &str,
     ) -> Result<()> {
-        let name = format!("{js_name}.d.ts");
+        let name = format!("{js_name}.d.mts");
         let path = self.output_directory.join(name);
         let output = javascript::ts_declaration(&module.ast, &module.input_path, &module.code);
         tracing::debug!(name = ?js_name, "Generated TS declaration");

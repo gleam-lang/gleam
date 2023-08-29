@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/prelude.rs
 assertion_line: 41
 expression: "import gleam\npub fn go() { gleam.Nil }\n"
 ---
-import type * as gleam from "../gleam.d.ts";
+import type * as gleam from "../gleam.d.mts";
 
 export function go(): null;
 
