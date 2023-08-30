@@ -27,7 +27,7 @@ use strum::IntoEnumIterator;
 use crate::{
     build_lock::BuildLock,
     cli,
-    fs::{self, MakeRelativeToCurrentDir, ProjectIO},
+    fs::{self, get_current_directory, ProjectIO},
     http::HttpClient,
 };
 
@@ -277,7 +277,7 @@ fn read_manifest_from_disc(paths: &ProjectPaths) -> Result<Manifest> {
 
 fn write_manifest_to_disc(paths: &ProjectPaths, manifest: &Manifest) -> Result<()> {
     let path = paths.manifest();
-    fs::write(&path, &manifest.to_toml(MakeRelativeToCurrentDir::new()))
+    fs::write(&path, &manifest.to_toml(&get_current_directory()?))
 }
 
 // This is the container for locally pinned packages, representing the current contents of
