@@ -335,13 +335,6 @@ gleeunit = { version = "~> 0.1" }
 zzz = { version = "> 0.0.0" }
 "#
         );
-
-        // The deserialized path no longer matches because it contains a relative path for the
-        // path dependency awesome_local1
-
-        // let deserialised: Manifest = toml::from_str(&buffer).unwrap();
-        // manifest.packages.sort_by(|a, b| a.name.cmp(&b.name));
-        // assert_eq!(deserialised, manifest);
     }
 
     impl Default for ManifestPackage {
