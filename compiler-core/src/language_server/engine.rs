@@ -1,5 +1,9 @@
+use std::sync::Arc;
+
 use crate::{
-    ast::{Definition, Import, TypedDefinition, TypedExpr, TypedPattern},
+    ast::{
+        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern,
+    },
     build::{Located, Module},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -8,7 +12,7 @@ use crate::{
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
-    type_::{pretty::Printer, PreludeType, ValueConstructorVariant},
+    type_::{pretty::Printer, PreludeType, Type, ValueConstructorVariant},
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
@@ -194,14 +198,11 @@ where
                     Some(this.completion_values(module))
                 }
 
-                Located::ModuleStatement(Definition::Function(function)) => {
-                    // The location of a function refers to the head, not the body
-                    if function.location.contains(byte_index) {
-                        Some(this.completion_types(module))
-                    } else {
-                        Some(this.completion_values(module))
-                    }
+                Located::ModuleStatement(Definition::Function(_)) => {
+                    Some(this.completion_types(module))
                 }
+
+                Located::FunctionBody(_) => Some(this.completion_values(module)),
 
                 Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_)) => {
                     Some(this.completion_types(module))
@@ -210,6 +211,8 @@ where
                 Located::ModuleStatement(Definition::Import(_) | Definition::ModuleConstant(_)) => {
                     None
                 }
+
+                Located::Arg(_) => None,
             };
 
             Ok(completions)
@@ -245,9 +248,17 @@ where
 
             Ok(match found {
                 Located::Statement(_) => None, // TODO: hover for statement
+                Located::ModuleStatement(Definition::Function(fun)) => {
+                    Some(hover_for_function_head(fun, lines))
+                }
+                Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
+                    Some(hover_for_module_constant(constant, lines))
+                }
                 Located::ModuleStatement(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::Expression(expression) => Some(hover_for_expression(expression, lines)),
+                Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
+                Located::FunctionBody(_) => None,
             })
         })
     }
@@ -466,6 +477,52 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(pattern.location(), &line_numbers)),
+    }
+}
+
+fn hover_for_function_head(
+    fun: &Function<Arc<Type>, TypedExpr>,
+    line_numbers: LineNumbers,
+) -> Hover {
+    let empty_smolstr = SmolStr::from("");
+    let documentation = fun.documentation.as_ref().unwrap_or(&empty_smolstr);
+    let function_type = Type::Fn {
+        args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
+        retrn: fun.return_type.clone(),
+    };
+    let formatted_type = Printer::new().pretty_print(&function_type, 0);
+    let contents = format!(
+        "```gleam
+{formatted_type}
+```
+{documentation}"
+    );
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(fun.location, &line_numbers)),
+    }
+}
+
+fn hover_for_function_argument(argument: &Arg<Arc<Type>>, line_numbers: LineNumbers) -> Hover {
+    let type_ = Printer::new().pretty_print(&argument.type_, 0);
+    let contents = format!("```gleam\n{type_}\n```");
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(argument.location, &line_numbers)),
+    }
+}
+
+fn hover_for_module_constant(
+    constant: &ModuleConstant<Arc<Type>, SmolStr>,
+    line_numbers: LineNumbers,
+) -> Hover {
+    let empty_smolstr = SmolStr::from("");
+    let type_ = Printer::new().pretty_print(&constant.type_, 0);
+    let documentation = constant.documentation.as_ref().unwrap_or(&empty_smolstr);
+    let contents = format!("```gleam\n{type_}\n```\n{documentation}");
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(constant.location, &line_numbers)),
     }
 }
 

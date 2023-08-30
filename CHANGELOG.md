@@ -15,6 +15,8 @@
   error.
 - Fixs a bug where constants where not being correctly inlined when used in the 
   size option of a bitstring pattern match.
+- Hovering over a function definition will now display the function signature,
+  or the type of the hovered argument.
 
 ## v0.30.4 - 2023-07-26
 

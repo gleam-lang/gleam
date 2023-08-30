@@ -492,10 +492,28 @@ impl TypedDefinition {
                     return Some(found);
                 };
 
+                if let Some(found_arg) = function
+                    .arguments
+                    .iter()
+                    .find(|arg| arg.location.contains(byte_index))
+                {
+                    return Some(Located::Arg(found_arg));
+                };
+
+                if let Some(found_statement) = function
+                    .body
+                    .iter()
+                    .find(|statement| statement.location().contains(byte_index))
+                {
+                    return Some(Located::Statement(found_statement));
+                };
+
                 // Note that the fn `.location` covers the function head, not
                 // the entire statement.
-                if function.full_location().contains(byte_index) {
+                if function.location.contains(byte_index) {
                     Some(Located::ModuleStatement(self))
+                } else if function.full_location().contains(byte_index) {
+                    Some(Located::FunctionBody(function))
                 } else {
                     None
                 }
