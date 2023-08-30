@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Definition, Import, TypedDefinition, TypedExpr, TypedPattern},
+    ast::{Definition, Import, TypedArg, TypedDefinition, TypedExpr, TypedPattern},
     build::{Located, Module},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -210,6 +210,8 @@ where
                 Located::ModuleStatement(Definition::Import(_) | Definition::ModuleConstant(_)) => {
                     None
                 }
+
+                Located::FunctionArgument(_arg) => None,
             };
 
             Ok(completions)
@@ -248,6 +250,7 @@ where
                 Located::ModuleStatement(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::Expression(expression) => Some(hover_for_expression(expression, lines)),
+                Located::FunctionArgument(arg) => Some(hover_for_fun_argument(arg, lines)),
             })
         })
     }
@@ -483,5 +486,20 @@ fn hover_for_expression(expression: &TypedExpr, line_numbers: LineNumbers) -> Ho
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
+    }
+}
+
+fn hover_for_fun_argument(arg: &TypedArg, line_numbers: LineNumbers) -> Hover {
+    // Show the type of the hovered node to the user
+    let type_ = Printer::new().pretty_print(arg.type_.as_ref(), 0);
+    let contents = format!(
+        "```gleam
+{type_}
+```
+A function argument."
+    );
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(arg.location, &line_numbers)),
     }
 }

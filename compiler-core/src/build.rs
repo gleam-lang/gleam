@@ -16,7 +16,8 @@ pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
-    CustomType, DefinitionLocation, TypedDefinition, TypedExpr, TypedPattern, TypedStatement,
+    CustomType, DefinitionLocation, TypedArg, TypedDefinition, TypedExpr, TypedPattern,
+    TypedStatement,
 };
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},
@@ -266,6 +267,7 @@ pub enum Located<'a> {
     Statement(&'a TypedStatement),
     Expression(&'a TypedExpr),
     ModuleStatement(&'a TypedDefinition),
+    FunctionArgument(&'a TypedArg),
 }
 
 impl<'a> Located<'a> {
@@ -277,6 +279,10 @@ impl<'a> Located<'a> {
             Self::ModuleStatement(statement) => Some(DefinitionLocation {
                 module: None,
                 span: statement.location(),
+            }),
+            Self::FunctionArgument(arg) => Some(DefinitionLocation {
+                module: None,
+                span: arg.location,
             }),
         }
     }

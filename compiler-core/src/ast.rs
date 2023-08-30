@@ -151,6 +151,16 @@ impl<A> Arg<A> {
     }
 }
 
+impl TypedArg {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if self.location.contains(byte_index) {
+            Some(Located::FunctionArgument(self))
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgNames {
     Discard { name: SmolStr },
@@ -489,6 +499,14 @@ impl TypedDefinition {
         match self {
             Definition::Function(function) => {
                 if let Some(found) = function.body.iter().find_map(|s| s.find_node(byte_index)) {
+                    return Some(found);
+                };
+
+                if let Some(found) = function
+                    .arguments
+                    .iter()
+                    .find_map(|a| a.find_node(byte_index))
+                {
                     return Some(found);
                 };
 

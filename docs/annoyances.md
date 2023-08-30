@@ -34,9 +34,10 @@ case str == "+" {
         case all(str, is_digit) {
           True -> {
             let assert Ok(int) = int.parse(str)
-            Keep(Number(int)
+            Keep(Number(int))
           }
           False -> Next
+        }
     }
 }
 ```
@@ -49,7 +50,7 @@ use <- bool.guard(
 )
 use <- bool.guard(
   when: all(str, is_ascii_letter),
-  return: Keep(Ident(str),
+  return: Keep(Ident(str)),
 )
 use <- bool.guard(
   when: !all(str, is_digit),
