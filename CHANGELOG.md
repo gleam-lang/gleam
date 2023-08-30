@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.1.0 - 2023-08-30
+
+- Updated for latest Hex API.
+
 ## v2.0.0 - 2022-04-12
 
 - The `publish_package_request` now takes an additional argument signifying

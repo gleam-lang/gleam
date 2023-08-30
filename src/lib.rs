@@ -15,10 +15,10 @@ use regex::Regex;
 use ring::digest::{Context, SHA256};
 use serde::Deserialize;
 use serde_json::json;
-use x509_parser::prelude::FromDer;
 use std::{collections::HashMap, convert::TryFrom, convert::TryInto, io::BufReader};
 use thiserror::Error;
 use version::{Range, Version};
+use x509_parser::prelude::FromDer;
 
 #[derive(Debug, Clone)]
 pub struct Config {
