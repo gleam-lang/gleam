@@ -2,8 +2,8 @@ use gleam_core::{
     build::{NullTelemetry, Target},
     error::{Error, FileIoAction, FileKind},
     io::{
-        CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter, MakeRelative,
-        OutputFile, ReadDir, Stdio, WrappedReader,
+        CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter, OutputFile,
+        ReadDir, Stdio, WrappedReader,
     },
     language_server::{DownloadDependencies, Locker, MakeLocker},
     manifest::Manifest,
@@ -28,45 +28,14 @@ use crate::{dependencies::UseManifest, lsp::LspLocker};
 mod tests;
 
 /// Return the current directory as a UTF-8 Path
-/// # Panics
-/// This function will panic if it fails to determine the current directory,
-/// or if your current directory is not a UTF8 Path.
-pub fn get_current_directory() -> Result<Utf8PathBuf, &'static str> {
-    let curr_dir = std::env::current_dir().map_err(|_| "Failed to get current directory")?;
-    Utf8PathBuf::from_path_buf(curr_dir).map_err(|_| "Non Utf8 Path")
-}
-
-/// This struct can be used to take an absolute path and make it relative
-/// to the current directory.
-///
-#[derive(Debug, Clone)]
-pub struct MakeRelativeToCurrentDir {
-    curr_dir: Utf8PathBuf,
-}
-
-impl MakeRelativeToCurrentDir {
-    /// Create a new `MakeRelativeToCurrentDir`.
-    /// # Panics
-    /// This function will panic if it fails to determine the current directory,
-    /// or if your current directory is not a utf-8 path.
-    pub fn new() -> Self {
-        let curr_dir = get_current_directory().expect("Could not get current directory");
-        Self { curr_dir }
-    }
-}
-
-impl MakeRelative for MakeRelativeToCurrentDir {
-    /// Given an absolute path, this method will return a relative path
-    /// from the current directory to the provided path.
-    /// A relative path will be returned as is.
-    fn make_relative(&self, path: &Utf8Path) -> Utf8PathBuf {
-        match path.is_absolute() {
-            true => pathdiff::diff_utf8_paths(path, &self.curr_dir)
-                .expect("Should not fail on two absolute paths"),
-
-            false => path.into(),
-        }
-    }
+pub fn get_current_directory() -> Result<Utf8PathBuf, Error> {
+    let curr_dir = std::env::current_dir().map_err(|e| Error::FileIo {
+        kind: FileKind::Directory,
+        action: FileIoAction::Open,
+        path: ".".into(),
+        err: Some(e.to_string()),
+    })?;
+    Utf8PathBuf::from_path_buf(curr_dir.clone()).map_err(|_| Error::NonUtf8Path { path: curr_dir })
 }
 
 /// A `FileWriter` implementation that writes to the file system.

@@ -16,6 +16,7 @@ use itertools::Itertools;
 use smol_str::SmolStr;
 use std::env;
 use std::fmt::Debug;
+use std::path::PathBuf;
 use termcolor::Buffer;
 use thiserror::Error;
 
@@ -86,6 +87,9 @@ pub enum Error {
         path: Utf8PathBuf,
         err: Option<String>,
     },
+
+    #[error("Non Utf-8 Path: {path}")]
+    NonUtf8Path { path: PathBuf },
 
     #[error("{error}")]
     GitInitialization { error: String },
@@ -793,6 +797,18 @@ Second: {}",
                     hint: None,
                     level: Level::Error,
                     location: None,
+                }
+            }
+
+            Error::NonUtf8Path { path: _ } => {
+                let text =
+                    "Encountered a non utf8 path. Only valid UTF-8 paths are supported".to_owned();
+                Diagnostic {
+                    title: "Non UTF-8 Path Encountered".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                    hint: None,
                 }
             }
 
