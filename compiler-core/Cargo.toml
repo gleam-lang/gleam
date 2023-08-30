@@ -81,6 +81,7 @@ lsp-types = "0.92"
 pubgrub = "0.2"
 # Drop in replacement for std::path but with only utf-8
 camino = { version = "1.1.6", features = ["serde1"] }
+# Used for converting absolute path to relative path
 pathdiff = { version = "0.2.1", features = ["camino"] }
 
 [build-dependencies]
@@ -96,5 +97,3 @@ pretty_assertions = "1.0.0"
 insta = "1.8.0"
 # Random value generation
 rand = "0.8.5"
-# Used for mocking converting absolute path to relative path
-pathdiff = { version = "0.2.1", features = ["camino"] }
