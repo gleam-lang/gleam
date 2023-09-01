@@ -538,14 +538,16 @@ impl<'a> TypeScriptGenerator<'a> {
             return "_".into();
         }
 
-        match self.aliased_module_names.get(name) {
+        let name = match self.aliased_module_names.get(name) {
             Some(name) => (*name).to_string(),
             None => name
                 .split('/')
                 .last()
                 .expect("Non empty module path")
                 .to_string(),
-        }
+        };
+
+        format!("${name}")
     }
 
     fn do_print(
