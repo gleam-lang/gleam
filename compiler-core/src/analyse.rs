@@ -65,6 +65,7 @@ impl Inferred<PatternConstructor> {
 }
 
 // TODO: This takes too many arguments.
+#[allow(clippy::too_many_arguments)]
 /// Crawl the AST, annotating each node with the inferred type or
 /// returning an error.
 ///
