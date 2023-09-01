@@ -32,6 +32,7 @@
   or the type of the hovered argument.
 - Use `import type` for importing types from typescript declarations.
 - Use `.d.mts` extension for typescript declarations to match `.mjs`.
+- Prefix module names with dollar sign in typescript to avoid name collisions.
 
 ## v0.30.4 - 2023-07-26
 

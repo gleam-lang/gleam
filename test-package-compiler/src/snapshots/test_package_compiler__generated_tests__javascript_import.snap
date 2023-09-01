@@ -36,9 +36,9 @@ export class A extends $CustomType {}
 
 
 //// /out/lib/the_package/two.d.mts
-import type * as two from "./one/two.d.mts";
+import type * as $two from "./one/two.d.mts";
 
-export const x: two.A$;
+export const x: $two.A$;
 
 
 //// /out/lib/the_package/two.mjs
