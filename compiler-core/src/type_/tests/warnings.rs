@@ -834,3 +834,17 @@ pub fn go(a: item_a) -> Nil
 "#,
     );
 }
+
+#[test]
+fn importing_non_direct_dep_package() {
+    // Warn if an imported module is from a package that is not a direct dependency
+    assert_warning!(
+        // Magic string package name that the test setup will detect to not
+        // register this package as a dep.
+        ("non-dependency-package", "some_module", "pub const x = 1"),
+        r#"
+import some_module
+pub const x = some_module.x
+        "#
+    );
+}

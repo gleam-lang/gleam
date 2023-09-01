@@ -2,6 +2,7 @@ use crate::{
     ast::TodoKind,
     build::Target,
     diagnostic::{self, Diagnostic, Location},
+    error::wrap,
     type_,
 };
 use camino::Utf8PathBuf;
@@ -547,6 +548,39 @@ need to know if the list is empty or not.
                         title: "Inefficient use of list.length".into(),
                         text,
                         hint,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
+                type_::Warning::TransitiveDependencyImported {
+                    location,
+                    module,
+                    package,
+                } => {
+                    let text = wrap(&format!(
+                        "The module `{module}` is being imported, but \
+`{package}`, the package it belongs to, is not a direct dependency of your \
+package.
+In a future version of Gleam this may become a compile error.
+
+Run this command to add it to your dependencies:
+
+    gleam add {package}
+"
+                    ));
+                    Diagnostic {
+                        title: "Transative dependency imported".into(),
+                        text,
+                        hint: None,
                         level: diagnostic::Level::Warning,
                         location: Some(Location {
                             src: src.clone(),

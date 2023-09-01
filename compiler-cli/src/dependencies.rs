@@ -150,9 +150,9 @@ pub fn download<Telem: Telemetry>(
         for package in packages {
             let version = Requirement::hex(">= 0.0.0");
             let _ = if dev {
-                config.dev_dependencies.insert(package.to_string(), version)
+                config.dev_dependencies.insert(package.into(), version)
             } else {
-                config.dependencies.insert(package.to_string(), version)
+                config.dependencies.insert(package.into(), version)
             };
         }
     }
@@ -298,7 +298,7 @@ impl LocalPackages {
             .collect();
         self.packages
             .iter()
-            .filter(|(n, v)| !manifest_packages.contains(&(n, v)))
+            .filter(|(n, v)| !manifest_packages.contains(&(&SmolStr::from(n), v)))
             .map(|(n, v)| (n.clone(), v.clone()))
             .collect()
     }
@@ -316,7 +316,7 @@ impl LocalPackages {
             // We don't need to download local packages because we use the linked source directly
             .filter(|p| !p.is_local())
             // We don't need to download packages which we have the correct version of
-            .filter(|p| self.packages.get(&p.name) != Some(&p.version))
+            .filter(|p| self.packages.get(p.name.as_str()) != Some(&p.version))
             .collect()
     }
 
@@ -532,7 +532,7 @@ impl ProvidedPackage {
             .iter()
             .map(|(name, version)| {
                 (
-                    name.to_string(),
+                    name.as_str().into(),
                     hexpm::Dependency {
                         requirement: version.clone(),
                         optional: false,
@@ -550,19 +550,19 @@ impl ProvidedPackage {
             meta: (),
         };
         hexpm::Package {
-            name: name.to_string(),
-            repository: "local".to_string(),
+            name: name.as_str().into(),
+            repository: "local".into(),
             releases: vec![release],
         }
     }
 
     fn to_manifest_package(&self, name: &str) -> ManifestPackage {
         let mut package = ManifestPackage {
-            name: name.to_string(),
+            name: name.into(),
             version: self.version.clone(),
             otp_app: None, // Note, this will probably need to be set to something eventually
-            build_tools: vec!["gleam".to_string()],
-            requirements: self.requirements.keys().map(SmolStr::to_string).collect(),
+            build_tools: vec!["gleam".into()],
+            requirements: self.requirements.keys().map(|e| e.to_string()).collect(),
             source: self.source.to_manifest_package_source(),
         };
         package.requirements.sort();
@@ -640,19 +640,16 @@ fn resolve_versions<Telem: Telemetry>(
         let version = match requirement {
             Requirement::Hex { version } => version,
             Requirement::Path { path } => provide_local_package(
-                SmolStr::from(&name),
+                name.clone(),
                 &path,
                 project_paths.root(),
                 project_paths,
                 &mut provided_packages,
                 &mut vec![],
             )?,
-            Requirement::Git { git } => provide_git_package(
-                SmolStr::from(&name),
-                &git,
-                project_paths,
-                &mut provided_packages,
-            )?,
+            Requirement::Git { git } => {
+                provide_git_package(name.clone(), &git, project_paths, &mut provided_packages)?
+            }
         };
         let _ = root_requirements.insert(name, version);
     }
@@ -660,7 +657,7 @@ fn resolve_versions<Telem: Telemetry>(
     // Convert provided packages into hex packages for pub-grub resolve
     let provided_hex_packages = provided_packages
         .iter()
-        .map(|(name, package)| (name.to_string(), package.to_hex_package(name)))
+        .map(|(name, package)| (name.clone(), package.to_hex_package(name)))
         .collect();
 
     let resolved = dependency::resolve_versions(
@@ -758,7 +755,7 @@ fn provide_package(
         Some(package) => {
             // This package has already been provided from a different source which conflicts
             return Err(Error::ProvidedDependencyConflict {
-                package: package_name.to_string(),
+                package: package_name.into(),
                 source_1: package_source.to_toml(),
                 source_2: package.source.to_toml(),
             });
@@ -770,9 +767,9 @@ fn provide_package(
     // Check that we are loading the correct project
     if config.name != package_name {
         return Err(Error::WrongDependencyProvided {
-            expected: package_name.to_string(),
+            expected: package_name.into(),
             path: package_path.to_path_buf(),
-            found: config.name.to_string(),
+            found: config.name.into(),
         });
     };
     // Walk the requirements of the package
@@ -850,10 +847,7 @@ fn provide_existing_package() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    assert_eq!(
-        result,
-        Ok(hexpm::version::Range::new("== 0.1.0".to_string()))
-    );
+    assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
 
     let result = provide_local_package(
         "hello_world".into(),
@@ -863,10 +857,7 @@ fn provide_existing_package() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    assert_eq!(
-        result,
-        Ok(hexpm::version::Range::new("== 0.1.0".to_string()))
-    );
+    assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
 }
 
 #[test]
@@ -881,10 +872,7 @@ fn provide_conflicting_package() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    assert_eq!(
-        result,
-        Ok(hexpm::version::Range::new("== 0.1.0".to_string()))
-    );
+    assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
 
     let result = provide_package(
         "hello_world".into(),
@@ -915,10 +903,7 @@ fn provided_is_absolute() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    assert_eq!(
-        result,
-        Ok(hexpm::version::Range::new("== 0.1.0".to_string()))
-    );
+    assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
     let package = provided.get("hello_world").unwrap().clone();
     if let ProvidedPackageSource::Local { path } = package.source {
         assert!(path.is_absolute())
@@ -960,7 +945,7 @@ async fn lookup_package(
             let release =
                 hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
             Ok(ManifestPackage {
-                name: name.to_string(),
+                name: name.into(),
                 version,
                 otp_app: Some(release.meta.app),
                 build_tools: release.meta.build_tools,
@@ -1039,19 +1024,19 @@ fn provided_local_to_hex() {
         requirements: [
             (
                 "req_1".into(),
-                hexpm::version::Range::new("~> 1.0.0".to_string()),
+                hexpm::version::Range::new("~> 1.0.0".into()),
             ),
             (
                 "req_2".into(),
-                hexpm::version::Range::new("== 1.0.0".to_string()),
+                hexpm::version::Range::new("== 1.0.0".into()),
             ),
         ]
         .into(),
     };
 
     let hex_package = hexpm::Package {
-        name: "package".to_string(),
-        repository: "local".to_string(),
+        name: "package".into(),
+        repository: "local".into(),
         releases: vec![hexpm::Release {
             version: hexpm::version::Version::new(1, 0, 0),
             retirement_status: None,
@@ -1061,7 +1046,7 @@ fn provided_local_to_hex() {
                 (
                     "req_1".into(),
                     hexpm::Dependency {
-                        requirement: hexpm::version::Range::new("~> 1.0.0".to_string()),
+                        requirement: hexpm::version::Range::new("~> 1.0.0".into()),
                         optional: false,
                         app: None,
                         repository: None,
@@ -1070,7 +1055,7 @@ fn provided_local_to_hex() {
                 (
                     "req_2".into(),
                     hexpm::Dependency {
-                        requirement: hexpm::version::Range::new("== 1.0.0".to_string()),
+                        requirement: hexpm::version::Range::new("== 1.0.0".into()),
                         optional: false,
                         app: None,
                         repository: None,
@@ -1098,19 +1083,19 @@ fn provided_git_to_hex() {
         requirements: [
             (
                 "req_1".into(),
-                hexpm::version::Range::new("~> 1.0.0".to_string()),
+                hexpm::version::Range::new("~> 1.0.0".into()),
             ),
             (
                 "req_2".into(),
-                hexpm::version::Range::new("== 1.0.0".to_string()),
+                hexpm::version::Range::new("== 1.0.0".into()),
             ),
         ]
         .into(),
     };
 
     let hex_package = hexpm::Package {
-        name: "package".to_string(),
-        repository: "local".to_string(),
+        name: "package".into(),
+        repository: "local".into(),
         releases: vec![hexpm::Release {
             version: hexpm::version::Version::new(1, 0, 0),
             retirement_status: None,
@@ -1120,7 +1105,7 @@ fn provided_git_to_hex() {
                 (
                     "req_1".into(),
                     hexpm::Dependency {
-                        requirement: hexpm::version::Range::new("~> 1.0.0".to_string()),
+                        requirement: hexpm::version::Range::new("~> 1.0.0".into()),
                         optional: false,
                         app: None,
                         repository: None,
@@ -1129,7 +1114,7 @@ fn provided_git_to_hex() {
                 (
                     "req_2".into(),
                     hexpm::Dependency {
-                        requirement: hexpm::version::Range::new("== 1.0.0".to_string()),
+                        requirement: hexpm::version::Range::new("== 1.0.0".into()),
                         optional: false,
                         app: None,
                         repository: None,
@@ -1156,21 +1141,21 @@ fn provided_local_to_manifest() {
         requirements: [
             (
                 "req_1".into(),
-                hexpm::version::Range::new("~> 1.0.0".to_string()),
+                hexpm::version::Range::new("~> 1.0.0".into()),
             ),
             (
                 "req_2".into(),
-                hexpm::version::Range::new("== 1.0.0".to_string()),
+                hexpm::version::Range::new("== 1.0.0".into()),
             ),
         ]
         .into(),
     };
 
     let manifest_package = ManifestPackage {
-        name: "package".to_string(),
+        name: "package".into(),
         version: hexpm::version::Version::new(1, 0, 0),
         otp_app: None,
-        build_tools: vec!["gleam".to_string()],
+        build_tools: vec!["gleam".into()],
         requirements: vec!["req_1".into(), "req_2".into()],
         source: ManifestPackageSource::Local {
             path: "canonical/path/to/package".into(),
@@ -1194,21 +1179,21 @@ fn provided_git_to_manifest() {
         requirements: [
             (
                 "req_1".into(),
-                hexpm::version::Range::new("~> 1.0.0".to_string()),
+                hexpm::version::Range::new("~> 1.0.0".into()),
             ),
             (
                 "req_2".into(),
-                hexpm::version::Range::new("== 1.0.0".to_string()),
+                hexpm::version::Range::new("== 1.0.0".into()),
             ),
         ]
         .into(),
     };
 
     let manifest_package = ManifestPackage {
-        name: "package".to_string(),
+        name: "package".into(),
         version: hexpm::version::Version::new(1, 0, 0),
         otp_app: None,
-        build_tools: vec!["gleam".to_string()],
+        build_tools: vec!["gleam".into()],
         requirements: vec!["req_1".into(), "req_2".into()],
         source: ManifestPackageSource::Git {
             repo: "https://github.com/gleam-lang/gleam.git".into(),

@@ -362,8 +362,8 @@ where
         let deps = &package.requirements;
         for dep in deps {
             // TODO: unit test
-            let dep_source = build_dir.join(&dep);
-            let dep_dest = mix_build_lib_dir.join(&dep);
+            let dep_source = build_dir.join(dep.as_str());
+            let dep_dest = mix_build_lib_dir.join(dep.as_str());
             if self.io.is_directory(&dep_source) && !self.io.is_directory(&dep_dest) {
                 tracing::debug!("linking_{}_to_build", dep);
                 self.io.symlink_dir(&dep_source, &dep_dest)?;
@@ -396,7 +396,7 @@ where
 
         if status == 0 {
             // TODO: unit test
-            let source = mix_build_dir.join("lib").join(name);
+            let source = mix_build_dir.join("lib").join(name.as_str());
             if self.io.is_directory(&source) && !self.io.is_directory(&dest) {
                 tracing::debug!("linking_{}_to_build", name);
                 self.io.symlink_dir(&source, &dest)?;

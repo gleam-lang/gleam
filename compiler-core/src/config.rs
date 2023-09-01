@@ -31,7 +31,7 @@ fn default_javascript_runtime() -> Runtime {
     Runtime::NodeJs
 }
 
-pub type Dependencies = HashMap<String, Requirement>;
+pub type Dependencies = HashMap<SmolStr, Requirement>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SpdxLicense {
@@ -144,7 +144,7 @@ impl PackageConfig {
     /// outdated deps are removed from the manifest and not locked to the
     /// previously selected versions.
     ///
-    pub fn locked(&self, manifest: Option<&Manifest>) -> Result<HashMap<String, Version>> {
+    pub fn locked(&self, manifest: Option<&Manifest>) -> Result<HashMap<SmolStr, Version>> {
         Ok(match manifest {
             None => HashMap::new(),
             Some(manifest) => {
@@ -207,18 +207,18 @@ struct StalePackageRemover<'a> {
     // These are the packages for which the requirement or their parents
     // requirement has not changed.
     fresh: HashSet<&'a str>,
-    locked: HashMap<&'a str, &'a Vec<String>>,
+    locked: HashMap<SmolStr, &'a Vec<String>>,
 }
 
 impl<'a> StalePackageRemover<'a> {
     pub fn fresh_and_locked(
-        requirements: &'a HashMap<String, Requirement>,
+        requirements: &'a HashMap<SmolStr, Requirement>,
         manifest: &'a Manifest,
-    ) -> HashMap<String, Version> {
+    ) -> HashMap<SmolStr, Version> {
         let locked = manifest
             .packages
             .iter()
-            .map(|p| (p.name.as_str(), &p.requirements))
+            .map(|p| (p.name.as_str().into(), &p.requirements))
             .collect();
         Self {
             fresh: HashSet::new(),
@@ -229,9 +229,9 @@ impl<'a> StalePackageRemover<'a> {
 
     fn run(
         &mut self,
-        requirements: &'a HashMap<String, Requirement>,
+        requirements: &'a HashMap<SmolStr, Requirement>,
         manifest: &'a Manifest,
-    ) -> HashMap<String, Version> {
+    ) -> HashMap<SmolStr, Version> {
         // Record all the requirements that have not changed
         for (name, requirement) in requirements {
             if manifest.requirements.get(name) != Some(requirement) {
@@ -584,7 +584,7 @@ fn manifest_package(
         version: Version::parse(version).unwrap(),
         build_tools: vec![],
         otp_app: None,
-        requirements: requirements.iter().map(|e| (*e).to_string()).collect(),
+        requirements: requirements.iter().map(|e| (*e).into()).collect(),
         source: crate::manifest::ManifestPackageSource::Hex {
             outer_checksum: Base16Checksum(vec![]),
         },
@@ -592,7 +592,7 @@ fn manifest_package(
 }
 
 #[cfg(test)]
-fn locked_version(name: &'static str, version: &'static str) -> (String, Version) {
+fn locked_version(name: &'static str, version: &'static str) -> (SmolStr, Version) {
     (name.into(), Version::parse(version).unwrap())
 }
 
@@ -620,9 +620,9 @@ impl Default for PackageConfig {
 #[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct ErlangConfig {
     #[serde(default)]
-    pub application_start_module: Option<String>,
+    pub application_start_module: Option<SmolStr>,
     #[serde(default)]
-    pub extra_applications: Vec<String>,
+    pub extra_applications: Vec<SmolStr>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Default, Clone)]

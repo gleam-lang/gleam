@@ -26,7 +26,7 @@ fn compile_module(src: &str) -> TypedModule {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    crate::analyse::infer_module(
+    crate::analyse::infer_module::<()>(
         Target::Erlang,
         &ids,
         ast,
@@ -34,6 +34,7 @@ fn compile_module(src: &str) -> TypedModule {
         &"thepackage".into(),
         &modules,
         &TypeWarningEmitter::null(),
+        &std::collections::HashMap::new(),
     )
     .expect("should successfully infer")
 }

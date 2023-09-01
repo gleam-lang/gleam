@@ -91,6 +91,7 @@ pub(crate) mod graph;
 pub use error::{Error, Result};
 pub use warning::Warning;
 
+const GLEAM_CORE_PACKAGE_NAME: &str = "";
 const STDLIB_PACKAGE_NAME: &str = "gleam_stdlib";
 
 mod schema_capnp {

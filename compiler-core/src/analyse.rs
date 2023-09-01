@@ -2,7 +2,6 @@
 mod tests;
 
 use crate::ast::{UntypedArg, UntypedStatement};
-use crate::dep_tree;
 use crate::type_::error::MissingAnnotation;
 use crate::{
     ast::{
@@ -27,6 +26,7 @@ use crate::{
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
 };
+use crate::{dep_tree, GLEAM_CORE_PACKAGE_NAME};
 use itertools::Itertools;
 use smol_str::SmolStr;
 use std::{collections::HashMap, sync::Arc};
@@ -68,7 +68,7 @@ impl Inferred<PatternConstructor> {
 /// Crawl the AST, annotating each node with the inferred type or
 /// returning an error.
 ///
-pub fn infer_module(
+pub fn infer_module<A>(
     target: Target,
     ids: &UniqueIdGenerator,
     mut module: UntypedModule,
@@ -76,6 +76,7 @@ pub fn infer_module(
     package: &SmolStr,
     modules: &im::HashMap<SmolStr, ModuleInterface>,
     warnings: &TypeWarningEmitter,
+    direct_dependencies: &HashMap<SmolStr, A>,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
@@ -122,7 +123,13 @@ pub fn infer_module(
     // Infer the types of each statement in the module
     let mut typed_statements = Vec::with_capacity(statements_count);
     for i in statements.imports {
-        let statement = record_imported_items_for_use_detection(i, &mut env)?;
+        let statement = record_imported_items_for_use_detection(
+            i,
+            package,
+            direct_dependencies,
+            warnings,
+            &mut env,
+        )?;
         typed_statements.push(statement);
     }
     for t in statements.custom_types {
@@ -233,6 +240,7 @@ pub fn register_import(
                 imported_modules: environment.imported_modules.keys().cloned().collect(),
             })?;
 
+    // Modules in `src/` cannot import modules from `test/`
     if origin.is_src() && !module_info.origin.is_src() {
         return Err(Error::SrcImportingTest {
             location: *location,
@@ -900,8 +908,11 @@ fn infer_custom_type(
     }))
 }
 
-fn record_imported_items_for_use_detection(
+fn record_imported_items_for_use_detection<A>(
     i: Import<()>,
+    current_package: &str,
+    direct_dependencies: &HashMap<SmolStr, A>,
+    warnings: &TypeWarningEmitter,
     environment: &mut Environment<'_>,
 ) -> Result<TypedDefinition, Error> {
     let Import {
@@ -929,6 +940,21 @@ fn record_imported_items_for_use_detection(
             import.layer = Layer::Type;
         }
     }
+
+    // Modules should belong to a package that is a direct dependency of the
+    // current package to be imported.
+    // Upgrade this to an error in future.
+    if module_info.package != GLEAM_CORE_PACKAGE_NAME
+        && module_info.package != current_package
+        && !direct_dependencies.contains_key(&module_info.package)
+    {
+        warnings.emit(type_::Warning::TransitiveDependencyImported {
+            location,
+            module: module_info.name.clone(),
+            package: module_info.package.clone(),
+        })
+    }
+
     Ok(Definition::Import(Import {
         documentation,
         location,

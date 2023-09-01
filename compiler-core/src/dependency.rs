@@ -21,19 +21,19 @@ type PubgrubRange = pubgrub::range::Range<Version>;
 
 pub fn resolve_versions<Requirements>(
     package_fetcher: Box<dyn PackageFetcher>,
-    provided_packages: HashMap<String, hexpm::Package>,
+    provided_packages: HashMap<SmolStr, hexpm::Package>,
     root_name: SmolStr,
     dependencies: Requirements,
-    locked: &HashMap<String, Version>,
+    locked: &HashMap<SmolStr, Version>,
 ) -> Result<PackageVersions>
 where
-    Requirements: Iterator<Item = (String, Range)>,
+    Requirements: Iterator<Item = (SmolStr, Range)>,
 {
     tracing::info!("resolving_versions");
     let root_version = Version::new(0, 0, 0);
     let root = hexpm::Package {
-        name: root_name.to_string(),
-        repository: "local".to_string(),
+        name: root_name.as_str().into(),
+        repository: "local".into(),
         releases: vec![Release {
             version: root_version.clone(),
             outer_checksum: vec![],
@@ -46,7 +46,7 @@ where
 
     let packages = pubgrub::solver::resolve(
         &DependencyProvider::new(package_fetcher, provided_packages, root, locked),
-        root_name.to_string(),
+        root_name.as_str().into(),
         root_version,
     )
     .map_err(Error::dependency_resolution_failed)?
@@ -59,10 +59,10 @@ where
 
 fn root_dependencies<Requirements>(
     base_requirements: Requirements,
-    locked: &HashMap<String, Version>,
+    locked: &HashMap<SmolStr, Version>,
 ) -> Result<HashMap<String, Dependency>, ResolutionError>
 where
-    Requirements: Iterator<Item = (String, Range)>,
+    Requirements: Iterator<Item = (SmolStr, Range)>,
 {
     // Record all of the already locked versions as hard requirements
     let mut requirements: HashMap<_, _> = locked
@@ -86,7 +86,7 @@ where
             // specified version requirement without modification.
             None => {
                 let _ = requirements.insert(
-                    name,
+                    name.into(),
                     Dependency {
                         app: None,
                         optional: false,
@@ -124,19 +124,19 @@ pub trait PackageFetcher {
 }
 
 struct DependencyProvider<'a> {
-    packages: RefCell<HashMap<String, hexpm::Package>>,
+    packages: RefCell<HashMap<SmolStr, hexpm::Package>>,
     remote: Box<dyn PackageFetcher>,
-    locked: &'a HashMap<String, Version>,
+    locked: &'a HashMap<SmolStr, Version>,
 }
 
 impl<'a> DependencyProvider<'a> {
     fn new(
         remote: Box<dyn PackageFetcher>,
-        mut packages: HashMap<String, hexpm::Package>,
+        mut packages: HashMap<SmolStr, hexpm::Package>,
         root: hexpm::Package,
-        locked: &'a HashMap<String, Version>,
+        locked: &'a HashMap<SmolStr, Version>,
     ) -> Self {
-        let _ = packages.insert(root.name.clone(), root);
+        let _ = packages.insert(root.name.as_str().into(), root);
         Self {
             packages: RefCell::new(packages),
             locked,
@@ -169,7 +169,7 @@ impl<'a> DependencyProvider<'a> {
                 .partition(|r| r.version.is_pre());
             norm.extend(pre);
             package.releases = norm;
-            let _ = packages.insert(name.to_string(), package);
+            let _ = packages.insert(name.into(), package);
         }
         Ok(())
     }
@@ -191,7 +191,7 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
         let list_available_versions = |name: &String| {
             self.packages
                 .borrow()
-                .get(name)
+                .get(name.as_str())
                 .cloned()
                 .into_iter()
                 .flat_map(|p| p.releases.into_iter())
@@ -211,7 +211,7 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
         self.ensure_package_fetched(name)?;
         let packages = self.packages.borrow();
         let release = match packages
-            .get(name)
+            .get(name.as_str())
             .into_iter()
             .flat_map(|p| p.releases.iter())
             .find(|r| &r.version == version)
@@ -221,7 +221,7 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
         };
 
         // Only use retired versions if they have been locked
-        if release.is_retired() && self.locked.get(name) != Some(version) {
+        if release.is_retired() && self.locked.get(name.as_str()) != Some(version) {
             return Ok(Dependencies::Unknown);
         }
 
@@ -254,10 +254,10 @@ mod tests {
     fn make_remote() -> Box<Remote> {
         let mut deps = HashMap::new();
         let _ = deps.insert(
-            "gleam_stdlib".to_string(),
+            "gleam_stdlib".into(),
             hexpm::Package {
-                name: "gleam_stdlib".to_string(),
-                repository: "hexpm".to_string(),
+                name: "gleam_stdlib".into(),
+                repository: "hexpm".into(),
                 releases: vec![
                     Release {
                         version: Version::try_from("0.1.0").unwrap(),
@@ -291,20 +291,20 @@ mod tests {
             },
         );
         let _ = deps.insert(
-            "gleam_otp".to_string(),
+            "gleam_otp".into(),
             hexpm::Package {
-                name: "gleam_otp".to_string(),
-                repository: "hexpm".to_string(),
+                name: "gleam_otp".into(),
+                repository: "hexpm".into(),
                 releases: vec![
                     Release {
                         version: Version::try_from("0.1.0").unwrap(),
                         requirements: [(
-                            "gleam_stdlib".to_string(),
+                            "gleam_stdlib".into(),
                             Dependency {
                                 app: None,
                                 optional: false,
                                 repository: None,
-                                requirement: Range::new(">= 0.1.0".to_string()),
+                                requirement: Range::new(">= 0.1.0".into()),
                             },
                         )]
                         .into(),
@@ -315,12 +315,12 @@ mod tests {
                     Release {
                         version: Version::try_from("0.2.0").unwrap(),
                         requirements: [(
-                            "gleam_stdlib".to_string(),
+                            "gleam_stdlib".into(),
                             Dependency {
                                 app: None,
                                 optional: false,
                                 repository: None,
-                                requirement: Range::new(">= 0.1.0".to_string()),
+                                requirement: Range::new(">= 0.1.0".into()),
                             },
                         )]
                         .into(),
@@ -331,12 +331,12 @@ mod tests {
                     Release {
                         version: Version::try_from("0.3.0-rc1").unwrap(),
                         requirements: [(
-                            "gleam_stdlib".to_string(),
+                            "gleam_stdlib".into(),
                             Dependency {
                                 app: None,
                                 optional: false,
                                 repository: None,
-                                requirement: Range::new(">= 0.1.0".to_string()),
+                                requirement: Range::new(">= 0.1.0".into()),
                             },
                         )]
                         .into(),
@@ -348,10 +348,10 @@ mod tests {
             },
         );
         let _ = deps.insert(
-            "package_with_retired".to_string(),
+            "package_with_retired".into(),
             hexpm::Package {
-                name: "package_with_retired".to_string(),
-                repository: "hexpm".to_string(),
+                name: "package_with_retired".into(),
+                repository: "hexpm".into(),
                 releases: vec![
                     Release {
                         version: Version::try_from("0.1.0").unwrap(),
@@ -365,7 +365,7 @@ mod tests {
                         requirements: [].into(),
                         retirement_status: Some(hexpm::RetirementStatus {
                             reason: hexpm::RetirementReason::Security,
-                            message: "It's bad".to_string(),
+                            message: "It's bad".into(),
                         }),
                         outer_checksum: vec![1, 2, 3],
                         meta: (),
@@ -378,18 +378,18 @@ mod tests {
 
     #[test]
     fn resolution_with_locked() {
-        let locked_stdlib = ("gleam_stdlib".to_string(), Version::parse("0.1.0").unwrap());
+        let locked_stdlib = ("gleam_stdlib".into(), Version::parse("0.1.0").unwrap());
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
             SmolStr::new_inline("app"),
-            vec![("gleam_stdlib".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
+            vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![locked_stdlib].into_iter().collect(),
         )
         .unwrap();
         assert_eq!(
             result,
-            vec![("gleam_stdlib".to_string(), Version::parse("0.1.0").unwrap())]
+            vec![("gleam_stdlib".into(), Version::parse("0.1.0").unwrap())]
                 .into_iter()
                 .collect()
         );
@@ -414,18 +414,15 @@ mod tests {
             make_remote(),
             HashMap::new(),
             SmolStr::new_inline("app"),
-            vec![("gleam_stdlib".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
+            vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
         assert_eq!(
             result,
-            vec![(
-                "gleam_stdlib".to_string(),
-                Version::try_from("0.3.0").unwrap()
-            )]
-            .into_iter()
-            .collect()
+            vec![("gleam_stdlib".into(), Version::try_from("0.3.0").unwrap())]
+                .into_iter()
+                .collect()
         );
     }
 
@@ -435,18 +432,15 @@ mod tests {
             make_remote(),
             HashMap::new(),
             SmolStr::new_inline("app"),
-            vec![("gleam_otp".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
+            vec![("gleam_otp".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
         assert_eq!(
             result,
             vec![
-                ("gleam_otp".to_string(), Version::try_from("0.2.0").unwrap()),
-                (
-                    "gleam_stdlib".to_string(),
-                    Version::try_from("0.3.0").unwrap()
-                )
+                ("gleam_otp".into(), Version::try_from("0.2.0").unwrap()),
+                ("gleam_stdlib".into(), Version::try_from("0.3.0").unwrap())
             ]
             .into_iter()
             .collect()
@@ -459,18 +453,15 @@ mod tests {
             make_remote(),
             HashMap::new(),
             SmolStr::new_inline("app"),
-            vec![("gleam_otp".to_string(), Range::new("~> 0.1.0".to_string()))].into_iter(),
+            vec![("gleam_otp".into(), Range::new("~> 0.1.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
         assert_eq!(
             result,
             vec![
-                ("gleam_otp".to_string(), Version::try_from("0.1.0").unwrap()),
-                (
-                    "gleam_stdlib".to_string(),
-                    Version::try_from("0.3.0").unwrap()
-                )
+                ("gleam_otp".into(), Version::try_from("0.1.0").unwrap()),
+                ("gleam_stdlib".into(), Version::try_from("0.3.0").unwrap())
             ]
             .into_iter()
             .collect()
@@ -483,18 +474,14 @@ mod tests {
             make_remote(),
             HashMap::new(),
             SmolStr::new_inline("app"),
-            vec![(
-                "package_with_retired".to_string(),
-                Range::new("> 0.0.0".to_string()),
-            )]
-            .into_iter(),
+            vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
         assert_eq!(
             result,
             vec![(
-                "package_with_retired".to_string(),
+                "package_with_retired".into(),
                 // Uses the older version that hasn't been retired
                 Version::try_from("0.1.0").unwrap()
             ),]
@@ -509,12 +496,8 @@ mod tests {
             make_remote(),
             HashMap::new(),
             SmolStr::new_inline("app"),
-            vec![(
-                "package_with_retired".to_string(),
-                Range::new("> 0.0.0".to_string()),
-            )]
-            .into_iter(),
-            &vec![("package_with_retired".to_string(), Version::new(0, 2, 0))]
+            vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
+            &vec![("package_with_retired".into(), Version::new(0, 2, 0))]
                 .into_iter()
                 .collect(),
         )
@@ -522,7 +505,7 @@ mod tests {
         assert_eq!(
             result,
             vec![(
-                "package_with_retired".to_string(),
+                "package_with_retired".into(),
                 // Uses the locked version even though it's retired
                 Version::new(0, 2, 0)
             ),]
@@ -537,25 +520,15 @@ mod tests {
             make_remote(),
             HashMap::new(),
             SmolStr::new_inline("app"),
-            vec![(
-                "gleam_otp".to_string(),
-                Range::new("~> 0.3.0-rc1".to_string()),
-            )]
-            .into_iter(),
+            vec![("gleam_otp".into(), Range::new("~> 0.3.0-rc1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap();
         assert_eq!(
             result,
             vec![
-                (
-                    "gleam_otp".to_string(),
-                    Version::try_from("0.3.0-rc1").unwrap()
-                ),
-                (
-                    "gleam_stdlib".to_string(),
-                    Version::try_from("0.3.0").unwrap()
-                ),
+                ("gleam_otp".into(), Version::try_from("0.3.0-rc1").unwrap()),
+                ("gleam_stdlib".into(), Version::try_from("0.3.0").unwrap()),
             ]
             .into_iter()
             .collect(),
@@ -568,7 +541,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             SmolStr::new_inline("app"),
-            vec![("unknown".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
+            vec![("unknown".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap_err();
@@ -580,11 +553,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             SmolStr::new_inline("app"),
-            vec![(
-                "gleam_stdlib".to_string(),
-                Range::new("~> 99.0".to_string()),
-            )]
-            .into_iter(),
+            vec![("gleam_stdlib".into(), Range::new("~> 99.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
         .unwrap_err();
@@ -596,11 +565,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             SmolStr::new_inline("app"),
-            vec![(
-                "gleam_stdlib".to_string(),
-                Range::new("~> 0.1.0".to_string()),
-            )]
-            .into_iter(),
+            vec![("gleam_stdlib".into(), Range::new("~> 0.1.0".into()))].into_iter(),
             &vec![("gleam_stdlib".into(), Version::new(0, 2, 0))]
                 .into_iter()
                 .collect(),
