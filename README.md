@@ -43,6 +43,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Alexander Stensrud](https://github.com/spektroskop)
  - [Alexandre Del Vecchio](https://github.com/defgenx)
  - [Ali Farhadi](https://github.com/farhadi)
+ - [Andy Aylward](https://github.com/aaylward)
  - [Anthony Khong](https://github.com/anthony-khong)
  - [Anthony Scotti](https://github.com/amscotti)
  - [Arnaud Berthomier](https://github.com/oz)
