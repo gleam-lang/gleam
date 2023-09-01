@@ -195,7 +195,7 @@ pub enum Error {
     DependencyResolutionFailed(String),
 
     #[error("The package {0} is listed in dependencies and dev-dependencies")]
-    DuplicateDependency(String),
+    DuplicateDependency(SmolStr),
 
     #[error("Expected package {expected} at path {path} but found {found} instead")]
     WrongDependencyProvided {

@@ -128,8 +128,9 @@ where
         // Type check the modules that are new or have changed
         tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
         let modules = analyse(
-            &self.config.name,
+            &self.config,
             self.target.target(),
+            self.mode,
             &self.ids,
             loaded.to_compile,
             existing_modules,
@@ -366,14 +367,16 @@ where
 }
 
 fn analyse(
-    package_name: &SmolStr,
+    package_config: &PackageConfig,
     target: Target,
+    mode: Mode,
     ids: &UniqueIdGenerator,
     mut parsed_modules: Vec<UncompiledModule>,
     module_types: &mut im::HashMap<SmolStr, type_::ModuleInterface>,
     warnings: &WarningEmitter,
 ) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
+    let direct_dependencies = package_config.dependencies_for(mode).expect("Package deps");
 
     // Insert the prelude
     // DUPE: preludeinsertion
@@ -401,9 +404,10 @@ fn analyse(
             ids,
             ast,
             origin,
-            package_name,
+            &package_config.name,
             module_types,
             &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
+            &direct_dependencies,
         )
         .map_err(|error| Error::Type {
             path: path.clone(),

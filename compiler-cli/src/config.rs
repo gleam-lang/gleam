@@ -6,6 +6,7 @@ use gleam_core::{
     manifest::Manifest,
     paths::ProjectPaths,
 };
+use smol_str::SmolStr;
 
 use crate::fs::get_current_directory;
 
@@ -22,16 +23,16 @@ pub fn find_package_config_for_module(
     manifest: &Manifest,
     project_paths: &ProjectPaths,
 ) -> Result<PackageConfig, Error> {
-    let gleam_projects: Vec<&String> = manifest
+    let gleam_projects: Vec<SmolStr> = manifest
         .packages
         .iter()
         .filter(|package| package.build_tools.contains(&"gleam".to_string()))
-        .map(|package| &package.name)
+        .map(|package| package.name.clone())
         .collect();
 
     let maybe_package_path = gleam_projects.into_iter().find(|package_to_check| {
         let mut path = project_paths.build_packages_directory();
-        path.push(package_to_check);
+        path.push(package_to_check.as_str());
 
         path.push("src");
 
@@ -47,7 +48,7 @@ pub fn find_package_config_for_module(
     match maybe_package_path {
         Some(package_path) => {
             let mut config_path = project_paths.build_packages_directory();
-            config_path.push(package_path);
+            config_path.push(package_path.as_str());
             config_path.push("gleam.toml");
             read(config_path)
         }

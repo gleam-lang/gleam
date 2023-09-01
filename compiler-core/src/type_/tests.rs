@@ -260,12 +260,13 @@ pub fn compile_module(
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
+    let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
 
     for (package, name, module_src) in dep {
         let parsed = crate::parse::parse_module(module_src).expect("syntax error");
         let mut ast = parsed.module;
         ast.name = name.into();
-        let module = crate::analyse::infer_module(
+        let module = crate::analyse::infer_module::<()>(
             Target::Erlang,
             &ids,
             ast,
@@ -273,9 +274,14 @@ pub fn compile_module(
             &package.into(),
             &modules,
             &warnings,
+            &std::collections::HashMap::from_iter(vec![]),
         )
         .expect("should successfully infer");
         let _ = modules.insert(name.into(), module.type_info);
+
+        if package != "non-dependency-package" {
+            let _ = direct_dependencies.insert(package.into(), ());
+        }
     }
 
     let parsed = crate::parse::parse_module(src).expect("syntax error");
@@ -288,6 +294,7 @@ pub fn compile_module(
         &"thepackage".into(),
         &modules,
         &warnings,
+        &direct_dependencies,
     )
 }
 
@@ -451,6 +458,7 @@ fn infer_module_type_retention_test() {
         definitions: vec![],
         type_info: (),
     };
+    let direct_dependencies = std::collections::HashMap::from_iter(vec![]);
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
     // DUPE: preludeinsertion
@@ -458,7 +466,7 @@ fn infer_module_type_retention_test() {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    let module = crate::analyse::infer_module(
+    let module = crate::analyse::infer_module::<()>(
         Target::Erlang,
         &ids,
         module,
@@ -466,6 +474,7 @@ fn infer_module_type_retention_test() {
         &"thepackage".into(),
         &modules,
         &TypeWarningEmitter::null(),
+        &direct_dependencies,
     )
     .expect("Should infer OK");
 

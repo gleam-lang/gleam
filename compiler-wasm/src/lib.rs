@@ -68,7 +68,7 @@ fn write_source_file<P: AsRef<Utf8Path>>(source: &str, path: P, wfs: &mut WasmFi
 
 fn manifest_from_name(name: &str) -> ManifestPackage {
     ManifestPackage {
-        name: name.to_string(),
+        name: name.into(),
         version: Version {
             major: 0,
             minor: 0,

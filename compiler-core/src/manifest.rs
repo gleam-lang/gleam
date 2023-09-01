@@ -10,7 +10,7 @@ use smol_str::SmolStr;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct Manifest {
     #[serde(serialize_with = "ordered_map")]
-    pub requirements: HashMap<String, Requirement>,
+    pub requirements: HashMap<SmolStr, Requirement>,
     #[serde(serialize_with = "sorted_vec")]
     pub packages: Vec<ManifestPackage>,
 }
@@ -257,7 +257,7 @@ impl<'de> serde::Deserialize<'de> for Base16Checksum {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct ManifestPackage {
-    pub name: String,
+    pub name: SmolStr,
     pub version: Version,
     pub build_tools: Vec<String>,
     #[serde(default)]
@@ -270,7 +270,7 @@ pub struct ManifestPackage {
 
 impl ManifestPackage {
     pub fn with_build_tools(mut self, build_tools: &'static [&'static str]) -> Self {
-        self.build_tools = build_tools.iter().map(|s| (*s).to_string()).collect();
+        self.build_tools = build_tools.iter().map(|s| (*s).into()).collect();
         self
     }
 
