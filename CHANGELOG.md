@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A warning is now emitted if a module from a transitive dependency is imported.
 - The `if` conditional compilation, `external fn`, and `external type` syntaxes
   have been removed.
 - The `description` flag for the `gleam new` command has been removed.
