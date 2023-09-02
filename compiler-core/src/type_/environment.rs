@@ -133,8 +133,8 @@ impl<'a> Environment<'a> {
         // processed. If it was not then any seemingly unused entities may have
         // been used beyond the point where the error occured, so we don't want
         // to incorrectly warn about them.
-        if dbg!(was_successful) {
-            self.handle_unused(dbg!(unused));
+        if was_successful {
+            self.handle_unused(unused);
         }
         self.scope = data.local_values;
     }
