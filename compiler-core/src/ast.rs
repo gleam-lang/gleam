@@ -343,6 +343,7 @@ pub struct Function<T, Expr> {
     pub arguments: Vec<Arg<T>>,
     pub body: Vec1<Statement<T, Expr>>,
     pub public: bool,
+    pub deprecated: bool,
     pub return_annotation: Option<TypeAst>,
     pub return_type: T,
     pub documentation: Option<SmolStr>,

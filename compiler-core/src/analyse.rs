@@ -286,6 +286,7 @@ pub fn register_import(
                 value.variant.clone(),
                 value.type_.clone(),
                 true,
+                false,
             );
             variant = Some(&value.variant);
             value_imported = true;
@@ -537,6 +538,7 @@ fn register_values_from_custom_type(
         environment.insert_module_value(
             constructor.name.clone(),
             ValueConstructor {
+                deprecated: false,
                 public: *public && !opaque,
                 type_: typ.clone(),
                 variant: constructor_info.clone(),
@@ -551,7 +553,13 @@ fn register_values_from_custom_type(
             );
         }
 
-        environment.insert_variable(constructor.name.clone(), constructor_info, typ, *public);
+        environment.insert_variable(
+            constructor.name.clone(),
+            constructor_info,
+            typ,
+            *public,
+            false,
+        );
     }
     Ok(())
 }
@@ -572,7 +580,10 @@ fn register_value_from_function(
         documentation,
         external_erlang,
         external_javascript,
-        ..
+        deprecated,
+        end_position: _,
+        body: _,
+        return_type: _,
     } = f;
     assert_unique_name(names, name, *location)?;
     assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
@@ -607,7 +618,7 @@ fn register_value_from_function(
         arity: args.len(),
         location: *location,
     };
-    environment.insert_variable(name.clone(), variant, typ, *public);
+    environment.insert_variable(name.clone(), variant, typ, *public, *deprecated);
     if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
     };
@@ -661,9 +672,10 @@ fn infer_function(
         body,
         return_annotation,
         end_position: end_location,
+        deprecated,
         external_erlang,
         external_javascript,
-        ..
+        return_type: (),
     } = f;
     let preregistered_fn = environment
         .get_variable(&name)
@@ -721,13 +733,14 @@ fn infer_function(
         arity: args.len(),
         location,
     };
-    environment.insert_variable(name.clone(), variant, type_.clone(), public);
+    environment.insert_variable(name.clone(), variant, type_.clone(), public, deprecated);
 
     Ok(Definition::Function(Function {
         documentation: doc,
         location,
         name,
         public,
+        deprecated,
         arguments: args,
         end_position: end_location,
         return_annotation,
@@ -984,6 +997,7 @@ fn infer_module_constant(
     let type_ = typed_expr.type_();
     let variant = ValueConstructor {
         public,
+        deprecated: false,
         variant: ValueConstructorVariant::ModuleConstant {
             documentation: doc.clone(),
             location,
@@ -993,7 +1007,13 @@ fn infer_module_constant(
         type_: type_.clone(),
     };
 
-    environment.insert_variable(name.clone(), variant.variant.clone(), type_.clone(), public);
+    environment.insert_variable(
+        name.clone(),
+        variant.variant.clone(),
+        type_.clone(),
+        public,
+        false,
+    );
     environment.insert_module_value(name.clone(), variant);
 
     if !public {
@@ -1104,6 +1124,7 @@ fn generalise_function(
         location,
         name,
         public,
+        deprecated,
         arguments: args,
         body,
         return_annotation,
@@ -1130,6 +1151,7 @@ fn generalise_function(
         name.clone(),
         ValueConstructor {
             public,
+            deprecated,
             type_: typ,
             variant: ValueConstructorVariant::ModuleFn {
                 documentation: doc.clone(),
@@ -1147,6 +1169,7 @@ fn generalise_function(
         location,
         name,
         public,
+        deprecated,
         arguments: args,
         end_position: end_location,
         return_annotation,

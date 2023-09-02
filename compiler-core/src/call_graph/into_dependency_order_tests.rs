@@ -22,6 +22,7 @@ fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>, Error> {
             location: Default::default(),
             return_annotation: None,
             public: true,
+            deprecated: false,
             end_position: src.len() as u32,
             return_type: (),
             documentation: None,

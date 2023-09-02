@@ -621,6 +621,7 @@ pub struct TypeConstructor {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValueConstructor {
     pub public: bool,
+    pub deprecated: bool,
     pub variant: ValueConstructorVariant,
     pub type_: Arc<Type>,
 }

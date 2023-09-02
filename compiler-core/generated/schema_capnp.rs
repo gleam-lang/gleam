@@ -2051,6 +2051,10 @@ pub mod value_constructor {
     pub fn get_public(self) -> bool {
       self.reader.get_bool_field(0)
     }
+    #[inline]
+    pub fn get_deprecated(self) -> bool {
+      self.reader.get_bool_field(1)
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -2140,6 +2144,14 @@ pub mod value_constructor {
     #[inline]
     pub fn set_public(&mut self, value: bool)  {
       self.builder.set_bool_field(0, value);
+    }
+    #[inline]
+    pub fn get_deprecated(self) -> bool {
+      self.builder.get_bool_field(1)
+    }
+    #[inline]
+    pub fn set_deprecated(&mut self, value: bool)  {
+      self.builder.set_bool_field(1, value);
     }
   }
 
