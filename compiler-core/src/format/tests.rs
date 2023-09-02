@@ -7,6 +7,7 @@ mod conditional_compilation;
 mod external_fn;
 mod external_types;
 mod function;
+mod guards;
 mod record_update;
 mod tuple;
 mod use_;
