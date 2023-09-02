@@ -14,7 +14,7 @@ fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
     assert!(response.result.is_ok());
 
     let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-        r#"\\?\C:\src\app.gleam"#
+        r"\\?\C:\src\app.gleam"
     } else {
         "/src/app.gleam"
     });
@@ -42,7 +42,7 @@ fn add_2(x) {
 ";
 
     assert_eq!(
-        positioned_hover(&code, Position::new(1, 3)),
+        positioned_hover(code, Position::new(1, 3)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -76,7 +76,7 @@ fn append(x, y) {
 ";
 
     assert_eq!(
-        positioned_hover(&code, Position::new(3, 3)),
+        positioned_hover(code, Position::new(3, 3)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -112,7 +112,7 @@ fn append(x, y) {
 ";
 
     assert_eq!(
-        positioned_hover(&code, Position::new(3, 10)),
+        positioned_hover(code, Position::new(3, 10)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam\nString\n```".to_string()
@@ -141,7 +141,7 @@ fn append(x, y) {
 }
 ";
 
-    assert_eq!(positioned_hover(&code, Position::new(4, 1)), None);
+    assert_eq!(positioned_hover(code, Position::new(4, 1)), None);
 }
 
 #[test]
@@ -153,7 +153,7 @@ fn append(x, y) {
 ";
 
     assert_eq!(
-        positioned_hover(&code, Position::new(2, 2)),
+        positioned_hover(code, Position::new(2, 2)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -185,7 +185,7 @@ const one = 1
 ";
 
     assert_eq!(
-        positioned_hover(&code, Position::new(3, 6)),
+        positioned_hover(code, Position::new(3, 6)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
