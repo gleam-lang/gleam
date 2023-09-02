@@ -1410,6 +1410,14 @@ where
                 };
                 (body, end, rbr_e)
             }
+
+            None if is_anon => {
+                return parse_error(
+                    ParseErrorType::ExpectedFunctionBody,
+                    SrcSpan { start, end: rpar_e },
+                );
+            }
+
             None => {
                 let body = vec1![Statement::Expression(UntypedExpr::Placeholder {
                     location: SrcSpan::new(start, rpar_e)

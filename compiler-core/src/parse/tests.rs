@@ -459,3 +459,8 @@ fn unknown_attribute() {
 pub fn main() { 1 }"#
     );
 }
+
+#[test]
+fn incomplete_function() {
+    assert_error!("fn()");
+}

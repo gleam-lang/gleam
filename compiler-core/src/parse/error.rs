@@ -202,6 +202,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 vec!["This attribute has already been given.".into()],
             ),
             ParseErrorType::UnknownTarget => ("I don't know what this attribute is", vec![]),
+            ParseErrorType::ExpectedFunctionBody => ("This function does not have a body", vec![]),
         }
     }
 }
@@ -252,7 +253,8 @@ pub enum ParseErrorType {
     UnexpectedFunction, // a function was used called outside of another function
     // A variable was assigned or discarded on the left hand side of a <> pattern
     ConcatPatternVariableLeftHandSide,
-    ListSpreadWithoutTail,
+    ListSpreadWithoutTail, // let x = [1, ..]
+    ExpectedFunctionBody,  // let x = fn()
 }
 
 impl LexicalError {
