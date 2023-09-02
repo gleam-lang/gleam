@@ -464,3 +464,16 @@ pub fn main() { 1 }"#
 fn incomplete_function() {
     assert_error!("fn()");
 }
+
+#[test]
+fn multiple_deprecation_attributes() {
+    assert_module_error!(
+        r#"
+@deprecated("1")
+@deprecated("2")
+pub fn main() -> Nil {
+  Nil
+}
+"#
+    );
+}

@@ -632,6 +632,16 @@ pub enum Deprecation {
     Deprecated { message: SmolStr },
 }
 
+impl Deprecation {
+    /// Returns `true` if the deprecation is [`Deprecated`].
+    ///
+    /// [`Deprecated`]: Deprecation::Deprecated
+    #[must_use]
+    pub fn is_deprecated(&self) -> bool {
+        matches!(self, Self::Deprecated { .. })
+    }
+}
+
 impl Default for Deprecation {
     fn default() -> Self {
         Self::NotDeprecated
