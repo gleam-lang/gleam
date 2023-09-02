@@ -1,5 +1,8 @@
 use super::*;
-use crate::ast::{Arg, Function};
+use crate::{
+    ast::{Arg, Function},
+    type_::Deprecation,
+};
 use smol_str::SmolStr;
 
 type Input = (&'static str, &'static [&'static str], &'static str);
@@ -22,7 +25,7 @@ fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>, Error> {
             location: Default::default(),
             return_annotation: None,
             public: true,
-            deprecated: false,
+            deprecation: Deprecation::NotDeprecated,
             end_position: src.len() as u32,
             return_type: (),
             documentation: None,

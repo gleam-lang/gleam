@@ -11,8 +11,8 @@ use crate::{
     build::Origin,
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, FieldMap, ModuleInterface, RecordAccessor, Type, TypeConstructor,
-        ValueConstructor, ValueConstructorVariant,
+        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, RecordAccessor, Type,
+        TypeConstructor, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     Result,
@@ -149,9 +149,14 @@ impl ModuleDecoder {
         let type_ = self.type_(&reader.get_type()?)?;
         let variant = self.value_constructor_variant(&reader.get_variant()?)?;
         let public = reader.get_public();
-        let deprecated = reader.get_deprecated();
+        let deprecation = match reader.get_deprecated()? {
+            "" => Deprecation::NotDeprecated,
+            message => Deprecation::Deprecated {
+                message: message.into(),
+            },
+        };
         Ok(ValueConstructor {
-            deprecated,
+            deprecation,
             public,
             type_,
             variant,

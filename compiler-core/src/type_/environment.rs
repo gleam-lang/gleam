@@ -168,7 +168,7 @@ impl<'a> Environment<'a> {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
-                deprecated: false,
+                deprecation: Deprecation::NotDeprecated,
                 public: false,
                 variant: ValueConstructorVariant::LocalVariable { location },
                 type_: typ,
@@ -184,13 +184,13 @@ impl<'a> Environment<'a> {
         variant: ValueConstructorVariant,
         typ: Arc<Type>,
         public: bool,
-        deprecated: bool,
+        deprecation: Deprecation,
     ) {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
                 public,
-                deprecated,
+                deprecation,
                 variant,
                 type_: typ,
             },

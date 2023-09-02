@@ -3,7 +3,8 @@ use strum::{EnumIter, IntoEnumIterator};
 use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 
 use super::{
-    ModuleInterface, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant,
+    Deprecation, ModuleInterface, Type, TypeConstructor, TypeVar, ValueConstructor,
+    ValueConstructorVariant,
 };
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
@@ -163,7 +164,7 @@ pub fn link(type_: Arc<Type>) -> Arc<Type> {
 pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
     let value = |variant, type_| ValueConstructor {
         public: true,
-        deprecated: false,
+        deprecation: Deprecation::NotDeprecated,
         variant,
         type_,
     };
