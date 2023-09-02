@@ -219,6 +219,64 @@ where
         })
     }
 
+    pub fn action(
+        &mut self,
+        params: lsp::CodeActionParams,
+    ) -> Response<Option<Vec<lsp_types::CodeAction>>> {
+        eprintln!("Got a new action request: {:?}", params);
+        self.respond(|this| {
+            let mut actions = vec![];
+
+            // question: how to get the current module warnings?
+            // These could be used to generate a single code action to fix all the unused warnings at once?
+            eprintln!("Why is this empty? {:?}", this.compiler.warnings);
+
+            // here is a demo action:
+            match params
+                .context
+                .diagnostics
+                .iter()
+                .find(|diag| diag.message.starts_with("Unused imported"))
+            {
+                Some(diag) => {
+                    let edit = lsp_types::TextEdit {
+                        range: lsp_types::Range::new(
+                            lsp_types::Position {
+                                line: diag.range.start.line,
+                                character: 0,
+                            },
+                            lsp_types::Position {
+                                line: diag.range.start.line + 1,
+                                character: 0,
+                            },
+                        ),
+                        new_text: "".to_string(),
+                    };
+                    let mut changes = std::collections::HashMap::new();
+                    let _ = changes.insert(params.text_document.uri, vec![edit]);
+                    let action = lsp_types::CodeAction {
+                        title: "Remove unused imports".to_string(),
+                        kind: None,
+                        diagnostics: None,
+                        edit: Some(lsp_types::WorkspaceEdit {
+                            changes: Some(changes),
+                            document_changes: None,
+                            change_annotations: None,
+                        }),
+                        command: None,
+                        is_preferred: Some(true),
+                        disabled: None,
+                        data: None,
+                    };
+                    actions.push(action)
+                }
+                None => (),
+            }
+
+            Ok(Some(actions))
+        })
+    }
+
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
         let result = handler(self);
         let warnings = self.take_warnings();
