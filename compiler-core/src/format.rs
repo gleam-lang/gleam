@@ -481,7 +481,17 @@ impl<'comments> Formatter<'comments> {
     fn statement_fn<'a>(&mut self, function: &'a Function<(), UntypedExpr>) -> Document<'a> {
         let attributes = docvec![];
 
-        // Attributes
+        // @deprecated attribute
+        let attributes = match &function.deprecation {
+            type_::Deprecation::NotDeprecated => attributes,
+            type_::Deprecation::Deprecated { message } => attributes
+                .append("@deprecated(\"")
+                .append(message)
+                .append("\")")
+                .append(line()),
+        };
+
+        // @external attribute
         let external = |t: &'static str, m: &'a str, f: &'a str| {
             docvec!["@external(", t, ", \"", m, "\", \"", f, "\")", line()]
         };
@@ -492,14 +502,6 @@ impl<'comments> Formatter<'comments> {
         let attributes = match function.external_javascript.as_ref() {
             Some((m, f)) => attributes.append(external("javascript", m, f)),
             None => attributes,
-        };
-        let attributes = match &function.deprecation {
-            type_::Deprecation::NotDeprecated => attributes,
-            type_::Deprecation::Deprecated { message } => attributes
-                .append("@deprecated(\"")
-                .append(message)
-                .append("\")")
-                .append(line()),
         };
 
         // Fn name and args
