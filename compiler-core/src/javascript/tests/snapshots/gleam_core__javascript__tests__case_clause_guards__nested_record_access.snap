@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+assertion_line: 223
+expression: "\npub type A {\n  A(b: B)\n}\n\npub type B {\n  B(c: C)\n}\n\npub type C {\n  C(d: Bool)\n}\n\npub fn a(a: A) {\n  case a {\n    _ if a.b.c.d -> 1\n    _ -> 0\n  }\n}\n"
+---
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class A extends $CustomType {
+  constructor(b) {
+    super();
+    this.b = b;
+  }
+}
+
+export class B extends $CustomType {
+  constructor(c) {
+    super();
+    this.c = c;
+  }
+}
+
+export class C extends $CustomType {
+  constructor(d) {
+    super();
+    this.d = d;
+  }
+}
+
+export function a(a) {
+  if (a.b.c.d) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
