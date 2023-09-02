@@ -140,3 +140,15 @@ pub fn ccc() {
         ]
     );
 }
+
+#[test]
+fn deprecated_function() {
+    assert_module_infer!(
+        "
+@deprecated()
+pub fn main() {
+  Nil
+}",
+        vec![(r#"main"#, r#"fn() -> Nil"#)]
+    );
+}

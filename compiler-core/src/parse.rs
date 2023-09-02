@@ -88,6 +88,7 @@ pub struct Parsed {
 #[derive(Debug, Default)]
 struct Attributes {
     target: Option<Target>,
+    deprecated: bool,
     external_erlang: Option<(SmolStr, SmolStr)>,
     external_javascript: Option<(SmolStr, SmolStr)>,
 }
@@ -2668,6 +2669,7 @@ where
         match name.as_str() {
             "external" => self.parse_external_attribute(start, end, attributes),
             "target" => self.parse_target_attribute(start, end, attributes),
+            "deprecated" => self.parse_deprecated_attribute(attributes),
             _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan { start, end }),
         }
     }
@@ -2729,6 +2731,15 @@ where
 
             _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan::new(start, end)),
         }
+    }
+
+    fn parse_deprecated_attribute(
+        &mut self,
+        attributes: &mut Attributes,
+    ) -> Result<(), ParseError> {
+        let (_, _) = self.expect_one(&Token::RightParen)?;
+        attributes.deprecated = true;
+        Ok(())
     }
 }
 
