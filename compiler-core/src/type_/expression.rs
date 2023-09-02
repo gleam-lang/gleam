@@ -1605,14 +1605,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             public,
             variant,
             type_: typ,
-            deprecation: deprecated,
+            deprecation,
         } = constructor;
+
+        // Emit a warning if the value being used is deprecated.
+        if let Deprecation::Deprecated { message } = &deprecation {
+            self.environment.warnings.emit(Warning::DeprecatedValue {
+                location: *location,
+                message: message.clone(),
+            })
+        }
 
         // Instantiate generic variables into unbound variables for this usage
         let typ = self.instantiate(typ, &mut hashmap![]);
         Ok(ValueConstructor {
             public,
-            deprecation: deprecated,
+            deprecation,
             variant,
             type_: typ,
         })

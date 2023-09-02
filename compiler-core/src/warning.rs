@@ -593,6 +593,25 @@ Run this command to add it to your dependencies:
                         }),
                     }
                 }
+
+                type_::Warning::DeprecatedValue { location, message } => {
+                    let text = wrap(&format!("It was deprecated with this message: {message}"));
+                    Diagnostic {
+                        title: "Deprecated value used".into(),
+                        text,
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: Some("This value has been deprecated".into()),
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
             },
         }
     }

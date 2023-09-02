@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 867
+expression: "\n@deprecated(\"Don't use this!\")\npub fn a() {\n  Nil\n}\n\npub fn b() {\n  a\n}\n        "
+---
+
+warning: Deprecated value used
+  ┌─ /src/warning/wrn.gleam:8:3
+  │
+8 │   a
+  │   ^ This value has been deprecated
+
+It was deprecated with this message: Don't use this!
+

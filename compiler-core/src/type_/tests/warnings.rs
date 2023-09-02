@@ -861,3 +861,19 @@ pub fn main() {
         "#
     );
 }
+
+#[test]
+fn deprecated_function() {
+    assert_warning!(
+        r#"
+@deprecated("Don't use this!")
+pub fn a() {
+  Nil
+}
+
+pub fn b() {
+  a
+}
+        "#
+    );
+}
