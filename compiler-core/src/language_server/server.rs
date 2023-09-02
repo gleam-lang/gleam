@@ -378,8 +378,8 @@ where
     }
 
     fn code_action(&mut self, params: lsp::CodeActionParams) -> (Json, Feedback) {
-        eprintln!("Got code action {:?}", params);
-        todo!()
+        let path = path(&params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.action(params))
     }
 
     /// A file opened in the editor may be unsaved, so store a copy of the
