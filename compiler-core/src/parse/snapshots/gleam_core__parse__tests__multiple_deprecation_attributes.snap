@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 470
+expression: "\n@deprecated(\"1\")\n@deprecated(\"2\")\npub fn main() -> Nil {\n  Nil\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:1
+  │
+3 │ @deprecated("2")
+  │ ^^^^^^^^^^^ Duplicate attribute
+
+This attribute has already been given.
+

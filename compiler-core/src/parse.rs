@@ -2671,7 +2671,7 @@ where
         match name.as_str() {
             "external" => self.parse_external_attribute(start, end, attributes),
             "target" => self.parse_target_attribute(start, end, attributes),
-            "deprecated" => self.parse_deprecated_attribute(attributes),
+            "deprecated" => self.parse_deprecated_attribute(start, end, attributes),
             _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan { start, end }),
         }
     }
@@ -2737,8 +2737,13 @@ where
 
     fn parse_deprecated_attribute(
         &mut self,
+        start: u32,
+        end: u32,
         attributes: &mut Attributes,
     ) -> Result<(), ParseError> {
+        if attributes.deprecated.is_deprecated() {
+            return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end));
+        }
         let (_, message, _) = self.expect_string()?;
         let (_, _) = self.expect_one(&Token::RightParen)?;
         attributes.deprecated = Deprecation::Deprecated { message };
