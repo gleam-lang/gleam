@@ -20,6 +20,7 @@ mod conditional_compilation;
 mod custom_types;
 mod errors;
 mod functions;
+mod guards;
 mod imports;
 mod pretty;
 mod type_alias;
