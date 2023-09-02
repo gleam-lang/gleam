@@ -14,8 +14,10 @@
   as having an overly general type.
 - Fixed a bug where recursive type constructors could incorrectly infer a type
   error.
-- Fixs a bug where constants where not being correctly inlined when used in the 
+- Fixed a bug where constants where not being correctly inlined when used in the 
   size option of a bitstring pattern match.
+- Fixed a bug where anonymous functions could parse successfully when missing a
+  body.
 - Hovering over a function definition will now display the function signature,
   or the type of the hovered argument.
 
