@@ -493,6 +493,14 @@ impl<'comments> Formatter<'comments> {
             Some((m, f)) => attributes.append(external("javascript", m, f)),
             None => attributes,
         };
+        let attributes = match &function.deprecation {
+            type_::Deprecation::NotDeprecated => attributes,
+            type_::Deprecation::Deprecated { message } => attributes
+                .append("@deprecated(\"")
+                .append(message)
+                .append("\")")
+                .append(line()),
+        };
 
         // Fn name and args
         let signature = pub_(function.public)
