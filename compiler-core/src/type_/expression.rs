@@ -33,7 +33,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    pub fn in_new_scope<T>(&mut self, process_scope: impl FnOnce(&mut Self) -> T) -> T {
+    pub fn in_new_scope<T, E>(
+        &mut self,
+        process_scope: impl FnOnce(&mut Self) -> Result<T, E>,
+    ) -> Result<T, E> {
         // Create new scope
         let environment_reset_data = self.environment.open_new_scope();
         let hydrator_reset_data = self.hydrator.open_new_scope();
@@ -42,7 +45,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let result = process_scope(self);
 
         // Close scope, discarding any scope local state
-        self.environment.close_scope(environment_reset_data);
+        self.environment
+            .close_scope(environment_reset_data, result.is_ok());
         self.hydrator.close_scope(hydrator_reset_data);
         result
     }
@@ -2050,7 +2054,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         body: Vec1<UntypedStatement>,
         return_type: Option<Arc<Type>>,
     ) -> Result<(Vec<TypedArg>, Vec1<TypedStatement>), Error> {
-        let (body_rigid_names, body_infer) = self.in_new_scope(|body_typer| {
+        self.in_new_scope(|body_typer| {
             // Used to track if any argument names are used more than once
             let mut argument_names = HashSet::with_capacity(args.len());
 
@@ -2086,21 +2090,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
 
             let body = body_typer.infer_statements(body);
-            Ok((body_typer.hydrator.rigid_names(), body))
-        })?;
+            let body_rigid_names = body_typer.hydrator.rigid_names();
+            let body = body.map_err(|e| e.with_unify_error_rigid_names(&body_rigid_names))?;
 
-        let body = body_infer.map_err(|e| e.with_unify_error_rigid_names(&body_rigid_names))?;
+            // Check that any return type is accurate.
+            if let Some(return_type) = return_type {
+                unify(return_type, body.last().type_()).map_err(|e| {
+                    e.return_annotation_mismatch()
+                        .into_error(body.last().type_defining_location())
+                        .with_unify_error_rigid_names(&body_rigid_names)
+                })?;
+            }
 
-        // Check that any return type is accurate.
-        if let Some(return_type) = return_type {
-            unify(return_type, body.last().type_()).map_err(|e| {
-                e.return_annotation_mismatch()
-                    .into_error(body.last().type_defining_location())
-                    .with_unify_error_rigid_names(&body_rigid_names)
-            })?;
-        }
-
-        Ok((args, body))
+            Ok((args, body))
+        })
     }
 
     fn check_case_exhaustiveness(

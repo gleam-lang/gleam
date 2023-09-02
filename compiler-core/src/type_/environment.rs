@@ -101,14 +101,17 @@ pub struct ScopeResetData {
 }
 
 impl<'a> Environment<'a> {
-    pub fn in_new_scope<T>(&mut self, process_scope: impl FnOnce(&mut Self) -> T) -> T {
+    pub fn in_new_scope<T, E>(
+        &mut self,
+        process_scope: impl FnOnce(&mut Self) -> Result<T, E>,
+    ) -> Result<T, E> {
         // Record initial scope state
         let initial = self.open_new_scope();
 
         // Process scope
         let result = process_scope(self);
 
-        self.close_scope(initial);
+        self.close_scope(initial, result.is_ok());
 
         // Return result of typing the scope
         result
@@ -120,12 +123,19 @@ impl<'a> Environment<'a> {
         ScopeResetData { local_values }
     }
 
-    pub fn close_scope(&mut self, data: ScopeResetData) {
+    pub fn close_scope(&mut self, data: ScopeResetData, was_successful: bool) {
         let unused = self
             .entity_usages
             .pop()
             .expect("There was no top entity scope.");
-        self.handle_unused(unused);
+
+        // We only check for unused entities if the scope was successfully
+        // processed. If it was not then any seemingly unused entities may have
+        // been used beyond the point where the error occured, so we don't want
+        // to incorrectly warn about them.
+        if dbg!(was_successful) {
+            self.handle_unused(dbg!(unused));
+        }
         self.scope = data.local_values;
     }
 

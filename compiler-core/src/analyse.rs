@@ -703,7 +703,7 @@ fn infer_function(
             .expect("Could not find hydrator for fn");
 
         let (args, body) =
-            expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type))?;
+            dbg!(expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type)))?;
         let args_types = args.iter().map(|a| a.type_.clone()).collect();
         let typ = fn_(args_types, body.last().type_());
         Ok((typ, args, body))

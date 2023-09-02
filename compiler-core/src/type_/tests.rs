@@ -117,7 +117,7 @@ macro_rules! assert_with_module_error {
 
 fn get_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> Vec<Warning> {
     let warnings = VectorWarningEmitterIO::default();
-    _ = compile_module(src, Some(Arc::new(warnings.clone())), deps).unwrap();
+    _ = compile_module(src, Some(Arc::new(warnings.clone())), deps);
     warnings
         .take()
         .into_iter()
@@ -175,14 +175,14 @@ macro_rules! assert_warning {
 macro_rules! assert_no_warnings {
     ($src:expr $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings($src, vec![]);
-        assert!(warnings.is_empty());
+        assert_eq!(warnings, vec![]);
     };
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
         );
-        assert!(warnings.is_empty());
+        assert_eq!(warnings, vec![]);
     };
 }
 
