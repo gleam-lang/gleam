@@ -20,7 +20,7 @@ use lsp::{
 use lsp_types::{
     self as lsp,
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
-    request::{Completion, Formatting, HoverRequest},
+    request::{CodeActionRequest, Completion, Formatting, HoverRequest},
     InitializeParams, PublishDiagnosticsParams,
 };
 use serde_json::Value as Json;
@@ -133,7 +133,12 @@ where
                 self.completion(params)
             }
 
-            _ => panic!("Unsupported LSP request"),
+            "textDocument/codeAction" => {
+                let params = cast_request::<CodeActionRequest>(request);
+                self.code_action(params)
+            }
+
+            name => panic!("Unsupported LSP request {}", name),
         };
 
         self.publish_feedback(feedback);
@@ -372,6 +377,11 @@ where
         })
     }
 
+    fn code_action(&mut self, params: lsp::CodeActionParams) -> (Json, Feedback) {
+        eprintln!("Got code action {:?}", params);
+        todo!()
+    }
+
     /// A file opened in the editor may be unsaved, so store a copy of the
     /// new content in memory and compile.
     fn text_document_did_open(&mut self, params: lsp::DidOpenTextDocumentParams) -> Feedback {
@@ -469,7 +479,7 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         document_highlight_provider: None,
         document_symbol_provider: None,
         workspace_symbol_provider: None,
-        code_action_provider: None,
+        code_action_provider: Some(lsp::CodeActionProviderCapability::Simple(true)),
         code_lens_provider: None,
         document_formatting_provider: Some(lsp::OneOf::Left(true)),
         document_range_formatting_provider: None,
