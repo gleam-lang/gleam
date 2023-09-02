@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/guards.rs
+assertion_line: 37
+expression: "\npub fn a(a: String) {\n  case a {\n    _ if a.b -> 1\n    _ -> 0\n  }\n}\n"
+---
+error: Unknown record field
+  ┌─ /src/one/two.gleam:4:11
+  │
+4 │     _ if a.b -> 1
+  │           ^^ This field does not exist
+
+The value being accessed has this type:
+
+    String
+
+It does not have any fields.
+

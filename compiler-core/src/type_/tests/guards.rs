@@ -1,4 +1,4 @@
-use crate::assert_module_infer;
+use crate::{assert_module_error, assert_module_infer};
 
 #[test]
 fn nested_record_access() {
@@ -29,5 +29,19 @@ pub fn a(a: A) {
             ("C", "fn(Bool) -> C"),
             ("a", "fn(A) -> Int"),
         ],
-    )
+    );
+}
+
+#[test]
+fn string_variable_access() {
+    assert_module_error!(
+        r#"
+pub fn a(a: String) {
+  case a {
+    _ if a.b -> 1
+    _ -> 0
+  }
+}
+"#
+    );
 }
