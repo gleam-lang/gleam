@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/erlang/tests/guards.rs
+assertion_line: 467
+expression: "\npub type A {\n  A(b: B)\n}\n\npub type B {\n  B(c: C)\n}\n\npub type C {\n  C(d: Bool)\n}\n\npub fn a(a: A) {\n  case a {\n    _ if a.b.c.d -> 1\n    _ -> 0\n  }\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([a/1]).
+-export_type([a/0, b/0, c/0]).
+
+-type a() :: {a, b()}.
+
+-type b() :: {b, c()}.
+
+-type c() :: {c, boolean()}.
+
+-spec a(a()) -> integer().
+a(A) ->
+    case A of
+        _ when erlang:element(2, erlang:element(2, erlang:element(2, A))) ->
+            1;
+
+        _ ->
+            0
+    end.
+
