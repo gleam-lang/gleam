@@ -387,6 +387,11 @@ pub enum Warning {
         module: SmolStr,
         package: SmolStr,
     },
+
+    DeprecatedValue {
+        location: SrcSpan,
+        message: SmolStr,
+    },
 }
 
 impl Error {
