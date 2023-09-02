@@ -1605,12 +1605,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             public,
             variant,
             type_: typ,
+            deprecated,
         } = constructor;
 
         // Instantiate generic variables into unbound variables for this usage
         let typ = self.instantiate(typ, &mut hashmap![]);
         Ok(ValueConstructor {
             public,
+            deprecated,
             variant,
             type_: typ,
         })

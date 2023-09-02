@@ -1437,6 +1437,7 @@ where
             body,
             return_type: (),
             return_annotation,
+            deprecated: attributes.deprecated,
             external_erlang: attributes.external_erlang.take(),
             external_javascript: attributes.external_javascript.take(),
         })))

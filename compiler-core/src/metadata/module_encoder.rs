@@ -152,6 +152,7 @@ impl<'a> ModuleEncoder<'a> {
         constructor: &ValueConstructor,
     ) {
         builder.set_public(constructor.public);
+        builder.set_deprecated(constructor.deprecated);
         self.build_type(builder.reborrow().init_type(), &constructor.type_);
         self.build_value_constructor_variant(builder.init_variant(), &constructor.variant);
     }
