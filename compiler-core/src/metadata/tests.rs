@@ -9,7 +9,8 @@ use crate::{
     },
     build::Origin,
     type_::{
-        self, ModuleInterface, Type, TypeConstructor, ValueConstructor, ValueConstructorVariant,
+        self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
+        ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
 };
@@ -37,7 +38,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
             "one".into(),
             ValueConstructor {
                 public: true,
-                deprecated: false,
+                deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleConstant {
                     documentation: Some("Some documentation".into()),
@@ -268,7 +269,7 @@ fn module_fn_value() {
             "one".into(),
             ValueConstructor {
                 public: true,
-                deprecated: false,
+                deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
                     documentation: Some("wobble!".into()),
@@ -301,7 +302,9 @@ fn deprecated_module_fn_value() {
             "one".into(),
             ValueConstructor {
                 public: true,
-                deprecated: true,
+                deprecation: Deprecation::Deprecated {
+                    message: "wibble wobble".into(),
+                },
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
                     documentation: Some("wobble!".into()),
@@ -334,7 +337,7 @@ fn private_module_fn_value() {
             "one".into(),
             ValueConstructor {
                 public: false,
-                deprecated: false,
+                deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
                     documentation: Some("wobble!".into()),
@@ -369,7 +372,7 @@ fn module_fn_value_regression() {
             "one".into(),
             ValueConstructor {
                 public: true,
-                deprecated: false,
+                deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
                     documentation: Some("wabble!".into()),
@@ -403,7 +406,7 @@ fn module_fn_value_with_field_map() {
             "one".into(),
             ValueConstructor {
                 public: true,
-                deprecated: false,
+                deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
                     documentation: Some("wubble!".into()),
@@ -439,7 +442,7 @@ fn record_value() {
             "one".into(),
             ValueConstructor {
                 public: true,
-                deprecated: false,
+                deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
                     documentation: Some("webble!".into()),
@@ -476,7 +479,7 @@ fn record_value_with_field_map() {
             "one".into(),
             ValueConstructor {
                 public: true,
-                deprecated: false,
+                deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
                     documentation: Some("wybble!".into()),
@@ -694,7 +697,7 @@ fn constant_var() {
         typ: type_::int(),
         constructor: Some(Box::from(ValueConstructor {
             public: true,
-            deprecated: false,
+            deprecation: Deprecation::NotDeprecated,
             type_: type_::int(),
             variant: ValueConstructorVariant::ModuleConstant {
                 documentation: Some("some doc".into()),
@@ -717,7 +720,7 @@ fn constant_var() {
                 "one".into(),
                 ValueConstructor {
                     public: true,
-                    deprecated: false,
+                    deprecation: Deprecation::NotDeprecated,
                     type_: type_::int(),
                     variant: ValueConstructorVariant::ModuleConstant {
                         documentation: Some("some doc!!!!!!!!!".into()),
@@ -731,7 +734,7 @@ fn constant_var() {
                 "one_original".into(),
                 ValueConstructor {
                     public: true,
-                    deprecated: false,
+                    deprecation: Deprecation::NotDeprecated,
                     type_: type_::int(),
                     variant: ValueConstructorVariant::ModuleConstant {
                         documentation: Some("some doc yeah".into()),

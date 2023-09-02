@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::build::Target;
-use crate::type_::PRELUDE_MODULE_NAME;
+use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{SrcSpan, TypedExpr},
     build::Located,
@@ -85,7 +85,7 @@ fn compile_expression(src: &str) -> TypedStatement {
         variant,
         type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),
         true,
-        false,
+        Deprecation::NotDeprecated,
     );
 
     environment.insert_accessors(
@@ -182,7 +182,7 @@ wibble}"#,
     let var = TypedExpr::Var {
         location: SrcSpan { start: 16, end: 22 },
         constructor: ValueConstructor {
-            deprecated: false,
+            deprecation: Deprecation::NotDeprecated,
             public: false,
             variant: ValueConstructorVariant::LocalVariable {
                 location: SrcSpan { start: 5, end: 11 },
@@ -467,7 +467,7 @@ fn find_node_bool() {
     let bool = TypedExpr::Var {
         location: SrcSpan { start: 1, end: 5 },
         constructor: ValueConstructor {
-            deprecated: false,
+            deprecation: Deprecation::NotDeprecated,
             public: true,
             variant: ValueConstructorVariant::Record {
                 documentation: None,

@@ -66,6 +66,7 @@ use crate::ast::{
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
+use crate::type_::Deprecation;
 use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
 use smol_str::SmolStr;
@@ -88,7 +89,7 @@ pub struct Parsed {
 #[derive(Debug, Default)]
 struct Attributes {
     target: Option<Target>,
-    deprecated: bool,
+    deprecated: Deprecation,
     external_erlang: Option<(SmolStr, SmolStr)>,
     external_javascript: Option<(SmolStr, SmolStr)>,
 }
@@ -1437,7 +1438,7 @@ where
             body,
             return_type: (),
             return_annotation,
-            deprecated: attributes.deprecated,
+            deprecation: std::mem::take(&mut attributes.deprecated),
             external_erlang: attributes.external_erlang.take(),
             external_javascript: attributes.external_javascript.take(),
         })))
@@ -2738,8 +2739,9 @@ where
         &mut self,
         attributes: &mut Attributes,
     ) -> Result<(), ParseError> {
+        let (_, message, _) = self.expect_string()?;
         let (_, _) = self.expect_one(&Token::RightParen)?;
-        attributes.deprecated = true;
+        attributes.deprecated = Deprecation::Deprecated { message };
         Ok(())
     }
 }

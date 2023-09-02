@@ -3,6 +3,7 @@ mod tests;
 
 use crate::ast::{UntypedArg, UntypedStatement};
 use crate::type_::error::MissingAnnotation;
+use crate::type_::Deprecation;
 use crate::{
     ast::{
         self, BitStringSegmentOption, CustomType, Definition, DefinitionLocation, Function,
@@ -286,7 +287,7 @@ pub fn register_import(
                 value.variant.clone(),
                 value.type_.clone(),
                 true,
-                false,
+                Deprecation::NotDeprecated,
             );
             variant = Some(&value.variant);
             value_imported = true;
@@ -538,7 +539,7 @@ fn register_values_from_custom_type(
         environment.insert_module_value(
             constructor.name.clone(),
             ValueConstructor {
-                deprecated: false,
+                deprecation: Deprecation::NotDeprecated,
                 public: *public && !opaque,
                 type_: typ.clone(),
                 variant: constructor_info.clone(),
@@ -558,7 +559,7 @@ fn register_values_from_custom_type(
             constructor_info,
             typ,
             *public,
-            false,
+            Deprecation::NotDeprecated,
         );
     }
     Ok(())
@@ -580,7 +581,7 @@ fn register_value_from_function(
         documentation,
         external_erlang,
         external_javascript,
-        deprecated,
+        deprecation,
         end_position: _,
         body: _,
         return_type: _,
@@ -618,7 +619,7 @@ fn register_value_from_function(
         arity: args.len(),
         location: *location,
     };
-    environment.insert_variable(name.clone(), variant, typ, *public, *deprecated);
+    environment.insert_variable(name.clone(), variant, typ, *public, deprecation.clone());
     if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
     };
@@ -672,7 +673,7 @@ fn infer_function(
         body,
         return_annotation,
         end_position: end_location,
-        deprecated,
+        deprecation,
         external_erlang,
         external_javascript,
         return_type: (),
@@ -733,14 +734,20 @@ fn infer_function(
         arity: args.len(),
         location,
     };
-    environment.insert_variable(name.clone(), variant, type_.clone(), public, deprecated);
+    environment.insert_variable(
+        name.clone(),
+        variant,
+        type_.clone(),
+        public,
+        deprecation.clone(),
+    );
 
     Ok(Definition::Function(Function {
         documentation: doc,
         location,
         name,
         public,
-        deprecated,
+        deprecation,
         arguments: args,
         end_position: end_location,
         return_annotation,
@@ -997,7 +1004,7 @@ fn infer_module_constant(
     let type_ = typed_expr.type_();
     let variant = ValueConstructor {
         public,
-        deprecated: false,
+        deprecation: Deprecation::NotDeprecated,
         variant: ValueConstructorVariant::ModuleConstant {
             documentation: doc.clone(),
             location,
@@ -1012,7 +1019,7 @@ fn infer_module_constant(
         variant.variant.clone(),
         type_.clone(),
         public,
-        false,
+        Deprecation::NotDeprecated,
     );
     environment.insert_module_value(name.clone(), variant);
 
@@ -1124,7 +1131,7 @@ fn generalise_function(
         location,
         name,
         public,
-        deprecated,
+        deprecation,
         arguments: args,
         body,
         return_annotation,
@@ -1151,7 +1158,7 @@ fn generalise_function(
         name.clone(),
         ValueConstructor {
             public,
-            deprecated,
+            deprecation: deprecation.clone(),
             type_: typ,
             variant: ValueConstructorVariant::ModuleFn {
                 documentation: doc.clone(),
@@ -1169,7 +1176,7 @@ fn generalise_function(
         location,
         name,
         public,
-        deprecated,
+        deprecation,
         arguments: args,
         end_position: end_location,
         return_annotation,
