@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" as greeting <> name -> greeting\n    _ -> \"Unknown\"\n  }\n}\n"
+---
+export function go(x) {
+  if (x.startsWith("Hello, ")) {
+    let name = x.slice(7);
+    return "Hello, ";
+  } else {
+    return "Unknown";
+  }
+}
+
