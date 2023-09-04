@@ -77,6 +77,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [David Bernheisel](https://github.com/dbernheisel)
  - [David Flanagan](https://github.com/rawkode)
  - [David Sancho](https://github.com/davesnx)
+ - [Dmitry Poroh](https://github.com/poroh)
  - [Edon Gashi](https://github.com/edongashi)
  - [Elliott Pogue](https://github.com/epogue)
  - [Erik Terpstra](https://github.com/eterps)
