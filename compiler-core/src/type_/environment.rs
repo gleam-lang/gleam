@@ -181,6 +181,7 @@ impl<'a> Environment<'a> {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
+                deprecation: Deprecation::NotDeprecated,
                 public: false,
                 variant: ValueConstructorVariant::LocalConstant {
                     literal: literal.clone(),
