@@ -11,6 +11,8 @@
   updated for the latest syntax.
 - Packages are no longer precompiled to Erlang when publishing to Hex if the
   package target is set to JavaScript.
+- An exception is now raised if JavaScript code uses the BitString class
+  constructor and passes in the incorrect argument type.
 - Fixed a bug where mutually recursive functions could be incorrectly inferred
   as having an overly general type.
 - Fixed a bug where recursive type constructors could incorrectly infer a type
