@@ -1,3 +1,4 @@
+mod action;
 mod compilation;
 mod completion;
 mod hover;
