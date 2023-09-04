@@ -164,7 +164,7 @@ impl<'module> Generator<'module> {
 
             TypedExpr::Var {
                 name, constructor, ..
-            } => Ok(self.variable(name, constructor)),
+            } => self.variable(name, constructor),
 
             TypedExpr::Pipeline {
                 assignments,
@@ -353,17 +353,13 @@ impl<'module> Generator<'module> {
         .group()
     }
 
-    fn variable<'a>(
-        &mut self,
-        name: &'a SmolStr,
-        constructor: &'a ValueConstructor,
-    ) -> Document<'a> {
+    fn variable<'a>(&mut self, name: &'a SmolStr, constructor: &'a ValueConstructor) -> Output<'a> {
         match &constructor.variant {
             ValueConstructorVariant::LocalConstant { literal } => {
                 constant_expression(self.tracker, literal)
             }
             ValueConstructorVariant::Record { arity, .. } => {
-                self.record_constructor(constructor.type_.clone(), None, name, *arity)
+                Ok(self.record_constructor(constructor.type_.clone(), None, name, *arity))
             }
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
