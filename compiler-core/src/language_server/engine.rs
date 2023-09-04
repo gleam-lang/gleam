@@ -223,58 +223,39 @@ where
         &mut self,
         params: lsp::CodeActionParams,
     ) -> Response<Option<Vec<lsp_types::CodeAction>>> {
-        eprintln!("Got a new action request: {:?}", params);
         self.respond(|this| {
             let mut actions = vec![];
 
-            // question: how to get the current module warnings?
-            // These could be used to generate a single code action to fix all the unused warnings at once?
-            eprintln!("Why is this empty? {:?}", this.compiler.warnings);
-
-            // here is a demo action:
-            match params
-                .context
-                .diagnostics
-                .iter()
-                .find(|diag| diag.message.starts_with("Unused imported"))
-            {
-                Some(diag) => {
-                    let edit = lsp_types::TextEdit {
-                        range: lsp_types::Range::new(
-                            lsp_types::Position {
-                                line: diag.range.start.line,
-                                character: 0,
-                            },
-                            lsp_types::Position {
-                                line: diag.range.start.line + 1,
-                                character: 0,
-                            },
-                        ),
-                        new_text: "".to_string(),
-                    };
-                    let mut changes = std::collections::HashMap::new();
-                    let _ = changes.insert(params.text_document.uri, vec![edit]);
-                    let action = lsp_types::CodeAction {
-                        title: "Remove unused imports".to_string(),
-                        kind: None,
-                        diagnostics: None,
-                        edit: Some(lsp_types::WorkspaceEdit {
-                            changes: Some(changes),
-                            document_changes: None,
-                            change_annotations: None,
-                        }),
-                        command: None,
-                        is_preferred: Some(true),
-                        disabled: None,
-                        data: None,
-                    };
-                    actions.push(action)
+            // Check if unused removal can be performed
+            if is_action_attached_to_unused_diagnostic(&params) {
+                if let Some(ranges) = this.get_unused_ranges(&params.text_document.uri) {
+                    actions.push(make_unused_code_action(params.text_document.uri, &ranges))
                 }
-                None => (),
             }
 
-            Ok(Some(actions))
+            Ok(if actions.is_empty() {
+                None
+            } else {
+                Some(actions)
+            })
         })
+    }
+
+    fn get_unused_ranges(&mut self, uri: &Url) -> Option<Vec<lsp_types::Range>> {
+        let module = self.module_for_uri(uri)?;
+        let unused = &module.ast.type_info.unused;
+        if unused.is_empty() {
+            None
+        } else {
+            // Convert to lsp range
+            let line_numbers = LineNumbers::new(&module.code);
+            Some(
+                unused
+                    .iter()
+                    .map(|location| src_span_to_lsp_range(*location, &line_numbers))
+                    .collect(),
+            )
+        }
     }
 
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
@@ -599,5 +580,43 @@ fn hover_for_expression(expression: &TypedExpr, line_numbers: LineNumbers) -> Ho
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
+    }
+}
+
+fn is_action_attached_to_unused_diagnostic(params: &lsp::CodeActionParams) -> bool {
+    params
+        .context
+        .diagnostics
+        .iter()
+        .any(|diag| diag.message.starts_with("Unused"))
+}
+
+// Convert a list of unused range into a "Remove unused" code action.
+fn make_unused_code_action(uri: Url, ranges: &[lsp_types::Range]) -> lsp_types::CodeAction {
+    use itertools::Itertools;
+
+    let edits = ranges
+        .iter()
+        .sorted_by(|a, b| Ord::cmp(&a.start, &b.start))
+        .map(|range| lsp_types::TextEdit {
+            range: *range,
+            new_text: "".to_string(),
+        })
+        .collect();
+    let mut changes = std::collections::HashMap::new();
+    let _ = changes.insert(uri, edits);
+    lsp_types::CodeAction {
+        title: "Remove unused imports".to_string(),
+        kind: None,
+        diagnostics: None,
+        edit: Some(lsp_types::WorkspaceEdit {
+            changes: Some(changes),
+            document_changes: None,
+            change_annotations: None,
+        }),
+        command: None,
+        is_preferred: Some(true),
+        disabled: None,
+        data: None,
     }
 }
