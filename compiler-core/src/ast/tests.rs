@@ -522,10 +522,9 @@ import gleam
     );
 
     assert!(module.find_node(0).is_none());
-    assert!(module.find_node(7).is_none());
 
     // The import
-    assert!(module.find_node(8).is_some());
+    assert!(module.find_node(1).is_some());
     assert!(module.find_node(12).is_some());
 
     assert!(module.find_node(13).is_none());

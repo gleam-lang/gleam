@@ -1,14 +1,13 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 841
 expression: "\nimport some_module\npub const x = some_module.x\n        "
 ---
 
 warning: Transative dependency imported
-  ┌─ /src/warning/wrn.gleam:2:8
+  ┌─ /src/warning/wrn.gleam:2:1
   │
 2 │ import some_module
-  │        ^^^^^^^^^^^
+  │ ^^^^^^^^^^^^^^^^^^
 
 The module `some_module` is being imported, but `non-dependency-package`,
 the package it belongs to, is not a direct dependency of your package.

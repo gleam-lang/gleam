@@ -1,13 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 236
 expression: import xpto
 ---
 error: Unknown module
-  ┌─ /src/one/two.gleam:1:8
+  ┌─ /src/one/two.gleam:1:1
   │
 1 │ import xpto
-  │        ^^^^
+  │ ^^^^^^^^^^^
 
 No module has been found with the name `xpto`.
 

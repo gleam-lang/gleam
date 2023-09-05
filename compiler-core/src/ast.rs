@@ -105,7 +105,7 @@ impl UntypedModule {
 #[test]
 fn module_dependencies_test() {
     let parsed = crate::parse::parse_module(
-        "import one 
+        "import one
          @target(erlang)
          import two
 
@@ -119,9 +119,9 @@ fn module_dependencies_test() {
 
     assert_eq!(
         vec![
-            ("one".into(), SrcSpan::new(7, 10)),
-            ("two".into(), SrcSpan::new(53, 56)),
-            ("four".into(), SrcSpan::new(126, 130)),
+            ("one".into(), SrcSpan::new(0, 10)),
+            ("two".into(), SrcSpan::new(45, 55)),
+            ("four".into(), SrcSpan::new(118, 129)),
         ],
         module.dependencies(Target::Erlang)
     );
