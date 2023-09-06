@@ -33,7 +33,7 @@ impl Requirement {
         Requirement::Git { git: url.into() }
     }
 
-    pub fn to_toml(&self, current_directory: &Utf8Path) -> String {
+    pub fn to_toml(&self, root_path: &Utf8Path) -> String {
         match self {
             Requirement::Hex { version: range } => {
                 format!(r#"{{ version = "{}" }}"#, range)
@@ -41,9 +41,7 @@ impl Requirement {
             Requirement::Path { path } => {
                 format!(
                     r#"{{ path = "{}" }}"#,
-                    make_relative(current_directory, path)
-                        .as_str()
-                        .replace('\\', "/")
+                    make_relative(root_path, path).as_str().replace('\\', "/")
                 )
             }
             Requirement::Git { git: url } => format!(r#"{{ git = "{}" }}"#, url),

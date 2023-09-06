@@ -21,7 +21,7 @@ impl Manifest {
     // manually so that we can control the formatting.
     // We want to keep entries on a single line each so that they are more
     // resistant to merge conflicts and are easier to fix when it does happen.
-    pub fn to_toml(&self, current_directory: &Utf8Path) -> String {
+    pub fn to_toml(&self, root_path: &Utf8Path) -> String {
         let mut buffer = String::new();
         let Self {
             requirements,
@@ -93,11 +93,7 @@ impl Manifest {
                 }
                 ManifestPackageSource::Local { path } => {
                     buffer.push_str(r#", source = "local", path = ""#);
-                    buffer.push_str(
-                        &make_relative(current_directory, path)
-                            .as_str()
-                            .replace('\\', "/"),
-                    );
+                    buffer.push_str(&make_relative(root_path, path).as_str().replace('\\', "/"));
                     buffer.push('"');
                 }
             };
@@ -111,7 +107,7 @@ impl Manifest {
         for (name, requirement) in requirements.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
             buffer.push_str(name);
             buffer.push_str(" = ");
-            buffer.push_str(&requirement.to_toml(current_directory));
+            buffer.push_str(&requirement.to_toml(root_path));
             buffer.push('\n');
         }
 
