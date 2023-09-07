@@ -25,6 +25,7 @@
   body.
 - Fixed a bug where incorrect unused variable warnings could be emitted for code
   that doesn't type check.
+- Corrected some outdated links in error messages.
 - Hovering over a function definition will now display the function signature,
   or the type of the hovered argument.
 - Use `import type` for importing types from typescript declarations.
