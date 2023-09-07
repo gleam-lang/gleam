@@ -580,12 +580,12 @@ your app.src file \"{app_ver}\""
                     "erl" | "erlc" | "escript" => text.push_str(
                         "
 Documentation for installing Erlang can be viewed here:
-https://gleam.run/getting-started/",
+https://gleam.run/getting-started/installing/",
                     ),
                     "rebar3" => text.push_str(
                         "
 Documentation for installing rebar3 can be viewed here:
-https://gleam.run/getting-started/",
+https://gleam.run/getting-started/installing/",
                     ),
                     _ => (),
                 }
