@@ -692,8 +692,8 @@ impl ValueConstructor {
 
     pub(crate) fn get_documentation(&self) -> Option<&str> {
         match &self.variant {
-            ValueConstructorVariant::LocalVariable { .. } => Some("A locally defined variable."),
-            ValueConstructorVariant::LocalConstant { .. } => Some("A locally defined constant."),
+            ValueConstructorVariant::LocalConstant { .. }
+            | ValueConstructorVariant::LocalVariable { .. } => Some("A locally defined variable."),
 
             ValueConstructorVariant::ModuleFn { documentation, .. }
             | ValueConstructorVariant::Record { documentation, .. }
