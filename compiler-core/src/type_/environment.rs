@@ -497,11 +497,17 @@ impl<'a> Environment<'a> {
             .entity_usages
             .pop()
             .expect("Expected a bottom level of entity usages.");
-        self.handle_unused(unused);
+        self.handle_unused(unused.clone());
 
         for (name, location) in self.unused_modules.clone().into_iter() {
-            self.warnings
-                .emit(Warning::UnusedImportedModule { name, location });
+            // Check if the module is really unused
+            if !unused
+                .iter()
+                .any(|(_, (_, loc, used))| *used && location.contains(loc.start))
+            {
+                self.warnings
+                    .emit(Warning::UnusedImportedModule { name, location });
+            }
         }
     }
 
