@@ -1208,7 +1208,7 @@ fn module_fn_with_args<'a>(
     module: &'a str,
     name: &'a str,
     args: Vec<Document<'a>>,
-    env: &mut Env<'a>,
+    env: &Env<'a>,
 ) -> Document<'a> {
     let args = wrap_args(args);
     if module == env.module {
@@ -1397,14 +1397,14 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
     }
 }
 
-fn todo<'a>(message: &'a Option<SmolStr>, location: SrcSpan, env: &mut Env<'a>) -> Document<'a> {
+fn todo<'a>(message: &'a Option<SmolStr>, location: SrcSpan, env: &Env<'a>) -> Document<'a> {
     let message = message
         .as_deref()
         .unwrap_or("This has not yet been implemented");
     erlang_error("todo", message, location, vec![], env)
 }
 
-fn panic<'a>(location: SrcSpan, message: Option<&'a str>, env: &mut Env<'a>) -> Document<'a> {
+fn panic<'a>(location: SrcSpan, message: Option<&'a str>, env: &Env<'a>) -> Document<'a> {
     let message = message.unwrap_or("panic expression evaluated");
     erlang_error("panic", message, location, vec![], env)
 }

@@ -49,19 +49,19 @@ impl Default for CompileOptions {
 /// `target` language.
 pub fn compile_(options: CompileOptions) -> Result<HashMap<String, String>, String> {
     let paths = ProjectPaths::at_filesystem_root();
-    let mut wfs = WasmFileSystem::new();
+    let wfs = WasmFileSystem::new();
 
     for (path, source) in options.source_files.iter() {
-        write_source_file(source, path, &mut wfs);
+        write_source_file(source, path, &wfs);
     }
 
     let _package =
-        compile_project(&mut wfs, options.target, &options).map_err(|e| e.pretty_string())?;
+        compile_project(&wfs, options.target, &options).map_err(|e| e.pretty_string())?;
 
     Ok(gather_compiled_files(&paths, &wfs, options.target).unwrap())
 }
 
-fn write_source_file<P: AsRef<Utf8Path>>(source: &str, path: P, wfs: &mut WasmFileSystem) {
+fn write_source_file<P: AsRef<Utf8Path>>(source: &str, path: P, wfs: &WasmFileSystem) {
     wfs.write(path.as_ref(), source)
         .expect("should always succeed with the virtual file system");
 }
@@ -86,7 +86,7 @@ fn manifest_from_name(name: &str) -> ManifestPackage {
 }
 
 fn compile_project(
-    wfs: &mut WasmFileSystem,
+    wfs: &WasmFileSystem,
     target: Target,
     compile_options: &CompileOptions,
 ) -> Result<Built, Error> {

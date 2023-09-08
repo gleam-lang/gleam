@@ -776,7 +776,6 @@ fn provide_package(
     let mut requirements = HashMap::new();
     parents.push(package_name);
     for (name, requirement) in config.dependencies.into_iter() {
-        let name = name;
         let version = match requirement {
             Requirement::Hex { version } => version,
             Requirement::Path { path } => {
