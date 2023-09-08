@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/erlang/tests/custom_types.rs
+assertion_line: 40
+expression: "\npub opaque type UserId {\n  UserId(inner: Int)\n}\n\npub fn main(x: UserId) {\n  let UserId(y) = x\n  y\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([main/1]).
+-export_type([user_id/0]).
+
+-opaque user_id() :: {user_id, integer()}.
+
+-spec main(user_id()) -> integer().
+main(X) ->
+    {user_id, Y} = X,
+    Y.
+

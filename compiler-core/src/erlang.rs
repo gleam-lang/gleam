@@ -1372,6 +1372,8 @@ fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Documen
 
 fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
     match expression {
+        TypedExpr::NewType { body, .. } => needs_begin_end_wrapping(&body),
+
         TypedExpr::Pipeline { .. } => true,
 
         TypedExpr::Int { .. }
@@ -1454,6 +1456,8 @@ fn erlang_error<'a>(
 
 fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     match expression {
+        TypedExpr::NewType { body, .. } => expr(&body, env),
+
         TypedExpr::Todo {
             message: label,
             location,

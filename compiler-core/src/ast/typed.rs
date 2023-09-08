@@ -83,6 +83,13 @@ pub enum TypedExpr {
         clauses: Vec<Clause<Self, Arc<Type>, SmolStr>>,
     },
 
+    NewType {
+        location: SrcSpan,
+        typ: Arc<Type>,
+        body: Box<Self>,
+        documentation: Option<SmolStr>,
+    },
+
     RecordAccess {
         location: SrcSpan,
         typ: Arc<Type>,
@@ -221,7 +228,10 @@ impl TypedExpr {
                 })
                 .or(Some(self.into())),
 
-            Self::RecordAccess {
+            Self::NewType {
+                body: expression, ..
+            }
+            | Self::RecordAccess {
                 record: expression, ..
             }
             | Self::TupleIndex {
@@ -268,10 +278,11 @@ impl TypedExpr {
             | Self::Panic { location, .. }
             | Self::Block { location, .. }
             | Self::String { location, .. }
-            | Self::NegateBool { location, .. }
-            | Self::NegateInt { location, .. }
+            | Self::NewType { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
+            | Self::NegateInt { location, .. }
+            | Self::NegateBool { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
@@ -293,10 +304,11 @@ impl TypedExpr {
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
             | Self::Panic { location, .. }
-            | Self::NegateBool { location, .. }
-            | Self::NegateInt { location, .. }
+            | Self::NewType { location, .. }
             | Self::Pipeline { location, .. }
+            | Self::NegateInt { location, .. }
             | Self::BitString { location, .. }
+            | Self::NegateBool { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
@@ -321,6 +333,7 @@ impl TypedExpr {
             | TypedExpr::NegateInt { .. }
             | TypedExpr::String { .. }
             | TypedExpr::Block { .. }
+            | TypedExpr::NewType { .. }
             | TypedExpr::Pipeline { .. }
             | TypedExpr::BitString { .. }
             | TypedExpr::TupleIndex { .. }
@@ -364,6 +377,7 @@ impl TypedExpr {
             | Self::BitString { typ, .. }
             | Self::TupleIndex { typ, .. }
             | Self::ModuleSelect { typ, .. }
+            | Self::NewType { typ, .. }
             | Self::RecordAccess { typ, .. }
             | Self::RecordUpdate { typ, .. } => typ.clone(),
             Self::Pipeline { finally, .. } => finally.type_(),
@@ -395,6 +409,8 @@ impl TypedExpr {
         match self {
             TypedExpr::Var { constructor, .. } => constructor.get_documentation(),
             TypedExpr::ModuleSelect { constructor, .. } => constructor.get_documentation(),
+
+            TypedExpr::NewType { documentation, .. } => documentation.as_deref(),
 
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }

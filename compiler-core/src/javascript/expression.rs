@@ -130,6 +130,8 @@ impl<'module> Generator<'module> {
 
     pub fn expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         let document = match expression {
+            TypedExpr::NewType { body, .. } => self.expression(&body),
+
             TypedExpr::String { value, .. } => Ok(string(value)),
 
             TypedExpr::Int { value, .. } => Ok(int(value)),
@@ -459,7 +461,7 @@ impl<'module> Generator<'module> {
         for (i, statement) in statements.iter().enumerate() {
             if i + 1 < count {
                 documents.push(self.not_in_tail_position(|gen| gen.statement(statement))?);
-                if requires_semicolon(statement) {
+                if statement_requires_semicolon(statement) {
                     documents.push(";".to_doc());
                 }
                 documents.push(line());
@@ -1325,6 +1327,8 @@ fn construct_record<'a>(
 impl TypedExpr {
     fn handles_own_return(&self) -> bool {
         match self {
+            TypedExpr::NewType { body, .. } => body.handles_own_return(),
+
             TypedExpr::Todo { .. }
             | TypedExpr::Call { .. }
             | TypedExpr::Case { .. }
@@ -1384,36 +1388,40 @@ pub fn is_js_scalar(t: Arc<Type>) -> bool {
     t.is_int() || t.is_float() || t.is_bool() || t.is_nil() || t.is_string()
 }
 
-fn requires_semicolon(statement: &TypedStatement) -> bool {
+fn statement_requires_semicolon(statement: &TypedStatement) -> bool {
     match statement {
-        Statement::Expression(
-            TypedExpr::Int { .. }
-            | TypedExpr::Fn { .. }
-            | TypedExpr::Var { .. }
-            | TypedExpr::List { .. }
-            | TypedExpr::Call { .. }
-            | TypedExpr::Float { .. }
-            | TypedExpr::String { .. }
-            | TypedExpr::BinOp { .. }
-            | TypedExpr::Tuple { .. }
-            | TypedExpr::NegateInt { .. }
-            | TypedExpr::BitString { .. }
-            | TypedExpr::TupleIndex { .. }
-            | TypedExpr::NegateBool { .. }
-            | TypedExpr::RecordUpdate { .. }
-            | TypedExpr::RecordAccess { .. }
-            | TypedExpr::ModuleSelect { .. },
-        ) => true,
-
-        Statement::Expression(
-            TypedExpr::Todo { .. }
-            | TypedExpr::Case { .. }
-            | TypedExpr::Panic { .. }
-            | TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. },
-        ) => false,
+        Statement::Expression(expression) => expression_requires_semicolon(expression),
 
         Statement::Assignment(_) => false,
         Statement::Use(_) => false,
+    }
+}
+
+fn expression_requires_semicolon(statement: &TypedExpr) -> bool {
+    match statement {
+        TypedExpr::NewType { body, .. } => expression_requires_semicolon(body.as_ref()),
+
+        TypedExpr::Int { .. }
+        | TypedExpr::Fn { .. }
+        | TypedExpr::Var { .. }
+        | TypedExpr::List { .. }
+        | TypedExpr::Call { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::String { .. }
+        | TypedExpr::BinOp { .. }
+        | TypedExpr::Tuple { .. }
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::BitString { .. }
+        | TypedExpr::TupleIndex { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::ModuleSelect { .. } => true,
+
+        TypedExpr::Todo { .. }
+        | TypedExpr::Case { .. }
+        | TypedExpr::Panic { .. }
+        | TypedExpr::Block { .. }
+        | TypedExpr::Pipeline { .. } => false,
     }
 }

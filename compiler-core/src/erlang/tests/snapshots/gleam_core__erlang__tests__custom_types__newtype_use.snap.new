@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/erlang/tests/custom_types.rs
+assertion_line: 10
+expression: "\npub opaque type UserId {\n  UserId(Int)\n}\n\npub fn main() {\n  UserId(1)\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([main/0]).
+-export_type([user_id/0]).
+
+-opaque user_id() :: {user_id, integer()}.
+
+-spec main() -> user_id().
+main() ->
+    {user_id, 1}.
+
