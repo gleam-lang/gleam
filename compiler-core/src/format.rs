@@ -247,8 +247,8 @@ impl<'comments> Formatter<'comments> {
                         .group();
                     ".{".to_doc().append(unqualified).append("}")
                 })
-                .append(if let Some(name) = as_name {
-                    docvec![" as ", name]
+                .append(if let Some(as_name) = as_name {
+                    docvec![" as ", &as_name.name]
                 } else {
                     nil()
                 }),

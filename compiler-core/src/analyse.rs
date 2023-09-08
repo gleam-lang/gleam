@@ -353,7 +353,7 @@ pub fn register_import(
         // so we can warn if not used by the end of the type checking
         let _ = environment
             .unused_modules
-            .insert(as_name.clone(), *location);
+            .insert(as_name.name.clone(), as_name.location);
     }
 
     // Check if a module was already imported with this name

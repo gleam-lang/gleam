@@ -500,14 +500,8 @@ impl<'a> Environment<'a> {
         self.handle_unused(unused.clone());
 
         for (name, location) in self.unused_modules.clone().into_iter() {
-            // Check if the module is really unused
-            if !unused
-                .iter()
-                .any(|(_, (_, loc, used))| *used && location.contains(loc.start))
-            {
-                self.warnings
-                    .emit(Warning::UnusedImportedModule { name, location });
-            }
+            self.warnings
+                .emit(Warning::UnusedImportedModule { name, location });
         }
     }
 
