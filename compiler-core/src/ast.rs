@@ -363,6 +363,12 @@ impl<T, E> Function<T, E> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImportName {
+    pub location: SrcSpan,
+    pub name: SmolStr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// Import another Gleam module so the current module can use the types and
 /// values it defines.
 ///
@@ -377,7 +383,7 @@ pub struct Import<PackageName> {
     pub documentation: Option<SmolStr>,
     pub location: SrcSpan,
     pub module: SmolStr,
-    pub as_name: Option<SmolStr>,
+    pub as_name: Option<ImportName>,
     pub unqualified: Vec<UnqualifiedImport>,
     pub package: PackageName,
 }
@@ -385,7 +391,7 @@ impl<T> Import<T> {
     pub(crate) fn used_name(&self) -> SmolStr {
         self.as_name
             .as_ref()
-            .cloned()
+            .map(|as_name| as_name.name.clone())
             .or_else(|| self.module.split('/').last().map(|s| s.into()))
             .expect("Import could not identify variable name.")
     }
