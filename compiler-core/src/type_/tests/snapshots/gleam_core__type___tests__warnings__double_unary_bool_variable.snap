@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
 assertion_line: 557
-expression: "\n        pub fn main() { \n            let x = True\n            let _ = !!x \n        }\n        "
+expression: "\n        pub fn main() {\n            let x = True\n            let _ = !!x\n        }\n        "
 ---
 
 warning: Unnecessary double negation (!!) on bool.
   ┌─ /src/warning/wrn.gleam:4:21
   │
-4 │             let _ = !!x 
+4 │             let _ = !!x
   │                     ^^^
 
 Hint: You can safely remove this.

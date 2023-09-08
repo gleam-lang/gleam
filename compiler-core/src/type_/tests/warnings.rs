@@ -537,9 +537,9 @@ fn double_unary_integer_literal() {
 fn double_unary_integer_variable() {
     assert_warning!(
         r#"
-        pub fn main() { 
+        pub fn main() {
             let x = 7
-            let _ = --x 
+            let _ = --x
         }
         "#
     );
@@ -556,9 +556,9 @@ fn double_unary_bool_literal() {
 fn double_unary_bool_variable() {
     assert_warning!(
         r#"
-        pub fn main() { 
+        pub fn main() {
             let x = True
-            let _ = !!x 
+            let _ = !!x
         }
         "#
     );

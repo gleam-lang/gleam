@@ -663,7 +663,7 @@ impl UnifyErrorSituation {
 one, but all case clauses must return the same type.",
             ),
             Self::ReturnAnnotationMismatch => Some(
-                "The type of this returned value doesn't match the return type 
+                "The type of this returned value doesn't match the return type
 annotation of this function.",
             ),
             Self::PipeTypeMismatch => {

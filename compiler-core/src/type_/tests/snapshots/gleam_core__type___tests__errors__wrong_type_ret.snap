@@ -9,7 +9,7 @@ error: Type mismatch
 3 │   y
   │   ^
 
-The type of this returned value doesn't match the return type 
+The type of this returned value doesn't match the return type
 annotation of this function.
 
 Expected type:
