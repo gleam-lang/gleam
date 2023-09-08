@@ -130,7 +130,7 @@ pub fn infer_module<A>(
             package,
             direct_dependencies,
             warnings,
-            &mut env,
+            &env,
         )?;
         typed_statements.push(statement);
     }
@@ -934,7 +934,7 @@ fn record_imported_items_for_use_detection<A>(
     current_package: &str,
     direct_dependencies: &HashMap<SmolStr, A>,
     warnings: &TypeWarningEmitter,
-    environment: &mut Environment<'_>,
+    environment: &Environment<'_>,
 ) -> Result<TypedDefinition, Error> {
     let Import {
         documentation,

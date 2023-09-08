@@ -630,10 +630,7 @@ impl<'module> Generator<'module> {
             // We can remove this when we get exhaustiveness checking.
             doc = doc
                 .append(" else {")
-                .append(
-                    docvec!(line(), self.case_no_match(location, subjects.into_iter())?)
-                        .nest(INDENT),
-                )
+                .append(docvec!(line(), self.case_no_match(location, subjects)?).nest(INDENT))
                 .append(line())
                 .append("}")
         }

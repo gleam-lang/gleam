@@ -19,10 +19,7 @@ impl Feedback {
     }
 
     pub fn append_diagnostic(&mut self, path: Utf8PathBuf, diagnostic: Diagnostic) {
-        self.diagnostics
-            .entry(path)
-            .or_insert_with(Vec::new)
-            .push(diagnostic);
+        self.diagnostics.entry(path).or_default().push(diagnostic);
     }
 
     fn append_message(&mut self, diagnostic: Diagnostic) {
