@@ -4,6 +4,8 @@
 
 - A warning is now emitted if a module from a transitive dependency is imported.
 - Record access can now be used in case clause guards.
+- Fixed a bug where `manifest.toml` could contain absolute paths for path
+  dependencies.
 - The `as` keyword can now be used to assign the literal prefix to a variable
   when pattern matching on a string.
 - The `if` conditional compilation, `external fn`, and `external type` syntaxes

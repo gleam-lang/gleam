@@ -802,7 +802,7 @@ Second: {}",
 
             Error::NonUtf8Path { path: _ } => {
                 let text =
-                    "Encountered a non utf8 path. Only valid UTF-8 paths are supported".to_owned();
+                    "Encountered a non UTF-8 path, but only UTF-8 paths are supported".to_owned();
                 Diagnostic {
                     title: "Non UTF-8 Path Encountered".into(),
                     text,
