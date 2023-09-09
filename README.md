@@ -141,6 +141,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Parker Selbert](https://github.com/sorentwo)
  - [Paul Gideon Dann](https://github.com/giddie)
  - [Pete Jodo](https://github.com/petejodo)
+ - [Prashant Singh Pawar](https://github.com/prashantpawar)
  - [Praveen Perera](https://github.com/praveenperera)
  - [qingliangcn](https://github.com/qingliangcn)
  - [Raúl Chouza ](https://github.com/chouzar)
