@@ -174,6 +174,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Wilson Silva](https://github.com/wilsonsilva)
  - [Wojtek Mach](https://github.com/wojtekmach)
  - [Wolf](https://github.com/sascha-wolf)
+ - [Xetera](https://github.com/Xetera)
  - [Yasuo Higano](https://github.com/Yasuo-Higano)
  - [Yu Matsuzawa](https://github.com/ymtszw)
  - [Zsombor Gasparin](https://github.com/gasparinzsombor)
