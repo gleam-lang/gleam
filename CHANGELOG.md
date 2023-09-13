@@ -27,6 +27,8 @@
   body.
 - Fixed a bug where incorrect unused variable warnings could be emitted for code
   that doesn't type check.
+- Fixed a bug where packages defaulting to the JavaScript target could have
+  modules missing from their HTML documentation when published.
 - Corrected some outdated links in error messages.
 - Hovering over a function definition will now display the function signature,
   or the type of the hovered argument.
