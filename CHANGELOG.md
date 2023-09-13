@@ -21,6 +21,8 @@
   as having an overly general type.
 - Fixed a bug where recursive type constructors could incorrectly infer a type
   error.
+- Fixed a bug where some mutually recursive functions would be inferred as
+  having too general a type.
 - Fixed a bug where constants where not being correctly inlined when used in the 
   size option of a bitstring pattern match.
 - Fixed a bug where anonymous functions could parse successfully when missing a
