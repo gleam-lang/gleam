@@ -122,23 +122,24 @@ pub fn build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result
 }
 
 fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<Tarball> {
+    let target = config.target;
     check_config_for_publishing(config)?;
 
     // Reset the build directory so we know the state of the project
-    fs::delete_dir(&paths.build_directory_for_target(Mode::Prod, Target::Erlang))?;
+    fs::delete_dir(&paths.build_directory_for_target(Mode::Prod, target))?;
 
     // Build the project to check that it is valid
     let built = build::main(
         Options {
             warnings_as_errors: false,
             mode: Mode::Prod,
-            target: Some(config.target),
+            target: Some(target),
             codegen: Codegen::All,
         },
         build::download_dependencies()?,
     )?;
 
-    let generated_files = match config.target {
+    let generated_files = match target {
         Target::Erlang => generated_erlang_files(paths, &built.root_package)?,
         Target::JavaScript => vec![],
     };
