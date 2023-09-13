@@ -156,6 +156,7 @@ pub fn infer_module<A>(
     for group in function_groups {
         // A group may have multiple functions that depend on each other through
         // mutual recursion.
+
         for function in group {
             let inferred = infer_function(function, &mut env, &mut hydrators, &name)?;
             working_group.push(inferred);
@@ -725,7 +726,6 @@ fn infer_function(
     // Assert that the inferred type matches the type of any recursive call
     unify(preregistered_type, type_.clone()).map_err(|e| convert_unify_error(e, location))?;
 
-    let type_ = type_::generalise(type_);
     let variant = ValueConstructorVariant::ModuleFn {
         documentation: doc.clone(),
         name: impl_function,
@@ -1148,26 +1148,35 @@ fn generalise_function(
     let field_map = function.field_map().cloned();
     let typ = function.type_.clone();
 
-    let typ = type_::generalise(typ);
+    let type_ = type_::generalise(typ);
 
     // Insert the function into the module's interface
     let external =
         target_function_implementation(environment.target, &external_erlang, &external_javascript);
     let (impl_module, impl_function) = implementation_names(external, module_name, &name);
+
+    let variant = ValueConstructorVariant::ModuleFn {
+        documentation: doc.clone(),
+        name: impl_function,
+        field_map,
+        module: impl_module,
+        arity: args.len(),
+        location,
+    };
+    environment.insert_variable(
+        name.clone(),
+        variant.clone(),
+        type_.clone(),
+        public,
+        deprecation.clone(),
+    );
     environment.insert_module_value(
         name.clone(),
         ValueConstructor {
             public,
             deprecation: deprecation.clone(),
-            type_: typ,
-            variant: ValueConstructorVariant::ModuleFn {
-                documentation: doc.clone(),
-                name: impl_function,
-                field_map,
-                module: impl_module,
-                arity: args.len(),
-                location,
-            },
+            type_,
+            variant,
         },
     );
 

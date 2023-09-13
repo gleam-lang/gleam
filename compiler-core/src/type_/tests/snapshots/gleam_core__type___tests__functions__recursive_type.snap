@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+assertion_line: 159
+expression: "\npub fn one(x) {\n  two([x])\n}\n\npub fn two(x) {\n  one(x)\n}\n"
+---
+error: Recursive type
+  ┌─ /src/one/two.gleam:3:7
+  │
+3 │   two([x])
+  │       ^^^
+
+I don't know how to work out what type this value has. It seems
+to be defined in terms of itself.
+
+Hint: Add some type annotations and try again.
+

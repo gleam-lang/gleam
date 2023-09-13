@@ -152,3 +152,19 @@ pub fn main() {
         vec![(r#"main"#, r#"fn() -> Nil"#)]
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2303
+#[test]
+fn recursive_type() {
+    assert_module_error!(
+        r#"
+pub fn one(x) {
+  two([x])
+}
+
+pub fn two(x) {
+  one(x)
+}
+"#
+    );
+}
