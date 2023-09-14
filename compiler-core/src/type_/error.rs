@@ -354,7 +354,7 @@ pub enum Warning {
         name: SmolStr,
     },
 
-    UnusedImportedModuleName {
+    UnusedImportedModuleAlias {
         location: SrcSpan,
         name: SmolStr,
     },

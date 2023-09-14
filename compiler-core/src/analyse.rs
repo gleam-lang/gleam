@@ -357,7 +357,7 @@ pub fn register_import(
         // We also register it's name to differentiate between unused module
         // and unused module name. See 'convert_unused_to_warnings'.
         let _ = environment
-            .imported_module_names
+            .imported_module_aliases
             .insert(as_name.name.clone());
     }
 

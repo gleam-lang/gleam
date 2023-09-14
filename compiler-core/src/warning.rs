@@ -437,8 +437,8 @@ expression.",
                     }),
                 },
 
-                type_::Warning::UnusedImportedModuleName { location, .. } => Diagnostic {
-                    title: "Unused imported module name".into(),
+                type_::Warning::UnusedImportedModuleAlias { location, .. } => Diagnostic {
+                    title: "Unused imported module alias".into(),
                     text: "".into(),
                     hint: Some("You can safely remove it.".into()),
                     level: diagnostic::Level::Warning,
@@ -446,7 +446,7 @@ expression.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This imported module name is never used.".into()),
+                            text: Some("This imported module alias is never used.".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
