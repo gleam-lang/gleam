@@ -354,6 +354,11 @@ pub enum Warning {
         name: SmolStr,
     },
 
+    UnusedImportedModuleName {
+        location: SrcSpan,
+        name: SmolStr,
+    },
+
     UnusedPrivateModuleConstant {
         location: SrcSpan,
         name: SmolStr,
