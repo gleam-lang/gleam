@@ -450,7 +450,7 @@ fn unused_imported_module_with_alias_and_unqualified_name_warnings_test() {
         warnings[0]
     );
     assert_eq!(
-        Warning::UnusedImportedModuleName {
+        Warning::UnusedImportedModuleAlias {
             name: "foo".into(),
             location: SrcSpan { start: 23, end: 29 },
         },
@@ -463,7 +463,7 @@ fn unused_imported_module_with_alias_and_unqualified_name_no_warnings_test() {
     assert_warning!(
         ("gleam/foo", "pub fn bar() { 1 }"),
         "import gleam/foo.{bar} as foo\npub fn baz() { bar() }",
-        Warning::UnusedImportedModuleName {
+        Warning::UnusedImportedModuleAlias {
             name: "foo".into(),
             location: SrcSpan { start: 23, end: 29 },
         }
