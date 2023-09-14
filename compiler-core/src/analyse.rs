@@ -354,6 +354,11 @@ pub fn register_import(
         let _ = environment
             .unused_modules
             .insert(as_name.name.clone(), as_name.location);
+        // We also register it's name to differentiate between unused module
+        // and unused module name. See 'convert_unused_to_warnings'.
+        let _ = environment
+            .imported_module_names
+            .insert(as_name.name.clone());
     }
 
     // Check if a module was already imported with this name
