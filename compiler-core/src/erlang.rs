@@ -1120,6 +1120,8 @@ fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Docu
             container, index, ..
         } => tuple_index_inline(container, index.expect("Unable to find index") + 1, env),
 
+        ClauseGuard::ModuleSelect { literal, .. } => const_inline(literal, env),
+
         ClauseGuard::Constant(constant) => const_inline(constant, env),
     }
 }
@@ -1159,7 +1161,8 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
         ClauseGuard::Constant(_)
         | ClauseGuard::Var { .. }
         | ClauseGuard::TupleIndex { .. }
-        | ClauseGuard::FieldAccess { .. } => bare_clause_guard(guard, env),
+        | ClauseGuard::FieldAccess { .. }
+        | ClauseGuard::ModuleSelect { .. } => bare_clause_guard(guard, env),
     }
 }
 

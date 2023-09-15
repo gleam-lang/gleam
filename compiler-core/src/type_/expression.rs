@@ -1062,24 +1062,72 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 container,
                 index: _,
                 type_: (),
-            } => {
-                let container = self.infer_clause_guard(*container)?;
-                let container = Box::new(container);
-                let container_type = container.type_();
-                let (index, label, type_) = self.infer_known_record_access(
-                    container_type,
-                    container.location(),
-                    FieldAccessUsage::Other,
-                    location,
-                    label,
-                )?;
-                Ok(ClauseGuard::FieldAccess {
-                    container,
-                    label,
-                    index: Some(index),
-                    location,
-                    type_,
-                })
+            } => match self.infer_clause_guard(*container.clone()) {
+                Ok(container) => {
+                    let container = Box::new(container);
+                    let container_type = container.type_();
+                    let (index, label, type_) = self.infer_known_record_access(
+                        container_type,
+                        container.location(),
+                        FieldAccessUsage::Other,
+                        location,
+                        label,
+                    )?;
+                    Ok(ClauseGuard::FieldAccess {
+                        container,
+                        label,
+                        index: Some(index),
+                        location,
+                        type_,
+                    })
+                }
+
+                Err(err) => match *container {
+                    ClauseGuard::Var { name, location, .. } => {
+                        let module_access = self
+                            .infer_module_access(&name, label, &location, location)
+                            .and_then(|ma| match ma {
+                                TypedExpr::ModuleSelect {
+                                    location,
+                                    typ,
+                                    label,
+                                    module_name,
+                                    module_alias,
+                                    constructor,
+                                } => match constructor {
+                                    ModuleValueConstructor::Constant { literal, .. } => {
+                                        Ok(ClauseGuard::ModuleSelect {
+                                            location,
+                                            type_: typ,
+                                            label,
+                                            module_name,
+                                            module_alias,
+                                            literal,
+                                        })
+                                    }
+
+                                    _ => Err(Error::RecordAccessUnknownType { location }),
+                                },
+
+                                _ => Err(Error::RecordAccessUnknownType { location }),
+                            });
+
+                        // If the name is in the environment, use the original error from
+                        // inferring the record access, so that we can suggest possible
+                        // misspellings of field names
+                        if self.environment.scope.contains_key(&name) {
+                            module_access.map_err(|_| err)
+                        } else {
+                            module_access
+                        }
+                    }
+
+                    _ => Err(Error::RecordAccessUnknownType { location }),
+                },
+            },
+
+            ClauseGuard::ModuleSelect { location, .. } => {
+                Err(Error::RecordAccessUnknownType { location })
             }
 
             ClauseGuard::And {
