@@ -1087,6 +1087,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         match self.environment.imported_modules.get(&name) {
                             Some((location, module)) => match module.get_public_value(&label) {
                                 Some(constructor) => {
+                                    let _ = self.environment.unused_modules.remove(&module.name);
+
                                     match &constructor.variant {
                                         ValueConstructorVariant::LocalVariable { .. } => (),
                                         ValueConstructorVariant::ModuleFn { .. }
