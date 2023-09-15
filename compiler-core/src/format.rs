@@ -1459,6 +1459,10 @@ impl<'comments> Formatter<'comments> {
                 .append(label)
                 .to_doc(),
 
+            ClauseGuard::ModuleSelect {
+                module_name, label, ..
+            } => module_name.to_doc().append(".").append(label).to_doc(),
+
             ClauseGuard::Constant(constant) => self.const_expr(constant),
         }
     }
