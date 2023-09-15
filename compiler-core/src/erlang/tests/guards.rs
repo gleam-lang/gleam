@@ -487,3 +487,59 @@ pub fn a(a: A) {
 "#
     );
 }
+
+#[test]
+fn module_access() {
+    assert_erl!(
+        (
+            "package",
+            "hero",
+            r#"
+              pub type Hero {
+                Hero(name: String)
+              }
+              pub const ironman = Hero("Tony Stark")
+            "#
+        ),
+        r#"
+          import hero
+          pub fn main() {
+            let name = "Tony Stark"
+            case name {
+              n if n == hero.ironman.name -> True
+              _ -> False
+            }
+          }
+        "#
+    );
+}
+
+#[test]
+fn module_nested_access() {
+    assert_erl!(
+        (
+            "package",
+            "hero",
+            r#"
+              pub type Person {
+                Person(name: String)
+              }
+              pub type Hero {
+                Hero(secret_identity: Person)
+              }
+              const bruce = Person("Bruce Wayne")
+              pub const batman = Hero(bruce)
+            "#
+        ),
+        r#"
+          import hero
+          pub fn main() {
+            let name = "Bruce Wayne"
+            case name {
+              n if n == hero.batman.secret_identity.name -> True
+              _ -> False
+            }
+          }
+        "#
+    );
+}
