@@ -1062,25 +1062,74 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 container,
                 index: _,
                 type_: (),
-            } => {
-                let container = self.infer_clause_guard(*container)?;
-                let container = Box::new(container);
-                let container_type = container.type_();
-                let (index, label, type_) = self.infer_known_record_access(
-                    container_type,
-                    container.location(),
-                    FieldAccessUsage::Other,
-                    location,
-                    label,
-                )?;
-                Ok(ClauseGuard::FieldAccess {
-                    container,
-                    label,
-                    index: Some(index),
-                    location,
-                    type_,
-                })
-            }
+            } => match self.infer_clause_guard(*container.clone()) {
+                Ok(container) => {
+                    let container = Box::new(container);
+                    let container_type = container.type_();
+                    let (index, label, type_) = self.infer_known_record_access(
+                        container_type,
+                        container.location(),
+                        FieldAccessUsage::Other,
+                        location,
+                        label,
+                    )?;
+                    Ok(ClauseGuard::FieldAccess {
+                        container,
+                        label,
+                        index: Some(index),
+                        location,
+                        type_,
+                    })
+                }
+
+                Err(_) => match *container {
+                    ClauseGuard::Var { location, name, .. } => {
+                        match self.environment.imported_modules.get(&name) {
+                            Some((location, module)) => match module.get_public_value(&label) {
+                                Some(constructor) => {
+                                    match &constructor.variant {
+                                        ValueConstructorVariant::LocalVariable { .. } => (),
+                                        ValueConstructorVariant::ModuleFn { .. }
+                                        | ValueConstructorVariant::Record { .. } => {
+                                            return Err(Error::NonLocalClauseGuardVariable {
+                                                location: *location,
+                                                name,
+                                            });
+                                        }
+
+                                        ValueConstructorVariant::ModuleConstant {
+                                            literal, ..
+                                        }
+                                        | ValueConstructorVariant::LocalConstant { literal } => {
+                                            return Ok(ClauseGuard::Constant(literal.clone()))
+                                        }
+                                    };
+
+                                    Ok(ClauseGuard::Var {
+                                        location: *location,
+                                        name,
+                                        type_: constructor.type_.clone(),
+                                    })
+                                }
+
+                                None => Err(Error::UnknownVariable {
+                                    location: *location,
+                                    name,
+                                    variables: self.environment.local_value_names(),
+                                }),
+                            },
+
+                            None => Err(Error::UnknownVariable {
+                                location,
+                                name,
+                                variables: self.environment.local_value_names(),
+                            }),
+                        }
+                    }
+
+                    _ => Err(Error::RecordAccessUnknownType { location }),
+                },
+            },
 
             ClauseGuard::And {
                 location,
