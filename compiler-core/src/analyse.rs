@@ -352,12 +352,12 @@ pub fn register_import(
             let _ = environment
                 .unused_modules
                 .insert(module_name.clone(), *location);
-        }
-
-        if let (Some(alias), Some(span)) = (as_name, as_span) {
-            let _ = environment
-                .unused_module_aliases
-                .insert(alias.clone(), *span);
+        } else {
+            if let (Some(alias), Some(span)) = (as_name, as_span) {
+                let _ = environment
+                    .unused_module_aliases
+                    .insert(alias.clone(), *span);
+            }
         }
 
         // Check if a module was already imported with this name
