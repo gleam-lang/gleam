@@ -15,6 +15,18 @@ fn alias_unqualified_import() {
 
 #[rustfmt::skip]
 #[test]
+fn discarded_module() {
+    let output =
+        crate::prepare("./cases/discarded_module");
+    insta::assert_snapshot!(
+        "discarded_module",
+        output,
+        "./cases/discarded_module"
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn duplicate_module() {
     let output =
         crate::prepare("./cases/duplicate_module");
