@@ -1979,9 +1979,18 @@ where
 
         // Parse as_name
         let mut as_name = None;
+        let mut discarded = false;
         if self.maybe_one(&Token::As).is_some() {
-            let (_, name, e) = self.expect_name()?;
-            as_name = Some(name);
+            let (_, name, e) = self.expect_assign_name()?;
+
+            match name {
+                AssignName::Variable(name) => {
+                    as_name = Some(name);
+                }
+
+                AssignName::Discard(_) => discarded = true,
+            };
+
             end = e;
         }
 
@@ -1994,6 +2003,7 @@ where
             unqualified,
             module: module.into(),
             as_name,
+            discarded,
             package: (),
         })))
     }

@@ -229,6 +229,7 @@ pub fn register_import(
         module,
         unqualified,
         location,
+        discarded,
         ..
     } = import;
     let name = module.clone();
@@ -345,30 +346,35 @@ pub fn register_import(
     if unqualified.is_empty() {
         // When the module has no unqualified imports, we track its usage
         // so we can warn if not used by the end of the type checking
+        if !discarded {
+            let _ = environment
+                .unused_modules
+                .insert(module_name.clone(), *location);
+        }
+    }
+
+    if !discarded {
+        // Check if a module was already imported with this name
+        if let Some((previous_location, _)) = environment.imported_modules.get(&module_name) {
+            return Err(Error::DuplicateImport {
+                location: *location,
+                previous_location: *previous_location,
+                name: module_name.clone(),
+            });
+        }
+
+        // Register the name as imported so it can't be imported a
+        // second time in future
         let _ = environment
-            .unused_modules
+            .unqualified_imported_names
             .insert(module_name.clone(), *location);
+
+        // Insert imported module into scope
+        let _ = environment
+            .imported_modules
+            .insert(module_name, (*location, module_info));
     }
 
-    // Check if a module was already imported with this name
-    if let Some((previous_location, _)) = environment.imported_modules.get(&module_name) {
-        return Err(Error::DuplicateImport {
-            location: *location,
-            previous_location: *previous_location,
-            name: module_name.clone(),
-        });
-    }
-
-    // Register the name as imported so it can't be imported a
-    // second time in future
-    let _ = environment
-        .unqualified_imported_names
-        .insert(module_name.clone(), *location);
-
-    // Insert imported module into scope
-    let _ = environment
-        .imported_modules
-        .insert(module_name, (*location, module_info));
     Ok(())
 }
 
@@ -942,6 +948,7 @@ fn record_imported_items_for_use_detection<A>(
         module,
         as_name,
         mut unqualified,
+        discarded,
         ..
     } = i;
     // Find imported module
@@ -982,6 +989,7 @@ fn record_imported_items_for_use_detection<A>(
         module,
         as_name,
         unqualified,
+        discarded,
         package: module_info.package.clone(),
     }))
 }
