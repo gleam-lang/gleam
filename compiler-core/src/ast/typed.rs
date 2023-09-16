@@ -153,7 +153,9 @@ impl TypedExpr {
     // This could be optimised in places to exit early if the first of a series
     // of expressions is after the byte index.
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        if !self.location().contains(byte_index) {
+        // arguments of a function may not be in the same location as the function
+        // e.g. in "use" expressions, so we handle it separately
+        if !self.location().contains(byte_index) && !matches!(self, Self::Fn { .. }) {
             return None;
         }
 
@@ -194,10 +196,20 @@ impl TypedExpr {
 
             Self::NegateInt { value, .. } => value.find_node(byte_index).or(Some(self.into())),
 
-            Self::Fn { body, .. } => body
+            Self::Fn { body, args, .. } => args
                 .iter()
-                .find_map(|statement| statement.find_node(byte_index))
-                .or(Some(self.into())),
+                .find_map(|arg| arg.find_node(byte_index))
+                .or_else(|| {
+                    body.iter()
+                        .find_map(|statement| statement.find_node(byte_index))
+                        .or_else(|| {
+                            if self.location().contains(byte_index) {
+                                Some(self.into())
+                            } else {
+                                None
+                            }
+                        })
+                }),
 
             Self::Call { fun, args, .. } => args
                 .iter()

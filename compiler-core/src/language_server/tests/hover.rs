@@ -209,3 +209,34 @@ Int
         })
     );
 }
+
+#[test]
+fn hover_variable_in_use_expression() {
+    let code = "
+fn with_increment(x: Int, fun: fn(Int) -> String) {
+  fun(x + 1)
+}
+
+fn do_stuff() {
+  use a <- with_increment(3)
+  \"done\"
+}
+";
+
+    assert_eq!(
+        positioned_hover(code, Position::new(6, 6)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String("```gleam\nInt\n```".to_string())),
+            range: Some(Range {
+                start: Position {
+                    line: 6,
+                    character: 6,
+                },
+                end: Position {
+                    line: 6,
+                    character: 7,
+                },
+            }),
+        })
+    );
+}
