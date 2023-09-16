@@ -259,10 +259,20 @@ where
         // packages into their own classes and then only mutate self after we no
         // longer need to have the package borrowed from self.packages.
         let package = self.packages.get(name).expect("Missing package").clone();
-        let result = match usable_build_tool(&package)? {
-            BuildTool::Gleam => self.compile_gleam_dep_package(&package),
-            BuildTool::Rebar3 => self.compile_rebar3_dep_package(&package).map(|_| vec![]),
-            BuildTool::Mix => self.compile_mix_dep_package(&package).map(|_| vec![]),
+        let result = match usable_build_tools(&package)?.as_slice() {
+            &[BuildTool::Gleam] => self.compile_gleam_dep_package(&package),
+            &[BuildTool::Rebar3] => self.compile_rebar3_dep_package(&package).map(|_| vec![]),
+            &[BuildTool::Mix] => self.compile_mix_dep_package(&package).map(|_| vec![]),
+            &[BuildTool::Mix, BuildTool::Rebar3] => self
+                .compile_mix_dep_package(&package)
+                .or_else(|_| self.compile_rebar3_dep_package(&package))
+                .map(|_| vec![]),
+            _ => {
+                return Err(Error::UnsupportedBuildTool {
+                    package: package.name.to_string(),
+                    build_tools: package.build_tools.clone(),
+                })
+            }
         };
 
         // TODO: test. This one is not covered by the integration tests.
@@ -568,20 +578,25 @@ pub(crate) enum BuildTool {
 }
 
 /// Determine the build tool we should use to build this package
-pub(crate) fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, Error> {
+pub(crate) fn usable_build_tools(package: &ManifestPackage) -> Result<Vec<BuildTool>, Error> {
+    let mut rebar3_present = false;
     let mut mix_present = false;
 
     for tool in &package.build_tools {
         match tool.as_str() {
-            "gleam" => return Ok(BuildTool::Gleam),
-            "rebar3" => return Ok(BuildTool::Rebar3),
+            "gleam" => return Ok(vec![BuildTool::Gleam]),
+            "rebar3" => rebar3_present = true,
             "mix" => mix_present = true,
             _ => (),
         }
     }
 
-    if mix_present {
-        return Ok(BuildTool::Mix);
+    if mix_present && rebar3_present {
+        return Ok(vec![BuildTool::Mix, BuildTool::Rebar3]);
+    } else if mix_present {
+        return Ok(vec![BuildTool::Mix]);
+    } else if rebar3_present {
+        return Ok(vec![BuildTool::Rebar3]);
     }
 
     Err(Error::UnsupportedBuildTool {
