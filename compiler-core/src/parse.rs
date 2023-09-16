@@ -1980,7 +1980,8 @@ where
         // Parse as_name
         let mut as_name = None;
         let mut discarded = false;
-        if self.maybe_one(&Token::As).is_some() {
+        let mut as_start = None;
+        if let Some((start, _)) = self.maybe_one(&Token::As) {
             let (_, name, e) = self.expect_assign_name()?;
 
             match name {
@@ -1991,6 +1992,7 @@ where
                 AssignName::Discard(_) => discarded = true,
             };
 
+            as_start = Some(start);
             end = e;
         }
 
@@ -2004,6 +2006,7 @@ where
             module: module.into(),
             as_name,
             discarded,
+            as_span: as_start.map(|start| SrcSpan { start, end }),
             package: (),
         })))
     }

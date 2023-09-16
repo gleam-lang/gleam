@@ -230,6 +230,8 @@ pub fn register_import(
         unqualified,
         location,
         discarded,
+        as_name,
+        as_span,
         ..
     } = import;
     let name = module.clone();
@@ -343,17 +345,21 @@ pub fn register_import(
         }
     }
 
-    if unqualified.is_empty() {
-        // When the module has no unqualified imports, we track its usage
-        // so we can warn if not used by the end of the type checking
-        if !discarded {
+    if !discarded {
+        if unqualified.is_empty() {
+            // When the module has no unqualified imports, we track its usage
+            // so we can warn if not used by the end of the type checking
             let _ = environment
                 .unused_modules
                 .insert(module_name.clone(), *location);
         }
-    }
 
-    if !discarded {
+        if let (Some(alias), Some(span)) = (as_name, as_span) {
+            let _ = environment
+                .unused_module_aliases
+                .insert(alias.clone(), *span);
+        }
+
         // Check if a module was already imported with this name
         if let Some((previous_location, _)) = environment.imported_modules.get(&module_name) {
             return Err(Error::DuplicateImport {
@@ -949,6 +955,7 @@ fn record_imported_items_for_use_detection<A>(
         as_name,
         mut unqualified,
         discarded,
+        as_span,
         ..
     } = i;
     // Find imported module
@@ -990,6 +997,7 @@ fn record_imported_items_for_use_detection<A>(
         as_name,
         unqualified,
         discarded,
+        as_span,
         package: module_info.package.clone(),
     }))
 }

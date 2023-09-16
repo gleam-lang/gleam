@@ -21,6 +21,7 @@ pub struct Environment<'a> {
     /// location of the import statement where they were imported.
     pub imported_modules: HashMap<SmolStr, (SrcSpan, &'a ModuleInterface)>,
     pub unused_modules: HashMap<SmolStr, SrcSpan>,
+    pub unused_module_aliases: HashMap<SmolStr, SrcSpan>,
     pub imported_types: HashSet<SmolStr>,
 
     /// Values defined in the current function (or the prelude)
@@ -68,6 +69,7 @@ impl<'a> Environment<'a> {
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
             unused_modules: HashMap::new(),
+            unused_module_aliases: HashMap::new(),
             unqualified_imported_names: HashMap::new(),
             accessors: prelude.accessors.clone(),
             scope: prelude.values.clone().into(),
@@ -502,6 +504,11 @@ impl<'a> Environment<'a> {
         for (name, location) in self.unused_modules.clone().into_iter() {
             self.warnings
                 .emit(Warning::UnusedImportedModule { name, location });
+        }
+
+        for (alias, location) in self.unused_module_aliases.clone().into_iter() {
+            self.warnings
+                .emit(Warning::UnusedImportedModuleAlias { alias, location });
         }
     }
 
