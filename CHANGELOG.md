@@ -36,6 +36,8 @@
   Erlang/OTP 27.
 - A warning is now emitted if a module alias is unused.
 - Variables defined using `use` now show the variable type on hover.
+- Dependencies that can be built with both `mix` and `rebar3` are now built
+  with `mix` if it exists on the system, and with `rebar3` if it doesn't.
 
 ## v0.31.0 - 2023-09-25
 

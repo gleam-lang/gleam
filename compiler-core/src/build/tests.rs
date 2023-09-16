@@ -1,11 +1,11 @@
 use crate::{manifest::ManifestPackage, Error};
 
-use super::project_compiler::{usable_build_tool, BuildTool};
+use super::project_compiler::{usable_build_tools, BuildTool};
 
 #[test]
 fn usable_build_tool_unknown() {
     assert_eq!(
-        usable_build_tool(&ManifestPackage::default().with_build_tools(&["unknown"])),
+        usable_build_tools(&ManifestPackage::default().with_build_tools(&["unknown"])),
         Err(Error::UnsupportedBuildTool {
             package: "".into(),
             build_tools: vec!["unknown".into()],
@@ -16,7 +16,7 @@ fn usable_build_tool_unknown() {
 #[test]
 fn usable_build_tool_none() {
     assert_eq!(
-        usable_build_tool(&ManifestPackage::default()),
+        usable_build_tools(&ManifestPackage::default()),
         Err(Error::UnsupportedBuildTool {
             package: "".into(),
             build_tools: vec![],
@@ -27,32 +27,31 @@ fn usable_build_tool_none() {
 #[test]
 fn usable_build_tool_only_mix() {
     assert_eq!(
-        usable_build_tool(&ManifestPackage::default().with_build_tools(&["mix"])),
-        Ok(BuildTool::Mix)
+        usable_build_tools(&ManifestPackage::default().with_build_tools(&["mix"])),
+        Ok(vec![BuildTool::Mix])
     )
 }
 
 #[test]
 fn usable_build_tool_only_rebar3() {
     assert_eq!(
-        usable_build_tool(&ManifestPackage::default().with_build_tools(&["rebar3"])),
-        Ok(BuildTool::Rebar3)
+        usable_build_tools(&ManifestPackage::default().with_build_tools(&["rebar3"])),
+        Ok(vec![BuildTool::Rebar3])
     )
 }
 
 #[test]
 fn usable_build_tool_only_gleam() {
     assert_eq!(
-        usable_build_tool(&ManifestPackage::default().with_build_tools(&["gleam"])),
-        Ok(BuildTool::Gleam)
+        usable_build_tools(&ManifestPackage::default().with_build_tools(&["gleam"])),
+        Ok(vec![BuildTool::Gleam])
     )
 }
 
 #[test]
 fn usable_build_tool_mix_then_rebar3() {
-    // We default to rebar3 if it is available, even if mix is also available.
     assert_eq!(
-        usable_build_tool(&ManifestPackage::default().with_build_tools(&["mix", "rebar3"])),
-        Ok(BuildTool::Rebar3)
+        usable_build_tools(&ManifestPackage::default().with_build_tools(&["mix", "rebar3"])),
+        Ok(vec![BuildTool::Mix, BuildTool::Rebar3])
     )
 }
