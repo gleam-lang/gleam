@@ -1,0 +1,63 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 321
+expression: "./cases/unused_alias"
+---
+//// /out/lib/the_package/_gleam_artefacts/one.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one.cache_meta
+<40 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one.erl
+-module(one).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([unbox/1]).
+
+-spec unbox(two:box()) -> integer().
+unbox(X) ->
+    {box, I} = X,
+    I.
+
+
+//// /out/lib/the_package/_gleam_artefacts/two.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.cache_meta
+<29 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.erl
+-module(two).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export_type([box/0]).
+
+-type box() :: {box, integer()}.
+
+
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.
+
+
+//// Warning
+
+warning: Unused alias for imported module
+  ┌─ src/one.gleam:1:18
+  │
+1 │ import two.{Box} as some_two
+  │                  ^ This alias for the imported module is never used.
+
+Hint: You can safely remove it.
+
+
+

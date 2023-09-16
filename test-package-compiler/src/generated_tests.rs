@@ -315,6 +315,18 @@ fn unknown_module_field_in_import() {
 
 #[rustfmt::skip]
 #[test]
+fn unused_alias() {
+    let output =
+        crate::prepare("./cases/unused_alias");
+    insta::assert_snapshot!(
+        "unused_alias",
+        output,
+        "./cases/unused_alias"
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn variable_or_module() {
     let output =
         crate::prepare("./cases/variable_or_module");
