@@ -1914,7 +1914,7 @@ impl<'a> TypePrinter<'a> {
                 let error = tuple(["error".to_doc(), arg_err]);
                 docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
             }
-            // Getting here sholud mean we either forgot a built-in type or there is a
+            // Getting here should mean we either forgot a built-in type or there is a
             // compiler error
             name => panic!("{name} is not a built-in type."),
         }
