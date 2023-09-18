@@ -49,7 +49,7 @@ fn positioned_expression_completions(
 fn prelude_type_completions() -> Vec<CompletionItem> {
     vec![
         CompletionItem {
-            label: "BitString".into(),
+            label: "Bits".into(),
             kind: Some(CompletionItemKind::CLASS),
             detail: Some("Type".into()),
             documentation: None,

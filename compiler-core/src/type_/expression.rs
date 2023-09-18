@@ -630,7 +630,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(TypedExpr::BitString {
             location,
             segments,
-            typ: bit_string(),
+            typ: bits(),
         })
     }
 
