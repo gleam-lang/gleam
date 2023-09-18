@@ -62,7 +62,7 @@ impl TypedConstant {
             Constant::Int { .. } => crate::type_::int(),
             Constant::Float { .. } => crate::type_::float(),
             Constant::String { .. } => crate::type_::string(),
-            Constant::BitString { .. } => crate::type_::bit_string(),
+            Constant::BitString { .. } => crate::type_::bits(),
             Constant::Tuple { elements, .. } => {
                 crate::type_::tuple(elements.iter().map(|e| e.type_()).collect())
             }

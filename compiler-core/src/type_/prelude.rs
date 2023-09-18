@@ -8,6 +8,7 @@ use super::{
 };
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
+const BITS: &str = "Bits";
 const BIT_STRING: &str = "BitString";
 const BOOL: &str = "Bool";
 const FLOAT: &str = "Float";
@@ -26,7 +27,7 @@ pub fn is_prelude_module(module: &str) -> bool {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum PreludeType {
-    BitString,
+    Bits,
     Bool,
     Float,
     Int,
@@ -40,7 +41,7 @@ pub enum PreludeType {
 impl PreludeType {
     pub fn name(self) -> &'static str {
         match self {
-            PreludeType::BitString => BIT_STRING,
+            PreludeType::Bits => BITS,
             PreludeType::Bool => BOOL,
             PreludeType::Float => FLOAT,
             PreludeType::Int => INT,
@@ -124,11 +125,11 @@ pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Fn { retrn, args })
 }
 
-pub fn bit_string() -> Arc<Type> {
+pub fn bits() -> Arc<Type> {
     Arc::new(Type::Named {
         args: vec![],
         public: true,
-        name: BIT_STRING.into(),
+        name: BITS.into(),
         module: PRELUDE_MODULE_NAME.into(),
     })
 }
@@ -181,17 +182,16 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
 
     for t in PreludeType::iter() {
         match t {
-            PreludeType::BitString => {
-                let _ = prelude.types.insert(
-                    "BitString".into(),
-                    TypeConstructor {
-                        origin: Default::default(),
-                        parameters: vec![],
-                        typ: bit_string(),
-                        module: PRELUDE_MODULE_NAME.into(),
-                        public: true,
-                    },
-                );
+            PreludeType::Bits => {
+                let v = TypeConstructor {
+                    origin: Default::default(),
+                    parameters: vec![],
+                    typ: bits(),
+                    module: PRELUDE_MODULE_NAME.into(),
+                    public: true,
+                };
+                let _ = prelude.types.insert(BITS.into(), v.clone());
+                let _ = prelude.types.insert(BIT_STRING.into(), v);
             }
 
             PreludeType::Bool => {

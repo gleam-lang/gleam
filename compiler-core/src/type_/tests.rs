@@ -697,10 +697,10 @@ fn bit_strings() {
     assert_infer!("let <<x>> = <<1>> x", "Int");
     assert_infer!("let <<x>> = <<1>> x", "Int");
     assert_infer!("let <<x:float>> = <<1>> x", "Float");
-    assert_infer!("let <<x:binary>> = <<1>> x", "BitString");
-    assert_infer!("let <<x:bytes>> = <<1>> x", "BitString");
-    assert_infer!("let <<x:bit_string>> = <<1>> x", "BitString");
-    assert_infer!("let <<x:bits>> = <<1>> x", "BitString");
+    assert_infer!("let <<x:binary>> = <<1>> x", "Bits");
+    assert_infer!("let <<x:bytes>> = <<1>> x", "Bits");
+    assert_infer!("let <<x:bit_string>> = <<1>> x", "Bits");
+    assert_infer!("let <<x:bits>> = <<1>> x", "Bits");
 
     assert_infer!("let <<x:utf8_codepoint>> = <<128013:32>> x", "UtfCodepoint");
     assert_infer!(
@@ -714,12 +714,9 @@ fn bit_strings() {
 
     assert_infer!(
         "let a = <<1>> let <<x:binary>> = <<1, a:2-bit_string>> x",
-        "BitString"
+        "Bits"
     );
-    assert_infer!(
-        "let x = <<<<1>>:bit_string, <<2>>:bit_string>> x",
-        "BitString"
-    );
+    assert_infer!("let x = <<<<1>>:bit_string, <<2>>:bit_string>> x", "Bits");
 }
 
 #[test]
@@ -1655,15 +1652,15 @@ fn early_function_generalisation() {
 
 // https://github.com/gleam-lang/gleam/issues/970
 #[test]
-fn bitstring_pattern_unification() {
+fn bits_pattern_unification() {
     assert_module_infer!(
         "pub fn m(x) { case x { <<>> -> Nil _ -> Nil} }",
-        vec![("m", "fn(BitString) -> Nil")],
+        vec![("m", "fn(Bits) -> Nil")],
     );
 
     assert_module_infer!(
         "pub fn m(x) { case x { <<>> -> Nil _ -> Nil} }",
-        vec![("m", "fn(BitString) -> Nil")],
+        vec![("m", "fn(Bits) -> Nil")],
     );
 }
 

@@ -52,8 +52,8 @@ impl<T> SegmentOptionCategories<'_, T> {
         match self.typ {
             Some(Int { .. }) => crate::type_::int(),
             Some(Float { .. }) => crate::type_::float(),
-            Some(Binary { .. }) => crate::type_::bit_string(),
-            Some(BitString { .. }) => crate::type_::bit_string(),
+            Some(Binary { .. }) => crate::type_::bits(),
+            Some(BitString { .. }) => crate::type_::bits(),
             Some(Utf8 { .. }) => crate::type_::string(),
             Some(Utf16 { .. }) => crate::type_::string(),
             Some(Utf32 { .. }) => crate::type_::string(),

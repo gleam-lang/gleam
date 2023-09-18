@@ -1905,7 +1905,7 @@ impl<'a> TypePrinter<'a> {
             "String" => "binary()".to_doc(),
             "Bool" => "boolean()".to_doc(),
             "Float" => "float()".to_doc(),
-            "BitString" => "bitstring()".to_doc(),
+            "Bits" => "bitstring()".to_doc(),
             "List" => {
                 let arg0 = self.print(args.get(0).expect("print_prelude_type list"));
                 "list(".to_doc().append(arg0).append(")")
