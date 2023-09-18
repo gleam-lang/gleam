@@ -30,7 +30,7 @@
 //
 // Operator Precedence Parsing:
 //   Needs to take place in expressions and in clause guards.
-//   It is accomplished using the Simple Precedence Parser algoithm.
+//   It is accomplished using the Simple Precedence Parser algorithm.
 //   See: https://en.wikipedia.org/wiki/Simple_precedence_parser
 //
 //   It relies or the operator grammar being in the general form:
@@ -178,8 +178,8 @@ where
         })
     }
 
-    // The way the parser is currenly implemented, it cannot exit immediately while advancing
-    // the token stream upon seing a LexError. That is to avoid having to put `?` all over the
+    // The way the parser is currently implemented, it cannot exit immediately while advancing
+    // the token stream upon seeing a LexError. That is to avoid having to put `?` all over the
     // place and instead we collect LexErrors in `self.lex_errors` and attempt to continue parsing.
     // Once parsing has returned we want to surface an error in the order:
     // 1) LexError, 2) ParseError, 3) More Tokens Left
@@ -203,8 +203,8 @@ where
         Ok(parse_result)
     }
 
-    // The way the parser is currenly implemented, it cannot exit immediately
-    // while advancing the token stream upon seing a LexError. That is to avoid
+    // The way the parser is currently implemented, it cannot exit immediately
+    // while advancing the token stream upon seeing a LexError. That is to avoid
     // having to put `?` all over the place and instead we collect LexErrors in
     // `self.lex_errors` and attempt to continue parsing.
     // Once parsing has returned we want to surface an error in the order:

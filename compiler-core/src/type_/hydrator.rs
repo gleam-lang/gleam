@@ -12,7 +12,7 @@ use im::hashmap;
 /// It keeps track of any type variables created. This is useful for:
 ///
 /// - Determining if a generic type variable should be made into an
-///   unbound type varable during type instantiation.
+///   unbound type variable during type instantiation.
 /// - Ensuring that the same type is constructed if the programmer
 ///   uses the same name for a type variable multiple times.
 ///
