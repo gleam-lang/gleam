@@ -8,7 +8,7 @@ use super::{
 };
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
-const BITS: &str = "Bits";
+const BIT_ARRAY: &str = "BitArray";
 const BIT_STRING: &str = "BitString";
 const BOOL: &str = "Bool";
 const FLOAT: &str = "Float";
@@ -27,7 +27,7 @@ pub fn is_prelude_module(module: &str) -> bool {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum PreludeType {
-    Bits,
+    BitArray,
     Bool,
     Float,
     Int,
@@ -41,7 +41,7 @@ pub enum PreludeType {
 impl PreludeType {
     pub fn name(self) -> &'static str {
         match self {
-            PreludeType::Bits => BITS,
+            PreludeType::BitArray => BIT_ARRAY,
             PreludeType::Bool => BOOL,
             PreludeType::Float => FLOAT,
             PreludeType::Int => INT,
@@ -129,7 +129,7 @@ pub fn bits() -> Arc<Type> {
     Arc::new(Type::Named {
         args: vec![],
         public: true,
-        name: BITS.into(),
+        name: BIT_ARRAY.into(),
         module: PRELUDE_MODULE_NAME.into(),
     })
 }
@@ -182,7 +182,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
 
     for t in PreludeType::iter() {
         match t {
-            PreludeType::Bits => {
+            PreludeType::BitArray => {
                 let v = TypeConstructor {
                     origin: Default::default(),
                     parameters: vec![],
@@ -190,7 +190,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     module: PRELUDE_MODULE_NAME.into(),
                     public: true,
                 };
-                let _ = prelude.types.insert(BITS.into(), v.clone());
+                let _ = prelude.types.insert(BIT_ARRAY.into(), v.clone());
                 let _ = prelude.types.insert(BIT_STRING.into(), v);
             }
 
