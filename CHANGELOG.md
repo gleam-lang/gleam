@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.31.0 - 2023-09-18
 
 - A warning is now emitted if a module from a transitive dependency is imported.
 - Record access can now be used in case clause guards.
