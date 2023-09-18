@@ -501,7 +501,7 @@ impl<'a> Environment<'a> {
             .entity_usages
             .pop()
             .expect("Expected a bottom level of entity usages.");
-        self.handle_unused(unused.clone());
+        self.handle_unused(unused);
 
         for (name, location) in self.unused_modules.clone().into_iter() {
             let warning = if self.imported_module_aliases.contains(&name) {
