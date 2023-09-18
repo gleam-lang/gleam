@@ -100,7 +100,7 @@ fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
             }
             TypeVar::Link { type_: typ } => generic_ids(typ, ids),
         },
-        Type::App { args, .. } => {
+        Type::Named { args, .. } => {
             for arg in args {
                 generic_ids(arg, ids)
             }
@@ -558,11 +558,11 @@ impl<'a> TypeScriptGenerator<'a> {
         match type_ {
             Type::Var { type_: typ } => self.print_var(&typ.borrow(), generic_usages, false),
 
-            Type::App {
+            Type::Named {
                 name, module, args, ..
             } if is_prelude_module(module) => self.print_prelude_type(name, args, generic_usages),
 
-            Type::App {
+            Type::Named {
                 name, args, module, ..
             } => self.print_type_app(name, args, module, generic_usages),
 
@@ -576,11 +576,11 @@ impl<'a> TypeScriptGenerator<'a> {
         match type_ {
             Type::Var { type_: typ } => self.print_var(&typ.borrow(), None, true),
 
-            Type::App {
+            Type::Named {
                 name, module, args, ..
             } if is_prelude_module(module) => self.print_prelude_type(name, args, None),
 
-            Type::App {
+            Type::Named {
                 name, args, module, ..
             } => self.print_type_app(name, args, module, None),
 
