@@ -697,10 +697,10 @@ fn bit_strings() {
     assert_infer!("let <<x>> = <<1>> x", "Int");
     assert_infer!("let <<x>> = <<1>> x", "Int");
     assert_infer!("let <<x:float>> = <<1>> x", "Float");
-    assert_infer!("let <<x:binary>> = <<1>> x", "Bits");
-    assert_infer!("let <<x:bytes>> = <<1>> x", "Bits");
-    assert_infer!("let <<x:bit_string>> = <<1>> x", "Bits");
-    assert_infer!("let <<x:bits>> = <<1>> x", "Bits");
+    assert_infer!("let <<x:binary>> = <<1>> x", "BitArray");
+    assert_infer!("let <<x:bytes>> = <<1>> x", "BitArray");
+    assert_infer!("let <<x:bit_string>> = <<1>> x", "BitArray");
+    assert_infer!("let <<x:bits>> = <<1>> x", "BitArray");
 
     assert_infer!("let <<x:utf8_codepoint>> = <<128013:32>> x", "UtfCodepoint");
     assert_infer!(
@@ -714,9 +714,12 @@ fn bit_strings() {
 
     assert_infer!(
         "let a = <<1>> let <<x:binary>> = <<1, a:2-bit_string>> x",
-        "Bits"
+        "BitArray"
     );
-    assert_infer!("let x = <<<<1>>:bit_string, <<2>>:bit_string>> x", "Bits");
+    assert_infer!(
+        "let x = <<<<1>>:bit_string, <<2>>:bit_string>> x",
+        "BitArray"
+    );
 }
 
 #[test]
@@ -1636,7 +1639,10 @@ fn early_function_generalisation() {
          pub fn int() { id(1) }",
         vec![("id", "fn(a) -> a"), ("int", "fn() -> Int")],
     );
+}
 
+#[test]
+fn early_function_generalisation2() {
     assert_module_infer!(
         "pub fn id(x) { x }
          pub fn int() { id(1) }
@@ -1652,15 +1658,19 @@ fn early_function_generalisation() {
 
 // https://github.com/gleam-lang/gleam/issues/970
 #[test]
-fn bits_pattern_unification() {
+fn bit_array_pattern_unification() {
     assert_module_infer!(
         "pub fn m(x) { case x { <<>> -> Nil _ -> Nil} }",
-        vec![("m", "fn(Bits) -> Nil")],
+        vec![("m", "fn(BitArray) -> Nil")],
     );
+}
 
+// https://github.com/gleam-lang/gleam/issues/970
+#[test]
+fn bit_array_pattern_unification2() {
     assert_module_infer!(
         "pub fn m(x) { case x { <<>> -> Nil _ -> Nil} }",
-        vec![("m", "fn(Bits) -> Nil")],
+        vec![("m", "fn(BitArray) -> Nil")],
     );
 }
 
