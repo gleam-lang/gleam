@@ -11,3 +11,11 @@ pub fn bad_argument_names(in, class, receive) {
 pub type BadLabelNames {
   BadLabelNames(in: String, class: String, receive: String)
 }
+
+pub const language = "gleam"
+
+pub type Movie {
+  Movie(title: String)
+}
+
+pub const war_games = Movie("WarGames")
