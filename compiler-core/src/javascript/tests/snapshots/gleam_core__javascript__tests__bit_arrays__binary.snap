@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 137
-expression: "\nfn go(x) {\n  <<x:bit_string>>\n}\n"
+assertion_line: 170
+expression: "\nfn go(x) {\n  <<x:binary>>\n}\n"
 ---
 import { toBitString } from "../gleam.mjs";
 

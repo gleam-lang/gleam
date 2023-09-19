@@ -247,12 +247,15 @@ impl<'module> Generator<'module> {
                     Ok(docvec!["codepointBits(", value, ")"])
                 }
 
-                // Bit strings
-                [Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
+                // Bit arrays
+                [Opt::Bytes { .. }]
+                | [Opt::Binary { .. }]
+                | [Opt::BitString { .. }]
+                | [Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
 
                 // Anything else
                 _ => Err(Error::Unsupported {
-                    feature: "This bit string segment option".into(),
+                    feature: "This bit array segment option".into(),
                     location: segment.location,
                 }),
             }

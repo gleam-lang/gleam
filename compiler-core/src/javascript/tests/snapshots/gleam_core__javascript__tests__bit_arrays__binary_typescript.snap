@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 203
+expression: "\npub fn go(x) {\n  <<x:binary>>\n}\n"
+---
+import type * as _ from "../gleam.d.mts";
+
+export function go(x: _.BitString): _.BitString;
+

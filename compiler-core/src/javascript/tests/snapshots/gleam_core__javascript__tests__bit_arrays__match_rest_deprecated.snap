@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 258
+expression: "\nfn go(x) {\n  let <<_, b:binary>> = <<1,2,3>>\n}\n"
+---
+import { makeError, toBitString } from "../gleam.mjs";
+
+function go(x) {
+  let $ = toBitString([1, 2, 3]);
+  if (!($.length >= 1)) {
+    throw makeError(
+      "assignment_no_match",
+      "my/mod",
+      3,
+      "go",
+      "Assignment pattern did not match",
+      { value: $ }
+    )
+  }
+  let b = $.sliceAfter(1);
+  return $;
+}
+

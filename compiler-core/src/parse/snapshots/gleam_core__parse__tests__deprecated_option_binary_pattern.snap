@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 541
+expression: "pub fn main(x) {\n  let assert <<y:binary>> = x\n  y\n}"
+---
+
+warning: Deprecated bit literal option
+  ┌─ :2:18
+  │
+2 │   let assert <<y:binary>> = x
+  │                  ^^^^^^
+
+This option has been replaced by the `bytes` option.
+
+Hint: Run `gleam format` to auto-fix your code.
+

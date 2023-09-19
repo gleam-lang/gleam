@@ -104,6 +104,10 @@ pub enum Warning {
     DeprecatedExternalType { location: SrcSpan, name: SmolStr },
     // TODO: remove
     DeprecatedTodo { location: SrcSpan, message: SmolStr },
+    // TODO: remove after next release
+    DeprecatedOptionBitString { location: SrcSpan },
+    // TODO: remove after next release
+    DeprecatedOptionBinary { location: SrcSpan },
 }
 
 //
@@ -2337,7 +2341,7 @@ where
         to_int_segment: &impl Fn(SmolStr, u32, u32) -> A,
     ) -> Result<Option<BitArraySegment<A, ()>>, ParseError>
     where
-        A: HasLocation,
+        A: HasLocation + std::fmt::Debug,
     {
         if let Some(value) = value_parser(self)? {
             let options = if self.maybe_one(&Token::Colon).is_some() {
@@ -2372,7 +2376,7 @@ where
     //   size(1)
     //   size(five)
     //   utf8
-    fn parse_bit_string_segment_option<A>(
+    fn parse_bit_string_segment_option<A: std::fmt::Debug>(
         &mut self,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
         to_int_segment: &impl Fn(SmolStr, u32, u32) -> A,
@@ -2423,6 +2427,18 @@ where
                     }
                 } else {
                     str_to_bit_string_segment_option(&name, SrcSpan { start, end })
+                        .map(|option| {
+                            if option.is_binary() {
+                                self.warnings.push(Warning::DeprecatedOptionBinary {
+                                    location: option.location(),
+                                })
+                            } else if option.is_bit_string() {
+                                self.warnings.push(Warning::DeprecatedOptionBitString {
+                                    location: option.location(),
+                                })
+                            }
+                            option
+                        })
                         .ok_or(ParseError {
                             error: ParseErrorType::InvalidBitArraySegment,
                             location: SrcSpan { start, end },
@@ -3080,11 +3096,11 @@ fn bit_string_const_int(value: SmolStr, start: u32, end: u32) -> UntypedConstant
 
 fn str_to_bit_string_segment_option<A>(lit: &str, location: SrcSpan) -> Option<BitArrayOption<A>> {
     match lit {
-        "binary" => Some(BitArrayOption::Bytes { location }),
+        "binary" => Some(BitArrayOption::Binary { location }),
         "bytes" => Some(BitArrayOption::Bytes { location }),
         "int" => Some(BitArrayOption::Int { location }),
         "float" => Some(BitArrayOption::Float { location }),
-        "bit_string" => Some(BitArrayOption::Bits { location }),
+        "bit_string" => Some(BitArrayOption::BitString { location }),
         "bits" => Some(BitArrayOption::Bits { location }),
         "utf8" => Some(BitArrayOption::Utf8 { location }),
         "utf16" => Some(BitArrayOption::Utf16 { location }),
