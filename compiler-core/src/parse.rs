@@ -1949,7 +1949,7 @@ where
             module.push_str(&name);
             end = e;
 
-            // Ueful error for : import a/.{b}
+            // Useful error for : import a/.{b}
             if let Some((s, _)) = self.maybe_one(&Token::SlashDot) {
                 return parse_error(
                     ParseErrorType::ExpectedName,
@@ -2319,9 +2319,9 @@ where
     //
 
     // The structure is roughly the same for pattern, const, and expr
-    // thats why these functions take functions
+    // that's why these functions take functions
     //
-    // patern (: option)?
+    // pattern (: option)?
     fn parse_bit_string_segment<A>(
         &mut self,
         value_parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,

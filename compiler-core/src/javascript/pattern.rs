@@ -50,7 +50,7 @@ impl Offset {
         }
     }
     // This should never be called on an open ended offset
-    // However previous checks ensure bit_string segements without a size are only allowed at the end of a pattern
+    // However previous checks ensure bit_string segments without a size are only allowed at the end of a pattern
     pub fn increment(&mut self, step: usize) {
         self.bytes += step
     }
