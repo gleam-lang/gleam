@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 794
+assertion_line: 797
 expression: "type PrivateType\n@external(erlang, \"a\", \"b\")\npub fn go(x: PrivateType) -> Int"
 ---
 error: Private type used in public interface

@@ -120,7 +120,10 @@ fn go() {
 }
 "#,
     );
+}
 
+#[test]
+fn int_equality1() {
     assert_js!(
         r#"
 fn go(y) {
@@ -141,7 +144,10 @@ fn go() {
 }
 "#,
     );
+}
 
+#[test]
+fn float_equality1() {
     assert_js!(
         r#"
 fn go(y) {

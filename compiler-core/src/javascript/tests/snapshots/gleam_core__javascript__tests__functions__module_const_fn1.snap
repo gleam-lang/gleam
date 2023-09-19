@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 394
+assertion_line: 400
 expression: "\npub fn int_identity(i: Int) -> Int { i }\npub const int_identity_alias: fn(Int) -> Int = int_identity\npub const compound: #(fn(Int) -> Int, fn(Int) -> Int) = \n    #(int_identity, int_identity_alias)"
 ---
 export const int_identity_alias: (x0: number) => number;

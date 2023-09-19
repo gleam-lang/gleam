@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 369
+assertion_line: 372
 expression: "\n        import foo.{println}\n        pub fn main() {\n          let println =\n            \"oh dear\"\n            |> println\n          println\n        }"
 ---
 import * as $foo from "../foo.mjs";

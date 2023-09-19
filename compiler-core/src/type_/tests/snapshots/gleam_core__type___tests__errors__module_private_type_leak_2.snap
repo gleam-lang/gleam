@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 772
+assertion_line: 775
 expression: "type PrivateType\n\n@external(erlang, \"a\", \"b\")\nfn go() -> PrivateType\n\npub fn leak_type() { go() }"
 ---
 error: Private type used in public interface

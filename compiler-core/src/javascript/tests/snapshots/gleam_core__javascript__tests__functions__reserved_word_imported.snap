@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 211
+assertion_line: 214
 expression: "import for.{class}\n\npub fn export() {\n  class()\n}\n"
 ---
 import * as $for from "../for.mjs";

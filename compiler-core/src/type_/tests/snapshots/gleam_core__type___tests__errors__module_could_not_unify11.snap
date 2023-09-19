@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 726
+assertion_line: 729
 expression: "\n        pub type Box(inner) {\n            Box(inner)\n        }\n\n        pub fn create_int_box(value: Int) {\n            let x: Box(Float) = Box(value)\n            x\n        }"
 ---
 error: Type mismatch

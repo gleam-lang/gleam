@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1844
+assertion_line: 1847
 expression: "\nimport one/two\n\npub fn main(_x: two.Thing) {\n  Nil\n}\n"
 ---
 error: Unknown module type

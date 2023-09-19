@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1017
+assertion_line: 1020
 expression: "type DupType { A } type DupType { B }"
 ---
 error: Duplicate type definition

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1356
+assertion_line: 1359
 expression: "type A(a) { A }\ntype B = a"
 ---
 error: Unknown type

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 415
+assertion_line: 435
 expression: "{ 1 { 1.0 2.0 } 3 }"
 ---
 [

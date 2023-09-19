@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1603
+assertion_line: 1606
 expression: "import foo pub type Thing { Thing }\n        pub fn main() {\n            [Thing] == [foo.Thing]\n        }"
 ---
 error: Type mismatch

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 975
+assertion_line: 978
 expression: "\n@external(erlang, \"a\", \"b\")\nfn dupe(x) -> x\nfn dupe() { 1 }\n"
 ---
 error: Duplicate definition

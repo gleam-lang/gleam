@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1057
+assertion_line: 1060
 expression: "\n@external(erlang, \"module1\", \"function1\")\nfn foo() -> Float\n@external(erlang, \"module2\", \"function2\")\nfn foo() -> Float\n"
 ---
 error: Duplicate definition

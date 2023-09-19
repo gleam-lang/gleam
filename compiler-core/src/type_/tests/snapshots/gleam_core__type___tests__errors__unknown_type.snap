@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 824
+assertion_line: 827
 expression: "type Thing { Thing(unknown: x) }"
 ---
 error: Unknown type
