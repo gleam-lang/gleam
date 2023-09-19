@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- The `BitString` type has been renamed to `BitArray`.
+- The `binary` and `bit_string` bit array modifier have been deprecated in favour
+  of `bytes` and `bits`.
+- The deprecated `todo("...")` syntax has been removed.
+
+## v0.31.0 - 2023-09-18
+
 - Module access can now be used in case clause guards.
 - The JS target now supports bit syntax for module consts.
 - The `gleam check` command supports the `target` flag now.
