@@ -5,8 +5,8 @@ use smol_str::SmolStr;
 
 use crate::{
     ast::{
-        BitStringSegment, BitStringSegmentOption, CallArg, Constant, SrcSpan, TypedConstant,
-        TypedConstantBitStringSegment, TypedConstantBitStringSegmentOption,
+        BitArrayOption, BitArraySegment, CallArg, Constant, SrcSpan, TypedConstant,
+        TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
     },
     build::Origin,
     schema_capnp::{self as schema, *},
@@ -172,7 +172,7 @@ impl ModuleDecoder {
             Which::Tuple(reader) => self.constant_tuple(&reader?),
             Which::List(reader) => self.constant_list(&reader),
             Which::Record(reader) => self.constant_record(&reader),
-            Which::BitString(reader) => self.constant_bit_string(&reader?),
+            Which::BitArray(reader) => self.constant_bit_array(&reader?),
             Which::Var(reader) => self.constant_var(&reader),
         }
     }
@@ -244,13 +244,13 @@ impl ModuleDecoder {
         })
     }
 
-    fn constant_bit_string(
+    fn constant_bit_array(
         &mut self,
-        reader: &capnp::struct_list::Reader<'_, bit_string_segment::Owned>,
+        reader: &capnp::struct_list::Reader<'_, bit_array_segment::Owned>,
     ) -> Result<TypedConstant> {
-        Ok(Constant::BitString {
+        Ok(Constant::BitArray {
             location: Default::default(),
-            segments: read_vec!(reader, self, bit_string_segment),
+            segments: read_vec!(reader, self, bit_array_segment),
         })
     }
 
@@ -271,75 +271,75 @@ impl ModuleDecoder {
         })
     }
 
-    fn bit_string_segment(
+    fn bit_array_segment(
         &mut self,
-        reader: &bit_string_segment::Reader<'_>,
-    ) -> Result<TypedConstantBitStringSegment> {
-        Ok(BitStringSegment {
+        reader: &bit_array_segment::Reader<'_>,
+    ) -> Result<TypedConstantBitArraySegment> {
+        Ok(BitArraySegment {
             location: Default::default(),
             type_: self.type_(&reader.get_type()?)?,
             value: Box::new(self.constant(&reader.get_value()?)?),
-            options: read_vec!(reader.get_options()?, self, bit_string_segment_option),
+            options: read_vec!(reader.get_options()?, self, bit_array_segment_option),
         })
     }
 
-    fn bit_string_segment_option(
+    fn bit_array_segment_option(
         &mut self,
-        reader: &bit_string_segment_option::Reader<'_>,
-    ) -> Result<TypedConstantBitStringSegmentOption> {
-        use bit_string_segment_option::Which;
+        reader: &bit_array_segment_option::Reader<'_>,
+    ) -> Result<TypedConstantBitArraySegmentOption> {
+        use bit_array_segment_option::Which;
         Ok(match reader.which()? {
-            Which::Bytes(_) => BitStringSegmentOption::Bytes {
+            Which::Bytes(_) => BitArrayOption::Bytes {
                 location: Default::default(),
             },
-            Which::Integer(_) => BitStringSegmentOption::Int {
+            Which::Integer(_) => BitArrayOption::Int {
                 location: Default::default(),
             },
-            Which::Float(_) => BitStringSegmentOption::Float {
+            Which::Float(_) => BitArrayOption::Float {
                 location: Default::default(),
             },
-            Which::Bits(_) => BitStringSegmentOption::Bits {
+            Which::Bits(_) => BitArrayOption::Bits {
                 location: Default::default(),
             },
-            Which::Utf8(_) => BitStringSegmentOption::Utf8 {
+            Which::Utf8(_) => BitArrayOption::Utf8 {
                 location: Default::default(),
             },
-            Which::Utf16(_) => BitStringSegmentOption::Utf16 {
+            Which::Utf16(_) => BitArrayOption::Utf16 {
                 location: Default::default(),
             },
-            Which::Utf32(_) => BitStringSegmentOption::Utf32 {
+            Which::Utf32(_) => BitArrayOption::Utf32 {
                 location: Default::default(),
             },
-            Which::Utf8Codepoint(_) => BitStringSegmentOption::Utf8Codepoint {
+            Which::Utf8Codepoint(_) => BitArrayOption::Utf8Codepoint {
                 location: Default::default(),
             },
-            Which::Utf16Codepoint(_) => BitStringSegmentOption::Utf16Codepoint {
+            Which::Utf16Codepoint(_) => BitArrayOption::Utf16Codepoint {
                 location: Default::default(),
             },
-            Which::Utf32Codepoint(_) => BitStringSegmentOption::Utf32Codepoint {
+            Which::Utf32Codepoint(_) => BitArrayOption::Utf32Codepoint {
                 location: Default::default(),
             },
-            Which::Signed(_) => BitStringSegmentOption::Signed {
+            Which::Signed(_) => BitArrayOption::Signed {
                 location: Default::default(),
             },
-            Which::Unsigned(_) => BitStringSegmentOption::Unsigned {
+            Which::Unsigned(_) => BitArrayOption::Unsigned {
                 location: Default::default(),
             },
-            Which::Big(_) => BitStringSegmentOption::Big {
+            Which::Big(_) => BitArrayOption::Big {
                 location: Default::default(),
             },
-            Which::Little(_) => BitStringSegmentOption::Little {
+            Which::Little(_) => BitArrayOption::Little {
                 location: Default::default(),
             },
-            Which::Native(_) => BitStringSegmentOption::Native {
+            Which::Native(_) => BitArrayOption::Native {
                 location: Default::default(),
             },
-            Which::Size(reader) => BitStringSegmentOption::Size {
+            Which::Size(reader) => BitArrayOption::Size {
                 location: Default::default(),
                 short_form: reader.get_short_form(),
                 value: Box::new(self.constant(&reader.get_value()?)?),
             },
-            Which::Unit(reader) => BitStringSegmentOption::Unit {
+            Which::Unit(reader) => BitArrayOption::Unit {
                 location: Default::default(),
                 value: reader.get_value(),
             },

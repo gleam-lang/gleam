@@ -7,7 +7,7 @@ use itertools::Itertools;
 use super::*;
 use crate::{
     analyse::Inferred,
-    ast::{AssignName, UntypedPatternBitStringSegment},
+    ast::{AssignName, UntypedPatternBitArraySegment},
 };
 use std::sync::Arc;
 
@@ -173,7 +173,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
     fn infer_pattern_bit_string(
         &mut self,
-        mut segments: Vec<UntypedPatternBitStringSegment>,
+        mut segments: Vec<UntypedPatternBitArraySegment>,
         location: SrcSpan,
     ) -> Result<TypedPattern, Error> {
         let last_segment = segments.pop();
@@ -188,7 +188,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             typed_segments.push(typed_last_segment)
         }
 
-        Ok(TypedPattern::BitString {
+        Ok(TypedPattern::BitArray {
             location,
             segments: typed_segments,
         })
@@ -196,10 +196,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
     fn infer_pattern_segment(
         &mut self,
-        segment: UntypedPatternBitStringSegment,
+        segment: UntypedPatternBitArraySegment,
         is_last_segment: bool,
-    ) -> Result<TypedPatternBitStringSegment, Error> {
-        let UntypedPatternBitStringSegment {
+    ) -> Result<TypedPatternBitArraySegment, Error> {
+        let UntypedPatternBitArraySegment {
             location,
             options,
             value,
@@ -234,7 +234,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }?;
         let typed_value = self.unify(*value, typ.clone())?;
 
-        Ok(BitStringSegment {
+        Ok(BitArraySegment {
             location,
             value: Box::new(typed_value),
             options,
@@ -449,7 +449,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             },
 
-            Pattern::BitString { location, segments } => {
+            Pattern::BitArray { location, segments } => {
                 unify(type_, bits()).map_err(|e| convert_unify_error(e, location))?;
                 self.infer_pattern_bit_string(segments, location)
             }

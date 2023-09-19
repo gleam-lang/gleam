@@ -2,12 +2,12 @@ use super::{pipe::PipeTyper, *};
 use crate::{
     analyse::infer_bit_string_segment_option,
     ast::{
-        Arg, Assignment, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
-        Clause, ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, Statement,
-        TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
+        Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
+        ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, Statement, TodoKind,
+        TypeAst, TypedArg, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
         TypedExpr, TypedMultiPattern, TypedStatement, UntypedArg, UntypedAssignment, UntypedClause,
-        UntypedClauseGuard, UntypedConstant, UntypedConstantBitStringSegment, UntypedExpr,
-        UntypedExprBitStringSegment, UntypedMultiPattern, UntypedStatement, Use, UseAssignment,
+        UntypedClauseGuard, UntypedConstant, UntypedConstantBitArraySegment, UntypedExpr,
+        UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, Use, UseAssignment,
         USE_ASSIGNMENT_VARIABLE,
     },
 };
@@ -159,7 +159,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => self.infer_tuple_index(*tuple, index, location),
 
-            UntypedExpr::BitString { location, segments } => {
+            UntypedExpr::BitArray { location, segments } => {
                 self.infer_bit_string(segments, location)
             }
 
@@ -617,7 +617,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_bit_string(
         &mut self,
-        segments: Vec<UntypedExprBitStringSegment>,
+        segments: Vec<UntypedExprBitArraySegment>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let segments = segments
@@ -627,7 +627,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
             .try_collect()?;
 
-        Ok(TypedExpr::BitString {
+        Ok(TypedExpr::BitArray {
             location,
             segments,
             typ: bits(),
@@ -636,7 +636,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_constant_bit_string(
         &mut self,
-        segments: Vec<UntypedConstantBitStringSegment>,
+        segments: Vec<UntypedConstantBitArraySegment>,
         location: SrcSpan,
     ) -> Result<TypedConstant, Error> {
         let segments = segments
@@ -648,23 +648,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
             .try_collect()?;
 
-        Ok(Constant::BitString { location, segments })
+        Ok(Constant::BitArray { location, segments })
     }
 
     fn infer_bit_segment<UntypedValue, TypedValue, InferFn>(
         &mut self,
         value: UntypedValue,
-        options: Vec<BitStringSegmentOption<UntypedValue>>,
+        options: Vec<BitArrayOption<UntypedValue>>,
         location: SrcSpan,
         mut infer: InferFn,
-    ) -> Result<BitStringSegment<TypedValue, Arc<Type>>, Error>
+    ) -> Result<BitArraySegment<TypedValue, Arc<Type>>, Error>
     where
         InferFn: FnMut(&mut Self, UntypedValue) -> Result<TypedValue, Error>,
         TypedValue: HasType + HasLocation + Clone + bit_string::GetLiteralValue,
     {
         let value = infer(self, value)?;
 
-        let infer_option = |segment_option: BitStringSegmentOption<UntypedValue>| {
+        let infer_option = |segment_option: BitArrayOption<UntypedValue>| {
             infer_bit_string_segment_option(segment_option, |value, typ| {
                 let typed_value = infer(self, value)?;
                 unify(typ, typed_value.type_())
@@ -684,7 +684,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         unify(typ.clone(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
 
-        Ok(BitStringSegment {
+        Ok(BitArraySegment {
             location,
             type_: typ,
             value: Box::new(value),
@@ -1752,7 +1752,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 elements, location, ..
             } => self.infer_const_list(elements, location),
 
-            Constant::BitString { location, segments } => {
+            Constant::BitArray { location, segments } => {
                 self.infer_constant_bit_string(segments, location)
             }
 
@@ -2397,7 +2397,7 @@ impl UseAssignments {
                 | Pattern::List { .. }
                 | Pattern::Constructor { .. }
                 | Pattern::Tuple { .. }
-                | Pattern::BitString { .. }
+                | Pattern::BitArray { .. }
                 | Pattern::Concatenate { .. }) => {
                     let name: SmolStr = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
                     assignments.function_arguments.push(Arg {

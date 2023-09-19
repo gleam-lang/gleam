@@ -76,7 +76,7 @@ fn print<'a>(
             tuple(elems.iter().map(|p| print(p, vars, define_variables, env)))
         }
 
-        Pattern::BitString { segments, .. } => bit_string(
+        Pattern::BitArray { segments, .. } => bit_string(
             segments
                 .iter()
                 .map(|s| pattern_segment(&s.value, &s.options, vars, define_variables, env)),
@@ -133,7 +133,7 @@ fn tag_tuple_pattern<'a>(
 
 fn pattern_segment<'a>(
     value: &'a TypedPattern,
-    options: &'a [BitStringSegmentOption<TypedPattern>],
+    options: &'a [BitArrayOption<TypedPattern>],
     vars: &mut Vec<&'a str>,
     define_variables: bool,
     env: &mut Env<'a>,

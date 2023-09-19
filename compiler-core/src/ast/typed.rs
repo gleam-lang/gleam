@@ -125,10 +125,10 @@ pub enum TypedExpr {
         type_: Arc<Type>,
     },
 
-    BitString {
+    BitArray {
         location: SrcSpan,
         typ: Arc<Type>,
-        segments: Vec<TypedExprBitStringSegment>,
+        segments: Vec<TypedExprBitArraySegment>,
     },
 
     RecordUpdate {
@@ -228,7 +228,7 @@ impl TypedExpr {
                 tuple: expression, ..
             } => expression.find_node(byte_index).or(Some(self.into())),
 
-            Self::BitString { segments, .. } => segments
+            Self::BitArray { segments, .. } => segments
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
                 .or(Some(self.into())),
@@ -271,7 +271,7 @@ impl TypedExpr {
             | Self::NegateBool { location, .. }
             | Self::NegateInt { location, .. }
             | Self::Pipeline { location, .. }
-            | Self::BitString { location, .. }
+            | Self::BitArray { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
@@ -296,7 +296,7 @@ impl TypedExpr {
             | Self::NegateBool { location, .. }
             | Self::NegateInt { location, .. }
             | Self::Pipeline { location, .. }
-            | Self::BitString { location, .. }
+            | Self::BitArray { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
@@ -322,7 +322,7 @@ impl TypedExpr {
             | TypedExpr::String { .. }
             | TypedExpr::Block { .. }
             | TypedExpr::Pipeline { .. }
-            | TypedExpr::BitString { .. }
+            | TypedExpr::BitArray { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::RecordAccess { .. } => None,
 
@@ -361,7 +361,7 @@ impl TypedExpr {
             | Self::BinOp { typ, .. }
             | Self::Tuple { typ, .. }
             | Self::String { typ, .. }
-            | Self::BitString { typ, .. }
+            | Self::BitArray { typ, .. }
             | Self::TupleIndex { typ, .. }
             | Self::ModuleSelect { typ, .. }
             | Self::RecordAccess { typ, .. }
@@ -379,7 +379,7 @@ impl TypedExpr {
                 | Self::Float { .. }
                 | Self::Tuple { .. }
                 | Self::String { .. }
-                | Self::BitString { .. }
+                | Self::BitArray { .. }
         )
     }
 
@@ -410,7 +410,7 @@ impl TypedExpr {
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::Todo { .. }
             | TypedExpr::Panic { .. }
-            | TypedExpr::BitString { .. }
+            | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::RecordAccess { .. }
             | TypedExpr::NegateBool { .. }

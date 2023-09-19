@@ -528,7 +528,7 @@ fn bit_string<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a>
 
 fn const_segment<'a>(
     value: &'a TypedConstant,
-    options: &'a [BitStringSegmentOption<TypedConstant>],
+    options: &'a [BitArrayOption<TypedConstant>],
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let document = match value {
@@ -536,7 +536,7 @@ fn const_segment<'a>(
         Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
 
         // As normal
-        Constant::Int { .. } | Constant::Float { .. } | Constant::BitString { .. } => {
+        Constant::Int { .. } | Constant::Float { .. } | Constant::BitArray { .. } => {
             const_inline(value, env)
         }
 
@@ -569,7 +569,7 @@ fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'
 
 fn expr_segment<'a>(
     value: &'a TypedExpr,
-    options: &'a [BitStringSegmentOption<TypedExpr>],
+    options: &'a [BitArrayOption<TypedExpr>],
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let mut value_is_a_string_literal = false;
@@ -585,7 +585,7 @@ fn expr_segment<'a>(
         TypedExpr::Int { .. }
         | TypedExpr::Float { .. }
         | TypedExpr::Var { .. }
-        | TypedExpr::BitString { .. } => expr(value, env),
+        | TypedExpr::BitArray { .. } => expr(value, env),
 
         // Wrap anything else in parentheses
         value => expr(value, env).surround("(", ")"),
@@ -625,7 +625,7 @@ fn expr_segment<'a>(
 
 fn bit_string_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
     mut document: Document<'a>,
-    options: &'a [BitStringSegmentOption<Value>],
+    options: &'a [BitArrayOption<Value>],
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
     value_is_a_string_literal: bool,
@@ -649,7 +649,7 @@ where
     };
 
     for option in options {
-        use BitStringSegmentOption as Opt;
+        use BitArrayOption as Opt;
         if !others.is_empty() && !matches!(option, Opt::Size { .. } | Opt::Unit { .. }) {
             others.push("-".to_doc());
         }
@@ -953,7 +953,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             concat(elements).nest(INDENT).surround("[", "]").group()
         }
 
-        Constant::BitString { segments, .. } => bit_string(
+        Constant::BitArray { segments, .. } => bit_string(
             segments
                 .iter()
                 .map(|s| const_segment(&s.value, &s.options, env)),
@@ -1393,7 +1393,7 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
         | TypedExpr::TupleIndex { .. }
         | TypedExpr::Todo { .. }
         | TypedExpr::Panic { .. }
-        | TypedExpr::BitString { .. }
+        | TypedExpr::BitArray { .. }
         | TypedExpr::RecordUpdate { .. }
         | TypedExpr::NegateBool { .. }
         | TypedExpr::NegateInt { .. } => false,
@@ -1530,7 +1530,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(|e| maybe_block_expr(e, env))),
 
-        TypedExpr::BitString { segments, .. } => bit_string(
+        TypedExpr::BitArray { segments, .. } => bit_string(
             segments
                 .iter()
                 .map(|s| expr_segment(&s.value, &s.options, env)),

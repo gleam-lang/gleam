@@ -285,7 +285,7 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elements.iter().map(|e| self.const_expr(e))))
                 .group(),
 
-            Constant::BitString { segments, .. } => bit_string(
+            Constant::BitArray { segments, .. } => bit_string(
                 segments
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.const_expr(e))),
@@ -692,7 +692,7 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elems.iter().map(|e| self.expr(e))))
                 .group(),
 
-            UntypedExpr::BitString { segments, .. } => bit_string(
+            UntypedExpr::BitArray { segments, .. } => bit_string(
                 segments
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.bit_string_segment_expr(e))),
@@ -792,7 +792,7 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         fn is_breakable(expr: &UntypedPattern) -> bool {
             match expr {
-                Pattern::Tuple { .. } | Pattern::List { .. } | Pattern::BitString { .. } => true,
+                Pattern::Tuple { .. } | Pattern::List { .. } | Pattern::BitArray { .. } => true,
                 Pattern::Constructor {
                     arguments: args, ..
                 } => !args.is_empty(),
@@ -849,7 +849,7 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::TupleIndex { .. }
             | UntypedExpr::Todo { .. }
             | UntypedExpr::Panic { .. }
-            | UntypedExpr::BitString { .. }
+            | UntypedExpr::BitArray { .. }
             | UntypedExpr::RecordUpdate { .. }
             | UntypedExpr::NegateBool { .. }
             | UntypedExpr::NegateInt { .. } => self.expr(fun),
@@ -1198,7 +1198,7 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
             | UntypedExpr::Tuple { .. }
-            | UntypedExpr::BitString { .. } => " ".to_doc().append(self.expr(expr)),
+            | UntypedExpr::BitArray { .. } => " ".to_doc().append(self.expr(expr)),
 
             UntypedExpr::Case { .. } => line().append(self.expr(expr)).nest(INDENT),
 
@@ -1323,7 +1323,7 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elems.iter().map(|e| self.pattern(e))))
                 .group(),
 
-            Pattern::BitString { segments, .. } => bit_string(
+            Pattern::BitArray { segments, .. } => bit_string(
                 segments
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.pattern(e))),
@@ -1544,7 +1544,7 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::TupleIndex { .. }
             | UntypedExpr::Todo { .. }
             | UntypedExpr::Panic { .. }
-            | UntypedExpr::BitString { .. }
+            | UntypedExpr::BitArray { .. }
             | UntypedExpr::RecordUpdate { .. }
             | UntypedExpr::NegateBool { .. }
             | UntypedExpr::NegateInt { .. }
@@ -1752,51 +1752,44 @@ fn commented<'a, 'comments>(
 }
 
 fn bit_string_segment<Value, Type, ToDoc>(
-    segment: &BitStringSegment<Value, Type>,
+    segment: &BitArraySegment<Value, Type>,
     mut to_doc: ToDoc,
 ) -> Document<'_>
 where
     ToDoc: FnMut(&Value) -> Document<'_>,
 {
     match segment {
-        BitStringSegment { value, options, .. } if options.is_empty() => to_doc(value),
+        BitArraySegment { value, options, .. } if options.is_empty() => to_doc(value),
 
-        BitStringSegment { value, options, .. } => to_doc(value).append(":").append(join(
+        BitArraySegment { value, options, .. } => to_doc(value).append(":").append(join(
             options.iter().map(|o| segment_option(o, |e| to_doc(e))),
             "-".to_doc(),
         )),
     }
 }
 
-fn segment_option<ToDoc, Value>(
-    option: &BitStringSegmentOption<Value>,
-    mut to_doc: ToDoc,
-) -> Document<'_>
+fn segment_option<ToDoc, Value>(option: &BitArrayOption<Value>, mut to_doc: ToDoc) -> Document<'_>
 where
     ToDoc: FnMut(&Value) -> Document<'_>,
 {
     match option {
-        BitStringSegmentOption::Binary { .. } | BitStringSegmentOption::Bytes { .. } => {
-            "bytes".to_doc()
-        }
-        BitStringSegmentOption::BitString { .. } | BitStringSegmentOption::Bits { .. } => {
-            "bits".to_doc()
-        }
-        BitStringSegmentOption::Int { .. } => "int".to_doc(),
-        BitStringSegmentOption::Float { .. } => "float".to_doc(),
-        BitStringSegmentOption::Utf8 { .. } => "utf8".to_doc(),
-        BitStringSegmentOption::Utf16 { .. } => "utf16".to_doc(),
-        BitStringSegmentOption::Utf32 { .. } => "utf32".to_doc(),
-        BitStringSegmentOption::Utf8Codepoint { .. } => "utf8_codepoint".to_doc(),
-        BitStringSegmentOption::Utf16Codepoint { .. } => "utf16_codepoint".to_doc(),
-        BitStringSegmentOption::Utf32Codepoint { .. } => "utf32_codepoint".to_doc(),
-        BitStringSegmentOption::Signed { .. } => "signed".to_doc(),
-        BitStringSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
-        BitStringSegmentOption::Big { .. } => "big".to_doc(),
-        BitStringSegmentOption::Little { .. } => "little".to_doc(),
-        BitStringSegmentOption::Native { .. } => "native".to_doc(),
+        BitArrayOption::Binary { .. } | BitArrayOption::Bytes { .. } => "bytes".to_doc(),
+        BitArrayOption::BitString { .. } | BitArrayOption::Bits { .. } => "bits".to_doc(),
+        BitArrayOption::Int { .. } => "int".to_doc(),
+        BitArrayOption::Float { .. } => "float".to_doc(),
+        BitArrayOption::Utf8 { .. } => "utf8".to_doc(),
+        BitArrayOption::Utf16 { .. } => "utf16".to_doc(),
+        BitArrayOption::Utf32 { .. } => "utf32".to_doc(),
+        BitArrayOption::Utf8Codepoint { .. } => "utf8_codepoint".to_doc(),
+        BitArrayOption::Utf16Codepoint { .. } => "utf16_codepoint".to_doc(),
+        BitArrayOption::Utf32Codepoint { .. } => "utf32_codepoint".to_doc(),
+        BitArrayOption::Signed { .. } => "signed".to_doc(),
+        BitArrayOption::Unsigned { .. } => "unsigned".to_doc(),
+        BitArrayOption::Big { .. } => "big".to_doc(),
+        BitArrayOption::Little { .. } => "little".to_doc(),
+        BitArrayOption::Native { .. } => "native".to_doc(),
 
-        BitStringSegmentOption::Size {
+        BitArrayOption::Size {
             value,
             short_form: false,
             ..
@@ -1806,13 +1799,13 @@ where
             .append(to_doc(value))
             .append(")"),
 
-        BitStringSegmentOption::Size {
+        BitArrayOption::Size {
             value,
             short_form: true,
             ..
         } => to_doc(value),
 
-        BitStringSegmentOption::Unit { value, .. } => "unit"
+        BitArrayOption::Unit { value, .. } => "unit"
             .to_doc()
             .append("(")
             .append(Document::String(format!("{value}")))
@@ -1877,6 +1870,6 @@ fn is_breakable_expr(expr: &UntypedExpr) -> bool {
             | UntypedExpr::Case { .. }
             | UntypedExpr::List { .. }
             | UntypedExpr::Tuple { .. }
-            | UntypedExpr::BitString { .. }
+            | UntypedExpr::BitArray { .. }
     )
 }

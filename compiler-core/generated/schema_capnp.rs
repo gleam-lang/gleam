@@ -3650,7 +3650,7 @@ pub mod field_map {
 }
 
 pub mod constant {
-  pub use self::Which::{Int,Float,String,Tuple,List,Record,BitString,Var};
+  pub use self::Which::{Int,Float,String,Tuple,List,Record,BitArray,Var};
 
   #[derive(Copy, Clone)]
   pub struct Owned(());
@@ -3718,7 +3718,7 @@ pub mod constant {
       !self.reader.get_pointer_field(0).is_null()
     }
     #[inline]
-    pub fn has_bit_string(&self) -> bool {
+    pub fn has_bit_array(&self) -> bool {
       if self.reader.get_data_field::<u16>(0) != 6 { return false; }
       !self.reader.get_pointer_field(0).is_null()
     }
@@ -3756,7 +3756,7 @@ pub mod constant {
           ))
         }
         6 => {
-          ::core::result::Result::Ok(BitString(
+          ::core::result::Result::Ok(BitArray(
             ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
@@ -3894,17 +3894,17 @@ pub mod constant {
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
-    pub fn set_bit_string(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::bit_string_segment::Owned>) -> ::capnp::Result<()> {
+    pub fn set_bit_array(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::bit_array_segment::Owned>) -> ::capnp::Result<()> {
       self.builder.set_data_field::<u16>(0, 6);
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
     }
     #[inline]
-    pub fn init_bit_string(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::bit_string_segment::Owned> {
+    pub fn init_bit_array(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::bit_array_segment::Owned> {
       self.builder.set_data_field::<u16>(0, 6);
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
     }
     #[inline]
-    pub fn has_bit_string(&self) -> bool {
+    pub fn has_bit_array(&self) -> bool {
       if self.builder.get_data_field::<u16>(0) != 6 { return false; }
       !self.builder.get_pointer_field(0).is_null()
     }
@@ -3951,7 +3951,7 @@ pub mod constant {
           ))
         }
         6 => {
-          ::core::result::Result::Ok(BitString(
+          ::core::result::Result::Ok(BitArray(
             ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
@@ -3985,11 +3985,11 @@ pub mod constant {
     Tuple(A3),
     List(A4),
     Record(A5),
-    BitString(A6),
+    BitArray(A6),
     Var(A7),
   }
-  pub type WhichReader<'a,> = Which<::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::constant::Owned>>,crate::schema_capnp::constant::list::Reader<'a>,crate::schema_capnp::constant::record::Reader<'a>,::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::bit_string_segment::Owned>>,crate::schema_capnp::constant::var::Reader<'a>>;
-  pub type WhichBuilder<'a,> = Which<::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::constant::Owned>>,crate::schema_capnp::constant::list::Builder<'a>,crate::schema_capnp::constant::record::Builder<'a>,::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::bit_string_segment::Owned>>,crate::schema_capnp::constant::var::Builder<'a>>;
+  pub type WhichReader<'a,> = Which<::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::constant::Owned>>,crate::schema_capnp::constant::list::Reader<'a>,crate::schema_capnp::constant::record::Reader<'a>,::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::bit_array_segment::Owned>>,crate::schema_capnp::constant::var::Reader<'a>>;
+  pub type WhichBuilder<'a,> = Which<::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::constant::Owned>>,crate::schema_capnp::constant::list::Builder<'a>,crate::schema_capnp::constant::record::Builder<'a>,::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::bit_array_segment::Owned>>,crate::schema_capnp::constant::var::Builder<'a>>;
 
   pub mod list {
     #[derive(Copy, Clone)]
@@ -4559,7 +4559,7 @@ pub mod constant {
   }
 }
 
-pub mod bit_string_segment {
+pub mod bit_array_segment {
   #[derive(Copy, Clone)]
   pub struct Owned(());
   impl <'a> ::capnp::traits::Owned<'a> for Owned { type Reader = Reader<'a>; type Builder = Builder<'a>; }
@@ -4614,7 +4614,7 @@ pub mod bit_string_segment {
       !self.reader.get_pointer_field(0).is_null()
     }
     #[inline]
-    pub fn get_options(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::bit_string_segment_option::Owned>> {
+    pub fn get_options(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::bit_array_segment_option::Owned>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
     }
     #[inline]
@@ -4696,15 +4696,15 @@ pub mod bit_string_segment {
       !self.builder.get_pointer_field(0).is_null()
     }
     #[inline]
-    pub fn get_options(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::bit_string_segment_option::Owned>> {
+    pub fn get_options(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::bit_array_segment_option::Owned>> {
       ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(1), ::core::option::Option::None)
     }
     #[inline]
-    pub fn set_options(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::bit_string_segment_option::Owned>) -> ::capnp::Result<()> {
+    pub fn set_options(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::bit_array_segment_option::Owned>) -> ::capnp::Result<()> {
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(1), value, false)
     }
     #[inline]
-    pub fn init_options(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::bit_string_segment_option::Owned> {
+    pub fn init_options(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::bit_array_segment_option::Owned> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), size)
     }
     #[inline]
@@ -4746,11 +4746,11 @@ pub mod bit_string_segment {
   mod _private {
     use capnp::private::layout;
     pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 0, pointers: 3 };
-    pub const TYPE_ID: u64 = 0xbe9f_6c6e_35d4_a673;
+    pub const TYPE_ID: u64 = 0xc541_c7f6_d9b6_2ab5;
   }
 }
 
-pub mod bit_string_segment_option {
+pub mod bit_array_segment_option {
   pub use self::Which::{Bytes,Integer,Float,Bits,Utf8,Utf16,Utf32,Utf8Codepoint,Utf16Codepoint,Utf32Codepoint,Signed,Unsigned,Big,Little,Native,Size,Unit};
 
   #[derive(Copy, Clone)]
@@ -5000,14 +5000,14 @@ pub mod bit_string_segment_option {
       self.builder.set_data_field::<u16>(0, 14);
     }
     #[inline]
-    pub fn init_size(self, ) -> crate::schema_capnp::bit_string_segment_option::size::Builder<'a> {
+    pub fn init_size(self, ) -> crate::schema_capnp::bit_array_segment_option::size::Builder<'a> {
       self.builder.set_data_field::<u16>(0, 15);
       self.builder.get_pointer_field(0).clear();
       self.builder.set_bool_field(16, false);
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
-    pub fn init_unit(self, ) -> crate::schema_capnp::bit_string_segment_option::unit::Builder<'a> {
+    pub fn init_unit(self, ) -> crate::schema_capnp::bit_array_segment_option::unit::Builder<'a> {
       self.builder.set_data_field::<u16>(0, 16);
       self.builder.set_data_field::<u8>(2, 0u8);
       self.builder.set_bool_field(24, false);
@@ -5117,7 +5117,7 @@ pub mod bit_string_segment_option {
   mod _private {
     use capnp::private::layout;
     pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 1 };
-    pub const TYPE_ID: u64 = 0xa450_f944_38a3_b881;
+    pub const TYPE_ID: u64 = 0xb0f5_1f3f_5295_0454;
   }
   pub enum Which<A0,A1> {
     Bytes(()),
@@ -5138,8 +5138,8 @@ pub mod bit_string_segment_option {
     Size(A0),
     Unit(A1),
   }
-  pub type WhichReader<'a,> = Which<crate::schema_capnp::bit_string_segment_option::size::Reader<'a>,crate::schema_capnp::bit_string_segment_option::unit::Reader<'a>>;
-  pub type WhichBuilder<'a,> = Which<crate::schema_capnp::bit_string_segment_option::size::Builder<'a>,crate::schema_capnp::bit_string_segment_option::unit::Builder<'a>>;
+  pub type WhichReader<'a,> = Which<crate::schema_capnp::bit_array_segment_option::size::Reader<'a>,crate::schema_capnp::bit_array_segment_option::unit::Reader<'a>>;
+  pub type WhichBuilder<'a,> = Which<crate::schema_capnp::bit_array_segment_option::size::Builder<'a>,crate::schema_capnp::bit_array_segment_option::unit::Builder<'a>>;
 
   pub mod size {
     #[derive(Copy, Clone)]
@@ -5289,7 +5289,7 @@ pub mod bit_string_segment_option {
     mod _private {
       use capnp::private::layout;
       pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 1 };
-      pub const TYPE_ID: u64 = 0x8969_69e6_33e2_6ebe;
+      pub const TYPE_ID: u64 = 0x9202_da8f_e347_b814;
     }
   }
 
@@ -5426,7 +5426,7 @@ pub mod bit_string_segment_option {
     mod _private {
       use capnp::private::layout;
       pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 1 };
-      pub const TYPE_ID: u64 = 0xda98_b911_e70c_99dc;
+      pub const TYPE_ID: u64 = 0xcf7d_fddd_a3be_0c5e;
     }
   }
 }
