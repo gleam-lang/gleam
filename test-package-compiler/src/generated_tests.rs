@@ -339,6 +339,18 @@ fn unused_alias() {
 
 #[rustfmt::skip]
 #[test]
+fn unused_aliases_with_cross_aliasing() {
+    let output =
+        crate::prepare("./cases/unused_aliases_with_cross_aliasing");
+    insta::assert_snapshot!(
+        "unused_aliases_with_cross_aliasing",
+        output,
+        "./cases/unused_aliases_with_cross_aliasing"
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn variable_or_module() {
     let output =
         crate::prepare("./cases/variable_or_module");

@@ -1,0 +1,78 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 345
+expression: "./cases/unused_aliases_with_cross_aliasing"
+---
+//// /out/lib/the_package/_gleam_artefacts/dojo.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/dojo.cache_meta
+<51 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/dojo.erl
+-module(dojo).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([main/0]).
+
+-spec main() -> integer().
+main() ->
+    3,
+    4.
+
+
+//// /out/lib/the_package/_gleam_artefacts/one.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one.cache_meta
+<29 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one.erl
+-module(one).
+
+
+//// /out/lib/the_package/_gleam_artefacts/two.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.cache_meta
+<29 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.erl
+-module(two).
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [dojo,
+               one,
+               two]},
+    {registered, []}
+]}.
+
+
+//// Warning
+
+warning: Unused alias for imported module
+  ┌─ src/dojo.gleam:1:20
+  │
+1 │ import one.{three} as two
+  │                    ^ This alias for the imported module is never used.
+
+Hint: You can safely remove it.
+
+
+//// Warning
+
+warning: Unused alias for imported module
+  ┌─ src/dojo.gleam:2:19
+  │
+2 │ import two.{four} as one
+  │                   ^ This alias for the imported module is never used.
+
+Hint: You can safely remove it.
+
+
+
