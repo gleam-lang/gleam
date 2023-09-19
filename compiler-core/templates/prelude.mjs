@@ -110,20 +110,20 @@ export class NonEmpty extends List {
   }
 }
 
-export class BitString {
-  static isBitString(data) {
-    return data?.__gleam_prelude_variant__ === "BitString";
+export class BitArray {
+  static isBitArray(data) {
+    return data?.__gleam_prelude_variant__ === "BitArray";
   }
 
   constructor(buffer) {
     if (!(buffer instanceof Uint8Array)) {
-      throw "BitString can only be constructed from a Uint8Array";
+      throw "BitArray can only be constructed from a Uint8Array";
     }
     this.buffer = buffer;
   }
 
   get __gleam_prelude_variant__() {
-    return "BitString";
+    return "BitArray";
   }
 
   inspect() {
@@ -147,13 +147,16 @@ export class BitString {
   }
 
   binaryFromSlice(start, end) {
-    return new BitString(this.buffer.slice(start, end));
+    return new BitArray(this.buffer.slice(start, end));
   }
 
   sliceAfter(index) {
-    return new BitString(this.buffer.slice(index));
+    return new BitArray(this.buffer.slice(index));
   }
 }
+
+// TODO: remove after next version
+export const BitString = BitArray;
 
 export class UtfCodepoint {
   constructor(value) {
@@ -169,7 +172,7 @@ export class UtfCodepoint {
   }
 }
 
-export function toBitString(segments) {
+export function toBitArray(segments) {
   let size = (segment) =>
     segment instanceof Uint8Array ? segment.byteLength : 1;
   let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
@@ -184,7 +187,7 @@ export function toBitString(segments) {
       cursor++;
     }
   }
-  return new BitString(new Uint8Array(view.buffer));
+  return new BitArray(new Uint8Array(view.buffer));
 }
 
 // Derived from this answer https://stackoverflow.com/questions/8482309/converting-javascript-integer-to-byte-array-and-back

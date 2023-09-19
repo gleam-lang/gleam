@@ -1876,7 +1876,7 @@ function and try again."
                     }
                 }
 
-                TypeError::BitStringSegmentError { error, location } => {
+                TypeError::BitArraySegmentError { error, location } => {
                     let (label, mut extra) = match error {
                         bit_array::ErrorType::ConflictingTypeOptions { existing_type } => (
                             "This is an extra type specifier.",
@@ -1908,7 +1908,7 @@ function and try again."
 
                         bit_array::ErrorType::ConflictingUnitOptions => (
                             "This is an extra unit specifier.",
-                            vec!["Hint: A BitString segment can have at most 1 unit.".into()],
+                            vec!["Hint: A BitArray segment can have at most 1 unit.".into()],
                         ),
 
                         bit_array::ErrorType::FloatWithSize => (
@@ -1923,8 +1923,8 @@ int, float, utf16 and utf32 types.")],
                         ),
 
                         bit_array::ErrorType::OptionNotAllowedInValue => (
-                            "This option is only allowed in BitString patterns.",
-                            vec!["Hint: This option has no effect in BitString values.".into()],
+                            "This option is only allowed in BitArray patterns.",
+                            vec!["Hint: This option has no effect in BitArray values.".into()],
                         ),
 
                         bit_array::ErrorType::SignednessUsedOnNonInt { typ } => (
@@ -1946,7 +1946,7 @@ and cannot have a unit."))],
                         ),
                         bit_array::ErrorType::SegmentMustHaveSize => (
                             "This segment has no size",
-                            vec![wrap("Hint: Bit string segments without a size are only \
+                            vec![wrap("Hint: Bit array segments without a size are only \
 allowed at the end of a bin pattern.")],
                         ),
                         bit_array::ErrorType::UnitMustHaveSize => (

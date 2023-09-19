@@ -3,9 +3,9 @@ source: compiler-core/src/javascript/tests/bit_arrays.rs
 assertion_line: 104
 expression: "\nfn go(x) {\n  <<256, 4, x, \"Gleam\":utf8>>\n}\n"
 ---
-import { toBitString, stringBits } from "../gleam.mjs";
+import { toBitArray, stringBits } from "../gleam.mjs";
 
 function go(x) {
-  return toBitString([256, 4, x, stringBits("Gleam")]);
+  return toBitArray([256, 4, x, stringBits("Gleam")]);
 }
 

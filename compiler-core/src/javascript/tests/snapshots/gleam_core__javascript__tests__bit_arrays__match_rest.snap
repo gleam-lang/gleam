@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 225
-expression: "\nfn go(x) {\n  let <<_, b:binary>> = <<1,2,3>>\n}\n"
+assertion_line: 247
+expression: "\nfn go(x) {\n  let <<_, b:bytes>> = <<1,2,3>>\n}\n"
 ---
-import { makeError, toBitString } from "../gleam.mjs";
+import { makeError, toBitArray } from "../gleam.mjs";
 
 function go(x) {
-  let $ = toBitString([1, 2, 3]);
+  let $ = toBitArray([1, 2, 3]);
   if (!($.length >= 1)) {
     throw makeError(
       "assignment_no_match",

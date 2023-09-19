@@ -676,7 +676,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let options: Vec<_> = options.into_iter().map(infer_option).try_collect()?;
 
         let typ = crate::bit_array::type_options_for_value(&options).map_err(|error| {
-            Error::BitStringSegmentError {
+            Error::BitArraySegmentError {
                 error: error.error,
                 location: error.location,
             }

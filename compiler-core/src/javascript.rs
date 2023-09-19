@@ -113,7 +113,7 @@ impl<'a> Generator<'a> {
         };
 
         if self.tracker.bit_string_literal_used {
-            self.register_prelude_usage(&mut imports, "toBitString", None);
+            self.register_prelude_usage(&mut imports, "toBitArray", None);
         };
 
         if self.tracker.sized_integer_segment_used {

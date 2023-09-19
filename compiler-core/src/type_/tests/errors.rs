@@ -41,7 +41,7 @@ fn bit_string_float() {
 
 #[test]
 fn bit_string_binary() {
-    assert_error!("case <<1>> { <<a:binary>> if a > 1 -> 1 }");
+    assert_error!("case <<1>> { <<a:bytes>> if a > 1 -> 1 }");
 }
 
 #[test]
@@ -51,17 +51,17 @@ fn bit_string_guard() {
 
 #[test]
 fn bit_string_segment_nosize() {
-    assert_error!("case <<1>> { <<_:binary, _:binary>> -> 1 }");
+    assert_error!("case <<1>> { <<_:bytes, _:bytes>> -> 1 }");
 }
 
 #[test]
 fn bit_string_segment_nosize2() {
-    assert_error!("case <<1>> { <<_:bit_string, _:binary>> -> 1 }");
+    assert_error!("case <<1>> { <<_:bit_string, _:bytes>> -> 1 }");
 }
 
 #[test]
 fn bit_string_segment_nosize3() {
-    assert_error!("case <<1>> { <<_:binary, _:bit_string>> -> 1 }");
+    assert_error!("case <<1>> { <<_:bytes, _:bit_string>> -> 1 }");
 }
 
 #[test]
@@ -193,7 +193,7 @@ fn bit_string_float_size() {
 #[test]
 fn bit_string_binary_option_in_value() {
     // using binary in value
-    assert_error!("let x = <<<<1:1>>:binary>> x");
+    assert_error!("let x = <<<<1:1>>:bytes>> x");
 }
 
 #[test]
@@ -1416,10 +1416,10 @@ pub fn change(x: String) -> String {
   ""
 }
 
-pub fn parse(input: BitString) -> String {
+pub fn parse(input: BitArray) -> String {
   case input {
     <<>> -> 1
-    <<"(":utf8, b:binary>> ->
+    <<"(":utf8, b:bytes>> ->
       parse(input)
       |> change
   }
@@ -1456,8 +1456,8 @@ fn let_exhaustiveness3() {
     assert_module_error!(
         r#"
 pub type Media {
-    Audio(BitString)
-    Video(BitString)
+    Audio(BitArray)
+    Video(BitArray)
     Text(String)
 }
 pub fn main(m) {
@@ -1473,8 +1473,8 @@ fn let_exhaustiveness4() {
     assert_module_error!(
         r#"
 pub type Media {
-    Audio(BitString)
-    Video(BitString)
+    Audio(BitArray)
+    Video(BitArray)
     Text(String)
 }
 pub fn main(m) {
@@ -1516,8 +1516,8 @@ fn case_exhaustiveness3() {
     assert_module_error!(
         r#"
 pub type Media {
-    Audio(BitString)
-    Video(BitString)
+    Audio(BitArray)
+    Video(BitArray)
     Text(String)
 }
 pub fn main(m) {
@@ -1535,8 +1535,8 @@ fn case_exhaustiveness4() {
     assert_module_error!(
         r#"
 pub type Media {
-    Audio(BitString)
-    Video(BitString)
+    Audio(BitArray)
+    Video(BitArray)
     Text(String)
 }
 pub fn main(m) {
@@ -1553,8 +1553,8 @@ fn case_exhaustiveness5() {
     assert_module_error!(
         r#"
 pub type Media {
-    Audio(BitString)
-    Video(BitString)
+    Audio(BitArray)
+    Video(BitArray)
     Text(String)
 }
 pub fn main(m) {

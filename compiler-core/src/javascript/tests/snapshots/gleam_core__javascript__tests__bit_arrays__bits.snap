@@ -3,9 +3,9 @@ source: compiler-core/src/javascript/tests/bit_arrays.rs
 assertion_line: 148
 expression: "\nfn go(x) {\n  <<x:bits>>\n}\n"
 ---
-import { toBitString } from "../gleam.mjs";
+import { toBitArray } from "../gleam.mjs";
 
 function go(x) {
-  return toBitString([x.buffer]);
+  return toBitArray([x.buffer]);
 }
 

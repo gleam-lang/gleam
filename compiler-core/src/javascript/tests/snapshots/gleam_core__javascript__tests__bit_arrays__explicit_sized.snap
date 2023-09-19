@@ -3,9 +3,9 @@ source: compiler-core/src/javascript/tests/bit_arrays.rs
 assertion_line: 71
 expression: "\nfn go() {\n  <<256:size(4)>>\n}\n"
 ---
-import { toBitString, sizedInt } from "../gleam.mjs";
+import { toBitArray, sizedInt } from "../gleam.mjs";
 
 function go() {
-  return toBitString([sizedInt(256, 4)]);
+  return toBitArray([sizedInt(256, 4)]);
 }
 

@@ -614,7 +614,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         expected_bytes: usize,
         has_tail_spread: bool,
     ) {
-        self.checks.push(Check::BitStringLength {
+        self.checks.push(Check::BitArrayLength {
             expected_bytes,
             has_tail_spread,
             subject,
@@ -676,7 +676,7 @@ pub enum Check<'a> {
         expected_length: usize,
         has_tail_spread: bool,
     },
-    BitStringLength {
+    BitArrayLength {
         subject: Document<'a>,
         path: Document<'a>,
         expected_bytes: usize,
@@ -766,7 +766,7 @@ impl<'a> Check<'a> {
                     docvec!["!", subject, path, length_check,]
                 }
             }
-            Check::BitStringLength {
+            Check::BitArrayLength {
                 subject,
                 path,
                 expected_bytes,

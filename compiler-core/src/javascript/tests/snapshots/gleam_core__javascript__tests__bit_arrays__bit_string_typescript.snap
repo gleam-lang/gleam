@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 148
-expression: "\npub fn go(x) {\n  <<x:bit_string, \"Gleam\":utf8>>\n}\n"
+assertion_line: 159
+expression: "\npub fn go(x) {\n  <<x:bit_string>>\n}\n"
 ---
 import type * as _ from "../gleam.d.mts";
 
-export function go(x: _.BitString): _.BitString;
+export function go(x: _.BitArray): _.BitArray;
 
