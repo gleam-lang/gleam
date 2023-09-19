@@ -3085,12 +3085,12 @@ fn str_to_bit_string_segment_option<A>(
     location: SrcSpan,
 ) -> Option<BitStringSegmentOption<A>> {
     match lit {
-        "binary" => Some(BitStringSegmentOption::Binary { location }),
-        "bytes" => Some(BitStringSegmentOption::Binary { location }),
+        "binary" => Some(BitStringSegmentOption::Bytes { location }),
+        "bytes" => Some(BitStringSegmentOption::Bytes { location }),
         "int" => Some(BitStringSegmentOption::Int { location }),
         "float" => Some(BitStringSegmentOption::Float { location }),
-        "bit_string" => Some(BitStringSegmentOption::BitString { location }),
-        "bits" => Some(BitStringSegmentOption::BitString { location }),
+        "bit_string" => Some(BitStringSegmentOption::Bits { location }),
+        "bits" => Some(BitStringSegmentOption::Bits { location }),
         "utf8" => Some(BitStringSegmentOption::Utf8 { location }),
         "utf16" => Some(BitStringSegmentOption::Utf16 { location }),
         "utf32" => Some(BitStringSegmentOption::Utf32 { location }),

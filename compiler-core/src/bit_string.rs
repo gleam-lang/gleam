@@ -52,8 +52,8 @@ impl<T> SegmentOptionCategories<'_, T> {
         match self.typ {
             Some(Int { .. }) => crate::type_::int(),
             Some(Float { .. }) => crate::type_::float(),
-            Some(Binary { .. }) => crate::type_::bits(),
-            Some(BitString { .. }) => crate::type_::bits(),
+            Some(Bytes { .. }) => crate::type_::bits(),
+            Some(Bits { .. }) => crate::type_::bits(),
             Some(Utf8 { .. }) => crate::type_::string(),
             Some(Utf16 { .. }) => crate::type_::string(),
             Some(Utf32 { .. }) => crate::type_::string(),
@@ -80,10 +80,12 @@ where
     // Basic category checking
     for option in input_options {
         match option {
-            Binary { .. }
+            Bytes { .. }
+            | Binary { .. }
+            | BitString { .. }
             | Int { .. }
             | Float { .. }
-            | BitString { .. }
+            | Bits { .. }
             | Utf8 { .. }
             | Utf16 { .. }
             | Utf32 { .. }
@@ -152,7 +154,7 @@ where
             signed: Some(opt), ..
         }
         | SegmentOptionCategories {
-            typ: Some(opt @ Binary { .. }),
+            typ: Some(opt @ Bytes { .. }),
             ..
         } = categories
         {
@@ -163,7 +165,7 @@ where
     // All but the last segment in a pattern must have an exact size
     if must_have_size {
         if let SegmentOptionCategories {
-            typ: Some(opt @ (Binary { .. } | BitString { .. })),
+            typ: Some(opt @ (Bytes { .. } | Bits { .. })),
             size: None,
             ..
         } = categories

@@ -1776,10 +1776,14 @@ where
     ToDoc: FnMut(&Value) -> Document<'_>,
 {
     match option {
-        BitStringSegmentOption::Binary { .. } => "binary".to_doc(),
+        BitStringSegmentOption::Binary { .. } | BitStringSegmentOption::Bytes { .. } => {
+            "bytes".to_doc()
+        }
+        BitStringSegmentOption::BitString { .. } | BitStringSegmentOption::Bits { .. } => {
+            "bits".to_doc()
+        }
         BitStringSegmentOption::Int { .. } => "int".to_doc(),
         BitStringSegmentOption::Float { .. } => "float".to_doc(),
-        BitStringSegmentOption::BitString { .. } => "bit_string".to_doc(),
         BitStringSegmentOption::Utf8 { .. } => "utf8".to_doc(),
         BitStringSegmentOption::Utf16 { .. } => "utf16".to_doc(),
         BitStringSegmentOption::Utf32 { .. } => "utf32".to_doc(),

@@ -289,7 +289,7 @@ impl ModuleDecoder {
     ) -> Result<TypedConstantBitStringSegmentOption> {
         use bit_string_segment_option::Which;
         Ok(match reader.which()? {
-            Which::Binary(_) => BitStringSegmentOption::Binary {
+            Which::Bytes(_) => BitStringSegmentOption::Bytes {
                 location: Default::default(),
             },
             Which::Integer(_) => BitStringSegmentOption::Int {
@@ -298,7 +298,7 @@ impl ModuleDecoder {
             Which::Float(_) => BitStringSegmentOption::Float {
                 location: Default::default(),
             },
-            Which::Bitstring(_) => BitStringSegmentOption::BitString {
+            Which::Bits(_) => BitStringSegmentOption::Bits {
                 location: Default::default(),
             },
             Which::Utf8(_) => BitStringSegmentOption::Utf8 {

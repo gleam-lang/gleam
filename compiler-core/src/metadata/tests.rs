@@ -813,7 +813,7 @@ fn constant_bit_string_size_short_form() {
 
 #[test]
 fn constant_bit_string_bit_string() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::BitString {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Bits {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);

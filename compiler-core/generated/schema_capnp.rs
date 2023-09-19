@@ -4751,7 +4751,7 @@ pub mod bit_string_segment {
 }
 
 pub mod bit_string_segment_option {
-  pub use self::Which::{Binary,Integer,Float,Bitstring,Utf8,Utf16,Utf32,Utf8Codepoint,Utf16Codepoint,Utf32Codepoint,Signed,Unsigned,Big,Little,Native,Size,Unit};
+  pub use self::Which::{Bytes,Integer,Float,Bits,Utf8,Utf16,Utf32,Utf8Codepoint,Utf16Codepoint,Utf32Codepoint,Signed,Unsigned,Big,Little,Native,Size,Unit};
 
   #[derive(Copy, Clone)]
   pub struct Owned(());
@@ -4802,7 +4802,7 @@ pub mod bit_string_segment_option {
     pub fn which(self) -> ::core::result::Result<WhichReader<'a,>, ::capnp::NotInSchema> {
       match self.reader.get_data_field::<u16>(0) {
         0 => {
-          ::core::result::Result::Ok(Binary(
+          ::core::result::Result::Ok(Bytes(
             ()
           ))
         }
@@ -4817,7 +4817,7 @@ pub mod bit_string_segment_option {
           ))
         }
         3 => {
-          ::core::result::Result::Ok(Bitstring(
+          ::core::result::Result::Ok(Bits(
             ()
           ))
         }
@@ -4940,7 +4940,7 @@ pub mod bit_string_segment_option {
       self.builder.into_reader().total_size()
     }
     #[inline]
-    pub fn set_binary(&mut self, _value: ())  {
+    pub fn set_bytes(&mut self, _value: ())  {
       self.builder.set_data_field::<u16>(0, 0);
     }
     #[inline]
@@ -4952,7 +4952,7 @@ pub mod bit_string_segment_option {
       self.builder.set_data_field::<u16>(0, 2);
     }
     #[inline]
-    pub fn set_bitstring(&mut self, _value: ())  {
+    pub fn set_bits(&mut self, _value: ())  {
       self.builder.set_data_field::<u16>(0, 3);
     }
     #[inline]
@@ -5017,7 +5017,7 @@ pub mod bit_string_segment_option {
     pub fn which(self) -> ::core::result::Result<WhichBuilder<'a,>, ::capnp::NotInSchema> {
       match self.builder.get_data_field::<u16>(0) {
         0 => {
-          ::core::result::Result::Ok(Binary(
+          ::core::result::Result::Ok(Bytes(
             ()
           ))
         }
@@ -5032,7 +5032,7 @@ pub mod bit_string_segment_option {
           ))
         }
         3 => {
-          ::core::result::Result::Ok(Bitstring(
+          ::core::result::Result::Ok(Bits(
             ()
           ))
         }
@@ -5120,10 +5120,10 @@ pub mod bit_string_segment_option {
     pub const TYPE_ID: u64 = 0xa450_f944_38a3_b881;
   }
   pub enum Which<A0,A1> {
-    Binary(()),
+    Bytes(()),
     Integer(()),
     Float(()),
-    Bitstring(()),
+    Bits(()),
     Utf8(()),
     Utf16(()),
     Utf32(()),
