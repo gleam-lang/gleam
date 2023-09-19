@@ -147,7 +147,7 @@ struct Constant {
       typ @8 :Type;
     }
 
-    bitString @9 :List(BitStringSegment);
+    bitArray @9 :List(BitArraySegment);
 
     var :group {
       module @10 :Text;
@@ -158,13 +158,13 @@ struct Constant {
   }
 }
 
-struct BitStringSegment {
+struct BitArraySegment {
   value @0 :Constant;
-  options @1 :List(BitStringSegmentOption);
+  options @1 :List(BitArraySegmentOption);
   type @2 :Type;
 }
 
-struct BitStringSegmentOption {
+struct BitArraySegmentOption {
   union {
     bytes @0 :Void;
 

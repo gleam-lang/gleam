@@ -1107,9 +1107,9 @@ pub enum Pattern<Type> {
         elems: Vec<Self>,
     },
 
-    BitString {
+    BitArray {
         location: SrcSpan,
-        segments: Vec<BitStringSegment<Self, Type>>,
+        segments: Vec<BitArraySegment<Self, Type>>,
     },
 
     // "prefix" <> variable
@@ -1172,7 +1172,7 @@ impl<A> Pattern<A> {
             | Pattern::Tuple { location, .. }
             | Pattern::Constructor { location, .. }
             | Pattern::Concatenate { location, .. }
-            | Pattern::BitString { location, .. } => *location,
+            | Pattern::BitArray { location, .. } => *location,
         }
     }
 
@@ -1196,7 +1196,7 @@ impl TypedPattern {
             | Pattern::Discard { .. }
             | Pattern::List { .. }
             | Pattern::Tuple { .. }
-            | Pattern::BitString { .. }
+            | Pattern::BitArray { .. }
             | Pattern::Concatenate { .. } => None,
 
             Pattern::Constructor { constructor, .. } => constructor.definition_location(),
@@ -1214,7 +1214,7 @@ impl TypedPattern {
             | Pattern::Discard { .. }
             | Pattern::List { .. }
             | Pattern::Tuple { .. }
-            | Pattern::BitString { .. }
+            | Pattern::BitArray { .. }
             | Pattern::Concatenate { .. } => None,
 
             Pattern::Constructor { constructor, .. } => constructor.get_documentation(),
@@ -1226,7 +1226,7 @@ impl TypedPattern {
             Pattern::Int { .. } => type_::int(),
             Pattern::Float { .. } => type_::float(),
             Pattern::String { .. } => type_::string(),
-            Pattern::BitString { .. } => type_::bits(),
+            Pattern::BitArray { .. } => type_::bits(),
             Pattern::Concatenate { .. } => type_::string(),
 
             Pattern::Var { type_, .. }
@@ -1255,7 +1255,7 @@ impl TypedPattern {
             | Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
-            | Pattern::BitString { .. }
+            | Pattern::BitArray { .. }
             | Pattern::Concatenate { .. } => Some(Located::Pattern(self)),
 
             Pattern::Constructor { arguments, .. } => {
@@ -1296,33 +1296,33 @@ impl AssignmentKind {
 
 // BitStrings
 
-pub type UntypedExprBitStringSegment = BitStringSegment<UntypedExpr, ()>;
-pub type TypedExprBitStringSegment = BitStringSegment<TypedExpr, Arc<Type>>;
+pub type UntypedExprBitArraySegment = BitArraySegment<UntypedExpr, ()>;
+pub type TypedExprBitArraySegment = BitArraySegment<TypedExpr, Arc<Type>>;
 
-pub type UntypedConstantBitStringSegment = BitStringSegment<UntypedConstant, ()>;
-pub type TypedConstantBitStringSegment = BitStringSegment<TypedConstant, Arc<Type>>;
+pub type UntypedConstantBitArraySegment = BitArraySegment<UntypedConstant, ()>;
+pub type TypedConstantBitArraySegment = BitArraySegment<TypedConstant, Arc<Type>>;
 
-pub type UntypedPatternBitStringSegment = BitStringSegment<UntypedPattern, ()>;
-pub type TypedPatternBitStringSegment = BitStringSegment<TypedPattern, Arc<Type>>;
+pub type UntypedPatternBitArraySegment = BitArraySegment<UntypedPattern, ()>;
+pub type TypedPatternBitArraySegment = BitArraySegment<TypedPattern, Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BitStringSegment<Value, Type> {
+pub struct BitArraySegment<Value, Type> {
     pub location: SrcSpan,
     pub value: Box<Value>,
-    pub options: Vec<BitStringSegmentOption<Value>>,
+    pub options: Vec<BitArrayOption<Value>>,
     pub type_: Type,
 }
 
-impl TypedExprBitStringSegment {
+impl TypedExprBitArraySegment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
 }
 
-pub type TypedConstantBitStringSegmentOption = BitStringSegmentOption<TypedConstant>;
+pub type TypedConstantBitArraySegmentOption = BitArrayOption<TypedConstant>;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum BitStringSegmentOption<Value> {
+pub enum BitArrayOption<Value> {
     Bytes {
         location: SrcSpan,
     },
@@ -1405,59 +1405,59 @@ pub enum BitStringSegmentOption<Value> {
     },
 }
 
-impl<A> BitStringSegmentOption<A> {
+impl<A> BitArrayOption<A> {
     pub fn value(&self) -> Option<&A> {
         match self {
-            BitStringSegmentOption::Size { value, .. } => Some(value),
+            BitArrayOption::Size { value, .. } => Some(value),
             _ => None,
         }
     }
 
     pub fn location(&self) -> SrcSpan {
         match self {
-            BitStringSegmentOption::Bytes { location }
-            | BitStringSegmentOption::Binary { location }
-            | BitStringSegmentOption::BitString { location }
-            | BitStringSegmentOption::Int { location }
-            | BitStringSegmentOption::Float { location }
-            | BitStringSegmentOption::Bits { location }
-            | BitStringSegmentOption::Utf8 { location }
-            | BitStringSegmentOption::Utf16 { location }
-            | BitStringSegmentOption::Utf32 { location }
-            | BitStringSegmentOption::Utf8Codepoint { location }
-            | BitStringSegmentOption::Utf16Codepoint { location }
-            | BitStringSegmentOption::Utf32Codepoint { location }
-            | BitStringSegmentOption::Signed { location }
-            | BitStringSegmentOption::Unsigned { location }
-            | BitStringSegmentOption::Big { location }
-            | BitStringSegmentOption::Little { location }
-            | BitStringSegmentOption::Native { location }
-            | BitStringSegmentOption::Size { location, .. }
-            | BitStringSegmentOption::Unit { location, .. } => *location,
+            BitArrayOption::Bytes { location }
+            | BitArrayOption::Binary { location }
+            | BitArrayOption::BitString { location }
+            | BitArrayOption::Int { location }
+            | BitArrayOption::Float { location }
+            | BitArrayOption::Bits { location }
+            | BitArrayOption::Utf8 { location }
+            | BitArrayOption::Utf16 { location }
+            | BitArrayOption::Utf32 { location }
+            | BitArrayOption::Utf8Codepoint { location }
+            | BitArrayOption::Utf16Codepoint { location }
+            | BitArrayOption::Utf32Codepoint { location }
+            | BitArrayOption::Signed { location }
+            | BitArrayOption::Unsigned { location }
+            | BitArrayOption::Big { location }
+            | BitArrayOption::Little { location }
+            | BitArrayOption::Native { location }
+            | BitArrayOption::Size { location, .. }
+            | BitArrayOption::Unit { location, .. } => *location,
         }
     }
 
     pub fn label(&self) -> SmolStr {
         match self {
-            BitStringSegmentOption::Binary { .. } => "binary".into(),
-            BitStringSegmentOption::Bytes { .. } => "bytes".into(),
-            BitStringSegmentOption::Int { .. } => "int".into(),
-            BitStringSegmentOption::Float { .. } => "float".into(),
-            BitStringSegmentOption::Bits { .. } => "bits".into(),
-            BitStringSegmentOption::BitString { .. } => "bit_string".into(),
-            BitStringSegmentOption::Utf8 { .. } => "utf8".into(),
-            BitStringSegmentOption::Utf16 { .. } => "utf16".into(),
-            BitStringSegmentOption::Utf32 { .. } => "utf32".into(),
-            BitStringSegmentOption::Utf8Codepoint { .. } => "utf8_codepoint".into(),
-            BitStringSegmentOption::Utf16Codepoint { .. } => "utf16_codepoint".into(),
-            BitStringSegmentOption::Utf32Codepoint { .. } => "utf32_codepoint".into(),
-            BitStringSegmentOption::Signed { .. } => "signed".into(),
-            BitStringSegmentOption::Unsigned { .. } => "unsigned".into(),
-            BitStringSegmentOption::Big { .. } => "big".into(),
-            BitStringSegmentOption::Little { .. } => "little".into(),
-            BitStringSegmentOption::Native { .. } => "native".into(),
-            BitStringSegmentOption::Size { .. } => "size".into(),
-            BitStringSegmentOption::Unit { .. } => "unit".into(),
+            BitArrayOption::Binary { .. } => "binary".into(),
+            BitArrayOption::Bytes { .. } => "bytes".into(),
+            BitArrayOption::Int { .. } => "int".into(),
+            BitArrayOption::Float { .. } => "float".into(),
+            BitArrayOption::Bits { .. } => "bits".into(),
+            BitArrayOption::BitString { .. } => "bit_string".into(),
+            BitArrayOption::Utf8 { .. } => "utf8".into(),
+            BitArrayOption::Utf16 { .. } => "utf16".into(),
+            BitArrayOption::Utf32 { .. } => "utf32".into(),
+            BitArrayOption::Utf8Codepoint { .. } => "utf8_codepoint".into(),
+            BitArrayOption::Utf16Codepoint { .. } => "utf16_codepoint".into(),
+            BitArrayOption::Utf32Codepoint { .. } => "utf32_codepoint".into(),
+            BitArrayOption::Signed { .. } => "signed".into(),
+            BitArrayOption::Unsigned { .. } => "unsigned".into(),
+            BitArrayOption::Big { .. } => "big".into(),
+            BitArrayOption::Little { .. } => "little".into(),
+            BitArrayOption::Native { .. } => "native".into(),
+            BitArrayOption::Size { .. } => "size".into(),
+            BitArrayOption::Unit { .. } => "unit".into(),
         }
     }
 }

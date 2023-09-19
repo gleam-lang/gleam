@@ -19,8 +19,8 @@ use smol_str::SmolStr;
 
 use crate::{
     ast::{
-        ArgNames, BitStringSegment, CallArg, Constant, DefinitionLocation, Pattern, SrcSpan,
-        TypedConstant, TypedExpr, TypedPattern, TypedPatternBitStringSegment, TypedRecordUpdateArg,
+        ArgNames, BitArraySegment, CallArg, Constant, DefinitionLocation, Pattern, SrcSpan,
+        TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment, TypedRecordUpdateArg,
         UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
     },
     bit_string,

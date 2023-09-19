@@ -186,7 +186,7 @@ impl<'module> Generator<'module> {
                 location, message, ..
             } => Ok(self.panic(location, message.as_deref())),
 
-            TypedExpr::BitString { segments, .. } => self.bit_string(segments),
+            TypedExpr::BitArray { segments, .. } => self.bit_string(segments),
 
             TypedExpr::ModuleSelect {
                 module_alias,
@@ -210,10 +210,10 @@ impl<'module> Generator<'module> {
         self.not_in_tail_position(|gen| Ok(docvec!(with, gen.wrap_expression(value)?)))
     }
 
-    fn bit_string<'a>(&mut self, segments: &'a [TypedExprBitStringSegment]) -> Output<'a> {
+    fn bit_string<'a>(&mut self, segments: &'a [TypedExprBitArraySegment]) -> Output<'a> {
         self.tracker.bit_string_literal_used = true;
 
-        use BitStringSegmentOption as Opt;
+        use BitArrayOption as Opt;
 
         // Collect all the values used in segments.
         let segments_array = array(segments.iter().map(|segment| {
@@ -258,7 +258,7 @@ impl<'module> Generator<'module> {
             }
         }))?;
 
-        Ok(docvec!["toBitString(", segments_array, ")"])
+        Ok(docvec!["toBitArray(", segments_array, ")"])
     }
 
     pub fn wrap_return<'a>(&self, document: Document<'a>) -> Document<'a> {
@@ -1229,7 +1229,7 @@ pub(crate) fn constant_expression<'a>(
             Ok(construct_record(module.as_deref(), tag, field_values))
         }
 
-        Constant::BitString { segments, .. } => bit_string(tracker, segments),
+        Constant::BitArray { segments, .. } => bit_array(tracker, segments),
 
         Constant::Var { name, module, .. } => Ok({
             match module {
@@ -1240,13 +1240,13 @@ pub(crate) fn constant_expression<'a>(
     }
 }
 
-fn bit_string<'a>(
+fn bit_array<'a>(
     tracker: &mut UsageTracker,
-    segments: &'a [BitStringSegment<TypedConstant, Arc<Type>>],
+    segments: &'a [BitArraySegment<TypedConstant, Arc<Type>>],
 ) -> Result<Document<'a>, Error> {
     tracker.bit_string_literal_used = true;
 
-    use BitStringSegmentOption as Opt;
+    use BitArrayOption as Opt;
 
     let segments_array = array(segments.iter().map(|segment| {
         let value = constant_expression(tracker, &segment.value)?;
@@ -1290,7 +1290,7 @@ fn bit_string<'a>(
         }
     }))?;
 
-    Ok(docvec!["toBitString(", segments_array, ")"])
+    Ok(docvec!["toBitArray(", segments_array, ")"])
 }
 
 pub fn string(value: &str) -> Document<'_> {
@@ -1390,7 +1390,7 @@ impl TypedExpr {
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
-            | TypedExpr::BitString { .. }
+            | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. } => false,
@@ -1444,7 +1444,7 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::BinOp { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::NegateInt { .. }
-            | TypedExpr::BitString { .. }
+            | TypedExpr::BitArray { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::RecordUpdate { .. }

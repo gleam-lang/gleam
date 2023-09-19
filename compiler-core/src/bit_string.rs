@@ -1,6 +1,6 @@
 use smol_str::SmolStr;
 
-use crate::ast::{BitStringSegmentOption, SrcSpan};
+use crate::ast::{BitArrayOption, SrcSpan};
 use crate::type_::Type;
 use std::sync::Arc;
 
@@ -9,7 +9,7 @@ use std::sync::Arc;
 //
 
 pub fn type_options_for_value<TypedValue>(
-    input_options: &[BitStringSegmentOption<TypedValue>],
+    input_options: &[BitArrayOption<TypedValue>],
 ) -> Result<Arc<Type>, Error>
 where
     TypedValue: GetLiteralValue,
@@ -18,7 +18,7 @@ where
 }
 
 pub fn type_options_for_pattern<TypedValue>(
-    input_options: &[BitStringSegmentOption<TypedValue>],
+    input_options: &[BitArrayOption<TypedValue>],
     must_have_size: bool,
 ) -> Result<Arc<Type>, Error>
 where
@@ -28,11 +28,11 @@ where
 }
 
 struct SegmentOptionCategories<'a, T> {
-    typ: Option<&'a BitStringSegmentOption<T>>,
-    signed: Option<&'a BitStringSegmentOption<T>>,
-    endian: Option<&'a BitStringSegmentOption<T>>,
-    unit: Option<&'a BitStringSegmentOption<T>>,
-    size: Option<&'a BitStringSegmentOption<T>>,
+    typ: Option<&'a BitArrayOption<T>>,
+    signed: Option<&'a BitArrayOption<T>>,
+    endian: Option<&'a BitArrayOption<T>>,
+    unit: Option<&'a BitArrayOption<T>>,
+    size: Option<&'a BitArrayOption<T>>,
 }
 
 impl<T> SegmentOptionCategories<'_, T> {
@@ -47,7 +47,7 @@ impl<T> SegmentOptionCategories<'_, T> {
     }
 
     fn segment_type(&self) -> Arc<Type> {
-        use BitStringSegmentOption::*;
+        use BitArrayOption::*;
 
         match self.typ {
             Some(Int { .. }) => crate::type_::int(),
@@ -67,14 +67,14 @@ impl<T> SegmentOptionCategories<'_, T> {
 }
 
 fn type_options<TypedValue>(
-    input_options: &[BitStringSegmentOption<TypedValue>],
+    input_options: &[BitArrayOption<TypedValue>],
     value_mode: bool,
     must_have_size: bool,
 ) -> Result<Arc<Type>, Error>
 where
     TypedValue: GetLiteralValue,
 {
-    use BitStringSegmentOption::*;
+    use BitArrayOption::*;
 
     let mut categories = SegmentOptionCategories::new();
     // Basic category checking
@@ -287,8 +287,8 @@ impl GetLiteralValue for crate::ast::Pattern<Arc<Type>> {
     }
 }
 
-fn is_unicode<T>(opt: &BitStringSegmentOption<T>) -> bool {
-    use BitStringSegmentOption::*;
+fn is_unicode<T>(opt: &BitArrayOption<T>) -> bool {
+    use BitArrayOption::*;
 
     matches!(
         opt,

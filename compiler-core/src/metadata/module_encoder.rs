@@ -2,8 +2,8 @@ use smol_str::SmolStr;
 
 use crate::{
     ast::{
-        Constant, SrcSpan, TypedConstant, TypedConstantBitStringSegment,
-        TypedConstantBitStringSegmentOption,
+        Constant, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
+        TypedConstantBitArraySegmentOption,
     },
     schema_capnp::{self as schema, *},
     type_::{
@@ -270,10 +270,10 @@ impl<'a> ModuleEncoder<'a> {
                 self.build_type(builder.init_type(), typ);
             }
 
-            Constant::BitString { segments, .. } => {
-                let mut builder = builder.init_bit_string(segments.len() as u32);
+            Constant::BitArray { segments, .. } => {
+                let mut builder = builder.init_bit_array(segments.len() as u32);
                 for (i, segment) in segments.iter().enumerate() {
-                    self.build_bit_string_segment(builder.reborrow().get(i as u32), segment);
+                    self.build_bit_array_segment(builder.reborrow().get(i as u32), segment);
                 }
             }
 
@@ -323,10 +323,10 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
-    fn build_bit_string_segment(
+    fn build_bit_array_segment(
         &mut self,
-        mut builder: bit_string_segment::Builder<'_>,
-        segment: &TypedConstantBitStringSegment,
+        mut builder: bit_array_segment::Builder<'_>,
+        segment: &TypedConstantBitArraySegment,
     ) {
         self.build_constant(builder.reborrow().init_value(), &segment.value);
         {
@@ -334,18 +334,18 @@ impl<'a> ModuleEncoder<'a> {
                 .reborrow()
                 .init_options(segment.options.len() as u32);
             for (i, option) in segment.options.iter().enumerate() {
-                self.build_bit_string_segment_option(builder.reborrow().get(i as u32), option);
+                self.build_bit_array_segment_option(builder.reborrow().get(i as u32), option);
             }
         }
         self.build_type(builder.init_type(), &segment.type_);
     }
 
-    fn build_bit_string_segment_option(
+    fn build_bit_array_segment_option(
         &mut self,
-        mut builder: bit_string_segment_option::Builder<'_>,
-        option: &TypedConstantBitStringSegmentOption,
+        mut builder: bit_array_segment_option::Builder<'_>,
+        option: &TypedConstantBitArraySegmentOption,
     ) {
-        use crate::ast::TypedConstantBitStringSegmentOption as Opt;
+        use crate::ast::TypedConstantBitArraySegmentOption as Opt;
         match option {
             Opt::Binary { .. } | Opt::Bytes { .. } => builder.set_bytes(()),
             Opt::Int { .. } => builder.set_integer(()),

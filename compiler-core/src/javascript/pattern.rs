@@ -452,8 +452,8 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 Ok(())
             }
 
-            Pattern::BitString { segments, .. } => {
-                use BitStringSegmentOption as Opt;
+            Pattern::BitArray { segments, .. } => {
+                use BitArrayOption as Opt;
 
                 let mut offset = Offset::new();
                 for segment in segments {

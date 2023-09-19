@@ -56,13 +56,13 @@ mod token;
 
 use crate::analyse::Inferred;
 use crate::ast::{
-    Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitStringSegment,
-    BitStringSegmentOption, CallArg, Clause, ClauseGuard, Constant, CustomType, Definition,
-    Function, HasLocation, Import, ImportName, Module, ModuleConstant, Pattern, RecordConstructor,
-    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind,
-    TypeAlias, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
-    UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern,
-    UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
+    Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
+    CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, HasLocation, Import,
+    ImportName, Module, ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg,
+    RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
+    UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
+    UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
+    UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -507,7 +507,7 @@ where
                     Some(&Token::Comma),
                 )?;
                 let (_, end) = self.expect_one(&Token::GtGt)?;
-                UntypedExpr::BitString {
+                UntypedExpr::BitArray {
                     location: SrcSpan { start, end },
                     segments,
                 }
@@ -1035,7 +1035,7 @@ where
                         Parser::parse_bit_string_segment(
                             s,
                             &|s| match Parser::parse_pattern(s) {
-                                Ok(Some(Pattern::BitString { location, .. })) => {
+                                Ok(Some(Pattern::BitArray { location, .. })) => {
                                     parse_error(ParseErrorType::NestedBitStringPattern, location)
                                 }
                                 x => x,
@@ -1047,7 +1047,7 @@ where
                     Some(&Token::Comma),
                 )?;
                 let (_, end) = self.expect_one(&Token::GtGt)?;
-                Pattern::BitString {
+                Pattern::BitArray {
                     location: SrcSpan { start, end },
                     segments,
                 }
@@ -2167,7 +2167,7 @@ where
                     Some(&Token::Comma),
                 )?;
                 let (_, end) = self.expect_one(&Token::GtGt)?;
-                Ok(Some(Constant::BitString {
+                Ok(Some(Constant::BitArray {
                     location: SrcSpan { start, end },
                     segments,
                 }))
@@ -2335,7 +2335,7 @@ where
         value_parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
         to_int_segment: &impl Fn(SmolStr, u32, u32) -> A,
-    ) -> Result<Option<BitStringSegment<A, ()>>, ParseError>
+    ) -> Result<Option<BitArraySegment<A, ()>>, ParseError>
     where
         A: HasLocation,
     {
@@ -2353,7 +2353,7 @@ where
                 .last()
                 .map(|o| o.location().end)
                 .unwrap_or_else(|| value.location().end);
-            Ok(Some(BitStringSegment {
+            Ok(Some(BitArraySegment {
                 location: SrcSpan {
                     start: value.location().start,
                     end,
@@ -2376,7 +2376,7 @@ where
         &mut self,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
         to_int_segment: &impl Fn(SmolStr, u32, u32) -> A,
-    ) -> Result<Option<BitStringSegmentOption<A>>, ParseError> {
+    ) -> Result<Option<BitArrayOption<A>>, ParseError> {
         match self.next_tok() {
             // named segment
             Some((start, Token::Name { name }, end)) => {
@@ -2389,12 +2389,10 @@ where
                                 let (_, end) = self.expect_one(&Token::RightParen)?;
                                 let v = value.replace('_', "");
                                 match u8::from_str(&v) {
-                                    Ok(units) if units > 0 => {
-                                        Ok(Some(BitStringSegmentOption::Unit {
-                                            location: SrcSpan { start, end },
-                                            value: units,
-                                        }))
-                                    }
+                                    Ok(units) if units > 0 => Ok(Some(BitArrayOption::Unit {
+                                        location: SrcSpan { start, end },
+                                        value: units,
+                                    })),
 
                                     _ => Err(ParseError {
                                         error: ParseErrorType::InvalidBitStringUnit,
@@ -2412,7 +2410,7 @@ where
                         "size" => {
                             let value = arg_parser(self)?;
                             let (_, end) = self.expect_one(&Token::RightParen)?;
-                            Ok(Some(BitStringSegmentOption::Size {
+                            Ok(Some(BitArrayOption::Size {
                                 location: SrcSpan { start, end },
                                 value: Box::new(value),
                                 short_form: false,
@@ -2433,7 +2431,7 @@ where
                 }
             }
             // int segment
-            Some((start, Token::Int { value }, end)) => Ok(Some(BitStringSegmentOption::Size {
+            Some((start, Token::Int { value }, end)) => Ok(Some(BitArrayOption::Size {
                 location: SrcSpan { start, end },
                 value: Box::new(to_int_segment(value, start, end)),
                 short_form: true,
@@ -3080,28 +3078,25 @@ fn bit_string_const_int(value: SmolStr, start: u32, end: u32) -> UntypedConstant
     }
 }
 
-fn str_to_bit_string_segment_option<A>(
-    lit: &str,
-    location: SrcSpan,
-) -> Option<BitStringSegmentOption<A>> {
+fn str_to_bit_string_segment_option<A>(lit: &str, location: SrcSpan) -> Option<BitArrayOption<A>> {
     match lit {
-        "binary" => Some(BitStringSegmentOption::Bytes { location }),
-        "bytes" => Some(BitStringSegmentOption::Bytes { location }),
-        "int" => Some(BitStringSegmentOption::Int { location }),
-        "float" => Some(BitStringSegmentOption::Float { location }),
-        "bit_string" => Some(BitStringSegmentOption::Bits { location }),
-        "bits" => Some(BitStringSegmentOption::Bits { location }),
-        "utf8" => Some(BitStringSegmentOption::Utf8 { location }),
-        "utf16" => Some(BitStringSegmentOption::Utf16 { location }),
-        "utf32" => Some(BitStringSegmentOption::Utf32 { location }),
-        "utf8_codepoint" => Some(BitStringSegmentOption::Utf8Codepoint { location }),
-        "utf16_codepoint" => Some(BitStringSegmentOption::Utf16Codepoint { location }),
-        "utf32_codepoint" => Some(BitStringSegmentOption::Utf32Codepoint { location }),
-        "signed" => Some(BitStringSegmentOption::Signed { location }),
-        "unsigned" => Some(BitStringSegmentOption::Unsigned { location }),
-        "big" => Some(BitStringSegmentOption::Big { location }),
-        "little" => Some(BitStringSegmentOption::Little { location }),
-        "native" => Some(BitStringSegmentOption::Native { location }),
+        "binary" => Some(BitArrayOption::Bytes { location }),
+        "bytes" => Some(BitArrayOption::Bytes { location }),
+        "int" => Some(BitArrayOption::Int { location }),
+        "float" => Some(BitArrayOption::Float { location }),
+        "bit_string" => Some(BitArrayOption::Bits { location }),
+        "bits" => Some(BitArrayOption::Bits { location }),
+        "utf8" => Some(BitArrayOption::Utf8 { location }),
+        "utf16" => Some(BitArrayOption::Utf16 { location }),
+        "utf32" => Some(BitArrayOption::Utf32 { location }),
+        "utf8_codepoint" => Some(BitArrayOption::Utf8Codepoint { location }),
+        "utf16_codepoint" => Some(BitArrayOption::Utf16Codepoint { location }),
+        "utf32_codepoint" => Some(BitArrayOption::Utf32Codepoint { location }),
+        "signed" => Some(BitArrayOption::Signed { location }),
+        "unsigned" => Some(BitArrayOption::Unsigned { location }),
+        "big" => Some(BitArrayOption::Big { location }),
+        "little" => Some(BitArrayOption::Little { location }),
+        "native" => Some(BitArrayOption::Native { location }),
         _ => None,
     }
 }
