@@ -832,6 +832,46 @@ fn clause_guard_tests() -> List(Test) {
         },
       )
     }),
+    "module access to string const(matches)"
+    |> example(fn() {
+      assert_equal(
+        True,
+        case "gleam" {
+          lang if lang == importable.language -> True
+          _ -> False
+        },
+      )
+    }),
+    "module access to string cnost(does not match)"
+    |> example(fn() {
+      assert_equal(
+        False,
+        case "python" {
+          lang if lang == importable.language -> True
+          _ -> False
+        },
+      )
+    }),
+     "module access to custom type const(matches)"
+    |> example(fn() {
+      assert_equal(
+        True,
+        case "WarGames" {
+          movie if movie == importable.war_games.title -> True
+          _ -> False
+        },
+      )
+    }),
+    "module access to custom type const(does not match)"
+    |> example(fn() {
+      assert_equal(
+        False,
+        case "Gattaca" {
+          movie if movie == importable.war_games.title-> True
+          _ -> False
+        },
+      )
+    }),
   ]
   // TODO
   // nested operators to check precedence
