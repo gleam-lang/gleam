@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 888
+expression: "\nimport gleam\npub type B = gleam.BitString\n"
+---
+
+warning: Deprecated BitString name used
+  ┌─ /src/warning/wrn.gleam:3:14
+  │
+3 │ pub type B = gleam.BitString
+  │              ^^^^^^^^^^^^^^^
+
+The type BitString has been renamed to BitArray.
+
+Hint: Run `gleam fix` to auto-fix your code.
+

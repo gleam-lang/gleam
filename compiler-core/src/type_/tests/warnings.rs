@@ -913,3 +913,38 @@ pub fn b() {
         "#
     );
 }
+
+#[test]
+fn deprecated_bit_string_type() {
+    assert_warning!(r#"pub type B = BitString"#);
+}
+
+#[test]
+fn deprecated_bit_string_type_imported() {
+    assert_warning!(
+        r#"
+import gleam
+pub type B = gleam.BitString
+"#
+    );
+}
+
+#[test]
+fn deprecated_bit_string_type_aliased() {
+    assert_warning!(
+        r#"
+import gleam.{BitString as BibbleWib}
+pub type B = BibbleWib
+"#
+    );
+}
+
+#[test]
+fn deprecated_bit_string_type_shadowed() {
+    assert_no_warnings!(
+        r#"
+pub type BitString = Nil
+pub type B = BitString
+"#
+    );
+}

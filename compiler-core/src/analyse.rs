@@ -97,7 +97,7 @@ pub fn infer_module<A>(
     // anywhere in the module.
     // TODO: Extract an ImportRegistrar class to perform this.
     for s in &statements.imports {
-        register_import(s, &name, origin, &mut env)?;
+        register_import(s, &name, origin, warnings, &mut env)?;
     }
 
     // Register types so they can be used in constructors and functions
@@ -220,6 +220,7 @@ pub fn register_import(
     import: &Import<()>,
     current_module: &str,
     origin: Origin,
+    warnings: &TypeWarningEmitter,
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     // Determine local alias of imported module
@@ -263,6 +264,12 @@ pub fn register_import(
         let mut type_imported = false;
         let mut value_imported = false;
         let mut variant = None;
+
+        if name == "BitString" && module == "gleam" {
+            warnings.emit(type_::Warning::DeprecatedBitString {
+                location: *location,
+            });
+        }
 
         let imported_name = as_name.as_ref().unwrap_or(name);
 
@@ -841,7 +848,7 @@ fn insert_type_alias(
         ..
     } = t;
     let typ = environment
-        .get_type_constructor(&None, &alias)
+        .get_type_constructor(&None, &alias, location)
         .expect("Could not find existing type for type alias")
         .typ
         .clone();
@@ -922,7 +929,7 @@ fn infer_custom_type(
         )
         .collect();
     let typed_parameters = environment
-        .get_type_constructor(&None, &name)
+        .get_type_constructor(&None, &name, location)
         .expect("Could not find preregistered type constructor ")
         .parameters
         .clone();
