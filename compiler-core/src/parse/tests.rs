@@ -161,7 +161,7 @@ fn string2() {
 
 #[test]
 fn bit_string() {
-    // non int value in BitString unit option
+    // non int value in bit array unit option
     assert_error!(
         "let x = <<1:unit(0)>> x",
         ParseError {

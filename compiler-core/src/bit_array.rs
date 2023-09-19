@@ -67,7 +67,7 @@ impl<T> SegmentOptionCategories<'_, T> {
             | Little { .. }
             | Native { .. }
             | Size { .. }
-            | Unit { .. } => panic!("Tried to type a non type kind BitString segment option.",),
+            | Unit { .. } => panic!("Tried to type a non type kind BitArray option."),
         }
     }
 }

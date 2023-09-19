@@ -216,7 +216,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             .try_collect()?;
 
         let segment_type = bit_array::type_options_for_pattern(&options, !is_last_segment)
-            .map_err(|error| Error::BitStringSegmentError {
+            .map_err(|error| Error::BitArraySegmentError {
                 error: error.error,
                 location: error.location,
             })?;
@@ -224,7 +224,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         let typ = {
             match value.deref() {
                 Pattern::Var { .. } if segment_type == string() => {
-                    Err(Error::BitStringSegmentError {
+                    Err(Error::BitArraySegmentError {
                         error: bit_array::ErrorType::VariableUtfSegmentInPattern,
                         location,
                     })

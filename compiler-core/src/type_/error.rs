@@ -20,7 +20,7 @@ pub enum Error {
         test_module: crate::error::Name,
     },
 
-    BitStringSegmentError {
+    BitArraySegmentError {
         error: crate::bit_array::ErrorType,
         location: SrcSpan,
     },

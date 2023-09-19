@@ -3,9 +3,9 @@ source: compiler-core/src/javascript/tests/bit_arrays.rs
 assertion_line: 82
 expression: "\nfn go(x, y) {\n  <<x:size(y)>>\n}\n"
 ---
-import { toBitString, sizedInt } from "../gleam.mjs";
+import { toBitArray, sizedInt } from "../gleam.mjs";
 
 function go(x, y) {
-  return toBitString([sizedInt(x, y)]);
+  return toBitArray([sizedInt(x, y)]);
 }
 

@@ -21,18 +21,18 @@ export interface List<T> extends Iterable<T> {
 
 export function toList<T>(array: Array<T>): List<T>;
 
-export interface BitStringStatic {
-  isBitString(value: unknown): boolean;
+export interface BitArrayStatic {
+  isBitArray(value: unknown): boolean;
 }
 
-export interface BitString {
-  get __gleam_prelude_variant__(): "BitString";
+export interface BitArray {
+  get __gleam_prelude_variant__(): "BitArray";
   get length(): number;
   inspect(): string;
   byteAt(index: number): number;
   floatAt(index: number): number;
   intFromSlice(start: number, end: number): number;
-  sliceAfter(index: number): BitString;
+  sliceAfter(index: number): BitArray;
 }
 
 export interface Utf8Codepoint {
@@ -40,9 +40,9 @@ export interface Utf8Codepoint {
   inspect(): string;
 }
 
-export function toBitString(segments: Array<number | Uint8Array>): BitString;
+export function toBitArray(segments: Array<number | Uint8Array>): BitArray;
 
-export function sizedInt(number: number, size: number): BitString;
+export function sizedInt(number: number, size: number): BitArray;
 
 export function stringBits(string: string): Uint8Array;
 
