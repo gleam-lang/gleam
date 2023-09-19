@@ -248,8 +248,10 @@ impl<'module> Generator<'module> {
                 }
 
                 // Bit arrays
-                [Opt::Bytes { .. } | Opt::Binary { .. } | Opt::BitString { .. } | Opt::Bits {
-.. }] => Ok(docvec![value, ".buffer"]),
+                [Opt::Bytes { .. }
+                | Opt::Binary { .. }
+                | Opt::BitString { .. }
+                | Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
 
                 // Anything else
                 _ => Err(Error::Unsupported {

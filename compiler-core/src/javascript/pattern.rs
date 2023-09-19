@@ -502,27 +502,29 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             Ok(())
                         }
 
-                        [Opt::Bytes { .. } | Opt::Binary { .. }, Opt::Size { value: size, .. }] |
-[Opt::Size { value: size, .. }, Opt::Bytes { .. } | Opt::Binary { .. }] => match &**size {
-                            Pattern::Int { value, .. } => {
-                                let start = offset.bytes;
-                                let increment = value
-                                    .parse::<usize>()
-                                    .expect("part of an Int node should always parse as integer");
-                                offset.increment(increment);
-                                let end = offset.bytes;
+                        [Opt::Bytes { .. } | Opt::Binary { .. }, Opt::Size { value: size, .. }]
+                        | [Opt::Size { value: size, .. }, Opt::Bytes { .. } | Opt::Binary { .. }] => {
+                            match &**size {
+                                Pattern::Int { value, .. } => {
+                                    let start = offset.bytes;
+                                    let increment = value.parse::<usize>().expect(
+                                        "part of an Int node should always parse as integer",
+                                    );
+                                    offset.increment(increment);
+                                    let end = offset.bytes;
 
-                                self.push_binary_from_slice(start, end);
-                                self.traverse_pattern(subject, &segment.value)?;
-                                self.pop();
-                                Ok(())
+                                    self.push_binary_from_slice(start, end);
+                                    self.traverse_pattern(subject, &segment.value)?;
+                                    self.pop();
+                                    Ok(())
+                                }
+
+                                _ => Err(Error::Unsupported {
+                                    feature: "This bit string size option in patterns".into(),
+                                    location: segment.location,
+                                }),
                             }
-
-                            _ => Err(Error::Unsupported {
-                                feature: "This bit string size option in patterns".into(),
-                                location: segment.location,
-                            }),
-                        },
+                        }
 
                         _ => Err(Error::Unsupported {
                             feature: "This bit string segment option in patterns".into(),
