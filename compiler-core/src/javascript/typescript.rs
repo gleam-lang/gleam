@@ -276,7 +276,7 @@ impl<'a> TypeScriptGenerator<'a> {
     fn import_path(&self, package: &'a str, module: &'a str) -> String {
         // DUPE: current_module_name_segments_count
         // TODO: strip shared prefixed between current module and imported
-        // module to avoid decending and climbing back out again
+        // module to avoid descending and climbing back out again
         if package == self.module.type_info.package || package.is_empty() {
             // Same package
             match self.current_module_name_segments_count {
@@ -351,8 +351,8 @@ impl<'a> TypeScriptGenerator<'a> {
     /// function first converts the constructors into TypeScript then finally
     /// emits a union type to represent the TypeScript type itself. Because in
     /// Gleam constructors can have the same name as the custom type, here we
-    /// append a "$" symbol to the emited TypeScript type to prevent those
-    /// naming clases.
+    /// append a "$" symbol to the emitted TypeScript type to prevent those
+    /// naming classes.
     ///
     fn custom_type_definition(
         &mut self,
@@ -518,7 +518,7 @@ impl<'a> TypeScriptGenerator<'a> {
         self.do_print(type_, None)
     }
 
-    /// Helper function for genering a TypeScript type string after collecting
+    /// Helper function for generating a TypeScript type string after collecting
     /// all of the generics used in a statement
     ///
     pub fn print_type_with_generic_usages(
@@ -653,7 +653,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     wrap_generic_args(args.iter().map(|x| self.do_print(x, generic_usages)))
                 ]
             }
-            // Getting here sholud mean we either forgot a built-in type or there is a
+            // Getting here should mean we either forgot a built-in type or there is a
             // compiler error
             name => panic!("{name} is not a built-in type."),
         }
@@ -673,7 +673,7 @@ impl<'a> TypeScriptGenerator<'a> {
         let name = match module == self.module.name {
             true => Document::String(name),
             false => {
-                // If type comes from a seperate module, use that module's nam
+                // If type comes from a separate module, use that module's nam
                 // as a TypeScript namespace prefix
                 docvec![
                     Document::String(self.module_name(module)),
