@@ -508,7 +508,7 @@ impl<'a> Environment<'a> {
 
         for (alias, location) in self.unused_module_aliases.clone().into_iter() {
             if let Some((_, module)) = self.imported_modules.get(&alias) {
-                if let Some(name) = module.name.split("/").last() {
+                if let Some(name) = module.name.split('/').last() {
                     if self.imported_modules.get(name).is_none() {
                         self.warnings
                             .emit(Warning::UnusedImportedModuleAlias { alias, location });

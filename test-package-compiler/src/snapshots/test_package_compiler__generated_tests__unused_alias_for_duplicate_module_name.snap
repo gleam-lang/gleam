@@ -1,0 +1,56 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 345
+expression: "./cases/unused_alias_for_duplicate_module_name"
+---
+//// /out/lib/the_package/_gleam_artefacts/a@one.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/a@one.cache_meta
+<29 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/a@one.erl
+-module(a@one).
+
+
+//// /out/lib/the_package/_gleam_artefacts/b@one.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/b@one.cache_meta
+<29 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/b@one.erl
+-module(b@one).
+
+
+//// /out/lib/the_package/_gleam_artefacts/dojo.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/dojo.cache_meta
+<55 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/dojo.erl
+-module(dojo).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([main/0]).
+
+-spec main() -> integer().
+main() ->
+    3,
+    4.
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [a@one,
+               b@one,
+               dojo]},
+    {registered, []}
+]}.
+
+
+

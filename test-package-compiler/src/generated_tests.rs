@@ -339,6 +339,18 @@ fn unused_alias() {
 
 #[rustfmt::skip]
 #[test]
+fn unused_alias_for_duplicate_module_name() {
+    let output =
+        crate::prepare("./cases/unused_alias_for_duplicate_module_name");
+    insta::assert_snapshot!(
+        "unused_alias_for_duplicate_module_name",
+        output,
+        "./cases/unused_alias_for_duplicate_module_name"
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn unused_aliases_with_cross_aliasing() {
     let output =
         crate::prepare("./cases/unused_aliases_with_cross_aliasing");

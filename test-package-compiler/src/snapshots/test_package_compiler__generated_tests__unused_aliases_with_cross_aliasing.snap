@@ -1,6 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 345
+assertion_line: 357
 expression: "./cases/unused_aliases_with_cross_aliasing"
 ---
 //// /out/lib/the_package/_gleam_artefacts/dojo.cache
@@ -51,28 +51,6 @@ main() ->
                two]},
     {registered, []}
 ]}.
-
-
-//// Warning
-
-warning: Unused alias for imported module
-  ┌─ src/dojo.gleam:1:20
-  │
-1 │ import one.{three} as two
-  │                    ^ This alias for the imported module is never used.
-
-Hint: You can safely remove it.
-
-
-//// Warning
-
-warning: Unused alias for imported module
-  ┌─ src/dojo.gleam:2:19
-  │
-2 │ import two.{four} as one
-  │                   ^ This alias for the imported module is never used.
-
-Hint: You can safely remove it.
 
 
 
