@@ -21,7 +21,7 @@ pub enum Error {
     },
 
     BitStringSegmentError {
-        error: crate::bit_string::ErrorType,
+        error: crate::bit_array::ErrorType,
         location: SrcSpan,
     },
     UnknownLabels {

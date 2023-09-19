@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 236
+expression: "\nfn go(x) {\n  let <<_, a:2-binary>> = x\n  let <<_, b:binary-size(2)>> = x\n}\n"
+---
+import { makeError } from "../gleam.mjs";
+
+function go(x) {
+  if (!(x.length == 3)) {
+    throw makeError(
+      "assignment_no_match",
+      "my/mod",
+      3,
+      "go",
+      "Assignment pattern did not match",
+      { value: x }
+    )
+  }
+  let a = x.binaryFromSlice(1, 3);
+  if (!(x.length == 3)) {
+    throw makeError(
+      "assignment_no_match",
+      "my/mod",
+      4,
+      "go",
+      "Assignment pattern did not match",
+      { value: x }
+    )
+  }
+  let b = x.binaryFromSlice(1, 3);
+  return x;
+}
+

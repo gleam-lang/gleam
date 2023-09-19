@@ -660,7 +660,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<BitArraySegment<TypedValue, Arc<Type>>, Error>
     where
         InferFn: FnMut(&mut Self, UntypedValue) -> Result<TypedValue, Error>,
-        TypedValue: HasType + HasLocation + Clone + bit_string::GetLiteralValue,
+        TypedValue: HasType + HasLocation + Clone + bit_array::GetLiteralValue,
     {
         let value = infer(self, value)?;
 
@@ -675,7 +675,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let options: Vec<_> = options.into_iter().map(infer_option).try_collect()?;
 
-        let typ = crate::bit_string::type_options_for_value(&options).map_err(|error| {
+        let typ = crate::bit_array::type_options_for_value(&options).map_err(|error| {
             Error::BitStringSegmentError {
                 error: error.error,
                 location: error.location,

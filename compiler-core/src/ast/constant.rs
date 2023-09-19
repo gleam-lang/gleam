@@ -107,7 +107,7 @@ impl<A, B> HasLocation for Constant<A, B> {
     }
 }
 
-impl<A, B> crate::bit_string::GetLiteralValue for Constant<A, B> {
+impl<A, B> crate::bit_array::GetLiteralValue for Constant<A, B> {
     fn as_int_literal(&self) -> Option<i64> {
         if let Constant::Int { value, .. } = self {
             if let Ok(val) = value.parse::<i64>() {

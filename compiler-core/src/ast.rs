@@ -1294,7 +1294,7 @@ impl AssignmentKind {
     }
 }
 
-// BitStrings
+// BitArrays
 
 pub type UntypedExprBitArraySegment = BitArraySegment<UntypedExpr, ()>;
 pub type TypedExprBitArraySegment = BitArraySegment<TypedExpr, Arc<Type>>;

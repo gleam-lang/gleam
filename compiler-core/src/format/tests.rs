@@ -1,7 +1,7 @@
 use pretty_assertions::assert_eq;
 
 mod asignments;
-mod bit_string;
+mod bit_array;
 mod blocks;
 mod conditional_compilation;
 mod external_fn;

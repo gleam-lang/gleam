@@ -5,7 +5,7 @@ use crate::type_::error::MissingAnnotation;
 use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{
-    bit_string,
+    bit_array,
     diagnostic::Level,
     javascript,
     type_::{pretty::Printer, UnifyErrorSituation},
@@ -1878,12 +1878,12 @@ function and try again."
 
                 TypeError::BitStringSegmentError { error, location } => {
                     let (label, mut extra) = match error {
-                        bit_string::ErrorType::ConflictingTypeOptions { existing_type } => (
+                        bit_array::ErrorType::ConflictingTypeOptions { existing_type } => (
                             "This is an extra type specifier.",
                             vec![format!("Hint: This segment already has the type {existing_type}.")],
                         ),
 
-                        bit_string::ErrorType::ConflictingSignednessOptions {
+                        bit_array::ErrorType::ConflictingSignednessOptions {
                             existing_signed
                         } => (
                             "This is an extra signedness specifier.",
@@ -1892,7 +1892,7 @@ function and try again."
                             )],
                         ),
 
-                        bit_string::ErrorType::ConflictingEndiannessOptions {
+                        bit_array::ErrorType::ConflictingEndiannessOptions {
                             existing_endianness
                         } => (
                             "This is an extra endianness specifier.",
@@ -1901,55 +1901,55 @@ function and try again."
                             )],
                         ),
 
-                        bit_string::ErrorType::ConflictingSizeOptions => (
+                        bit_array::ErrorType::ConflictingSizeOptions => (
                             "This is an extra size specifier.",
                             vec!["Hint: This segment already has a size.".into()],
                         ),
 
-                        bit_string::ErrorType::ConflictingUnitOptions => (
+                        bit_array::ErrorType::ConflictingUnitOptions => (
                             "This is an extra unit specifier.",
                             vec!["Hint: A BitString segment can have at most 1 unit.".into()],
                         ),
 
-                        bit_string::ErrorType::FloatWithSize => (
+                        bit_array::ErrorType::FloatWithSize => (
                             "Invalid float size.",
                             vec!["Hint: floats have an exact size of 16/32/64 bits.".into()],
                         ),
 
-                        bit_string::ErrorType::InvalidEndianness => (
+                        bit_array::ErrorType::InvalidEndianness => (
                             "This option is invalid here.",
                                 vec![wrap("Hint: signed and unsigned can only be used with \
 int, float, utf16 and utf32 types.")],
                         ),
 
-                        bit_string::ErrorType::OptionNotAllowedInValue => (
+                        bit_array::ErrorType::OptionNotAllowedInValue => (
                             "This option is only allowed in BitString patterns.",
                             vec!["Hint: This option has no effect in BitString values.".into()],
                         ),
 
-                        bit_string::ErrorType::SignednessUsedOnNonInt { typ } => (
+                        bit_array::ErrorType::SignednessUsedOnNonInt { typ } => (
                             "Signedness is only valid with int types.",
                             vec![format!("Hint: This segment has a type of {typ}")],
                         ),
-                        bit_string::ErrorType::TypeDoesNotAllowSize { typ } => (
+                        bit_array::ErrorType::TypeDoesNotAllowSize { typ } => (
                             "Size cannot be specified here",
                             vec![format!("Hint: {typ} segments have an autoatic size.")],
                         ),
-                        bit_string::ErrorType::TypeDoesNotAllowUnit { typ } => (
+                        bit_array::ErrorType::TypeDoesNotAllowUnit { typ } => (
                             "Unit cannot be specified here",
                             vec![wrap(&format!("Hint: {typ} segments are sized based on their value \
 and cannot have a unit."))],
                         ),
-                        bit_string::ErrorType::VariableUtfSegmentInPattern => (
+                        bit_array::ErrorType::VariableUtfSegmentInPattern => (
                             "This cannot be a variable",
                             vec![wrap("Hint: in patterns utf8, utf16, and utf32  must be an exact string.")],
                         ),
-                        bit_string::ErrorType::SegmentMustHaveSize => (
+                        bit_array::ErrorType::SegmentMustHaveSize => (
                             "This segment has no size",
                             vec![wrap("Hint: Bit string segments without a size are only \
 allowed at the end of a bin pattern.")],
                         ),
-                        bit_string::ErrorType::UnitMustHaveSize => (
+                        bit_array::ErrorType::UnitMustHaveSize => (
                             "This needs an explicit size",
                             vec!["Hint: If you specify unit() you must also specify size().".into()],
                         ),
