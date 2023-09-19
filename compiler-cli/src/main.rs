@@ -59,6 +59,7 @@ mod config;
 mod dependencies;
 mod docs;
 mod export;
+mod fix;
 mod format;
 mod fs;
 mod hex;
@@ -158,6 +159,12 @@ enum Command {
         /// Check if inputs are formatted without changing them
         #[clap(long)]
         check: bool,
+    },
+    /// Rewrite deprecated Gleam code
+    Fix {
+        /// Files to fix
+        #[clap(default_value = ".")]
+        files: Vec<String>,
     },
 
     /// Start an Erlang shell
@@ -389,6 +396,8 @@ fn main() {
             files,
             check,
         } => format::run(stdin, check, files),
+
+        Command::Fix { files } => fix::run(files),
 
         Command::Deps(Dependencies::List) => dependencies::list(),
 
