@@ -96,14 +96,6 @@ struct Attributes {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Warning {
-    // TODO: remove
-    DeprecatedIf { location: SrcSpan, target: Target },
-    // TODO: remove
-    DeprecatedExternalFn { location: SrcSpan },
-    // TODO: remove
-    DeprecatedExternalType { location: SrcSpan, name: SmolStr },
-    // TODO: remove
-    DeprecatedTodo { location: SrcSpan, message: SmolStr },
     // TODO: remove after next release
     DeprecatedOptionBitString { location: SrcSpan },
     // TODO: remove after next release
@@ -407,16 +399,6 @@ where
             Some((start, Token::Todo, mut end)) => {
                 let _ = self.next_tok();
                 let mut message = None;
-                if let Some((start, __)) = self.maybe_one(&Token::LeftParen) {
-                    let (_, m, _) = self.expect_string()?;
-                    message = Some(m.clone());
-                    let (_, e) = self.expect_one(&Token::RightParen)?;
-                    end = e;
-                    self.warnings.push(Warning::DeprecatedTodo {
-                        location: SrcSpan::new(start, end),
-                        message: m,
-                    });
-                }
                 if self.maybe_one(&Token::As).is_some() {
                     let (_, l, e) = self.expect_string()?;
                     message = Some(l);
