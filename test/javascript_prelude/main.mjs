@@ -13,7 +13,7 @@ import {
   inspect,
   isEqual,
   stringBits,
-  toBitString,
+  toBitArray,
   toList,
 } from "./prelude.mjs";
 
@@ -144,23 +144,23 @@ assertNotEqual(
 assertEqual(new UtfCodepoint(128013), new UtfCodepoint(128013));
 assertNotEqual(new UtfCodepoint(128013), new UtfCodepoint(128014));
 
-// toBitString
+// toBitArray
 
-assertEqual(new BitString(new Uint8Array([])), toBitString([]));
+assertEqual(new BitString(new Uint8Array([])), toBitArray([]));
 
 assertEqual(
   new BitString(new Uint8Array([97, 98, 99])),
-  toBitString([stringBits("abc")])
+  toBitArray([stringBits("abc")])
 );
 
 assertEqual(
   new BitString(new Uint8Array([97])),
-  toBitString([codepointBits(new UtfCodepoint(97))])
+  toBitArray([codepointBits(new UtfCodepoint(97))])
 );
 
 assertEqual(
   new BitString(new Uint8Array([240, 159, 144, 141])),
-  toBitString([codepointBits(new UtfCodepoint(128013))])
+  toBitArray([codepointBits(new UtfCodepoint(128013))])
 );
 
 // toList
@@ -313,8 +313,14 @@ const hasEqualsField2 = {
 assertEqual(new NoCustomEquals(1, 1), new NoCustomEquals(1, 1));
 assertNotEqual(new NoCustomEquals(1, 1), new NoCustomEquals(1, 2));
 // custom equals throws, fallback to structural equality
-assertEqual(new HasCustomEqualsThatThrows(1, 1), new HasCustomEqualsThatThrows(1, 1));
-assertNotEqual(new HasCustomEqualsThatThrows(1, 1), new HasCustomEqualsThatThrows(1, 2));
+assertEqual(
+  new HasCustomEqualsThatThrows(1, 1),
+  new HasCustomEqualsThatThrows(1, 1)
+);
+assertNotEqual(
+  new HasCustomEqualsThatThrows(1, 1),
+  new HasCustomEqualsThatThrows(1, 2)
+);
 // custom equals works, use it
 assertEqual(new HasCustomEquals(1, 1), new HasCustomEquals(1, 1));
 assertEqual(new HasCustomEquals(1, 1), new HasCustomEquals(1, 2));
