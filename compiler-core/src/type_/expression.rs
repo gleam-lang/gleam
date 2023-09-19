@@ -1084,42 +1084,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 Err(err) => match *container {
                     ClauseGuard::Var { name, location, .. } => {
-                        let module_access = self
-                            .infer_module_access(&name, label, &location, location)
-                            .and_then(|ma| match ma {
-                                TypedExpr::ModuleSelect {
-                                    location,
-                                    typ,
-                                    label,
-                                    module_name,
-                                    module_alias,
-                                    constructor,
-                                } => match constructor {
-                                    ModuleValueConstructor::Constant { literal, .. } => {
-                                        Ok(ClauseGuard::ModuleSelect {
-                                            location,
-                                            type_: typ,
-                                            label,
-                                            module_name,
-                                            module_alias,
-                                            literal,
-                                        })
-                                    }
-
-                                    _ => Err(Error::RecordAccessUnknownType { location }),
-                                },
-
-                                _ => Err(Error::RecordAccessUnknownType { location }),
-                            });
-
-                        // If the name is in the environment, use the original error from
-                        // inferring the record access, so that we can suggest possible
-                        // misspellings of field names
-                        if self.environment.scope.contains_key(&name) {
-                            module_access.map_err(|_| err)
-                        } else {
-                            module_access
-                        }
+                        self.infer_guard_module_access(name, label, location, err)
                     }
 
                     _ => Err(Error::RecordAccessUnknownType { location }),
@@ -1349,6 +1314,51 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ClauseGuard::Constant(constant) => {
                 self.infer_const(&None, constant).map(ClauseGuard::Constant)
             }
+        }
+    }
+
+    fn infer_guard_module_access(
+        &mut self,
+        name: SmolStr,
+        label: SmolStr,
+        location: SrcSpan,
+        record_access_erorr: Error,
+    ) -> Result<ClauseGuard<Arc<Type>, SmolStr>, Error> {
+        let module_access = self
+            .infer_module_access(&name, label, &location, location)
+            .and_then(|ma| match ma {
+                TypedExpr::ModuleSelect {
+                    location,
+                    typ,
+                    label,
+                    module_name,
+                    module_alias,
+                    constructor,
+                } => match constructor {
+                    ModuleValueConstructor::Constant { literal, .. } => {
+                        Ok(ClauseGuard::ModuleSelect {
+                            location,
+                            type_: typ,
+                            label,
+                            module_name,
+                            module_alias,
+                            literal,
+                        })
+                    }
+
+                    _ => Err(Error::RecordAccessUnknownType { location }),
+                },
+
+                _ => Err(Error::RecordAccessUnknownType { location }),
+            });
+
+        // If the name is in the environment, use the original error from
+        // inferring the record access, so that we can suggest possible
+        // misspellings of field names
+        if self.environment.scope.contains_key(&name) {
+            module_access.map_err(|_| record_access_erorr)
+        } else {
+            module_access
         }
     }
 
