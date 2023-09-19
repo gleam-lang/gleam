@@ -397,6 +397,10 @@ pub enum Warning {
         location: SrcSpan,
         message: SmolStr,
     },
+
+    DeprecatedBitString {
+        location: SrcSpan,
+    },
 }
 
 impl Error {

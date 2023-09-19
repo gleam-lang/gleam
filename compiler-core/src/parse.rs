@@ -96,9 +96,13 @@ struct Attributes {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Warning {
+    // TODO: remove
     DeprecatedIf { location: SrcSpan, target: Target },
+    // TODO: remove
     DeprecatedExternalFn { location: SrcSpan },
+    // TODO: remove
     DeprecatedExternalType { location: SrcSpan, name: SmolStr },
+    // TODO: remove
     DeprecatedTodo { location: SrcSpan, message: SmolStr },
 }
 

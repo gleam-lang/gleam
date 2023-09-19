@@ -276,8 +276,10 @@ impl<'a> Environment<'a> {
         &mut self,
         module_alias: &Option<SmolStr>,
         name: &SmolStr,
+        // TODO: remove this once we have removed the deprecated BitString type
+        location: SrcSpan,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
-        match module_alias {
+        let t = match module_alias {
             None => self
                 .module_types
                 .get(name)
@@ -303,7 +305,17 @@ impl<'a> Environment<'a> {
                         type_constructors: module.public_type_names(),
                     })
             }
+        }?;
+
+        if name == "BitString"
+            && t.typ.is_bit_array()
+            && (module_alias == &None || module_alias.as_deref() == Some("gleam"))
+        {
+            self.warnings
+                .emit(Warning::DeprecatedBitString { location })
         }
+
+        Ok(t)
     }
 
     /// Lookup constructors for type in the current scope.
