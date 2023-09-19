@@ -1063,24 +1063,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 index: _,
                 type_: (),
             } => match self.infer_clause_guard(*container.clone()) {
-                Ok(container) => {
-                    let container = Box::new(container);
-                    let container_type = container.type_();
-                    let (index, label, type_) = self.infer_known_record_access(
-                        container_type,
-                        container.location(),
-                        FieldAccessUsage::Other,
-                        location,
-                        label,
-                    )?;
-                    Ok(ClauseGuard::FieldAccess {
-                        container,
-                        label,
-                        index: Some(index),
-                        location,
-                        type_,
-                    })
-                }
+                Ok(container) => self.infer_guard_record_access(container, label, location),
 
                 Err(err) => match *container {
                     ClauseGuard::Var { name, location, .. } => {
@@ -1315,6 +1298,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 self.infer_const(&None, constant).map(ClauseGuard::Constant)
             }
         }
+    }
+
+    fn infer_guard_record_access(
+        &mut self,
+        container: ClauseGuard<Arc<Type>, SmolStr>,
+        label: SmolStr,
+        location: SrcSpan,
+    ) -> Result<ClauseGuard<Arc<Type>, SmolStr>, Error> {
+        let container = Box::new(container);
+        let container_type = container.type_();
+        let (index, label, type_) = self.infer_known_record_access(
+            container_type,
+            container.location(),
+            FieldAccessUsage::Other,
+            location,
+            label,
+        )?;
+        Ok(ClauseGuard::FieldAccess {
+            container,
+            label,
+            index: Some(index),
+            location,
+            type_,
+        })
     }
 
     fn infer_guard_module_access(
