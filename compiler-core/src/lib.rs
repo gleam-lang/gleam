@@ -67,6 +67,7 @@ pub mod diagnostic;
 pub mod docs;
 pub mod erlang;
 pub mod error;
+pub mod fix;
 pub mod format;
 pub mod hex;
 pub mod io;
