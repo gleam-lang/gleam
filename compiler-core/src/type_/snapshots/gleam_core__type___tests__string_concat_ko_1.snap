@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests.rs
-assertion_line: 1705
+assertion_line: 1723
 expression: " \"1\" <> 2 "
 ---
 error: Type mismatch

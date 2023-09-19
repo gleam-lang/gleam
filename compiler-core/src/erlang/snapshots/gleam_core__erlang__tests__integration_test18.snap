@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 270
+assertion_line: 274
 expression: "pub fn run() { case 1, 2 { a, b -> a } }"
 ---
 -module(my@mod).

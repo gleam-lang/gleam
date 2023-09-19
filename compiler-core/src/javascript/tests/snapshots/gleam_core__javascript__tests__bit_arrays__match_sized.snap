@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 181
+assertion_line: 203
 expression: "\nfn go(x) {\n  let <<a:16, b:8>> = x\n}\n"
 ---
 import { makeError } from "../gleam.mjs";

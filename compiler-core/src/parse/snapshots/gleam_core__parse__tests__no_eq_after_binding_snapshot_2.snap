@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 355
+assertion_line: 375
 expression: "let foo\n        foo = 4"
 ---
 error: Syntax error

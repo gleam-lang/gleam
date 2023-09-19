@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 397
+assertion_line: 417
 expression: "1"
 ---
 [

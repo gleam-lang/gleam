@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 756
+assertion_line: 759
 expression: "fn go(x: List(a, b)) -> Int { 1 }"
 ---
 error: Incorrect arity

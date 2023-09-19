@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 191
+assertion_line: 197
 expression: "\nfn go() {\n  let a = 3\n  let b = --a\n}\n"
 ---
 function go() {

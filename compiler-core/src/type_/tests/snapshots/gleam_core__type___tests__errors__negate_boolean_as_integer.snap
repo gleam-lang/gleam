@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1880
+assertion_line: 1883
 expression: "\nfn() {\n  let a = True\n  let b = -a\n}\n"
 ---
 error: Type mismatch

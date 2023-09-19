@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1429
+assertion_line: 1432
 expression: "\npub fn main(b) {\n    let True = b\n    Nil\n}\n"
 ---
 error: Not exhaustive pattern match

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 421
+assertion_line: 441
 expression: "\n1 + let a = 5\na\n"
 ---
 error: Syntax error

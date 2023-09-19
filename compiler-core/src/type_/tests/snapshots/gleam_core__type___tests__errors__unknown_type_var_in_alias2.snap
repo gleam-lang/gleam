@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 842
+assertion_line: 845
 expression: type X = List(a)
 ---
 error: Unknown type

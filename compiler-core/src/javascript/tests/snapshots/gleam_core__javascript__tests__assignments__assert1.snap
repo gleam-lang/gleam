@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 18
+assertion_line: 21
 expression: "fn go(x) { let assert #(1, 2) = x }"
 ---
 import { makeError } from "../gleam.mjs";

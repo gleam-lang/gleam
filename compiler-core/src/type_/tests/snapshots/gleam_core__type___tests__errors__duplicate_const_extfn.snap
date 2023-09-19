@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1091
+assertion_line: 1094
 expression: "const foo = 1\n\n@external(erlang, \"module2\", \"function2\")\nfn foo() -> Float\n"
 ---
 error: Duplicate definition

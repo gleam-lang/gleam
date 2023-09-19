@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1049
+assertion_line: 1052
 expression: "fn foo() { 1 }\nfn foo() { 2 }"
 ---
 error: Duplicate definition

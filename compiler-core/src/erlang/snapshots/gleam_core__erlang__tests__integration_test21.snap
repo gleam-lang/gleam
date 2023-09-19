@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 296
+assertion_line: 300
 expression: "\npub fn go(a) {\n  let a = 1\n  a\n}\n\n                    "
 ---
 -module(my@mod).

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 354
+assertion_line: 357
 expression: "\npub fn main() {\n  let version = 1 |> version()\n  version\n}\n\npub fn version(n) {\n  Ok(1)\n}"
 ---
 import { Ok } from "../gleam.mjs";

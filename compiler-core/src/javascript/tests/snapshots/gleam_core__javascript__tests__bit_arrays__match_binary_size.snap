@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 236
+assertion_line: 269
 expression: "\nfn go(x) {\n  let <<_, a:2-binary>> = x\n  let <<_, b:binary-size(2)>> = x\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
