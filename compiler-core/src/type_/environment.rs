@@ -309,7 +309,7 @@ impl<'a> Environment<'a> {
 
         if name == "BitString"
             && t.typ.is_bit_array()
-            && (module_alias == &None || module_alias.as_deref() == Some("gleam"))
+            && (module_alias.is_none() || module_alias.as_deref() == Some("gleam"))
         {
             self.warnings
                 .emit(Warning::DeprecatedBitString { location })
