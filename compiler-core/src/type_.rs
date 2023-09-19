@@ -23,7 +23,7 @@ use crate::{
         TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment, TypedRecordUpdateArg,
         UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
     },
-    bit_string,
+    bit_array,
     build::Origin,
 };
 use error::*;

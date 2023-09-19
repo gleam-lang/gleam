@@ -145,7 +145,7 @@ fn bit_string() {
     assert_error!(
         "let x = <<1:unit(0)>> x",
         ParseError {
-            error: ParseErrorType::InvalidBitStringUnit,
+            error: ParseErrorType::InvalidBitArrayUnit,
             location: SrcSpan { start: 17, end: 18 }
         }
     );
@@ -156,7 +156,7 @@ fn bit_string1() {
     assert_error!(
         "let x = <<1:unit(257)>> x",
         ParseError {
-            error: ParseErrorType::InvalidBitStringUnit,
+            error: ParseErrorType::InvalidBitArrayUnit,
             location: SrcSpan { start: 17, end: 20 }
         }
     );
@@ -168,7 +168,7 @@ fn bit_string2() {
     assert_error!(
         "case <<>> { <<<<1>>:bit_string>> -> 1 }",
         ParseError {
-            error: ParseErrorType::NestedBitStringPattern,
+            error: ParseErrorType::NestedBitArrayPattern,
             location: SrcSpan { start: 14, end: 19 }
         }
     );

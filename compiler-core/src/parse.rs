@@ -491,7 +491,7 @@ where
                 }
             }
 
-            // BitString
+            // BitArray
             Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();
                 let segments = Parser::series_of(
@@ -1026,7 +1026,7 @@ where
                     elems,
                 }
             }
-            // BitString
+            // BitArray
             Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();
                 let segments = Parser::series_of(
@@ -1036,7 +1036,7 @@ where
                             s,
                             &|s| match Parser::parse_pattern(s) {
                                 Ok(Some(Pattern::BitArray { location, .. })) => {
-                                    parse_error(ParseErrorType::NestedBitStringPattern, location)
+                                    parse_error(ParseErrorType::NestedBitArrayPattern, location)
                                 }
                                 x => x,
                             },
@@ -2151,7 +2151,7 @@ where
                     typ: (),
                 }))
             }
-            // BitString
+            // BitArray
             Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();
                 let segments = Parser::series_of(
@@ -2395,7 +2395,7 @@ where
                                     })),
 
                                     _ => Err(ParseError {
-                                        error: ParseErrorType::InvalidBitStringUnit,
+                                        error: ParseErrorType::InvalidBitArrayUnit,
                                         location: SrcSpan {
                                             start: int_s,
                                             end: int_e,
@@ -2417,14 +2417,14 @@ where
                             }))
                         }
                         _ => parse_error(
-                            ParseErrorType::InvalidBitStringSegment,
+                            ParseErrorType::InvalidBitArraySegment,
                             SrcSpan { start, end },
                         ),
                     }
                 } else {
                     str_to_bit_string_segment_option(&name, SrcSpan { start, end })
                         .ok_or(ParseError {
-                            error: ParseErrorType::InvalidBitStringSegment,
+                            error: ParseErrorType::InvalidBitArraySegment,
                             location: SrcSpan { start, end },
                         })
                         .map(Some)
@@ -3052,9 +3052,9 @@ fn clause_guard_reduction(
     }
 }
 
-// BitString Parse Helpers
+// BitArray Parse Helpers
 //
-// BitStrings in patterns, guards, and expressions have a very similar structure
+// BitArrays in patterns, guards, and expressions have a very similar structure
 // but need specific types. These are helpers for that. There is probably a
 // rustier way to do this :)
 fn bit_string_pattern_int(value: SmolStr, start: u32, end: u32) -> UntypedPattern {

@@ -64,19 +64,19 @@ and can contain a-z, 0-9, or _.",
 contain a-z, A-Z, or 0-9.",
                 )],
             ),
-            ParseErrorType::InvalidBitStringSegment => (
-                "This is not a valid BitString segment option",
+            ParseErrorType::InvalidBitArraySegment => (
+                "This is not a valid BitArray segment option",
                 vec![
-                    "Hint: Valid BitString segment options are:".into(),
+                    "Hint: Valid BitArray segment options are:".into(),
                     wrap(
-                        "binary, int, float, bit_string, utf8, utf16, utf32, utf8_codepoint, \
+                        "bits, bytes, int, float, utf8, utf16, utf32, utf8_codepoint, \
 utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, unit",
                     ),
                     "See: https://gleam.run/book/tour/bit-strings".into(),
                 ],
             ),
-            ParseErrorType::InvalidBitStringUnit => (
-                "This is not a valid BitString unit value",
+            ParseErrorType::InvalidBitArrayUnit => (
+                "This is not a valid BitArray unit value",
                 vec![
                     "Hint: unit must be an integer literal >= 1 and <= 256".into(),
                     "See: https://gleam.run/book/tour/bit-strings".into(),
@@ -94,9 +94,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ],
             ),
             ParseErrorType::LexError { error: lex_err } => lex_err.to_parse_error_info(),
-            ParseErrorType::NestedBitStringPattern => {
-                ("BitString patterns cannot be nested", vec![])
-            }
+            ParseErrorType::NestedBitArrayPattern => ("BitArray patterns cannot be nested", vec![]),
             ParseErrorType::NoCaseClause => (
                 "This case expression has no clauses",
                 vec!["See: https://gleam.run/book/tour/case-expressions".into()],
@@ -209,26 +207,26 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseErrorType {
-    ExpectedEqual,           // expect "="
-    ExpectedExpr,            // after "->" in a case clause
-    ExpectedName,            // any token used when a Name was expected
-    ExpectedPattern,         // after ':' where a pattern is expected
-    ExpectedType,            // after ':' or '->' where a type annotation is expected
-    ExpectedUpName,          // any token used when a UpName was expected
-    ExpectedValue,           // no value after "="
-    ExpectedStatement,       // no statement after "@<name>"
-    ExprLparStart,           // it seems "(" was used to start an expression
-    ExtraSeparator,          // #(1,,) <- the 2nd comma is an extra separator
-    IncorrectName,           // UpName or DiscardName used when Name was expected
-    IncorrectUpName,         // Name or DiscardName used when UpName was expected
-    InvalidBitStringSegment, // <<7:hello>> `hello` is an invalid bitstring segment
-    InvalidBitStringUnit,    // in <<1:unit(x)>> x must be 1 <= x <= 256
-    InvalidTailPattern,      // only name and _name are allowed after ".." in list pattern
-    InvalidTupleAccess,      // only positive int literals for tuple access
+    ExpectedEqual,          // expect "="
+    ExpectedExpr,           // after "->" in a case clause
+    ExpectedName,           // any token used when a Name was expected
+    ExpectedPattern,        // after ':' where a pattern is expected
+    ExpectedType,           // after ':' or '->' where a type annotation is expected
+    ExpectedUpName,         // any token used when a UpName was expected
+    ExpectedValue,          // no value after "="
+    ExpectedStatement,      // no statement after "@<name>"
+    ExprLparStart,          // it seems "(" was used to start an expression
+    ExtraSeparator,         // #(1,,) <- the 2nd comma is an extra separator
+    IncorrectName,          // UpName or DiscardName used when Name was expected
+    IncorrectUpName,        // Name or DiscardName used when UpName was expected
+    InvalidBitArraySegment, // <<7:hello>> `hello` is an invalid BitArray segment
+    InvalidBitArrayUnit,    // in <<1:unit(x)>> x must be 1 <= x <= 256
+    InvalidTailPattern,     // only name and _name are allowed after ".." in list pattern
+    InvalidTupleAccess,     // only positive int literals for tuple access
     LexError {
         error: LexicalError,
     },
-    NestedBitStringPattern,    // <<<<1>>, 2>>, <<1>> is not allowed in there
+    NestedBitArrayPattern,     // <<<<1>>, 2>>, <<1>> is not allowed in there
     NoCaseClause,              // a case with no clauses
     NoExpression, // between "{" and "}" in expression position, there must be an expression
     NoLetBinding, // Bindings and rebinds always require let and must always bind to a value.

@@ -453,7 +453,7 @@ impl HasType for TypedExpr {
     }
 }
 
-impl crate::bit_string::GetLiteralValue for TypedExpr {
+impl crate::bit_array::GetLiteralValue for TypedExpr {
     fn as_int_literal(&self) -> Option<i64> {
         if let TypedExpr::Int { value: val, .. } = self {
             if let Ok(val) = val.parse::<i64>() {
