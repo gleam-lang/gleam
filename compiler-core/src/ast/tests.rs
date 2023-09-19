@@ -133,12 +133,12 @@ fn find_node_todo() {
 
 #[test]
 fn find_node_todo_with_string() {
-    let statement = compile_expression(r#" todo("ok") "#);
+    let statement = compile_expression(r#" todo as "ok" "#);
     let expr = get_bare_expression(&statement);
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(expr)));
-    assert_eq!(expr.find_node(10), Some(Located::Expression(expr)));
-    assert_eq!(expr.find_node(11), None);
+    assert_eq!(expr.find_node(12), Some(Located::Expression(expr)));
+    assert_eq!(expr.find_node(13), None);
 }
 
 #[test]

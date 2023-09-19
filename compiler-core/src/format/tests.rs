@@ -3177,20 +3177,6 @@ fn expr_todo_with_label() {
 }
 
 #[test]
-fn todo_old() {
-    assert_format_rewrite!(
-        r#"fn main() {
-  todo("todo with a label")
-}
-"#,
-        r#"fn main() {
-  todo as "todo with a label"
-}
-"#
-    );
-}
-
-#[test]
 fn expr_todo1() {
     assert_format_rewrite!(
         r#"fn main() {
