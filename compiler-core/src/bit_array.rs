@@ -48,20 +48,26 @@ impl<T> SegmentOptionCategories<'_, T> {
 
     fn segment_type(&self) -> Arc<Type> {
         use BitArrayOption::*;
+        let default = Int {
+            location: SrcSpan::default(),
+        };
 
-        match self.typ {
-            Some(Int { .. }) => crate::type_::int(),
-            Some(Float { .. }) => crate::type_::float(),
-            Some(Bytes { .. }) => crate::type_::bits(),
-            Some(Bits { .. }) => crate::type_::bits(),
-            Some(Utf8 { .. }) => crate::type_::string(),
-            Some(Utf16 { .. }) => crate::type_::string(),
-            Some(Utf32 { .. }) => crate::type_::string(),
-            Some(Utf8Codepoint { .. }) => crate::type_::utf_codepoint(),
-            Some(Utf16Codepoint { .. }) => crate::type_::utf_codepoint(),
-            Some(Utf32Codepoint { .. }) => crate::type_::utf_codepoint(),
-            None => crate::type_::int(),
-            _ => panic!("Tried to type a non type kind BitString segment option.",),
+        match self.typ.unwrap_or(&default) {
+            Int { .. } => crate::type_::int(),
+            Float { .. } => crate::type_::float(),
+            Utf8 { .. } | Utf16 { .. } | Utf32 { .. } => crate::type_::string(),
+            Binary { .. } | BitString { .. } | Bytes { .. } | Bits { .. } => crate::type_::bits(),
+            Utf8Codepoint { .. } | Utf16Codepoint { .. } | Utf32Codepoint { .. } => {
+                crate::type_::utf_codepoint()
+            }
+
+            Signed { .. }
+            | Unsigned { .. }
+            | Big { .. }
+            | Little { .. }
+            | Native { .. }
+            | Size { .. }
+            | Unit { .. } => panic!("Tried to type a non type kind BitString segment option.",),
         }
     }
 }
@@ -150,22 +156,22 @@ where
 
     // Some options are not allowed in value mode
     if value_mode {
-        if let SegmentOptionCategories {
-            signed: Some(opt), ..
-        }
-        | SegmentOptionCategories {
-            typ: Some(opt @ Bytes { .. }),
-            ..
-        } = categories
-        {
-            return err(ErrorType::OptionNotAllowedInValue, opt.location());
+        match categories {
+            SegmentOptionCategories {
+                signed: Some(opt), ..
+            }
+            | SegmentOptionCategories {
+                typ: Some(opt @ (Binary { .. } | Bytes { .. })),
+                ..
+            } => return err(ErrorType::OptionNotAllowedInValue, opt.location()),
+            _ => (),
         }
     }
 
     // All but the last segment in a pattern must have an exact size
     if must_have_size {
         if let SegmentOptionCategories {
-            typ: Some(opt @ (Bytes { .. } | Bits { .. })),
+            typ: Some(opt @ (Bytes { .. } | Bits { .. } | BitString { .. } | Binary { .. })),
             size: None,
             ..
         } = categories

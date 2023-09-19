@@ -494,7 +494,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             Ok(())
                         }
 
-                        [Opt::Bytes { .. }] => {
+                        [Opt::Bytes { .. } | Opt::Binary { .. }] => {
                             self.push_rest_from(offset.bytes);
                             self.traverse_pattern(subject, &segment.value)?;
                             self.pop();
@@ -503,7 +503,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                         }
 
                         [Opt::Bytes { .. }, Opt::Size { value: size, .. }]
-                        | [Opt::Size { value: size, .. }, Opt::Bytes { .. }] => match &**size {
+                        | [Opt::Size { value: size, .. }, Opt::Bytes { .. }]
+                        | [Opt::Binary { .. }, Opt::Size { value: size, .. }]
+                        | [Opt::Size { value: size, .. }, Opt::Binary { .. }] => match &**size {
                             Pattern::Int { value, .. } => {
                                 let start = offset.bytes;
                                 let increment = value

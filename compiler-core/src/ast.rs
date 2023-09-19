@@ -1439,12 +1439,12 @@ impl<A> BitArrayOption<A> {
 
     pub fn label(&self) -> SmolStr {
         match self {
-            BitArrayOption::Binary { .. } => "binary".into(),
+            BitArrayOption::Binary { .. } => "bytes".into(),
             BitArrayOption::Bytes { .. } => "bytes".into(),
             BitArrayOption::Int { .. } => "int".into(),
             BitArrayOption::Float { .. } => "float".into(),
             BitArrayOption::Bits { .. } => "bits".into(),
-            BitArrayOption::BitString { .. } => "bit_string".into(),
+            BitArrayOption::BitString { .. } => "bits".into(),
             BitArrayOption::Utf8 { .. } => "utf8".into(),
             BitArrayOption::Utf16 { .. } => "utf16".into(),
             BitArrayOption::Utf32 { .. } => "utf32".into(),
@@ -1459,6 +1459,22 @@ impl<A> BitArrayOption<A> {
             BitArrayOption::Size { .. } => "size".into(),
             BitArrayOption::Unit { .. } => "unit".into(),
         }
+    }
+
+    /// Returns `true` if the bit array option is [`Binary`].
+    ///
+    /// [`Binary`]: BitArrayOption::Binary
+    #[must_use]
+    pub fn is_binary(&self) -> bool {
+        matches!(self, Self::Binary { .. })
+    }
+
+    /// Returns `true` if the bit array option is [`BitString`].
+    ///
+    /// [`BitString`]: BitArrayOption::BitString
+    #[must_use]
+    pub fn is_bit_string(&self) -> bool {
+        matches!(self, Self::BitString { .. })
     }
 }
 

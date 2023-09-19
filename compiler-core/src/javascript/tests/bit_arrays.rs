@@ -137,7 +137,18 @@ fn bit_string() {
     assert_js!(
         r#"
 fn go(x) {
-  <<x:bit_string, "Gleam":utf8>>
+  <<x:bit_string>>
+}
+"#,
+    );
+}
+
+#[test]
+fn bits() {
+    assert_js!(
+        r#"
+fn go(x) {
+  <<x:bits>>
 }
 "#,
     );
@@ -148,7 +159,18 @@ fn bit_string_typescript() {
     assert_ts_def!(
         r#"
 pub fn go(x) {
-  <<x:bit_string, "Gleam":utf8>>
+  <<x:bit_string>>
+}
+"#,
+    );
+}
+
+#[test]
+fn bits_typescript() {
+    assert_ts_def!(
+        r#"
+pub fn go(x) {
+  <<x:bits>>
 }
 "#,
     );
@@ -222,6 +244,17 @@ fn go(x) {
 
 #[test]
 fn match_rest() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let <<_, b:bytes>> = <<1,2,3>>
+}
+"#,
+    );
+}
+
+#[test]
+fn match_rest_deprecated() {
     assert_js!(
         r#"
 fn go(x) {

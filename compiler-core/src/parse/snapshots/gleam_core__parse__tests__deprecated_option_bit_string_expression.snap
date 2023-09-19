@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 508
+expression: "pub fn main(x) {\n  <<x:bit_string>>\n}"
+---
+
+warning: Deprecated bit literal option
+  ┌─ :2:7
+  │
+2 │   <<x:bit_string>>
+  │       ^^^^^^^^^^
+
+This option has been replaced by the `bits` option.
+
+Hint: Run `gleam format` to auto-fix your code.
+

@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 532
+expression: "pub fn main(x) {\n  <<x:binary>>\n}"
+---
+
+warning: Deprecated bit literal option
+  ┌─ :2:7
+  │
+2 │   <<x:binary>>
+  │       ^^^^^^
+
+This option has been replaced by the `bytes` option.
+
+Hint: Run `gleam format` to auto-fix your code.
+
