@@ -1085,13 +1085,17 @@ where
         BitStringSegmentOption::Binary { location } => {
             Ok(BitStringSegmentOption::Binary { location })
         }
+        BitStringSegmentOption::BitString { location } => {
+            Ok(BitStringSegmentOption::BitString { location })
+        }
+        BitStringSegmentOption::Bytes { location } => {
+            Ok(BitStringSegmentOption::Bytes { location })
+        }
         BitStringSegmentOption::Int { location } => Ok(BitStringSegmentOption::Int { location }),
         BitStringSegmentOption::Float { location } => {
             Ok(BitStringSegmentOption::Float { location })
         }
-        BitStringSegmentOption::BitString { location } => {
-            Ok(BitStringSegmentOption::BitString { location })
-        }
+        BitStringSegmentOption::Bits { location } => Ok(BitStringSegmentOption::Bits { location }),
         BitStringSegmentOption::Utf8 { location } => Ok(BitStringSegmentOption::Utf8 { location }),
         BitStringSegmentOption::Utf16 { location } => {
             Ok(BitStringSegmentOption::Utf16 { location })

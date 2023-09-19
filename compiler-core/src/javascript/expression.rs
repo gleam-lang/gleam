@@ -248,7 +248,7 @@ impl<'module> Generator<'module> {
                 }
 
                 // Bit strings
-                [Opt::BitString { .. }] => Ok(docvec![value, ".buffer"]),
+                [Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
 
                 // Anything else
                 _ => Err(Error::Unsupported {

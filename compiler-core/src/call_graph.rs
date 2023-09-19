@@ -301,8 +301,10 @@ impl<'a> CallGraphBuilder<'a> {
     ) {
         match option {
             BitStringSegmentOption::Big { .. }
-            | BitStringSegmentOption::Binary { .. }
+            | BitStringSegmentOption::Bytes { .. }
             | BitStringSegmentOption::BitString { .. }
+            | BitStringSegmentOption::Binary { .. }
+            | BitStringSegmentOption::Bits { .. }
             | BitStringSegmentOption::Float { .. }
             | BitStringSegmentOption::Int { .. }
             | BitStringSegmentOption::Little { .. }

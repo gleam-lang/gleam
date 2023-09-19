@@ -9,6 +9,6 @@ error: Invalid bit string segment
 1 │ case <<1>> { <<1:bit_string-binary>> -> 1 }
   │                             ^^^^^^ This is an extra type specifier.
 
-Hint: This segment already has the type bit_string.
+Hint: This segment already has the type bits.
 See: https://gleam.run/book/tour/bit-strings.html
 

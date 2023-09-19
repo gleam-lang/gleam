@@ -1323,6 +1323,11 @@ pub type TypedConstantBitStringSegmentOption = BitStringSegmentOption<TypedConst
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BitStringSegmentOption<Value> {
+    Bytes {
+        location: SrcSpan,
+    },
+
+    // TODO: remove deprecated syntax
     Binary {
         location: SrcSpan,
     },
@@ -1335,6 +1340,11 @@ pub enum BitStringSegmentOption<Value> {
         location: SrcSpan,
     },
 
+    Bits {
+        location: SrcSpan,
+    },
+
+    // TODO: remove deprecated syntax
     BitString {
         location: SrcSpan,
     },
@@ -1405,10 +1415,12 @@ impl<A> BitStringSegmentOption<A> {
 
     pub fn location(&self) -> SrcSpan {
         match self {
-            BitStringSegmentOption::Binary { location }
+            BitStringSegmentOption::Bytes { location }
+            | BitStringSegmentOption::Binary { location }
+            | BitStringSegmentOption::BitString { location }
             | BitStringSegmentOption::Int { location }
             | BitStringSegmentOption::Float { location }
-            | BitStringSegmentOption::BitString { location }
+            | BitStringSegmentOption::Bits { location }
             | BitStringSegmentOption::Utf8 { location }
             | BitStringSegmentOption::Utf16 { location }
             | BitStringSegmentOption::Utf32 { location }
@@ -1428,8 +1440,10 @@ impl<A> BitStringSegmentOption<A> {
     pub fn label(&self) -> SmolStr {
         match self {
             BitStringSegmentOption::Binary { .. } => "binary".into(),
+            BitStringSegmentOption::Bytes { .. } => "bytes".into(),
             BitStringSegmentOption::Int { .. } => "int".into(),
             BitStringSegmentOption::Float { .. } => "float".into(),
+            BitStringSegmentOption::Bits { .. } => "bits".into(),
             BitStringSegmentOption::BitString { .. } => "bit_string".into(),
             BitStringSegmentOption::Utf8 { .. } => "utf8".into(),
             BitStringSegmentOption::Utf16 { .. } => "utf16".into(),

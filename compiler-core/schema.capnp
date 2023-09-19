@@ -166,13 +166,13 @@ struct BitStringSegment {
 
 struct BitStringSegmentOption {
   union {
-    binary @0 :Void;
+    bytes @0 :Void;
 
     integer @1 :Void;
 
     float @2 :Void;
 
-    bitstring @3 :Void;
+    bits @3 :Void;
 
     utf8 @4 :Void;
 
