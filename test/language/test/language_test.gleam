@@ -1519,6 +1519,36 @@ fn bit_string_match_tests() {
         },
       )
     }),
+    "bit_string from function"
+    |> example(fn() {
+      assert_equal(
+        True,
+        <<
+          0x1,
+          2,
+          2:size(16),
+          0x4:size(32),
+          "Gleam":utf8,
+          4.2:float,
+          <<<<1, 2, 3>>:bit_string, "Gleam":utf8, 1024>>:bit_string,
+        >> == importable.get_bit_string(),
+      )
+    }),
+    "bit_string module const"
+    |> example(fn() {
+      assert_equal(
+        True,
+        <<
+          0x1,
+          2,
+          2:size(16),
+          0x4:size(32),
+          "Gleam":utf8,
+          4.2:float,
+          <<<<1, 2, 3>>:bit_string, "Gleam":utf8, 1024>>:bit_string,
+        >> == importable.data,
+      )
+    }),
   ]
 }
 
