@@ -10,3 +10,20 @@ fn fix(src: &str) -> String {
 fn empty() {
     assert_eq!(fix(""), "\n")
 }
+
+#[test]
+fn alias() {
+    assert_eq!(
+        fix("pub type X =
+  BitString
+"),
+        "pub type X =
+  BitArray
+"
+    );
+}
+
+// TODO: shadowed
+// TODO: imported unqualified
+// TODO: imported unqualified but used qualified
+// TODO: imported qualified but used unqualified

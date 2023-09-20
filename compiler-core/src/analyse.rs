@@ -1,7 +1,10 @@
 #[cfg(test)]
 mod tests;
 
-use crate::ast::{UntypedArg, UntypedStatement};
+use crate::ast::{
+    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg,
+    UntypedStatement,
+};
 use crate::type_::error::MissingAnnotation;
 use crate::type_::Deprecation;
 use crate::{
@@ -1203,9 +1206,11 @@ fn make_type_vars(
     environment: &mut Environment<'_>,
 ) -> Result<Vec<Arc<Type>>, Error> {
     args.iter()
-        .map(|arg| TypeAst::Var {
-            location: *location,
-            name: arg.clone(),
+        .map(|arg| {
+            TypeAst::Var(TypeAstVar {
+                location: *location,
+                name: arg.clone(),
+            })
         })
         .map(|ast| hydrator.type_from_ast(&ast, environment))
         .try_collect()
@@ -1317,14 +1322,14 @@ fn get_type_dependencies(typ: &TypeAst) -> Vec<SmolStr> {
     let mut deps = Vec::with_capacity(1);
 
     match typ {
-        TypeAst::Var { .. } => (),
-        TypeAst::Hole { .. } => (),
-        TypeAst::Constructor {
+        TypeAst::Var(TypeAstVar { .. }) => (),
+        TypeAst::Hole(TypeAstHole { .. }) => (),
+        TypeAst::Constructor(TypeAstConstructor {
             name,
             arguments,
             module,
             ..
-        } => {
+        }) => {
             deps.push(match module {
                 Some(module) => format!("{}.{}", name, module).into(),
                 None => name.clone(),
@@ -1334,15 +1339,15 @@ fn get_type_dependencies(typ: &TypeAst) -> Vec<SmolStr> {
                 deps.extend(get_type_dependencies(arg))
             }
         }
-        TypeAst::Fn {
+        TypeAst::Fn(TypeAstFn {
             arguments, return_, ..
-        } => {
+        }) => {
             for arg in arguments {
                 deps.extend(get_type_dependencies(arg))
             }
             deps.extend(get_type_dependencies(return_))
         }
-        TypeAst::Tuple { elems, .. } => {
+        TypeAst::Tuple(TypeAstTuple { elems, .. }) => {
             for elem in elems {
                 deps.extend(get_type_dependencies(elem))
             }

@@ -2,7 +2,10 @@
 mod tests;
 
 use crate::{
-    ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, Use, *},
+    ast::{
+        CustomType, Function, Import, ModuleConstant, TypeAlias, TypeAstConstructor, TypeAstFn,
+        TypeAstHole, TypeAstTuple, TypeAstVar, Use, *,
+    },
     build::Target,
     docvec,
     io::Utf8Writer,
@@ -418,29 +421,31 @@ impl<'comments> Formatter<'comments> {
 
     fn type_ast<'a>(&mut self, t: &'a TypeAst) -> Document<'a> {
         match t {
-            TypeAst::Hole { name, .. } => name.to_doc(),
+            TypeAst::Hole(TypeAstHole { name, .. }) => name.to_doc(),
 
-            TypeAst::Constructor {
+            TypeAst::Constructor(TypeAstConstructor {
                 name,
                 arguments: args,
                 module,
                 ..
-            } => self.type_ast_constructor(module, name, args),
+            }) => self.type_ast_constructor(module, name, args),
 
-            TypeAst::Fn {
+            TypeAst::Fn(TypeAstFn {
                 arguments: args,
                 return_: retrn,
                 ..
-            } => "fn"
+            }) => "fn"
                 .to_doc()
                 .append(self.type_arguments(args))
                 .group()
                 .append(" ->")
                 .append(break_("", " ").append(self.type_ast(retrn)).nest(INDENT)),
 
-            TypeAst::Var { name, .. } => name.to_doc(),
+            TypeAst::Var(TypeAstVar { name, .. }) => name.to_doc(),
 
-            TypeAst::Tuple { elems, .. } => "#".to_doc().append(self.type_arguments(elems)),
+            TypeAst::Tuple(TypeAstTuple { elems, .. }) => {
+                "#".to_doc().append(self.type_arguments(elems))
+            }
         }
         .group()
     }
