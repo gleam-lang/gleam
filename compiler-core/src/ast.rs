@@ -373,6 +373,8 @@ impl<T, E> Function<T, E> {
     }
 }
 
+pub type UntypedImport = Import<()>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImportName {
     pub location: SrcSpan,
@@ -398,6 +400,7 @@ pub struct Import<PackageName> {
     pub unqualified: Vec<UnqualifiedImport>,
     pub package: PackageName,
 }
+
 impl<T> Import<T> {
     pub(crate) fn used_name(&self) -> SmolStr {
         self.as_name
@@ -428,6 +431,8 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
     pub value: Box<Constant<T, ConstantRecordTag>>,
     pub type_: T,
 }
+
+pub type UntypedCustomType = CustomType<()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A newly defined type with one or more constructors.
@@ -468,6 +473,8 @@ impl<T> CustomType<T> {
         SrcSpan::new(self.location.start, self.end_position)
     }
 }
+
+pub type UntypedTypeAlias = TypeAlias<()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A new name for an existing type
