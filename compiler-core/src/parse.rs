@@ -60,9 +60,10 @@ use crate::ast::{
     CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, HasLocation, Import,
     ImportName, Module, ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg,
     RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
-    UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
-    UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
-    UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
+    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport,
+    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
+    UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment,
+    CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -94,7 +95,7 @@ struct Attributes {
     external_javascript: Option<(SmolStr, SmolStr)>,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum Warning {
     // TODO: remove after next release
     DeprecatedOptionBitString { location: SrcSpan },
@@ -1808,10 +1809,10 @@ where
             // Type hole
             Some((start, Token::DiscardName { name }, end)) => {
                 let _ = self.next_tok();
-                Ok(Some(TypeAst::Hole {
+                Ok(Some(TypeAst::Hole(TypeAstHole {
                     location: SrcSpan { start, end },
                     name,
-                }))
+                })))
             }
 
             // Tuple
@@ -1820,10 +1821,10 @@ where
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elems = self.parse_types()?;
                 let _ = self.expect_one(&Token::RightParen)?;
-                Ok(Some(TypeAst::Tuple {
+                Ok(Some(TypeAst::Tuple(TypeAstTuple {
                     location: SrcSpan { start, end },
                     elems,
-                }))
+                })))
             }
 
             // Function
@@ -1836,14 +1837,14 @@ where
                 let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
                 let retrn = self.parse_type()?;
                 if let Some(retrn) = retrn {
-                    Ok(Some(TypeAst::Fn {
+                    Ok(Some(TypeAst::Fn(TypeAstFn {
                         location: SrcSpan {
                             start,
                             end: retrn.location().end,
                         },
                         return_: Box::new(retrn),
                         arguments: args,
-                    }))
+                    })))
                 } else {
                     parse_error(
                         ParseErrorType::ExpectedType,
@@ -1868,10 +1869,10 @@ where
                     let (_, upname, upname_e) = self.expect_upname()?;
                     self.parse_type_name_finish(start, Some(mod_name), upname, upname_e)
                 } else {
-                    Ok(Some(TypeAst::Var {
+                    Ok(Some(TypeAst::Var(TypeAstVar {
                         location: SrcSpan { start, end },
                         name: mod_name,
-                    }))
+                    })))
                 }
             }
 
@@ -1893,19 +1894,19 @@ where
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args = self.parse_types()?;
             let (_, par_e) = self.expect_one(&Token::RightParen)?;
-            Ok(Some(TypeAst::Constructor {
+            Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan { start, end: par_e },
                 module,
                 name,
                 arguments: args,
-            }))
+            })))
         } else {
-            Ok(Some(TypeAst::Constructor {
+            Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan { start, end },
                 module,
                 name,
                 arguments: vec![],
-            }))
+            })))
         }
     }
 

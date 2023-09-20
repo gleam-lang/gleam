@@ -1,6 +1,5 @@
 use crate::{
     ast::TodoKind,
-    build::Target,
     diagnostic::{self, Diagnostic, Location},
     error::wrap,
     type_,

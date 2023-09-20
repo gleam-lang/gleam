@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::TypeAst;
+use crate::ast::{TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar};
 use std::sync::Arc;
 
 use im::hashmap;
@@ -102,12 +102,12 @@ impl Hydrator {
         environment: &mut Environment<'_>,
     ) -> Result<Arc<Type>, Error> {
         match ast {
-            TypeAst::Constructor {
+            TypeAst::Constructor(TypeAstConstructor {
                 location,
                 module,
                 name,
                 arguments: args,
-            } => {
+            }) => {
                 // Hydrate the type argument AST into types
                 let mut argument_types = Vec::with_capacity(args.len());
                 for t in args {
@@ -163,18 +163,18 @@ impl Hydrator {
                 Ok(return_type)
             }
 
-            TypeAst::Tuple { elems, .. } => Ok(tuple(
+            TypeAst::Tuple(TypeAstTuple { elems, .. }) => Ok(tuple(
                 elems
                     .iter()
                     .map(|t| self.type_from_ast(t, environment))
                     .try_collect()?,
             )),
 
-            TypeAst::Fn {
+            TypeAst::Fn(TypeAstFn {
                 arguments: args,
                 return_: retrn,
                 ..
-            } => {
+            }) => {
                 let args = args
                     .iter()
                     .map(|t| self.type_from_ast(t, environment))
@@ -183,30 +183,34 @@ impl Hydrator {
                 Ok(fn_(args, retrn))
             }
 
-            TypeAst::Var { name, location, .. } => match self.created_type_variables.get(name) {
-                Some(var) => Ok(var.clone()),
+            TypeAst::Var(TypeAstVar { name, location, .. }) => {
+                match self.created_type_variables.get(name) {
+                    Some(var) => Ok(var.clone()),
 
-                None if self.permit_new_type_variables => {
-                    let var = environment.new_generic_var();
-                    let _ = self
-                        .rigid_type_names
-                        .insert(environment.previous_uid(), name.clone());
-                    let _ = self
-                        .created_type_variables
-                        .insert(name.clone(), var.clone());
-                    Ok(var)
+                    None if self.permit_new_type_variables => {
+                        let var = environment.new_generic_var();
+                        let _ = self
+                            .rigid_type_names
+                            .insert(environment.previous_uid(), name.clone());
+                        let _ = self
+                            .created_type_variables
+                            .insert(name.clone(), var.clone());
+                        Ok(var)
+                    }
+
+                    None => Err(Error::UnknownType {
+                        name: name.clone(),
+                        location: *location,
+                        types: environment.module_types.keys().cloned().collect(),
+                    }),
                 }
+            }
 
-                None => Err(Error::UnknownType {
-                    name: name.clone(),
-                    location: *location,
-                    types: environment.module_types.keys().cloned().collect(),
-                }),
-            },
+            TypeAst::Hole(TypeAstHole { .. }) if self.permit_holes => {
+                Ok(environment.new_unbound_var())
+            }
 
-            TypeAst::Hole { .. } if self.permit_holes => Ok(environment.new_unbound_var()),
-
-            TypeAst::Hole { location, .. } => Err(Error::UnexpectedTypeHole {
+            TypeAst::Hole(TypeAstHole { location, .. }) => Err(Error::UnexpectedTypeHole {
                 location: *location,
             }),
         }
