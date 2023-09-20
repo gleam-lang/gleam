@@ -23,6 +23,22 @@ fn alias() {
     );
 }
 
+#[test]
+fn qualified() {
+    assert_eq!(
+        fix("import gleam
+
+pub type X =
+  gleam.BitString
+"),
+        "import gleam
+
+pub type X =
+  gleam.BitArray
+"
+    );
+}
+
 // TODO: shadowed
 // TODO: imported unqualified
 // TODO: imported unqualified but used qualified

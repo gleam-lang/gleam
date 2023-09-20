@@ -78,7 +78,7 @@ impl Fixer {
 
     fn fix_definition(&mut self, definition: UntypedDefinition) -> UntypedDefinition {
         match definition {
-            Definition::Import(_) => todo!(),
+            Definition::Import(i) => Definition::Import(i),
             Definition::Function(_) => todo!(),
             Definition::CustomType(_) => todo!(),
             Definition::TypeAlias(a) => Definition::TypeAlias(self.fix_alias(a)),
@@ -87,13 +87,13 @@ impl Fixer {
     }
 
     fn fix_alias(&mut self, mut alias: TypeAlias<()>) -> TypeAlias<()> {
-        alias.type_ast = self.fold(alias.type_ast);
+        alias.type_ast = self.fold_type(alias.type_ast);
         alias
     }
 }
 
 impl TypeAstFolder for Fixer {
-    fn fold_constructor(&mut self, mut constructor: TypeAstConstructor) -> TypeAst {
+    fn fold_type_constructor(&mut self, mut constructor: TypeAstConstructor) -> TypeAst {
         if constructor.name == self.bit_string_name {
             constructor.name = self.bit_array_name.clone();
         }
