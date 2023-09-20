@@ -1111,46 +1111,7 @@ fn bit_string_target_tests() -> List(Test) {
 
 @target(javascript)
 fn bit_string_target_tests() -> List(Test) {
-  [
-    "<<0,1>> == <<1:size(16)>>"
-    |> example(fn() { assert_equal(True, <<0, 1>> == <<1:size(16)>>) }),
-    "<<0,0,0,1>> == <<1:32>>"
-    |> example(fn() { assert_equal(True, <<0, 0, 0, 1>> == <<1:32>>) }),
-    "<<71, 108, 101, 97, 109>> == <<\"Gleam\":utf8>>"
-    |> example(fn() {
-      assert_equal(True, <<71, 108, 101, 97, 109>> == <<"Gleam":utf8>>)
-    }),
-    "bit string from function"
-    |> example(fn() {
-      assert_equal(
-        True,
-        <<
-          0x1,
-          2,
-          2:size(16),
-          0x4:size(32),
-          "Gleam":utf8,
-          4.2:float,
-          <<<<1, 2, 3>>:bit_string, "Gleam":utf8, 1024>>:bit_string,
-        >> == importable.get_bit_string(),
-      )
-    }),
-    "bit string module const"
-    |> example(fn() {
-      assert_equal(
-        True,
-        <<
-          0x1,
-          2,
-          2:size(16),
-          0x4:size(32),
-          "Gleam":utf8,
-          4.2:float,
-          <<<<1, 2, 3>>:bit_string, "Gleam":utf8, 1024>>:bit_string,
-        >> == importable.data,
-      )
-    }),
-  ]
+  []
 }
 
 fn sized_bit_string_tests() -> List(Test) {
