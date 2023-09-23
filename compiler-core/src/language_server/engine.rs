@@ -243,7 +243,7 @@ where
 
     fn get_unused_ranges(&mut self, uri: &Url) -> Option<Vec<lsp_types::Range>> {
         let module = self.module_for_uri(uri)?;
-        let unused = &module.ast.type_info.unused;
+        let unused = &module.ast.type_info.unused_imports;
         if unused.is_empty() {
             None
         } else {

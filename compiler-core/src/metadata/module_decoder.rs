@@ -76,7 +76,7 @@ impl ModuleDecoder {
             values: read_hashmap!(reader.get_values()?, self, value_constructor),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
             // Unused locations are not serialized
-            unused: Vec::new(),
+            unused_imports: Vec::new(),
         })
     }
 
