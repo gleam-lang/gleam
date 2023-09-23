@@ -529,7 +529,7 @@ impl<'a> Environment<'a> {
     }
 
     /// Converts entities with a usage count of 0 to warnings.
-    /// Returns the list of location for the removed unused lsp action.
+    /// Returns the list of unused imported module location for the removed unused lsp action.
     pub fn convert_unused_to_warnings(&mut self) -> Vec<SrcSpan> {
         let unused = self
             .entity_usages
