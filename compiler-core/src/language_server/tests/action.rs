@@ -7,10 +7,6 @@ use lsp_types::{
 use super::*;
 
 fn remove_unused_action(src: &str) -> String {
-    do_remove_unused_action(src).unwrap_or_else(|| src.into())
-}
-
-fn do_remove_unused_action(src: &str) -> Option<String> {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
 
@@ -26,6 +22,7 @@ fn do_remove_unused_action(src: &str) -> Option<String> {
     _ = io.src_module("app", src);
     engine.compile_please().result.expect("compiled");
 
+    // create the code action request
     let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
         r#"\\?\C:\src\app.gleam"#
     } else {
@@ -47,7 +44,7 @@ fn do_remove_unused_action(src: &str) -> Option<String> {
     };
 
     let params = CodeActionParams {
-        text_document: TextDocumentIdentifier::new(url),
+        text_document: TextDocumentIdentifier::new(url.clone()),
         context: CodeActionContext {
             diagnostics: vec![diag],
             only: None,
@@ -60,39 +57,57 @@ fn do_remove_unused_action(src: &str) -> Option<String> {
             partial_result_token: None,
         },
     };
-    let response = engine.action(params).result.unwrap();
+
+    // find the remove unused action response
+    let response = engine
+        .action(params)
+        .result
+        .unwrap()
+        .map(|actions| {
+            actions
+                .into_iter()
+                .find(|action| action.title == "Remove unused imports")
+        })
+        .flatten();
     if let Some(action) = response {
-        let action = action.iter().next()?;
-        Some(apply_code_action(src, action))
+        apply_code_action(src, &url, &action)
     } else {
-        None
+        panic!("No code action produced by the engine")
     }
 }
 
-fn apply_code_action(src: &str, action: &lsp_types::CodeAction) -> String {
+fn apply_code_action(src: &str, url: &Url, action: &lsp_types::CodeAction) -> String {
+    match &action.edit {
+        Some(WorkspaceEdit { changes, .. }) => match changes {
+            Some(changes) => apply_code_edit(src, url, changes),
+            None => panic!("No text edit found"),
+        },
+        _ => panic!("No workspace edit found"),
+    }
+}
+
+// This function replicates how the text editor applies TextEdit
+fn apply_code_edit(
+    src: &str,
+    url: &Url,
+    changes: &HashMap<Url, Vec<lsp_types::TextEdit>>,
+) -> String {
     let mut result = src.to_string();
     let line_numbers = LineNumbers::new(src);
     let mut offset = 0;
-    match &action.edit {
-        Some(WorkspaceEdit { changes, .. }) => match changes {
-            Some(changes) => {
-                for change in changes.values() {
-                    for edit in change {
-                        let start = line_numbers
-                            .byte_index(edit.range.start.line, edit.range.start.character)
-                            - offset;
-                        let end = line_numbers
-                            .byte_index(edit.range.end.line, edit.range.end.character)
-                            - offset;
-                        let range = (start as usize)..(end as usize);
-                        offset += end - start;
-                        result.replace_range(range, &edit.new_text);
-                    }
-                }
-            }
-            None => (),
-        },
-        _ => (),
+    for (change_url, change) in changes {
+        if url != change_url {
+            panic!("Unknown url {}", change_url)
+        }
+        for edit in change {
+            let start =
+                line_numbers.byte_index(edit.range.start.line, edit.range.start.character) - offset;
+            let end =
+                line_numbers.byte_index(edit.range.end.line, edit.range.end.character) - offset;
+            let range = (start as usize)..(end as usize);
+            offset += end - start;
+            result.replace_range(range, &edit.new_text);
+        }
     }
     result
 }
