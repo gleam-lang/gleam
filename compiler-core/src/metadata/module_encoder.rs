@@ -43,9 +43,20 @@ impl<'a> ModuleEncoder<'a> {
         self.set_module_values(&mut module);
         self.set_module_accessors(&mut module);
         self.set_module_types_constructors(&mut module);
+        self.set_unused_imports(&mut module);
 
         capnp::serialize_packed::write_message(&mut buffer, &message).expect("capnp encode");
         Ok(buffer)
+    }
+
+    fn set_unused_imports(&mut self, module: &mut module::Builder<'_>) {
+        let mut unused_imports = module
+            .reborrow()
+            .init_unused_imports(self.data.unused_imports.len() as u32);
+        for (i, span) in self.data.unused_imports.iter().enumerate() {
+            let unused_import = unused_imports.reborrow().get(i as u32);
+            self.build_src_span(unused_import, *span)
+        }
     }
 
     fn set_module_accessors(&mut self, module: &mut module::Builder<'_>) {
