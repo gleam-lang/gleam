@@ -26,6 +26,7 @@ struct Module {
   accessors @3 :List(Property(AccessorsMap));
   package @4 :Text;
   typesConstructors @5 :List(Property(List(Text)));
+  unusedImports @6 :List(SrcSpan);
 }
 
 struct TypeConstructor {

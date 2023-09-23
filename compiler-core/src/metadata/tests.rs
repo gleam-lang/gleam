@@ -109,6 +109,24 @@ fn module_with_private_type() {
 }
 
 #[test]
+fn module_with_unused_import() {
+    let module = ModuleInterface {
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a".into(),
+        types: HashMap::new(),
+        types_constructors: HashMap::new(),
+        unused_imports: vec![
+            SrcSpan { start: 0, end: 10 },
+            SrcSpan { start: 13, end: 42 },
+        ],
+        accessors: HashMap::new(),
+        values: HashMap::new(),
+    };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
 fn module_with_app_type() {
     let module = ModuleInterface {
         package: "some_package".into(),
