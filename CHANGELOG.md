@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.31.0 - Unreleased
+## v0.31.0 - 2023-09-25
 
 - New Gleam projects are created with `gleam_stdlib` v0.31, `actions/checkout`
   v3.\*, and `erlef/setup-beam` v1.\*.
