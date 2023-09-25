@@ -2,6 +2,8 @@
 
 ## v0.31.0 - 2023-09-18
 
+- The `@deprecated("...")` attribute can be used to mark a function as
+  deprecated. This will cause a warning to be emitted when the function is used.
 - A warning is now emitted if a module from a transitive dependency is imported.
 - Record access can now be used in case clause guards.
 - Fixed a bug where `manifest.toml` could contain absolute paths for path
