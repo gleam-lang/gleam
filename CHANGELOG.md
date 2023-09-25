@@ -2,6 +2,8 @@
 
 ## v0.31.0 - Unreleased
 
+- New Gleam projects are created with `gleam_stdlib` v0.31, `actions/checkout`
+  v3.\*, and `erlef/setup-beam` v1.\*.
 - A note is included in the generated HTML documentation if a function is
   deprecated.
 
