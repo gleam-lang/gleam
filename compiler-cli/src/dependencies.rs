@@ -721,7 +721,7 @@ fn provide_git_package(
         repo: SmolStr::new_inline("repo"),
         commit: SmolStr::new_inline("commit"),
     };
-    Err(Error::GitDependencyUnsuported)
+    Err(Error::GitDependencyUnsupported)
 }
 
 /// Adds a gleam project located at a specific path to the list of "provided packages"
@@ -733,7 +733,7 @@ fn provide_package(
     provided: &mut HashMap<SmolStr, ProvidedPackage>,
     parents: &mut Vec<SmolStr>,
 ) -> Result<hexpm::version::Range> {
-    // Return early if a package cyle is detected
+    // Return early if a package cycle is detected
     if parents.contains(&package_name) {
         let mut last_cycle = parents
             .split(|p| p == &package_name)

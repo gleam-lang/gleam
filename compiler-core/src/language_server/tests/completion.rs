@@ -553,7 +553,7 @@ type Wibble {
 }
 
 #[test]
-fn in_custom_type_defintion() {
+fn in_custom_type_definition() {
     let code = "import dep";
     let dep = "
 type Wibble {

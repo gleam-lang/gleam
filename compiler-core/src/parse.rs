@@ -59,7 +59,7 @@ use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitStringSegment,
     BitStringSegmentOption, CallArg, Clause, ClauseGuard, Constant, CustomType, Definition,
     Function, HasLocation, Import, Module, ModuleConstant, Pattern, RecordConstructor,
-    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargettedDefinition, TodoKind,
+    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind,
     TypeAlias, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
     UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern,
     UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
@@ -224,7 +224,7 @@ where
         }
     }
 
-    fn parse_definition(&mut self) -> Result<Option<TargettedDefinition>, ParseError> {
+    fn parse_definition(&mut self) -> Result<Option<TargetedDefinition>, ParseError> {
         let mut attributes = Attributes::default();
         self.parse_attributes(&mut attributes)?;
 
@@ -279,7 +279,7 @@ where
             }
         }?;
 
-        Ok(def.map(|definition| TargettedDefinition {
+        Ok(def.map(|definition| TargetedDefinition {
             definition,
             target: attributes.target,
         }))

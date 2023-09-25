@@ -30,7 +30,7 @@ impl<'a> CallGraphBuilder<'a> {
 
     /// Add each function to the graph, storing the index of the node under the
     /// name of the function.
-    fn register_module_function_existance(
+    fn register_module_function_existence(
         &mut self,
         function: &'a UntypedFunction,
     ) -> Result<(), Error> {
@@ -397,7 +397,7 @@ pub fn into_dependency_order(
     let mut grapher = CallGraphBuilder::default();
 
     for function in &functions {
-        grapher.register_module_function_existance(function)?;
+        grapher.register_module_function_existence(function)?;
     }
 
     // Build the call graph between the module functions.
@@ -410,13 +410,13 @@ pub fn into_dependency_order(
 
     // Determine the order in which the functions should be compiled by looking
     // at which other functions they depend on.
-    let indicies = crate::graph::into_dependency_order(graph);
+    let indices = crate::graph::into_dependency_order(graph);
 
-    // We got node indicies back, so we need to map them back to the functions
+    // We got node indices back, so we need to map them back to the functions
     // they represent.
     // We wrap them each with `Some` so we can use `.take()`.
     let mut functions = functions.into_iter().map(Some).collect_vec();
-    let ordered = indicies
+    let ordered = indices
         .into_iter()
         .map(|level| {
             level

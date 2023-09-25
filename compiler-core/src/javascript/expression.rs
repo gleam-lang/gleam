@@ -40,7 +40,7 @@ pub(crate) struct Generator<'module> {
     // We register whether these features are used within an expression so that
     // the module generator can output a suitable function if it is needed.
     pub tracker: &'module mut UsageTracker,
-    // We track whether tail call recusion is used so that we can render a loop
+    // We track whether tail call recursion is used so that we can render a loop
     // at the top level of the function to use in place of pushing new stack
     // frames.
     pub tail_recursion_used: bool,
