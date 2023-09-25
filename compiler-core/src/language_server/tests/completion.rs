@@ -362,7 +362,7 @@ pub type Box {
 }
 
 #[test]
-fn imported_unqualifed_module_function() {
+fn imported_unqualified_module_function() {
     let code = "
 import dep.{wobble}
 ";
@@ -394,7 +394,7 @@ pub fn wobble() {
 }
 
 #[test]
-fn imported_unqualifed_public_enum() {
+fn imported_unqualified_public_enum() {
     let code = "
 import dep.{Left}
 ";
@@ -434,7 +434,7 @@ pub type Direction {
 }
 
 #[test]
-fn imported_unqualifed_public_record() {
+fn imported_unqualified_public_record() {
     let code = "
 import dep.{Box}
 ";
