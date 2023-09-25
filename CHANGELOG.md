@@ -1,6 +1,11 @@
 # Changelog
 
-## v0.31.0 - 2023-09-18
+## v0.31.0 - Unreleased
+
+- A note is included in the generated HTML documentation if a function is
+  deprecated.
+
+## v0.31.0-rc1 - 2023-09-18
 
 - The `@deprecated("...")` attribute can be used to mark a function as
   deprecated. This will cause a warning to be emitted when the function is used.

@@ -14,6 +14,7 @@ use crate::{
     io::OutputFile,
     paths::ProjectPaths,
     pretty,
+    type_::Deprecation,
     version::COMPILER_VERSION,
 };
 use askama::Template;
@@ -485,6 +486,7 @@ fn function<'a>(
             arguments: args,
             return_type: ret,
             location,
+            deprecation,
             ..
         }) => Some(DocsFunction {
             name,
@@ -492,6 +494,10 @@ fn function<'a>(
             text_documentation: text_documentation(doc),
             signature: print(formatter.docs_fn_signature(true, name, args, ret.clone())),
             source_url: source_links.url(location),
+            deprecation_message: match deprecation {
+                Deprecation::NotDeprecated => "".to_string(),
+                Deprecation::Deprecated { message } => message.to_string(),
+            },
         }),
 
         _ => None,
@@ -641,6 +647,7 @@ struct DocsFunction<'a> {
     documentation: String,
     text_documentation: String,
     source_url: String,
+    deprecation_message: String,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
