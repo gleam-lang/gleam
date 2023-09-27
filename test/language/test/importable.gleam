@@ -37,3 +37,11 @@ pub fn get_bit_string() {
     <<<<1, 2, 3>>:bit_string, "Gleam":utf8, 1024>>:bit_string,
   >>
 }
+
+pub const language = "gleam"
+
+pub type Movie {
+  Movie(title: String)
+}
+
+pub const war_games = Movie("WarGames")

@@ -154,7 +154,13 @@
       </a>
       {% endif %}
     </div>
+
     <pre><code class="hljs gleam">{{ function.signature }}</code></pre>
+    {% if !function.deprecation_message.is_empty() %}
+    <p>
+      <b>Deprecated:</b> {{ function.deprecation_message }}
+    </p>
+    {% endif %}
     <div class="rendered-markdown">{{ function.documentation|safe }}</div>
   </div>
   {% endfor %}

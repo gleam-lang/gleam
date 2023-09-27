@@ -635,7 +635,7 @@ fn resolve_versions<Telem: Telemetry>(
     // The version requires of the current project
     let mut root_requirements = HashMap::new();
 
-    // Populate the provided_packages and root_requrements maps
+    // Populate the provided_packages and root_requirements maps
     for (name, requirement) in dependencies.into_iter() {
         let version = match requirement {
             Requirement::Hex { version } => version,
@@ -668,7 +668,7 @@ fn resolve_versions<Telem: Telemetry>(
         &locked,
     )?;
 
-    // Convert the hex packages and local packages into manfiest packages
+    // Convert the hex packages and local packages into manliest packages
     let manifest_packages = runtime.block_on(future::try_join_all(
         resolved
             .into_iter()

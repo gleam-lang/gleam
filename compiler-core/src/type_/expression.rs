@@ -1062,24 +1062,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 container,
                 index: _,
                 type_: (),
-            } => {
-                let container = self.infer_clause_guard(*container)?;
-                let container = Box::new(container);
-                let container_type = container.type_();
-                let (index, label, type_) = self.infer_known_record_access(
-                    container_type,
-                    container.location(),
-                    FieldAccessUsage::Other,
-                    location,
-                    label,
-                )?;
-                Ok(ClauseGuard::FieldAccess {
-                    container,
-                    label,
-                    index: Some(index),
-                    location,
-                    type_,
-                })
+            } => match self.infer_clause_guard(*container.clone()) {
+                Ok(container) => self.infer_guard_record_access(container, label, location),
+
+                Err(err) => match *container {
+                    ClauseGuard::Var { name, location, .. } => {
+                        self.infer_guard_module_access(name, label, location, err)
+                    }
+
+                    _ => Err(Error::RecordAccessUnknownType { location }),
+                },
+            },
+
+            ClauseGuard::ModuleSelect { location, .. } => {
+                Err(Error::RecordAccessUnknownType { location })
             }
 
             ClauseGuard::And {
@@ -1304,6 +1300,75 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
+    fn infer_guard_record_access(
+        &mut self,
+        container: ClauseGuard<Arc<Type>, SmolStr>,
+        label: SmolStr,
+        location: SrcSpan,
+    ) -> Result<ClauseGuard<Arc<Type>, SmolStr>, Error> {
+        let container = Box::new(container);
+        let container_type = container.type_();
+        let (index, label, type_) = self.infer_known_record_access(
+            container_type,
+            container.location(),
+            FieldAccessUsage::Other,
+            location,
+            label,
+        )?;
+        Ok(ClauseGuard::FieldAccess {
+            container,
+            label,
+            index: Some(index),
+            location,
+            type_,
+        })
+    }
+
+    fn infer_guard_module_access(
+        &mut self,
+        name: SmolStr,
+        label: SmolStr,
+        location: SrcSpan,
+        record_access_erorr: Error,
+    ) -> Result<ClauseGuard<Arc<Type>, SmolStr>, Error> {
+        let module_access = self
+            .infer_module_access(&name, label, &location, location)
+            .and_then(|ma| match ma {
+                TypedExpr::ModuleSelect {
+                    location,
+                    typ,
+                    label,
+                    module_name,
+                    module_alias,
+                    constructor,
+                } => match constructor {
+                    ModuleValueConstructor::Constant { literal, .. } => {
+                        Ok(ClauseGuard::ModuleSelect {
+                            location,
+                            type_: typ,
+                            label,
+                            module_name,
+                            module_alias,
+                            literal,
+                        })
+                    }
+
+                    _ => Err(Error::RecordAccessUnknownType { location }),
+                },
+
+                _ => Err(Error::RecordAccessUnknownType { location }),
+            });
+
+        // If the name is in the environment, use the original error from
+        // inferring the record access, so that we can suggest possible
+        // misspellings of field names
+        if self.environment.scope.contains_key(&name) {
+            module_access.map_err(|_| record_access_erorr)
+        } else {
+            module_access
+        }
+    }
+
     fn infer_module_access(
         &mut self,
         module_alias: &SmolStr,
@@ -1421,12 +1486,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
         let accessors = match collapse_links(record_type.clone()).as_ref() {
             // A type in the current module which may have fields
-            Type::App { module, name, .. } if module == self.environment.current_module => {
+            Type::Named { module, name, .. } if module == self.environment.current_module => {
                 self.environment.accessors.get(name)
             }
 
             // A type in another module which may have fields
-            Type::App { module, name, .. } => self
+            Type::Named { module, name, .. } => self
                 .environment
                 .importable_modules
                 .get(module)

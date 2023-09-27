@@ -1120,6 +1120,8 @@ fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Docu
             container, index, ..
         } => tuple_index_inline(container, index.expect("Unable to find index") + 1, env),
 
+        ClauseGuard::ModuleSelect { literal, .. } => const_inline(literal, env),
+
         ClauseGuard::Constant(constant) => const_inline(constant, env),
     }
 }
@@ -1159,7 +1161,8 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
         ClauseGuard::Constant(_)
         | ClauseGuard::Var { .. }
         | ClauseGuard::TupleIndex { .. }
-        | ClauseGuard::FieldAccess { .. } => bare_clause_guard(guard, env),
+        | ClauseGuard::FieldAccess { .. }
+        | ClauseGuard::ModuleSelect { .. } => bare_clause_guard(guard, env),
     }
 }
 
@@ -1771,7 +1774,7 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
             }
             TypeVar::Link { type_: typ } => type_var_ids(typ, ids),
         },
-        Type::App { args, .. } => {
+        Type::Named { args, .. } => {
             for arg in args {
                 type_var_ids(arg, ids)
             }
@@ -1864,11 +1867,11 @@ impl<'a> TypePrinter<'a> {
         match type_ {
             Type::Var { type_: typ } => self.print_var(&typ.borrow()),
 
-            Type::App {
+            Type::Named {
                 name, module, args, ..
             } if is_prelude_module(module) => self.print_prelude_type(name, args),
 
-            Type::App {
+            Type::Named {
                 name, module, args, ..
             } => self.print_type_app(module, name, args),
 
@@ -1914,7 +1917,7 @@ impl<'a> TypePrinter<'a> {
                 let error = tuple(["error".to_doc(), arg_err]);
                 docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
             }
-            // Getting here sholud mean we either forgot a built-in type or there is a
+            // Getting here should mean we either forgot a built-in type or there is a
             // compiler error
             name => panic!("{name} is not a built-in type."),
         }

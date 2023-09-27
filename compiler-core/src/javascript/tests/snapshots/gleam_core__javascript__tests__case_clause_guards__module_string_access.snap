@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+assertion_line: 249
+expression: "\n          import hero\n          pub fn main() {\n            let name = \"Tony Stark\"\n            case name {\n              n if n == hero.ironman -> True\n              _ -> False\n            }\n          }\n        "
+---
+import * as $hero from "../../package/hero.mjs";
+
+export function main() {
+  let name = "Tony Stark";
+  if (name === ($hero.ironman)) {
+    let n = name;
+    return true;
+  } else {
+    return false;
+  }
+}
+

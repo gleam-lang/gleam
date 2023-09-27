@@ -386,7 +386,7 @@ impl<'a> ModuleEncoder<'a> {
                 self.build_type(fun.init_return(), retrn)
             }
 
-            Type::App {
+            Type::Named {
                 name, args, module, ..
             } => {
                 let mut app = builder.init_app();

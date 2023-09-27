@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+assertion_line: 272
+expression: "\n          import hero\n          pub fn main() {\n            let names = [\"Tony Stark\", \"Bruce Wayne\"]\n            case names {\n              n if n == hero.heroes -> True\n              _ -> False\n            }\n          }\n        "
+---
+import * as $hero from "../../package/hero.mjs";
+import { toList, isEqual } from "../gleam.mjs";
+
+export function main() {
+  let names = toList(["Tony Stark", "Bruce Wayne"]);
+  if (isEqual(names, $hero.heroes)) {
+    let n = names;
+    return true;
+  } else {
+    return false;
+  }
+}
+
