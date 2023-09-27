@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/tuples.rs
-assertion_line: 100
 expression: "\npub const e = #(\n  \"a\", \"a\", \"a\", \"a\", \"a\", \"a\", \"a\",\n  \"a\", \"a\", \"a\", \"a\", \"a\", \"a\", \"a\",\n  \"a\", \"a\", \"a\", \"a\", \"a\", \"a\", \"a\",\n)\n"
 ---
 export const e: [
