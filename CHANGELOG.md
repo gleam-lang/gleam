@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Module access can now be used in case clause guards.
+- The JS target now supports bit syntax for module consts.
 
 ## v0.31.0 - 2023-09-25
 
@@ -50,7 +51,6 @@
 - Use `import type` for importing types from typescript declarations.
 - Use `.d.mts` extension for typescript declarations to match `.mjs`.
 - Prefix module names with dollar sign in typescript to avoid name collisions.
-- The JS target now suports bit syntax for module consts.
 
 ## v0.30.4 - 2023-07-26
 
