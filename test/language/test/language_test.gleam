@@ -21,7 +21,7 @@ pub fn main() {
       suite("strings", strings_tests()),
       suite("equality", equality_tests()),
       suite("constants", constants_tests()),
-      suite("bit strings erlang", bit_string_float_erlang()),
+      suite("bit strings target", bit_string_target_tests()),
       suite("bit strings", bit_string_tests()),
       suite("sized bit strings", sized_bit_string_tests()),
       suite("list spread", list_spread_tests()),
@@ -1100,7 +1100,7 @@ fn bit_string_tests() -> List(Test) {
 }
 
 @target(erlang)
-fn bit_string_float_erlang() -> List(Test) {
+fn bit_string_target_tests() -> List(Test) {
   [
     "<<60,0>> == <<1.0:float-size(16)>>"
     |> example(fn() { assert_equal(True, <<60, 0>> == <<1.0:float-16>>) }),
@@ -1112,7 +1112,7 @@ fn bit_string_float_erlang() -> List(Test) {
 }
 
 @target(javascript)
-fn bit_string_float_erlang() -> List(Test) {
+fn bit_string_target_tests() -> List(Test) {
   []
 }
 
@@ -1520,6 +1520,40 @@ fn bit_string_match_tests() {
           x
         },
       )
+    }),
+    "bit_string from function"
+    |> example(fn() {
+      assert_equal(
+        True,
+        <<
+          0x1,
+          2,
+          2:size(16),
+          0x4:size(32),
+          "Gleam":utf8,
+          4.2:float,
+          <<<<1, 2, 3>>:bit_string, "Gleam":utf8, 1024>>:bit_string,
+        >> == importable.get_bit_string(),
+      )
+    }),
+    "bit_string module const"
+    |> example(fn() {
+      assert_equal(
+        True,
+        <<
+          0x1,
+          2,
+          2:size(16),
+          0x4:size(32),
+          "Gleam":utf8,
+          4.2:float,
+          <<<<1, 2, 3>>:bit_string, "Gleam":utf8, 1024>>:bit_string,
+        >> == importable.data,
+      )
+    }),
+    "<<71, 108, 101, 97, 109>> == <<\"Gleam\":utf8>>"
+    |> example(fn() {
+      assert_equal(True, <<71, 108, 101, 97, 109>> == <<"Gleam":utf8>>)
     }),
   ]
 }
