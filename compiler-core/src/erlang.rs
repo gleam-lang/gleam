@@ -255,7 +255,7 @@ fn register_imports(
             ..
         }) => {
             // Erlang doesn't allow phantom type variables in type definitions but gleam does
-            // so we check the type declaratinon against its constroctors and generate a phantom
+            // so we check the type declaration against its constructors and generate a phantom
             // value that uses the unused type variables.
             let type_var_usages = collect_type_var_usages(HashMap::new(), typed_parameters);
             let mut constructor_var_usages = HashMap::new();
