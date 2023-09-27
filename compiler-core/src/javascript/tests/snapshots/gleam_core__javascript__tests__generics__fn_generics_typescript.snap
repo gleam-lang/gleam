@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/generics.rs
 assertion_line: 5
-expression: "pub fn indentity(a) -> a {\n  a\n}\n"
+expression: "pub fn identity(a) -> a {\n  a\n}\n"
 ---
-export function indentity<J>(a: J): J;
+export function identity<J>(a: J): J;
 
