@@ -458,7 +458,7 @@ fn register_types_from_custom_type<'a>(
 
     hydrator.clear_ridgid_type_names();
 
-    let typ = Arc::new(Type::App {
+    let typ = Arc::new(Type::Named {
         public: *public,
         module: module.to_owned(),
         name: name.clone(),

@@ -321,7 +321,7 @@ impl<'a> Generator<'a> {
 
     fn import_path(&self, package: &'a str, module: &'a str) -> String {
         // TODO: strip shared prefixed between current module and imported
-        // module to avoid decending and climbing back out again
+        // module to avoid descending and climbing back out again
         if package == self.module.type_info.package || package.is_empty() {
             // Same package
             match self.current_module_name_segments_count {

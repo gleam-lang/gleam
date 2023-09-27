@@ -386,7 +386,7 @@ impl<'a> Environment<'a> {
         hydrator: &Hydrator,
     ) -> Arc<Type> {
         match t.deref() {
-            Type::App {
+            Type::Named {
                 public,
                 name,
                 module,
@@ -396,7 +396,7 @@ impl<'a> Environment<'a> {
                     .iter()
                     .map(|t| self.instantiate(t.clone(), ids, hydrator))
                     .collect();
-                Arc::new(Type::App {
+                Arc::new(Type::Named {
                     public: *public,
                     name: name.clone(),
                     module: module.clone(),
@@ -572,7 +572,7 @@ impl<'a> Environment<'a> {
         value_typ: Arc<Type>,
     ) -> Result<(), Vec<SmolStr>> {
         match &*value_typ {
-            Type::App {
+            Type::Named {
                 name: type_name,
                 module: module_name,
                 ..
@@ -692,13 +692,13 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
 
     match (t1.deref(), t2.deref()) {
         (
-            Type::App {
+            Type::Named {
                 module: m1,
                 name: n1,
                 args: args1,
                 ..
             },
-            Type::App {
+            Type::Named {
                 module: m2,
                 name: n2,
                 args: args2,

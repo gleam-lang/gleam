@@ -917,6 +917,15 @@ pub enum ClauseGuard<Type, RecordTag> {
         container: Box<Self>,
     },
 
+    ModuleSelect {
+        location: SrcSpan,
+        type_: Type,
+        label: SmolStr,
+        module_name: SmolStr,
+        module_alias: SmolStr,
+        literal: Constant<Type, RecordTag>,
+    },
+
     Constant(Constant<Type, RecordTag>),
 }
 
@@ -938,7 +947,8 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::GtEqFloat { location, .. }
             | ClauseGuard::LtFloat { location, .. }
             | ClauseGuard::FieldAccess { location, .. }
-            | ClauseGuard::LtEqFloat { location, .. } => *location,
+            | ClauseGuard::LtEqFloat { location, .. }
+            | ClauseGuard::ModuleSelect { location, .. } => *location,
         }
     }
 
@@ -962,7 +972,8 @@ impl<A, B> ClauseGuard<A, B> {
             ClauseGuard::Constant(_)
             | ClauseGuard::Var { .. }
             | ClauseGuard::TupleIndex { .. }
-            | ClauseGuard::FieldAccess { .. } => 5,
+            | ClauseGuard::FieldAccess { .. }
+            | ClauseGuard::ModuleSelect { .. } => 5,
         }
     }
 }
@@ -973,6 +984,7 @@ impl TypedClauseGuard {
             ClauseGuard::Var { type_, .. } => type_.clone(),
             ClauseGuard::TupleIndex { type_, .. } => type_.clone(),
             ClauseGuard::FieldAccess { type_, .. } => type_.clone(),
+            ClauseGuard::ModuleSelect { type_, .. } => type_.clone(),
             ClauseGuard::Constant(constant) => constant.type_(),
 
             ClauseGuard::Or { .. }
