@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::ast::{UntypedArg, UntypedStatement};
+use crate::ast::{AssignName, UntypedArg, UntypedStatement};
 use crate::type_::error::MissingAnnotation;
 use crate::type_::Deprecation;
 use crate::{
@@ -229,9 +229,7 @@ pub fn register_import(
         module,
         unqualified,
         location,
-        discarded,
-        as_name,
-        as_span,
+        alias,
         ..
     } = import;
     let name = module.clone();
@@ -345,39 +343,46 @@ pub fn register_import(
         }
     }
 
-    if !discarded {
-        if unqualified.is_empty() {
-            // When the module has no unqualified imports, we track its usage
-            // so we can warn if not used by the end of the type checking
-            let _ = environment
-                .unused_modules
-                .insert(module_name.clone(), *location);
-        } else if let (Some(alias), Some(span)) = (as_name, as_span) {
+    match alias {
+        Some((AssignName::Variable(alias), span)) if !unqualified.is_empty() => {
             let _ = environment
                 .unused_module_aliases
                 .insert(alias.clone(), *span);
         }
+        _ => (),
+    };
 
-        // Check if a module was already imported with this name
-        if let Some((previous_location, _)) = environment.imported_modules.get(&module_name) {
-            return Err(Error::DuplicateImport {
-                location: *location,
-                previous_location: *previous_location,
-                name: module_name.clone(),
-            });
+    match *alias {
+        Some((AssignName::Variable(_), _)) | None => {
+            if unqualified.is_empty() {
+                let _ = environment
+                    .unused_modules
+                    .insert(module_name.clone(), *location);
+            }
+
+            // Check if a module was already imported with this name
+            if let Some((previous_location, _)) = environment.imported_modules.get(&module_name) {
+                return Err(Error::DuplicateImport {
+                    location: *location,
+                    previous_location: *previous_location,
+                    name: module_name.clone(),
+                });
+            }
+
+            // Register the name as imported so it can't be imported a
+            // second time in future
+            let _ = environment
+                .unqualified_imported_names
+                .insert(module_name.clone(), *location);
+
+            // Insert imported module into scope
+            let _ = environment
+                .imported_modules
+                .insert(module_name, (*location, module_info));
         }
 
-        // Register the name as imported so it can't be imported a
-        // second time in future
-        let _ = environment
-            .unqualified_imported_names
-            .insert(module_name.clone(), *location);
-
-        // Insert imported module into scope
-        let _ = environment
-            .imported_modules
-            .insert(module_name, (*location, module_info));
-    }
+        Some((AssignName::Discard(_), _)) => (),
+    };
 
     Ok(())
 }
@@ -950,10 +955,8 @@ fn record_imported_items_for_use_detection<A>(
         documentation,
         location,
         module,
-        as_name,
         mut unqualified,
-        discarded,
-        as_span,
+        alias,
         ..
     } = i;
     // Find imported module
@@ -992,10 +995,8 @@ fn record_imported_items_for_use_detection<A>(
         documentation,
         location,
         module,
-        as_name,
         unqualified,
-        discarded,
-        as_span,
+        alias,
         package: module_info.package.clone(),
     }))
 }

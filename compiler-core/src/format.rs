@@ -224,7 +224,7 @@ impl<'comments> Formatter<'comments> {
 
             Definition::Import(Import {
                 module,
-                as_name,
+                alias,
                 unqualified,
                 ..
             }) => "import "
@@ -247,7 +247,7 @@ impl<'comments> Formatter<'comments> {
                         .group();
                     ".{".to_doc().append(unqualified).append("}")
                 })
-                .append(if let Some(name) = as_name {
+                .append(if let Some((AssignName::Variable(name), _)) = alias {
                     docvec![" as ", name]
                 } else {
                     nil()

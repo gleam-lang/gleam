@@ -377,17 +377,16 @@ pub struct Import<PackageName> {
     pub documentation: Option<SmolStr>,
     pub location: SrcSpan,
     pub module: SmolStr,
-    pub as_name: Option<SmolStr>,
-    pub as_span: Option<SrcSpan>,
-    pub discarded: bool,
     pub unqualified: Vec<UnqualifiedImport>,
     pub package: PackageName,
+    pub alias: Option<(AssignName, SrcSpan)>,
 }
 impl<T> Import<T> {
     pub(crate) fn used_name(&self) -> SmolStr {
-        self.as_name
+        self.alias
             .as_ref()
             .cloned()
+            .map(|(name, _)| name.name().into())
             .or_else(|| self.module.split('/').last().map(|s| s.into()))
             .expect("Import could not identify variable name.")
     }

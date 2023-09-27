@@ -1978,22 +1978,11 @@ where
         }
 
         // Parse as_name
-        let mut as_name = None;
-        let mut discarded = false;
-        let mut as_start = None;
+        let mut alias = None;
         if let Some((start, _)) = self.maybe_one(&Token::As) {
             let (_, name, e) = self.expect_assign_name()?;
-
-            match name {
-                AssignName::Variable(name) => {
-                    as_name = Some(name);
-                }
-
-                AssignName::Discard(_) => discarded = true,
-            };
-
-            as_start = Some(start);
             end = e;
+            alias = Some((name, SrcSpan { start, end }));
         }
 
         Ok(Some(Definition::Import(Import {
@@ -2004,9 +1993,7 @@ where
             },
             unqualified,
             module: module.into(),
-            as_name,
-            discarded,
-            as_span: as_start.map(|start| SrcSpan { start, end }),
+            alias,
             package: (),
         })))
     }

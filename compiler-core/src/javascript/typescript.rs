@@ -16,6 +16,7 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 use itertools::Itertools;
 use smol_str::SmolStr;
 
+use crate::ast::AssignName;
 use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{
@@ -182,7 +183,7 @@ fn ts_safe_type_name(mut name: String) -> String {
 #[derive(Debug)]
 pub struct TypeScriptGenerator<'a> {
     module: &'a TypedModule,
-    aliased_module_names: HashMap<&'a str, &'a str>,
+    aliased_module_names: HashMap<&'a str, SmolStr>,
     tracker: UsageTracker,
     current_module_name_segments_count: usize,
 }
@@ -247,11 +248,11 @@ impl<'a> TypeScriptGenerator<'a> {
                 Definition::Import(Import {
                     module,
                     package,
-                    as_name,
+                    alias,
                     ..
                 }) => {
-                    if let Some(alias) = as_name {
-                        let _ = self.aliased_module_names.insert(module, alias);
+                    if let Some((AssignName::Variable(name), _)) = alias.as_ref() {
+                        let _ = self.aliased_module_names.insert(module, name.clone());
                     }
                     self.register_import(&mut imports, package, module);
                 }

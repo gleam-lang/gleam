@@ -294,13 +294,11 @@ impl<'a> Generator<'a> {
             match statement {
                 Definition::Import(Import {
                     module,
-                    as_name,
+                    alias,
                     unqualified,
                     package,
                     ..
-                }) => {
-                    self.register_import(&mut imports, package, module, as_name, unqualified);
-                }
+                }) => self.register_import(&mut imports, package, module, alias, unqualified),
 
                 Definition::Function(Function {
                     name,
@@ -345,15 +343,22 @@ impl<'a> Generator<'a> {
         imports: &mut Imports<'a>,
         package: &'a str,
         module: &'a str,
-        as_name: &'a Option<SmolStr>,
+        alias: &Option<(AssignName, SrcSpan)>,
         unqualified: &'a [UnqualifiedImport],
     ) {
-        let module_name = as_name.as_ref().map(SmolStr::as_str).unwrap_or_else(|| {
-            module
-                .split('/')
-                .last()
-                .expect("JavaScript generator could not identify imported module name.")
-        });
+        let module_name = alias
+            .as_ref()
+            .and_then(|(alias, _)| match alias {
+                AssignName::Variable(name) => Some(name),
+                AssignName::Discard(_) => None,
+            })
+            .map(SmolStr::as_str)
+            .unwrap_or_else(|| {
+                module
+                    .split('/')
+                    .last()
+                    .expect("JavaScript generator could not identify imported module name.")
+            });
         let module_name = format!("${module_name}");
         let path = self.import_path(package, module);
         let unqualified_imports = unqualified
