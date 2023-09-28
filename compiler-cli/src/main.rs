@@ -77,7 +77,6 @@ use dependencies::UseManifest;
 use fs::get_current_directory;
 pub use gleam_core::{
     error::{Error, Result},
-    warning::Warning,
 };
 
 use gleam_core::{
