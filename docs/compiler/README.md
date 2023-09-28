@@ -124,7 +124,7 @@ new correct output.
 
 This style of testing saves us huge amounts of time as manually updating all the
 expected output when we make changes to the output format of the compiler or
-error messaging is time consuming and very dull. With snapshot testing it takes
+error messaging is time-consuming and very dull. With snapshot testing it takes
 seconds.
 
 ```shell
