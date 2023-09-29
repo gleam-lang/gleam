@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/erlang/tests/guards.rs
+assertion_line: 519
+expression: "\n          import hero\n          pub fn main() {\n            let name = \"Bruce Wayne\"\n            case name {\n              n if n == hero.batman.secret_identity.name -> True\n              _ -> False\n            }\n          }\n        "
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([main/0]).
+
+-spec main() -> boolean().
+main() ->
+    Name = <<"Bruce Wayne"/utf8>>,
+    case Name of
+        N when N =:= erlang:element(
+            2,
+            erlang:element(2, {hero, {person, <<"Bruce Wayne"/utf8>>}})
+        ) ->
+            true;
+
+        _ ->
+            false
+    end.
+

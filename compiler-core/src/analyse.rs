@@ -348,6 +348,17 @@ pub fn register_import(
         let _ = environment
             .unused_modules
             .insert(module_name.clone(), *location);
+    } else if let Some(as_name) = &import.as_name {
+        // When the module has a name, we also track its as_name usage
+        // so we can warn if not used by the end of the type checking
+        let _ = environment
+            .unused_modules
+            .insert(as_name.name.clone(), as_name.location);
+        // We also register it's name to differentiate between unused module
+        // and unused module name. See 'convert_unused_to_warnings'.
+        let _ = environment
+            .imported_module_aliases
+            .insert(as_name.name.clone());
     }
 
     // Check if a module was already imported with this name

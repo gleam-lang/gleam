@@ -58,7 +58,7 @@ use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitStringSegment,
     BitStringSegmentOption, CallArg, Clause, ClauseGuard, Constant, CustomType, Definition,
-    Function, HasLocation, Import, Module, ModuleConstant, Pattern, RecordConstructor,
+    Function, HasLocation, Import, ImportName, Module, ModuleConstant, Pattern, RecordConstructor,
     RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind,
     TypeAlias, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
     UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern,
@@ -1979,9 +1979,13 @@ where
 
         // Parse as_name
         let mut as_name = None;
-        if self.maybe_one(&Token::As).is_some() {
+        if let Some((as_start, _)) = self.maybe_one(&Token::As) {
             let (_, name, e) = self.expect_name()?;
-            as_name = Some(name);
+            let location = SrcSpan {
+                start: as_start,
+                end: e,
+            };
+            as_name = Some(ImportName { location, name });
             end = e;
         }
 

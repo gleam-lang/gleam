@@ -251,7 +251,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     ..
                 }) => {
                     if let Some(alias) = as_name {
-                        let _ = self.aliased_module_names.insert(module, alias);
+                        let _ = self.aliased_module_names.insert(module, &alias.name);
                     }
                     self.register_import(&mut imports, package, module);
                 }

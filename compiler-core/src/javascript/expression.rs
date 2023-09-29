@@ -1229,10 +1229,7 @@ pub(crate) fn constant_expression<'a>(
             Ok(construct_record(module.as_deref(), tag, field_values))
         }
 
-        Constant::BitString { location, .. } => Err(Error::Unsupported {
-            feature: "Bit string syntax".into(),
-            location: *location,
-        }),
+        Constant::BitString { segments, .. } => bit_string(tracker, segments),
 
         Constant::Var { name, module, .. } => Ok({
             match module {
@@ -1241,6 +1238,59 @@ pub(crate) fn constant_expression<'a>(
             }
         }),
     }
+}
+
+fn bit_string<'a>(
+    tracker: &mut UsageTracker,
+    segments: &'a [BitStringSegment<TypedConstant, Arc<Type>>],
+) -> Result<Document<'a>, Error> {
+    tracker.bit_string_literal_used = true;
+
+    use BitStringSegmentOption as Opt;
+
+    let segments_array = array(segments.iter().map(|segment| {
+        let value = constant_expression(tracker, &segment.value)?;
+        match segment.options.as_slice() {
+            // Ints
+            [] | [Opt::Int { .. }] => Ok(value),
+
+            // Sized ints
+            [Opt::Size { value: size, .. }] => {
+                tracker.sized_integer_segment_used = true;
+                let size = constant_expression(tracker, size)?;
+                Ok(docvec!["sizedInt(", value, ", ", size, ")"])
+            }
+
+            // Floats
+            [Opt::Float { .. }] => {
+                tracker.float_bit_string_segment_used = true;
+                Ok(docvec!["float64Bits(", value, ")"])
+            }
+
+            // UTF8 strings
+            [Opt::Utf8 { .. }] => {
+                tracker.string_bit_string_segment_used = true;
+                Ok(docvec!["stringBits(", value, ")"])
+            }
+
+            // UTF8 codepoints
+            [Opt::Utf8Codepoint { .. }] => {
+                tracker.codepoint_bit_string_segment_used = true;
+                Ok(docvec!["codepointBits(", value, ")"])
+            }
+
+            // Bit strings
+            [Opt::BitString { .. }] => Ok(docvec![value, ".buffer"]),
+
+            // Anything else
+            _ => Err(Error::Unsupported {
+                feature: "This bit string segment option".into(),
+                location: segment.location,
+            }),
+        }
+    }))?;
+
+    Ok(docvec!["toBitString(", segments_array, ")"])
 }
 
 pub fn string(value: &str) -> Document<'_> {

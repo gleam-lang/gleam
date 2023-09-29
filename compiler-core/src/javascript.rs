@@ -345,15 +345,18 @@ impl<'a> Generator<'a> {
         imports: &mut Imports<'a>,
         package: &'a str,
         module: &'a str,
-        as_name: &'a Option<SmolStr>,
+        as_name: &'a Option<ImportName>,
         unqualified: &'a [UnqualifiedImport],
     ) {
-        let module_name = as_name.as_ref().map(SmolStr::as_str).unwrap_or_else(|| {
-            module
-                .split('/')
-                .last()
-                .expect("JavaScript generator could not identify imported module name.")
-        });
+        let module_name = as_name
+            .as_ref()
+            .map(|n| SmolStr::as_str(&n.name))
+            .unwrap_or_else(|| {
+                module
+                    .split('/')
+                    .last()
+                    .expect("JavaScript generator could not identify imported module name.")
+            });
         let module_name = format!("${module_name}");
         let path = self.import_path(package, module);
         let unqualified_imports = unqualified
