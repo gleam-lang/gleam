@@ -138,7 +138,6 @@ pub fn main() {
     assert_eq!(remove_unused_action(code), expected.to_string())
 }
 
-#[ignore] // This need https://github.com/gleam-lang/gleam/pull/2327
 #[test]
 fn test_remove_unused_alias() {
     let code = "
@@ -152,13 +151,14 @@ pub fn main() {
 ";
     let expected = "
 // test
-import result.{is_ok}
+import result.{is_ok}%SPACE%
+
 
 pub fn main() {
   is_ok
 }
 ";
-    assert_eq!(remove_unused_action(code), expected.to_string())
+    assert_eq!(remove_unused_action(code), expected.replace("%SPACE%", " "))
 }
 
 /* TODO: implement qualified unused location
