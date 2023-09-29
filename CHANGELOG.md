@@ -4,6 +4,7 @@
 
 - Module access can now be used in case clause guards.
 - The JS target now supports bit syntax for module consts.
+- The `gleam check` command supports the `target` flag now.
 
 ## v0.31.0 - 2023-09-25
 
