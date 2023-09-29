@@ -125,7 +125,7 @@ impl Hydrator {
                     .map_err(|e| convert_get_type_constructor_error(e, location))?
                     .clone();
 
-                // Register the type constructor as being used if it is unqualifed.
+                // Register the type constructor as being used if it is unqualified.
                 // We do not track use of qualified type constructors as they may be
                 // used in another module.
                 if module.is_none() {

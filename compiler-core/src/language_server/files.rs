@@ -129,12 +129,12 @@ where
         self.io.reader(path)
     }
 
-    // Cache overides existence of file
+    // Cache overrides existence of file
     fn is_file(&self, path: &Utf8Path) -> bool {
         self.edit_cache.is_file(path) || self.io.is_file(path)
     }
 
-    // Cache overides existence of directory
+    // Cache overrides existence of directory
     fn is_directory(&self, path: &Utf8Path) -> bool {
         self.edit_cache.is_directory(path) || self.io.is_directory(path)
     }

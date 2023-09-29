@@ -135,7 +135,7 @@ impl<'a> Environment<'a> {
 
         // We only check for unused entities if the scope was successfully
         // processed. If it was not then any seemingly unused entities may have
-        // been used beyond the point where the error occured, so we don't want
+        // been used beyond the point where the error occurred, so we don't want
         // to incorrectly warn about them.
         if was_successful {
             self.handle_unused(unused);
@@ -452,7 +452,7 @@ impl<'a> Environment<'a> {
         match self
             .entity_usages
             .last_mut()
-            .expect("Attempted to access non-existant entity usages scope")
+            .expect("Attempted to access non-existent entity usages scope")
             .insert(name.clone(), (kind, location, false))
         {
             // Private types can be shadowed by a constructor with the same name

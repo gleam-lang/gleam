@@ -3,7 +3,7 @@ use crate::assert_ts_def;
 #[test]
 fn fn_generics_typescript() {
     assert_ts_def!(
-        r#"pub fn indentity(a) -> a {
+        r#"pub fn identity(a) -> a {
   a
 }
 "#,

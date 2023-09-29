@@ -190,7 +190,7 @@ pub enum Error {
     Http(String),
 
     #[error("Git dependencies are currently unsupported")]
-    GitDependencyUnsuported,
+    GitDependencyUnsupported,
 
     #[error("Failed to create canonical path for package {0}")]
     DependencyCanonicalizationFailed(String),
@@ -2489,7 +2489,7 @@ The error from the version resolver library was:
                 }
             }
 
-            Error::GitDependencyUnsuported => Diagnostic {
+            Error::GitDependencyUnsupported => Diagnostic {
                 title: "Git dependencies are not currently supported".into(),
                 text: "Please remove all git dependencies from the gleam.toml file".into(),
                 hint: None,

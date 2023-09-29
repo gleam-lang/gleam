@@ -64,7 +64,7 @@ pub fn read(config_path: Utf8PathBuf) -> Result<PackageConfig, Error> {
         path: config_path,
         err: Some(e.to_string()),
     })?;
-    config.check_gleam_compatability()?;
+    config.check_gleam_compatibility()?;
     Ok(config)
 }
 

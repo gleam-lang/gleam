@@ -673,7 +673,7 @@ impl<'a> TypeScriptGenerator<'a> {
         let name = match module == self.module.name {
             true => Document::String(name),
             false => {
-                // If type comes from a separate module, use that module's nam
+                // If type comes from a separate module, use that module's name
                 // as a TypeScript namespace prefix
                 docvec![
                     Document::String(self.module_name(module)),
