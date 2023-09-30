@@ -487,3 +487,128 @@ pub fn a(a: A) {
 "#
     );
 }
+
+#[test]
+fn module_string_access() {
+    assert_erl!(
+        (
+            "package",
+            "hero",
+            r#"
+              pub const ironman = "Tony Stark"
+            "#
+        ),
+        r#"
+          import hero
+          pub fn main() {
+            let name = "Tony Stark"
+            case name {
+              n if n == hero.ironman -> True
+              _ -> False
+            }
+          }
+        "#
+    );
+}
+
+#[test]
+fn module_list_access() {
+    assert_erl!(
+        (
+            "package",
+            "hero",
+            r#"
+              pub const heroes = ["Tony Stark", "Bruce Wayne"]
+            "#
+        ),
+        r#"
+          import hero
+          pub fn main() {
+            let names = ["Tony Stark", "Bruce Wayne"]
+            case names {
+              n if n == hero.heroes -> True
+              _ -> False
+            }
+          }
+        "#
+    );
+}
+
+#[test]
+fn module_tuple_access() {
+    assert_erl!(
+        (
+            "package",
+            "hero",
+            r#"
+              pub const hero = #("ironman", "Tony Stark")
+            "#
+        ),
+        r#"
+          import hero
+          pub fn main() {
+            let name = "Tony Stark"
+            case name {
+              n if n == hero.hero.1 -> True
+              _ -> False
+            }
+          }
+        "#
+    );
+}
+
+#[test]
+fn module_access() {
+    assert_erl!(
+        (
+            "package",
+            "hero",
+            r#"
+              pub type Hero {
+                Hero(name: String)
+              }
+              pub const ironman = Hero("Tony Stark")
+            "#
+        ),
+        r#"
+          import hero
+          pub fn main() {
+            let name = "Tony Stark"
+            case name {
+              n if n == hero.ironman.name -> True
+              _ -> False
+            }
+          }
+        "#
+    );
+}
+
+#[test]
+fn module_nested_access() {
+    assert_erl!(
+        (
+            "package",
+            "hero",
+            r#"
+              pub type Person {
+                Person(name: String)
+              }
+              pub type Hero {
+                Hero(secret_identity: Person)
+              }
+              const bruce = Person("Bruce Wayne")
+              pub const batman = Hero(bruce)
+            "#
+        ),
+        r#"
+          import hero
+          pub fn main() {
+            let name = "Bruce Wayne"
+            case name {
+              n if n == hero.batman.secret_identity.name -> True
+              _ -> False
+            }
+          }
+        "#
+    );
+}

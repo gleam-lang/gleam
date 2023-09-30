@@ -12,7 +12,7 @@ use im::hashmap;
 /// It keeps track of any type variables created. This is useful for:
 ///
 /// - Determining if a generic type variable should be made into an
-///   unbound type varable during type instantiation.
+///   unbound type variable during type instantiation.
 /// - Ensuring that the same type is constructed if the programmer
 ///   uses the same name for a type variable multiple times.
 ///
@@ -125,7 +125,7 @@ impl Hydrator {
                     .map_err(|e| convert_get_type_constructor_error(e, location))?
                     .clone();
 
-                // Register the type constructor as being used if it is unqualifed.
+                // Register the type constructor as being used if it is unqualified.
                 // We do not track use of qualified type constructors as they may be
                 // used in another module.
                 if module.is_none() {

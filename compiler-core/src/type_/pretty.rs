@@ -53,7 +53,7 @@ impl Printer {
     // for TypeVar::Link'd types.
     pub fn print<'a>(&mut self, typ: &Type) -> Document<'a> {
         match typ {
-            Type::App {
+            Type::Named {
                 name, args, module, ..
             } => {
                 let doc = if self.name_clashes_if_unqualified(name, module) {
@@ -255,7 +255,7 @@ fn pretty_print_test() {
     }
 
     assert_string!(
-        Type::App {
+        Type::Named {
             module: "whatever".into(),
             name: "Int".into(),
             public: true,
@@ -264,18 +264,18 @@ fn pretty_print_test() {
         "Int",
     );
     assert_string!(
-        Type::App {
+        Type::Named {
             module: "themodule".into(),
             name: "Pair".into(),
             public: true,
             args: vec![
-                Arc::new(Type::App {
+                Arc::new(Type::Named {
                     module: "whatever".into(),
                     name: "Int".into(),
                     public: true,
                     args: vec![],
                 }),
-                Arc::new(Type::App {
+                Arc::new(Type::Named {
                     module: "whatever".into(),
                     name: "Bool".into(),
                     public: true,
@@ -288,20 +288,20 @@ fn pretty_print_test() {
     assert_string!(
         Type::Fn {
             args: vec![
-                Arc::new(Type::App {
+                Arc::new(Type::Named {
                     args: vec![],
                     module: "whatever".into(),
                     name: "Int".into(),
                     public: true,
                 }),
-                Arc::new(Type::App {
+                Arc::new(Type::Named {
                     args: vec![],
                     module: "whatever".into(),
                     name: "Bool".into(),
                     public: true,
                 }),
             ],
-            retrn: Arc::new(Type::App {
+            retrn: Arc::new(Type::Named {
                 args: vec![],
                 module: "whatever".into(),
                 name: "Bool".into(),
@@ -313,7 +313,7 @@ fn pretty_print_test() {
     assert_string!(
         Type::Var {
             type_: Arc::new(RefCell::new(TypeVar::Link {
-                type_: Arc::new(Type::App {
+                type_: Arc::new(Type::Named {
                     args: vec![],
                     module: "whatever".into(),
                     name: "Int".into(),

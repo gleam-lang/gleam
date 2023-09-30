@@ -105,7 +105,7 @@ const e = #(
 }
 
 #[test]
-fn tuple_formating_typescript() {
+fn tuple_formatting_typescript() {
     assert_ts_def!(
         r#"
 pub const e = #(

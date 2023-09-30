@@ -130,7 +130,7 @@ impl<'comments> Formatter<'comments> {
         end != 0
     }
 
-    fn targetted_definition<'a>(&mut self, definition: &'a TargettedDefinition) -> Document<'a> {
+    fn targeted_definition<'a>(&mut self, definition: &'a TargetedDefinition) -> Document<'a> {
         let target = definition.target;
         let definition = &definition.definition;
         let start = definition.location().start;
@@ -159,7 +159,7 @@ impl<'comments> Formatter<'comments> {
                 documents.push(lines(2));
             };
 
-            documents.push(self.targetted_definition(definition));
+            documents.push(self.targeted_definition(definition));
             previous_was_import = is_import;
         }
 
@@ -247,8 +247,8 @@ impl<'comments> Formatter<'comments> {
                         .group();
                     ".{".to_doc().append(unqualified).append("}")
                 })
-                .append(if let Some(name) = as_name {
-                    docvec![" as ", name]
+                .append(if let Some(as_name) = as_name {
+                    docvec![" as ", &as_name.name]
                 } else {
                     nil()
                 }),
@@ -563,8 +563,8 @@ impl<'comments> Formatter<'comments> {
         let count = statements.len();
         let mut documents = Vec::with_capacity(count * 2);
         for (i, statement) in statements.iter().enumerate() {
-            let preceeding_newline = self.pop_empty_lines(previous_position + 1);
-            if i != 0 && preceeding_newline {
+            let preceding_newline = self.pop_empty_lines(previous_position + 1);
+            if i != 0 && preceding_newline {
                 documents.push(lines(2));
             } else if i != 0 {
                 documents.push(lines(1));
@@ -1458,6 +1458,10 @@ impl<'comments> Formatter<'comments> {
                 .append(".")
                 .append(label)
                 .to_doc(),
+
+            ClauseGuard::ModuleSelect {
+                module_name, label, ..
+            } => module_name.to_doc().append(".").append(label).to_doc(),
 
             ClauseGuard::Constant(constant) => self.const_expr(constant),
         }

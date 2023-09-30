@@ -178,9 +178,9 @@ impl PackageConfig {
         .is_match(module)
     }
 
-    // Checks to see if the gleam version specified in the config is compatable
+    // Checks to see if the gleam version specified in the config is compatible
     // with the current compiler version
-    pub fn check_gleam_compatability(&self) -> Result<(), Error> {
+    pub fn check_gleam_compatibility(&self) -> Result<(), Error> {
         if let Some(required_version) = &self.gleam_version {
             let compiler_version = hexpm::version::Version::parse(COMPILER_VERSION)
                 .expect("Parse compiler semantic version");

@@ -50,7 +50,7 @@ impl Offset {
         }
     }
     // This should never be called on an open ended offset
-    // However previous checks ensure bit_string segements without a size are only allowed at the end of a pattern
+    // However previous checks ensure bit_string segments without a size are only allowed at the end of a pattern
     pub fn increment(&mut self, step: usize) {
         self.bytes += step
     }
@@ -190,7 +190,8 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             | ClauseGuard::LtFloat { .. }
             | ClauseGuard::LtEqFloat { .. }
             | ClauseGuard::Or { .. }
-            | ClauseGuard::And { .. } => Ok(docvec!("(", self.guard(guard)?, ")")),
+            | ClauseGuard::And { .. }
+            | ClauseGuard::ModuleSelect { .. } => Ok(docvec!("(", self.guard(guard)?, ")")),
         }
     }
 
@@ -273,6 +274,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             } => {
                 docvec!(self.guard(container)?, ".", label)
             }
+
+            ClauseGuard::ModuleSelect {
+                module_name, label, ..
+            } => docvec!("$", module_name, ".", label),
 
             ClauseGuard::Constant(constant) => {
                 return expression::guard_constant_expression(

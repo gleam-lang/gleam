@@ -30,7 +30,7 @@
 //
 // Operator Precedence Parsing:
 //   Needs to take place in expressions and in clause guards.
-//   It is accomplished using the Simple Precedence Parser algoithm.
+//   It is accomplished using the Simple Precedence Parser algorithm.
 //   See: https://en.wikipedia.org/wiki/Simple_precedence_parser
 //
 //   It relies or the operator grammar being in the general form:
@@ -58,8 +58,8 @@ use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitStringSegment,
     BitStringSegmentOption, CallArg, Clause, ClauseGuard, Constant, CustomType, Definition,
-    Function, HasLocation, Import, Module, ModuleConstant, Pattern, RecordConstructor,
-    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargettedDefinition, TodoKind,
+    Function, HasLocation, Import, ImportName, Module, ModuleConstant, Pattern, RecordConstructor,
+    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind,
     TypeAlias, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
     UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern,
     UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
@@ -178,8 +178,8 @@ where
         })
     }
 
-    // The way the parser is currenly implemented, it cannot exit immediately while advancing
-    // the token stream upon seing a LexError. That is to avoid having to put `?` all over the
+    // The way the parser is currently implemented, it cannot exit immediately while advancing
+    // the token stream upon seeing a LexError. That is to avoid having to put `?` all over the
     // place and instead we collect LexErrors in `self.lex_errors` and attempt to continue parsing.
     // Once parsing has returned we want to surface an error in the order:
     // 1) LexError, 2) ParseError, 3) More Tokens Left
@@ -203,8 +203,8 @@ where
         Ok(parse_result)
     }
 
-    // The way the parser is currenly implemented, it cannot exit immediately
-    // while advancing the token stream upon seing a LexError. That is to avoid
+    // The way the parser is currently implemented, it cannot exit immediately
+    // while advancing the token stream upon seeing a LexError. That is to avoid
     // having to put `?` all over the place and instead we collect LexErrors in
     // `self.lex_errors` and attempt to continue parsing.
     // Once parsing has returned we want to surface an error in the order:
@@ -224,7 +224,7 @@ where
         }
     }
 
-    fn parse_definition(&mut self) -> Result<Option<TargettedDefinition>, ParseError> {
+    fn parse_definition(&mut self) -> Result<Option<TargetedDefinition>, ParseError> {
         let mut attributes = Attributes::default();
         self.parse_attributes(&mut attributes)?;
 
@@ -279,7 +279,7 @@ where
             }
         }?;
 
-        Ok(def.map(|definition| TargettedDefinition {
+        Ok(def.map(|definition| TargetedDefinition {
             definition,
             target: attributes.target,
         }))
@@ -1949,7 +1949,7 @@ where
             module.push_str(&name);
             end = e;
 
-            // Ueful error for : import a/.{b}
+            // Useful error for : import a/.{b}
             if let Some((s, _)) = self.maybe_one(&Token::SlashDot) {
                 return parse_error(
                     ParseErrorType::ExpectedName,
@@ -1979,9 +1979,13 @@ where
 
         // Parse as_name
         let mut as_name = None;
-        if self.maybe_one(&Token::As).is_some() {
+        if let Some((as_start, _)) = self.maybe_one(&Token::As) {
             let (_, name, e) = self.expect_name()?;
-            as_name = Some(name);
+            let location = SrcSpan {
+                start: as_start,
+                end: e,
+            };
+            as_name = Some(ImportName { location, name });
             end = e;
         }
 
@@ -2319,9 +2323,9 @@ where
     //
 
     // The structure is roughly the same for pattern, const, and expr
-    // thats why these functions take functions
+    // that's why these functions take functions
     //
-    // patern (: option)?
+    // pattern (: option)?
     fn parse_bit_string_segment<A>(
         &mut self,
         value_parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,

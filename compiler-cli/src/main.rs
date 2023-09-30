@@ -107,7 +107,11 @@ enum Command {
     },
 
     /// Type check the project
-    Check,
+    Check {
+        /// The platform to target
+        #[clap(short, long, ignore_case = true, possible_values = Target::VARIANTS)]
+        target: Option<Target>,
+    },
 
     /// Publish the project to the Hex package manager
     ///
@@ -372,7 +376,7 @@ fn main() {
             warnings_as_errors,
         } => command_build(target, warnings_as_errors),
 
-        Command::Check => command_check(),
+        Command::Check { target } => command_check(target),
 
         Command::Docs(Docs::Build { open }) => docs::build(docs::BuildOptions { open }),
 
@@ -454,13 +458,13 @@ fn main() {
     }
 }
 
-fn command_check() -> Result<(), Error> {
+fn command_check(target: Option<Target>) -> Result<(), Error> {
     let _ = build::main(
         Options {
             warnings_as_errors: false,
             codegen: Codegen::DepsOnly,
             mode: Mode::Dev,
-            target: None,
+            target,
         },
         build::download_dependencies()?,
     )?;

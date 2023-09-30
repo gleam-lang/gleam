@@ -35,7 +35,7 @@ pub trait HasLocation {
 
 pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition>;
 
-pub type UntypedModule = Module<(), TargettedDefinition>;
+pub type UntypedModule = Module<(), TargetedDefinition>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module<Info, Statements> {
@@ -64,12 +64,12 @@ impl TypedModule {
 /// ```
 ///
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TargettedDefinition {
+pub struct TargetedDefinition {
     pub definition: UntypedDefinition,
     pub target: Option<Target>,
 }
 
-impl TargettedDefinition {
+impl TargetedDefinition {
     pub fn is_for(&self, target: Target) -> bool {
         self.target.map(|t| t == target).unwrap_or(true)
     }
@@ -373,6 +373,12 @@ impl<T, E> Function<T, E> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImportName {
+    pub location: SrcSpan,
+    pub name: SmolStr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// Import another Gleam module so the current module can use the types and
 /// values it defines.
 ///
@@ -387,7 +393,7 @@ pub struct Import<PackageName> {
     pub documentation: Option<SmolStr>,
     pub location: SrcSpan,
     pub module: SmolStr,
-    pub as_name: Option<SmolStr>,
+    pub as_name: Option<ImportName>,
     pub unqualified: Vec<UnqualifiedImport>,
     pub package: PackageName,
 }
@@ -395,7 +401,7 @@ impl<T> Import<T> {
     pub(crate) fn used_name(&self) -> SmolStr {
         self.as_name
             .as_ref()
-            .cloned()
+            .map(|as_name| as_name.name.clone())
             .or_else(|| self.module.split('/').last().map(|s| s.into()))
             .expect("Import could not identify variable name.")
     }
@@ -926,6 +932,15 @@ pub enum ClauseGuard<Type, RecordTag> {
         container: Box<Self>,
     },
 
+    ModuleSelect {
+        location: SrcSpan,
+        type_: Type,
+        label: SmolStr,
+        module_name: SmolStr,
+        module_alias: SmolStr,
+        literal: Constant<Type, RecordTag>,
+    },
+
     Constant(Constant<Type, RecordTag>),
 }
 
@@ -947,7 +962,8 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::GtEqFloat { location, .. }
             | ClauseGuard::LtFloat { location, .. }
             | ClauseGuard::FieldAccess { location, .. }
-            | ClauseGuard::LtEqFloat { location, .. } => *location,
+            | ClauseGuard::LtEqFloat { location, .. }
+            | ClauseGuard::ModuleSelect { location, .. } => *location,
         }
     }
 
@@ -971,7 +987,8 @@ impl<A, B> ClauseGuard<A, B> {
             ClauseGuard::Constant(_)
             | ClauseGuard::Var { .. }
             | ClauseGuard::TupleIndex { .. }
-            | ClauseGuard::FieldAccess { .. } => 5,
+            | ClauseGuard::FieldAccess { .. }
+            | ClauseGuard::ModuleSelect { .. } => 5,
         }
     }
 }
@@ -982,6 +999,7 @@ impl TypedClauseGuard {
             ClauseGuard::Var { type_, .. } => type_.clone(),
             ClauseGuard::TupleIndex { type_, .. } => type_.clone(),
             ClauseGuard::FieldAccess { type_, .. } => type_.clone(),
+            ClauseGuard::ModuleSelect { type_, .. } => type_.clone(),
             ClauseGuard::Constant(constant) => constant.type_(),
 
             ClauseGuard::Or { .. }

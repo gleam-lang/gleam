@@ -54,7 +54,7 @@ impl PreludeType {
 }
 
 pub fn int() -> Arc<Type> {
-    Arc::new(Type::App {
+    Arc::new(Type::Named {
         public: true,
         name: INT.into(),
         module: PRELUDE_MODULE_NAME.into(),
@@ -63,7 +63,7 @@ pub fn int() -> Arc<Type> {
 }
 
 pub fn float() -> Arc<Type> {
-    Arc::new(Type::App {
+    Arc::new(Type::Named {
         args: vec![],
         public: true,
         name: FLOAT.into(),
@@ -72,7 +72,7 @@ pub fn float() -> Arc<Type> {
 }
 
 pub fn bool() -> Arc<Type> {
-    Arc::new(Type::App {
+    Arc::new(Type::Named {
         args: vec![],
         public: true,
         name: BOOL.into(),
@@ -81,7 +81,7 @@ pub fn bool() -> Arc<Type> {
 }
 
 pub fn string() -> Arc<Type> {
-    Arc::new(Type::App {
+    Arc::new(Type::Named {
         args: vec![],
         public: true,
         name: STRING.into(),
@@ -90,7 +90,7 @@ pub fn string() -> Arc<Type> {
 }
 
 pub fn nil() -> Arc<Type> {
-    Arc::new(Type::App {
+    Arc::new(Type::Named {
         args: vec![],
         public: true,
         name: NIL.into(),
@@ -99,7 +99,7 @@ pub fn nil() -> Arc<Type> {
 }
 
 pub fn list(t: Arc<Type>) -> Arc<Type> {
-    Arc::new(Type::App {
+    Arc::new(Type::Named {
         public: true,
         name: LIST.into(),
         module: PRELUDE_MODULE_NAME.into(),
@@ -108,7 +108,7 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
 }
 
 pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
-    Arc::new(Type::App {
+    Arc::new(Type::Named {
         public: true,
         name: RESULT.into(),
         module: PRELUDE_MODULE_NAME.into(),
@@ -125,7 +125,7 @@ pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
 }
 
 pub fn bit_string() -> Arc<Type> {
-    Arc::new(Type::App {
+    Arc::new(Type::Named {
         args: vec![],
         public: true,
         name: BIT_STRING.into(),
@@ -134,7 +134,7 @@ pub fn bit_string() -> Arc<Type> {
 }
 
 pub fn utf_codepoint() -> Arc<Type> {
-    Arc::new(Type::App {
+    Arc::new(Type::Named {
         args: vec![],
         public: true,
         name: UTF_CODEPOINT.into(),

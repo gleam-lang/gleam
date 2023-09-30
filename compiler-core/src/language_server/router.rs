@@ -14,7 +14,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use super::feedback::FeedbackBookKeeper;
 
-/// The language server instance serves a langauge client, typically a text
+/// The language server instance serves a language client, typically a text
 /// editor. The editor could have multiple Gleam projects open at once, so run
 /// an instance of the language server engine for each project.
 ///

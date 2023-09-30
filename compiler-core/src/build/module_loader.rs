@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use std::{collections::HashMap, time::SystemTime};
+use std::time::SystemTime;
 
 use camino::{Utf8Path, Utf8PathBuf};
 
