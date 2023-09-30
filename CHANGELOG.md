@@ -11,6 +11,7 @@
 - The `gleam check` command supports the `target` flag now.
 - Fixed a bug where some hexidecimal numbers would generate incorrect Erlang.
 - A warning is now emitted if a module alias is unused.
+- Variables defined using `use` now show the variable type on hover.
 
 ## v0.31.0 - 2023-09-25
 
