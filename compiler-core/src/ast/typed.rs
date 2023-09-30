@@ -153,12 +153,6 @@ impl TypedExpr {
     // This could be optimised in places to exit early if the first of a series
     // of expressions is after the byte index.
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        // arguments of a function may not be in the same location as the function
-        // e.g. in "use" expressions, so we handle it separately
-        if !self.location().contains(byte_index) && !matches!(self, Self::Fn { .. }) {
-            return None;
-        }
-
         match self {
             Self::Var { .. }
             | Self::Int { .. }
@@ -166,7 +160,13 @@ impl TypedExpr {
             | Self::Panic { .. }
             | Self::Float { .. }
             | Self::String { .. }
-            | Self::ModuleSelect { .. } => Some(self.into()),
+            | Self::ModuleSelect { .. } => {
+                if self.location().contains(byte_index) {
+                    Some(self.into())
+                } else {
+                    None
+                }
+            }
 
             Self::Pipeline {
                 assignments,
@@ -187,14 +187,21 @@ impl TypedExpr {
             | Self::List {
                 elements: expressions,
                 ..
-            } => expressions
-                .iter()
-                .find_map(|e| e.find_node(byte_index))
-                .or(Some(self.into())),
+            } => expressions.iter().find_map(|e| e.find_node(byte_index)).or(
+                if self.location().contains(byte_index) {
+                    Some(self.into())
+                } else {
+                    None
+                },
+            ),
 
-            Self::NegateBool { value, .. } => value.find_node(byte_index).or(Some(self.into())),
-
-            Self::NegateInt { value, .. } => value.find_node(byte_index).or(Some(self.into())),
+            Self::NegateBool { value, .. } | Self::NegateInt { value, .. } => value
+                .find_node(byte_index)
+                .or(if self.location().contains(byte_index) {
+                    Some(self.into())
+                } else {
+                    None
+                }),
 
             Self::Fn { body, args, .. } => args
                 .iter()
@@ -215,7 +222,11 @@ impl TypedExpr {
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| fun.find_node(byte_index))
-                .or(Some(self.into())),
+                .or(if self.location().contains(byte_index) {
+                    Some(self.into())
+                } else {
+                    None
+                }),
 
             Self::BinOp { left, right, .. } => left
                 .find_node(byte_index)
@@ -231,25 +242,43 @@ impl TypedExpr {
                         .iter()
                         .find_map(|clause| clause.find_node(byte_index))
                 })
-                .or(Some(self.into())),
+                .or(if self.location().contains(byte_index) {
+                    Some(self.into())
+                } else {
+                    None
+                }),
 
             Self::RecordAccess {
                 record: expression, ..
             }
             | Self::TupleIndex {
                 tuple: expression, ..
-            } => expression.find_node(byte_index).or(Some(self.into())),
+            } => expression
+                .find_node(byte_index)
+                .or(if self.location().contains(byte_index) {
+                    Some(self.into())
+                } else {
+                    None
+                }),
 
             Self::BitString { segments, .. } => segments
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
-                .or(Some(self.into())),
+                .or(if self.location().contains(byte_index) {
+                    Some(self.into())
+                } else {
+                    None
+                }),
 
             Self::RecordUpdate { spread, args, .. } => args
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| spread.find_node(byte_index))
-                .or(Some(self.into())),
+                .or(if self.location().contains(byte_index) {
+                    Some(self.into())
+                } else {
+                    None
+                }),
         }
     }
 
