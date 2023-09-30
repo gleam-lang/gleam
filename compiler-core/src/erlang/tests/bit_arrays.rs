@@ -1,7 +1,7 @@
 use crate::assert_erl;
 
 #[test]
-fn bit_strings() {
+fn bit_array() {
     assert_erl!(
         r#"pub fn main() {
   let a = 1
@@ -17,7 +17,7 @@ fn bit_strings() {
 }
 
 #[test]
-fn bit_strings_float() {
+fn bit_array_float() {
     assert_erl!(
         r#"pub fn main() {
   let b = 16
@@ -28,7 +28,7 @@ fn bit_strings_float() {
 }
 
 #[test]
-fn bit_strings1() {
+fn bit_array1() {
     assert_erl!(
         r#"pub fn x() { 2 }
 fn main() {
@@ -42,7 +42,7 @@ fn main() {
 }
 
 #[test]
-fn bit_strings2() {
+fn bit_array2() {
     assert_erl!(
         r#"pub fn main() {
   let a = 1
@@ -54,7 +54,7 @@ fn bit_strings2() {
 }
 
 #[test]
-fn bit_strings3() {
+fn bit_array3() {
     assert_erl!(
         r#"pub fn main() {
   let a = <<"test":utf8>>
@@ -66,7 +66,7 @@ fn bit_strings3() {
 }
 
 #[test]
-fn bit_strings4() {
+fn bit_array4() {
     assert_erl!(
         r#"fn x() { 1 }
 pub fn main() {
@@ -78,12 +78,12 @@ pub fn main() {
 }
 
 #[test]
-fn bit_string_discard() {
+fn bit_array_discard() {
     // https://github.com/gleam-lang/gleam/issues/704
 
     assert_erl!(
         r#"
-pub fn bitstring_discard(x) -> Bool {
+pub fn bit_array_discard(x) -> Bool {
  case x {
   <<_:utf8, rest:binary>> -> True
    _ -> False
@@ -94,10 +94,10 @@ pub fn bitstring_discard(x) -> Bool {
 }
 
 #[test]
-fn bit_string_discard1() {
+fn bit_array_discard1() {
     assert_erl!(
         r#"
-pub fn bitstring_discard(x) -> Bool {
+pub fn bit_array_discard(x) -> Bool {
  case x {
   <<_discardme:utf8, rest:binary>> -> True
    _ -> False
@@ -108,7 +108,7 @@ pub fn bitstring_discard(x) -> Bool {
 }
 
 #[test]
-fn bit_string_declare_and_use_var() {
+fn bit_array_declare_and_use_var() {
     assert_erl!(
         r#"pub fn go(x) {
   let <<name_size:8, name:binary-size(name_size)>> = x

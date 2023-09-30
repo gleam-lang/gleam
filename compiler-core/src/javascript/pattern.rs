@@ -50,7 +50,8 @@ impl Offset {
         }
     }
     // This should never be called on an open ended offset
-    // However previous checks ensure bit_string segments without a size are only allowed at the end of a pattern
+    // However previous checks ensure bit_array segments without a size are only
+    // allowed at the end of a pattern
     pub fn increment(&mut self, step: usize) {
         self.bytes += step
     }
@@ -481,7 +482,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                 Ok(())
                             }
                             _ => Err(Error::Unsupported {
-                                feature: "This bit string size option in patterns".into(),
+                                feature: "This bit array size option in patterns".into(),
                                 location: segment.location,
                             }),
                         },
@@ -520,24 +521,24 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                 }
 
                                 _ => Err(Error::Unsupported {
-                                    feature: "This bit string size option in patterns".into(),
+                                    feature: "This bit array size option in patterns".into(),
                                     location: segment.location,
                                 }),
                             }
                         }
 
                         _ => Err(Error::Unsupported {
-                            feature: "This bit string segment option in patterns".into(),
+                            feature: "This bit array segment option in patterns".into(),
                             location: segment.location,
                         }),
                     }?;
                 }
 
-                self.push_bitstring_length_check(subject.clone(), offset.bytes, offset.open_ended);
+                self.push_bit_array_length_check(subject.clone(), offset.bytes, offset.open_ended);
                 Ok(())
             }
             Pattern::VarUsage { location, .. } => Err(Error::Unsupported {
-                feature: "Bit string matching".into(),
+                feature: "Bit array matching".into(),
                 location: *location,
             }),
         }
@@ -608,7 +609,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         })
     }
 
-    fn push_bitstring_length_check(
+    fn push_bit_array_length_check(
         &mut self,
         subject: Document<'a>,
         expected_bytes: usize,

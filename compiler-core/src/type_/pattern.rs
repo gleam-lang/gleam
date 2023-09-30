@@ -171,7 +171,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         Ok(typed_multi)
     }
 
-    fn infer_pattern_bit_string(
+    fn infer_pattern_bit_array(
         &mut self,
         mut segments: Vec<UntypedPatternBitArraySegment>,
         location: SrcSpan,
@@ -208,11 +208,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         let options: Vec<_> = options
             .into_iter()
-            .map(|o| {
-                crate::analyse::infer_bit_string_segment_option(o, |value, typ| {
-                    self.unify(value, typ)
-                })
-            })
+            .map(|o| crate::analyse::infer_bit_array_option(o, |value, typ| self.unify(value, typ)))
             .try_collect()?;
 
         let segment_type = bit_array::type_options_for_pattern(&options, !is_last_segment)
@@ -451,7 +447,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
             Pattern::BitArray { location, segments } => {
                 unify(type_, bits()).map_err(|e| convert_unify_error(e, location))?;
-                self.infer_pattern_bit_string(segments, location)
+                self.infer_pattern_bit_array(segments, location)
             }
 
             Pattern::Constructor {

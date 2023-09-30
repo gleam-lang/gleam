@@ -1076,7 +1076,7 @@ pub enum Pattern<Type> {
         type_: Type,
     },
 
-    /// A reference to a variable in a bit string. This is always a variable
+    /// A reference to a variable in a bit array. This is always a variable
     /// being used rather than a new variable being assigned.
     /// e.g. `assert <<y:size(somevar)>> = x`
     VarUsage {
@@ -1488,6 +1488,8 @@ impl<A> BitArrayOption<A> {
     }
 
     /// Returns `true` if the bit array option is [`BitString`].
+    ///
+    /// The deprecated bit_string variable specifically!
     ///
     /// [`BitString`]: BitArrayOption::BitString
     #[must_use]

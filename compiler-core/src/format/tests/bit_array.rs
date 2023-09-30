@@ -42,7 +42,7 @@ fn long() {
 }
 
 #[test]
-fn concise_wrapping_of_simple_bit_strings() {
+fn concise_wrapping_of_simple_bit_arrays() {
     assert_format!(
         "pub fn main() {
   <<
@@ -55,7 +55,7 @@ fn concise_wrapping_of_simple_bit_strings() {
 }
 
 #[test]
-fn concise_wrapping_of_simple_bit_strings1() {
+fn concise_wrapping_of_simple_bit_arrays1() {
     assert_format!(
         "pub fn main() {
   <<
@@ -68,7 +68,7 @@ fn concise_wrapping_of_simple_bit_strings1() {
 }
 
 #[test]
-fn concise_wrapping_of_simple_bit_strings2() {
+fn concise_wrapping_of_simple_bit_arrays2() {
     assert_format!(
         r#"pub fn main() {
   <<
@@ -81,7 +81,7 @@ fn concise_wrapping_of_simple_bit_strings2() {
 }
 
 #[test]
-fn concise_wrapping_of_simple_bit_strings3() {
+fn concise_wrapping_of_simple_bit_arrays3() {
     assert_format!(
         "const values = <<
   100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400,
@@ -92,7 +92,7 @@ fn concise_wrapping_of_simple_bit_strings3() {
 }
 
 #[test]
-fn concise_wrapping_of_simple_bit_strings4() {
+fn concise_wrapping_of_simple_bit_arrays4() {
     assert_format!(
         "const values = <<
   1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.0, 11.0, 12.0, 13.0, 14.0, 15.0,
@@ -103,7 +103,7 @@ fn concise_wrapping_of_simple_bit_strings4() {
 }
 
 #[test]
-fn concise_wrapping_of_simple_bit_strings5() {
+fn concise_wrapping_of_simple_bit_arrays5() {
     assert_format!(
         r#"const values = <<
   "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",

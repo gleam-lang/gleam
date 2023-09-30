@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 174
+expression: "let x = <<1:unit(5)>> x"
+---
+error: Invalid bit array segment
+  ┌─ /src/one/two.gleam:1:13
+  │
+1 │ let x = <<1:unit(5)>> x
+  │             ^^^^^^^ This needs an explicit size
+
+Hint: If you specify unit() you must also specify size().
+See: https://gleam.run/book/tour/bit-strings.html
+

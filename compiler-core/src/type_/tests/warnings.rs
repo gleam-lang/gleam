@@ -136,7 +136,7 @@ fn unused_string() {
 }
 
 #[test]
-fn unused_bit_string() {
+fn unused_bit_array() {
     assert_warning!(
         "
     fn main() {
@@ -915,12 +915,12 @@ pub fn b() {
 }
 
 #[test]
-fn deprecated_bit_string_type() {
+fn deprecated_bit_array_type() {
     assert_warning!(r#"pub type B = BitString"#);
 }
 
 #[test]
-fn deprecated_bit_string_type_imported() {
+fn deprecated_bit_array_type_imported() {
     assert_warning!(
         r#"
 import gleam
@@ -930,7 +930,7 @@ pub type B = gleam.BitString
 }
 
 #[test]
-fn deprecated_bit_string_type_aliased() {
+fn deprecated_bit_array_type_aliased() {
     assert_warning!(
         r#"
 import gleam.{BitString as BibbleWib}
@@ -940,11 +940,16 @@ pub type B = BibbleWib
 }
 
 #[test]
-fn deprecated_bit_string_type_shadowed() {
+fn deprecated_bit_array_type_shadowed() {
     assert_no_warnings!(
         r#"
 pub type BitString = Nil
 pub type B = BitString
 "#
     );
+}
+
+#[test]
+fn const_bits_option() {
+    assert_no_warnings!("pub const x = <<<<>>:bits>>");
 }

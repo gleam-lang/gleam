@@ -620,7 +620,7 @@ assertEqual(
 
 // Test BitString can only be constructed from Uint8Array, not ArrayBuffer
 const bs1 = new BitString(new Uint8Array(new ArrayBuffer(8)));
-assertThrows("Should only construct bitstring from Uint8Array", () => {
+assertThrows("Should only construct BitArray from Uint8Array", () => {
   const bs = new BitString(new ArrayBuffer(8));
 });
 

@@ -1928,7 +1928,7 @@ allowed at the end of a bin pattern.")],
                     extra.push("See: https://gleam.run/book/tour/bit-strings.html".into());
                     let text = extra.join("\n");
                     Diagnostic {
-                        title: "Invalid bit string segment".into(),
+                        title: "Invalid bit array segment".into(),
                         text,
                         hint: None,
                         level: Level::Error,

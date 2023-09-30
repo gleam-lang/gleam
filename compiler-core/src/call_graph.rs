@@ -282,7 +282,7 @@ impl<'a> CallGraphBuilder<'a> {
             Pattern::BitArray { segments, .. } => {
                 for segment in segments {
                     for option in &segment.options {
-                        self.bit_string_option(option, |s, p| s.pattern(p));
+                        self.bit_array_option(option, |s, p| s.pattern(p));
                     }
                     self.pattern(&segment.value);
                 }
@@ -294,7 +294,7 @@ impl<'a> CallGraphBuilder<'a> {
         _ = self.names.insert(name, None);
     }
 
-    fn bit_string_option<T>(
+    fn bit_array_option<T>(
         &mut self,
         option: &'a BitArrayOption<T>,
         process: impl Fn(&mut Self, &'a T),
@@ -383,7 +383,7 @@ impl<'a> CallGraphBuilder<'a> {
             Constant::BitArray { segments, .. } => {
                 for segment in segments {
                     for option in &segment.options {
-                        self.bit_string_option(option, |s, c| s.constant(c));
+                        self.bit_array_option(option, |s, c| s.constant(c));
                     }
                     self.constant(&segment.value);
                 }

@@ -288,10 +288,10 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elements.iter().map(|e| self.const_expr(e))))
                 .group(),
 
-            Constant::BitArray { segments, .. } => bit_string(
+            Constant::BitArray { segments, .. } => bit_array(
                 segments
                     .iter()
-                    .map(|s| bit_string_segment(s, |e| self.const_expr(e))),
+                    .map(|s| bit_array_segment(s, |e| self.const_expr(e))),
                 segments.iter().all(|s| s.value.is_simple()),
             ),
 
@@ -697,10 +697,10 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elems.iter().map(|e| self.expr(e))))
                 .group(),
 
-            UntypedExpr::BitArray { segments, .. } => bit_string(
+            UntypedExpr::BitArray { segments, .. } => bit_array(
                 segments
                     .iter()
-                    .map(|s| bit_string_segment(s, |e| self.bit_string_segment_expr(e))),
+                    .map(|s| bit_array_segment(s, |e| self.bit_array_segment_expr(e))),
                 segments.iter().all(|s| s.value.is_simple_constant()),
             ),
             UntypedExpr::RecordUpdate {
@@ -1328,10 +1328,10 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elems.iter().map(|e| self.pattern(e))))
                 .group(),
 
-            Pattern::BitArray { segments, .. } => bit_string(
+            Pattern::BitArray { segments, .. } => bit_array(
                 segments
                     .iter()
-                    .map(|s| bit_string_segment(s, |e| self.pattern(e))),
+                    .map(|s| bit_array_segment(s, |e| self.pattern(e))),
                 false,
             ),
 
@@ -1529,7 +1529,7 @@ impl<'comments> Formatter<'comments> {
         commented(doc, comments)
     }
 
-    fn bit_string_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
+    fn bit_array_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
             UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
 
@@ -1684,7 +1684,7 @@ where
         .group()
 }
 
-fn bit_string<'a>(
+fn bit_array<'a>(
     segments: impl IntoIterator<Item = Document<'a>>,
     is_simple: bool,
 ) -> Document<'a> {
@@ -1756,7 +1756,7 @@ fn commented<'a, 'comments>(
     }
 }
 
-fn bit_string_segment<Value, Type, ToDoc>(
+fn bit_array_segment<Value, Type, ToDoc>(
     segment: &BitArraySegment<Value, Type>,
     mut to_doc: ToDoc,
 ) -> Document<'_>

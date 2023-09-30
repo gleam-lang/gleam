@@ -186,7 +186,7 @@ impl<'module> Generator<'module> {
                 location, message, ..
             } => Ok(self.panic(location, message.as_deref())),
 
-            TypedExpr::BitArray { segments, .. } => self.bit_string(segments),
+            TypedExpr::BitArray { segments, .. } => self.bit_array(segments),
 
             TypedExpr::ModuleSelect {
                 module_alias,
@@ -210,8 +210,8 @@ impl<'module> Generator<'module> {
         self.not_in_tail_position(|gen| Ok(docvec!(with, gen.wrap_expression(value)?)))
     }
 
-    fn bit_string<'a>(&mut self, segments: &'a [TypedExprBitArraySegment]) -> Output<'a> {
-        self.tracker.bit_string_literal_used = true;
+    fn bit_array<'a>(&mut self, segments: &'a [TypedExprBitArraySegment]) -> Output<'a> {
+        self.tracker.bit_array_literal_used = true;
 
         use BitArrayOption as Opt;
 
@@ -231,19 +231,19 @@ impl<'module> Generator<'module> {
 
                 // Floats
                 [Opt::Float { .. }] => {
-                    self.tracker.float_bit_string_segment_used = true;
+                    self.tracker.float_bit_array_segment_used = true;
                     Ok(docvec!["float64Bits(", value, ")"])
                 }
 
                 // UTF8 strings
                 [Opt::Utf8 { .. }] => {
-                    self.tracker.string_bit_string_segment_used = true;
+                    self.tracker.string_bit_array_segment_used = true;
                     Ok(docvec!["stringBits(", value, ")"])
                 }
 
                 // UTF8 codepoints
                 [Opt::Utf8Codepoint { .. }] => {
-                    self.tracker.codepoint_bit_string_segment_used = true;
+                    self.tracker.codepoint_bit_array_segment_used = true;
                     Ok(docvec!["codepointBits(", value, ")"])
                 }
 
@@ -1247,7 +1247,7 @@ fn bit_array<'a>(
     tracker: &mut UsageTracker,
     segments: &'a [BitArraySegment<TypedConstant, Arc<Type>>],
 ) -> Result<Document<'a>, Error> {
-    tracker.bit_string_literal_used = true;
+    tracker.bit_array_literal_used = true;
 
     use BitArrayOption as Opt;
 
@@ -1266,19 +1266,19 @@ fn bit_array<'a>(
 
             // Floats
             [Opt::Float { .. }] => {
-                tracker.float_bit_string_segment_used = true;
+                tracker.float_bit_array_segment_used = true;
                 Ok(docvec!["float64Bits(", value, ")"])
             }
 
             // UTF8 strings
             [Opt::Utf8 { .. }] => {
-                tracker.string_bit_string_segment_used = true;
+                tracker.string_bit_array_segment_used = true;
                 Ok(docvec!["stringBits(", value, ")"])
             }
 
             // UTF8 codepoints
             [Opt::Utf8Codepoint { .. }] => {
-                tracker.codepoint_bit_string_segment_used = true;
+                tracker.codepoint_bit_array_segment_used = true;
                 Ok(docvec!["codepointBits(", value, ")"])
             }
 
@@ -1287,7 +1287,7 @@ fn bit_array<'a>(
 
             // Anything else
             _ => Err(Error::Unsupported {
-                feature: "This bit string segment option".into(),
+                feature: "This bit array segment option".into(),
                 location: segment.location,
             }),
         }
