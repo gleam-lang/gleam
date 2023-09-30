@@ -21,9 +21,9 @@ pub fn main() {
       suite("strings", strings_tests()),
       suite("equality", equality_tests()),
       suite("constants", constants_tests()),
-      suite("bit strings target", bit_string_target_tests()),
-      suite("bit strings", bit_string_tests()),
-      suite("sized bit strings", sized_bit_string_tests()),
+      suite("bit strings target", bit_array_target_tests()),
+      suite("bit strings", bit_array_tests()),
+      suite("sized bit strings", sized_bit_array_tests()),
       suite("list spread", list_spread_tests()),
       suite("clause guards", clause_guard_tests()),
       suite("imported custom types", imported_custom_types_test()),
@@ -42,7 +42,7 @@ pub fn main() {
       suite("unicode overflow", unicode_overflow_tests()),
       suite("bool negation", bool_negation_tests()),
       suite("number negation", int_negation_tests()),
-      suite("bit string match", bit_string_match_tests()),
+      suite("bit string match", bit_array_match_tests()),
       suite("anonymous functions", anonymous_function_tests()),
       suite("string pattern matching", string_pattern_matching_tests()),
       suite("typescript file inclusion", typescript_file_included_tests()),
@@ -852,7 +852,7 @@ fn clause_guard_tests() -> List(Test) {
         },
       )
     }),
-     "module access to custom type const(matches)"
+    "module access to custom type const(matches)"
     |> example(fn() {
       assert_equal(
         True,
@@ -867,7 +867,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         False,
         case "Gattaca" {
-          movie if movie == importable.war_games.title-> True
+          movie if movie == importable.war_games.title -> True
           _ -> False
         },
       )
@@ -1073,7 +1073,7 @@ fn equality_tests() -> List(Test) {
   ]
 }
 
-fn bit_string_tests() -> List(Test) {
+fn bit_array_tests() -> List(Test) {
   [
     "<<\"Gleam\":utf8, \"👍\":utf8>> == <<\"Gleam\":utf8, \"👍\":utf8>>"
     |> example(fn() {
@@ -1088,8 +1088,8 @@ fn bit_string_tests() -> List(Test) {
     }),
     "<<\"abc\":utf8>> == <<97, 98, 99>>"
     |> example(fn() { assert_equal(True, <<"abc":utf8>> == <<97, 98, 99>>) }),
-    "<<<<1>>:bit_string, 2>> == <<1, 2>>"
-    |> example(fn() { assert_equal(True, <<<<1>>:bit_string, 2>> == <<1, 2>>) }),
+    "<<<<1>>:bit_array, 2>> == <<1, 2>>"
+    |> example(fn() { assert_equal(True, <<<<1>>:bits, 2>> == <<1, 2>>) }),
     "<<1>> == <<1:int>>"
     |> example(fn() { assert_equal(True, <<1>> == <<1:int>>) }),
     "<<63, 240, 0, 0, 0, 0, 0, 0>> == <<1.0:float>>"
@@ -1100,7 +1100,7 @@ fn bit_string_tests() -> List(Test) {
 }
 
 @target(erlang)
-fn bit_string_target_tests() -> List(Test) {
+fn bit_array_target_tests() -> List(Test) {
   [
     "<<60,0>> == <<1.0:float-size(16)>>"
     |> example(fn() { assert_equal(True, <<60, 0>> == <<1.0:float-16>>) }),
@@ -1112,11 +1112,11 @@ fn bit_string_target_tests() -> List(Test) {
 }
 
 @target(javascript)
-fn bit_string_target_tests() -> List(Test) {
+fn bit_array_target_tests() -> List(Test) {
   []
 }
 
-fn sized_bit_string_tests() -> List(Test) {
+fn sized_bit_array_tests() -> List(Test) {
   [
     "<<1>> == <<257:size(8)>>"
     |> example(fn() { assert_equal(True, <<1>> == <<257:size(8)>>) }),
@@ -1439,7 +1439,7 @@ fn int_negation_tests() {
   ]
 }
 
-fn bit_string_match_tests() {
+fn bit_array_match_tests() {
   [
     "let <<1, x>> = <<1, 2>>"
     |> example(fn() {
@@ -1496,7 +1496,7 @@ fn bit_string_match_tests() {
       assert_equal(
         <<>>,
         {
-          let <<_, rest:binary>> = <<1>>
+          let <<_, rest:bytes>> = <<1>>
           rest
         },
       )
@@ -1506,7 +1506,7 @@ fn bit_string_match_tests() {
       assert_equal(
         <<2, 3>>,
         {
-          let <<_, rest:binary>> = <<1, 2, 3>>
+          let <<_, rest:bytes>> = <<1, 2, 3>>
           rest
         },
       )
@@ -1516,12 +1516,12 @@ fn bit_string_match_tests() {
       assert_equal(
         <<1, 2>>,
         {
-          let <<x:2-binary, _:binary>> = <<1, 2, 3>>
+          let <<x:2-bytes, _:bytes>> = <<1, 2, 3>>
           x
         },
       )
     }),
-    "bit_string from function"
+    "bit_array from function"
     |> example(fn() {
       assert_equal(
         True,
@@ -1532,11 +1532,11 @@ fn bit_string_match_tests() {
           0x4:size(32),
           "Gleam":utf8,
           4.2:float,
-          <<<<1, 2, 3>>:bit_string, "Gleam":utf8, 1024>>:bit_string,
-        >> == importable.get_bit_string(),
+          <<<<1, 2, 3>>:bits, "Gleam":utf8, 1024>>:bits,
+        >> == importable.get_bit_array(),
       )
     }),
-    "bit_string module const"
+    "bit_array module const"
     |> example(fn() {
       assert_equal(
         True,
@@ -1547,7 +1547,7 @@ fn bit_string_match_tests() {
           0x4:size(32),
           "Gleam":utf8,
           4.2:float,
-          <<<<1, 2, 3>>:bit_string, "Gleam":utf8, 1024>>:bit_string,
+          <<<<1, 2, 3>>:bits, "Gleam":utf8, 1024>>:bits,
         >> == importable.data,
       )
     }),

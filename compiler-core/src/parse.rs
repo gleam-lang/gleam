@@ -484,11 +484,11 @@ where
                 let segments = Parser::series_of(
                     self,
                     &|s| {
-                        Parser::parse_bit_string_segment(
+                        Parser::parse_bit_array_segment(
                             s,
                             &Parser::parse_expression_unit_collapsing_single_value_blocks,
                             &Parser::expect_expression,
-                            &bit_string_expr_int,
+                            &bit_array_expr_int,
                         )
                     },
                     Some(&Token::Comma),
@@ -1019,7 +1019,7 @@ where
                 let segments = Parser::series_of(
                     self,
                     &|s| {
-                        Parser::parse_bit_string_segment(
+                        Parser::parse_bit_array_segment(
                             s,
                             &|s| match Parser::parse_pattern(s) {
                                 Ok(Some(Pattern::BitArray { location, .. })) => {
@@ -1027,8 +1027,8 @@ where
                                 }
                                 x => x,
                             },
-                            &Parser::expect_bit_string_pattern_segment_arg,
-                            &bit_string_pattern_int,
+                            &Parser::expect_bit_array_pattern_segment_arg,
+                            &bit_array_pattern_int,
                         )
                     },
                     Some(&Token::Comma),
@@ -2144,11 +2144,11 @@ where
                 let segments = Parser::series_of(
                     self,
                     &|s| {
-                        Parser::parse_bit_string_segment(
+                        Parser::parse_bit_array_segment(
                             s,
                             &Parser::parse_const_value,
                             &Parser::expect_const_int,
-                            &bit_string_const_int,
+                            &bit_array_const_int,
                         )
                     },
                     Some(&Token::Comma),
@@ -2317,7 +2317,7 @@ where
     // that's why these functions take functions
     //
     // pattern (: option)?
-    fn parse_bit_string_segment<A>(
+    fn parse_bit_array_segment<A>(
         &mut self,
         value_parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
@@ -2330,7 +2330,7 @@ where
             let options = if self.maybe_one(&Token::Colon).is_some() {
                 Parser::series_of(
                     self,
-                    &|s| Parser::parse_bit_string_segment_option(s, &arg_parser, &to_int_segment),
+                    &|s| Parser::parse_bit_array_option(s, &arg_parser, &to_int_segment),
                     Some(&Token::Minus),
                 )?
             } else {
@@ -2359,7 +2359,7 @@ where
     //   size(1)
     //   size(five)
     //   utf8
-    fn parse_bit_string_segment_option<A: std::fmt::Debug>(
+    fn parse_bit_array_option<A: std::fmt::Debug>(
         &mut self,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
         to_int_segment: &impl Fn(SmolStr, u32, u32) -> A,
@@ -2409,7 +2409,7 @@ where
                         ),
                     }
                 } else {
-                    str_to_bit_string_segment_option(&name, SrcSpan { start, end })
+                    str_to_bit_array_option(&name, SrcSpan { start, end })
                         .map(|option| {
                             if option.is_binary() {
                                 self.warnings.push(Warning::DeprecatedOptionBinary {
@@ -2437,13 +2437,13 @@ where
             })),
             // invalid
             _ => self.next_tok_unexpected(vec![
-                "A valid bitstring segment type".into(),
+                "A valid bit array segment type".into(),
                 "See: https://gleam.run/book/tour/bit-strings.html".into(),
             ]),
         }
     }
 
-    fn expect_bit_string_pattern_segment_arg(&mut self) -> Result<UntypedPattern, ParseError> {
+    fn expect_bit_array_pattern_segment_arg(&mut self) -> Result<UntypedPattern, ParseError> {
         match self.next_tok() {
             Some((start, Token::Name { name }, end)) => Ok(Pattern::VarUsage {
                 location: SrcSpan { start, end },
@@ -3056,28 +3056,28 @@ fn clause_guard_reduction(
 // BitArrays in patterns, guards, and expressions have a very similar structure
 // but need specific types. These are helpers for that. There is probably a
 // rustier way to do this :)
-fn bit_string_pattern_int(value: SmolStr, start: u32, end: u32) -> UntypedPattern {
+fn bit_array_pattern_int(value: SmolStr, start: u32, end: u32) -> UntypedPattern {
     Pattern::Int {
         location: SrcSpan { start, end },
         value,
     }
 }
 
-fn bit_string_expr_int(value: SmolStr, start: u32, end: u32) -> UntypedExpr {
+fn bit_array_expr_int(value: SmolStr, start: u32, end: u32) -> UntypedExpr {
     UntypedExpr::Int {
         location: SrcSpan { start, end },
         value,
     }
 }
 
-fn bit_string_const_int(value: SmolStr, start: u32, end: u32) -> UntypedConstant {
+fn bit_array_const_int(value: SmolStr, start: u32, end: u32) -> UntypedConstant {
     Constant::Int {
         location: SrcSpan { start, end },
         value,
     }
 }
 
-fn str_to_bit_string_segment_option<A>(lit: &str, location: SrcSpan) -> Option<BitArrayOption<A>> {
+fn str_to_bit_array_option<A>(lit: &str, location: SrcSpan) -> Option<BitArrayOption<A>> {
     match lit {
         "binary" => Some(BitArrayOption::Binary { location }),
         "bytes" => Some(BitArrayOption::Bytes { location }),

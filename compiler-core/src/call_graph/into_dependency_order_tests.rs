@@ -212,7 +212,7 @@ fn binop() {
 }
 
 #[test]
-fn bit_strings() {
+fn bit_arrays() {
     let functions = [
         ("a", [].as_slice(), r#"<<b, c>>"#),
         ("b", [].as_slice(), r#"123"#),
@@ -417,7 +417,7 @@ fn pattern_list_spread() {
 }
 
 #[test]
-fn pattern_bit_string_segment_size_var_usage() {
+fn pattern_bit_array_segment_size_var_usage() {
     let functions = [
         (
             "a",

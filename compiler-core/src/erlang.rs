@@ -481,7 +481,7 @@ fn string_concatenate<'a>(
 ) -> Document<'a> {
     let left = string_concatenate_argument(left, env);
     let right = string_concatenate_argument(right, env);
-    bit_string([left, right])
+    bit_array([left, right])
 }
 
 fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
@@ -519,7 +519,7 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
     }
 }
 
-fn bit_string<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
+fn bit_array<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
     concat(Itertools::intersperse(elems.into_iter(), break_(",", ", ")))
         .nest(INDENT)
         .surround("<<", ">>")
@@ -554,7 +554,7 @@ fn const_segment<'a>(
 
     let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
-    bit_string_segment(document, options, size, unit, true, env)
+    bit_array_segment(document, options, size, unit, true, env)
 }
 
 fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'a> {
@@ -613,7 +613,7 @@ fn expr_segment<'a>(
 
     let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
-    bit_string_segment(
+    bit_array_segment(
         document,
         options,
         size,
@@ -623,7 +623,7 @@ fn expr_segment<'a>(
     )
 }
 
-fn bit_string_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
+fn bit_array_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
     mut document: Document<'a>,
     options: &'a [BitArrayOption<Value>],
     mut size_to_doc: SizeToDoc,
@@ -953,7 +953,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             concat(elements).nest(INDENT).surround("[", "]").group()
         }
 
-        Constant::BitArray { segments, .. } => bit_string(
+        Constant::BitArray { segments, .. } => bit_array(
             segments
                 .iter()
                 .map(|s| const_segment(&s.value, &s.options, env)),
@@ -1530,7 +1530,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(|e| maybe_block_expr(e, env))),
 
-        TypedExpr::BitArray { segments, .. } => bit_string(
+        TypedExpr::BitArray { segments, .. } => bit_array(
             segments
                 .iter()
                 .map(|s| expr_segment(&s.value, &s.options, env)),

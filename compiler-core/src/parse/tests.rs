@@ -160,7 +160,7 @@ fn string2() {
 }
 
 #[test]
-fn bit_string() {
+fn bit_array() {
     // non int value in bit array unit option
     assert_error!(
         "let x = <<1:unit(0)>> x",
@@ -172,7 +172,7 @@ fn bit_string() {
 }
 
 #[test]
-fn bit_string1() {
+fn bit_array1() {
     assert_error!(
         "let x = <<1:unit(257)>> x",
         ParseError {
@@ -183,7 +183,7 @@ fn bit_string1() {
 }
 
 #[test]
-fn bit_string2() {
+fn bit_array2() {
     // patterns cannot be nested
     assert_error!(
         "case <<>> { <<<<1>>:bit_string>> -> 1 }",

@@ -1,6 +1,6 @@
 use super::{pipe::PipeTyper, *};
 use crate::{
-    analyse::infer_bit_string_segment_option,
+    analyse::infer_bit_array_option,
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, Statement, TodoKind,
@@ -160,7 +160,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => self.infer_tuple_index(*tuple, index, location),
 
             UntypedExpr::BitArray { location, segments } => {
-                self.infer_bit_string(segments, location)
+                self.infer_bit_array(segments, location)
             }
 
             UntypedExpr::RecordUpdate {
@@ -615,7 +615,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_bit_string(
+    fn infer_bit_array(
         &mut self,
         segments: Vec<UntypedExprBitArraySegment>,
         location: SrcSpan,
@@ -634,7 +634,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_constant_bit_string(
+    fn infer_constant_bit_array(
         &mut self,
         segments: Vec<UntypedConstantBitArraySegment>,
         location: SrcSpan,
@@ -665,7 +665,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let value = infer(self, value)?;
 
         let infer_option = |segment_option: BitArrayOption<UntypedValue>| {
-            infer_bit_string_segment_option(segment_option, |value, typ| {
+            infer_bit_array_option(segment_option, |value, typ| {
                 let typed_value = infer(self, value)?;
                 unify(typ, typed_value.type_())
                     .map_err(|e| convert_unify_error(e, typed_value.location()))?;
@@ -1753,7 +1753,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => self.infer_const_list(elements, location),
 
             Constant::BitArray { location, segments } => {
-                self.infer_constant_bit_string(segments, location)
+                self.infer_constant_bit_array(segments, location)
             }
 
             Constant::Record {

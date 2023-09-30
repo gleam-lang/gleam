@@ -12,9 +12,9 @@ pub type BadLabelNames {
   BadLabelNames(in: String, class: String, receive: String)
 }
 
-pub const ints_in_bit_string = <<1, 2, 3>>
+pub const ints_in_bit_array = <<1, 2, 3>>
 
-pub const string_in_bit_string = <<"Gleam":utf8>>
+pub const string_in_bit_array = <<"Gleam":utf8>>
 
 pub const data = <<
   0x1,
@@ -23,10 +23,10 @@ pub const data = <<
   0x4:size(32),
   "Gleam":utf8,
   4.2:float,
-  <<<<1, 2, 3>>:bit_string, "Gleam":utf8, 1024>>:bit_string,
+  <<<<1, 2, 3>>:bits, "Gleam":utf8, 1024>>:bits,
 >>
 
-pub fn get_bit_string() {
+pub fn get_bit_array() {
   <<
     0x1,
     2,
@@ -34,7 +34,7 @@ pub fn get_bit_string() {
     0x4:size(32),
     "Gleam":utf8,
     4.2:float,
-    <<<<1, 2, 3>>:bit_string, "Gleam":utf8, 1024>>:bit_string,
+    <<<<1, 2, 3>>:bits, "Gleam":utf8, 1024>>:bits,
   >>
 }
 

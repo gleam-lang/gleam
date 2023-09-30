@@ -1059,7 +1059,7 @@ fn infer_module_constant(
     }))
 }
 
-pub fn infer_bit_string_segment_option<UntypedValue, TypedValue, Typer>(
+pub fn infer_bit_array_option<UntypedValue, TypedValue, Typer>(
     segment_option: BitArrayOption<UntypedValue>,
     mut type_check: Typer,
 ) -> Result<BitArrayOption<TypedValue>, Error>

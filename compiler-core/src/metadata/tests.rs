@@ -52,7 +52,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
     }
 }
 
-fn bit_string_segment_option_module(option: TypedConstantBitArraySegmentOption) -> ModuleInterface {
+fn bit_array_segment_option_module(option: TypedConstantBitArraySegmentOption) -> ModuleInterface {
     constant_module(Constant::BitArray {
         location: Default::default(),
         segments: vec![BitArraySegment {
@@ -750,7 +750,7 @@ fn constant_var() {
 }
 
 #[test]
-fn constant_bit_string() {
+fn constant_bit_array() {
     let module = constant_module(Constant::BitArray {
         location: Default::default(),
         segments: vec![],
@@ -759,8 +759,8 @@ fn constant_bit_string() {
 }
 
 #[test]
-fn constant_bit_string_unit() {
-    let module = bit_string_segment_option_module(BitArrayOption::Unit {
+fn constant_bit_array_unit() {
+    let module = bit_array_segment_option_module(BitArrayOption::Unit {
         location: Default::default(),
         value: 234,
     });
@@ -768,24 +768,24 @@ fn constant_bit_string_unit() {
 }
 
 #[test]
-fn constant_bit_string_float() {
-    let module = bit_string_segment_option_module(BitArrayOption::Float {
+fn constant_bit_array_float() {
+    let module = bit_array_segment_option_module(BitArrayOption::Float {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_int() {
-    let module = bit_string_segment_option_module(BitArrayOption::Int {
+fn constant_bit_array_int() {
+    let module = bit_array_segment_option_module(BitArrayOption::Int {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_size() {
-    let module = bit_string_segment_option_module(BitArrayOption::Size {
+fn constant_bit_array_size() {
+    let module = bit_array_segment_option_module(BitArrayOption::Size {
         location: Default::default(),
         value: Box::new(Constant::Int {
             location: Default::default(),
@@ -797,8 +797,8 @@ fn constant_bit_string_size() {
 }
 
 #[test]
-fn constant_bit_string_size_short_form() {
-    let module = bit_string_segment_option_module(BitArrayOption::Size {
+fn constant_bit_array_size_short_form() {
+    let module = bit_array_segment_option_module(BitArrayOption::Size {
         location: Default::default(),
         value: Box::new(Constant::Int {
             location: Default::default(),
@@ -810,96 +810,96 @@ fn constant_bit_string_size_short_form() {
 }
 
 #[test]
-fn constant_bit_string_bit_string() {
-    let module = bit_string_segment_option_module(BitArrayOption::Bits {
+fn constant_bit_array_bit_arry() {
+    let module = bit_array_segment_option_module(BitArrayOption::Bits {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_utf8() {
-    let module = bit_string_segment_option_module(BitArrayOption::Utf8 {
+fn constant_bit_array_utf8() {
+    let module = bit_array_segment_option_module(BitArrayOption::Utf8 {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_utf16() {
-    let module = bit_string_segment_option_module(BitArrayOption::Utf16 {
+fn constant_bit_array_utf16() {
+    let module = bit_array_segment_option_module(BitArrayOption::Utf16 {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_utf32() {
-    let module = bit_string_segment_option_module(BitArrayOption::Utf32 {
+fn constant_bit_array_utf32() {
+    let module = bit_array_segment_option_module(BitArrayOption::Utf32 {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_utf8codepoint() {
-    let module = bit_string_segment_option_module(BitArrayOption::Utf8Codepoint {
+fn constant_bit_array_utf8codepoint() {
+    let module = bit_array_segment_option_module(BitArrayOption::Utf8Codepoint {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_utf16codepoint() {
-    let module = bit_string_segment_option_module(BitArrayOption::Utf16Codepoint {
+fn constant_bit_array_utf16codepoint() {
+    let module = bit_array_segment_option_module(BitArrayOption::Utf16Codepoint {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_utf32codepoint() {
-    let module = bit_string_segment_option_module(BitArrayOption::Utf32Codepoint {
+fn constant_bit_array_utf32codepoint() {
+    let module = bit_array_segment_option_module(BitArrayOption::Utf32Codepoint {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_signed() {
-    let module = bit_string_segment_option_module(BitArrayOption::Signed {
+fn constant_bit_array_signed() {
+    let module = bit_array_segment_option_module(BitArrayOption::Signed {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_unsigned() {
-    let module = bit_string_segment_option_module(BitArrayOption::Unsigned {
+fn constant_bit_array_unsigned() {
+    let module = bit_array_segment_option_module(BitArrayOption::Unsigned {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_big() {
-    let module = bit_string_segment_option_module(BitArrayOption::Big {
+fn constant_bit_array_big() {
+    let module = bit_array_segment_option_module(BitArrayOption::Big {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_little() {
-    let module = bit_string_segment_option_module(BitArrayOption::Little {
+fn constant_bit_array_little() {
+    let module = bit_array_segment_option_module(BitArrayOption::Little {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_native() {
-    let module = bit_string_segment_option_module(BitArrayOption::Native {
+fn constant_bit_array_native() {
+    let module = bit_array_segment_option_module(BitArrayOption::Native {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
