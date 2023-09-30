@@ -190,6 +190,9 @@ export function toBitArray(segments) {
   return new BitArray(new Uint8Array(view.buffer));
 }
 
+// TODO: remove after next version
+export const toBitString = toBitArray;
+
 // Derived from this answer https://stackoverflow.com/questions/8482309/converting-javascript-integer-to-byte-array-and-back
 export function sizedInt(int, size) {
   let value = int;
