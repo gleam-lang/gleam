@@ -35,7 +35,7 @@ pub trait HasLocation {
 
 pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition>;
 
-pub type UntypedModule = Module<(), TargettedDefinition>;
+pub type UntypedModule = Module<(), TargetedDefinition>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module<Info, Statements> {
@@ -64,12 +64,12 @@ impl TypedModule {
 /// ```
 ///
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TargettedDefinition {
+pub struct TargetedDefinition {
     pub definition: UntypedDefinition,
     pub target: Option<Target>,
 }
 
-impl TargettedDefinition {
+impl TargetedDefinition {
     pub fn is_for(&self, target: Target) -> bool {
         self.target.map(|t| t == target).unwrap_or(true)
     }
@@ -360,6 +360,12 @@ impl<T, E> Function<T, E> {
     fn full_location(&self) -> SrcSpan {
         SrcSpan::new(self.location.start, self.end_position)
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImportName {
+    pub location: SrcSpan,
+    pub name: SmolStr,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

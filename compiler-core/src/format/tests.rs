@@ -4828,9 +4828,9 @@ fn list_spread_discard_comment_pattern() {
 #[test]
 fn multiple_line_documentation_comment_statement_grouping() {
     assert_format!(
-        r#"/// This is the first line of the documenation comment.
-/// This is the second line of the documenation comment.
-/// This is the third line of the documenation comment.
+        r#"/// This is the first line of the documentation comment.
+/// This is the second line of the documentation comment.
+/// This is the third line of the documentation comment.
 pub type Map(key, value)
 "#
     );

@@ -24,6 +24,9 @@ pub struct Environment<'a> {
     pub unused_module_aliases: HashMap<SmolStr, SrcSpan>,
     pub imported_types: HashSet<SmolStr>,
 
+    /// Names of modules that have been imported with as name.
+    pub imported_module_aliases: HashSet<SmolStr>,
+
     /// Values defined in the current function (or the prelude)
     pub scope: im::HashMap<SmolStr, ValueConstructor>,
 
@@ -75,6 +78,7 @@ impl<'a> Environment<'a> {
             scope: prelude.values.clone().into(),
             importable_modules,
             imported_types: HashSet::new(),
+            imported_module_aliases: HashSet::new(),
             current_module,
             warnings,
             entity_usages: vec![HashMap::new()],
@@ -133,7 +137,7 @@ impl<'a> Environment<'a> {
 
         // We only check for unused entities if the scope was successfully
         // processed. If it was not then any seemingly unused entities may have
-        // been used beyond the point where the error occured, so we don't want
+        // been used beyond the point where the error occurred, so we don't want
         // to incorrectly warn about them.
         if was_successful {
             self.handle_unused(unused);
@@ -450,7 +454,7 @@ impl<'a> Environment<'a> {
         match self
             .entity_usages
             .last_mut()
-            .expect("Attempted to access non-existant entity usages scope")
+            .expect("Attempted to access non-existent entity usages scope")
             .insert(name.clone(), (kind, location, false))
         {
             // Private types can be shadowed by a constructor with the same name
@@ -502,8 +506,12 @@ impl<'a> Environment<'a> {
         self.handle_unused(unused);
 
         for (name, location) in self.unused_modules.clone().into_iter() {
-            self.warnings
-                .emit(Warning::UnusedImportedModule { name, location });
+            let warning = if self.imported_module_aliases.contains(&name) {
+                Warning::UnusedImportedModuleAlias { name, location }
+            } else {
+                Warning::UnusedImportedModule { name, location }
+            };
+            self.warnings.emit(warning);
         }
 
         for (alias, location) in self.unused_module_aliases.clone().into_iter() {

@@ -503,7 +503,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let tail = match tail {
             Some(tail) => {
                 let tail = self.infer(*tail)?;
-                // Ensure the tail has the same type as the preceeding elements
+                // Ensure the tail has the same type as the preceding elements
                 unify(typ.clone(), tail.type_()).map_err(|e| convert_unify_error(e, location))?;
                 Some(Box::new(tail))
             }

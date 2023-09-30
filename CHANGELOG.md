@@ -5,6 +5,8 @@
 - Module access can now be used in case clause guards.
 - The JS target now supports bit syntax for module consts.
 - Imported modules can now be discarded by giving them an alias starting with `_`.
+- The `gleam check` command supports the `target` flag now.
+- A warning is now emitted if a module alias is unused.
 
 ## v0.31.0 - 2023-09-25
 
@@ -38,7 +40,7 @@
   error.
 - Fixed a bug where some mutually recursive functions would be inferred as
   having too general a type.
-- Fixed a bug where constants where not being correctly inlined when used in the 
+- Fixed a bug where constants where not being correctly inlined when used in the
   size option of a bitstring pattern match.
 - Fixed a bug where anonymous functions could parse successfully when missing a
   body.
@@ -204,7 +206,7 @@
 
 ## v0.28.1 - 2023-04-05
 
-- Fixed a bug where the languag server would unset too many error diagnostics
+- Fixed a bug where the language server would unset too many error diagnostics
   when multiple projects are open, more than one have errors, and one of them is
   successfully compiled.
 - Fixed a bug where the language server would unset error diagnostics when
@@ -1217,7 +1219,7 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 - Fixed a bug where generic types may be incorrectly unified.
 - Ints and floats can now be written with underscores for clarity.
 - The warning for a `todo` now includes the required type of the
-  not-yet-implented expression.
+  not-yet-implemented expression.
 - Holes can be used in type annotations to specify part of a type, leaving the
   rest for inference.
 - The incorrect arity error now prints any missing labelled arguments.

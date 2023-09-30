@@ -285,7 +285,7 @@ fn files_do_not_get_copied_if_there_already_is_a_new_version() {
 }
 
 #[test]
-fn files_get_copied_if_the_previously_copied_vesion_is_older() {
+fn files_get_copied_if_the_previously_copied_version_is_older() {
     let fs = InMemoryFileSystem::new();
     let out = Utf8Path::new("/out/wibble.mjs");
     let src = Utf8Path::new("/src/wibble.mjs");
