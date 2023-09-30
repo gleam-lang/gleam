@@ -151,6 +151,9 @@ pub enum Document<'a> {
     /// May break contained document based on best fit, thus flex break
     FlexBreak(Box<Self>),
 
+    /// Ignore the next break
+    NextBreakFits(Box<Self>, NextBreakFitsMode),
+
     /// Renders `broken` if group is broken, `unbroken` otherwise
     Break {
         broken: &'a str,
@@ -188,7 +191,15 @@ enum Mode {
     //
     /// Broken and forced to remain broken
     ForcedBroken,
-    // ForcedUnbroken, // Used for next_break_fits. Not yet implemented.
+
+    /// Not broken and forced to remain flat
+    ForcedUnbroken,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NextBreakFitsMode {
+    Enabled,
+    Disabled,
 }
 
 impl Mode {
@@ -213,28 +224,44 @@ fn fits(
         };
 
         match document {
-            Document::ForceBroken(_) => {
-                return false;
-            }
+            Document::ForceBroken(doc) => match mode {
+                Mode::Broken | Mode::Unbroken | Mode::ForcedUnbroken => return false,
+                Mode::ForcedBroken => docs.push_front((indent, mode, doc)),
+            },
 
-            Document::Line(_) => return true,
+            Document::Line(_) => match mode {
+                Mode::Broken | Mode::ForcedBroken => return true,
+                Mode::Unbroken | Mode::ForcedUnbroken => (),
+                // ^-- Here the original algorithms sets a var to false, I have to
+                //     understand what that does
+            },
 
             Document::Nest(i, doc) => docs.push_front((i + indent, mode, doc)),
 
             Document::Group(doc) if mode.is_forced() => docs.push_front((indent, mode, doc)),
-
             Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, doc)),
-
+            // ^-- Here the original algorithm does a strange thing with {:tail} that I do not
+            //     really get but I'm guessing is important
             Document::Str(s) => current_width += s.len() as isize,
             Document::String(s) => current_width += s.len() as isize,
             Document::EcoString(s) => current_width += s.len() as isize,
 
             Document::Break { unbroken, .. } => match mode {
                 Mode::Broken | Mode::ForcedBroken => return true,
-                Mode::Unbroken => current_width += unbroken.len() as isize,
+                Mode::Unbroken | Mode::ForcedUnbroken => current_width += unbroken.len() as isize,
             },
 
             Document::FlexBreak(doc) => docs.push_front((indent, mode, doc)),
+
+            Document::NextBreakFits(doc, enabled) => match enabled {
+                NextBreakFitsMode::Disabled => docs.push_front((indent, Mode::ForcedUnbroken, doc)),
+                NextBreakFitsMode::Enabled => match mode {
+                    Mode::ForcedUnbroken => docs.push_front((indent, mode, doc)),
+                    Mode::Broken | Mode::Unbroken | Mode::ForcedBroken => {
+                        docs.push_front((indent, Mode::ForcedBroken, doc))
+                    }
+                },
+            },
 
             Document::Vec(vec) => {
                 for doc in vec.iter().rev() {
@@ -277,7 +304,7 @@ fn format(
             } => {
                 let unbroken_width = width + unbroken.len() as isize;
 
-                if fits(limit, unbroken_width, docs.clone()) {
+                if mode == Mode::Unbroken || fits(limit, unbroken_width, docs.clone()) {
                     writer.str_write(unbroken)?;
                     width = unbroken_width;
                 } else {
@@ -297,18 +324,17 @@ fn format(
                 kind: BreakKind::Strict,
             } => {
                 width = match mode {
-                    Mode::Unbroken => {
-                        writer.str_write(unbroken)?;
-                        width + unbroken.len() as isize
-                    }
-
-                    Mode::Broken | Mode::ForcedBroken => {
+                    Mode::Broken => {
                         writer.str_write(broken)?;
                         writer.str_write("\n")?;
                         for _ in 0..indent {
                             writer.str_write(" ")?;
                         }
                         indent
+                    }
+                    Mode::Unbroken | Mode::ForcedUnbroken | Mode::ForcedBroken => {
+                        writer.str_write(unbroken)?;
+                        width + unbroken.len() as isize
                     }
                 };
             }
@@ -347,8 +373,8 @@ fn format(
                 }
             }
 
-            Document::ForceBroken(document) => {
-                docs.push_front((indent, Mode::ForcedBroken, document));
+            Document::ForceBroken(document) | Document::NextBreakFits(document, _) => {
+                docs.push_front((indent, mode, document));
             }
         }
     }
@@ -396,6 +422,10 @@ impl<'a> Document<'a> {
         Self::ForceBroken(Box::new(self))
     }
 
+    pub fn next_break_fits(self, mode: NextBreakFitsMode) -> Self {
+        Self::NextBreakFits(Box::new(self), mode)
+    }
+
     pub fn append(self, second: impl Documentable<'a>) -> Self {
         match self {
             Self::Vec(mut vec) => {
@@ -434,7 +464,9 @@ impl<'a> Document<'a> {
             Str(s) => s.is_empty(),
             // assuming `broken` and `unbroken` are equivalent
             Break { broken, .. } => broken.is_empty(),
-            ForceBroken(d) | FlexBreak(d) | Nest(_, d) | Group(d) => d.is_empty(),
+            ForceBroken(d) | FlexBreak(d) | Nest(_, d) | Group(d) | NextBreakFits(d, _) => {
+                d.is_empty()
+            }
             Vec(docs) => docs.iter().all(|d| d.is_empty()),
         }
     }
