@@ -262,7 +262,7 @@ pub fn register_import(
     } in unqualified
     {
         let mut type_imported = false;
-        let mut value_imported = false;
+        let mut value_imported = None;
         let mut variant = None;
 
         let imported_name = as_name.as_ref().unwrap_or(name);
@@ -292,7 +292,7 @@ pub fn register_import(
                 Deprecation::NotDeprecated,
             );
             variant = Some(&value.variant);
-            value_imported = true;
+            value_imported = Some(module_name.clone());
         }
 
         // Register the unqualified import if it is a type constructor
@@ -309,79 +309,86 @@ pub fn register_import(
             type_imported = true;
         }
 
-        if value_imported && type_imported {
-            environment.init_usage(
-                imported_name.clone(),
-                EntityKind::ImportedTypeAndConstructor,
-                *location,
-            );
-        } else if type_imported {
-            let _ = environment.imported_types.insert(imported_name.clone());
-            environment.init_usage(imported_name.clone(), EntityKind::ImportedType, *location);
-        } else if value_imported {
-            match variant {
-                Some(&ValueConstructorVariant::Record { .. }) => environment.init_usage(
+        match value_imported {
+            Some(module) if type_imported => {
+                environment.init_usage(
                     imported_name.clone(),
-                    EntityKind::ImportedConstructor,
+                    EntityKind::ImportedTypeAndConstructor(module),
                     *location,
-                ),
-                _ => environment.init_usage(
+                );
+            }
+
+            Some(module) => {
+                match variant {
+                    Some(&ValueConstructorVariant::Record { .. }) => environment.init_usage(
+                        imported_name.clone(),
+                        EntityKind::ImportedConstructor(module),
+                        *location,
+                    ),
+                    _ => environment.init_usage(
+                        imported_name.clone(),
+                        EntityKind::ImportedValue(module),
+                        *location,
+                    ),
+                };
+            }
+
+            _ if type_imported => {
+                let _ = environment.imported_types.insert(imported_name.clone());
+                environment.init_usage(
                     imported_name.clone(),
-                    EntityKind::ImportedValue,
+                    EntityKind::ImportedType(module_name.clone()),
                     *location,
-                ),
-            };
-        } else if !value_imported {
-            // Error if no type or value was found with that name
-            return Err(Error::UnknownModuleField {
-                location: *location,
-                name: name.clone(),
-                module_name: module.clone(),
-                value_constructors: module_info.public_value_names(),
-                type_constructors: module_info.public_type_names(),
-            });
+                );
+            }
+
+            None => {
+                // Error if no type or value was found with that name
+                return Err(Error::UnknownModuleField {
+                    location: *location,
+                    name: name.clone(),
+                    module_name: module.clone(),
+                    value_constructors: module_info.public_value_names(),
+                    type_constructors: module_info.public_type_names(),
+                });
+            }
         }
     }
 
-    match alias {
-        Some((AssignName::Variable(alias), span)) if !unqualified.is_empty() => {
+    if let Some(module_name) = module_name.clone() {
+        if unqualified.is_empty() {
             let _ = environment
-                .unused_module_aliases
-                .insert(alias.clone(), *span);
-        }
-        _ => (),
-    };
-
-    match *alias {
-        Some((AssignName::Variable(_), _)) | None => {
-            if unqualified.is_empty() {
-                let _ = environment
-                    .unused_modules
-                    .insert(module_name.clone(), *location);
-            }
-
-            // Check if a module was already imported with this name
-            if let Some((previous_location, _)) = environment.imported_modules.get(&module_name) {
-                return Err(Error::DuplicateImport {
-                    location: *location,
-                    previous_location: *previous_location,
-                    name: module_name.clone(),
-                });
-            }
-
-            // Register the name as imported so it can't be imported a
-            // second time in future
-            let _ = environment
-                .unqualified_imported_names
+                .unused_modules
                 .insert(module_name.clone(), *location);
-
-            // Insert imported module into scope
-            let _ = environment
-                .imported_modules
-                .insert(module_name, (*location, module_info));
         }
 
-        Some((AssignName::Discard(_), _)) => (),
+        if let Some((AssignName::Variable(_), span)) = alias {
+            if !unqualified.is_empty() {
+                let _ = environment
+                    .unused_module_aliases
+                    .insert(module_name.clone(), *span);
+            };
+        };
+
+        // Check if a module was already imported with this name
+        if let Some((previous_location, _)) = environment.imported_modules.get(&module_name) {
+            return Err(Error::DuplicateImport {
+                location: *location,
+                previous_location: *previous_location,
+                name: module_name.clone(),
+            });
+        }
+
+        // Register the name as imported so it can't be imported a
+        // second time in future
+        let _ = environment
+            .unqualified_imported_names
+            .insert(module_name.clone(), *location);
+
+        // Insert imported module into scope
+        let _ = environment
+            .imported_modules
+            .insert(module_name, (*location, module_info));
     };
 
     Ok(())

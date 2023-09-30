@@ -445,6 +445,7 @@ fn unused_imported_module_with_alias_and_unqualified_name_warnings_test() {
     assert_eq!(
         Warning::UnusedImportedValue {
             name: "bar".into(),
+            module: Some("gleam/foo".into()),
             location: SrcSpan { start: 18, end: 21 },
         },
         warnings[0]

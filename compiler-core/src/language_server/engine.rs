@@ -341,7 +341,7 @@ where
                 if !type_.public {
                     continue;
                 }
-                completions.push(type_completion(Some(&alias), name, type_));
+                completions.push(type_completion(alias.as_ref(), name, type_));
             }
 
             // Unqualified types
@@ -380,7 +380,7 @@ where
                 if !value.public {
                     continue;
                 }
-                completions.push(value_completion(Some(&alias), name, value));
+                completions.push(value_completion(alias.as_deref(), name, value));
             }
 
             // Unqualified values

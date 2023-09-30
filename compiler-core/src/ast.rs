@@ -388,13 +388,12 @@ pub struct Import<PackageName> {
     pub alias: Option<(AssignName, SrcSpan)>,
 }
 impl<T> Import<T> {
-    pub(crate) fn used_name(&self) -> SmolStr {
-        self.alias
-            .as_ref()
-            .cloned()
-            .map(|(name, _)| name.name().into())
-            .or_else(|| self.module.split('/').last().map(|s| s.into()))
-            .expect("Import could not identify variable name.")
+    pub(crate) fn used_name(&self) -> Option<SmolStr> {
+        match &self.alias {
+            Some((AssignName::Discard(_), _)) => None,
+            Some((AssignName::Variable(alias), _)) => Some(alias.clone()),
+            None => self.module.split('/').last().map(|s| s.into()),
+        }
     }
 }
 
@@ -605,6 +604,7 @@ pub struct UnqualifiedImport {
     pub name: SmolStr,
     pub as_name: Option<SmolStr>,
     pub layer: Layer,
+    pub module: SmolStr,
 }
 
 impl UnqualifiedImport {

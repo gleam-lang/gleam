@@ -93,10 +93,10 @@ pub enum EntityKind {
     // String here is the type constructor's type name
     PrivateTypeConstructor(SmolStr),
     PrivateFunction,
-    ImportedConstructor,
-    ImportedType,
-    ImportedTypeAndConstructor,
-    ImportedValue,
+    ImportedConstructor(Option<SmolStr>),
+    ImportedType(Option<SmolStr>),
+    ImportedTypeAndConstructor(Option<SmolStr>),
+    ImportedValue(Option<SmolStr>),
     PrivateType,
     Variable,
 }
@@ -280,13 +280,16 @@ impl<'a> Environment<'a> {
         name: &SmolStr,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         match module_alias {
-            None => self
-                .module_types
-                .get(name)
-                .ok_or_else(|| UnknownTypeConstructorError::Type {
-                    name: name.clone(),
-                    type_constructors: self.module_types.keys().cloned().collect(),
-                }),
+            None => {
+                let constructor = self.module_types.get(name).ok_or_else(|| {
+                    UnknownTypeConstructorError::Type {
+                        name: name.clone(),
+                        type_constructors: self.module_types.keys().cloned().collect(),
+                    }
+                })?;
+                let _ = self.unused_modules.remove(&constructor.module);
+                Ok(constructor)
+            }
 
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
@@ -462,7 +465,7 @@ impl<'a> Environment<'a> {
             // TODO: Improve this so that we can tell if an imported overriden
             // type is actually used or not by tracking whether usages apply to
             // the value or type scope
-            Some((ImportedType | ImportedTypeAndConstructor | PrivateType, _, _)) => {}
+            Some((ImportedType(_) | ImportedTypeAndConstructor(_) | PrivateType, _, _)) => {}
 
             Some((kind, location, false)) => {
                 // an entity was overwritten in the top most scope without being used
@@ -503,40 +506,39 @@ impl<'a> Environment<'a> {
             .entity_usages
             .pop()
             .expect("Expected a bottom level of entity usages.");
-        self.handle_unused(unused);
+        self.handle_unused(unused.clone());
 
         for (name, location) in self.unused_modules.clone().into_iter() {
+            // if unused.iter().any(|(_, metadata)| {
+            //     matches!(&metadata.0 ,
+            //         EntityKind::ImportedConstructor(module)
+            //         | EntityKind::ImportedType(module)
+            //         | EntityKind::ImportedTypeAndConstructor(module)
+            //         | EntityKind::ImportedValue(module)
+            //             if *module == Some(name.clone())
+            //     )
+            // }) {
             let warning = if self.imported_module_aliases.contains(&name) {
                 Warning::UnusedImportedModuleAlias { name, location }
             } else {
                 Warning::UnusedImportedModule { name, location }
             };
             self.warnings.emit(warning);
-        }
-
-        for (alias, location) in self.unused_module_aliases.clone().into_iter() {
-            if let Some((_, module)) = self.imported_modules.get(&alias) {
-                if let Some(name) = module.name.split('/').last() {
-                    if self.imported_modules.get(name).is_none() {
-                        self.warnings
-                            .emit(Warning::UnusedImportedModuleAlias { alias, location });
-                    }
-                }
-            }
+            // }
         }
     }
 
     fn handle_unused(&mut self, unused: HashMap<SmolStr, (EntityKind, SrcSpan, bool)>) {
         for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
             let warning = match kind {
-                EntityKind::ImportedType | EntityKind::ImportedTypeAndConstructor => {
+                EntityKind::ImportedType(_) | EntityKind::ImportedTypeAndConstructor(_) => {
                     Warning::UnusedType {
                         name,
                         imported: true,
                         location,
                     }
                 }
-                EntityKind::ImportedConstructor => Warning::UnusedConstructor {
+                EntityKind::ImportedConstructor(_) => Warning::UnusedConstructor {
                     name,
                     imported: true,
                     location,
@@ -555,7 +557,11 @@ impl<'a> Environment<'a> {
                     imported: false,
                     location,
                 },
-                EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
+                EntityKind::ImportedValue(module) => Warning::UnusedImportedValue {
+                    name,
+                    location,
+                    module,
+                },
                 EntityKind::Variable => Warning::UnusedVariable { name, location },
             };
 

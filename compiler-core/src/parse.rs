@@ -58,7 +58,7 @@ use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitStringSegment,
     BitStringSegmentOption, CallArg, Clause, ClauseGuard, Constant, CustomType, Definition,
-    Function, HasLocation, Import, ImportName, Module, ModuleConstant, Pattern, RecordConstructor,
+    Function, HasLocation, Import, Module, ModuleConstant, Pattern, RecordConstructor,
     RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind,
     TypeAlias, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
     UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern,
@@ -1938,6 +1938,7 @@ where
         let mut start = 0;
         let mut end;
         let mut module = String::new();
+        let module_name;
         // Gather module names
         loop {
             let (s, name, e) = self.expect_name()?;
@@ -1962,6 +1963,7 @@ where
 
             // break if there's no trailing slash
             if self.maybe_one(&Token::Slash).is_none() {
+                module_name = name;
                 break;
             }
         }
@@ -1972,7 +1974,7 @@ where
         let mut unqualified = vec![];
         if self.maybe_one(&Token::Dot).is_some() {
             let _ = self.expect_one(&Token::LeftBrace)?;
-            unqualified = self.parse_unqualified_imports()?;
+            unqualified = self.parse_unqualified_imports(module_name)?;
             let (_, e) = self.expect_one(&Token::RightBrace)?;
             end = e;
         }
@@ -1984,6 +1986,19 @@ where
             end = e;
             alias = Some((name, SrcSpan { start, end }));
         }
+
+        if let Some((AssignName::Variable(alias), _)) = alias.clone() {
+            unqualified = unqualified
+                .iter()
+                .map(|import| UnqualifiedImport {
+                    location: import.location,
+                    name: import.name.clone(),
+                    as_name: import.as_name.clone(),
+                    layer: import.layer,
+                    module: alias.clone(),
+                })
+                .collect();
+        };
 
         Ok(Some(Definition::Import(Import {
             documentation,
@@ -1999,7 +2014,10 @@ where
     }
 
     // [Name (as Name)? | UpName (as Name)? ](, [Name (as Name)? | UpName (as Name)?])*,?
-    fn parse_unqualified_imports(&mut self) -> Result<Vec<UnqualifiedImport>, ParseError> {
+    fn parse_unqualified_imports(
+        &mut self,
+        module: SmolStr,
+    ) -> Result<Vec<UnqualifiedImport>, ParseError> {
         let mut imports = vec![];
         loop {
             // parse imports
@@ -2010,6 +2028,7 @@ where
                     let mut import = UnqualifiedImport {
                         name,
                         location,
+                        module: module.clone(),
                         as_name: None,
                         layer: Default::default(),
                     };
@@ -2025,6 +2044,7 @@ where
                     let mut import = UnqualifiedImport {
                         name,
                         location,
+                        module: module.clone(),
                         as_name: None,
                         layer: Default::default(),
                     };

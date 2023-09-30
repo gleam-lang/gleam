@@ -346,6 +346,7 @@ pub enum Warning {
 
     UnusedImportedValue {
         location: SrcSpan,
+        module: Option<SmolStr>,
         name: SmolStr,
     },
 
@@ -356,7 +357,7 @@ pub enum Warning {
 
     UnusedImportedModuleAlias {
         location: SrcSpan,
-        alias: SmolStr,
+        name: SmolStr,
     },
 
     UnusedPrivateModuleConstant {
