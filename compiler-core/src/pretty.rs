@@ -198,7 +198,7 @@ impl Mode {
 }
 
 fn fits(
-    mut limit: isize,
+    limit: isize,
     mut current_width: isize,
     mut docs: im::Vector<(isize, Mode, &Document<'_>)>,
 ) -> bool {
@@ -225,9 +225,9 @@ fn fits(
 
             Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, doc)),
 
-            Document::Str(s) => limit -= s.len() as isize,
-            Document::String(s) => limit -= s.len() as isize,
-            Document::EcoString(s) => limit -= s.len() as isize,
+            Document::Str(s) => current_width += s.len() as isize,
+            Document::String(s) => current_width += s.len() as isize,
+            Document::EcoString(s) => current_width += s.len() as isize,
 
             Document::Break { unbroken, .. } => match mode {
                 Mode::Broken | Mode::ForcedBroken => return true,
