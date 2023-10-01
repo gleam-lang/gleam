@@ -23,7 +23,13 @@ pub fn run(files: Vec<String>) -> Result<()> {
         }
     }
 
-    println!("All fixed!");
+    println!(
+        "Your Gleam code has been fixed!
+
+If you have any JavaScript code that used the BitString class
+you will need to update it to use the BitArray class instead.
+"
+    );
     Ok(())
 }
 
