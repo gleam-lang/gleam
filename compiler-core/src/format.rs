@@ -228,7 +228,7 @@ impl<'comments> Formatter<'comments> {
             Definition::Import(Import {
                 module,
                 as_name,
-                unqualified,
+                unqualified_values: unqualified,
                 ..
             }) => "import "
                 .to_doc()

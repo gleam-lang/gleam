@@ -295,7 +295,7 @@ impl<'a> Generator<'a> {
                 Definition::Import(Import {
                     module,
                     as_name,
-                    unqualified,
+                    unqualified_values: unqualified,
                     package,
                     ..
                 }) => {
@@ -461,7 +461,10 @@ impl<'a> Generator<'a> {
                 Definition::ModuleConstant(ModuleConstant { name, .. })
                 | Definition::Function(Function { name, .. }) => self.register_in_scope(name),
 
-                Definition::Import(Import { unqualified, .. }) => unqualified
+                Definition::Import(Import {
+                    unqualified_values: unqualified,
+                    ..
+                }) => unqualified
                     .iter()
                     .for_each(|unq_import| self.register_in_scope(unq_import.variable_name())),
 

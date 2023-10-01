@@ -1,0 +1,67 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 558
+expression: "import wibble.{type Wobble, Wobble, type Wabble}"
+---
+Parsed {
+    module: Module {
+        name: "",
+        documentation: [],
+        type_info: (),
+        definitions: [
+            TargetedDefinition {
+                definition: Import(
+                    Import {
+                        documentation: None,
+                        location: SrcSpan {
+                            start: 0,
+                            end: 48,
+                        },
+                        module: "wibble",
+                        as_name: None,
+                        unqualified_values: [
+                            UnqualifiedImport {
+                                location: SrcSpan {
+                                    start: 28,
+                                    end: 34,
+                                },
+                                name: "Wobble",
+                                as_name: None,
+                                layer: Value,
+                            },
+                        ],
+                        unqualified_types: [
+                            UnqualifiedImport {
+                                location: SrcSpan {
+                                    start: 15,
+                                    end: 26,
+                                },
+                                name: "Wobble",
+                                as_name: None,
+                                layer: Value,
+                            },
+                            UnqualifiedImport {
+                                location: SrcSpan {
+                                    start: 36,
+                                    end: 47,
+                                },
+                                name: "Wabble",
+                                as_name: None,
+                                layer: Value,
+                            },
+                        ],
+                        package: (),
+                    },
+                ),
+                target: None,
+            },
+        ],
+    },
+    extra: ModuleExtra {
+        module_comments: [],
+        doc_comments: [],
+        comments: [],
+        empty_lines: [],
+    },
+    warnings: [],
+}

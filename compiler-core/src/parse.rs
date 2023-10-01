@@ -1960,10 +1960,14 @@ where
         let documentation = self.take_documentation(start);
 
         // Gather imports
-        let mut unqualified = vec![];
+        let mut unqualified_values = vec![];
+        let mut unqualified_types = vec![];
+
         if self.maybe_one(&Token::Dot).is_some() {
             let _ = self.expect_one(&Token::LeftBrace)?;
-            unqualified = self.parse_unqualified_imports()?;
+            let parsed = self.parse_unqualified_imports()?;
+            unqualified_types = parsed.types;
+            unqualified_values = parsed.values;
             let (_, e) = self.expect_one(&Token::RightBrace)?;
             end = e;
         }
@@ -1986,7 +1990,8 @@ where
                 start: import_start,
                 end,
             },
-            unqualified,
+            unqualified_values,
+            unqualified_types,
             module: module.into(),
             as_name,
             package: (),
@@ -1994,8 +1999,8 @@ where
     }
 
     // [Name (as Name)? | UpName (as Name)? ](, [Name (as Name)? | UpName (as Name)?])*,?
-    fn parse_unqualified_imports(&mut self) -> Result<Vec<UnqualifiedImport>, ParseError> {
-        let mut imports = vec![];
+    fn parse_unqualified_imports(&mut self) -> Result<ParsedUnqualifiedImports, ParseError> {
+        let mut imports = ParsedUnqualifiedImports::default();
         loop {
             // parse imports
             match self.tok0.take() {
@@ -2012,8 +2017,9 @@ where
                         let (_, as_name, _) = self.expect_name()?;
                         import.as_name = Some(as_name);
                     }
-                    imports.push(import)
+                    imports.values.push(import)
                 }
+
                 Some((start, Token::UpName { name }, end)) => {
                     let _ = self.next_tok();
                     let location = SrcSpan { start, end };
@@ -2027,8 +2033,26 @@ where
                         let (_, as_name, _) = self.expect_upname()?;
                         import.as_name = Some(as_name);
                     }
-                    imports.push(import)
+                    imports.values.push(import)
                 }
+
+                Some((start, Token::Type, _)) => {
+                    let _ = self.next_tok();
+                    let (_, name, end) = self.expect_upname()?;
+                    let location = SrcSpan { start, end };
+                    let mut import = UnqualifiedImport {
+                        name,
+                        location,
+                        as_name: None,
+                        layer: Default::default(),
+                    };
+                    if self.maybe_one(&Token::As).is_some() {
+                        let (_, as_name, _) = self.expect_upname()?;
+                        import.as_name = Some(as_name);
+                    }
+                    imports.types.push(import)
+                }
+
                 t0 => {
                     self.tok0 = t0;
                     break;
@@ -3195,4 +3219,10 @@ pub fn make_call(
 
         _ => parse_error(ParseErrorType::TooManyArgHoles, call.location()),
     }
+}
+
+#[derive(Debug, Default)]
+struct ParsedUnqualifiedImports {
+    types: Vec<UnqualifiedImport>,
+    values: Vec<UnqualifiedImport>,
 }
