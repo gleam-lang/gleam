@@ -397,7 +397,8 @@ pub struct Import<PackageName> {
     pub location: SrcSpan,
     pub module: SmolStr,
     pub as_name: Option<ImportName>,
-    pub unqualified: Vec<UnqualifiedImport>,
+    pub unqualified_values: Vec<UnqualifiedImport>,
+    pub unqualified_types: Vec<UnqualifiedImport>,
     pub package: PackageName,
 }
 

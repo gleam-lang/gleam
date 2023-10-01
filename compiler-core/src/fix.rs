@@ -83,7 +83,7 @@ impl Fixer {
                     self.prelude_module_import_alias = Some(i.used_name());
                 }
 
-                for i in &i.unqualified {
+                for i in &i.unqualified_values {
                     if i.variable_name() == "BitString" && self.bit_string_name == "BitString" {
                         self.bit_string_name = "".into();
                     }
@@ -138,8 +138,8 @@ impl Fixer {
             return i;
         }
 
-        i.unqualified = i
-            .unqualified
+        i.unqualified_values = i
+            .unqualified_values
             .into_iter()
             .map(|mut i| {
                 if i.name == "BitString" {

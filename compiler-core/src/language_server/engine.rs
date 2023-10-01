@@ -345,7 +345,7 @@ where
             }
 
             // Unqualified types
-            for unqualified in &import.unqualified {
+            for unqualified in &import.unqualified_values {
                 let Some(type_) = module.get_public_type(&unqualified.name) else {
                     continue;
                 };
@@ -384,7 +384,7 @@ where
             }
 
             // Unqualified values
-            for unqualified in &import.unqualified {
+            for unqualified in &import.unqualified_values {
                 let Some(value) = module.get_public_value(&unqualified.name) else {
                     continue;
                 };

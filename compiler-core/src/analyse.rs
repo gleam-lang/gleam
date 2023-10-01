@@ -231,7 +231,7 @@ pub fn register_import(
 
     let Import {
         module,
-        unqualified,
+        unqualified_values: unqualified,
         location,
         ..
     } = import;
@@ -962,7 +962,9 @@ fn record_imported_items_for_use_detection<A>(
         location,
         module,
         as_name,
-        mut unqualified,
+        mut unqualified_values,
+        // TODO: handle imported types
+        mut unqualified_types,
         ..
     } = i;
     // Find imported module
@@ -977,7 +979,7 @@ fn record_imported_items_for_use_detection<A>(
             })?;
     // Record any imports that are types only as this information is
     // needed to prevent types being imported in generated JavaScript
-    for import in unqualified.iter_mut() {
+    for import in unqualified_values.iter_mut() {
         if environment.imported_types.contains(import.variable_name()) {
             import.layer = Layer::Type;
         }
@@ -1002,7 +1004,8 @@ fn record_imported_items_for_use_detection<A>(
         location,
         module,
         as_name,
-        unqualified,
+        unqualified_values,
+        unqualified_types,
         package: module_info.package.clone(),
     }))
 }

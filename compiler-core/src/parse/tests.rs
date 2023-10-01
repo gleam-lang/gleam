@@ -22,6 +22,13 @@ macro_rules! assert_module_error {
     };
 }
 
+macro_rules! assert_parse_module {
+    ($src:expr) => {
+        let result = crate::parse::parse_module($src).expect("should parse");
+        insta::assert_snapshot!(insta::internals::AutoName, &format!("{:#?}", result), $src);
+    };
+}
+
 macro_rules! assert_parse {
     ($src:expr) => {
         let result = crate::parse::parse_statement_sequence($src).expect("should parse");
@@ -544,4 +551,9 @@ fn deprecated_option_binary_pattern() {
   y
 }"#
     );
+}
+
+#[test]
+fn import_type() {
+    assert_parse_module!(r#"import wibble.{type Wobble, Wobble, type Wabble}"#);
 }
