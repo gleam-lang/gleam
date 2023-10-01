@@ -238,7 +238,21 @@ pub trait UntypedExprFolder: TypeAstFolder {
                 location,
                 fun,
                 arguments,
-            } => todo!(),
+            } => {
+                let fun = Box::new(self.fold_expr(*fun));
+                let arguments = arguments
+                    .into_iter()
+                    .map(|mut a| {
+                        a.value = self.fold_expr(a.value);
+                        a
+                    })
+                    .collect();
+                UntypedExpr::Call {
+                    location,
+                    fun,
+                    arguments,
+                }
+            }
 
             UntypedExpr::BinOp {
                 location,
@@ -265,7 +279,21 @@ pub trait UntypedExprFolder: TypeAstFolder {
                 location,
                 subjects,
                 clauses,
-            } => todo!(),
+            } => {
+                let subjects = subjects.into_iter().map(|e| self.fold_expr(e)).collect();
+                let clauses = clauses
+                    .into_iter()
+                    .map(|mut c| {
+                        c.then = self.fold_expr(c.then);
+                        c
+                    })
+                    .collect();
+                UntypedExpr::Case {
+                    location,
+                    subjects,
+                    clauses,
+                }
+            }
 
             UntypedExpr::FieldAccess {
                 location,
@@ -298,14 +326,38 @@ pub trait UntypedExprFolder: TypeAstFolder {
                 }
             }
 
-            UntypedExpr::BitArray { location, segments } => todo!(),
+            UntypedExpr::BitArray { location, segments } => {
+                let segments = segments
+                    .into_iter()
+                    .map(|mut s| {
+                        s.value = Box::new(self.fold_expr(*s.value));
+                        s
+                    })
+                    .collect();
+                UntypedExpr::BitArray { location, segments }
+            }
 
             UntypedExpr::RecordUpdate {
                 location,
                 constructor,
                 spread,
                 arguments,
-            } => todo!(),
+            } => {
+                let constructor = Box::new(self.fold_expr(*constructor));
+                let arguments = arguments
+                    .into_iter()
+                    .map(|mut a| {
+                        a.value = self.fold_expr(a.value);
+                        a
+                    })
+                    .collect();
+                UntypedExpr::RecordUpdate {
+                    location,
+                    constructor,
+                    spread,
+                    arguments,
+                }
+            }
         }
     }
 
