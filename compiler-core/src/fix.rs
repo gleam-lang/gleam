@@ -3,8 +3,8 @@ mod tests;
 
 use crate::{
     ast::{
-        Definition, TargetedDefinition, TypeAlias, TypeAst, TypeAstConstructor, UntypedDefinition,
-        UntypedModule,
+        CustomType, Definition, Import, TargetedDefinition, TypeAlias, TypeAst, TypeAstConstructor,
+        UntypedDefinition, UntypedFunction, UntypedModule,
     },
     ast_folder::TypeAstFolder,
     format::{Formatter, Intermediate},
@@ -52,35 +52,56 @@ impl Fixer {
     }
 
     fn fix_module(&mut self, mut module: UntypedModule) -> UntypedModule {
-        // Determine what name the prelude has been imported under, if any
+        // Work out what BitString is called in this module
         for d in module.definitions.iter() {
-            if let Definition::Import(i) = &d.definition {
-                if i.module == "gleam" {
-                    self.prelude_module_import_alias = Some(i.used_name());
-                    break;
-                }
-            }
+            self.determine_names(&d.definition);
         }
 
+        // Fix the module
         module.definitions = module
             .definitions
             .into_iter()
-            .map(|d| self.fix_targetted_definition(d))
+            .map(|d| self.fix_targeted_definition(d))
             .collect();
 
         module
     }
 
-    fn fix_targetted_definition(&mut self, mut d: TargetedDefinition) -> TargetedDefinition {
+    fn determine_names(&mut self, d: &UntypedDefinition) {
+        match d {
+            Definition::Function(_) | Definition::ModuleConstant(_) => (),
+
+            Definition::CustomType(CustomType { name, .. })
+            | Definition::TypeAlias(TypeAlias { alias: name, .. }) => {
+                if name == "BitString" && self.bit_string_name == "BitString" {
+                    self.bit_string_name = "".into();
+                }
+            }
+
+            Definition::Import(i) => {
+                if i.module == "gleam" {
+                    self.prelude_module_import_alias = Some(i.used_name());
+                }
+
+                for i in &i.unqualified {
+                    if i.variable_name() == "BitString" && self.bit_string_name == "BitString" {
+                        self.bit_string_name = "".into();
+                    }
+                }
+            }
+        }
+    }
+
+    fn fix_targeted_definition(&mut self, mut d: TargetedDefinition) -> TargetedDefinition {
         d.definition = self.fix_definition(d.definition);
         d
     }
 
     fn fix_definition(&mut self, definition: UntypedDefinition) -> UntypedDefinition {
         match definition {
-            Definition::Import(i) => Definition::Import(i),
-            Definition::Function(_) => todo!(),
-            Definition::CustomType(_) => todo!(),
+            Definition::Import(i) => Definition::Import(self.fix_import(i)),
+            Definition::Function(f) => Definition::Function(self.fix_function(f)),
+            Definition::CustomType(c) => Definition::CustomType(self.fix_custom_type(c)),
             Definition::TypeAlias(a) => Definition::TypeAlias(self.fix_alias(a)),
             Definition::ModuleConstant(_) => todo!(),
         }
@@ -89,6 +110,57 @@ impl Fixer {
     fn fix_alias(&mut self, mut alias: TypeAlias<()>) -> TypeAlias<()> {
         alias.type_ast = self.fold_type(alias.type_ast);
         alias
+    }
+
+    fn fix_custom_type(&mut self, mut c: CustomType<()>) -> CustomType<()> {
+        c.constructors = c
+            .constructors
+            .into_iter()
+            .map(|mut c| {
+                c.arguments = c
+                    .arguments
+                    .into_iter()
+                    .map(|mut a| {
+                        a.ast = self.fold_type(a.ast);
+                        a
+                    })
+                    .collect();
+                c
+            })
+            .collect();
+        c
+    }
+
+    fn fix_import(&self, mut i: Import<()>) -> Import<()> {
+        if i.module != "gleam" {
+            return i;
+        }
+
+        i.unqualified = i
+            .unqualified
+            .into_iter()
+            .map(|mut i| {
+                if i.name == "BitString" {
+                    i.name = "BitArray".into();
+                }
+                i
+            })
+            .collect();
+
+        i
+    }
+
+    fn fix_function(&mut self, mut f: UntypedFunction) -> UntypedFunction {
+        f.return_annotation = f.return_annotation.map(|t| self.fold_type(t));
+        f.arguments = f
+            .arguments
+            .into_iter()
+            .map(|mut a| {
+                a.annotation = a.annotation.map(|t| self.fold_type(t));
+                a
+            })
+            .collect();
+        f
     }
 }
 
