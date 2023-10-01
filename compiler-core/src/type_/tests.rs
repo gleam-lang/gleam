@@ -198,7 +198,7 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     crate::type_::ExprTyper::new(&mut crate::type_::Environment::new(
         ids,
-        "themodule",
+        "themodule".into(),
         Target::Erlang,
         &modules,
         &TypeWarningEmitter::null(),

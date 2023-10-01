@@ -1,36 +1,32 @@
+mod imports;
 #[cfg(test)]
 mod tests;
 
-use crate::ast::{
-    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg,
-    UntypedStatement,
-};
-use crate::type_::error::MissingAnnotation;
-use crate::type_::Deprecation;
 use crate::{
     ast::{
         self, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, Layer, ModuleConstant, RecordConstructor, RecordConstructorArg,
-        SrcSpan, TypeAlias, TypeAst, TypedDefinition, TypedModule, UnqualifiedImport,
-        UntypedModule,
+        SrcSpan, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple,
+        TypeAstVar, TypedDefinition, TypedModule, UntypedArg, UntypedModule, UntypedStatement,
     },
     build::{Origin, Target},
     call_graph::into_dependency_order,
+    dep_tree,
     type_::{
         self,
         environment::*,
-        error::{convert_unify_error, Error},
+        error::{convert_unify_error, Error, MissingAnnotation},
         expression::ExprTyper,
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
-        AccessorsMap, ModuleInterface, PatternConstructor, RecordAccessor, Type, TypeConstructor,
-        ValueConstructor, ValueConstructorVariant,
+        AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
+        TypeConstructor, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
+    GLEAM_CORE_PACKAGE_NAME,
 };
-use crate::{dep_tree, GLEAM_CORE_PACKAGE_NAME};
 use itertools::Itertools;
 use smol_str::SmolStr;
 use std::{collections::HashMap, sync::Arc};
@@ -85,7 +81,7 @@ pub fn infer_module<A>(
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
-    let mut env = Environment::new(ids.clone(), &name, target, modules, warnings);
+    let env = Environment::new(ids.clone(), name.clone(), target, modules, warnings);
     validate_module_name(&name)?;
 
     let mut type_names = HashMap::with_capacity(module.definitions.len());
@@ -98,10 +94,7 @@ pub fn infer_module<A>(
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
-    // TODO: Extract an ImportRegistrar class to perform this.
-    for s in &statements.imports {
-        register_import(s, &name, origin, warnings, &mut env)?;
-    }
+    let mut env = imports::Importer::run(origin, warnings, env, &statements.imports)?;
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
@@ -217,180 +210,6 @@ pub fn infer_module<A>(
             package: package.clone(),
         },
     })
-}
-
-pub fn register_import(
-    import: &Import<()>,
-    current_module: &str,
-    origin: Origin,
-    warnings: &TypeWarningEmitter,
-    environment: &mut Environment<'_>,
-) -> Result<(), Error> {
-    // Determine local alias of imported module
-    let module_name = import.used_name();
-
-    let Import {
-        module,
-        unqualified_values: unqualified,
-        location,
-        ..
-    } = import;
-    let name = module.clone();
-    // Find imported module
-    let module_info =
-        environment
-            .importable_modules
-            .get(&name)
-            .ok_or_else(|| Error::UnknownModule {
-                location: *location,
-                name: name.clone(),
-                imported_modules: environment.imported_modules.keys().cloned().collect(),
-            })?;
-
-    // Modules in `src/` cannot import modules from `test/`
-    if origin.is_src() && !module_info.origin.is_src() {
-        return Err(Error::SrcImportingTest {
-            location: *location,
-            src_module: current_module.into(),
-            test_module: name,
-        });
-    }
-
-    // Insert unqualified imports into scope
-    for UnqualifiedImport {
-        name,
-        location,
-        as_name,
-        ..
-    } in unqualified
-    {
-        let mut type_imported = false;
-        let mut value_imported = false;
-        let mut variant = None;
-
-        if name == "BitString" && module == "gleam" {
-            warnings.emit(type_::Warning::DeprecatedBitString {
-                location: *location,
-            });
-        }
-
-        let imported_name = as_name.as_ref().unwrap_or(name);
-
-        // Check if value already was imported
-        if let Some(previous) = environment.unqualified_imported_names.get(imported_name) {
-            return Err(Error::DuplicateImport {
-                location: *location,
-                previous_location: *previous,
-                name: name.clone(),
-            });
-        }
-
-        // Register the name as imported so it can't be imported a
-        // second time in future
-        let _ = environment
-            .unqualified_imported_names
-            .insert(imported_name.clone(), *location);
-
-        // Register the unqualified import if it is a value
-        if let Some(value) = module_info.get_public_value(name) {
-            environment.insert_variable(
-                imported_name.clone(),
-                value.variant.clone(),
-                value.type_.clone(),
-                true,
-                Deprecation::NotDeprecated,
-            );
-            variant = Some(&value.variant);
-            value_imported = true;
-        }
-
-        // Register the unqualified import if it is a type constructor
-        if let Some(typ) = module_info.get_public_type(name) {
-            let typ_info = TypeConstructor {
-                origin: *location,
-                ..typ.clone()
-            };
-            match environment.insert_type_constructor(imported_name.clone(), typ_info) {
-                Ok(_) => (),
-                Err(e) => return Err(e),
-            };
-
-            type_imported = true;
-        }
-
-        if value_imported && type_imported {
-            environment.init_usage(
-                imported_name.clone(),
-                EntityKind::ImportedTypeAndConstructor,
-                *location,
-            );
-        } else if type_imported {
-            let _ = environment.imported_types.insert(imported_name.clone());
-            environment.init_usage(imported_name.clone(), EntityKind::ImportedType, *location);
-        } else if value_imported {
-            match variant {
-                Some(&ValueConstructorVariant::Record { .. }) => environment.init_usage(
-                    imported_name.clone(),
-                    EntityKind::ImportedConstructor,
-                    *location,
-                ),
-                _ => environment.init_usage(
-                    imported_name.clone(),
-                    EntityKind::ImportedValue,
-                    *location,
-                ),
-            };
-        } else if !value_imported {
-            // Error if no type or value was found with that name
-            return Err(Error::UnknownModuleField {
-                location: *location,
-                name: name.clone(),
-                module_name: module.clone(),
-                value_constructors: module_info.public_value_names(),
-                type_constructors: module_info.public_type_names(),
-            });
-        }
-    }
-
-    if unqualified.is_empty() {
-        // When the module has no unqualified imports, we track its usage
-        // so we can warn if not used by the end of the type checking
-        let _ = environment
-            .unused_modules
-            .insert(module_name.clone(), *location);
-    } else if let Some(as_name) = &import.as_name {
-        // When the module has a name, we also track its as_name usage
-        // so we can warn if not used by the end of the type checking
-        let _ = environment
-            .unused_modules
-            .insert(as_name.name.clone(), as_name.location);
-        // We also register it's name to differentiate between unused module
-        // and unused module name. See 'convert_unused_to_warnings'.
-        let _ = environment
-            .imported_module_aliases
-            .insert(as_name.name.clone());
-    }
-
-    // Check if a module was already imported with this name
-    if let Some((previous_location, _)) = environment.imported_modules.get(&module_name) {
-        return Err(Error::DuplicateImport {
-            location: *location,
-            previous_location: *previous_location,
-            name: module_name.clone(),
-        });
-    }
-
-    // Register the name as imported so it can't be imported a
-    // second time in future
-    let _ = environment
-        .unqualified_imported_names
-        .insert(module_name.clone(), *location);
-
-    // Insert imported module into scope
-    let _ = environment
-        .imported_modules
-        .insert(module_name, (*location, module_info));
-    Ok(())
 }
 
 fn validate_module_name(name: &SmolStr) -> Result<(), Error> {

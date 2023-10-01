@@ -193,3 +193,17 @@ pub fn main() {
 }",
     );
 }
+
+#[test]
+fn import_type() {
+    assert_infer_with_module!(
+        ("one", "pub type One = Int"),
+        "import one.{type One}
+
+pub fn main() -> One {
+  todo
+}
+",
+        vec![("main", "fn() -> Int")],
+    );
+}
