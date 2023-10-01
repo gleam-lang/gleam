@@ -1489,7 +1489,7 @@ impl<A> BitArrayOption<A> {
 
     /// Returns `true` if the bit array option is [`BitString`].
     ///
-    /// The deprecated bit_string variable specifically!
+    /// The deprecated `bit_string` variable specifically!
     ///
     /// [`BitString`]: BitArrayOption::BitString
     #[must_use]

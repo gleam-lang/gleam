@@ -183,7 +183,7 @@ impl Hydrator {
                 Ok(fn_(args, retrn))
             }
 
-            TypeAst::Var(TypeAstVar { name, location, .. }) => {
+            TypeAst::Var(TypeAstVar { name, location }) => {
                 match self.created_type_variables.get(name) {
                     Some(var) => Ok(var.clone()),
 
