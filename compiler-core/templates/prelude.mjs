@@ -115,6 +115,7 @@ export class BitArray {
     return data?.__gleam_prelude_variant__ === "BitArray";
   }
 
+  // TODO: remove after next version
   static isBitString(data) {
     return BitArray.isBitArray(data);
   }
