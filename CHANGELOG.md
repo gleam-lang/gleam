@@ -43,7 +43,7 @@
   error.
 - Fixed a bug where some mutually recursive functions would be inferred as
   having too general a type.
-- Fixed a bug where constants where not being correctly inlined when used in the 
+- Fixed a bug where constants where not being correctly inlined when used in the
   size option of a bit string pattern match.
 - Fixed a bug where anonymous functions could parse successfully when missing a
   body.
