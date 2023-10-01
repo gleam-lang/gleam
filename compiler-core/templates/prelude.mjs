@@ -115,6 +115,10 @@ export class BitArray {
     return data?.__gleam_prelude_variant__ === "BitArray";
   }
 
+  static isBitString(data) {
+    return BitArray.isBitArray(data);
+  }
+
   constructor(buffer) {
     if (!(buffer instanceof Uint8Array)) {
       throw "BitArray can only be constructed from a Uint8Array";
