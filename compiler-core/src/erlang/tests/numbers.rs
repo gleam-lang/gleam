@@ -87,3 +87,15 @@ pub fn main() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2356
+#[test]
+fn zero_b_in_hex() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  0xffe0bb
+}
+"#
+    );
+}

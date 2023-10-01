@@ -929,13 +929,16 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
 }
 
 fn int<'a>(value: &str) -> Document<'a> {
-    Document::String(
-        value
-            .replace('_', "")
-            .replace("0x", "16#")
-            .replace("0o", "8#")
-            .replace("0b", "2#"),
-    )
+    let mut value = value.replace('_', "");
+    if value.starts_with("0x") {
+        value.replace_range(..2, "16#");
+    } else if value.starts_with("0o") {
+        value.replace_range(..2, "8#");
+    } else if value.starts_with("0b") {
+        value.replace_range(..2, "2#");
+    }
+
+    Document::String(value)
 }
 
 fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'a> {
