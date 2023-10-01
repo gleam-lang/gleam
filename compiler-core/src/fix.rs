@@ -4,9 +4,9 @@ mod tests;
 use crate::{
     ast::{
         CustomType, Definition, Import, TargetedDefinition, TypeAlias, TypeAst, TypeAstConstructor,
-        UntypedDefinition, UntypedFunction, UntypedModule,
+        UntypedDefinition, UntypedFunction, UntypedModule, UntypedModuleConstant,
     },
-    ast_folder::TypeAstFolder,
+    ast_folder::{TypeAstFolder, UntypedExprFolder},
     format::{Formatter, Intermediate},
     Error, Result,
 };
@@ -103,7 +103,9 @@ impl Fixer {
             Definition::Function(f) => Definition::Function(self.fix_function(f)),
             Definition::CustomType(c) => Definition::CustomType(self.fix_custom_type(c)),
             Definition::TypeAlias(a) => Definition::TypeAlias(self.fix_alias(a)),
-            Definition::ModuleConstant(_) => todo!(),
+            Definition::ModuleConstant(c) => {
+                Definition::ModuleConstant(self.fix_module_constant(c))
+            }
         }
     }
 
@@ -160,9 +162,17 @@ impl Fixer {
                 a
             })
             .collect();
+        f.body = f.body.mapped(|e| self.fold_statement(e));
         f
     }
+
+    fn fix_module_constant(&mut self, mut c: UntypedModuleConstant) -> UntypedModuleConstant {
+        c.annotation = c.annotation.map(|t| self.fold_type(t));
+        c
+    }
 }
+
+impl UntypedExprFolder for Fixer {}
 
 impl TypeAstFolder for Fixer {
     fn fold_type_constructor(&mut self, mut constructor: TypeAstConstructor) -> TypeAst {

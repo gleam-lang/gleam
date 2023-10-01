@@ -211,3 +211,39 @@ fn arguments() {
 "
     );
 }
+
+#[test]
+fn let_annotation() {
+    assert_eq!(
+        fix("pub fn main() {
+  let x: List(BitString) = todo
+}
+"),
+        "pub fn main() {
+  let x: List(BitArray) = todo
+}
+"
+    );
+}
+
+#[test]
+fn use_annotation() {
+    assert_eq!(
+        fix("pub fn main() {
+  use x: List(BitString), y: BitString <- todo
+}
+"),
+        "pub fn main() {
+  use x: List(BitArray), y: BitArray <- todo
+}
+"
+    );
+}
+
+#[test]
+fn constant() {
+    assert_eq!(
+        fix("pub const x: BitString = <<>>"),
+        "pub const x: BitArray = <<>>\n"
+    );
+}
