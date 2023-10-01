@@ -1283,7 +1283,7 @@ fn bit_array<'a>(
             }
 
             // Bit strings
-            [Opt::BitString { .. }] => Ok(docvec![value, ".buffer"]),
+            [Opt::Bits { .. } | Opt::BitString { .. }] => Ok(docvec![value, ".buffer"]),
 
             // Anything else
             _ => Err(Error::Unsupported {
