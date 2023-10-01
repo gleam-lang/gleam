@@ -8,13 +8,14 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Environment<'a> {
-    pub current_module: &'a str,
+    pub current_module: SmolStr,
     pub target: Target,
     pub ids: UniqueIdGenerator,
     previous_id: u64,
     /// Names of types or values that have been imported an unqualified fashion
     /// from other modules. Used to prevent multiple imports using the same name.
     pub unqualified_imported_names: HashMap<SmolStr, SrcSpan>,
+    pub unqualified_imported_types: HashMap<SmolStr, SrcSpan>,
     pub importable_modules: &'a im::HashMap<SmolStr, ModuleInterface>,
 
     /// Modules that have been imported by the current module, along with the
@@ -54,7 +55,7 @@ pub struct Environment<'a> {
 impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
-        current_module: &'a str,
+        current_module: SmolStr,
         target: Target,
         importable_modules: &'a im::HashMap<SmolStr, ModuleInterface>,
         warnings: &'a TypeWarningEmitter,
@@ -72,6 +73,7 @@ impl<'a> Environment<'a> {
             imported_modules: HashMap::new(),
             unused_modules: HashMap::new(),
             unqualified_imported_names: HashMap::new(),
+            unqualified_imported_types: HashMap::new(),
             accessors: prelude.accessors.clone(),
             scope: prelude.values.clone().into(),
             importable_modules,
@@ -584,7 +586,7 @@ impl<'a> Environment<'a> {
                 module: module_name,
                 ..
             } => {
-                let m = if module_name.is_empty() || module_name == self.current_module {
+                let m = if module_name.is_empty() || module_name == &self.current_module {
                     None
                 } else {
                     Some(module_name.as_str())

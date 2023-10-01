@@ -1486,7 +1486,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
         let accessors = match collapse_links(record_type.clone()).as_ref() {
             // A type in the current module which may have fields
-            Type::Named { module, name, .. } if module == self.environment.current_module => {
+            Type::Named { module, name, .. } if module == &self.environment.current_module => {
                 self.environment.accessors.get(name)
             }
 

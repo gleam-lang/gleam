@@ -643,6 +643,12 @@ pub struct TypeConstructor {
     pub parameters: Vec<Arc<Type>>,
     pub typ: Arc<Type>,
 }
+impl TypeConstructor {
+    pub(crate) fn with_location(mut self, location: SrcSpan) -> Self {
+        self.origin = location;
+        self
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValueConstructor {
