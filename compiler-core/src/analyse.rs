@@ -165,8 +165,8 @@ pub fn infer_module<A>(
         }
     }
 
-    // Generate warnings for unused items
-    env.convert_unused_to_warnings();
+    env.emit_warnings_for_unused();
+    env.emit_warnings_for_deprecated_type_imports();
 
     // Remove imported types and values to create the public interface
     // Private types and values are retained so they can be used in the language
@@ -782,8 +782,7 @@ fn record_imported_items_for_use_detection<A>(
         module,
         as_name,
         mut unqualified_values,
-        // TODO: handle imported types
-        mut unqualified_types,
+        unqualified_types,
         ..
     } = i;
     // Find imported module

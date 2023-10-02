@@ -596,6 +596,30 @@ Run this command to add it to your dependencies:
                         }),
                     }
                 }
+
+                type_::Warning::DeprecatedTypeImport { name, location } => {
+                    let text = wrap(&format!(
+                        "The syntax for importing a type has changed. The new syntax is:
+
+    import module.{{type {name}}}
+"
+                    ));
+                    Diagnostic {
+                        title: "Deprecated type import".into(),
+                        text,
+                        hint: Some("Run `gleam fix` to auto-fix your code.".into()),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
             },
         }
     }
