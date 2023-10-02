@@ -3,10 +3,11 @@ mod tests;
 
 use crate::{
     ast::{
-        CustomType, Definition, Import, TargetedDefinition, TypeAlias, TypeAst, TypeAstConstructor,
-        UntypedDefinition, UntypedFunction, UntypedModule, UntypedModuleConstant,
+        CustomType, Definition, Import, TypeAlias, TypeAst, TypeAstConstructor, UntypedDefinition,
+        UntypedImport, UntypedModule,
     },
-    ast_folder::{TypeAstFolder, UntypedExprFolder},
+    ast_folder::{TypeAstFolder, UntypedExprFolder, UntypedModuleFolder},
+    build::Target,
     format::{Formatter, Intermediate},
     Error, Result,
 };
@@ -51,20 +52,14 @@ impl Fixer {
         fixer.fix_module(module)
     }
 
-    fn fix_module(&mut self, mut module: UntypedModule) -> UntypedModule {
+    fn fix_module(&mut self, module: UntypedModule) -> UntypedModule {
         // Work out what BitString is called in this module
         for d in module.definitions.iter() {
             self.determine_names(&d.definition);
         }
 
         // Fix the module
-        module.definitions = module
-            .definitions
-            .into_iter()
-            .map(|d| self.fix_targeted_definition(d))
-            .collect();
-
-        module
+        self.fold_module(module)
     }
 
     fn determine_names(&mut self, d: &UntypedDefinition) {
@@ -91,84 +86,23 @@ impl Fixer {
             }
         }
     }
+}
 
-    fn fix_targeted_definition(&mut self, mut d: TargetedDefinition) -> TargetedDefinition {
-        d.definition = self.fix_definition(d.definition);
-        d
-    }
-
-    fn fix_definition(&mut self, definition: UntypedDefinition) -> UntypedDefinition {
-        match definition {
-            Definition::Import(i) => Definition::Import(self.fix_import(i)),
-            Definition::Function(f) => Definition::Function(self.fix_function(f)),
-            Definition::CustomType(c) => Definition::CustomType(self.fix_custom_type(c)),
-            Definition::TypeAlias(a) => Definition::TypeAlias(self.fix_alias(a)),
-            Definition::ModuleConstant(c) => {
-                Definition::ModuleConstant(self.fix_module_constant(c))
-            }
+impl UntypedModuleFolder for Fixer {
+    fn fold_import(&mut self, mut i: UntypedImport, _target: Option<Target>) -> Import<()> {
+        if i.module == "gleam" {
+            i.unqualified_values = i
+                .unqualified_values
+                .into_iter()
+                .map(|mut i| {
+                    if i.name == "BitString" {
+                        i.name = "BitArray".into();
+                    }
+                    i
+                })
+                .collect();
         }
-    }
-
-    fn fix_alias(&mut self, mut alias: TypeAlias<()>) -> TypeAlias<()> {
-        alias.type_ast = self.fold_type(alias.type_ast);
-        alias
-    }
-
-    fn fix_custom_type(&mut self, mut c: CustomType<()>) -> CustomType<()> {
-        c.constructors = c
-            .constructors
-            .into_iter()
-            .map(|mut c| {
-                c.arguments = c
-                    .arguments
-                    .into_iter()
-                    .map(|mut a| {
-                        a.ast = self.fold_type(a.ast);
-                        a
-                    })
-                    .collect();
-                c
-            })
-            .collect();
-        c
-    }
-
-    fn fix_import(&self, mut i: Import<()>) -> Import<()> {
-        if i.module != "gleam" {
-            return i;
-        }
-
-        i.unqualified_values = i
-            .unqualified_values
-            .into_iter()
-            .map(|mut i| {
-                if i.name == "BitString" {
-                    i.name = "BitArray".into();
-                }
-                i
-            })
-            .collect();
-
         i
-    }
-
-    fn fix_function(&mut self, mut f: UntypedFunction) -> UntypedFunction {
-        f.return_annotation = f.return_annotation.map(|t| self.fold_type(t));
-        f.arguments = f
-            .arguments
-            .into_iter()
-            .map(|mut a| {
-                a.annotation = a.annotation.map(|t| self.fold_type(t));
-                a
-            })
-            .collect();
-        f.body = f.body.mapped(|e| self.fold_statement(e));
-        f
-    }
-
-    fn fix_module_constant(&mut self, mut c: UntypedModuleConstant) -> UntypedModuleConstant {
-        c.annotation = c.annotation.map(|t| self.fold_type(t));
-        c
     }
 }
 

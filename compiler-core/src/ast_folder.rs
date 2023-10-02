@@ -1,12 +1,151 @@
 use smol_str::SmolStr;
 use vec1::Vec1;
 
-use crate::ast::{
-    Assignment, BinOp, CallArg, RecordUpdateSpread, SrcSpan, Statement, TodoKind, TypeAst,
-    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg,
-    UntypedAssignment, UntypedClause, UntypedExpr, UntypedExprBitArraySegment,
-    UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment,
+use crate::{
+    ast::{
+        Assignment, BinOp, CallArg, Definition, RecordUpdateSpread, SrcSpan, Statement,
+        TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole,
+        TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssignment, UntypedClause, UntypedCustomType,
+        UntypedDefinition, UntypedExpr, UntypedExprBitArraySegment, UntypedFunction, UntypedImport,
+        UntypedModule, UntypedModuleConstant, UntypedRecordUpdateArg, UntypedStatement,
+        UntypedTypeAlias, Use, UseAssignment,
+    },
+    build::Target,
 };
+
+pub trait UntypedModuleFolder: TypeAstFolder + UntypedExprFolder {
+    /// You probably don't want to override this method.
+    fn fold_module(&mut self, mut m: UntypedModule) -> UntypedModule {
+        m.definitions = m
+            .definitions
+            .into_iter()
+            .map(|d| {
+                let TargetedDefinition { definition, target } = d;
+                match definition {
+                    Definition::Function(f) => {
+                        let f = self.fold_function_definition(f, target);
+                        let definition = self.walk_function_definition(f);
+                        TargetedDefinition { definition, target }
+                    }
+
+                    Definition::TypeAlias(a) => {
+                        let a = self.fold_type_alias(a, target);
+                        let definition = self.walk_type_alias(a);
+                        TargetedDefinition { definition, target }
+                    }
+
+                    Definition::CustomType(t) => {
+                        let t = self.fold_custom_type(t, target);
+                        let definition = self.walk_custom_type(t);
+                        TargetedDefinition { definition, target }
+                    }
+
+                    Definition::Import(i) => {
+                        let i = self.fold_import(i, target);
+                        let definition = self.walk_import(i);
+                        TargetedDefinition { definition, target }
+                    }
+
+                    Definition::ModuleConstant(c) => {
+                        let c = self.fold_module_constant(c, target);
+                        let definition = self.walk_module_constant(c);
+                        TargetedDefinition { definition, target }
+                    }
+                }
+            })
+            .collect();
+        m
+    }
+
+    /// You probably don't want to override this method.
+    fn walk_function_definition(&mut self, mut f: UntypedFunction) -> UntypedDefinition {
+        f.body = f.body.mapped(|s| self.fold_statement(s));
+        f.return_annotation = f.return_annotation.map(|t| self.fold_type(t));
+        f.arguments = f
+            .arguments
+            .into_iter()
+            .map(|mut a| {
+                a.annotation = a.annotation.map(|t| self.fold_type(t));
+                a
+            })
+            .collect();
+        Definition::Function(f)
+    }
+
+    /// You probably don't want to override this method.
+    fn walk_type_alias(&mut self, mut f: UntypedTypeAlias) -> UntypedDefinition {
+        f.type_ast = self.fold_type(f.type_ast);
+        Definition::TypeAlias(f)
+    }
+
+    /// You probably don't want to override this method.
+    fn walk_custom_type(&mut self, mut c: UntypedCustomType) -> UntypedDefinition {
+        c.constructors = c
+            .constructors
+            .into_iter()
+            .map(|mut c| {
+                c.arguments = c
+                    .arguments
+                    .into_iter()
+                    .map(|mut a| {
+                        a.ast = self.fold_type(a.ast);
+                        a
+                    })
+                    .collect();
+                c
+            })
+            .collect();
+
+        Definition::CustomType(c)
+    }
+
+    /// You probably don't want to override this method.
+    fn walk_import(&mut self, i: UntypedImport) -> UntypedDefinition {
+        Definition::Import(i)
+    }
+
+    /// You probably don't want to override this method.
+    fn walk_module_constant(&mut self, mut c: UntypedModuleConstant) -> UntypedDefinition {
+        c.annotation = c.annotation.map(|t| self.fold_type(t));
+        Definition::ModuleConstant(c)
+    }
+
+    fn fold_function_definition(
+        &mut self,
+        f: UntypedFunction,
+        _target: Option<Target>,
+    ) -> UntypedFunction {
+        f
+    }
+
+    fn fold_type_alias(
+        &mut self,
+        f: UntypedTypeAlias,
+        _target: Option<Target>,
+    ) -> UntypedTypeAlias {
+        f
+    }
+
+    fn fold_custom_type(
+        &mut self,
+        c: UntypedCustomType,
+        _target: Option<Target>,
+    ) -> UntypedCustomType {
+        c
+    }
+
+    fn fold_import(&mut self, i: UntypedImport, _target: Option<Target>) -> UntypedImport {
+        i
+    }
+
+    fn fold_module_constant(
+        &mut self,
+        c: UntypedModuleConstant,
+        _target: Option<Target>,
+    ) -> UntypedModuleConstant {
+        c
+    }
+}
 
 pub trait TypeAstFolder {
     /// Visit a node and potentially replace it with another node using the
