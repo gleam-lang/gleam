@@ -102,11 +102,10 @@ impl<'a> Importer<'a> {
         let type_info = module
             .get_public_type(&import.name)
             // TODO: refine to a type specific error
-            .ok_or_else(|| Error::UnknownModuleField {
+            .ok_or_else(|| Error::UnknownModuleType {
                 location: import.location,
                 name: import.name.clone(),
                 module_name: module.name.clone(),
-                value_constructors: module.public_value_names(),
                 type_constructors: module.public_type_names(),
             })?
             .clone()
@@ -157,18 +156,10 @@ impl<'a> Importer<'a> {
 
         // Register the unqualified import if it is a type constructor
         if let Some(typ) = module.get_public_type(import_name) {
-            let typ_info = TypeConstructor {
-                origin: location,
-                ..typ.clone()
-            };
-            match self
-                .environment
-                .insert_type_constructor(imported_name.clone(), typ_info)
-            {
-                Ok(_) => (),
-                Err(e) => return Err(e),
-            };
-
+            let _ = self.environment.insert_type_constructor(
+                imported_name.clone(),
+                typ.clone().with_location(location),
+            )?;
             type_imported = true;
         }
 
@@ -209,15 +200,6 @@ impl<'a> Importer<'a> {
             });
         }
 
-        // TODO: replicate this in the type function
-        // TODO: replicate this in the type function
-        // TODO: replicate this in the type function
-        // TODO: replicate this in the type function
-        // TODO: replicate this in the type function
-        // TODO: replicate this in the type function
-        // TODO: replicate this in the type function
-        // TODO: replicate this in the type function
-        // TODO: replicate this in the type function
         // Check if value already was imported
         if let Some(previous) = self
             .environment
