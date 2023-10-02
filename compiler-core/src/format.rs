@@ -228,19 +228,23 @@ impl<'comments> Formatter<'comments> {
             Definition::Import(Import {
                 module,
                 as_name,
-                unqualified_values: unqualified,
+                unqualified_values,
+                unqualified_types,
                 ..
-            }) => "import "
-                .to_doc()
-                .append(module.as_str())
-                .append(if unqualified.is_empty() {
+            }) => {
+                let second = if unqualified_values.is_empty() && unqualified_types.is_empty() {
                     nil()
                 } else {
+                    let unqualified_types = unqualified_types
+                        .iter()
+                        .sorted_by(|a, b| a.name.cmp(&b.name))
+                        .map(|e| docvec!["type ", e]);
+                    let unqualified_values = unqualified_values
+                        .iter()
+                        .sorted_by(|a, b| a.name.cmp(&b.name))
+                        .map(|e| e.to_doc());
                     let unqualified = Itertools::intersperse(
-                        unqualified
-                            .iter()
-                            .sorted_by(|a, b| a.name.cmp(&b.name))
-                            .map(|e| e.to_doc()),
+                        unqualified_types.chain(unqualified_values),
                         flex_break(",", ", "),
                     );
                     let unqualified = break_("", "")
@@ -249,12 +253,14 @@ impl<'comments> Formatter<'comments> {
                         .append(break_(",", ""))
                         .group();
                     ".{".to_doc().append(unqualified).append("}")
-                })
-                .append(if let Some(as_name) = as_name {
-                    docvec![" as ", &as_name.name]
+                };
+                let doc = docvec!["import ", module.as_str(), second];
+                if let Some(as_name) = as_name {
+                    doc.append(" as ").append(&as_name.name)
                 } else {
-                    nil()
-                }),
+                    doc
+                }
+            }
 
             Definition::ModuleConstant(ModuleConstant {
                 public,
