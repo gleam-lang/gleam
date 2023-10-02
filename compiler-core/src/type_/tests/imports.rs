@@ -207,3 +207,16 @@ pub fn main() -> One {
         vec![("main", "fn() -> Int")],
     );
 }
+
+#[test]
+fn import_type_duplicate() {
+    assert_with_module_error!(
+        ("one", "pub type One = Int"),
+        "import one.{One, type One}
+
+pub fn main() -> One {
+  todo
+}
+",
+    );
+}
