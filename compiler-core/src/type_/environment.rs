@@ -1,5 +1,8 @@
 use crate::{
-    analyse::Inferred, ast::PIPE_VARIABLE, build::Target, uid::UniqueIdGenerator,
+    analyse::Inferred,
+    ast::{Layer, PIPE_VARIABLE},
+    build::Target,
+    uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
 };
 
@@ -50,6 +53,8 @@ pub struct Environment<'a> {
     /// stack for an entity with that name and mark it as used.
     /// NOTE: The bool in the tuple here tracks if the entity has been used
     pub entity_usages: Vec<HashMap<SmolStr, (EntityKind, SrcSpan, bool)>>,
+
+    pub types_imported_using_deprecated_syntax: HashMap<SmolStr, SrcSpan>,
 }
 
 impl<'a> Environment<'a> {
@@ -82,6 +87,7 @@ impl<'a> Environment<'a> {
             current_module,
             warnings,
             entity_usages: vec![HashMap::new()],
+            types_imported_using_deprecated_syntax: HashMap::new(),
         }
     }
 }
@@ -95,7 +101,7 @@ pub enum EntityKind {
     PrivateFunction,
     ImportedConstructor,
     ImportedType,
-    ImportedTypeAndConstructor,
+    ImportedTypeAndConstructor(SrcSpan),
     ImportedValue,
     PrivateType,
     Variable,
@@ -234,7 +240,7 @@ impl<'a> Environment<'a> {
     /// Lookup a module constant in the current scope.
     ///
     pub fn get_module_const(&mut self, name: &SmolStr) -> Option<&ValueConstructor> {
-        self.increment_usage(name);
+        self.increment_usage(name, Layer::Value);
         self.module_values
             .get(name)
             .filter(|ValueConstructor { variant, .. }| {
@@ -474,7 +480,7 @@ impl<'a> Environment<'a> {
             // TODO: Improve this so that we can tell if an imported overriden
             // type is actually used or not by tracking whether usages apply to
             // the value or type scope
-            Some((ImportedType | ImportedTypeAndConstructor | PrivateType, _, _)) => {}
+            Some((ImportedType | ImportedTypeAndConstructor(_) | PrivateType, _, _)) => {}
 
             Some((kind, location, false)) => {
                 // an entity was overwritten in the top most scope without being used
@@ -488,7 +494,7 @@ impl<'a> Environment<'a> {
     }
 
     /// Increments an entity's usage in the current or nearest enclosing scope
-    pub fn increment_usage(&mut self, name: &SmolStr) {
+    pub fn increment_usage(&mut self, name: &SmolStr, layer: Layer) {
         let mut name = name.clone();
 
         while let Some((kind, _, used)) = self
@@ -504,13 +510,26 @@ impl<'a> Environment<'a> {
                 EntityKind::PrivateTypeConstructor(type_name) if *type_name != name => {
                     name = type_name.clone();
                 }
-                _ => return,
+                EntityKind::ImportedTypeAndConstructor(location) if layer == Layer::Type => {
+                    let _ = self
+                        .types_imported_using_deprecated_syntax
+                        .insert(name.clone(), *location);
+                    break;
+                }
+                _ => break,
             }
         }
     }
 
+    pub fn emit_warnings_for_deprecated_type_imports(&mut self) {
+        for (name, location) in self.types_imported_using_deprecated_syntax.drain() {
+            self.warnings
+                .emit(Warning::DeprecatedTypeImport { name, location })
+        }
+    }
+
     /// Converts entities with a usage count of 0 to warnings
-    pub fn convert_unused_to_warnings(&mut self) {
+    pub fn emit_warnings_for_unused(&mut self) {
         let unused = self
             .entity_usages
             .pop()
@@ -530,7 +549,7 @@ impl<'a> Environment<'a> {
     fn handle_unused(&mut self, unused: HashMap<SmolStr, (EntityKind, SrcSpan, bool)>) {
         for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
             let warning = match kind {
-                EntityKind::ImportedType | EntityKind::ImportedTypeAndConstructor => {
+                EntityKind::ImportedType | EntityKind::ImportedTypeAndConstructor(_) => {
                     Warning::UnusedType {
                         name,
                         imported: true,

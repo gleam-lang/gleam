@@ -498,7 +498,7 @@ fn unused_imported_module_no_warning_on_used_unqualified_function_test() {
 fn unused_imported_module_no_warning_on_used_unqualified_type_test() {
     assert_no_warnings!(
         ("thepackage", "gleam/foo", "pub type Foo = Int"),
-        "import gleam/foo.{Foo} pub fn baz(a: Foo) { a }",
+        "import gleam/foo.{type Foo} pub fn baz(a: Foo) { a }",
     );
 }
 
@@ -933,7 +933,7 @@ pub type B = gleam.BitString
 fn deprecated_bit_array_type_aliased() {
     assert_warning!(
         r#"
-import gleam.{BitString as BibbleWib}
+import gleam.{type BitString as BibbleWib}
 pub type B = BibbleWib
 "#
     );
@@ -952,4 +952,48 @@ pub type B = BitString
 #[test]
 fn const_bits_option() {
     assert_no_warnings!("pub const x = <<<<>>:bits>>");
+}
+
+#[test]
+fn deprecate_type_import_extenal() {
+    assert_warning!(
+        ("package", "module", "pub type X"),
+        "
+import module.{X}
+pub type Y = X
+"
+    );
+}
+
+#[test]
+fn deprecate_type_import_type_alias() {
+    assert_warning!(
+        ("package", "module", "pub type X = Int"),
+        "
+import module.{X}
+pub type Y = X
+"
+    );
+}
+
+#[test]
+fn deprecate_type_import_type_custom_type() {
+    assert_warning!(
+        ("package", "module", "pub type X { X }"),
+        "
+import module.{X}
+pub type Y = X
+"
+    );
+}
+
+#[test]
+fn deprecate_type_import_type_custom_type_not_using_type() {
+    assert_no_warnings!(
+        ("package", "module", "pub type X { X }"),
+        "
+import module.{X}
+pub const x = X
+"
+    );
 }

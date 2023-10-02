@@ -4,8 +4,7 @@ use crate::{
     ast::{Import, SrcSpan, UnqualifiedImport},
     build::Origin,
     type_::{
-        self, Deprecation, EntityKind, Environment, Error, ModuleInterface, TypeConstructor,
-        ValueConstructorVariant,
+        self, Deprecation, EntityKind, Environment, Error, ModuleInterface, ValueConstructorVariant,
     },
     warning::TypeWarningEmitter,
 };
@@ -166,7 +165,7 @@ impl<'a> Importer<'a> {
         if value_imported && type_imported {
             self.environment.init_usage(
                 imported_name.clone(),
-                EntityKind::ImportedTypeAndConstructor,
+                EntityKind::ImportedTypeAndConstructor(location),
                 location,
             );
         } else if type_imported {
@@ -176,6 +175,10 @@ impl<'a> Importer<'a> {
                 .insert(imported_name.clone());
             self.environment
                 .init_usage(imported_name.clone(), EntityKind::ImportedType, location);
+            let _ = self
+                .environment
+                .types_imported_using_deprecated_syntax
+                .insert(import_name.clone(), location);
         } else if value_imported {
             match variant {
                 Some(&ValueConstructorVariant::Record { .. }) => self.environment.init_usage(

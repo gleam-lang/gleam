@@ -1,5 +1,7 @@
 use super::*;
-use crate::ast::{TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar};
+use crate::ast::{
+    Layer, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
+};
 use std::sync::Arc;
 
 use im::hashmap;
@@ -129,7 +131,7 @@ impl Hydrator {
                 // We do not track use of qualified type constructors as they may be
                 // used in another module.
                 if module.is_none() {
-                    environment.increment_usage(name);
+                    environment.increment_usage(name, Layer::Type);
                 }
 
                 // Ensure that the correct number of arguments have been given to the constructor

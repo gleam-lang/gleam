@@ -3,8 +3,8 @@ use crate::{
     analyse::infer_bit_array_option,
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
-        ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, Statement, TodoKind,
-        TypeAst, TypedArg, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
+        ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan, Statement,
+        TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
         TypedExpr, TypedMultiPattern, TypedStatement, UntypedArg, UntypedAssignment, UntypedClause,
         UntypedClauseGuard, UntypedConstant, UntypedConstantBitArraySegment, UntypedExpr,
         UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, Use, UseAssignment,
@@ -1665,7 +1665,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         })?;
 
                 // Register the value as seen for detection of unused values
-                self.environment.increment_usage(name);
+                self.environment.increment_usage(name, Layer::Value);
 
                 constructor
             }
