@@ -37,7 +37,7 @@ impl<'a> Importer<'a> {
     ) -> Result<Environment<'a>, Error> {
         let mut importer = Self::new(origin, warnings, env);
         for import in imports {
-            let _ = importer.register_import(import)?;
+            importer.register_import(import)?;
         }
         Ok(importer.environment)
     }
@@ -155,7 +155,7 @@ impl<'a> Importer<'a> {
 
         // Register the unqualified import if it is a type constructor
         if let Some(typ) = module.get_public_type(import_name) {
-            let _ = self.environment.insert_type_constructor(
+            self.environment.insert_type_constructor(
                 imported_name.clone(),
                 typ.clone().with_location(location),
             )?;
