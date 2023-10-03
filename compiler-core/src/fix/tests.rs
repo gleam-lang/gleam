@@ -330,3 +330,25 @@ type Y {
 "
     );
 }
+
+#[test]
+fn imported_value_only() {
+    assert_eq!(
+        fix("import x.{X}
+
+const x = X
+
+type X {
+  Z(X)
+}
+"),
+        "import x.{X}
+
+const x = X
+
+type X {
+  Z(X)
+}
+"
+    );
+}
