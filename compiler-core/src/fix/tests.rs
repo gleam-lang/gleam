@@ -13,7 +13,17 @@ fn empty() {
 
 #[test]
 fn import() {
-    assert_eq!(fix("import gleam.{BitString}"), "import gleam.{BitArray}\n");
+    assert_eq!(
+        fix("import gleam.{BitString}
+
+type X =
+  BitString"),
+        "import gleam.{type BitArray}
+
+type X =
+  BitArray
+"
+    );
 }
 
 #[test]
@@ -164,7 +174,7 @@ fn shadowed_by_import() {
 pub type X =
   BitString
 "),
-        "import x.{BitString}
+        "import x.{type BitString}
 
 pub type X =
   BitString
