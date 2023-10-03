@@ -1,9 +1,9 @@
 use crate::{
     ast::{
-        CustomType, Definition, Import, TypeAlias, TypeAst, TypeAstConstructor, UntypedDefinition,
-        UntypedImport, UntypedModule,
+        CallArg, Constant, CustomType, Definition, Import, SrcSpan, TypeAlias, TypeAst,
+        TypeAstConstructor, UntypedConstant, UntypedDefinition, UntypedImport, UntypedModule,
     },
-    ast_folder::{TypeAstFolder, UntypedExprFolder, UntypedModuleFolder},
+    ast_folder::{TypeAstFolder, UntypedConstantFolder, UntypedExprFolder, UntypedModuleFolder},
     build::Target,
 };
 use smol_str::SmolStr;
@@ -50,7 +50,7 @@ impl Fixer {
                 if i.module == "gleam" {
                     self.prelude_module_import_alias = Some(i.used_name());
                 } else {
-                    for i in &i.unqualified_values {
+                    for i in i.unqualified_values.iter().chain(&i.unqualified_types) {
                         if i.variable_name() == "BitString" && self.bit_string_name == "BitString" {
                             self.bit_string_name = "".into();
                         }
@@ -64,18 +64,38 @@ impl Fixer {
 impl UntypedModuleFolder for Fixer {
     fn fold_import(&mut self, mut i: UntypedImport, _target: Option<Target>) -> Import<()> {
         if i.module == "gleam" {
-            i.unqualified_values = i
-                .unqualified_values
-                .into_iter()
-                .map(|mut i| {
-                    if i.name == "BitString" {
-                        i.name = "BitArray".into();
-                    }
-                    i
-                })
-                .collect();
+            i.unqualified_values
+                .iter_mut()
+                .chain(&mut i.unqualified_types)
+                .filter(|i| i.name == "BitString")
+                .for_each(|i| i.name = "BitArray".into());
         }
         i
+    }
+}
+
+impl UntypedConstantFolder for Fixer {
+    fn fold_constant_record(
+        &mut self,
+        location: SrcSpan,
+        module: Option<SmolStr>,
+        name: SmolStr,
+        args: Vec<CallArg<UntypedConstant>>,
+    ) -> UntypedConstant {
+        let name = if name == self.bit_string_name {
+            self.bit_array_name.clone()
+        } else {
+            name
+        };
+        Constant::Record {
+            location,
+            module,
+            name,
+            args,
+            tag: (),
+            typ: (),
+            field_map: None,
+        }
     }
 }
 

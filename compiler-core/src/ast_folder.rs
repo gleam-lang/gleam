@@ -3,12 +3,13 @@ use vec1::Vec1;
 
 use crate::{
     ast::{
-        Assignment, BinOp, CallArg, Definition, RecordUpdateSpread, SrcSpan, Statement,
+        Assignment, BinOp, CallArg, Constant, Definition, RecordUpdateSpread, SrcSpan, Statement,
         TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole,
-        TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssignment, UntypedClause, UntypedCustomType,
-        UntypedDefinition, UntypedExpr, UntypedExprBitArraySegment, UntypedFunction, UntypedImport,
-        UntypedModule, UntypedModuleConstant, UntypedRecordUpdateArg, UntypedStatement,
-        UntypedTypeAlias, Use, UseAssignment,
+        TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssignment, UntypedClause, UntypedConstant,
+        UntypedConstantBitArraySegment, UntypedCustomType, UntypedDefinition, UntypedExpr,
+        UntypedExprBitArraySegment, UntypedFunction, UntypedImport, UntypedModule,
+        UntypedModuleConstant, UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias, Use,
+        UseAssignment,
     },
     build::Target,
 };
@@ -107,6 +108,7 @@ pub trait UntypedModuleFolder: TypeAstFolder + UntypedExprFolder {
     /// You probably don't want to override this method.
     fn walk_module_constant(&mut self, mut c: UntypedModuleConstant) -> UntypedDefinition {
         c.annotation = c.annotation.map(|t| self.fold_type(t));
+        c.value = Box::new(self.fold_constant(*c.value));
         Definition::ModuleConstant(c)
     }
 
@@ -218,7 +220,7 @@ pub trait TypeAstFolder {
     }
 }
 
-pub trait UntypedExprFolder: TypeAstFolder {
+pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder {
     /// Visit a node and potentially replace it with another node using the
     /// `fold_*` methods. Afterwards, the `walk` method is called on the new
     /// node to continue traversing.
@@ -775,5 +777,192 @@ pub trait UntypedExprFolder: TypeAstFolder {
 
     fn fold_use(&mut self, use_: Use) -> Use {
         use_
+    }
+}
+
+pub trait UntypedConstantFolder {
+    /// You probably don't want to override this method.
+    fn fold_constant(&mut self, m: UntypedConstant) -> UntypedConstant {
+        let m = self.update_constant(m);
+        self.walk_constant(m)
+    }
+
+    /// You probably don't want to override this method.
+    fn update_constant(&mut self, m: UntypedConstant) -> UntypedConstant {
+        match m {
+            Constant::Int { location, value } => self.fold_constant_int(location, value),
+
+            Constant::Float { location, value } => self.fold_constant_float(location, value),
+
+            Constant::String { location, value } => self.fold_constant_string(location, value),
+
+            Constant::Tuple { location, elements } => self.fold_constant_tuple(location, elements),
+
+            Constant::List {
+                location,
+                elements,
+                typ: (),
+            } => self.fold_constant_list(location, elements),
+
+            Constant::Record {
+                location,
+                module,
+                name,
+                args,
+                tag: (),
+                typ: (),
+                field_map: _,
+            } => self.fold_constant_record(location, module, name, args),
+
+            Constant::BitArray { location, segments } => {
+                self.fold_constant_bit_array(location, segments)
+            }
+
+            Constant::Var {
+                location,
+                module,
+                name,
+                constructor: _,
+                typ: (),
+            } => self.fold_constant_var(location, module, name),
+        }
+    }
+
+    fn fold_constant_int(&mut self, location: SrcSpan, value: SmolStr) -> UntypedConstant {
+        Constant::Int { location, value }
+    }
+
+    fn fold_constant_float(&mut self, location: SrcSpan, value: SmolStr) -> UntypedConstant {
+        Constant::Float { location, value }
+    }
+
+    fn fold_constant_string(&mut self, location: SrcSpan, value: SmolStr) -> UntypedConstant {
+        Constant::String { location, value }
+    }
+
+    fn fold_constant_tuple(
+        &mut self,
+        location: SrcSpan,
+        elements: Vec<UntypedConstant>,
+    ) -> UntypedConstant {
+        Constant::Tuple { location, elements }
+    }
+
+    fn fold_constant_list(
+        &mut self,
+        location: SrcSpan,
+        elements: Vec<UntypedConstant>,
+    ) -> UntypedConstant {
+        Constant::List {
+            location,
+            elements,
+            typ: (),
+        }
+    }
+
+    fn fold_constant_record(
+        &mut self,
+        location: SrcSpan,
+        module: Option<SmolStr>,
+        name: SmolStr,
+        args: Vec<CallArg<UntypedConstant>>,
+    ) -> UntypedConstant {
+        Constant::Record {
+            location,
+            module,
+            name,
+            args,
+            tag: (),
+            typ: (),
+            field_map: None,
+        }
+    }
+
+    fn fold_constant_bit_array(
+        &mut self,
+        location: SrcSpan,
+        segments: Vec<UntypedConstantBitArraySegment>,
+    ) -> UntypedConstant {
+        Constant::BitArray { location, segments }
+    }
+
+    fn fold_constant_var(
+        &mut self,
+        location: SrcSpan,
+        module: Option<SmolStr>,
+        name: SmolStr,
+    ) -> UntypedConstant {
+        Constant::Var {
+            location,
+            module,
+            name,
+            constructor: None,
+            typ: (),
+        }
+    }
+
+    /// You probably don't want to override this method.
+    fn walk_constant(&mut self, m: UntypedConstant) -> UntypedConstant {
+        match m {
+            Constant::Var { .. }
+            | Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::Tuple { .. } => m,
+
+            Constant::List {
+                location,
+                elements,
+                typ,
+            } => {
+                let elements = elements
+                    .into_iter()
+                    .map(|e| self.fold_constant(e))
+                    .collect();
+                Constant::List {
+                    location,
+                    elements,
+                    typ,
+                }
+            }
+
+            Constant::Record {
+                location,
+                module,
+                name,
+                args,
+                tag,
+                typ,
+                field_map,
+            } => {
+                let args = args
+                    .into_iter()
+                    .map(|mut a| {
+                        a.value = self.fold_constant(a.value);
+                        a
+                    })
+                    .collect();
+                Constant::Record {
+                    location,
+                    module,
+                    name,
+                    args,
+                    tag,
+                    typ,
+                    field_map,
+                }
+            }
+
+            Constant::BitArray { location, segments } => {
+                let segments = segments
+                    .into_iter()
+                    .map(|mut s| {
+                        s.value = Box::new(self.fold_constant(*s.value));
+                        s
+                    })
+                    .collect();
+                Constant::BitArray { location, segments }
+            }
+        }
     }
 }
