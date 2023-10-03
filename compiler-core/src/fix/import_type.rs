@@ -3,15 +3,18 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         CallArg, Constant, Definition, SrcSpan, TypeAst, TypeAstConstructor, UntypedConstant,
-        UntypedExpr, UntypedImport, UntypedModule,
+        UntypedDefinition, UntypedExpr, UntypedImport, UntypedModule,
     },
     ast_folder::{TypeAstFolder, UntypedConstantFolder, UntypedExprFolder, UntypedModuleFolder},
 };
+use im::HashSet;
 use smol_str::SmolStr;
 
 #[derive(Debug, Default)]
 pub struct Fixer {
     imports: HashMap<SmolStr, Imported>,
+    local_types: HashSet<SmolStr>,
+    local_values: HashSet<SmolStr>,
 }
 
 impl Fixer {
@@ -21,9 +24,7 @@ impl Fixer {
 
     fn fix_module(&mut self, module: UntypedModule) -> UntypedModule {
         for d in module.definitions.iter() {
-            if let Definition::Import(i) = &d.definition {
-                self.register_unqualified_imported_constructors(&i);
-            }
+            self.register_items(&d.definition);
         }
 
         // Determine which imported constructors are used as types and which are
@@ -78,6 +79,25 @@ impl Fixer {
             import.unqualified_types.push(t);
         }
     }
+
+    fn register_items(&mut self, definition: &UntypedDefinition) {
+        match definition {
+            Definition::Function(_) | Definition::ModuleConstant(_) => (),
+
+            Definition::TypeAlias(a) => {
+                let _ = self.local_types.insert(a.alias.clone());
+            }
+
+            Definition::CustomType(c) => {
+                let _ = self.local_types.insert(c.name.clone());
+                for c in &c.constructors {
+                    let _ = self.local_values.insert(c.name.clone());
+                }
+            }
+
+            Definition::Import(i) => self.register_unqualified_imported_constructors(i),
+        }
+    }
 }
 
 impl UntypedModuleFolder for Fixer {}
@@ -90,8 +110,10 @@ impl UntypedConstantFolder for Fixer {
         name: SmolStr,
         args: Vec<CallArg<UntypedConstant>>,
     ) -> UntypedConstant {
-        if let Some(import) = self.imports.get_mut(&name) {
-            import.used_as_value = true;
+        if module.is_none() && !self.local_values.contains(&name) {
+            if let Some(import) = self.imports.get_mut(&name) {
+                import.used_as_value = true;
+            }
         }
         Constant::Record {
             location,
@@ -110,7 +132,7 @@ impl UntypedConstantFolder for Fixer {
         module: Option<SmolStr>,
         name: SmolStr,
     ) -> UntypedConstant {
-        if module.is_none() {
+        if module.is_none() && !self.local_values.contains(&name) {
             if let Some(import) = self.imports.get_mut(&name) {
                 import.used_as_value = true;
             }
@@ -127,8 +149,10 @@ impl UntypedConstantFolder for Fixer {
 
 impl UntypedExprFolder for Fixer {
     fn fold_var(&mut self, location: SrcSpan, name: SmolStr) -> UntypedExpr {
-        if let Some(import) = self.imports.get_mut(&name) {
-            import.used_as_value = true;
+        if !self.local_values.contains(&name) {
+            if let Some(import) = self.imports.get_mut(&name) {
+                import.used_as_value = true;
+            }
         }
         UntypedExpr::Var { location, name }
     }
@@ -136,7 +160,7 @@ impl UntypedExprFolder for Fixer {
 
 impl TypeAstFolder for Fixer {
     fn fold_type_constructor(&mut self, constructor: TypeAstConstructor) -> TypeAst {
-        if constructor.module.is_none() {
+        if constructor.module.is_none() && !self.local_types.contains(&constructor.name) {
             if let Some(import) = self.imports.get_mut(&constructor.name) {
                 import.used_as_type = true;
             }
