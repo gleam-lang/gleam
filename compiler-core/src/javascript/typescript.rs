@@ -636,9 +636,9 @@ impl<'a> TypeScriptGenerator<'a> {
             }
             "String" => "string".to_doc(),
             "Bool" => "boolean".to_doc(),
-            "BitString" => {
+            "BitArray" => {
                 self.tracker.prelude_used = true;
-                "_.BitString".to_doc()
+                "_.BitArray".to_doc()
             }
             "List" => {
                 self.tracker.prelude_used = true;

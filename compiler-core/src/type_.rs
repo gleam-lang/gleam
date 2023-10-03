@@ -19,11 +19,11 @@ use smol_str::SmolStr;
 
 use crate::{
     ast::{
-        ArgNames, BitStringSegment, CallArg, Constant, DefinitionLocation, Pattern, SrcSpan,
-        TypedConstant, TypedExpr, TypedPattern, TypedPatternBitStringSegment, TypedRecordUpdateArg,
+        ArgNames, BitArraySegment, CallArg, Constant, DefinitionLocation, Pattern, SrcSpan,
+        TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment, TypedRecordUpdateArg,
         UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
     },
-    bit_string,
+    bit_array,
     build::Origin,
 };
 use error::*;
@@ -112,6 +112,16 @@ impl Type {
     pub fn is_nil(&self) -> bool {
         match self {
             Self::Named { module, name, .. } if "Nil" == name && is_prelude_module(module) => true,
+            Self::Var { type_ } => type_.borrow().is_nil(),
+            _ => false,
+        }
+    }
+
+    pub fn is_bit_array(&self) -> bool {
+        match self {
+            Self::Named { module, name, .. } if "BitArray" == name && is_prelude_module(module) => {
+                true
+            }
             Self::Var { type_ } => type_.borrow().is_nil(),
             _ => false,
         }
@@ -632,6 +642,12 @@ pub struct TypeConstructor {
     pub module: SmolStr,
     pub parameters: Vec<Arc<Type>>,
     pub typ: Arc<Type>,
+}
+impl TypeConstructor {
+    pub(crate) fn with_location(mut self, location: SrcSpan) -> Self {
+        self.origin = location;
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1470
-expression: "\npub type Media {\n    Audio(BitString)\n    Video(BitString)\n    Text(String)\n}\npub fn main(m) {\n    let Video(_) as v = m\n    v\n}\n"
+assertion_line: 1473
+expression: "\npub type Media {\n    Audio(BitArray)\n    Video(BitArray)\n    Text(String)\n}\npub fn main(m) {\n    let Video(_) as v = m\n    v\n}\n"
 ---
 error: Not exhaustive pattern match
   ┌─ /src/one/two.gleam:8:5

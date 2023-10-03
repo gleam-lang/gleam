@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1869
+assertion_line: 1872
 expression: "\nfn(x, x) {\n  Nil\n}\n"
 ---
 error: Argument name already used

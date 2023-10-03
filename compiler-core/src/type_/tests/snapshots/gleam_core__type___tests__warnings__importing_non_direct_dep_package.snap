@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 841
 expression: "\nimport some_module\npub const x = some_module.x\n        "
 ---
 

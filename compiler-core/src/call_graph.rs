@@ -6,7 +6,7 @@ mod into_dependency_order_tests;
 
 use crate::{
     ast::{
-        AssignName, BitStringSegmentOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
+        AssignName, BitArrayOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
         UntypedExpr, UntypedFunction, UntypedPattern, UntypedStatement,
     },
     type_::Error,
@@ -179,7 +179,7 @@ impl<'a> CallGraphBuilder<'a> {
                 self.expression(expression);
             }
 
-            UntypedExpr::BitString { segments, .. } => {
+            UntypedExpr::BitArray { segments, .. } => {
                 for segment in segments {
                     self.expression(&segment.value);
                 }
@@ -279,10 +279,10 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            Pattern::BitString { segments, .. } => {
+            Pattern::BitArray { segments, .. } => {
                 for segment in segments {
                     for option in &segment.options {
-                        self.bit_string_option(option, |s, p| s.pattern(p));
+                        self.bit_array_option(option, |s, p| s.pattern(p));
                     }
                     self.pattern(&segment.value);
                 }
@@ -294,30 +294,32 @@ impl<'a> CallGraphBuilder<'a> {
         _ = self.names.insert(name, None);
     }
 
-    fn bit_string_option<T>(
+    fn bit_array_option<T>(
         &mut self,
-        option: &'a BitStringSegmentOption<T>,
+        option: &'a BitArrayOption<T>,
         process: impl Fn(&mut Self, &'a T),
     ) {
         match option {
-            BitStringSegmentOption::Big { .. }
-            | BitStringSegmentOption::Binary { .. }
-            | BitStringSegmentOption::BitString { .. }
-            | BitStringSegmentOption::Float { .. }
-            | BitStringSegmentOption::Int { .. }
-            | BitStringSegmentOption::Little { .. }
-            | BitStringSegmentOption::Native { .. }
-            | BitStringSegmentOption::Signed { .. }
-            | BitStringSegmentOption::Unit { .. }
-            | BitStringSegmentOption::Unsigned { .. }
-            | BitStringSegmentOption::Utf16 { .. }
-            | BitStringSegmentOption::Utf16Codepoint { .. }
-            | BitStringSegmentOption::Utf32 { .. }
-            | BitStringSegmentOption::Utf32Codepoint { .. }
-            | BitStringSegmentOption::Utf8 { .. }
-            | BitStringSegmentOption::Utf8Codepoint { .. } => (),
+            BitArrayOption::Big { .. }
+            | BitArrayOption::Bytes { .. }
+            | BitArrayOption::BitString { .. }
+            | BitArrayOption::Binary { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unit { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf8Codepoint { .. } => (),
 
-            BitStringSegmentOption::Size { value: pattern, .. } => {
+            BitArrayOption::Size { value: pattern, .. } => {
                 process(self, pattern);
             }
         }
@@ -378,10 +380,10 @@ impl<'a> CallGraphBuilder<'a> {
                 module: None, name, ..
             } => self.referenced(name),
 
-            Constant::BitString { segments, .. } => {
+            Constant::BitArray { segments, .. } => {
                 for segment in segments {
                     for option in &segment.options {
-                        self.bit_string_option(option, |s, c| s.constant(c));
+                        self.bit_array_option(option, |s, c| s.constant(c));
                     }
                     self.constant(&segment.value);
                 }

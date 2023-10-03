@@ -7,7 +7,7 @@ use itertools::Itertools;
 use super::*;
 use crate::{
     analyse::Inferred,
-    ast::{AssignName, UntypedPatternBitStringSegment},
+    ast::{AssignName, Layer, UntypedPatternBitArraySegment},
 };
 use std::sync::Arc;
 
@@ -171,9 +171,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         Ok(typed_multi)
     }
 
-    fn infer_pattern_bit_string(
+    fn infer_pattern_bit_array(
         &mut self,
-        mut segments: Vec<UntypedPatternBitStringSegment>,
+        mut segments: Vec<UntypedPatternBitArraySegment>,
         location: SrcSpan,
     ) -> Result<TypedPattern, Error> {
         let last_segment = segments.pop();
@@ -188,7 +188,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             typed_segments.push(typed_last_segment)
         }
 
-        Ok(TypedPattern::BitString {
+        Ok(TypedPattern::BitArray {
             location,
             segments: typed_segments,
         })
@@ -196,10 +196,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
     fn infer_pattern_segment(
         &mut self,
-        segment: UntypedPatternBitStringSegment,
+        segment: UntypedPatternBitArraySegment,
         is_last_segment: bool,
-    ) -> Result<TypedPatternBitStringSegment, Error> {
-        let UntypedPatternBitStringSegment {
+    ) -> Result<TypedPatternBitArraySegment, Error> {
+        let UntypedPatternBitArraySegment {
             location,
             options,
             value,
@@ -208,15 +208,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         let options: Vec<_> = options
             .into_iter()
-            .map(|o| {
-                crate::analyse::infer_bit_string_segment_option(o, |value, typ| {
-                    self.unify(value, typ)
-                })
-            })
+            .map(|o| crate::analyse::infer_bit_array_option(o, |value, typ| self.unify(value, typ)))
             .try_collect()?;
 
-        let segment_type = bit_string::type_options_for_pattern(&options, !is_last_segment)
-            .map_err(|error| Error::BitStringSegmentError {
+        let segment_type = bit_array::type_options_for_pattern(&options, !is_last_segment)
+            .map_err(|error| Error::BitArraySegmentError {
                 error: error.error,
                 location: error.location,
             })?;
@@ -224,8 +220,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         let typ = {
             match value.deref() {
                 Pattern::Var { .. } if segment_type == string() => {
-                    Err(Error::BitStringSegmentError {
-                        error: bit_string::ErrorType::VariableUtfSegmentInPattern,
+                    Err(Error::BitArraySegmentError {
+                        error: bit_array::ErrorType::VariableUtfSegmentInPattern,
                         location,
                     })
                 }
@@ -234,7 +230,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }?;
         let typed_value = self.unify(*value, typ.clone())?;
 
-        Ok(BitStringSegment {
+        Ok(BitArraySegment {
             location,
             value: Box::new(typed_value),
             options,
@@ -278,7 +274,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         name: name.clone(),
                         variables: self.environment.local_value_names(),
                     })?;
-                self.environment.increment_usage(&name);
+                self.environment.increment_usage(&name, Layer::Value);
                 let typ =
                     self.environment
                         .instantiate(vc.type_.clone(), &mut hashmap![], self.hydrator);
@@ -449,9 +445,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             },
 
-            Pattern::BitString { location, segments } => {
-                unify(type_, bit_string()).map_err(|e| convert_unify_error(e, location))?;
-                self.infer_pattern_bit_string(segments, location)
+            Pattern::BitArray { location, segments } => {
+                unify(type_, bits()).map_err(|e| convert_unify_error(e, location))?;
+                self.infer_pattern_bit_array(segments, location)
             }
 
             Pattern::Constructor {
@@ -463,7 +459,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 ..
             } => {
                 // Register the value as seen for detection of unused values
-                self.environment.increment_usage(&name);
+                self.environment.increment_usage(&name, Layer::Value);
 
                 let cons = self
                     .environment

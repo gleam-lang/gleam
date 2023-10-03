@@ -186,7 +186,7 @@ impl<'module> Generator<'module> {
                 location, message, ..
             } => Ok(self.panic(location, message.as_deref())),
 
-            TypedExpr::BitString { segments, .. } => self.bit_string(segments),
+            TypedExpr::BitArray { segments, .. } => self.bit_array(segments),
 
             TypedExpr::ModuleSelect {
                 module_alias,
@@ -210,10 +210,10 @@ impl<'module> Generator<'module> {
         self.not_in_tail_position(|gen| Ok(docvec!(with, gen.wrap_expression(value)?)))
     }
 
-    fn bit_string<'a>(&mut self, segments: &'a [TypedExprBitStringSegment]) -> Output<'a> {
-        self.tracker.bit_string_literal_used = true;
+    fn bit_array<'a>(&mut self, segments: &'a [TypedExprBitArraySegment]) -> Output<'a> {
+        self.tracker.bit_array_literal_used = true;
 
-        use BitStringSegmentOption as Opt;
+        use BitArrayOption as Opt;
 
         // Collect all the values used in segments.
         let segments_array = array(segments.iter().map(|segment| {
@@ -231,34 +231,37 @@ impl<'module> Generator<'module> {
 
                 // Floats
                 [Opt::Float { .. }] => {
-                    self.tracker.float_bit_string_segment_used = true;
+                    self.tracker.float_bit_array_segment_used = true;
                     Ok(docvec!["float64Bits(", value, ")"])
                 }
 
                 // UTF8 strings
                 [Opt::Utf8 { .. }] => {
-                    self.tracker.string_bit_string_segment_used = true;
+                    self.tracker.string_bit_array_segment_used = true;
                     Ok(docvec!["stringBits(", value, ")"])
                 }
 
                 // UTF8 codepoints
                 [Opt::Utf8Codepoint { .. }] => {
-                    self.tracker.codepoint_bit_string_segment_used = true;
+                    self.tracker.codepoint_bit_array_segment_used = true;
                     Ok(docvec!["codepointBits(", value, ")"])
                 }
 
-                // Bit strings
-                [Opt::BitString { .. }] => Ok(docvec![value, ".buffer"]),
+                // Bit arrays
+                [Opt::Bytes { .. }
+                | Opt::Binary { .. }
+                | Opt::BitString { .. }
+                | Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
 
                 // Anything else
                 _ => Err(Error::Unsupported {
-                    feature: "This bit string segment option".into(),
+                    feature: "This bit array segment option".into(),
                     location: segment.location,
                 }),
             }
         }))?;
 
-        Ok(docvec!["toBitString(", segments_array, ")"])
+        Ok(docvec!["toBitArray(", segments_array, ")"])
     }
 
     pub fn wrap_return<'a>(&self, document: Document<'a>) -> Document<'a> {
@@ -1229,7 +1232,7 @@ pub(crate) fn constant_expression<'a>(
             Ok(construct_record(module.as_deref(), tag, field_values))
         }
 
-        Constant::BitString { segments, .. } => bit_string(tracker, segments),
+        Constant::BitArray { segments, .. } => bit_array(tracker, segments),
 
         Constant::Var { name, module, .. } => Ok({
             match module {
@@ -1240,13 +1243,13 @@ pub(crate) fn constant_expression<'a>(
     }
 }
 
-fn bit_string<'a>(
+fn bit_array<'a>(
     tracker: &mut UsageTracker,
-    segments: &'a [BitStringSegment<TypedConstant, Arc<Type>>],
+    segments: &'a [BitArraySegment<TypedConstant, Arc<Type>>],
 ) -> Result<Document<'a>, Error> {
-    tracker.bit_string_literal_used = true;
+    tracker.bit_array_literal_used = true;
 
-    use BitStringSegmentOption as Opt;
+    use BitArrayOption as Opt;
 
     let segments_array = array(segments.iter().map(|segment| {
         let value = constant_expression(tracker, &segment.value)?;
@@ -1263,34 +1266,34 @@ fn bit_string<'a>(
 
             // Floats
             [Opt::Float { .. }] => {
-                tracker.float_bit_string_segment_used = true;
+                tracker.float_bit_array_segment_used = true;
                 Ok(docvec!["float64Bits(", value, ")"])
             }
 
             // UTF8 strings
             [Opt::Utf8 { .. }] => {
-                tracker.string_bit_string_segment_used = true;
+                tracker.string_bit_array_segment_used = true;
                 Ok(docvec!["stringBits(", value, ")"])
             }
 
             // UTF8 codepoints
             [Opt::Utf8Codepoint { .. }] => {
-                tracker.codepoint_bit_string_segment_used = true;
+                tracker.codepoint_bit_array_segment_used = true;
                 Ok(docvec!["codepointBits(", value, ")"])
             }
 
             // Bit strings
-            [Opt::BitString { .. }] => Ok(docvec![value, ".buffer"]),
+            [Opt::Bits { .. } | Opt::BitString { .. }] => Ok(docvec![value, ".buffer"]),
 
             // Anything else
             _ => Err(Error::Unsupported {
-                feature: "This bit string segment option".into(),
+                feature: "This bit array segment option".into(),
                 location: segment.location,
             }),
         }
     }))?;
 
-    Ok(docvec!["toBitString(", segments_array, ")"])
+    Ok(docvec!["toBitArray(", segments_array, ")"])
 }
 
 pub fn string(value: &str) -> Document<'_> {
@@ -1390,7 +1393,7 @@ impl TypedExpr {
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
-            | TypedExpr::BitString { .. }
+            | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. } => false,
@@ -1444,7 +1447,7 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::BinOp { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::NegateInt { .. }
-            | TypedExpr::BitString { .. }
+            | TypedExpr::BitArray { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::RecordUpdate { .. }

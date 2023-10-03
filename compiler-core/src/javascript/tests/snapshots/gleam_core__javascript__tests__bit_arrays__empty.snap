@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 5
+expression: "\nfn go() {\n  <<>>\n}\n"
+---
+import { toBitArray } from "../gleam.mjs";
+
+function go() {
+  return toBitArray([]);
+}
+

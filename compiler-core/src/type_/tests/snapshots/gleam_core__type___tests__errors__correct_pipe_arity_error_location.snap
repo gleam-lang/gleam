@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1130
+assertion_line: 1133
 expression: "fn x(x, y) { x }\nfn main() { 1 |> x() }"
 ---
 error: Incorrect arity

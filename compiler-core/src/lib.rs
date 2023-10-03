@@ -58,7 +58,7 @@ extern crate pretty_assertions;
 
 pub mod analyse;
 pub mod ast;
-pub mod bit_string;
+pub mod bit_array;
 pub mod build;
 pub mod codegen;
 pub mod config;
@@ -67,6 +67,7 @@ pub mod diagnostic;
 pub mod docs;
 pub mod erlang;
 pub mod error;
+pub mod fix;
 pub mod format;
 pub mod hex;
 pub mod io;
@@ -84,6 +85,7 @@ pub mod uid;
 pub mod version;
 pub mod warning;
 
+pub(crate) mod ast_folder;
 mod call_graph;
 mod dep_tree;
 pub(crate) mod graph;

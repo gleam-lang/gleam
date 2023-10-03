@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 465
+assertion_line: 485
 expression: fn()
 ---
 error: Syntax error

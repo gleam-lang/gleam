@@ -27,7 +27,7 @@ fn named() {
     assert_erl!(
         r#"
 pub fn main() {
-  todo("testing")
+  todo as "testing"
 }
 "#
     );
@@ -37,10 +37,10 @@ pub fn main() {
 fn piped() {
     assert_erl!(
         r#"
-     pub fn main(){
+     pub fn main() {
       "lets"
-      |> todo("pipe")
-      |> todo("other todo")
+      |> todo as "pipe"
+      |> todo as "other todo"
     }
     "#
     );

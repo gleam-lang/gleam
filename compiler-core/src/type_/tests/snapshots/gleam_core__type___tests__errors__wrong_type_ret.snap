@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1214
+assertion_line: 1217
 expression: "pub fn main(x: something) -> Int {\n  let y = x\n  y\n}"
 ---
 error: Type mismatch

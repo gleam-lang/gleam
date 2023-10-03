@@ -1,13 +1,14 @@
 use pretty_assertions::assert_eq;
 
 mod asignments;
-mod bit_string;
+mod bit_array;
 mod blocks;
 mod conditional_compilation;
 mod external_fn;
 mod external_types;
 mod function;
 mod guards;
+mod imports;
 mod record_update;
 mod tuple;
 mod use_;
@@ -3169,20 +3170,6 @@ fn expr_todo() {
 #[test]
 fn expr_todo_with_label() {
     assert_format!(
-        r#"fn main() {
-  todo as "todo with a label"
-}
-"#
-    );
-}
-
-#[test]
-fn todo_old() {
-    assert_format_rewrite!(
-        r#"fn main() {
-  todo("todo with a label")
-}
-"#,
         r#"fn main() {
   todo as "todo with a label"
 }

@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 109
+expression: "let x = <<1:unit(2)-unit(5)>> x"
+---
+error: Invalid bit array segment
+  ┌─ /src/one/two.gleam:1:21
+  │
+1 │ let x = <<1:unit(2)-unit(5)>> x
+  │                     ^^^^^^^ This is an extra unit specifier.
+
+Hint: A BitArray segment can have at most 1 unit.
+See: https://gleam.run/book/tour/bit-strings.html
+

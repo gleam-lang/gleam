@@ -59,7 +59,7 @@ fn compile_expression(src: &str) -> TypedStatement {
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(&ids));
     let emitter = TypeWarningEmitter::null();
-    let mut environment = Environment::new(ids, "mymod", Target::Erlang, &modules, &emitter);
+    let mut environment = Environment::new(ids, "mymod".into(), Target::Erlang, &modules, &emitter);
 
     // Insert a cat record to use in the tests
     let cat_type = Arc::new(Type::Named {
@@ -133,12 +133,12 @@ fn find_node_todo() {
 
 #[test]
 fn find_node_todo_with_string() {
-    let statement = compile_expression(r#" todo("ok") "#);
+    let statement = compile_expression(r#" todo as "ok" "#);
     let expr = get_bare_expression(&statement);
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(expr)));
-    assert_eq!(expr.find_node(10), Some(Located::Expression(expr)));
-    assert_eq!(expr.find_node(11), None);
+    assert_eq!(expr.find_node(12), Some(Located::Expression(expr)));
+    assert_eq!(expr.find_node(13), None);
 }
 
 #[test]

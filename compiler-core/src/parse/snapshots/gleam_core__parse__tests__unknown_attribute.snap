@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 457
+assertion_line: 477
 expression: "@go_faster()\npub fn main() { 1 }"
 ---
 error: Syntax error

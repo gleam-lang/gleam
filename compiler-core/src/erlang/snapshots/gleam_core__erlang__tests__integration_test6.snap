@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 196
+assertion_line: 200
 expression: "pub fn x() { let x = 1 let x = x + 1 x }"
 ---
 -module(my@mod).

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1121
+assertion_line: 1124
 expression: "fn foo() { 1 }\nconst foo = 2"
 ---
 error: Duplicate definition

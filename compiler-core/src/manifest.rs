@@ -219,10 +219,10 @@ mod tests {
     const PACKAGE: &'static str = "C:\\home\\louis\\packages\\path\\to\\package";
 
     #[cfg(not(windows))]
-    const HOME: &'static str = "/home/louis/packages/some_folder";
+    const HOME: &str = "/home/louis/packages/some_folder";
 
     #[cfg(not(windows))]
-    const PACKAGE: &'static str = "/home/louis/packages/path/to/package";
+    const PACKAGE: &str = "/home/louis/packages/path/to/package";
 
     #[test]
     fn manifest_toml_format() {

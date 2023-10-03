@@ -1,6 +1,5 @@
 use crate::{
     ast::TodoKind,
-    build::Target,
     diagnostic::{self, Diagnostic, Location},
     error::wrap,
     type_,
@@ -145,16 +144,10 @@ impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
             Self::Parse { path, warning, src } => match warning {
-                crate::parse::Warning::DeprecatedIf { location, target } => {
-                    let target = match target {
-                        Target::Erlang => "erlang",
-                        Target::JavaScript => "javascript",
-                    };
-                    let text = format!(
-                        "This syntax has been replaced by the `@target({target})` attribute.\n"
-                    );
+                crate::parse::Warning::DeprecatedOptionBitString { location } => {
+                    let text = "This option has been replaced by the `bits` option.\n".into();
                     Diagnostic {
-                        title: "Deprecated if syntax".into(),
+                        title: "Deprecated bit literal option".into(),
                         text,
                         hint: Some("Run `gleam format` to auto-fix your code.".into()),
                         level: diagnostic::Level::Warning,
@@ -170,54 +163,10 @@ impl Warning {
                     }
                 }
 
-                crate::parse::Warning::DeprecatedExternalFn { location } => {
-                    let text =
-                        "This syntax has been replaced by the `@external` attribute.\n".into();
+                crate::parse::Warning::DeprecatedOptionBinary { location } => {
+                    let text = "This option has been replaced by the `bytes` option.\n".into();
                     Diagnostic {
-                        title: "Deprecated external fn syntax".into(),
-                        text,
-                        hint: Some("Run `gleam fix` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            path: path.to_path_buf(),
-                            src: src.clone(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-
-                crate::parse::Warning::DeprecatedTodo { location, message } => {
-                    let text = format!(
-                        "The `todo()` syntax has been replaced by this syntax:
-                        
-    todo as \"{message}\"\n"
-                    );
-                    Diagnostic {
-                        title: "Deprecated todo syntax".into(),
-                        text,
-                        hint: Some("Run `gleam format` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            path: path.to_path_buf(),
-                            src: src.clone(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-
-                crate::parse::Warning::DeprecatedExternalType { location, name } => {
-                    let text =
-                        format!("This syntax has been replaced by the `type {name}` syntax.\n");
-                    Diagnostic {
-                        title: "Deprecated if syntax".into(),
+                        title: "Deprecated bit literal option".into(),
                         text,
                         hint: Some("Run `gleam format` to auto-fix your code.".into()),
                         level: diagnostic::Level::Warning,
@@ -622,6 +571,49 @@ Run this command to add it to your dependencies:
                             path: path.to_path_buf(),
                             label: diagnostic::Label {
                                 text: Some("This value has been deprecated".into()),
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
+                type_::Warning::DeprecatedBitString { location } => {
+                    let text = "The type BitString has been renamed to BitArray.\n".into();
+                    Diagnostic {
+                        title: "Deprecated BitString name used".into(),
+                        text,
+                        hint: Some("Run `gleam fix` to auto-fix your code.".into()),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
+                type_::Warning::DeprecatedTypeImport { name, location } => {
+                    let text = wrap(&format!(
+                        "The syntax for importing a type has changed. The new syntax is:
+
+    import module.{{type {name}}}
+"
+                    ));
+                    Diagnostic {
+                        title: "Deprecated type import".into(),
+                        text,
+                        hint: Some("Run `gleam fix` to auto-fix your code.".into()),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
                                 span: *location,
                             },
                             extra_labels: Vec::new(),

@@ -7,7 +7,7 @@ use crate::{
 use camino::Utf8Path;
 
 mod assignments;
-mod bit_strings;
+mod bit_arrays;
 mod blocks;
 mod bools;
 mod case;

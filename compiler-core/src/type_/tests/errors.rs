@@ -3,7 +3,7 @@ use crate::{
 };
 
 #[test]
-fn bit_string_invalid_type() {
+fn bit_array_invalid_type() {
     assert_module_error!(
         "fn x() { \"test\" }
 
@@ -15,185 +15,185 @@ fn main() {
 }
 
 #[test]
-fn bit_strings2() {
+fn bit_arrays2() {
     assert_error!("let <<x:utf8>> = <<1>> x");
 }
 
 #[test]
-fn bit_strings3() {
+fn bit_arrays3() {
     assert_error!("let <<x:utf16>> = <<1>> x");
 }
 
 #[test]
-fn bit_strings4() {
+fn bit_arrays4() {
     assert_error!("let <<x:utf32>> = <<1>> x");
 }
 
 #[test]
-fn bit_string() {
+fn bit_array() {
     assert_error!("case <<1>> { <<2.0, a>> -> 1 }");
 }
 
 #[test]
-fn bit_string_float() {
+fn bit_array_float() {
     assert_error!("case <<1>> { <<a:float>> if a > 1 -> 1 }");
 }
 
 #[test]
-fn bit_string_binary() {
-    assert_error!("case <<1>> { <<a:binary>> if a > 1 -> 1 }");
+fn bit_array_binary() {
+    assert_error!("case <<1>> { <<a:bytes>> if a > 1 -> 1 }");
 }
 
 #[test]
-fn bit_string_guard() {
+fn bit_array_guard() {
     assert_error!("case <<1>> { <<a:utf16_codepoint>> if a == \"test\" -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_nosize() {
-    assert_error!("case <<1>> { <<_:binary, _:binary>> -> 1 }");
+fn bit_array_segment_nosize() {
+    assert_error!("case <<1>> { <<_:bytes, _:bytes>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_nosize2() {
-    assert_error!("case <<1>> { <<_:bit_string, _:binary>> -> 1 }");
+fn bit_array_segment_nosize2() {
+    assert_error!("case <<1>> { <<_:bits, _:bytes>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_nosize3() {
-    assert_error!("case <<1>> { <<_:binary, _:bit_string>> -> 1 }");
+fn bit_array_segment_nosize3() {
+    assert_error!("case <<1>> { <<_:bytes, _:bits>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_conflicting_options_int() {
+fn bit_array_segment_conflicting_options_int() {
     assert_error!("let x = <<1:int-binary>> x");
 }
 
 #[test]
-fn bit_string_segment_conflicting_options_bit_string() {
-    assert_error!("case <<1>> { <<1:bit_string-binary>> -> 1 }");
+fn bit_array_segment_conflicting_options_bit_array() {
+    assert_error!("case <<1>> { <<1:bits-binary>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_conflicting_signedness1() {
+fn bit_array_segment_conflicting_signedness1() {
     assert_error!("let x = <<1:signed-unsigned>> x");
 }
 
 #[test]
-fn bit_string_segment_conflicting_signedness2() {
+fn bit_array_segment_conflicting_signedness2() {
     assert_error!("case <<1>> { <<1:unsigned-signed>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_conflicting_endianness1() {
+fn bit_array_segment_conflicting_endianness1() {
     assert_error!("let x = <<1:big-little>> x");
 }
 
 #[test]
-fn bit_string_segment_conflicting_endianness2() {
+fn bit_array_segment_conflicting_endianness2() {
     assert_error!("case <<1>> { <<1:native-big>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_size() {
+fn bit_array_segment_size() {
     assert_error!("let x = <<1:8-size(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_size2() {
+fn bit_array_segment_size2() {
     assert_error!("case <<1>> { <<1:size(2)-size(8)>> -> a }");
 }
 
 #[test]
-fn bit_string_segment_unit_unit() {
+fn bit_array_segment_unit_unit() {
     assert_error!("let x = <<1:unit(2)-unit(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_codepoint_utf8() {
+fn bit_array_segment_type_does_not_allow_unit_codepoint_utf8() {
     assert_error!("let x = <<1:utf8_codepoint-unit(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_codepoint_utf16() {
+fn bit_array_segment_type_does_not_allow_unit_codepoint_utf16() {
     assert_error!("let x = <<1:utf16_codepoint-unit(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_codepoint_utf32() {
+fn bit_array_segment_type_does_not_allow_unit_codepoint_utf32() {
     assert_error!("case <<1>> { <<1:utf32_codepoint-unit(2)>> -> a }");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_codepoint_utf8_2() {
+fn bit_array_segment_type_does_not_allow_unit_codepoint_utf8_2() {
     assert_error!("let x = <<1:utf8_codepoint-size(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_codepoint_utf16_2() {
+fn bit_array_segment_type_does_not_allow_unit_codepoint_utf16_2() {
     assert_error!("let x = <<1:utf16_codepoint-size(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_codepoint_utf32_2() {
+fn bit_array_segment_type_does_not_allow_unit_codepoint_utf32_2() {
     assert_error!("case <<1>> { <<1:utf32_codepoint-size(5)>> -> a }");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_utf8_2() {
+fn bit_array_segment_type_does_not_allow_unit_utf8_2() {
     assert_error!("let x = <<1:utf8-unit(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_utf16() {
+fn bit_array_segment_type_does_not_allow_unit_utf16() {
     assert_error!("let x = <<1:utf16-unit(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_utf32() {
+fn bit_array_segment_type_does_not_allow_unit_utf32() {
     assert_error!("case <<1>> { <<1:utf32-unit(2)>> -> a }");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_size_utf8() {
+fn bit_array_segment_type_does_not_allow_size_utf8() {
     assert_error!("let x = <<1:utf8-size(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_size_utf16() {
+fn bit_array_segment_type_does_not_allow_size_utf16() {
     assert_error!("let x = <<1:utf16-size(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_size_utf32() {
+fn bit_array_segment_type_does_not_allow_size_utf32() {
     assert_error!("case <<1>> { <<1:utf32-size(5)>> -> a }");
 }
 
 #[test]
-fn bit_string_segment_unit_no_size() {
+fn bit_array_segment_unit_no_size() {
     assert_error!("let x = <<1:unit(5)>> x");
 }
 
 #[test]
-fn bit_string_size_not_int() {
+fn bit_array_size_not_int() {
     assert_error!("let x = <<1:size(\"1\")>> x");
 }
 
 #[test]
-fn bit_string_size_not_int_variable() {
+fn bit_array_size_not_int_variable() {
     assert_error!("let a = 2.0 case <<1>> { <<1:size(a)>> -> a }");
 }
 
 #[test]
-fn bit_string_float_size() {
+fn bit_array_float_size() {
     // float given invalid size
     assert_error!("let x = <<1:8-float>> x");
 }
 
 #[test]
-fn bit_string_binary_option_in_value() {
+fn bit_array_binary_option_in_value() {
     // using binary in value
-    assert_error!("let x = <<<<1:1>>:binary>> x");
+    assert_error!("let x = <<<<1:1>>:bytes>> x");
 }
 
 #[test]
@@ -1416,10 +1416,10 @@ pub fn change(x: String) -> String {
   ""
 }
 
-pub fn parse(input: BitString) -> String {
+pub fn parse(input: BitArray) -> String {
   case input {
     <<>> -> 1
-    <<"(":utf8, b:binary>> ->
+    <<"(":utf8, b:bytes>> ->
       parse(input)
       |> change
   }
@@ -1456,8 +1456,8 @@ fn let_exhaustiveness3() {
     assert_module_error!(
         r#"
 pub type Media {
-    Audio(BitString)
-    Video(BitString)
+    Audio(BitArray)
+    Video(BitArray)
     Text(String)
 }
 pub fn main(m) {
@@ -1473,8 +1473,8 @@ fn let_exhaustiveness4() {
     assert_module_error!(
         r#"
 pub type Media {
-    Audio(BitString)
-    Video(BitString)
+    Audio(BitArray)
+    Video(BitArray)
     Text(String)
 }
 pub fn main(m) {
@@ -1516,8 +1516,8 @@ fn case_exhaustiveness3() {
     assert_module_error!(
         r#"
 pub type Media {
-    Audio(BitString)
-    Video(BitString)
+    Audio(BitArray)
+    Video(BitArray)
     Text(String)
 }
 pub fn main(m) {
@@ -1535,8 +1535,8 @@ fn case_exhaustiveness4() {
     assert_module_error!(
         r#"
 pub type Media {
-    Audio(BitString)
-    Video(BitString)
+    Audio(BitArray)
+    Video(BitArray)
     Text(String)
 }
 pub fn main(m) {
@@ -1553,8 +1553,8 @@ fn case_exhaustiveness5() {
     assert_module_error!(
         r#"
 pub type Media {
-    Audio(BitString)
-    Video(BitString)
+    Audio(BitArray)
+    Video(BitArray)
     Text(String)
 }
 pub fn main(m) {

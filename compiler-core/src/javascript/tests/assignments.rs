@@ -14,7 +14,10 @@ fn go(x) {
 #[test]
 fn assert() {
     assert_js!(r#"fn go(x) { let assert 1 = x }"#,);
+}
 
+#[test]
+fn assert1() {
     assert_js!(r#"fn go(x) { let assert #(1, 2) = x }"#,);
 }
 

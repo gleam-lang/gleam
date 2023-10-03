@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 898
+expression: "\nimport gleam.{BitString as BibbleWib}\npub type B = BibbleWib\n"
+---
+
+warning: Deprecated BitString name used
+  ┌─ /src/warning/wrn.gleam:2:15
+  │
+2 │ import gleam.{BitString as BibbleWib}
+  │               ^^^^^^^^^
+
+The type BitString has been renamed to BitArray.
+
+Hint: Run `gleam fix` to auto-fix your code.
+

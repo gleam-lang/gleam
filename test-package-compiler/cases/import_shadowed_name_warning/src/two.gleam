@@ -2,7 +2,7 @@
 
 // No warning should be emitted about this imported type. The compiler does not
 // confuse it for the value constructor defined below.
-import one.{Port}
+import one.{type Port}
 
 type Shadowing {
   // This value constructor has the same name as the imported type.

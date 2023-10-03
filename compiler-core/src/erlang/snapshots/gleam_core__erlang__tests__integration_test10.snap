@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 215
+assertion_line: 219
 expression: "type Null { Null } fn x() { Null }"
 ---
 -module(my@mod).

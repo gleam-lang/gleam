@@ -2,10 +2,15 @@
 
 ## Unreleased
 
+- The `BitString` type has been renamed to `BitArray`.
+- The `binary` and `bit_string` bit array modifier have been deprecated in favour
+  of `bytes` and `bits`.
+- The deprecated `todo("...")` syntax has been removed.
 - Module access can now be used in case clause guards.
 - The JS target now supports bit syntax for module consts.
 - Imported modules can now be discarded by giving them an alias starting with `_`.
 - The `gleam check` command supports the `target` flag now.
+- Fixed a bug where some hexidecimal numbers would generate incorrect Erlang.
 - A warning is now emitted if a module alias is unused.
 
 ## v0.31.0 - 2023-09-25
@@ -32,7 +37,7 @@
   updated for the latest syntax.
 - Packages are no longer precompiled to Erlang when publishing to Hex if the
   package target is set to JavaScript.
-- An exception is now raised if JavaScript code uses the BitString class
+- An exception is now raised if JavaScript code uses the `BitString` class
   constructor and passes in the incorrect argument type.
 - Fixed a bug where mutually recursive functions could be incorrectly inferred
   as having an overly general type.
@@ -41,7 +46,7 @@
 - Fixed a bug where some mutually recursive functions would be inferred as
   having too general a type.
 - Fixed a bug where constants where not being correctly inlined when used in the
-  size option of a bitstring pattern match.
+  size option of a bit string pattern match.
 - Fixed a bug where anonymous functions could parse successfully when missing a
   body.
 - Fixed a bug where incorrect unused variable warnings could be emitted for code
@@ -415,7 +420,7 @@
   GitHub actions erlef/setup-beam.
 - A better error message is now shown when attempting to use a function within a
   constant expression.
-- Changed float size limit in bitstring expressions to 16, 32 or 64, when static.
+- Changed float size limit in bit string expressions to 16, 32 or 64, when static.
   Also allowed dynamic size.
 - New Gleam projects are created using GitHub actions erlef/setup-beam@v1.15.0.
 - Fixed a bug where returning an anonymous function from a pipeline and calling
@@ -678,8 +683,8 @@
   been improved with a tip on how to install them (#1567).
 - Corrected the hint given with certain int and float binary operator type
   errors.
-- Add support for `int` and `float` bitstring type when compiling to JavaScript.
-- Add support for specifying size of integers in a bitstring. Supports only exact binaries,
+- Add support for `int` and `float` bit string type when compiling to JavaScript.
+- Add support for specifying size of integers in a bit string. Supports only exact binaries,
   i.e. length is a multiple of 8.
 - Fixed compilation of rebar3 based dependencies on Windows.
 

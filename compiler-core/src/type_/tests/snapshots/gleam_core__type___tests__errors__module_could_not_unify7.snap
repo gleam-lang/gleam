@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 701
+assertion_line: 704
 expression: "fn main() { let assert 5: Int = \"\" 5 }"
 ---
 error: Type mismatch

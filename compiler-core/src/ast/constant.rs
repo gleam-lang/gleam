@@ -42,9 +42,9 @@ pub enum Constant<T, RecordTag> {
         field_map: Option<FieldMap>,
     },
 
-    BitString {
+    BitArray {
         location: SrcSpan,
-        segments: Vec<BitStringSegment<Self, T>>,
+        segments: Vec<BitArraySegment<Self, T>>,
     },
 
     Var {
@@ -62,7 +62,7 @@ impl TypedConstant {
             Constant::Int { .. } => crate::type_::int(),
             Constant::Float { .. } => crate::type_::float(),
             Constant::String { .. } => crate::type_::string(),
-            Constant::BitString { .. } => crate::type_::bit_string(),
+            Constant::BitArray { .. } => crate::type_::bits(),
             Constant::Tuple { elements, .. } => {
                 crate::type_::tuple(elements.iter().map(|e| e.type_()).collect())
             }
@@ -88,7 +88,7 @@ impl<A, B> Constant<A, B> {
             | Constant::Tuple { location, .. }
             | Constant::String { location, .. }
             | Constant::Record { location, .. }
-            | Constant::BitString { location, .. }
+            | Constant::BitArray { location, .. }
             | Constant::Var { location, .. } => *location,
         }
     }
@@ -107,7 +107,7 @@ impl<A, B> HasLocation for Constant<A, B> {
     }
 }
 
-impl<A, B> crate::bit_string::GetLiteralValue for Constant<A, B> {
+impl<A, B> crate::bit_array::GetLiteralValue for Constant<A, B> {
     fn as_int_literal(&self) -> Option<i64> {
         if let Constant::Int { value, .. } = self {
             if let Ok(val) = value.parse::<i64>() {

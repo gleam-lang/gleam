@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 21
+expression: "fn go(x) { let assert #(1, 2) = x }"
+---
+import { makeError } from "../gleam.mjs";
+
+function go(x) {
+  if (x[0] !== 1 || x[1] !== 2) {
+    throw makeError(
+      "assignment_no_match",
+      "my/mod",
+      1,
+      "go",
+      "Assignment pattern did not match",
+      { value: x }
+    )
+  }
+  return x;
+}
+

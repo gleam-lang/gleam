@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1179
+assertion_line: 1182
 expression: "type X { X(a: Int, b: Float) }\nfn x() {\n  let x = X(a: 1, c: 2.0)\n  x\n}"
 ---
 error: Unknown label

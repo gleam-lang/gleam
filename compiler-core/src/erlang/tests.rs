@@ -7,7 +7,7 @@ use crate::{
     warning::TypeWarningEmitter,
 };
 
-mod bit_strings;
+mod bit_arrays;
 mod case;
 mod conditional_compilation;
 mod consts;

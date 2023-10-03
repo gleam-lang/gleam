@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 711
+assertion_line: 714
 expression: "fn main() { let [1, 2, ..x]: List(String) = [1,2,3] x }"
 ---
 error: Type mismatch

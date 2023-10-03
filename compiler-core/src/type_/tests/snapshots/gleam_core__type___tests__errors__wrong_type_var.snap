@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1192
+assertion_line: 1195
 expression: "fn foo(x: String) { x }\nfn multi_result(x: some_name) {\n  foo(x)\n}"
 ---
 error: Type mismatch

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 72
+assertion_line: 100
 expression: "\npub fn go(x) {\n  x <> \"1\"\n}\n"
 ---
 -module(my@mod).

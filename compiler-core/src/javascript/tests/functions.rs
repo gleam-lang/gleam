@@ -89,7 +89,10 @@ pub fn add(the_first_variable_that_should_be_added, the_second_variable_that_sho
   the_first_variable_that_should_be_added + the_second_variable_that_should_be_added
 }"#,
     );
+}
 
+#[test]
+fn function_formatting_typescript1() {
     assert_ts_def!(
         r#"
 pub fn this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(x, y) {
@@ -390,7 +393,10 @@ pub fn use_int_identity_alias() { int_identity_alias(42) }
 pub const compound: #(fn(Int) -> Int, fn(Int) -> Int) = #(int_identity, int_identity_alias)
 pub fn use_compound() { compound.0(compound.1(42)) }"#
     );
+}
 
+#[test]
+fn module_const_fn1() {
     assert_ts_def!(
         r#"
 pub fn int_identity(i: Int) -> Int { i }

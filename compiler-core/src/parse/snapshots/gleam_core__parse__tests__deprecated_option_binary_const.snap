@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 527
+expression: "pub const x = <<<<>>:binary>>"
+---
+
+warning: Deprecated bit literal option
+  ┌─ :1:22
+  │
+1 │ pub const x = <<<<>>:binary>>
+  │                      ^^^^^^
+
+This option has been replaced by the `bytes` option.
+
+Hint: Run `gleam format` to auto-fix your code.
+

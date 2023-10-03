@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 281
+expression: "\n          pub const data = <<\n            0x1,\n            2,\n            2:size(16),\n            0x4:size(32),\n            \"Gleam\":utf8,\n            4.2:float,\n            <<\n              <<1, 2, 3>>:bit_string,\n              \"Gleam\":utf8,\n              1024\n            >>:bit_string\n          >>\n        "
+---
+import { toBitArray, sizedInt, stringBits, float64Bits } from "../gleam.mjs";
+
+export const data = toBitArray([
+  0x1,
+  2,
+  sizedInt(2, 16),
+  sizedInt(0x4, 32),
+  stringBits("Gleam"),
+  float64Bits(4.2),
+  toBitArray([toBitArray([1, 2, 3]).buffer, stringBits("Gleam"), 1024]).buffer,
+]);
+

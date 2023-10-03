@@ -1,5 +1,8 @@
 use crate::{
-    analyse::Inferred, ast::PIPE_VARIABLE, build::Target, uid::UniqueIdGenerator,
+    analyse::Inferred,
+    ast::{Layer, PIPE_VARIABLE},
+    build::Target,
+    uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
 };
 
@@ -8,13 +11,14 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Environment<'a> {
-    pub current_module: &'a str,
+    pub current_module: SmolStr,
     pub target: Target,
     pub ids: UniqueIdGenerator,
     previous_id: u64,
     /// Names of types or values that have been imported an unqualified fashion
     /// from other modules. Used to prevent multiple imports using the same name.
     pub unqualified_imported_names: HashMap<SmolStr, SrcSpan>,
+    pub unqualified_imported_types: HashMap<SmolStr, SrcSpan>,
     pub importable_modules: &'a im::HashMap<SmolStr, ModuleInterface>,
 
     /// Modules that have been imported by the current module, along with the
@@ -50,12 +54,14 @@ pub struct Environment<'a> {
     /// stack for an entity with that name and mark it as used.
     /// NOTE: The bool in the tuple here tracks if the entity has been used
     pub entity_usages: Vec<HashMap<SmolStr, (EntityKind, SrcSpan, bool)>>,
+
+    pub types_imported_using_deprecated_syntax: HashMap<SmolStr, SrcSpan>,
 }
 
 impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
-        current_module: &'a str,
+        current_module: SmolStr,
         target: Target,
         importable_modules: &'a im::HashMap<SmolStr, ModuleInterface>,
         warnings: &'a TypeWarningEmitter,
@@ -74,6 +80,7 @@ impl<'a> Environment<'a> {
             unused_modules: HashMap::new(),
             unused_module_aliases: HashMap::new(),
             unqualified_imported_names: HashMap::new(),
+            unqualified_imported_types: HashMap::new(),
             accessors: prelude.accessors.clone(),
             scope: prelude.values.clone().into(),
             importable_modules,
@@ -82,6 +89,7 @@ impl<'a> Environment<'a> {
             current_module,
             warnings,
             entity_usages: vec![HashMap::new()],
+            types_imported_using_deprecated_syntax: HashMap::new(),
         }
     }
 }
@@ -95,7 +103,7 @@ pub enum EntityKind {
     PrivateFunction,
     ImportedConstructor(Option<SmolStr>),
     ImportedType(Option<SmolStr>),
-    ImportedTypeAndConstructor(Option<SmolStr>),
+    ImportedTypeAndConstructor((SrcSpan, Option<SmolStr>)),
     ImportedValue(Option<SmolStr>),
     PrivateType,
     Variable,
@@ -234,7 +242,7 @@ impl<'a> Environment<'a> {
     /// Lookup a module constant in the current scope.
     ///
     pub fn get_module_const(&mut self, name: &SmolStr) -> Option<&ValueConstructor> {
-        self.increment_usage(name);
+        self.increment_usage(name, Layer::Value);
         self.module_values
             .get(name)
             .filter(|ValueConstructor { variant, .. }| {
@@ -278,18 +286,17 @@ impl<'a> Environment<'a> {
         &mut self,
         module_alias: &Option<SmolStr>,
         name: &SmolStr,
+        // TODO: remove this once we have removed the deprecated BitString type
+        location: SrcSpan,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
-        match module_alias {
-            None => {
-                let constructor = self.module_types.get(name).ok_or_else(|| {
-                    UnknownTypeConstructorError::Type {
-                        name: name.clone(),
-                        type_constructors: self.module_types.keys().cloned().collect(),
-                    }
-                })?;
-                let _ = self.unused_modules.remove(&constructor.module);
-                Ok(constructor)
-            }
+        let t = match module_alias {
+            None => self
+                .module_types
+                .get(name)
+                .ok_or_else(|| UnknownTypeConstructorError::Type {
+                    name: name.clone(),
+                    type_constructors: self.module_types.keys().cloned().collect(),
+                }),
 
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
@@ -308,7 +315,17 @@ impl<'a> Environment<'a> {
                         type_constructors: module.public_type_names(),
                     })
             }
+        }?;
+
+        if name == "BitString"
+            && t.typ.is_bit_array()
+            && (module_alias.is_none() || module_alias.as_deref() == Some("gleam"))
+        {
+            self.warnings
+                .emit(Warning::DeprecatedBitString { location })
         }
+
+        Ok(t)
     }
 
     /// Lookup constructors for type in the current scope.
@@ -479,7 +496,7 @@ impl<'a> Environment<'a> {
     }
 
     /// Increments an entity's usage in the current or nearest enclosing scope
-    pub fn increment_usage(&mut self, name: &SmolStr) {
+    pub fn increment_usage(&mut self, name: &SmolStr, layer: Layer) {
         let mut name = name.clone();
 
         while let Some((kind, _, used)) = self
@@ -495,13 +512,26 @@ impl<'a> Environment<'a> {
                 EntityKind::PrivateTypeConstructor(type_name) if *type_name != name => {
                     name = type_name.clone();
                 }
-                _ => return,
+                EntityKind::ImportedTypeAndConstructor(location) if layer == Layer::Type => {
+                    let _ = self
+                        .types_imported_using_deprecated_syntax
+                        .insert(name.clone(), *location);
+                    break;
+                }
+                _ => break,
             }
         }
     }
 
+    pub fn emit_warnings_for_deprecated_type_imports(&mut self) {
+        for (name, location) in self.types_imported_using_deprecated_syntax.drain() {
+            self.warnings
+                .emit(Warning::DeprecatedTypeImport { name, location })
+        }
+    }
+
     /// Converts entities with a usage count of 0 to warnings
-    pub fn convert_unused_to_warnings(&mut self) {
+    pub fn emit_warnings_for_unused(&mut self) {
         let unused = self
             .entity_usages
             .pop()
@@ -591,7 +621,7 @@ impl<'a> Environment<'a> {
                 module: module_name,
                 ..
             } => {
-                let m = if module_name.is_empty() || module_name == self.current_module {
+                let m = if module_name.is_empty() || module_name == &self.current_module {
                     None
                 } else {
                     Some(module_name.as_str())

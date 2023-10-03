@@ -50,7 +50,8 @@ impl Offset {
         }
     }
     // This should never be called on an open ended offset
-    // However previous checks ensure bit_string segments without a size are only allowed at the end of a pattern
+    // However previous checks ensure bit_array segments without a size are only
+    // allowed at the end of a pattern
     pub fn increment(&mut self, step: usize) {
         self.bytes += step
     }
@@ -452,8 +453,8 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 Ok(())
             }
 
-            Pattern::BitString { segments, .. } => {
-                use BitStringSegmentOption as Opt;
+            Pattern::BitArray { segments, .. } => {
+                use BitArrayOption as Opt;
 
                 let mut offset = Offset::new();
                 for segment in segments {
@@ -481,7 +482,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                 Ok(())
                             }
                             _ => Err(Error::Unsupported {
-                                feature: "This bit string size option in patterns".into(),
+                                feature: "This bit array size option in patterns".into(),
                                 location: segment.location,
                             }),
                         },
@@ -494,7 +495,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             Ok(())
                         }
 
-                        [Opt::Binary { .. }] => {
+                        [Opt::Bytes { .. } | Opt::Binary { .. }] => {
                             self.push_rest_from(offset.bytes);
                             self.traverse_pattern(subject, &segment.value)?;
                             self.pop();
@@ -502,40 +503,42 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             Ok(())
                         }
 
-                        [Opt::Binary { .. }, Opt::Size { value: size, .. }]
-                        | [Opt::Size { value: size, .. }, Opt::Binary { .. }] => match &**size {
-                            Pattern::Int { value, .. } => {
-                                let start = offset.bytes;
-                                let increment = value
-                                    .parse::<usize>()
-                                    .expect("part of an Int node should always parse as integer");
-                                offset.increment(increment);
-                                let end = offset.bytes;
+                        [Opt::Bytes { .. } | Opt::Binary { .. }, Opt::Size { value: size, .. }]
+                        | [Opt::Size { value: size, .. }, Opt::Bytes { .. } | Opt::Binary { .. }] => {
+                            match &**size {
+                                Pattern::Int { value, .. } => {
+                                    let start = offset.bytes;
+                                    let increment = value.parse::<usize>().expect(
+                                        "part of an Int node should always parse as integer",
+                                    );
+                                    offset.increment(increment);
+                                    let end = offset.bytes;
 
-                                self.push_binary_from_slice(start, end);
-                                self.traverse_pattern(subject, &segment.value)?;
-                                self.pop();
-                                Ok(())
+                                    self.push_binary_from_slice(start, end);
+                                    self.traverse_pattern(subject, &segment.value)?;
+                                    self.pop();
+                                    Ok(())
+                                }
+
+                                _ => Err(Error::Unsupported {
+                                    feature: "This bit array size option in patterns".into(),
+                                    location: segment.location,
+                                }),
                             }
-
-                            _ => Err(Error::Unsupported {
-                                feature: "This bit string size option in patterns".into(),
-                                location: segment.location,
-                            }),
-                        },
+                        }
 
                         _ => Err(Error::Unsupported {
-                            feature: "This bit string segment option in patterns".into(),
+                            feature: "This bit array segment option in patterns".into(),
                             location: segment.location,
                         }),
                     }?;
                 }
 
-                self.push_bitstring_length_check(subject.clone(), offset.bytes, offset.open_ended);
+                self.push_bit_array_length_check(subject.clone(), offset.bytes, offset.open_ended);
                 Ok(())
             }
             Pattern::VarUsage { location, .. } => Err(Error::Unsupported {
-                feature: "Bit string matching".into(),
+                feature: "Bit array matching".into(),
                 location: *location,
             }),
         }
@@ -606,13 +609,13 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         })
     }
 
-    fn push_bitstring_length_check(
+    fn push_bit_array_length_check(
         &mut self,
         subject: Document<'a>,
         expected_bytes: usize,
         has_tail_spread: bool,
     ) {
-        self.checks.push(Check::BitStringLength {
+        self.checks.push(Check::BitArrayLength {
             expected_bytes,
             has_tail_spread,
             subject,
@@ -674,7 +677,7 @@ pub enum Check<'a> {
         expected_length: usize,
         has_tail_spread: bool,
     },
-    BitStringLength {
+    BitArrayLength {
         subject: Document<'a>,
         path: Document<'a>,
         expected_bytes: usize,
@@ -764,7 +767,7 @@ impl<'a> Check<'a> {
                     docvec!["!", subject, path, length_check,]
                 }
             }
-            Check::BitStringLength {
+            Check::BitArrayLength {
                 subject,
                 path,
                 expected_bytes,

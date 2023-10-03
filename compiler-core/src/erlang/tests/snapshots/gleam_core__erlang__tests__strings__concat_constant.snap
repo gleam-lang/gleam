@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 98
+assertion_line: 126
 expression: "\nconst a = \"Hello, \"\nconst b = \"Joe!\"\n\npub fn go() {\n  a <> b\n}\n"
 ---
 -module(my@mod).

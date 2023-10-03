@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 483
+assertion_line: 487
 expression: "fn id(x) {\n  x\n}\n        \npub fn bool_expr(x, y) {\n  y || x |> id \n}"
 ---
 -module(my@mod).

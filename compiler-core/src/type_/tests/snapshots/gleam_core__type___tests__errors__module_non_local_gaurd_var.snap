@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 847
+assertion_line: 850
 expression: "fn one() { 1 }\nfn main() { case 1 { _ if one -> 1 } }"
 ---
 error: Invalid guard variable

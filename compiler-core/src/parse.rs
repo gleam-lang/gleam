@@ -56,13 +56,14 @@ mod token;
 
 use crate::analyse::Inferred;
 use crate::ast::{
-    Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitStringSegment,
-    BitStringSegmentOption, CallArg, Clause, ClauseGuard, Constant, CustomType, Definition,
-    Function, HasLocation, Import, Module, ModuleConstant, Pattern, RecordConstructor,
-    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind,
-    TypeAlias, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
-    UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern,
-    UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
+    Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
+    CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, HasLocation, Import,
+    ImportName, Module, ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg,
+    RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
+    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport,
+    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
+    UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment,
+    CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -94,12 +95,12 @@ struct Attributes {
     external_javascript: Option<(SmolStr, SmolStr)>,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum Warning {
-    DeprecatedIf { location: SrcSpan, target: Target },
-    DeprecatedExternalFn { location: SrcSpan },
-    DeprecatedExternalType { location: SrcSpan, name: SmolStr },
-    DeprecatedTodo { location: SrcSpan, message: SmolStr },
+    // TODO: remove after next release
+    DeprecatedOptionBitString { location: SrcSpan },
+    // TODO: remove after next release
+    DeprecatedOptionBinary { location: SrcSpan },
 }
 
 //
@@ -399,16 +400,6 @@ where
             Some((start, Token::Todo, mut end)) => {
                 let _ = self.next_tok();
                 let mut message = None;
-                if let Some((start, __)) = self.maybe_one(&Token::LeftParen) {
-                    let (_, m, _) = self.expect_string()?;
-                    message = Some(m.clone());
-                    let (_, e) = self.expect_one(&Token::RightParen)?;
-                    end = e;
-                    self.warnings.push(Warning::DeprecatedTodo {
-                        location: SrcSpan::new(start, end),
-                        message: m,
-                    });
-                }
                 if self.maybe_one(&Token::As).is_some() {
                     let (_, l, e) = self.expect_string()?;
                     message = Some(l);
@@ -487,23 +478,23 @@ where
                 }
             }
 
-            // BitString
+            // BitArray
             Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();
                 let segments = Parser::series_of(
                     self,
                     &|s| {
-                        Parser::parse_bit_string_segment(
+                        Parser::parse_bit_array_segment(
                             s,
                             &Parser::parse_expression_unit_collapsing_single_value_blocks,
                             &Parser::expect_expression,
-                            &bit_string_expr_int,
+                            &bit_array_expr_int,
                         )
                     },
                     Some(&Token::Comma),
                 )?;
                 let (_, end) = self.expect_one(&Token::GtGt)?;
-                UntypedExpr::BitString {
+                UntypedExpr::BitArray {
                     location: SrcSpan { start, end },
                     segments,
                 }
@@ -1022,28 +1013,28 @@ where
                     elems,
                 }
             }
-            // BitString
+            // BitArray
             Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();
                 let segments = Parser::series_of(
                     self,
                     &|s| {
-                        Parser::parse_bit_string_segment(
+                        Parser::parse_bit_array_segment(
                             s,
                             &|s| match Parser::parse_pattern(s) {
-                                Ok(Some(Pattern::BitString { location, .. })) => {
-                                    parse_error(ParseErrorType::NestedBitStringPattern, location)
+                                Ok(Some(Pattern::BitArray { location, .. })) => {
+                                    parse_error(ParseErrorType::NestedBitArrayPattern, location)
                                 }
                                 x => x,
                             },
-                            &Parser::expect_bit_string_pattern_segment_arg,
-                            &bit_string_pattern_int,
+                            &Parser::expect_bit_array_pattern_segment_arg,
+                            &bit_array_pattern_int,
                         )
                     },
                     Some(&Token::Comma),
                 )?;
                 let (_, end) = self.expect_one(&Token::GtGt)?;
-                Pattern::BitString {
+                Pattern::BitArray {
                     location: SrcSpan { start, end },
                     segments,
                 }
@@ -1818,10 +1809,10 @@ where
             // Type hole
             Some((start, Token::DiscardName { name }, end)) => {
                 let _ = self.next_tok();
-                Ok(Some(TypeAst::Hole {
+                Ok(Some(TypeAst::Hole(TypeAstHole {
                     location: SrcSpan { start, end },
                     name,
-                }))
+                })))
             }
 
             // Tuple
@@ -1830,10 +1821,10 @@ where
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elems = self.parse_types()?;
                 let _ = self.expect_one(&Token::RightParen)?;
-                Ok(Some(TypeAst::Tuple {
+                Ok(Some(TypeAst::Tuple(TypeAstTuple {
                     location: SrcSpan { start, end },
                     elems,
-                }))
+                })))
             }
 
             // Function
@@ -1846,14 +1837,14 @@ where
                 let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
                 let retrn = self.parse_type()?;
                 if let Some(retrn) = retrn {
-                    Ok(Some(TypeAst::Fn {
+                    Ok(Some(TypeAst::Fn(TypeAstFn {
                         location: SrcSpan {
                             start,
                             end: retrn.location().end,
                         },
                         return_: Box::new(retrn),
                         arguments: args,
-                    }))
+                    })))
                 } else {
                     parse_error(
                         ParseErrorType::ExpectedType,
@@ -1878,10 +1869,10 @@ where
                     let (_, upname, upname_e) = self.expect_upname()?;
                     self.parse_type_name_finish(start, Some(mod_name), upname, upname_e)
                 } else {
-                    Ok(Some(TypeAst::Var {
+                    Ok(Some(TypeAst::Var(TypeAstVar {
                         location: SrcSpan { start, end },
                         name: mod_name,
-                    }))
+                    })))
                 }
             }
 
@@ -1903,19 +1894,19 @@ where
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args = self.parse_types()?;
             let (_, par_e) = self.expect_one(&Token::RightParen)?;
-            Ok(Some(TypeAst::Constructor {
+            Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan { start, end: par_e },
                 module,
                 name,
                 arguments: args,
-            }))
+            })))
         } else {
-            Ok(Some(TypeAst::Constructor {
+            Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan { start, end },
                 module,
                 name,
                 arguments: vec![],
-            }))
+            })))
         }
     }
 
@@ -1971,10 +1962,14 @@ where
         let documentation = self.take_documentation(start);
 
         // Gather imports
-        let mut unqualified = vec![];
+        let mut unqualified_values = vec![];
+        let mut unqualified_types = vec![];
+
         if self.maybe_one(&Token::Dot).is_some() {
             let _ = self.expect_one(&Token::LeftBrace)?;
-            unqualified = self.parse_unqualified_imports(module_name)?;
+            let parsed = self.parse_unqualified_imports(module_name)?;
+            unqualified_types = parsed.types;
+            unqualified_values = parsed.values;
             let (_, e) = self.expect_one(&Token::RightBrace)?;
             end = e;
         }
@@ -2006,7 +2001,8 @@ where
                 start: import_start,
                 end,
             },
-            unqualified,
+            unqualified_values,
+            unqualified_types,
             module: module.into(),
             alias,
             package: (),
@@ -2018,7 +2014,7 @@ where
         &mut self,
         module: SmolStr,
     ) -> Result<Vec<UnqualifiedImport>, ParseError> {
-        let mut imports = vec![];
+        let mut imports = ParsedUnqualifiedImports::default();
         loop {
             // parse imports
             match self.tok0.take() {
@@ -2036,8 +2032,9 @@ where
                         let (_, as_name, _) = self.expect_name()?;
                         import.as_name = Some(as_name);
                     }
-                    imports.push(import)
+                    imports.values.push(import)
                 }
+
                 Some((start, Token::UpName { name }, end)) => {
                     let _ = self.next_tok();
                     let location = SrcSpan { start, end };
@@ -2052,8 +2049,26 @@ where
                         let (_, as_name, _) = self.expect_upname()?;
                         import.as_name = Some(as_name);
                     }
-                    imports.push(import)
+                    imports.values.push(import)
                 }
+
+                Some((start, Token::Type, _)) => {
+                    let _ = self.next_tok();
+                    let (_, name, end) = self.expect_upname()?;
+                    let location = SrcSpan { start, end };
+                    let mut import = UnqualifiedImport {
+                        name,
+                        location,
+                        as_name: None,
+                        layer: Default::default(),
+                    };
+                    if self.maybe_one(&Token::As).is_some() {
+                        let (_, as_name, _) = self.expect_upname()?;
+                        import.as_name = Some(as_name);
+                    }
+                    imports.types.push(import)
+                }
+
                 t0 => {
                     self.tok0 = t0;
                     break;
@@ -2163,23 +2178,23 @@ where
                     typ: (),
                 }))
             }
-            // BitString
+            // BitArray
             Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();
                 let segments = Parser::series_of(
                     self,
                     &|s| {
-                        Parser::parse_bit_string_segment(
+                        Parser::parse_bit_array_segment(
                             s,
                             &Parser::parse_const_value,
                             &Parser::expect_const_int,
-                            &bit_string_const_int,
+                            &bit_array_const_int,
                         )
                     },
                     Some(&Token::Comma),
                 )?;
                 let (_, end) = self.expect_one(&Token::GtGt)?;
-                Ok(Some(Constant::BitString {
+                Ok(Some(Constant::BitArray {
                     location: SrcSpan { start, end },
                     segments,
                 }))
@@ -2342,20 +2357,20 @@ where
     // that's why these functions take functions
     //
     // pattern (: option)?
-    fn parse_bit_string_segment<A>(
+    fn parse_bit_array_segment<A>(
         &mut self,
         value_parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
         to_int_segment: &impl Fn(SmolStr, u32, u32) -> A,
-    ) -> Result<Option<BitStringSegment<A, ()>>, ParseError>
+    ) -> Result<Option<BitArraySegment<A, ()>>, ParseError>
     where
-        A: HasLocation,
+        A: HasLocation + std::fmt::Debug,
     {
         if let Some(value) = value_parser(self)? {
             let options = if self.maybe_one(&Token::Colon).is_some() {
                 Parser::series_of(
                     self,
-                    &|s| Parser::parse_bit_string_segment_option(s, &arg_parser, &to_int_segment),
+                    &|s| Parser::parse_bit_array_option(s, &arg_parser, &to_int_segment),
                     Some(&Token::Minus),
                 )?
             } else {
@@ -2365,7 +2380,7 @@ where
                 .last()
                 .map(|o| o.location().end)
                 .unwrap_or_else(|| value.location().end);
-            Ok(Some(BitStringSegment {
+            Ok(Some(BitArraySegment {
                 location: SrcSpan {
                     start: value.location().start,
                     end,
@@ -2384,11 +2399,11 @@ where
     //   size(1)
     //   size(five)
     //   utf8
-    fn parse_bit_string_segment_option<A>(
+    fn parse_bit_array_option<A: std::fmt::Debug>(
         &mut self,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
         to_int_segment: &impl Fn(SmolStr, u32, u32) -> A,
-    ) -> Result<Option<BitStringSegmentOption<A>>, ParseError> {
+    ) -> Result<Option<BitArrayOption<A>>, ParseError> {
         match self.next_tok() {
             // named segment
             Some((start, Token::Name { name }, end)) => {
@@ -2401,15 +2416,13 @@ where
                                 let (_, end) = self.expect_one(&Token::RightParen)?;
                                 let v = value.replace('_', "");
                                 match u8::from_str(&v) {
-                                    Ok(units) if units > 0 => {
-                                        Ok(Some(BitStringSegmentOption::Unit {
-                                            location: SrcSpan { start, end },
-                                            value: units,
-                                        }))
-                                    }
+                                    Ok(units) if units > 0 => Ok(Some(BitArrayOption::Unit {
+                                        location: SrcSpan { start, end },
+                                        value: units,
+                                    })),
 
                                     _ => Err(ParseError {
-                                        error: ParseErrorType::InvalidBitStringUnit,
+                                        error: ParseErrorType::InvalidBitArrayUnit,
                                         location: SrcSpan {
                                             start: int_s,
                                             end: int_e,
@@ -2424,41 +2437,53 @@ where
                         "size" => {
                             let value = arg_parser(self)?;
                             let (_, end) = self.expect_one(&Token::RightParen)?;
-                            Ok(Some(BitStringSegmentOption::Size {
+                            Ok(Some(BitArrayOption::Size {
                                 location: SrcSpan { start, end },
                                 value: Box::new(value),
                                 short_form: false,
                             }))
                         }
                         _ => parse_error(
-                            ParseErrorType::InvalidBitStringSegment,
+                            ParseErrorType::InvalidBitArraySegment,
                             SrcSpan { start, end },
                         ),
                     }
                 } else {
-                    str_to_bit_string_segment_option(&name, SrcSpan { start, end })
+                    str_to_bit_array_option(&name, SrcSpan { start, end })
+                        .map(|option| {
+                            if option.is_binary() {
+                                self.warnings.push(Warning::DeprecatedOptionBinary {
+                                    location: option.location(),
+                                })
+                            } else if option.is_bit_string() {
+                                self.warnings.push(Warning::DeprecatedOptionBitString {
+                                    location: option.location(),
+                                })
+                            }
+                            option
+                        })
                         .ok_or(ParseError {
-                            error: ParseErrorType::InvalidBitStringSegment,
+                            error: ParseErrorType::InvalidBitArraySegment,
                             location: SrcSpan { start, end },
                         })
                         .map(Some)
                 }
             }
             // int segment
-            Some((start, Token::Int { value }, end)) => Ok(Some(BitStringSegmentOption::Size {
+            Some((start, Token::Int { value }, end)) => Ok(Some(BitArrayOption::Size {
                 location: SrcSpan { start, end },
                 value: Box::new(to_int_segment(value, start, end)),
                 short_form: true,
             })),
             // invalid
             _ => self.next_tok_unexpected(vec![
-                "A valid bitstring segment type".into(),
+                "A valid bit array segment type".into(),
                 "See: https://gleam.run/book/tour/bit-strings.html".into(),
             ]),
         }
     }
 
-    fn expect_bit_string_pattern_segment_arg(&mut self) -> Result<UntypedPattern, ParseError> {
+    fn expect_bit_array_pattern_segment_arg(&mut self) -> Result<UntypedPattern, ParseError> {
         match self.next_tok() {
             Some((start, Token::Name { name }, end)) => Ok(Pattern::VarUsage {
                 location: SrcSpan { start, end },
@@ -3066,54 +3091,51 @@ fn clause_guard_reduction(
     }
 }
 
-// BitString Parse Helpers
+// BitArray Parse Helpers
 //
-// BitStrings in patterns, guards, and expressions have a very similar structure
+// BitArrays in patterns, guards, and expressions have a very similar structure
 // but need specific types. These are helpers for that. There is probably a
 // rustier way to do this :)
-fn bit_string_pattern_int(value: SmolStr, start: u32, end: u32) -> UntypedPattern {
+fn bit_array_pattern_int(value: SmolStr, start: u32, end: u32) -> UntypedPattern {
     Pattern::Int {
         location: SrcSpan { start, end },
         value,
     }
 }
 
-fn bit_string_expr_int(value: SmolStr, start: u32, end: u32) -> UntypedExpr {
+fn bit_array_expr_int(value: SmolStr, start: u32, end: u32) -> UntypedExpr {
     UntypedExpr::Int {
         location: SrcSpan { start, end },
         value,
     }
 }
 
-fn bit_string_const_int(value: SmolStr, start: u32, end: u32) -> UntypedConstant {
+fn bit_array_const_int(value: SmolStr, start: u32, end: u32) -> UntypedConstant {
     Constant::Int {
         location: SrcSpan { start, end },
         value,
     }
 }
 
-fn str_to_bit_string_segment_option<A>(
-    lit: &str,
-    location: SrcSpan,
-) -> Option<BitStringSegmentOption<A>> {
+fn str_to_bit_array_option<A>(lit: &str, location: SrcSpan) -> Option<BitArrayOption<A>> {
     match lit {
-        "binary" => Some(BitStringSegmentOption::Binary { location }),
-        "bytes" => Some(BitStringSegmentOption::Binary { location }),
-        "int" => Some(BitStringSegmentOption::Int { location }),
-        "float" => Some(BitStringSegmentOption::Float { location }),
-        "bit_string" => Some(BitStringSegmentOption::BitString { location }),
-        "bits" => Some(BitStringSegmentOption::BitString { location }),
-        "utf8" => Some(BitStringSegmentOption::Utf8 { location }),
-        "utf16" => Some(BitStringSegmentOption::Utf16 { location }),
-        "utf32" => Some(BitStringSegmentOption::Utf32 { location }),
-        "utf8_codepoint" => Some(BitStringSegmentOption::Utf8Codepoint { location }),
-        "utf16_codepoint" => Some(BitStringSegmentOption::Utf16Codepoint { location }),
-        "utf32_codepoint" => Some(BitStringSegmentOption::Utf32Codepoint { location }),
-        "signed" => Some(BitStringSegmentOption::Signed { location }),
-        "unsigned" => Some(BitStringSegmentOption::Unsigned { location }),
-        "big" => Some(BitStringSegmentOption::Big { location }),
-        "little" => Some(BitStringSegmentOption::Little { location }),
-        "native" => Some(BitStringSegmentOption::Native { location }),
+        "binary" => Some(BitArrayOption::Binary { location }),
+        "bytes" => Some(BitArrayOption::Bytes { location }),
+        "int" => Some(BitArrayOption::Int { location }),
+        "float" => Some(BitArrayOption::Float { location }),
+        "bit_string" => Some(BitArrayOption::BitString { location }),
+        "bits" => Some(BitArrayOption::Bits { location }),
+        "utf8" => Some(BitArrayOption::Utf8 { location }),
+        "utf16" => Some(BitArrayOption::Utf16 { location }),
+        "utf32" => Some(BitArrayOption::Utf32 { location }),
+        "utf8_codepoint" => Some(BitArrayOption::Utf8Codepoint { location }),
+        "utf16_codepoint" => Some(BitArrayOption::Utf16Codepoint { location }),
+        "utf32_codepoint" => Some(BitArrayOption::Utf32Codepoint { location }),
+        "signed" => Some(BitArrayOption::Signed { location }),
+        "unsigned" => Some(BitArrayOption::Unsigned { location }),
+        "big" => Some(BitArrayOption::Big { location }),
+        "little" => Some(BitArrayOption::Little { location }),
+        "native" => Some(BitArrayOption::Native { location }),
         _ => None,
     }
 }
@@ -3213,4 +3235,10 @@ pub fn make_call(
 
         _ => parse_error(ParseErrorType::TooManyArgHoles, call.location()),
     }
+}
+
+#[derive(Debug, Default)]
+struct ParsedUnqualifiedImports {
+    types: Vec<UnqualifiedImport>,
+    values: Vec<UnqualifiedImport>,
 }

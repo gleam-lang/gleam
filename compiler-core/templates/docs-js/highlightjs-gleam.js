@@ -47,16 +47,16 @@ hljs.registerLanguage("gleam", function (hljs) {
       hljs.C_LINE_COMMENT_MODE,
       STRING,
       {
-        // bit string
+        // bit array
         begin: "<<",
         end: ">>",
         contains: [
           {
             className: "keyword",
             beginKeywords:
-              "binary bytes int float bit_string bits utf8 utf16 utf32 " +
-              "utf8_codepoint utf16_codepoint utf32_codepoint signed unsigned " +
-              "big little native unit size",
+              "binary bits bytes int float bit_string bit_array bits utf8 utf16 " +
+              "utf32 utf8_codepoint utf16_codepoint utf32_codepoint signed " +
+              "unsigned big little native unit size",
           },
           KEYWORDS,
           STRING,

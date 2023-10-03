@@ -481,7 +481,7 @@ fn string_concatenate<'a>(
 ) -> Document<'a> {
     let left = string_concatenate_argument(left, env);
     let right = string_concatenate_argument(right, env);
-    bit_string([left, right])
+    bit_array([left, right])
 }
 
 fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
@@ -519,7 +519,7 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
     }
 }
 
-fn bit_string<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
+fn bit_array<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
     concat(Itertools::intersperse(elems.into_iter(), break_(",", ", ")))
         .nest(INDENT)
         .surround("<<", ">>")
@@ -528,7 +528,7 @@ fn bit_string<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a>
 
 fn const_segment<'a>(
     value: &'a TypedConstant,
-    options: &'a [BitStringSegmentOption<TypedConstant>],
+    options: &'a [BitArrayOption<TypedConstant>],
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let document = match value {
@@ -536,7 +536,7 @@ fn const_segment<'a>(
         Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
 
         // As normal
-        Constant::Int { .. } | Constant::Float { .. } | Constant::BitString { .. } => {
+        Constant::Int { .. } | Constant::Float { .. } | Constant::BitArray { .. } => {
             const_inline(value, env)
         }
 
@@ -554,7 +554,7 @@ fn const_segment<'a>(
 
     let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
-    bit_string_segment(document, options, size, unit, true, env)
+    bit_array_segment(document, options, size, unit, true, env)
 }
 
 fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'a> {
@@ -569,7 +569,7 @@ fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'
 
 fn expr_segment<'a>(
     value: &'a TypedExpr,
-    options: &'a [BitStringSegmentOption<TypedExpr>],
+    options: &'a [BitArrayOption<TypedExpr>],
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let mut value_is_a_string_literal = false;
@@ -585,7 +585,7 @@ fn expr_segment<'a>(
         TypedExpr::Int { .. }
         | TypedExpr::Float { .. }
         | TypedExpr::Var { .. }
-        | TypedExpr::BitString { .. } => expr(value, env),
+        | TypedExpr::BitArray { .. } => expr(value, env),
 
         // Wrap anything else in parentheses
         value => expr(value, env).surround("(", ")"),
@@ -613,7 +613,7 @@ fn expr_segment<'a>(
 
     let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
-    bit_string_segment(
+    bit_array_segment(
         document,
         options,
         size,
@@ -623,9 +623,9 @@ fn expr_segment<'a>(
     )
 }
 
-fn bit_string_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
+fn bit_array_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
     mut document: Document<'a>,
-    options: &'a [BitStringSegmentOption<Value>],
+    options: &'a [BitArrayOption<Value>],
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
     value_is_a_string_literal: bool,
@@ -649,7 +649,7 @@ where
     };
 
     for option in options {
-        use BitStringSegmentOption as Opt;
+        use BitArrayOption as Opt;
         if !others.is_empty() && !matches!(option, Opt::Size { .. } | Opt::Unit { .. }) {
             others.push("-".to_doc());
         }
@@ -659,8 +659,8 @@ where
             Opt::Utf32 { .. } => others.push(override_type.unwrap_or("utf32").to_doc()),
             Opt::Int { .. } => others.push("integer".to_doc()),
             Opt::Float { .. } => others.push("float".to_doc()),
-            Opt::Binary { .. } => others.push("binary".to_doc()),
-            Opt::BitString { .. } => others.push("bitstring".to_doc()),
+            Opt::Binary { .. } | Opt::Bytes { .. } => others.push("binary".to_doc()),
+            Opt::BitString { .. } | Opt::Bits { .. } => others.push("bitstring".to_doc()),
             Opt::Utf8Codepoint { .. } => others.push("utf8".to_doc()),
             Opt::Utf16Codepoint { .. } => others.push("utf16".to_doc()),
             Opt::Utf32Codepoint { .. } => others.push("utf32".to_doc()),
@@ -929,13 +929,16 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
 }
 
 fn int<'a>(value: &str) -> Document<'a> {
-    Document::String(
-        value
-            .replace('_', "")
-            .replace("0x", "16#")
-            .replace("0o", "8#")
-            .replace("0b", "2#"),
-    )
+    let mut value = value.replace('_', "");
+    if value.starts_with("0x") {
+        value.replace_range(..2, "16#");
+    } else if value.starts_with("0o") {
+        value.replace_range(..2, "8#");
+    } else if value.starts_with("0b") {
+        value.replace_range(..2, "2#");
+    }
+
+    Document::String(value)
 }
 
 fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'a> {
@@ -953,7 +956,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             concat(elements).nest(INDENT).surround("[", "]").group()
         }
 
-        Constant::BitString { segments, .. } => bit_string(
+        Constant::BitArray { segments, .. } => bit_array(
             segments
                 .iter()
                 .map(|s| const_segment(&s.value, &s.options, env)),
@@ -1393,7 +1396,7 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
         | TypedExpr::TupleIndex { .. }
         | TypedExpr::Todo { .. }
         | TypedExpr::Panic { .. }
-        | TypedExpr::BitString { .. }
+        | TypedExpr::BitArray { .. }
         | TypedExpr::RecordUpdate { .. }
         | TypedExpr::NegateBool { .. }
         | TypedExpr::NegateInt { .. } => false,
@@ -1530,7 +1533,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(|e| maybe_block_expr(e, env))),
 
-        TypedExpr::BitString { segments, .. } => bit_string(
+        TypedExpr::BitArray { segments, .. } => bit_array(
             segments
                 .iter()
                 .map(|s| expr_segment(&s.value, &s.options, env)),
@@ -1905,7 +1908,7 @@ impl<'a> TypePrinter<'a> {
             "String" => "binary()".to_doc(),
             "Bool" => "boolean()".to_doc(),
             "Float" => "float()".to_doc(),
-            "BitString" => "bitstring()".to_doc(),
+            "BitArray" => "bitstring()".to_doc(),
             "List" => {
                 let arg0 = self.print(args.get(0).expect("print_prelude_type list"));
                 "list(".to_doc().append(arg0).append(")")

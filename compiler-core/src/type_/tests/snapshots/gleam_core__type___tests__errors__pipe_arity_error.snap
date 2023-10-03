@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1582
+assertion_line: 1585
 expression: "\nfn go(x, y) {\n  x + y\n}\n\nfn main(x) {\n  1\n  |> go\n}\n"
 ---
 error: Type mismatch

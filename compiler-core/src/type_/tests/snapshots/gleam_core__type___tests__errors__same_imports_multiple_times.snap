@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1647
 expression: "\n        import gleam/foo.{bar}\n        import gleam/foo.{zoo}\n        pub fn go() { bar() + zoo() }\n        "
 ---
 error: Duplicate import

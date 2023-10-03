@@ -112,23 +112,23 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "isEqual", None);
         };
 
-        if self.tracker.bit_string_literal_used {
-            self.register_prelude_usage(&mut imports, "toBitString", None);
+        if self.tracker.bit_array_literal_used {
+            self.register_prelude_usage(&mut imports, "toBitArray", None);
         };
 
         if self.tracker.sized_integer_segment_used {
             self.register_prelude_usage(&mut imports, "sizedInt", None);
         };
 
-        if self.tracker.string_bit_string_segment_used {
+        if self.tracker.string_bit_array_segment_used {
             self.register_prelude_usage(&mut imports, "stringBits", None);
         };
 
-        if self.tracker.codepoint_bit_string_segment_used {
+        if self.tracker.codepoint_bit_array_segment_used {
             self.register_prelude_usage(&mut imports, "codepointBits", None);
         };
 
-        if self.tracker.float_bit_string_segment_used {
+        if self.tracker.float_bit_array_segment_used {
             self.register_prelude_usage(&mut imports, "float64Bits", None);
         };
 
@@ -295,7 +295,7 @@ impl<'a> Generator<'a> {
                 Definition::Import(Import {
                     module,
                     alias,
-                    unqualified,
+                    unqualified_values: unqualified,
                     package,
                     ..
                 }) => self.register_import(&mut imports, package, module, alias, unqualified),
@@ -463,7 +463,10 @@ impl<'a> Generator<'a> {
                 Definition::ModuleConstant(ModuleConstant { name, .. })
                 | Definition::Function(Function { name, .. }) => self.register_in_scope(name),
 
-                Definition::Import(Import { unqualified, .. }) => unqualified
+                Definition::Import(Import {
+                    unqualified_values: unqualified,
+                    ..
+                }) => unqualified
                     .iter()
                     .for_each(|unq_import| self.register_in_scope(unq_import.variable_name())),
 
@@ -677,9 +680,9 @@ pub(crate) struct UsageTracker {
     pub int_division_used: bool,
     pub float_division_used: bool,
     pub object_equality_used: bool,
-    pub bit_string_literal_used: bool,
+    pub bit_array_literal_used: bool,
     pub sized_integer_segment_used: bool,
-    pub string_bit_string_segment_used: bool,
-    pub codepoint_bit_string_segment_used: bool,
-    pub float_bit_string_segment_used: bool,
+    pub string_bit_array_segment_used: bool,
+    pub codepoint_bit_array_segment_used: bool,
+    pub float_bit_array_segment_used: bool,
 }

@@ -2,7 +2,10 @@
 mod tests;
 
 use crate::{
-    ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, Use, *},
+    ast::{
+        CustomType, Function, Import, ModuleConstant, TypeAlias, TypeAstConstructor, TypeAstFn,
+        TypeAstHole, TypeAstTuple, TypeAstVar, Use, *,
+    },
     build::Target,
     docvec,
     io::Utf8Writer,
@@ -225,19 +228,23 @@ impl<'comments> Formatter<'comments> {
             Definition::Import(Import {
                 module,
                 alias,
-                unqualified,
+                unqualified_values,
+                unqualified_types,
                 ..
-            }) => "import "
-                .to_doc()
-                .append(module.as_str())
-                .append(if unqualified.is_empty() {
+            }) => {
+                let second = if unqualified_values.is_empty() && unqualified_types.is_empty() {
                     nil()
                 } else {
+                    let unqualified_types = unqualified_types
+                        .iter()
+                        .sorted_by(|a, b| a.name.cmp(&b.name))
+                        .map(|e| docvec!["type ", e]);
+                    let unqualified_values = unqualified_values
+                        .iter()
+                        .sorted_by(|a, b| a.name.cmp(&b.name))
+                        .map(|e| e.to_doc());
                     let unqualified = Itertools::intersperse(
-                        unqualified
-                            .iter()
-                            .sorted_by(|a, b| a.name.cmp(&b.name))
-                            .map(|e| e.to_doc()),
+                        unqualified_types.chain(unqualified_values),
                         flex_break(",", ", "),
                     );
                     let unqualified = break_("", "")
@@ -246,12 +253,14 @@ impl<'comments> Formatter<'comments> {
                         .append(break_(",", ""))
                         .group();
                     ".{".to_doc().append(unqualified).append("}")
-                })
-                .append(if let Some((AssignName::Variable(name), _)) = alias {
-                    docvec![" as ", name]
+                };
+                let doc = docvec!["import ", module.as_str(), second];
+                if let Some(as_name) = as_name {
+                    doc.append(" as ").append(&as_name.name)
                 } else {
-                    nil()
-                }),
+                    doc
+                }
+            }
 
             Definition::ModuleConstant(ModuleConstant {
                 public,
@@ -285,10 +294,10 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elements.iter().map(|e| self.const_expr(e))))
                 .group(),
 
-            Constant::BitString { segments, .. } => bit_string(
+            Constant::BitArray { segments, .. } => bit_array(
                 segments
                     .iter()
-                    .map(|s| bit_string_segment(s, |e| self.const_expr(e))),
+                    .map(|s| bit_array_segment(s, |e| self.const_expr(e))),
                 segments.iter().all(|s| s.value.is_simple()),
             ),
 
@@ -418,29 +427,31 @@ impl<'comments> Formatter<'comments> {
 
     fn type_ast<'a>(&mut self, t: &'a TypeAst) -> Document<'a> {
         match t {
-            TypeAst::Hole { name, .. } => name.to_doc(),
+            TypeAst::Hole(TypeAstHole { name, .. }) => name.to_doc(),
 
-            TypeAst::Constructor {
+            TypeAst::Constructor(TypeAstConstructor {
                 name,
                 arguments: args,
                 module,
                 ..
-            } => self.type_ast_constructor(module, name, args),
+            }) => self.type_ast_constructor(module, name, args),
 
-            TypeAst::Fn {
+            TypeAst::Fn(TypeAstFn {
                 arguments: args,
                 return_: retrn,
                 ..
-            } => "fn"
+            }) => "fn"
                 .to_doc()
                 .append(self.type_arguments(args))
                 .group()
                 .append(" ->")
                 .append(break_("", " ").append(self.type_ast(retrn)).nest(INDENT)),
 
-            TypeAst::Var { name, .. } => name.to_doc(),
+            TypeAst::Var(TypeAstVar { name, .. }) => name.to_doc(),
 
-            TypeAst::Tuple { elems, .. } => "#".to_doc().append(self.type_arguments(elems)),
+            TypeAst::Tuple(TypeAstTuple { elems, .. }) => {
+                "#".to_doc().append(self.type_arguments(elems))
+            }
         }
         .group()
     }
@@ -692,10 +703,10 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elems.iter().map(|e| self.expr(e))))
                 .group(),
 
-            UntypedExpr::BitString { segments, .. } => bit_string(
+            UntypedExpr::BitArray { segments, .. } => bit_array(
                 segments
                     .iter()
-                    .map(|s| bit_string_segment(s, |e| self.bit_string_segment_expr(e))),
+                    .map(|s| bit_array_segment(s, |e| self.bit_array_segment_expr(e))),
                 segments.iter().all(|s| s.value.is_simple_constant()),
             ),
             UntypedExpr::RecordUpdate {
@@ -792,7 +803,7 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         fn is_breakable(expr: &UntypedPattern) -> bool {
             match expr {
-                Pattern::Tuple { .. } | Pattern::List { .. } | Pattern::BitString { .. } => true,
+                Pattern::Tuple { .. } | Pattern::List { .. } | Pattern::BitArray { .. } => true,
                 Pattern::Constructor {
                     arguments: args, ..
                 } => !args.is_empty(),
@@ -849,7 +860,7 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::TupleIndex { .. }
             | UntypedExpr::Todo { .. }
             | UntypedExpr::Panic { .. }
-            | UntypedExpr::BitString { .. }
+            | UntypedExpr::BitArray { .. }
             | UntypedExpr::RecordUpdate { .. }
             | UntypedExpr::NegateBool { .. }
             | UntypedExpr::NegateInt { .. } => self.expr(fun),
@@ -1198,7 +1209,7 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
             | UntypedExpr::Tuple { .. }
-            | UntypedExpr::BitString { .. } => " ".to_doc().append(self.expr(expr)),
+            | UntypedExpr::BitArray { .. } => " ".to_doc().append(self.expr(expr)),
 
             UntypedExpr::Case { .. } => line().append(self.expr(expr)).nest(INDENT),
 
@@ -1323,10 +1334,10 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elems.iter().map(|e| self.pattern(e))))
                 .group(),
 
-            Pattern::BitString { segments, .. } => bit_string(
+            Pattern::BitArray { segments, .. } => bit_array(
                 segments
                     .iter()
-                    .map(|s| bit_string_segment(s, |e| self.pattern(e))),
+                    .map(|s| bit_array_segment(s, |e| self.pattern(e))),
                 false,
             ),
 
@@ -1524,7 +1535,7 @@ impl<'comments> Formatter<'comments> {
         commented(doc, comments)
     }
 
-    fn bit_string_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
+    fn bit_array_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
             UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
 
@@ -1544,7 +1555,7 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::TupleIndex { .. }
             | UntypedExpr::Todo { .. }
             | UntypedExpr::Panic { .. }
-            | UntypedExpr::BitString { .. }
+            | UntypedExpr::BitArray { .. }
             | UntypedExpr::RecordUpdate { .. }
             | UntypedExpr::NegateBool { .. }
             | UntypedExpr::NegateInt { .. }
@@ -1679,7 +1690,7 @@ where
         .group()
 }
 
-fn bit_string<'a>(
+fn bit_array<'a>(
     segments: impl IntoIterator<Item = Document<'a>>,
     is_simple: bool,
 ) -> Document<'a> {
@@ -1751,48 +1762,45 @@ fn commented<'a, 'comments>(
     }
 }
 
-fn bit_string_segment<Value, Type, ToDoc>(
-    segment: &BitStringSegment<Value, Type>,
+fn bit_array_segment<Value, Type, ToDoc>(
+    segment: &BitArraySegment<Value, Type>,
     mut to_doc: ToDoc,
 ) -> Document<'_>
 where
     ToDoc: FnMut(&Value) -> Document<'_>,
 {
     match segment {
-        BitStringSegment { value, options, .. } if options.is_empty() => to_doc(value),
+        BitArraySegment { value, options, .. } if options.is_empty() => to_doc(value),
 
-        BitStringSegment { value, options, .. } => to_doc(value).append(":").append(join(
+        BitArraySegment { value, options, .. } => to_doc(value).append(":").append(join(
             options.iter().map(|o| segment_option(o, |e| to_doc(e))),
             "-".to_doc(),
         )),
     }
 }
 
-fn segment_option<ToDoc, Value>(
-    option: &BitStringSegmentOption<Value>,
-    mut to_doc: ToDoc,
-) -> Document<'_>
+fn segment_option<ToDoc, Value>(option: &BitArrayOption<Value>, mut to_doc: ToDoc) -> Document<'_>
 where
     ToDoc: FnMut(&Value) -> Document<'_>,
 {
     match option {
-        BitStringSegmentOption::Binary { .. } => "binary".to_doc(),
-        BitStringSegmentOption::Int { .. } => "int".to_doc(),
-        BitStringSegmentOption::Float { .. } => "float".to_doc(),
-        BitStringSegmentOption::BitString { .. } => "bit_string".to_doc(),
-        BitStringSegmentOption::Utf8 { .. } => "utf8".to_doc(),
-        BitStringSegmentOption::Utf16 { .. } => "utf16".to_doc(),
-        BitStringSegmentOption::Utf32 { .. } => "utf32".to_doc(),
-        BitStringSegmentOption::Utf8Codepoint { .. } => "utf8_codepoint".to_doc(),
-        BitStringSegmentOption::Utf16Codepoint { .. } => "utf16_codepoint".to_doc(),
-        BitStringSegmentOption::Utf32Codepoint { .. } => "utf32_codepoint".to_doc(),
-        BitStringSegmentOption::Signed { .. } => "signed".to_doc(),
-        BitStringSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
-        BitStringSegmentOption::Big { .. } => "big".to_doc(),
-        BitStringSegmentOption::Little { .. } => "little".to_doc(),
-        BitStringSegmentOption::Native { .. } => "native".to_doc(),
+        BitArrayOption::Binary { .. } | BitArrayOption::Bytes { .. } => "bytes".to_doc(),
+        BitArrayOption::BitString { .. } | BitArrayOption::Bits { .. } => "bits".to_doc(),
+        BitArrayOption::Int { .. } => "int".to_doc(),
+        BitArrayOption::Float { .. } => "float".to_doc(),
+        BitArrayOption::Utf8 { .. } => "utf8".to_doc(),
+        BitArrayOption::Utf16 { .. } => "utf16".to_doc(),
+        BitArrayOption::Utf32 { .. } => "utf32".to_doc(),
+        BitArrayOption::Utf8Codepoint { .. } => "utf8_codepoint".to_doc(),
+        BitArrayOption::Utf16Codepoint { .. } => "utf16_codepoint".to_doc(),
+        BitArrayOption::Utf32Codepoint { .. } => "utf32_codepoint".to_doc(),
+        BitArrayOption::Signed { .. } => "signed".to_doc(),
+        BitArrayOption::Unsigned { .. } => "unsigned".to_doc(),
+        BitArrayOption::Big { .. } => "big".to_doc(),
+        BitArrayOption::Little { .. } => "little".to_doc(),
+        BitArrayOption::Native { .. } => "native".to_doc(),
 
-        BitStringSegmentOption::Size {
+        BitArrayOption::Size {
             value,
             short_form: false,
             ..
@@ -1802,13 +1810,13 @@ where
             .append(to_doc(value))
             .append(")"),
 
-        BitStringSegmentOption::Size {
+        BitArrayOption::Size {
             value,
             short_form: true,
             ..
         } => to_doc(value),
 
-        BitStringSegmentOption::Unit { value, .. } => "unit"
+        BitArrayOption::Unit { value, .. } => "unit"
             .to_doc()
             .append("(")
             .append(Document::String(format!("{value}")))
@@ -1873,6 +1881,6 @@ fn is_breakable_expr(expr: &UntypedExpr) -> bool {
             | UntypedExpr::Case { .. }
             | UntypedExpr::List { .. }
             | UntypedExpr::Tuple { .. }
-            | UntypedExpr::BitString { .. }
+            | UntypedExpr::BitArray { .. }
     )
 }

@@ -136,7 +136,7 @@ fn unused_string() {
 }
 
 #[test]
-fn unused_bit_string() {
+fn unused_bit_array() {
     assert_warning!(
         "
     fn main() {
@@ -499,7 +499,7 @@ fn unused_imported_module_no_warning_on_used_unqualified_function_test() {
 fn unused_imported_module_no_warning_on_used_unqualified_type_test() {
     assert_no_warnings!(
         ("thepackage", "gleam/foo", "pub type Foo = Int"),
-        "import gleam/foo.{Foo} pub fn baz(a: Foo) { a }",
+        "import gleam/foo.{type Foo} pub fn baz(a: Foo) { a }",
     );
 }
 
@@ -912,5 +912,89 @@ pub fn b() {
   a
 }
         "#
+    );
+}
+
+#[test]
+fn deprecated_bit_array_type() {
+    assert_warning!(r#"pub type B = BitString"#);
+}
+
+#[test]
+fn deprecated_bit_array_type_imported() {
+    assert_warning!(
+        r#"
+import gleam
+pub type B = gleam.BitString
+"#
+    );
+}
+
+#[test]
+fn deprecated_bit_array_type_aliased() {
+    assert_warning!(
+        r#"
+import gleam.{type BitString as BibbleWib}
+pub type B = BibbleWib
+"#
+    );
+}
+
+#[test]
+fn deprecated_bit_array_type_shadowed() {
+    assert_no_warnings!(
+        r#"
+pub type BitString = Nil
+pub type B = BitString
+"#
+    );
+}
+
+#[test]
+fn const_bits_option() {
+    assert_no_warnings!("pub const x = <<<<>>:bits>>");
+}
+
+#[test]
+fn deprecate_type_import_extenal() {
+    assert_warning!(
+        ("package", "module", "pub type X"),
+        "
+import module.{X}
+pub type Y = X
+"
+    );
+}
+
+#[test]
+fn deprecate_type_import_type_alias() {
+    assert_warning!(
+        ("package", "module", "pub type X = Int"),
+        "
+import module.{X}
+pub type Y = X
+"
+    );
+}
+
+#[test]
+fn deprecate_type_import_type_custom_type() {
+    assert_warning!(
+        ("package", "module", "pub type X { X }"),
+        "
+import module.{X}
+pub type Y = X
+"
+    );
+}
+
+#[test]
+fn deprecate_type_import_type_custom_type_not_using_type() {
+    assert_no_warnings!(
+        ("package", "module", "pub type X { X }"),
+        "
+import module.{X}
+pub const x = X
+"
     );
 }

@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+assertion_line: 58
+expression: "pub fn main() {\n  let a = <<\"test\":utf8>>\n  let <<b:utf8_codepoint, \"st\":utf8>> = a\n  b\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([main/0]).
+
+-spec main() -> integer().
+main() ->
+    A = <<"test"/utf8>>,
+    <<B/utf8, "st"/utf8>> = A,
+    B.
+

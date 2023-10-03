@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 696
+assertion_line: 699
 expression: "fn main() { let x: String = 5 x }"
 ---
 error: Type mismatch

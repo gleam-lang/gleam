@@ -22,10 +22,37 @@ macro_rules! assert_module_error {
     };
 }
 
+macro_rules! assert_parse_module {
+    ($src:expr) => {
+        let result = crate::parse::parse_module($src).expect("should parse");
+        insta::assert_snapshot!(insta::internals::AutoName, &format!("{:#?}", result), $src);
+    };
+}
+
 macro_rules! assert_parse {
     ($src:expr) => {
         let result = crate::parse::parse_statement_sequence($src).expect("should parse");
         insta::assert_snapshot!(insta::internals::AutoName, &format!("{:#?}", result), $src);
+    };
+}
+
+fn get_warnings(src: &str) -> String {
+    let result = crate::parse::parse_module(src).expect("should parse");
+    let mut nocolor = termcolor::Buffer::no_color();
+    for warning in result.warnings {
+        crate::Warning::Parse {
+            path: Utf8PathBuf::new(),
+            src: src.into(),
+            warning,
+        }
+        .pretty(&mut nocolor);
+    }
+    String::from_utf8(nocolor.into_inner()).expect("Error printing produced invalid utf8")
+}
+
+macro_rules! assert_warning {
+    ($src:expr) => {
+        insta::assert_snapshot!(insta::internals::AutoName, get_warnings($src), $src);
     };
 }
 
@@ -140,35 +167,35 @@ fn string2() {
 }
 
 #[test]
-fn bit_string() {
-    // non int value in BitString unit option
+fn bit_array() {
+    // non int value in bit array unit option
     assert_error!(
         "let x = <<1:unit(0)>> x",
         ParseError {
-            error: ParseErrorType::InvalidBitStringUnit,
+            error: ParseErrorType::InvalidBitArrayUnit,
             location: SrcSpan { start: 17, end: 18 }
         }
     );
 }
 
 #[test]
-fn bit_string1() {
+fn bit_array1() {
     assert_error!(
         "let x = <<1:unit(257)>> x",
         ParseError {
-            error: ParseErrorType::InvalidBitStringUnit,
+            error: ParseErrorType::InvalidBitArrayUnit,
             location: SrcSpan { start: 17, end: 20 }
         }
     );
 }
 
 #[test]
-fn bit_string2() {
+fn bit_array2() {
     // patterns cannot be nested
     assert_error!(
         "case <<>> { <<<<1>>:bit_string>> -> 1 }",
         ParseError {
-            error: ParseErrorType::NestedBitStringPattern,
+            error: ParseErrorType::NestedBitArrayPattern,
             location: SrcSpan { start: 14, end: 19 }
         }
     );
@@ -476,4 +503,57 @@ pub fn main() -> Nil {
 }
 "#
     );
+}
+
+#[test]
+fn deprecated_option_bit_string_const() {
+    assert_warning!(r#"pub const x = <<<<>>:bit_string>>"#);
+}
+
+#[test]
+fn deprecated_option_bit_string_expression() {
+    assert_warning!(
+        r#"pub fn main(x) {
+  <<x:bit_string>>
+}"#
+    );
+}
+
+#[test]
+fn deprecated_option_bit_string_pattern() {
+    assert_warning!(
+        r#"pub fn main(x) {
+  let assert <<y:bit_string>> = x
+  y
+}"#
+    );
+}
+
+#[test]
+fn deprecated_option_binary_const() {
+    assert_warning!(r#"pub const x = <<<<>>:binary>>"#);
+}
+
+#[test]
+fn deprecated_option_binary_expression() {
+    assert_warning!(
+        r#"pub fn main(x) {
+  <<x:binary>>
+}"#
+    );
+}
+
+#[test]
+fn deprecated_option_binary_pattern() {
+    assert_warning!(
+        r#"pub fn main(x) {
+  let assert <<y:binary>> = x
+  y
+}"#
+    );
+}
+
+#[test]
+fn import_type() {
+    assert_parse_module!(r#"import wibble.{type Wobble, Wobble, type Wabble}"#);
 }

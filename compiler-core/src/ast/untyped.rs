@@ -95,9 +95,9 @@ pub enum UntypedExpr {
         message: Option<SmolStr>,
     },
 
-    BitString {
+    BitArray {
         location: SrcSpan,
-        segments: Vec<UntypedExprBitStringSegment>,
+        segments: Vec<UntypedExprBitArraySegment>,
     },
 
     RecordUpdate {
@@ -146,7 +146,7 @@ impl UntypedExpr {
             | Self::Tuple { location, .. }
             | Self::Panic { location, .. }
             | Self::String { location, .. }
-            | Self::BitString { location, .. }
+            | Self::BitArray { location, .. }
             | Self::NegateInt { location, .. }
             | Self::NegateBool { location, .. }
             | Self::TupleIndex { location, .. }

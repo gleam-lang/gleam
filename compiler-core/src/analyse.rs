@@ -1,33 +1,36 @@
+mod imports;
 #[cfg(test)]
 mod tests;
 
 use crate::ast::{AssignName, UntypedArg, UntypedStatement};
 use crate::type_::error::MissingAnnotation;
 use crate::type_::Deprecation;
+
 use crate::{
     ast::{
-        self, BitStringSegmentOption, CustomType, Definition, DefinitionLocation, Function,
+        self, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, Layer, ModuleConstant, RecordConstructor, RecordConstructorArg,
-        SrcSpan, TypeAlias, TypeAst, TypedDefinition, TypedModule, UnqualifiedImport,
-        UntypedModule,
+        SrcSpan, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple,
+        TypeAstVar, TypedDefinition, TypedModule, UntypedArg, UntypedModule, UntypedStatement,
     },
     build::{Origin, Target},
     call_graph::into_dependency_order,
+    dep_tree,
     type_::{
         self,
         environment::*,
-        error::{convert_unify_error, Error},
+        error::{convert_unify_error, Error, MissingAnnotation},
         expression::ExprTyper,
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
-        AccessorsMap, ModuleInterface, PatternConstructor, RecordAccessor, Type, TypeConstructor,
-        ValueConstructor, ValueConstructorVariant,
+        AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
+        TypeConstructor, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
+    GLEAM_CORE_PACKAGE_NAME,
 };
-use crate::{dep_tree, GLEAM_CORE_PACKAGE_NAME};
 use itertools::Itertools;
 use smol_str::SmolStr;
 use std::{collections::HashMap, sync::Arc};
@@ -82,7 +85,7 @@ pub fn infer_module<A>(
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
-    let mut env = Environment::new(ids.clone(), &name, target, modules, warnings);
+    let env = Environment::new(ids.clone(), name.clone(), target, modules, warnings);
     validate_module_name(&name)?;
 
     let mut type_names = HashMap::with_capacity(module.definitions.len());
@@ -95,10 +98,7 @@ pub fn infer_module<A>(
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
-    // TODO: Extract an ImportRegistrar class to perform this.
-    for s in &statements.imports {
-        register_import(s, &name, origin, &mut env)?;
-    }
+    let mut env = imports::Importer::run(origin, warnings, env, &statements.imports)?;
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
@@ -169,8 +169,8 @@ pub fn infer_module<A>(
         }
     }
 
-    // Generate warnings for unused items
-    env.convert_unused_to_warnings();
+    env.emit_warnings_for_unused();
+    env.emit_warnings_for_deprecated_type_imports();
 
     // Remove imported types and values to create the public interface
     // Private types and values are retained so they can be used in the language
@@ -852,7 +852,7 @@ fn insert_type_alias(
         ..
     } = t;
     let typ = environment
-        .get_type_constructor(&None, &alias)
+        .get_type_constructor(&None, &alias, location)
         .expect("Could not find existing type for type alias")
         .typ
         .clone();
@@ -933,7 +933,7 @@ fn infer_custom_type(
         )
         .collect();
     let typed_parameters = environment
-        .get_type_constructor(&None, &name)
+        .get_type_constructor(&None, &name, location)
         .expect("Could not find preregistered type constructor ")
         .parameters
         .clone();
@@ -962,8 +962,9 @@ fn record_imported_items_for_use_detection<A>(
         documentation,
         location,
         module,
-        mut unqualified,
         alias,
+        mut unqualified_values,
+        unqualified_types,
         ..
     } = i;
     // Find imported module
@@ -978,7 +979,7 @@ fn record_imported_items_for_use_detection<A>(
             })?;
     // Record any imports that are types only as this information is
     // needed to prevent types being imported in generated JavaScript
-    for import in unqualified.iter_mut() {
+    for import in unqualified_values.iter_mut() {
         if environment.imported_types.contains(import.variable_name()) {
             import.layer = Layer::Type;
         }
@@ -1002,8 +1003,9 @@ fn record_imported_items_for_use_detection<A>(
         documentation,
         location,
         module,
-        unqualified,
         alias,
+        unqualified_values,
+        unqualified_types,
         package: module_info.package.clone(),
     }))
 }
@@ -1060,71 +1062,53 @@ fn infer_module_constant(
     }))
 }
 
-pub fn infer_bit_string_segment_option<UntypedValue, TypedValue, Typer>(
-    segment_option: BitStringSegmentOption<UntypedValue>,
+pub fn infer_bit_array_option<UntypedValue, TypedValue, Typer>(
+    segment_option: BitArrayOption<UntypedValue>,
     mut type_check: Typer,
-) -> Result<BitStringSegmentOption<TypedValue>, Error>
+) -> Result<BitArrayOption<TypedValue>, Error>
 where
     Typer: FnMut(UntypedValue, Arc<Type>) -> Result<TypedValue, Error>,
 {
     match segment_option {
-        BitStringSegmentOption::Size {
+        BitArrayOption::Size {
             value,
             location,
             short_form,
             ..
         } => {
             let value = type_check(*value, int())?;
-            Ok(BitStringSegmentOption::Size {
+            Ok(BitArrayOption::Size {
                 location,
                 short_form,
                 value: Box::new(value),
             })
         }
 
-        BitStringSegmentOption::Unit { location, value } => {
-            Ok(BitStringSegmentOption::Unit { location, value })
-        }
+        BitArrayOption::Unit { location, value } => Ok(BitArrayOption::Unit { location, value }),
 
-        BitStringSegmentOption::Binary { location } => {
-            Ok(BitStringSegmentOption::Binary { location })
+        BitArrayOption::Binary { location } => Ok(BitArrayOption::Binary { location }),
+        BitArrayOption::BitString { location } => Ok(BitArrayOption::BitString { location }),
+        BitArrayOption::Bytes { location } => Ok(BitArrayOption::Bytes { location }),
+        BitArrayOption::Int { location } => Ok(BitArrayOption::Int { location }),
+        BitArrayOption::Float { location } => Ok(BitArrayOption::Float { location }),
+        BitArrayOption::Bits { location } => Ok(BitArrayOption::Bits { location }),
+        BitArrayOption::Utf8 { location } => Ok(BitArrayOption::Utf8 { location }),
+        BitArrayOption::Utf16 { location } => Ok(BitArrayOption::Utf16 { location }),
+        BitArrayOption::Utf32 { location } => Ok(BitArrayOption::Utf32 { location }),
+        BitArrayOption::Utf8Codepoint { location } => {
+            Ok(BitArrayOption::Utf8Codepoint { location })
         }
-        BitStringSegmentOption::Int { location } => Ok(BitStringSegmentOption::Int { location }),
-        BitStringSegmentOption::Float { location } => {
-            Ok(BitStringSegmentOption::Float { location })
+        BitArrayOption::Utf16Codepoint { location } => {
+            Ok(BitArrayOption::Utf16Codepoint { location })
         }
-        BitStringSegmentOption::BitString { location } => {
-            Ok(BitStringSegmentOption::BitString { location })
+        BitArrayOption::Utf32Codepoint { location } => {
+            Ok(BitArrayOption::Utf32Codepoint { location })
         }
-        BitStringSegmentOption::Utf8 { location } => Ok(BitStringSegmentOption::Utf8 { location }),
-        BitStringSegmentOption::Utf16 { location } => {
-            Ok(BitStringSegmentOption::Utf16 { location })
-        }
-        BitStringSegmentOption::Utf32 { location } => {
-            Ok(BitStringSegmentOption::Utf32 { location })
-        }
-        BitStringSegmentOption::Utf8Codepoint { location } => {
-            Ok(BitStringSegmentOption::Utf8Codepoint { location })
-        }
-        BitStringSegmentOption::Utf16Codepoint { location } => {
-            Ok(BitStringSegmentOption::Utf16Codepoint { location })
-        }
-        BitStringSegmentOption::Utf32Codepoint { location } => {
-            Ok(BitStringSegmentOption::Utf32Codepoint { location })
-        }
-        BitStringSegmentOption::Signed { location } => {
-            Ok(BitStringSegmentOption::Signed { location })
-        }
-        BitStringSegmentOption::Unsigned { location } => {
-            Ok(BitStringSegmentOption::Unsigned { location })
-        }
-        BitStringSegmentOption::Big { location } => Ok(BitStringSegmentOption::Big { location }),
-        BitStringSegmentOption::Little { location } => {
-            Ok(BitStringSegmentOption::Little { location })
-        }
-        BitStringSegmentOption::Native { location } => {
-            Ok(BitStringSegmentOption::Native { location })
-        }
+        BitArrayOption::Signed { location } => Ok(BitArrayOption::Signed { location }),
+        BitArrayOption::Unsigned { location } => Ok(BitArrayOption::Unsigned { location }),
+        BitArrayOption::Big { location } => Ok(BitArrayOption::Big { location }),
+        BitArrayOption::Little { location } => Ok(BitArrayOption::Little { location }),
+        BitArrayOption::Native { location } => Ok(BitArrayOption::Native { location }),
     }
 }
 
@@ -1225,9 +1209,11 @@ fn make_type_vars(
     environment: &mut Environment<'_>,
 ) -> Result<Vec<Arc<Type>>, Error> {
     args.iter()
-        .map(|arg| TypeAst::Var {
-            location: *location,
-            name: arg.clone(),
+        .map(|arg| {
+            TypeAst::Var(TypeAstVar {
+                location: *location,
+                name: arg.clone(),
+            })
         })
         .map(|ast| hydrator.type_from_ast(&ast, environment))
         .try_collect()
@@ -1339,14 +1325,14 @@ fn get_type_dependencies(typ: &TypeAst) -> Vec<SmolStr> {
     let mut deps = Vec::with_capacity(1);
 
     match typ {
-        TypeAst::Var { .. } => (),
-        TypeAst::Hole { .. } => (),
-        TypeAst::Constructor {
+        TypeAst::Var(TypeAstVar { .. }) => (),
+        TypeAst::Hole(TypeAstHole { .. }) => (),
+        TypeAst::Constructor(TypeAstConstructor {
             name,
             arguments,
             module,
             ..
-        } => {
+        }) => {
             deps.push(match module {
                 Some(module) => format!("{}.{}", name, module).into(),
                 None => name.clone(),
@@ -1356,15 +1342,15 @@ fn get_type_dependencies(typ: &TypeAst) -> Vec<SmolStr> {
                 deps.extend(get_type_dependencies(arg))
             }
         }
-        TypeAst::Fn {
+        TypeAst::Fn(TypeAstFn {
             arguments, return_, ..
-        } => {
+        }) => {
             for arg in arguments {
                 deps.extend(get_type_dependencies(arg))
             }
             deps.extend(get_type_dependencies(return_))
         }
-        TypeAst::Tuple { elems, .. } => {
+        TypeAst::Tuple(TypeAstTuple { elems, .. }) => {
             for elem in elems {
                 deps.extend(get_type_dependencies(elem))
             }

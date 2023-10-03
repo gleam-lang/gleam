@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 386
+assertion_line: 406
 expression: "let x = [1, 2, 3, ..]"
 ---
 error: Syntax error
