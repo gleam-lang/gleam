@@ -2,9 +2,10 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        Definition, SrcSpan, TypeAst, TypeAstConstructor, UntypedExpr, UntypedImport, UntypedModule,
+        CallArg, Constant, Definition, SrcSpan, TypeAst, TypeAstConstructor, UntypedConstant,
+        UntypedExpr, UntypedImport, UntypedModule,
     },
-    ast_folder::{TypeAstFolder, UntypedExprFolder, UntypedModuleFolder},
+    ast_folder::{TypeAstFolder, UntypedConstantFolder, UntypedExprFolder, UntypedModuleFolder},
 };
 use smol_str::SmolStr;
 
@@ -80,6 +81,49 @@ impl Fixer {
 }
 
 impl UntypedModuleFolder for Fixer {}
+
+impl UntypedConstantFolder for Fixer {
+    fn fold_constant_record(
+        &mut self,
+        location: SrcSpan,
+        module: Option<SmolStr>,
+        name: SmolStr,
+        args: Vec<CallArg<UntypedConstant>>,
+    ) -> UntypedConstant {
+        if let Some(import) = self.imports.get_mut(&name) {
+            import.used_as_value = true;
+        }
+        Constant::Record {
+            location,
+            module,
+            name,
+            args,
+            tag: (),
+            typ: (),
+            field_map: None,
+        }
+    }
+
+    fn fold_constant_var(
+        &mut self,
+        location: SrcSpan,
+        module: Option<SmolStr>,
+        name: SmolStr,
+    ) -> UntypedConstant {
+        if module.is_none() {
+            if let Some(import) = self.imports.get_mut(&name) {
+                import.used_as_value = true;
+            }
+        }
+        Constant::Var {
+            location,
+            module,
+            name,
+            constructor: None,
+            typ: (),
+        }
+    }
+}
 
 impl UntypedExprFolder for Fixer {
     fn fold_var(&mut self, location: SrcSpan, name: SmolStr) -> UntypedExpr {
