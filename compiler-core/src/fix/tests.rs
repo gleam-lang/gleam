@@ -13,7 +13,32 @@ fn empty() {
 
 #[test]
 fn import() {
-    assert_eq!(fix("import gleam.{BitString}"), "import gleam.{BitArray}\n");
+    assert_eq!(
+        fix("import gleam.{BitString}
+
+type X =
+  BitString"),
+        "import gleam.{type BitArray}
+
+type X =
+  BitArray
+"
+    );
+}
+
+#[test]
+fn import_new_syntax() {
+    assert_eq!(
+        fix("import gleam.{type BitString}
+
+type X =
+  BitString"),
+        "import gleam.{type BitArray}
+
+type X =
+  BitArray
+"
+    );
 }
 
 #[test]
@@ -164,7 +189,7 @@ fn shadowed_by_import() {
 pub type X =
   BitString
 "),
-        "import x.{BitString}
+        "import x.{type BitString}
 
 pub type X =
   BitString
@@ -245,5 +270,85 @@ fn constant() {
     assert_eq!(
         fix("pub const x: BitString = <<>>"),
         "pub const x: BitArray = <<>>\n"
+    );
+}
+
+#[test]
+fn imported_used_in_const() {
+    assert_eq!(
+        fix("import x.{X}
+
+const x = X
+"),
+        "import x.{X}
+
+const x = X
+"
+    );
+}
+
+#[test]
+fn imported_type_only() {
+    assert_eq!(
+        fix("import x.{X}
+
+const x = X
+
+type Y {
+  X(X)
+}
+"),
+        "import x.{type X}
+
+const x = X
+
+type Y {
+  X(X)
+}
+"
+    );
+}
+
+#[test]
+fn imported_value_and_type() {
+    assert_eq!(
+        fix("import x.{X}
+
+const x = X
+
+type Y {
+  Y(X)
+}
+"),
+        "import x.{type X, X}
+
+const x = X
+
+type Y {
+  Y(X)
+}
+"
+    );
+}
+
+#[test]
+fn imported_value_only() {
+    assert_eq!(
+        fix("import x.{X}
+
+const x = X
+
+type X {
+  Z(X)
+}
+"),
+        "import x.{X}
+
+const x = X
+
+type X {
+  Z(X)
+}
+"
     );
 }

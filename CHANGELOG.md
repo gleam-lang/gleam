@@ -2,7 +2,12 @@
 
 ## Unreleased
 
-- The `BitString` type has been renamed to `BitArray`.
+- Using `import module.{TypeName}` to import a type has been deprecated,
+  replaced by `import module.{type TypeName}`. In a future version of Gleam the
+  old syntax will only import the value of the same name. Run `gleam fix` to
+  update your code.
+- The `BitString` type has been renamed to `BitArray`. Run `gleam fix` to update
+  your code.
 - The `binary` and `bit_string` bit array modifier have been deprecated in favour
   of `bytes` and `bits`.
 - The deprecated `todo("...")` syntax has been removed.
