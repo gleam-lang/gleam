@@ -1403,6 +1403,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Register this imported module as having been used, to inform
             // warnings of unused imports later
             let _ = self.environment.unused_modules.remove(module_alias);
+            let _ = self.environment.unused_module_aliases.remove(module_alias);
 
             (module.name.clone(), constructor.clone())
         };
@@ -1767,6 +1768,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // Register the module as having been used if it was imported
                 if let Some(ref module) = &module {
                     _ = self.environment.unused_modules.remove(module);
+                    _ = self.environment.unused_module_aliases.remove(module);
                 }
 
                 // Type check the record constructor
@@ -1811,6 +1813,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // Register the module as having been used if it was imported
                 if let Some(ref module) = &module {
                     _ = self.environment.unused_modules.remove(module);
+                    _ = self.environment.unused_module_aliases.remove(module);
                 }
 
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
@@ -1934,6 +1937,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // Register the module as having been used if it was imported
                 if let Some(ref module) = &module {
                     _ = self.environment.unused_modules.remove(module);
+                    _ = self.environment.unused_module_aliases.remove(module);
                 }
 
                 // Infer the type of this constant

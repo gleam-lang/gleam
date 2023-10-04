@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern,
+        Arg, Definition, Function, Import, ImportName, ModuleConstant, TypedDefinition, TypedExpr,
+        TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -341,7 +342,11 @@ where
                 if !type_.public {
                     continue;
                 }
-                completions.push(type_completion(Some(&alias), name, type_));
+                let module = match alias.clone() {
+                    ImportName::Alias(_, name) | ImportName::Original(_, name) => Some(name),
+                    ImportName::Discarded(_, _) => None,
+                };
+                completions.push(type_completion(module, name, type_));
             }
 
             // Unqualified types
@@ -380,7 +385,12 @@ where
                 if !value.public {
                     continue;
                 }
-                completions.push(value_completion(Some(&alias), name, value));
+
+                let module = match alias.clone() {
+                    ImportName::Alias(_, name) | ImportName::Original(_, name) => Some(name),
+                    ImportName::Discarded(_, _) => None,
+                };
+                completions.push(value_completion(module.as_deref(), name, value));
             }
 
             // Unqualified values
@@ -397,7 +407,7 @@ where
 }
 
 fn type_completion(
-    module: Option<&SmolStr>,
+    module: Option<SmolStr>,
     name: &str,
     type_: &crate::type_::TypeConstructor,
 ) -> lsp::CompletionItem {

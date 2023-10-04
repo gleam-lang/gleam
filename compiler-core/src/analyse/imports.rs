@@ -1,7 +1,7 @@
 use smol_str::SmolStr;
 
 use crate::{
-    ast::{Import, SrcSpan, UnqualifiedImport},
+    ast::{Import, ImportName, SrcSpan, UnqualifiedImport},
     build::Origin,
     type_::{
         self, Deprecation, EntityKind, Environment, Error, ModuleInterface, ValueConstructorVariant,
@@ -43,9 +43,6 @@ impl<'a> Importer<'a> {
     }
 
     fn register_import(&mut self, import: &Import<()>) -> Result<(), Error> {
-        // Determine local alias of imported module
-        let used_name = import.used_name();
-
         let location = import.location;
         let imported_module_name = import.module.clone();
 
@@ -60,8 +57,8 @@ impl<'a> Importer<'a> {
                 imported_modules: self.environment.imported_modules.keys().cloned().collect(),
             })?;
 
-        self.check_not_a_duplicate_import(&used_name, location)?;
         self.check_src_does_not_import_test(module_info, location, imported_module_name.clone())?;
+        self.register_module(import, module_info)?;
 
         // Insert unqualified imports into scope
         for value in &import.unqualified_values {
@@ -70,21 +67,6 @@ impl<'a> Importer<'a> {
         for type_ in &import.unqualified_types {
             self.register_unqualified_type(type_, module_info)?;
         }
-
-        self.register_module_usage(import);
-
-        // Register the name as imported so it can't be imported a
-        // second time in future
-        let _ = self
-            .environment
-            .unqualified_imported_names
-            .insert(used_name.clone(), location);
-
-        // Insert imported module into scope
-        let _ = self
-            .environment
-            .imported_modules
-            .insert(used_name, (location, module_info));
         Ok(())
     }
 
@@ -242,28 +224,46 @@ impl<'a> Importer<'a> {
         Ok(())
     }
 
-    fn register_module_usage(&mut self, import: &Import<()>) {
-        if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
-            // When the module has no unqualified imports, we track its usage
-            // so we can warn if not used by the end of the type checking
+    fn register_module(
+        &mut self,
+        import: &Import<()>,
+        import_info: &'a ModuleInterface,
+    ) -> Result<(), Error> {
+        if let ImportName::Original(location, used_name) | ImportName::Alias(location, used_name) =
+            import.used_name()
+        {
+            self.check_not_a_duplicate_import(&used_name, import.location)?;
+
+            if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
+                // When the module has no unqualified imports, we track its usage
+                // so we can warn if not used by the end of the type checking
+                let _ = self
+                    .environment
+                    .unused_modules
+                    .insert(used_name.clone(), import.location);
+            }
+
+            if let ImportName::Alias(_, _) = import.used_name() {
+                // We also register it's name to differentiate between unused module
+                // and unused module name. See 'convert_unused_to_warnings'.
+                let _ = self
+                    .environment
+                    .imported_module_aliases
+                    .insert(used_name.clone(), location);
+
+                let _ = self
+                    .environment
+                    .unused_module_aliases
+                    .insert(used_name.clone(), location);
+            };
+
+            // Insert imported module into scope
             let _ = self
                 .environment
-                .unused_modules
-                .insert(import.used_name(), import.location);
-        } else if let Some(as_name) = &import.as_name {
-            // When the module has a name, we also track its as_name usage
-            // so we can warn if not used by the end of the type checking
-            let _ = self
-                .environment
-                .unused_modules
-                .insert(as_name.name.clone(), as_name.location);
-            // We also register it's name to differentiate between unused module
-            // and unused module name. See 'convert_unused_to_warnings'.
-            let _ = self
-                .environment
-                .imported_module_aliases
-                .insert(as_name.name.clone());
-        }
+                .imported_modules
+                .insert(used_name, (import.location, import_info));
+        };
+        Ok(())
     }
 
     fn check_not_a_duplicate_import(

@@ -386,9 +386,10 @@ impl<T, E> Function<T, E> {
 pub type UntypedImport = Import<()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ImportName {
-    pub location: SrcSpan,
-    pub name: SmolStr,
+pub enum ImportName {
+    Alias(SrcSpan, SmolStr),
+    Original(SrcSpan, SmolStr),
+    Discarded(SrcSpan, SmolStr),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -406,19 +407,15 @@ pub struct Import<PackageName> {
     pub documentation: Option<SmolStr>,
     pub location: SrcSpan,
     pub module: SmolStr,
-    pub as_name: Option<ImportName>,
+    pub as_name: ImportName,
     pub unqualified_values: Vec<UnqualifiedImport>,
     pub unqualified_types: Vec<UnqualifiedImport>,
     pub package: PackageName,
 }
 
 impl<T> Import<T> {
-    pub(crate) fn used_name(&self) -> SmolStr {
-        self.as_name
-            .as_ref()
-            .map(|as_name| as_name.name.clone())
-            .or_else(|| self.module.split('/').last().map(|s| s.into()))
-            .expect("Import could not identify variable name.")
+    pub(crate) fn used_name(&self) -> ImportName {
+        self.as_name.clone()
     }
 }
 

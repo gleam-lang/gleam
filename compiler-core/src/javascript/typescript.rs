@@ -19,7 +19,7 @@ use smol_str::SmolStr;
 use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{
-        CustomType, Definition, Function, Import, ModuleConstant, TypeAlias, TypedArg,
+        CustomType, Definition, Function, Import, ImportName, ModuleConstant, TypeAlias, TypedArg,
         TypedConstant, TypedDefinition, TypedModule, TypedRecordConstructor,
     },
     docvec,
@@ -250,9 +250,13 @@ impl<'a> TypeScriptGenerator<'a> {
                     as_name,
                     ..
                 }) => {
-                    if let Some(alias) = as_name {
-                        let _ = self.aliased_module_names.insert(module, &alias.name);
+                    match as_name {
+                        ImportName::Alias(_, name) | ImportName::Original(_, name) => {
+                            let _ = self.aliased_module_names.insert(module, name);
+                        }
+                        ImportName::Discarded(_, _) => (),
                     }
+
                     self.register_import(&mut imports, package, module);
                 }
             }

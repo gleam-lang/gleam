@@ -3,8 +3,8 @@ mod tests;
 
 use crate::{
     ast::{
-        CustomType, Definition, Import, TypeAlias, TypeAst, TypeAstConstructor, UntypedDefinition,
-        UntypedImport, UntypedModule,
+        CustomType, Definition, Import, ImportName, TypeAlias, TypeAst, TypeAstConstructor,
+        UntypedDefinition, UntypedImport, UntypedModule,
     },
     ast_folder::{TypeAstFolder, UntypedExprFolder, UntypedModuleFolder},
     build::Target,
@@ -75,7 +75,11 @@ impl Fixer {
 
             Definition::Import(i) => {
                 if i.module == "gleam" {
-                    self.prelude_module_import_alias = Some(i.used_name());
+                    self.prelude_module_import_alias = match i.used_name() {
+                        ImportName::Alias(_, name)
+                        | ImportName::Original(_, name)
+                        | ImportName::Discarded(_, name) => Some(name),
+                    }
                 }
 
                 for i in &i.unqualified_values {

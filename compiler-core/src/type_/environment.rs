@@ -28,7 +28,8 @@ pub struct Environment<'a> {
     pub imported_types: HashSet<SmolStr>,
 
     /// Names of modules that have been imported with as name.
-    pub imported_module_aliases: HashSet<SmolStr>,
+    pub imported_module_aliases: HashMap<SmolStr, SrcSpan>,
+    pub unused_module_aliases: HashMap<SmolStr, SrcSpan>,
 
     /// Values defined in the current function (or the prelude)
     pub scope: im::HashMap<SmolStr, ValueConstructor>,
@@ -83,7 +84,8 @@ impl<'a> Environment<'a> {
             scope: prelude.values.clone().into(),
             importable_modules,
             imported_types: HashSet::new(),
-            imported_module_aliases: HashSet::new(),
+            imported_module_aliases: HashMap::new(),
+            unused_module_aliases: HashMap::new(),
             current_module,
             warnings,
             entity_usages: vec![HashMap::new()],
@@ -537,12 +539,19 @@ impl<'a> Environment<'a> {
         self.handle_unused(unused);
 
         for (name, location) in self.unused_modules.clone().into_iter() {
-            let warning = if self.imported_module_aliases.contains(&name) {
-                Warning::UnusedImportedModuleAlias { name, location }
-            } else {
-                Warning::UnusedImportedModule { name, location }
-            };
-            self.warnings.emit(warning);
+            self.warnings.emit(Warning::UnusedImportedModule {
+                name: name.clone(),
+                location,
+            });
+        }
+
+        for (name, location) in self.unused_module_aliases.iter() {
+            if self.unused_modules.get(name).is_none() {
+                self.warnings.emit(Warning::UnusedImportedModuleAlias {
+                    name: name.clone(),
+                    location: *location,
+                })
+            }
         }
     }
 

@@ -12,6 +12,7 @@
 - Fixed a bug where some hexidecimal numbers would generate incorrect Erlang.
 - A warning is now emitted if a module alias is unused.
 - Variables defined using `use` now show the variable type on hover.
+- Imported modules can now be discarded by giving them an alias starting with `_`
 
 ## v0.31.0 - 2023-09-25
 

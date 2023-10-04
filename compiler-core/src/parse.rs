@@ -1973,14 +1973,27 @@ where
         }
 
         // Parse as_name
-        let mut as_name = None;
+        let mut as_name = ImportName::Original(
+            SrcSpan { start, end },
+            module
+                .split('/')
+                .last()
+                .map(|s| s.into())
+                .expect("Could not determine module name!"),
+        );
+
         if let Some((as_start, _)) = self.maybe_one(&Token::As) {
-            let (_, name, e) = self.expect_name()?;
+            let (_, name, e) = self.expect_assign_name()?;
             let location = SrcSpan {
                 start: as_start,
                 end: e,
             };
-            as_name = Some(ImportName { location, name });
+
+            match name {
+                AssignName::Variable(name) => as_name = ImportName::Alias(location, name),
+                AssignName::Discard(name) => as_name = ImportName::Discarded(location, name),
+            }
+
             end = e;
         }
 
