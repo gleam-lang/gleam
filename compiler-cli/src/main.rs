@@ -74,9 +74,7 @@ mod shell;
 use config::root_config;
 use dependencies::UseManifest;
 use fs::get_current_directory;
-pub use gleam_core::{
-    error::{Error, Result},
-};
+pub use gleam_core::error::{Error, Result};
 
 use gleam_core::{
     build::{Codegen, Mode, Options, Runtime, Target},
