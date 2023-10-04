@@ -7,6 +7,7 @@ run(Module) ->
     io:setopts(standard_error, [{encoding, utf8}]),
     try
         {ok, _} = application:ensure_all_started('{{ application }}'),
+        erlang:process_flag(trap_exit, false),
         Module:main(),
         erlang:halt(0)
     catch
