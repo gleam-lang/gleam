@@ -142,6 +142,20 @@ fn get_printed_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
 }
 
 #[macro_export]
+macro_rules! assert_warnings_with_imports {
+    ($(($name:expr, $module_src:expr)),+; $src:literal, $($warning:expr),+) => {
+        let warnings = $crate::type_::tests::get_warnings(
+            $src,
+            vec![
+                $(("thepackage", $name, $module_src)),*
+            ],
+        );
+        assert!(!warnings.is_empty());
+        assert_eq!(vec![$($warning),*], warnings);
+    };
+}
+
+#[macro_export]
 macro_rules! assert_warning {
     ($src:expr) => {
         let output = $crate::type_::tests::get_printed_warnings($src, vec![]);
