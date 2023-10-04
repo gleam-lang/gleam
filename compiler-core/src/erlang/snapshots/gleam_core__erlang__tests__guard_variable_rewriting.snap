@@ -11,7 +11,7 @@ expression: "pub fn main() {\n  case 1.0 {\n    a if a <. 0.0 -> {\n      let a 
 -spec main() -> float().
 main() ->
     case 1.0 of
-        A when A < 0.0 ->
+        A when A < +0.0 ->
             A@1 = A,
             A@1
     end.
