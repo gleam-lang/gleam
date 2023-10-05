@@ -197,6 +197,7 @@ button:-moz-focusring {
 
 button {
   -webkit-appearance: button;
+  appearance: button;
   line-height: 1;
   margin: 0;
   overflow: visible;
