@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::time::{Instant, SystemTime};
 
 use camino::Utf8Path;
 
@@ -122,8 +122,13 @@ pub(crate) fn build_documentation(
         source: paths.readme(), // TODO: support non markdown READMEs. Or a default if there is none.
     }];
     pages.extend(config.documentation.pages.iter().cloned());
-    let outputs =
-        gleam_core::docs::generate_html(&paths, config, compiled.modules.as_slice(), &pages);
+    let outputs = gleam_core::docs::generate_html(
+        &paths,
+        config,
+        compiled.modules.as_slice(),
+        &pages,
+        SystemTime::now(),
+    );
     Ok(outputs)
 }
 

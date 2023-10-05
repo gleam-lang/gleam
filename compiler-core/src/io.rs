@@ -75,6 +75,13 @@ impl Content {
             Content::Text(data) => data.as_bytes(),
         }
     }
+
+    pub fn text(&self) -> Option<&str> {
+        match self {
+            Content::Binary(_) => None,
+            Content::Text(s) => Some(s),
+        }
+    }
 }
 
 impl From<Vec<u8>> for Content {
