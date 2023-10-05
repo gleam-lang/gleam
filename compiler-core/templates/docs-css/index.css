@@ -124,7 +124,7 @@
   --accent: var(--pink);
 
   /* Sizes */
-  --content-width: 800px;
+  --content-width: 750px;
   --header-height: 60px;
   --hash-offset: calc(var(--header-height) * 1.67);
   --sidebar-width: 240px;
