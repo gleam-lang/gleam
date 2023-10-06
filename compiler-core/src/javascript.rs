@@ -348,12 +348,15 @@ impl<'a> Generator<'a> {
         as_name: &'a ImportName,
         unqualified: &'a [UnqualifiedImport],
     ) {
-        let module_name = match as_name {
-            ImportName::Alias(_, name) | ImportName::Original(_, name) => name,
-            ImportName::Discarded(_, _) => module
-                .split('/')
-                .last()
-                .expect("JavaScript generator could not identify imported module name."),
+        let (discarded, module_name) = match as_name {
+            ImportName::Alias(_, name) | ImportName::Original(_, name) => (false, name.as_str()),
+            ImportName::Discarded(_, _) => (
+                true,
+                module
+                    .split('/')
+                    .last()
+                    .expect("JavaScript generator could not identify imported module name."),
+            ),
         };
 
         let module_name = format!("${module_name}");
@@ -370,7 +373,9 @@ impl<'a> Generator<'a> {
                 let name = maybe_escape_identifier_doc(&i.name);
                 Member { name, alias }
             });
-        imports.register_module(path, [module_name], unqualified_imports);
+
+        let aliases = if discarded { vec![] } else { vec![module_name] };
+        imports.register_module(path, aliases, unqualified_imports);
     }
 
     fn register_external_function(
