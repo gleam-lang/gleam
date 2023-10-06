@@ -49,9 +49,8 @@ impl Fixer {
             Definition::Import(i) => {
                 if i.module == "gleam" {
                     self.prelude_module_import_alias = match i.used_name() {
-                        ImportName::Alias(_, name)
-                        | ImportName::Original(_, name)
-                        | ImportName::Discarded(_, name) => Some(name),
+                        ImportName::Alias(_, name) | ImportName::Original(_, name) => Some(name),
+                        ImportName::Discarded(_, _) => None,
                     }
                 } else {
                     for i in i.unqualified_values.iter().chain(&i.unqualified_types) {
