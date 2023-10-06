@@ -410,6 +410,7 @@ pub struct Import<PackageName> {
     pub unqualified_values: Vec<UnqualifiedImport>,
     pub unqualified_types: Vec<UnqualifiedImport>,
     pub package: PackageName,
+    pub public: bool,
 }
 
 impl<T> Import<T> {

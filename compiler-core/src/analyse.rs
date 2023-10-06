@@ -777,13 +777,14 @@ fn record_imported_items_for_use_detection<A>(
     environment: &Environment<'_>,
 ) -> Result<TypedDefinition, Error> {
     let Import {
+        public,
         documentation,
         location,
         module,
         as_name,
         mut unqualified_values,
         unqualified_types,
-        ..
+        package: (),
     } = i;
     // Find imported module
     let module_info =
@@ -818,6 +819,7 @@ fn record_imported_items_for_use_detection<A>(
     }
 
     Ok(Definition::Import(Import {
+        public,
         documentation,
         location,
         module,

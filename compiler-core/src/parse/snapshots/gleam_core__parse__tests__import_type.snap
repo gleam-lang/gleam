@@ -51,6 +51,7 @@ Parsed {
                             },
                         ],
                         package: (),
+                        public: false,
                     },
                 ),
                 target: None,

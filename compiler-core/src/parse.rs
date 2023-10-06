@@ -231,9 +231,13 @@ where
 
         let def = match (self.tok0.take(), self.tok1.as_ref()) {
             // Imports
+            (Some((start, Token::Pub, _)), Some((_, Token::Import, _))) => {
+                let _ = self.next_tok();
+                self.parse_import(start, false)
+            }
             (Some((start, Token::Import, _)), _) => {
                 let _ = self.next_tok();
-                self.parse_import(start)
+                self.parse_import(start, false)
             }
             // Module Constants
             (Some((_, Token::Const, _)), _) => {
@@ -1925,7 +1929,11 @@ where
     //   import a/b
     //   import a/b.{c}
     //   import a/b.{c as d} as e
-    fn parse_import(&mut self, import_start: u32) -> Result<Option<UntypedDefinition>, ParseError> {
+    fn parse_import(
+        &mut self,
+        import_start: u32,
+        public: bool,
+    ) -> Result<Option<UntypedDefinition>, ParseError> {
         let mut start = 0;
         let mut end;
         let mut module = String::new();
@@ -1985,6 +1993,7 @@ where
         }
 
         Ok(Some(Definition::Import(Import {
+            public,
             documentation,
             location: SrcSpan {
                 start: import_start,
