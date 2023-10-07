@@ -10,6 +10,9 @@
   your code.
 - The `binary` and `bit_string` bit array modifier have been deprecated in favour
   of `bytes` and `bits`.
+- The `gleam export javascript-prelude` command has been added to export a copy
+  of the prelude. This command me be useful for build tools that use the
+  compiler via the `gleam compile-package` API.
 - The main process started with `gleam run` no longer traps exits on Erlang.
 - The formatting of code in rendered HTML documentation has been improved.
 - The content has been made wider in rendered HTML documentation.
