@@ -10,9 +10,14 @@
   your code.
 - The `binary` and `bit_string` bit array modifier have been deprecated in favour
   of `bytes` and `bits`.
-- The `gleam export javascript-prelude` command has been added to export a copy
-  of the prelude. This command me be useful for build tools that use the
-  compiler via the `gleam compile-package` API.
+- The `gleam export javascript-prelude` and `gleam export typescript-prelude`
+  commands have been added to export a copy of the prelude. This command may be
+  useful for build tools that use the compiler via the `gleam compile-package`
+  API.
+- The prelude is no longer rendered once per package when compiling to
+  JavaScript, instead one copy is rendered for the entire project. If you are
+  using the `gleam compile-package` API you now need to give a path to the
+  prelude using the `--javascript-prelude` flag.
 - The main process started with `gleam run` no longer traps exits on Erlang.
 - The formatting of code in rendered HTML documentation has been improved.
 - The content has been made wider in rendered HTML documentation.
