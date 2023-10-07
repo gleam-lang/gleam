@@ -101,3 +101,8 @@ Your hex tarball has been generated in {}.
     );
     Ok(())
 }
+
+pub fn javascript_prelude() -> Result<()> {
+    print!("{}", gleam_core::javascript::PRELUDE);
+    Ok(())
+}

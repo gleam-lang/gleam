@@ -239,7 +239,10 @@ enum Command {
 pub enum ExportTarget {
     /// Precompiled Erlang, suitable for deployment.
     ErlangShipment,
+    /// The package bundled into a tarball, suitable for publishing to Hex.
     HexTarball,
+    /// The JavaScript prelude module.
+    JavascriptPrelude,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -448,6 +451,7 @@ fn main() {
 
         Command::Export(ExportTarget::ErlangShipment) => export::erlang_shipment(),
         Command::Export(ExportTarget::HexTarball) => export::hex_tarball(),
+        Command::Export(ExportTarget::JavascriptPrelude) => export::javascript_prelude(),
     };
 
     match result {
