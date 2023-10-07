@@ -24,7 +24,27 @@ pub fn one() {
 }
 "#,
     )];
+    insta::assert_snapshot!(compile(config, modules));
+}
 
+// https://github.com/gleam-lang/gleam/issues/2347
+
+#[test]
+fn tables() {
+    let config = PackageConfig::default();
+    let modules = vec![(
+        "app.gleam",
+        r#"
+/// | heading 1    | heading 2    |
+/// |--------------|--------------|
+/// | row 1 cell 1 | row 1 cell 2 |
+/// | row 2 cell 1 | row 2 cell 2 |
+///
+pub fn one() {
+  1
+}
+"#,
+    )];
     insta::assert_snapshot!(compile(config, modules));
 }
 
