@@ -243,6 +243,7 @@ pub enum ExportTarget {
     HexTarball,
     /// The JavaScript prelude module.
     JavascriptPrelude,
+    TypescriptPrelude,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -463,6 +464,7 @@ fn main() {
         Command::Export(ExportTarget::ErlangShipment) => export::erlang_shipment(),
         Command::Export(ExportTarget::HexTarball) => export::hex_tarball(),
         Command::Export(ExportTarget::JavascriptPrelude) => export::javascript_prelude(),
+        Command::Export(ExportTarget::TypescriptPrelude) => export::typescript_prelude(),
     };
 
     match result {
