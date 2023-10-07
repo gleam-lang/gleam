@@ -526,8 +526,15 @@ fn markdown_documentation(doc: &Option<SmolStr>) -> String {
 }
 
 fn render_markdown(text: &str) -> String {
+    // Doc comments start with "///\s", which can confuse the markdown parser
+    // and prevent tables from rendering correctly, so remove that first space.
+    let text = text
+        .split('\n')
+        .map(|s| s.strip_prefix(" ").unwrap_or(s))
+        .join("\n");
+
     let mut s = String::with_capacity(text.len() * 3 / 2);
-    let p = pulldown_cmark::Parser::new_ext(text, pulldown_cmark::Options::all());
+    let p = pulldown_cmark::Parser::new_ext(&text, pulldown_cmark::Options::all());
     pulldown_cmark::html::push_html(&mut s, p);
     s
 }
