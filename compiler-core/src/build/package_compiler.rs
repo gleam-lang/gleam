@@ -25,7 +25,7 @@ use std::{collections::HashMap, fmt::write, time::SystemTime};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration};
+use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
 
 #[cfg(not(target_os = "windows"))]
 const ELIXIR_EXECUTABLE: &str = "elixir";
@@ -92,6 +92,7 @@ where
         existing_modules: &mut im::HashMap<SmolStr, type_::ModuleInterface>,
         already_defined_modules: &mut im::HashMap<SmolStr, Utf8PathBuf>,
         stale_modules: &mut StaleTracker,
+        telemetry: &dyn Telemetry,
     ) -> Result<Vec<Module>, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
@@ -123,6 +124,11 @@ where
         // Load the cached modules that have previously been compiled
         for module in loaded.cached.into_iter() {
             _ = existing_modules.insert(module.name.clone(), module.clone());
+        }
+
+        if !loaded.to_compile.is_empty() {
+            // Print that work is being done
+            telemetry.compiling_package(&self.config.name);
         }
 
         // Type check the modules that are new or have changed

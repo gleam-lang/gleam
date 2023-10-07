@@ -1,17 +1,16 @@
 use std::time::SystemTime;
 
-use camino::Utf8PathBuf;
-use itertools::Itertools;
-use smol_str::SmolStr;
-
 use crate::{
-    build::{Mode, PackageCompiler, StaleTracker, TargetCodegenConfiguration},
+    build::{Mode, NullTelemetry, PackageCompiler, StaleTracker, TargetCodegenConfiguration},
     config::PackageConfig,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
     paths::ProjectPaths,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
 };
+use camino::Utf8PathBuf;
+use itertools::Itertools;
+use smol_str::SmolStr;
 
 #[test]
 fn hello_docs() {
@@ -84,6 +83,7 @@ fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> SmolStr {
             &mut type_manifests,
             &mut defined_modules,
             &mut StaleTracker::default(),
+            &NullTelemetry,
         )
         .unwrap();
 

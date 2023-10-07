@@ -259,8 +259,6 @@ where
     }
 
     fn load_cache_or_compile_package(&mut self, name: &str) -> Result<Vec<Module>, Error> {
-        self.telemetry.compiling_package(name);
-
         // TODO: We could remove this clone if we split out the compilation of
         // packages into their own classes and then only mutate self after we no
         // longer need to have the package borrowed from self.packages.
@@ -308,6 +306,9 @@ where
             tracing::debug!(%name, "skipping_rebar3_build_for_non_erlang_target");
             return Ok(());
         }
+
+        // Print that work is being done
+        self.telemetry.compiling_package(name);
 
         let package = self.paths.build_packages_package(name);
         let build_packages = self.paths.build_directory_for_target(mode, target);
@@ -373,6 +374,9 @@ where
             tracing::debug!(%name, "skipping_mix_build_for_non_erlang_target");
             return Ok(());
         }
+
+        // Print that work is being done
+        self.telemetry.compiling_package(name);
 
         let build_dir = self.paths.build_directory_for_target(mode, target);
         let project_dir = self.paths.build_packages_package(name);
@@ -532,6 +536,7 @@ where
             &mut self.importable_modules,
             &mut self.defined_modules,
             &mut self.stale_modules,
+            self.telemetry.as_ref(),
         )?;
 
         Ok(compiled)

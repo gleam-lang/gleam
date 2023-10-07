@@ -5,7 +5,9 @@ use crate::{
 };
 use camino::Utf8Path;
 use gleam_core::{
-    build::{Mode, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration},
+    build::{
+        Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
+    },
     metadata,
     paths::{self, ProjectPaths},
     type_::ModuleInterface,
@@ -28,7 +30,6 @@ pub fn command(options: CompilePackage) -> Result<()> {
         Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: false,
-            // TODO: prelude error
             prelude_location: options
                 .javascript_prelude
                 .ok_or_else(|| Error::JavaScriptPreludeRequired)?,
@@ -55,6 +56,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
         &mut type_manifests,
         &mut defined_modules,
         &mut StaleTracker::default(),
+        &NullTelemetry,
     )?;
 
     Ok(())
