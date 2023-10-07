@@ -150,12 +150,18 @@ pub enum TypeScriptDeclarations {
 #[derive(Debug)]
 pub struct JavaScript<'a> {
     output_directory: &'a Utf8Path,
+    prelude_location: &'a Utf8Path,
     typescript: TypeScriptDeclarations,
 }
 
 impl<'a> JavaScript<'a> {
-    pub fn new(output_directory: &'a Utf8Path, typescript: TypeScriptDeclarations) -> Self {
+    pub fn new(
+        output_directory: &'a Utf8Path,
+        typescript: TypeScriptDeclarations,
+        prelude_location: &'a Utf8Path,
+    ) -> Self {
         Self {
+            prelude_location,
             output_directory,
             typescript,
         }
@@ -174,17 +180,12 @@ impl<'a> JavaScript<'a> {
     }
 
     fn write_prelude(&self, writer: &impl FileSystemWriter) -> Result<()> {
-        writer.write(
-            &self.output_directory.join("gleam.mjs"),
-            javascript::PRELUDE,
-        )?;
-        tracing::debug!("Generated JS prelude");
+        let rexport = format!("export * from \"{}\";\n", self.prelude_location);
+
+        writer.write(&self.output_directory.join("gleam.mjs"), &rexport)?;
+
         if self.typescript == TypeScriptDeclarations::Emit {
-            writer.write(
-                &self.output_directory.join("gleam.d.mts"),
-                javascript::PRELUDE_TS_DEF,
-            )?;
-            tracing::debug!("Generated TS prelude");
+            writer.write(&self.output_directory.join("gleam.d.mts"), &rexport)?;
         }
         Ok(())
     }

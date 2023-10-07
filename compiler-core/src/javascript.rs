@@ -5,8 +5,6 @@ mod pattern;
 mod tests;
 mod typescript;
 
-use camino::Utf8Path;
-
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
@@ -14,6 +12,7 @@ use crate::{
     line_numbers::LineNumbers,
     pretty::*,
 };
+use camino::Utf8Path;
 use itertools::Itertools;
 use smol_str::SmolStr;
 
@@ -44,6 +43,7 @@ pub struct Generator<'a> {
 impl<'a> Generator<'a> {
     pub fn new(line_numbers: &'a LineNumbers, module: &'a TypedModule) -> Self {
         let current_module_name_segments_count = module.name.split('/').count();
+
         Self {
             current_module_name_segments_count,
             line_numbers,
