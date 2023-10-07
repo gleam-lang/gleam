@@ -11,7 +11,7 @@ use gleam_core::{
     type_::ModuleInterface,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
-    Result,
+    Error, Result,
 };
 use smol_str::SmolStr;
 use std::sync::Arc;
@@ -29,10 +29,9 @@ pub fn command(options: CompilePackage) -> Result<()> {
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: false,
             // TODO: prelude error
-            prelude_location: options.javascript_prelude.ok_or_else(|| {
-                let x: gleam_core::Error = todo!();
-                x
-            })?,
+            prelude_location: options
+                .javascript_prelude
+                .ok_or_else(|| Error::JavaScriptPreludeRequired)?,
         },
     };
 
