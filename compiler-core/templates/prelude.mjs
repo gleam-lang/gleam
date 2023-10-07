@@ -22,11 +22,6 @@ export class List {
     return array.reduceRight((xs, x) => new NonEmpty(x, xs), t);
   }
 
-  static isList(data) {
-    let variant = data?.__gleam_prelude_variant__;
-    return variant === "EmptyList" || variant === "NonEmptyList";
-  }
-
   [Symbol.iterator]() {
     return new ListIterator(this);
   }
@@ -74,7 +69,7 @@ class ListIterator {
   }
 
   next() {
-    if (this.#current.isEmpty()) {
+    if (this.#current instanceof Empty) {
       return { done: true };
     } else {
       let { head, tail } = this.#current;
@@ -84,15 +79,7 @@ class ListIterator {
   }
 }
 
-export class Empty extends List {
-  get __gleam_prelude_variant__() {
-    return "EmptyList";
-  }
-
-  isEmpty() {
-    return true;
-  }
-}
+export class Empty extends List {}
 
 export class NonEmpty extends List {
   constructor(head, tail) {
@@ -100,35 +87,14 @@ export class NonEmpty extends List {
     this.head = head;
     this.tail = tail;
   }
-
-  get __gleam_prelude_variant__() {
-    return "NonEmptyList";
-  }
-
-  isEmpty() {
-    return false;
-  }
 }
 
 export class BitArray {
-  static isBitArray(data) {
-    return data?.__gleam_prelude_variant__ === "BitArray";
-  }
-
-  // TODO: remove after next version
-  static isBitString(data) {
-    return BitArray.isBitArray(data);
-  }
-
   constructor(buffer) {
     if (!(buffer instanceof Uint8Array)) {
       throw "BitArray can only be constructed from a Uint8Array";
     }
     this.buffer = buffer;
-  }
-
-  get __gleam_prelude_variant__() {
-    return "BitArray";
   }
 
   inspect() {
@@ -166,10 +132,6 @@ export const BitString = BitArray;
 export class UtfCodepoint {
   constructor(value) {
     this.value = value;
-  }
-
-  get __gleam_prelude_variant__() {
-    return "UtfCodepoint";
   }
 
   inspect() {
@@ -244,8 +206,7 @@ export function float64Bits(float) {
 
 export class Result extends CustomType {
   static isResult(data) {
-    let variant = data?.__gleam_prelude_variant__;
-    return variant === "Ok" || variant === "Error";
+    return data instanceof Result;
   }
 }
 
@@ -253,10 +214,6 @@ export class Ok extends Result {
   constructor(value) {
     super();
     this[0] = value;
-  }
-
-  get __gleam_prelude_variant__() {
-    return "Ok";
   }
 
   isOk() {
@@ -268,10 +225,6 @@ export class Error extends Result {
   constructor(detail) {
     super();
     this[0] = detail;
-  }
-
-  get __gleam_prelude_variant__() {
-    return "Error";
   }
 
   isOk() {
@@ -397,11 +350,7 @@ function structurallyCompatibleObjects(a, b) {
   let nonstructural = [Promise, WeakSet, WeakMap, Function];
   if (nonstructural.some((c) => a instanceof c)) return false;
 
-  return (
-    a.constructor === b.constructor ||
-    (a.__gleam_prelude_variant__ &&
-      a.__gleam_prelude_variant__ === b.__gleam_prelude_variant__)
-  );
+  return a.constructor === b.constructor;
 }
 
 export function remainderInt(a, b) {
