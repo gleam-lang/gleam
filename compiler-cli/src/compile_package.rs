@@ -23,10 +23,16 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let warnings = WarningEmitter::new(Arc::new(ConsoleWarningEmitter));
     let paths = ProjectPaths::new(options.package_directory.clone());
     let config = config::read(paths.root_config())?;
+
     let target = match options.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: false,
+            // TODO: prelude error
+            prelude_location: options.javascript_prelude.ok_or_else(|| {
+                let x: gleam_core::Error = todo!();
+                x
+            })?,
         },
     };
 

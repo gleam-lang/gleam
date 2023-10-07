@@ -11,11 +11,6 @@
 //! <https://www.typescriptlang.org/>
 //! <https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html>
 
-use std::{collections::HashMap, ops::Deref, sync::Arc};
-
-use itertools::Itertools;
-use smol_str::SmolStr;
-
 use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{
@@ -27,6 +22,9 @@ use crate::{
     pretty::{break_, Document, Documentable},
     type_::{Type, TypeVar},
 };
+use itertools::Itertools;
+use smol_str::SmolStr;
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use super::{concat, import::Imports, line, lines, wrap_args, Output, INDENT};
 

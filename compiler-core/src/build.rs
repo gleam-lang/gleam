@@ -61,6 +61,14 @@ impl Target {
     pub fn variant_strings() -> Vec<SmolStr> {
         Self::VARIANTS.iter().map(|s| (*s).into()).collect()
     }
+
+    /// Returns `true` if the target is [`JavaScript`].
+    ///
+    /// [`JavaScript`]: Target::JavaScript
+    #[must_use]
+    pub fn is_javascript(&self) -> bool {
+        matches!(self, Self::JavaScript)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -102,6 +110,7 @@ impl Default for Runtime {
 pub enum TargetCodegenConfiguration {
     JavaScript {
         emit_typescript_definitions: bool,
+        prelude_location: Utf8PathBuf,
     },
     Erlang {
         app_file: Option<ErlangAppCodegenConfiguration>,

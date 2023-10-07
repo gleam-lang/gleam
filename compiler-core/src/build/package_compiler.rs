@@ -263,7 +263,12 @@ where
         match self.target {
             TargetCodegenConfiguration::JavaScript {
                 emit_typescript_definitions,
-            } => self.perform_javascript_codegen(modules, *emit_typescript_definitions),
+                prelude_location,
+            } => self.perform_javascript_codegen(
+                modules,
+                *emit_typescript_definitions,
+                prelude_location,
+            ),
             TargetCodegenConfiguration::Erlang { app_file } => {
                 self.perform_erlang_codegen(modules, app_file.as_ref())
             }
@@ -321,6 +326,7 @@ where
         &mut self,
         modules: &[Module],
         typescript: bool,
+        prelude_location: &Utf8Path,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
         let typescript = if typescript {
@@ -329,7 +335,7 @@ where
             TypeScriptDeclarations::None
         };
 
-        JavaScript::new(&self.out, typescript).render(&self.io, modules)?;
+        JavaScript::new(&self.out, typescript, prelude_location).render(&self.io, modules)?;
 
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;

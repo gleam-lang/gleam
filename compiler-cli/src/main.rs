@@ -289,6 +289,17 @@ pub struct CompilePackage {
     #[clap(long = "lib")]
     libraries_directory: Utf8PathBuf,
 
+    /// The location of the JavaScript prelude module, relative to the `out`
+    /// directory.
+    ///
+    /// Required when compiling to JavaScript.
+    ///
+    /// This likely wants to be a `.mjs` file as NodeJS does not permit
+    /// importing of other JavaScript file extentions.
+    ///
+    #[clap(long = "javascript-prelude")]
+    javascript_prelude: Option<Utf8PathBuf>,
+
     /// Skip Erlang to BEAM bytecode compilation if given
     #[clap(long = "no-beam")]
     skip_beam_compilation: bool,
