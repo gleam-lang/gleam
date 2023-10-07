@@ -18,6 +18,8 @@
   JavaScript, instead one copy is rendered for the entire project. If you are
   using the `gleam compile-package` API you now need to give a path to the
   prelude using the `--javascript-prelude` flag.
+- The `__gleam_prelude_variant__` property has been removed from the classes
+  defined in the JavaScript prelude.
 - The main process started with `gleam run` no longer traps exits on Erlang.
 - The formatting of code in rendered HTML documentation has been improved.
 - The content has been made wider in rendered HTML documentation.
