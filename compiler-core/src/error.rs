@@ -239,6 +239,9 @@ pub enum Error {
         required_version: String,
         gleam_version: String,
     },
+
+    #[error("The --javascript-prelude flag must be given when compiling to JavaScript")]
+    JavaScriptPreludeRequired,
 }
 
 impl Error {
@@ -2646,6 +2649,15 @@ but you are using v{}.",
                     level: Level::Error,
                 }
             }
+
+            Error::JavaScriptPreludeRequired => Diagnostic {
+                title: "JavaScript prelude required".into(),
+                text: "The --javascript-prelude flag must be given when compiling to JavaScript."
+                    .into(),
+                level: Level::Error,
+                location: None,
+                hint: None,
+            },
         }
     }
 }
