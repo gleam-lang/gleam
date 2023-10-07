@@ -30,6 +30,8 @@
 - The JS target now supports bit syntax for module consts.
 - The `gleam check` command supports the `target` flag now.
 - Fixed a bug where some hexidecimal numbers would generate incorrect Erlang.
+- Fixed a bug where markdown tables would not render correctly in HTML
+  documentation.
 - The float 0.0 is now rendered in Erlang as `+0.0` to silence warnings in
   Erlang/OTP 27.
 - A warning is now emitted if a module alias is unused.
