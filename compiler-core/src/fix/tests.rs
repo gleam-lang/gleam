@@ -352,3 +352,27 @@ type X {
 "
     );
 }
+
+#[test]
+fn pattern() {
+    assert_eq!(
+        fix("import x.{X}
+
+pub fn main(x) {
+  case x {
+    X -> 1
+    _ -> 0
+  }
+}
+"),
+        "import x.{X}
+
+pub fn main(x) {
+  case x {
+    X -> 1
+    _ -> 0
+  }
+}
+"
+    );
+}

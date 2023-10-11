@@ -1,11 +1,15 @@
 use std::collections::HashMap;
 
 use crate::{
+    analyse::Inferred,
     ast::{
-        CallArg, Constant, Definition, SrcSpan, TypeAst, TypeAstConstructor, UntypedConstant,
-        UntypedDefinition, UntypedExpr, UntypedImport, UntypedModule,
+        CallArg, Constant, Definition, Pattern, SrcSpan, TypeAst, TypeAstConstructor,
+        UntypedConstant, UntypedDefinition, UntypedExpr, UntypedImport, UntypedModule,
+        UntypedPattern,
     },
-    ast_folder::{TypeAstFolder, UntypedConstantFolder, UntypedExprFolder, UntypedModuleFolder},
+    ast_folder::{
+        PatternFolder, TypeAstFolder, UntypedConstantFolder, UntypedExprFolder, UntypedModuleFolder,
+    },
 };
 use im::HashSet;
 use smol_str::SmolStr;
@@ -167,6 +171,33 @@ impl TypeAstFolder for Fixer {
         }
 
         TypeAst::Constructor(constructor)
+    }
+}
+
+impl PatternFolder for Fixer {
+    fn fold_pattern_constructor(
+        &mut self,
+        location: SrcSpan,
+        name: SmolStr,
+        arguments: Vec<CallArg<UntypedPattern>>,
+        module: Option<SmolStr>,
+        with_spread: bool,
+    ) -> UntypedPattern {
+        if module.is_none() && !self.local_types.contains(&name) {
+            if let Some(import) = self.imports.get_mut(&name) {
+                import.used_as_value = true;
+            }
+        }
+
+        Pattern::Constructor {
+            location,
+            name,
+            arguments,
+            module,
+            with_spread,
+            constructor: Inferred::Unknown,
+            type_: (),
+        }
     }
 }
 

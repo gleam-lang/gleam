@@ -2,14 +2,15 @@ use smol_str::SmolStr;
 use vec1::Vec1;
 
 use crate::{
+    analyse::Inferred,
     ast::{
-        Assignment, BinOp, CallArg, Constant, Definition, RecordUpdateSpread, SrcSpan, Statement,
-        TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole,
-        TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssignment, UntypedClause, UntypedConstant,
-        UntypedConstantBitArraySegment, UntypedCustomType, UntypedDefinition, UntypedExpr,
-        UntypedExprBitArraySegment, UntypedFunction, UntypedImport, UntypedModule,
-        UntypedModuleConstant, UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias, Use,
-        UseAssignment,
+        AssignName, Assignment, BinOp, CallArg, Constant, Definition, Pattern, RecordUpdateSpread,
+        SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor, TypeAstFn,
+        TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssignment, UntypedClause,
+        UntypedConstant, UntypedConstantBitArraySegment, UntypedCustomType, UntypedDefinition,
+        UntypedExpr, UntypedExprBitArraySegment, UntypedFunction, UntypedImport, UntypedModule,
+        UntypedModuleConstant, UntypedPattern, UntypedPatternBitArraySegment,
+        UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias, Use, UseAssignment,
     },
     build::Target,
 };
@@ -220,7 +221,7 @@ pub trait TypeAstFolder {
     }
 }
 
-pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder {
+pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFolder {
     /// Visit a node and potentially replace it with another node using the
     /// `fold_*` methods. Afterwards, the `walk` method is called on the new
     /// node to continue traversing.
@@ -425,6 +426,16 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder {
                 let clauses = clauses
                     .into_iter()
                     .map(|mut c| {
+                        c.pattern = c
+                            .pattern
+                            .into_iter()
+                            .map(|p| self.fold_pattern(p))
+                            .collect();
+                        c.alternative_patterns = c
+                            .alternative_patterns
+                            .into_iter()
+                            .map(|p| p.into_iter().map(|p| self.fold_pattern(p)).collect())
+                            .collect();
                         c.then = self.fold_expr(c.then);
                         c
                     })
@@ -546,6 +557,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder {
                 kind,
                 annotation,
             }) => {
+                let pattern = self.fold_pattern(pattern);
                 let annotation = annotation.map(|t| self.fold_type(t));
                 let value = Box::new(self.fold_expr(*value));
                 Statement::Assignment(Assignment {
@@ -564,7 +576,11 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder {
             }) => {
                 let assignments = assignments
                     .into_iter()
-                    .map(|a| self.fold_use_assignment(a))
+                    .map(|a| {
+                        let mut use_ = self.fold_use_assignment(a);
+                        use_.pattern = self.fold_pattern(use_.pattern);
+                        use_
+                    })
                     .collect();
                 let call = Box::new(self.fold_expr(*call));
                 Statement::Use(Use {
@@ -962,6 +978,292 @@ pub trait UntypedConstantFolder {
                     })
                     .collect();
                 Constant::BitArray { location, segments }
+            }
+        }
+    }
+}
+
+pub trait PatternFolder {
+    /// You probably don't want to override this method.
+    fn fold_pattern(&mut self, m: UntypedPattern) -> UntypedPattern {
+        let m = self.update_pattern(m);
+        self.walk_pattern(m)
+    }
+
+    /// You probably don't want to override this method.
+    fn update_pattern(&mut self, m: UntypedPattern) -> UntypedPattern {
+        match m {
+            Pattern::Int { location, value } => self.fold_pattern_int(location, value),
+
+            Pattern::Float { location, value } => self.fold_pattern_float(location, value),
+
+            Pattern::String { location, value } => self.fold_pattern_string(location, value),
+
+            Pattern::Var {
+                location,
+                name,
+                type_: (),
+            } => self.fold_pattern_var(location, name),
+
+            Pattern::VarUsage {
+                location,
+                name,
+                constructor: _,
+                type_: (),
+            } => self.fold_pattern_var_usage(location, name),
+
+            Pattern::Assign {
+                name,
+                location,
+                pattern,
+            } => self.fold_pattern_assign(name, location, pattern),
+
+            Pattern::Discard {
+                name,
+                location,
+                type_: (),
+            } => self.fold_pattern_discard(name, location),
+
+            Pattern::List {
+                location,
+                elements,
+                tail,
+                type_: (),
+            } => self.fold_pattern_list(location, elements, tail),
+
+            Pattern::Constructor {
+                location,
+                name,
+                arguments,
+                module,
+                with_spread,
+                constructor: _,
+                type_: (),
+            } => self.fold_pattern_constructor(location, name, arguments, module, with_spread),
+
+            Pattern::Tuple { location, elems } => self.fold_pattern_tuple(location, elems),
+
+            Pattern::BitArray { location, segments } => {
+                self.fold_pattern_bit_array(location, segments)
+            }
+
+            Pattern::Concatenate {
+                location,
+                left_location,
+                left_side_assignment,
+                right_location,
+                left_side_string,
+                right_side_assignment,
+            } => self.fold_pattern_concatenate(
+                location,
+                left_location,
+                left_side_assignment,
+                right_location,
+                left_side_string,
+                right_side_assignment,
+            ),
+        }
+    }
+
+    fn fold_pattern_int(&mut self, location: SrcSpan, value: SmolStr) -> UntypedPattern {
+        Pattern::Int { location, value }
+    }
+
+    fn fold_pattern_float(&mut self, location: SrcSpan, value: SmolStr) -> UntypedPattern {
+        Pattern::Float { location, value }
+    }
+
+    fn fold_pattern_string(&mut self, location: SrcSpan, value: SmolStr) -> UntypedPattern {
+        Pattern::String { location, value }
+    }
+
+    fn fold_pattern_var(&mut self, location: SrcSpan, name: SmolStr) -> UntypedPattern {
+        Pattern::Var {
+            location,
+            name,
+            type_: (),
+        }
+    }
+
+    fn fold_pattern_var_usage(&mut self, location: SrcSpan, name: SmolStr) -> UntypedPattern {
+        Pattern::VarUsage {
+            location,
+            name,
+            constructor: None,
+            type_: (),
+        }
+    }
+
+    fn fold_pattern_assign(
+        &mut self,
+        name: SmolStr,
+        location: SrcSpan,
+        pattern: Box<UntypedPattern>,
+    ) -> UntypedPattern {
+        Pattern::Assign {
+            name,
+            location,
+            pattern,
+        }
+    }
+
+    fn fold_pattern_discard(&mut self, name: SmolStr, location: SrcSpan) -> UntypedPattern {
+        Pattern::Discard {
+            name,
+            location,
+            type_: (),
+        }
+    }
+
+    fn fold_pattern_list(
+        &mut self,
+        location: SrcSpan,
+        elements: Vec<UntypedPattern>,
+        tail: Option<Box<UntypedPattern>>,
+    ) -> UntypedPattern {
+        Pattern::List {
+            location,
+            elements,
+            tail,
+            type_: (),
+        }
+    }
+
+    fn fold_pattern_constructor(
+        &mut self,
+        location: SrcSpan,
+        name: SmolStr,
+        arguments: Vec<CallArg<UntypedPattern>>,
+        module: Option<SmolStr>,
+        with_spread: bool,
+    ) -> UntypedPattern {
+        Pattern::Constructor {
+            location,
+            name,
+            arguments,
+            module,
+            constructor: Inferred::Unknown,
+            with_spread,
+            type_: (),
+        }
+    }
+
+    fn fold_pattern_tuple(
+        &mut self,
+        location: SrcSpan,
+        elems: Vec<UntypedPattern>,
+    ) -> UntypedPattern {
+        Pattern::Tuple { location, elems }
+    }
+
+    fn fold_pattern_bit_array(
+        &mut self,
+        location: SrcSpan,
+        segments: Vec<UntypedPatternBitArraySegment>,
+    ) -> UntypedPattern {
+        Pattern::BitArray { location, segments }
+    }
+
+    fn fold_pattern_concatenate(
+        &mut self,
+        location: SrcSpan,
+        left_location: SrcSpan,
+        left_side_assignment: Option<(SmolStr, SrcSpan)>,
+        right_location: SrcSpan,
+        left_side_string: SmolStr,
+        right_side_assignment: AssignName,
+    ) -> UntypedPattern {
+        Pattern::Concatenate {
+            location,
+            left_location,
+            left_side_assignment,
+            right_location,
+            left_side_string,
+            right_side_assignment,
+        }
+    }
+
+    /// You probably don't want to override this method.
+    fn walk_pattern(&mut self, m: UntypedPattern) -> UntypedPattern {
+        match m {
+            Pattern::Int { .. }
+            | Pattern::Var { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Discard { .. }
+            | Pattern::VarUsage { .. }
+            | Pattern::Concatenate { .. } => m,
+
+            Pattern::Assign {
+                name,
+                location,
+                pattern,
+            } => {
+                let pattern = Box::new(self.fold_pattern(*pattern));
+                Pattern::Assign {
+                    name,
+                    location,
+                    pattern,
+                }
+            }
+
+            Pattern::List {
+                location,
+                elements,
+                tail,
+                type_,
+            } => {
+                let elements = elements.into_iter().map(|p| self.fold_pattern(p)).collect();
+                let tail = tail.map(|p| Box::new(self.fold_pattern(*p)));
+                Pattern::List {
+                    location,
+                    elements,
+                    tail,
+                    type_,
+                }
+            }
+
+            Pattern::Constructor {
+                location,
+                name,
+                arguments,
+                module,
+                constructor,
+                with_spread,
+                type_,
+            } => {
+                let arguments = arguments
+                    .into_iter()
+                    .map(|mut a| {
+                        a.value = self.fold_pattern(a.value);
+                        a
+                    })
+                    .collect();
+                Pattern::Constructor {
+                    location,
+                    name,
+                    arguments,
+                    module,
+                    constructor,
+                    with_spread,
+                    type_,
+                }
+            }
+
+            Pattern::Tuple { location, elems } => {
+                let elems = elems.into_iter().map(|p| self.fold_pattern(p)).collect();
+                Pattern::Tuple { location, elems }
+            }
+
+            Pattern::BitArray { location, segments } => {
+                let segments = segments
+                    .into_iter()
+                    .map(|mut s| {
+                        s.value = Box::new(self.fold_pattern(*s.value));
+                        s
+                    })
+                    .collect();
+                Pattern::BitArray { location, segments }
             }
         }
     }
