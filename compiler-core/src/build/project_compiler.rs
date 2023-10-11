@@ -161,10 +161,6 @@ where
         // dependency has warnings, only if the root package does.
         self.warnings.reset_count();
 
-        match self.options.codegen {
-            Codegen::All => self.telemetry.compiling_package(&self.config.name),
-            Codegen::DepsOnly | Codegen::None => self.telemetry.checking_package(&self.config.name),
-        }
         let root_package = self.compile_root_package()?;
 
         // TODO: test

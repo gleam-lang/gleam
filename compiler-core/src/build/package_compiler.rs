@@ -128,7 +128,11 @@ where
 
         if !loaded.to_compile.is_empty() {
             // Print that work is being done
-            telemetry.compiling_package(&self.config.name);
+            if self.perform_codegen {
+                telemetry.compiling_package(&self.config.name);
+            } else {
+                telemetry.checking_package(&self.config.name)
+            }
         }
 
         // Type check the modules that are new or have changed
