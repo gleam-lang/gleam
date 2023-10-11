@@ -530,7 +530,7 @@ fn render_markdown(text: &str) -> String {
     // and prevent tables from rendering correctly, so remove that first space.
     let text = text
         .split('\n')
-        .map(|s| s.strip_prefix(" ").unwrap_or(s))
+        .map(|s| s.strip_prefix(' ').unwrap_or(s))
         .join("\n");
 
     let mut s = String::with_capacity(text.len() * 3 / 2);
