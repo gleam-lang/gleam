@@ -227,10 +227,8 @@ where
             let mut actions = vec![];
 
             // Check if unused removal can be performed
-            if is_action_attached_to_unused_diagnostic(&params) {
-                if let Some(ranges) = this.get_unused_ranges(&params.text_document.uri) {
-                    actions.push(make_unused_code_action(params.text_document.uri, &ranges))
-                }
+            if let Some(ranges) = this.get_unused_ranges(&params.text_document.uri) {
+                actions.push(make_unused_code_action(params.text_document.uri, &ranges))
             }
 
             Ok(if actions.is_empty() {
@@ -581,14 +579,6 @@ fn hover_for_expression(expression: &TypedExpr, line_numbers: LineNumbers) -> Ho
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
     }
-}
-
-fn is_action_attached_to_unused_diagnostic(params: &lsp::CodeActionParams) -> bool {
-    params
-        .context
-        .diagnostics
-        .iter()
-        .any(|diag| diag.message.starts_with("Unused"))
 }
 
 // Convert a list of unused range into a "Remove unused" code action.
