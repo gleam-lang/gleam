@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        CallArg, Constant, CustomType, Definition, Import, ImportName, SrcSpan, TypeAlias, TypeAst,
+        AssignName, CallArg, Constant, CustomType, Definition, Import, SrcSpan, TypeAlias, TypeAst,
         TypeAstConstructor, UntypedConstant, UntypedDefinition, UntypedImport, UntypedModule,
     },
     ast_folder::{
@@ -51,8 +51,8 @@ impl Fixer {
             Definition::Import(i) => {
                 if i.module == "gleam" {
                     self.prelude_module_import_alias = match i.used_name() {
-                        ImportName::Alias(_, name) | ImportName::Original(_, name) => Some(name),
-                        ImportName::Discarded(_, _) => None,
+                        AssignName::Variable(name, ..) => Some(name),
+                        AssignName::Discard(_) => None,
                     }
                 } else {
                     for i in i.unqualified_values.iter().chain(&i.unqualified_types) {

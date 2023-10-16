@@ -401,7 +401,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             } => {
                 self.push_string_prefix_check(subject.clone(), left_side_string);
                 self.push_string_prefix_slice(utf16_no_escape_len(left_side_string));
-                if let AssignName::Variable(right) = right_side_assignment {
+                if let AssignName::Variable(right, ..) = right_side_assignment {
                     self.push_assignment(subject.clone(), right);
                 }
                 self.pop();

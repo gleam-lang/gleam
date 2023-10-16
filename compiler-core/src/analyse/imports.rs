@@ -1,7 +1,7 @@
 use smol_str::SmolStr;
 
 use crate::{
-    ast::{Import, ImportName, SrcSpan, UnqualifiedImport},
+    ast::{AssignName, AssignVariableType, Import, SrcSpan, UnqualifiedImport},
     build::Origin,
     type_::{
         self, Deprecation, EntityKind, Environment, Error, ModuleInterface, ValueConstructorVariant,
@@ -229,9 +229,7 @@ impl<'a> Importer<'a> {
         import: &Import<()>,
         import_info: &'a ModuleInterface,
     ) -> Result<(), Error> {
-        if let ImportName::Original(location, used_name) | ImportName::Alias(location, used_name) =
-            import.used_name()
-        {
+        if let AssignName::Variable(used_name, location, variable_type) = import.used_name() {
             self.check_not_a_duplicate_import(&used_name, import.location)?;
 
             if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
@@ -243,7 +241,7 @@ impl<'a> Importer<'a> {
                     .insert(used_name.clone(), import.location);
             }
 
-            if let ImportName::Alias(_, _) = import.used_name() {
+            if variable_type == AssignVariableType::Alias {
                 // We also register it's name to differentiate between unused module
                 // and unused module name. See 'convert_unused_to_warnings'.
                 let _ = self

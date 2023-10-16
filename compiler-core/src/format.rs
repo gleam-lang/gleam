@@ -256,10 +256,9 @@ impl<'comments> Formatter<'comments> {
                 };
                 let doc = docvec!["import ", module.as_str(), second];
                 match as_name {
-                    ImportName::Alias(_, name) | ImportName::Discarded(_, name) => {
-                        doc.append(" as ").append(name)
-                    }
-                    ImportName::Original(_, _) => doc,
+                    AssignName::Variable(name, _, AssignVariableType::Alias)
+                    | AssignName::Discard(name) => doc.append(" as ").append(name),
+                    AssignName::Variable(..) => doc,
                 }
             }
 
@@ -1348,8 +1347,8 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => {
                 let right = match right {
-                    AssignName::Variable(name) => name.to_doc(),
-                    AssignName::Discard(name) => name.to_doc(),
+                    AssignName::Variable(name, ..) => name.to_doc(),
+                    AssignName::Discard(name, ..) => name.to_doc(),
                 };
                 docvec![self.string(left), " <> ", right]
             }

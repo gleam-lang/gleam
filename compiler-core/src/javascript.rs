@@ -345,12 +345,12 @@ impl<'a> Generator<'a> {
         imports: &mut Imports<'a>,
         package: &'a str,
         module: &'a str,
-        as_name: &'a ImportName,
+        as_name: &'a AssignName,
         unqualified: &'a [UnqualifiedImport],
     ) {
         let (discarded, module_name) = match as_name {
-            ImportName::Alias(_, name) | ImportName::Original(_, name) => (false, name.as_str()),
-            ImportName::Discarded(_, _) => (
+            AssignName::Variable(name, ..) => (false, name.as_str()),
+            AssignName::Discard(_) => (
                 true,
                 module
                     .split('/')

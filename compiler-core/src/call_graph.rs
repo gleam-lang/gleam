@@ -240,7 +240,7 @@ impl<'a> CallGraphBuilder<'a> {
             } => (),
 
             Pattern::Concatenate {
-                right_side_assignment: AssignName::Variable(name),
+                right_side_assignment: AssignName::Variable(name, ..),
                 ..
             }
             | Pattern::Var { name, .. } => {

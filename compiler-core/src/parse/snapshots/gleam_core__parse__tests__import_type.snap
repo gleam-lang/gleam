@@ -18,12 +18,13 @@ Parsed {
                             end: 48,
                         },
                         module: "wibble",
-                        as_name: Original(
+                        as_name: Variable(
+                            "wibble",
                             SrcSpan {
                                 start: 7,
                                 end: 48,
                             },
-                            "wibble",
+                            Original,
                         ),
                         unqualified_values: [
                             UnqualifiedImport {

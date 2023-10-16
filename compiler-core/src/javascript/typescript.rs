@@ -11,10 +11,11 @@
 //! <https://www.typescriptlang.org/>
 //! <https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html>
 
+use crate::ast::AssignName;
 use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{
-        CustomType, Definition, Function, Import, ImportName, ModuleConstant, TypeAlias, TypedArg,
+        CustomType, Definition, Function, Import, ModuleConstant, TypeAlias, TypedArg,
         TypedConstant, TypedDefinition, TypedModule, TypedRecordConstructor,
     },
     docvec,
@@ -249,10 +250,10 @@ impl<'a> TypeScriptGenerator<'a> {
                     ..
                 }) => {
                     match as_name {
-                        ImportName::Alias(_, name) | ImportName::Original(_, name) => {
+                        AssignName::Variable(name, ..) => {
                             let _ = self.aliased_module_names.insert(module, name);
                         }
-                        ImportName::Discarded(_, _) => (),
+                        AssignName::Discard(..) => (),
                     }
 
                     self.register_import(&mut imports, package, module);

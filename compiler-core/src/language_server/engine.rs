@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ImportName, ModuleConstant, TypedDefinition, TypedExpr,
+        Arg, AssignName, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr,
         TypedPattern,
     },
     build::{Located, Module},
@@ -343,8 +343,8 @@ where
                     continue;
                 }
                 let module = match alias.clone() {
-                    ImportName::Alias(_, name) | ImportName::Original(_, name) => Some(name),
-                    ImportName::Discarded(_, _) => None,
+                    AssignName::Variable(name, ..) => Some(name),
+                    AssignName::Discard(_) => None,
                 };
                 completions.push(type_completion(module, name, type_));
             }
@@ -387,8 +387,8 @@ where
                 }
 
                 let module = match alias.clone() {
-                    ImportName::Alias(_, name) | ImportName::Original(_, name) => Some(name),
-                    ImportName::Discarded(_, _) => None,
+                    AssignName::Variable(name, ..) => Some(name),
+                    AssignName::Discard(_) => None,
                 };
                 completions.push(value_completion(module.as_deref(), name, value));
             }

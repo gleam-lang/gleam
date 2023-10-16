@@ -386,13 +386,6 @@ impl<T, E> Function<T, E> {
 pub type UntypedImport = Import<()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ImportName {
-    Alias(SrcSpan, SmolStr),
-    Original(SrcSpan, SmolStr),
-    Discarded(SrcSpan, SmolStr),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 /// Import another Gleam module so the current module can use the types and
 /// values it defines.
 ///
@@ -407,14 +400,14 @@ pub struct Import<PackageName> {
     pub documentation: Option<SmolStr>,
     pub location: SrcSpan,
     pub module: SmolStr,
-    pub as_name: ImportName,
+    pub as_name: AssignName,
     pub unqualified_values: Vec<UnqualifiedImport>,
     pub unqualified_types: Vec<UnqualifiedImport>,
     pub package: PackageName,
 }
 
 impl<T> Import<T> {
-    pub(crate) fn used_name(&self) -> ImportName {
+    pub(crate) fn used_name(&self) -> AssignName {
         self.as_name.clone()
     }
 }
@@ -1156,29 +1149,35 @@ impl Default for Inferred<()> {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum AssignVariableType {
+    Alias,
+    Original,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AssignName {
-    Variable(SmolStr),
+    Variable(SmolStr, SrcSpan, AssignVariableType),
     Discard(SmolStr),
 }
 
 impl AssignName {
     pub fn name(&self) -> &str {
         match self {
-            AssignName::Variable(name) | AssignName::Discard(name) => name,
+            AssignName::Variable(name, ..) | AssignName::Discard(name) => name,
         }
     }
 
     pub fn to_arg_names(self) -> ArgNames {
         match self {
-            AssignName::Variable(name) => ArgNames::Named { name },
+            AssignName::Variable(name, ..) => ArgNames::Named { name },
             AssignName::Discard(name) => ArgNames::Discard { name },
         }
     }
 
     pub fn assigned_name(&self) -> Option<&str> {
         match self {
-            AssignName::Variable(name) => Some(name),
+            AssignName::Variable(name, ..) => Some(name),
             AssignName::Discard(_) => None,
         }
     }
