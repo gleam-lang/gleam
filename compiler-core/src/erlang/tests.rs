@@ -587,3 +587,15 @@ fn inline_const_pattern_option() {
           pub const sixteen = 16"
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/2349
+#[test]
+fn positive_zero() {
+    assert_erl!(
+        "
+pub fn main() {
+  0.0
+}
+"
+    )
+}

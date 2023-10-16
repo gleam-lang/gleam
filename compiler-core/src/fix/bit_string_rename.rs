@@ -3,7 +3,9 @@ use crate::{
         CallArg, Constant, CustomType, Definition, Import, ImportName, SrcSpan, TypeAlias, TypeAst,
         TypeAstConstructor, UntypedConstant, UntypedDefinition, UntypedImport, UntypedModule,
     },
-    ast_folder::{TypeAstFolder, UntypedConstantFolder, UntypedExprFolder, UntypedModuleFolder},
+    ast_folder::{
+        PatternFolder, TypeAstFolder, UntypedConstantFolder, UntypedExprFolder, UntypedModuleFolder,
+    },
     build::Target,
 };
 use smol_str::SmolStr;
@@ -113,3 +115,5 @@ impl TypeAstFolder for Fixer {
         TypeAst::Constructor(constructor)
     }
 }
+
+impl PatternFolder for Fixer {}

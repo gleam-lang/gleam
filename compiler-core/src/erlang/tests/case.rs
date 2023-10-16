@@ -17,3 +17,33 @@ pub fn myfun(mt) {
 "
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/2349
+#[test]
+fn positive_zero_pattern() {
+    assert_erl!(
+        "
+pub fn main(x) {
+  case x {
+    0.0 -> 1
+    _ -> 2
+  }
+}
+"
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/2349
+#[test]
+fn negative_zero_pattern() {
+    assert_erl!(
+        "
+pub fn main(x) {
+  case x {
+    -0.0 -> 1
+    _ -> 2
+  }
+}
+"
+    )
+}

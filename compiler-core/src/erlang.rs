@@ -856,6 +856,9 @@ fn float<'a>(value: &str) -> Document<'a> {
     if value.ends_with('.') {
         value.push('0')
     }
+    if value == "0.0" {
+        return "+0.0".to_doc();
+    }
     Document::String(value)
 }
 

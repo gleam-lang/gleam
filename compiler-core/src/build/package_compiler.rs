@@ -25,7 +25,7 @@ use std::{collections::HashMap, fmt::write, time::SystemTime};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration};
+use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
 
 #[cfg(not(target_os = "windows"))]
 const ELIXIR_EXECUTABLE: &str = "elixir";
@@ -92,6 +92,7 @@ where
         existing_modules: &mut im::HashMap<SmolStr, type_::ModuleInterface>,
         already_defined_modules: &mut im::HashMap<SmolStr, Utf8PathBuf>,
         stale_modules: &mut StaleTracker,
+        telemetry: &dyn Telemetry,
     ) -> Result<Vec<Module>, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
@@ -123,6 +124,15 @@ where
         // Load the cached modules that have previously been compiled
         for module in loaded.cached.into_iter() {
             _ = existing_modules.insert(module.name.clone(), module.clone());
+        }
+
+        if !loaded.to_compile.is_empty() {
+            // Print that work is being done
+            if self.perform_codegen {
+                telemetry.compiling_package(&self.config.name);
+            } else {
+                telemetry.checking_package(&self.config.name)
+            }
         }
 
         // Type check the modules that are new or have changed
@@ -263,7 +273,12 @@ where
         match self.target {
             TargetCodegenConfiguration::JavaScript {
                 emit_typescript_definitions,
-            } => self.perform_javascript_codegen(modules, *emit_typescript_definitions),
+                prelude_location,
+            } => self.perform_javascript_codegen(
+                modules,
+                *emit_typescript_definitions,
+                prelude_location,
+            ),
             TargetCodegenConfiguration::Erlang { app_file } => {
                 self.perform_erlang_codegen(modules, app_file.as_ref())
             }
@@ -321,6 +336,7 @@ where
         &mut self,
         modules: &[Module],
         typescript: bool,
+        prelude_location: &Utf8Path,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
         let typescript = if typescript {
@@ -329,7 +345,7 @@ where
             TypeScriptDeclarations::None
         };
 
-        JavaScript::new(&self.out, typescript).render(&self.io, modules)?;
+        JavaScript::new(&self.out, typescript, prelude_location).render(&self.io, modules)?;
 
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;

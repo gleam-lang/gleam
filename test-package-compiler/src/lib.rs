@@ -9,7 +9,8 @@ mod generated_tests;
 
 use gleam_core::{
     build::{
-        ErlangAppCodegenConfiguration, Mode, StaleTracker, Target, TargetCodegenConfiguration,
+        ErlangAppCodegenConfiguration, Mode, NullTelemetry, StaleTracker, Target,
+        TargetCodegenConfiguration,
     },
     config::PackageConfig,
     io::{memory::InMemoryFileSystem, Content, FileSystemWriter},
@@ -35,6 +36,7 @@ pub fn prepare(path: &str) -> String {
         },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: config.javascript.typescript_declarations,
+            prelude_location: Utf8PathBuf::from("../prelude.mjs"),
         },
     };
 
@@ -66,6 +68,7 @@ pub fn prepare(path: &str) -> String {
         &mut modules,
         &mut im::HashMap::new(),
         &mut StaleTracker::default(),
+        &NullTelemetry,
     );
     match result {
         Ok(_) => {

@@ -5,11 +5,9 @@ export class CustomType {
 
 export interface ListStatic {
   fromArray<T>(array: Array<T>): List<T>;
-  isList(value: unknown): boolean;
 }
 
 export interface List<T> extends Iterable<T> {
-  get __gleam_prelude_variant__(): "EmptyList" | "NonEmptyList";
   head?: T;
   tail?: List<T>;
   inspect(): string;
@@ -21,12 +19,7 @@ export interface List<T> extends Iterable<T> {
 
 export function toList<T>(array: Array<T>): List<T>;
 
-export interface BitArrayStatic {
-  isBitArray(value: unknown): boolean;
-}
-
 export interface BitArray {
-  get __gleam_prelude_variant__(): "BitArray";
   get length(): number;
   inspect(): string;
   byteAt(index: number): number;
@@ -36,7 +29,6 @@ export interface BitArray {
 }
 
 export interface Utf8Codepoint {
-  get __gleam_prelude_variant__(): "UtfCodepoint";
   inspect(): string;
 }
 
@@ -51,7 +43,6 @@ export function codepointBits(codepoint: Utf8Codepoint): Uint8Array;
 export function float64Bits(float: number): Uint8Array;
 
 export interface Result<T, E> {
-  get __gleam_prelude_variant__(): "Ok" | "Error";
   isOk(): boolean;
   inspect(): string;
 }

@@ -1,6 +1,7 @@
 name: release-nightly
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '45 0 * * *'
 
@@ -81,16 +82,7 @@ jobs:
       - name: Update versions
         shell: bash
         run: |
-          version=0.0.0-nightly-$(date +"%y%m%d")
-          
-          sed "s/^version = \".*\"\$/version = \"$version\"/" compiler-core/Cargo.toml > /tmp/gleam-cargo.toml
-          mv /tmp/gleam-cargo.toml compiler-core/Cargo.toml
-          
-          sed "s/^version = \".*\"\$/version = \"$version\"/" compiler-wasm/Cargo.toml > /tmp/gleam-cargo.toml
-          mv /tmp/gleam-cargo.toml compiler-wasm/Cargo.toml
-          
-          sed "s/^version = \".*\"\$/version = \"$version\"/" compiler-cli/Cargo.toml > /tmp/gleam-cargo.toml
-          mv /tmp/gleam-cargo.toml compiler-cli/Cargo.toml
+          ./bin/add-nightly-suffix-to-versions.sh
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -154,19 +146,14 @@ jobs:
         shell: bash
         run: |
           for i in $(seq 5); do
-            hub release edit nightly \
-              --draft=false \
-              --prerelease \
-              --message=Nightly \
-              --message="nightly release for ${{ env.DAY }}" \
-              --attach="${{ env.ASSET }}" \
-              --attach="${{ env.ASSET }}.sha256" \
-              --attach="${{ env.ASSET }}.sha512" \
+            gh release upload nightly --clobber \
+              "${{ env.ASSET }}" \
+              "${{ env.ASSET }}.sha256" \
+              "${{ env.ASSET }}.sha512" \
             && break
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HUB_VERBOSE: 1
 
       - name: Upload x86_64-unknown-linux-musl artifact
         uses: actions/upload-artifact@v2

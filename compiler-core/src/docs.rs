@@ -1,4 +1,6 @@
 mod source_links;
+#[cfg(test)]
+mod tests;
 
 use std::time::SystemTime;
 
@@ -30,13 +32,14 @@ pub fn generate_html(
     config: &PackageConfig,
     analysed: &[Module],
     docs_pages: &[DocsPage],
+    rendering_timestamp: SystemTime,
 ) -> Vec<OutputFile> {
     let modules = analysed
         .iter()
         .filter(|module| !module.is_test())
         .filter(|module| !config.is_internal_module(&module.name));
 
-    let rendering_timestamp = SystemTime::now()
+    let rendering_timestamp = rendering_timestamp
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("get current timestamp")
         .as_secs()
@@ -492,7 +495,11 @@ fn function<'a>(
             name,
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
-            signature: print(formatter.docs_fn_signature(true, name, args, ret.clone())),
+            signature: print(
+                formatter
+                    .docs_fn_signature(true, name, args, ret.clone())
+                    .group(),
+            ),
             source_url: source_links.url(location),
             deprecation_message: match deprecation {
                 Deprecation::NotDeprecated => "".to_string(),
@@ -519,8 +526,15 @@ fn markdown_documentation(doc: &Option<SmolStr>) -> String {
 }
 
 fn render_markdown(text: &str) -> String {
+    // Doc comments start with "///\s", which can confuse the markdown parser
+    // and prevent tables from rendering correctly, so remove that first space.
+    let text = text
+        .split('\n')
+        .map(|s| s.strip_prefix(' ').unwrap_or(s))
+        .join("\n");
+
     let mut s = String::with_capacity(text.len() * 3 / 2);
-    let p = pulldown_cmark::Parser::new_ext(text, pulldown_cmark::Options::all());
+    let p = pulldown_cmark::Parser::new_ext(&text, pulldown_cmark::Options::all());
     pulldown_cmark::html::push_html(&mut s, p);
     s
 }
@@ -577,7 +591,11 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             ..
         }) => Some(Type {
             name,
-            definition: print(formatter.docs_opaque_custom_type(true, name, parameters, location)),
+            definition: print(
+                formatter
+                    .docs_opaque_custom_type(true, name, parameters, location)
+                    .group(),
+            ),
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
             constructors: vec![],
@@ -594,7 +612,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             ..
         }) => Some(Type {
             name,
-            definition: print(formatter.type_alias(true, name, args, typ)),
+            definition: print(formatter.type_alias(true, name, args, typ).group()),
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
             constructors: vec![],

@@ -5,13 +5,15 @@ use crate::{
 };
 use camino::Utf8Path;
 use gleam_core::{
-    build::{Mode, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration},
+    build::{
+        Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
+    },
     metadata,
     paths::{self, ProjectPaths},
     type_::ModuleInterface,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
-    Result,
+    Error, Result,
 };
 use smol_str::SmolStr;
 use std::sync::Arc;
@@ -23,10 +25,14 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let warnings = WarningEmitter::new(Arc::new(ConsoleWarningEmitter));
     let paths = ProjectPaths::new(options.package_directory.clone());
     let config = config::read(paths.root_config())?;
+
     let target = match options.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: false,
+            prelude_location: options
+                .javascript_prelude
+                .ok_or_else(|| Error::JavaScriptPreludeRequired)?,
         },
     };
 
@@ -50,6 +56,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
         &mut type_manifests,
         &mut defined_modules,
         &mut StaleTracker::default(),
+        &NullTelemetry,
     )?;
 
     Ok(())

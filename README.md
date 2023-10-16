@@ -79,6 +79,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Dmitry Poroh](https://github.com/poroh)
  - [Edon Gashi](https://github.com/edongashi)
  - [Elliott Pogue](https://github.com/epogue)
+ - [Emma](https://github.com/Emma-Fuller)
  - [Erik Terpstra](https://github.com/eterps)
  - [Ernesto Malave](https://github.com/oberernst)
  - [Fernando Farias](https://github.com/nandofarias)

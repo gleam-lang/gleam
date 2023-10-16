@@ -101,3 +101,13 @@ Your hex tarball has been generated in {}.
     );
     Ok(())
 }
+
+pub fn javascript_prelude() -> Result<()> {
+    print!("{}", gleam_core::javascript::PRELUDE);
+    Ok(())
+}
+
+pub fn typescript_prelude() -> Result<()> {
+    print!("{}", gleam_core::javascript::PRELUDE_TS_DEF);
+    Ok(())
+}
