@@ -548,7 +548,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             // TODO: Don't use the same printer for docs as for the formatter.
             // We are not interested in showing the exact implementation in the
             // documentation and we could add things like colours, etc.
-            definition: print(formatter.custom_type(&ct)),
+            definition: print(formatter.custom_type(ct)),
             documentation: markdown_documentation(&ct.documentation),
             text_documentation: text_documentation(&ct.documentation),
             constructors: ct

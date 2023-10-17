@@ -5,7 +5,7 @@ use gleam_core::{
 };
 
 pub fn run() -> Result<()> {
-    for path in crate::fs::gleam_files_excluding_gitignore(&Utf8Path::new(".")) {
+    for path in crate::fs::gleam_files_excluding_gitignore(Utf8Path::new(".")) {
         fix_file(path)?;
     }
 

@@ -215,7 +215,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             }) => self.type_alias(*public, alias, args, resolved_type),
 
-            Definition::CustomType(ct) => self.custom_type(&ct),
+            Definition::CustomType(ct) => self.custom_type(ct),
 
             Definition::Import(Import {
                 module,
