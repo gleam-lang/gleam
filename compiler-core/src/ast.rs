@@ -468,6 +468,7 @@ pub struct CustomType<T> {
     pub public: bool,
     pub constructors: Vec<RecordConstructor<T>>,
     pub documentation: Option<SmolStr>,
+    pub deprecation: Deprecation,
     pub opaque: bool,
     /// The names of the type parameters.
     pub parameters: Vec<SmolStr>,

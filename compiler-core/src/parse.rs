@@ -260,18 +260,18 @@ where
             // Custom Types, and Type Aliases
             (Some((start, Token::Type, _)), _) => {
                 let _ = self.next_tok();
-                self.parse_custom_type(start, false, false)
+                self.parse_custom_type(start, false, false, &mut attributes)
             }
             (Some((start, Token::Pub, _)), Some((_, Token::Opaque, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::Type)?;
-                self.parse_custom_type(start, true, true)
+                self.parse_custom_type(start, true, true, &mut attributes)
             }
             (Some((start, Token::Pub, _)), Some((_, Token::Type, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
-                self.parse_custom_type(start, true, false)
+                self.parse_custom_type(start, true, false, &mut attributes)
             }
 
             (t0, _) => {
@@ -1658,6 +1658,7 @@ where
         start: u32,
         public: bool,
         opaque: bool,
+        attributes: &mut Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
         let (_, name, parameters, end) = self.expect_type_name()?;
@@ -1718,6 +1719,7 @@ where
             parameters,
             constructors,
             typed_parameters: vec![],
+            deprecation: std::mem::take(&mut attributes.deprecated),
         })))
     }
 
