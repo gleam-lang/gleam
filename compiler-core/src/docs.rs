@@ -500,7 +500,7 @@ fn function<'a>(
                     .docs_fn_signature(true, name, args, ret.clone())
                     .group(),
             ),
-            source_url: source_links.url(location),
+            source_url: source_links.url(*location),
             deprecation_message: match deprecation {
                 Deprecation::NotDeprecated => "".to_string(),
                 Deprecation::Deprecated { message } => message.to_string(),
@@ -543,24 +543,16 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
     let mut formatter = format::Formatter::new();
 
     match statement {
-        Definition::CustomType(CustomType {
-            public: true,
-            opaque: false,
-            name,
-            parameters,
-            documentation: doc,
-            constructors: cs,
-            location,
-            ..
-        }) => Some(Type {
-            name,
+        Definition::CustomType(ct) if ct.public && !ct.opaque => Some(Type {
+            name: &ct.name,
             // TODO: Don't use the same printer for docs as for the formatter.
             // We are not interested in showing the exact implementation in the
             // documentation and we could add things like colours, etc.
-            definition: print(formatter.custom_type(true, false, name, parameters, cs, location)),
-            documentation: markdown_documentation(doc),
-            text_documentation: text_documentation(doc),
-            constructors: cs
+            definition: print(formatter.custom_type(ct)),
+            documentation: markdown_documentation(&ct.documentation),
+            text_documentation: text_documentation(&ct.documentation),
+            constructors: ct
+                .constructors
                 .iter()
                 .map(|constructor| TypeConstructor {
                     definition: print(formatter.record_constructor(constructor)),
@@ -578,7 +570,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
                         .collect(),
                 })
                 .collect(),
-            source_url: source_links.url(location),
+            source_url: source_links.url(ct.location),
         }),
 
         Definition::CustomType(CustomType {
@@ -599,7 +591,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
             constructors: vec![],
-            source_url: source_links.url(location),
+            source_url: source_links.url(*location),
         }),
 
         Definition::TypeAlias(TypeAlias {
@@ -616,7 +608,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
             constructors: vec![],
-            source_url: source_links.url(location),
+            source_url: source_links.url(*location),
         }),
 
         _ => None,
@@ -641,7 +633,7 @@ fn constant<'a>(
             definition: print(formatter.docs_const_expr(true, name, value)),
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
-            source_url: source_links.url(location),
+            source_url: source_links.url(*location),
         }),
 
         _ => None,

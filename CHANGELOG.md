@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+### Additions
+
 - Using `import module.{TypeName}` to import a type has been deprecated,
   replaced by `import module.{type TypeName}`. In a future version of Gleam the
   old syntax will only import the value of the same name. Run `gleam fix` to
@@ -10,6 +12,13 @@
   your code.
 - The `binary` and `bit_string` bit array modifier have been deprecated in favour
   of `bytes` and `bits`.
+- `gleam fix` sets the `gleam` version constraint in `gleam.toml` to `>= 0.32.0`.
+- The `gleam` version constraint field in `gleam.toml` now disregards pre and
+  build components when checking for compatibility.
+- The error message for when one element in a list doesn't match the others has
+  been improved.
+- The error message for when the elements of a list's tail don't match the
+  previous ones has been improved.
 - The `gleam export javascript-prelude` and `gleam export typescript-prelude`
   commands have been added to export a copy of the prelude. This command may be
   useful for build tools that use the compiler via the `gleam compile-package`
@@ -20,25 +29,30 @@
   prelude using the `--javascript-prelude` flag.
 - The `__gleam_prelude_variant__` property has been removed from the classes
   defined in the JavaScript prelude.
-- "Compiling $package" is now only printed when a package has new changes to
-  compile.
-- The main process started with `gleam run` no longer traps exits on Erlang.
-- The formatting of code in rendered HTML documentation has been improved.
 - The content has been made wider in rendered HTML documentation.
 - The deprecated `todo("...")` syntax has been removed.
 - Module access can now be used in case clause guards.
 - The JS target now supports bit syntax for module consts.
 - The `gleam check` command supports the `target` flag now.
+- A warning is now emitted if a module alias is unused.
+- The language server now shows the type of variables defined using `use` on
+  hover.
+- Dependencies that can be built with both `mix` and `rebar3` are now built
+  with `mix` if it exists on the system, and with `rebar3` if it doesn't.
+- Imported modules can now be discarded by giving them an alias starting with `_`.
+
+### Bug fixes
+
+- "Compiling $package" is now only printed when a package has new changes to
+  compile.
+- The main process started with `gleam run` no longer traps exits on Erlang.
+- The formatting of code in rendered HTML documentation has been improved.
+- The formatter no longer moves trailing comments out of custom type definitions.
 - Fixed a bug where some hexidecimal numbers would generate incorrect Erlang.
 - Fixed a bug where markdown tables would not render correctly in HTML
   documentation.
 - The float 0.0 is now rendered in Erlang as `+0.0` to silence warnings in
   Erlang/OTP 27.
-- A warning is now emitted if a module alias is unused.
-- Variables defined using `use` now show the variable type on hover.
-- Dependencies that can be built with both `mix` and `rebar3` are now built
-  with `mix` if it exists on the system, and with `rebar3` if it doesn't.
-- Imported modules can now be discarded by giving them an alias starting with `_`.
 
 ## v0.31.0 - 2023-09-25
 

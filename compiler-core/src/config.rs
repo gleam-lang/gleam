@@ -190,7 +190,12 @@ impl PackageConfig {
                     input: required_version.to_string(),
                     error: error.to_string(),
                 })?;
-            if !range.contains(&compiler_version) {
+
+            // We ignore the pre-release and build metadata when checking compatibility
+            let mut version_without_pre = compiler_version.clone();
+            version_without_pre.pre = vec![];
+            version_without_pre.build = None;
+            if !range.contains(&version_without_pre) {
                 return Err(Error::IncompatibleCompilerVersion {
                     package: self.name.to_string(),
                     required_version: required_version.to_string(),

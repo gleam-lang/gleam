@@ -158,11 +158,7 @@ enum Command {
         check: bool,
     },
     /// Rewrite deprecated Gleam code
-    Fix {
-        /// Files to fix
-        #[clap(default_value = ".")]
-        files: Vec<String>,
-    },
+    Fix,
 
     /// Start an Erlang shell
     Shell,
@@ -409,7 +405,7 @@ fn main() {
             check,
         } => format::run(stdin, check, files),
 
-        Command::Fix { files } => fix::run(files),
+        Command::Fix => fix::run(),
 
         Command::Deps(Dependencies::List) => dependencies::list(),
 

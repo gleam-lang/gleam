@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "[\"foo\", ..[1, 2]]"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:11
+  │
+1 │ ["foo", ..[1, 2]]
+  │           ^^^^^^
+
+All elements in a list must have the same type, but the elements of
+this list don't match the type of the elements being prepended to it.
+
+Expected type:
+
+    List(String)
+
+Found type:
+
+    List(Int)
+

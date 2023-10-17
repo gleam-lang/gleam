@@ -215,15 +215,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             }) => self.type_alias(*public, alias, args, resolved_type),
 
-            Definition::CustomType(CustomType {
-                name,
-                parameters,
-                public,
-                constructors,
-                location,
-                opaque,
-                ..
-            }) => self.custom_type(*public, *opaque, name, parameters, constructors, location),
+            Definition::CustomType(ct) => self.custom_type(ct),
 
             Definition::Import(Import {
                 module,
@@ -1084,44 +1076,42 @@ impl<'comments> Formatter<'comments> {
         commented(doc_comments.append(doc).group(), comments)
     }
 
-    pub fn custom_type<'a, A>(
-        &mut self,
-        public: bool,
-        opaque: bool,
-        name: &'a str,
-        args: &'a [SmolStr],
-        constructors: &'a [RecordConstructor<A>],
-        location: &'a SrcSpan,
-    ) -> Document<'a> {
-        let _ = self.pop_empty_lines(location.start);
-        let doc = pub_(public)
+    pub fn custom_type<'a, A>(&mut self, ct: &'a CustomType<A>) -> Document<'a> {
+        let _ = self.pop_empty_lines(ct.location.end);
+        let doc = pub_(ct.public)
             .to_doc()
-            .append(if opaque { "opaque type " } else { "type " })
-            .append(if args.is_empty() {
-                name.to_doc()
+            .append(if ct.opaque { "opaque type " } else { "type " })
+            .append(if ct.parameters.is_empty() {
+                Document::SmolStr(ct.name.clone())
             } else {
-                name.to_doc()
-                    .append(wrap_args(args.iter().map(|e| e.to_doc())))
+                Document::SmolStr(ct.name.clone())
+                    .append(wrap_args(ct.parameters.iter().map(|e| e.to_doc())))
                     .group()
             });
 
-        if constructors.is_empty() {
+        if ct.constructors.is_empty() {
             return doc;
         }
+        let doc = doc.append(" {");
 
-        doc.append(" {")
-            .append(concat(constructors.iter().map(|c| {
-                if self.pop_empty_lines(c.location.start) {
-                    lines(2)
-                } else {
-                    line()
-                }
-                .append(self.record_constructor(c))
-                .nest(INDENT)
-                .group()
-            })))
-            .append(line())
-            .append("}")
+        let inner = concat(ct.constructors.iter().map(|c| {
+            if self.pop_empty_lines(c.location.start) {
+                lines(2)
+            } else {
+                line()
+            }
+            .append(self.record_constructor(c))
+        }));
+
+        // Add any trailing comments
+        let inner = match printed_comments(self.pop_comments(ct.end_position), false) {
+            Some(comments) => inner.append(line()).append(comments),
+            None => inner,
+        }
+        .nest(INDENT)
+        .group();
+
+        doc.append(inner).append(line()).append("}")
     }
 
     pub fn docs_opaque_custom_type<'a>(

@@ -1901,3 +1901,14 @@ fn() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2371
+#[test]
+fn list() {
+    assert_error!("[1, 2.0]");
+}
+
+#[test]
+fn mismatched_list_tail() {
+    assert_error!("[\"foo\", ..[1, 2]]");
+}

@@ -493,8 +493,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .map(|element| {
                 let element = self.infer(element)?;
                 // Ensure they all have the same type
-                unify(typ.clone(), element.type_())
-                    .map_err(|e| convert_unify_error(e, location))?;
+                unify(typ.clone(), element.type_()).map_err(|e| {
+                    convert_unify_error(e.list_element_mismatch(), element.location())
+                })?;
                 Ok(element)
             })
             .try_collect()?;
@@ -504,7 +505,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             Some(tail) => {
                 let tail = self.infer(*tail)?;
                 // Ensure the tail has the same type as the preceding elements
-                unify(typ.clone(), tail.type_()).map_err(|e| convert_unify_error(e, location))?;
+                unify(typ.clone(), tail.type_())
+                    .map_err(|e| convert_unify_error(e.list_tail_mismatch(), tail.location()))?;
                 Some(Box::new(tail))
             }
             None => None,
