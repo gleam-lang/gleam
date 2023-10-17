@@ -708,8 +708,8 @@ match the one before it.",
             ),
 
             Self::ListTailMismatch => Some(
-                "All elements of a list must be the same type, but this tail of the list
-contains elements with a different type.",
+                "All elements in a list must have the same type, but the elements of
+this list don't match the type of the elements being prepended to it.",
             ),
         }
     }
