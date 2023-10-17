@@ -10,6 +10,8 @@
   your code.
 - The `binary` and `bit_string` bit array modifier have been deprecated in favour
   of `bytes` and `bits`.
+- The error message for when one element in a list doesn't match the others has
+  been improved.
 - The `gleam export javascript-prelude` and `gleam export typescript-prelude`
   commands have been added to export a copy of the prelude. This command may be
   useful for build tools that use the compiler via the `gleam compile-package`
