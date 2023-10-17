@@ -343,8 +343,9 @@ where
                     continue;
                 }
                 let module = match alias.clone() {
-                    AssignName::Variable(name, ..) => Some(name),
-                    AssignName::Discard(_) => None,
+                    Some((AssignName::Variable(name), _)) => Some(name),
+                    Some((AssignName::Discard(_), _)) => None,
+                    None => Some(module.name.clone()),
                 };
                 completions.push(type_completion(module, name, type_));
             }
@@ -387,8 +388,16 @@ where
                 }
 
                 let module = match alias.clone() {
-                    AssignName::Variable(name, ..) => Some(name),
-                    AssignName::Discard(_) => None,
+                    Some((AssignName::Variable(name), _)) => Some(name),
+                    Some((AssignName::Discard(_), _)) => None,
+                    None => Some(
+                        module
+                            .name
+                            .split('/')
+                            .last()
+                            .expect("Could not identify imported module name.")
+                            .into(),
+                    ),
                 };
                 completions.push(value_completion(module.as_deref(), name, value));
             }

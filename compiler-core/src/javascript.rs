@@ -345,18 +345,18 @@ impl<'a> Generator<'a> {
         imports: &mut Imports<'a>,
         package: &'a str,
         module: &'a str,
-        as_name: &'a AssignName,
+        as_name: &'a Option<(AssignName, SrcSpan)>,
         unqualified: &'a [UnqualifiedImport],
     ) {
+        let name = module
+            .split('/')
+            .last()
+            .expect("JavaScript generator could not identify imported module name.");
+
         let (discarded, module_name) = match as_name {
-            AssignName::Variable(name, ..) => (false, name.as_str()),
-            AssignName::Discard(_) => (
-                true,
-                module
-                    .split('/')
-                    .last()
-                    .expect("JavaScript generator could not identify imported module name."),
-            ),
+            None => (false, name),
+            Some((AssignName::Discard(_), _)) => (true, name),
+            Some((AssignName::Variable(name), _)) => (false, name.as_str()),
         };
 
         let module_name = format!("${module_name}");

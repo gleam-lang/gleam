@@ -400,14 +400,14 @@ pub struct Import<PackageName> {
     pub documentation: Option<SmolStr>,
     pub location: SrcSpan,
     pub module: SmolStr,
-    pub as_name: AssignName,
+    pub as_name: Option<(AssignName, SrcSpan)>,
     pub unqualified_values: Vec<UnqualifiedImport>,
     pub unqualified_types: Vec<UnqualifiedImport>,
     pub package: PackageName,
 }
 
 impl<T> Import<T> {
-    pub(crate) fn used_name(&self) -> AssignName {
+    pub(crate) fn used_name(&self) -> Option<(AssignName, SrcSpan)> {
         self.as_name.clone()
     }
 }
@@ -1149,15 +1149,9 @@ impl Default for Inferred<()> {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum AssignVariableType {
-    Alias,
-    Original,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AssignName {
-    Variable(SmolStr, SrcSpan, AssignVariableType),
+    Variable(SmolStr),
     Discard(SmolStr),
 }
 

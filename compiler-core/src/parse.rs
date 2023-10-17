@@ -56,14 +56,13 @@ mod token;
 
 use crate::analyse::Inferred;
 use crate::ast::{
-    Arg, ArgNames, AssignName, AssignVariableType, Assignment, AssignmentKind, BinOp,
-    BitArrayOption, BitArraySegment, CallArg, Clause, ClauseGuard, Constant, CustomType,
-    Definition, Function, HasLocation, Import, Module, ModuleConstant, Pattern, RecordConstructor,
-    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind,
-    TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
-    UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
-    UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
-    UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
+    Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
+    CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, HasLocation, Import,
+    Module, ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread,
+    SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst, TypeAstConstructor,
+    TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause,
+    UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule,
+    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -1973,32 +1972,18 @@ where
         }
 
         // Parse as_name
-        let mut as_name = AssignName::Variable(
-            module
-                .split('/')
-                .last()
-                .map(|s| s.into())
-                .expect("Could not determine module name!"),
-            SrcSpan { start, end },
-            AssignVariableType::Original,
-        );
-
+        let mut as_name = None;
         if let Some((as_start, _)) = self.maybe_one(&Token::As) {
             let (_, name, e) = self.expect_assign_name()?;
 
-            as_name = name;
-            if let AssignName::Variable(name, _, AssignVariableType::Alias) = as_name.clone() {
-                as_name = AssignName::Variable(
-                    name,
-                    SrcSpan {
-                        start: as_start,
-                        end: e,
-                    },
-                    AssignVariableType::Alias,
-                )
-            }
-
             end = e;
+            as_name = Some((
+                name,
+                SrcSpan {
+                    start: as_start,
+                    end,
+                },
+            ));
         }
 
         Ok(Some(Definition::Import(Import {
@@ -2545,11 +2530,7 @@ where
         let t = self.next_tok();
         match t {
             Some((start, tok, end)) => match tok {
-                Token::Name { name } => Ok((
-                    start,
-                    AssignName::Variable(name, SrcSpan { start, end }, AssignVariableType::Alias),
-                    end,
-                )),
+                Token::Name { name } => Ok((start, AssignName::Variable(name), end)),
                 Token::DiscardName { name, .. } => Ok((start, AssignName::Discard(name), end)),
                 Token::UpName { .. } => {
                     parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })

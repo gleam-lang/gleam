@@ -1,7 +1,7 @@
 use smol_str::SmolStr;
 
 use crate::{
-    ast::{AssignName, AssignVariableType, Import, SrcSpan, UnqualifiedImport},
+    ast::{AssignName, Import, SrcSpan, UnqualifiedImport},
     build::Origin,
     type_::{
         self, Deprecation, EntityKind, Environment, Error, ModuleInterface, ValueConstructorVariant,
@@ -229,19 +229,19 @@ impl<'a> Importer<'a> {
         import: &Import<()>,
         import_info: &'a ModuleInterface,
     ) -> Result<(), Error> {
-        if let AssignName::Variable(used_name, location, variable_type) = import.used_name() {
-            self.check_not_a_duplicate_import(&used_name, import.location)?;
+        match import.used_name() {
+            Some((AssignName::Variable(used_name), location)) => {
+                self.check_not_a_duplicate_import(&used_name, import.location)?;
 
-            if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
-                // When the module has no unqualified imports, we track its usage
-                // so we can warn if not used by the end of the type checking
-                let _ = self
-                    .environment
-                    .unused_modules
-                    .insert(used_name.clone(), import.location);
-            }
+                if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
+                    // When the module has no unqualified imports, we track its usage
+                    // so we can warn if not used by the end of the type checking
+                    let _ = self
+                        .environment
+                        .unused_modules
+                        .insert(used_name.clone(), import.location);
+                }
 
-            if variable_type == AssignVariableType::Alias {
                 // We also register it's name to differentiate between unused module
                 // and unused module name. See 'convert_unused_to_warnings'.
                 let _ = self
@@ -253,13 +253,41 @@ impl<'a> Importer<'a> {
                     .environment
                     .unused_module_aliases
                     .insert(used_name.clone(), location);
-            };
 
-            // Insert imported module into scope
-            let _ = self
-                .environment
-                .imported_modules
-                .insert(used_name, (import.location, import_info));
+                // Insert imported module into scope
+                let _ = self
+                    .environment
+                    .imported_modules
+                    .insert(used_name, (import.location, import_info));
+            }
+
+            None => {
+                let module: SmolStr = import_info
+                    .name
+                    .split('/')
+                    .last()
+                    .expect("Could not identify imported module name.")
+                    .into();
+
+                self.check_not_a_duplicate_import(&module, import.location)?;
+
+                if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
+                    // When the module has no unqualified imports, we track its usage
+                    // so we can warn if not used by the end of the type checking
+                    let _ = self
+                        .environment
+                        .unused_modules
+                        .insert(module.clone(), import.location);
+                }
+
+                // Insert imported module into scope
+                let _ = self
+                    .environment
+                    .imported_modules
+                    .insert(module, (import.location, import_info));
+            }
+
+            _ => (),
         };
         Ok(())
     }

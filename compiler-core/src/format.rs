@@ -256,9 +256,10 @@ impl<'comments> Formatter<'comments> {
                 };
                 let doc = docvec!["import ", module.as_str(), second];
                 match as_name {
-                    AssignName::Variable(name, _, AssignVariableType::Alias)
-                    | AssignName::Discard(name) => doc.append(" as ").append(name),
-                    AssignName::Variable(..) => doc,
+                    Some((AssignName::Variable(name) | AssignName::Discard(name), _)) => {
+                        doc.append(" as ").append(name)
+                    }
+                    None => doc,
                 }
             }
 

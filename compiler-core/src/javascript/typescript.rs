@@ -250,10 +250,10 @@ impl<'a> TypeScriptGenerator<'a> {
                     ..
                 }) => {
                     match as_name {
-                        AssignName::Variable(name, ..) => {
+                        Some((AssignName::Variable(name), _)) => {
                             let _ = self.aliased_module_names.insert(module, name);
                         }
-                        AssignName::Discard(..) => (),
+                        Some((AssignName::Discard(_), _)) | None => (),
                     }
 
                     self.register_import(&mut imports, package, module);
