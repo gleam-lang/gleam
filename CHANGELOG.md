@@ -17,6 +17,8 @@
   build components when checking for compatibility.
 - The error message for when one element in a list doesn't match the others has
   been improved.
+- The error message for when the elements of a list's tail don't match the
+  previous ones has been improved.
 - The `gleam export javascript-prelude` and `gleam export typescript-prelude`
   commands have been added to export a copy of the prelude. This command may be
   useful for build tools that use the compiler via the `gleam compile-package`

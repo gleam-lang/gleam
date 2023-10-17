@@ -670,6 +670,9 @@ pub enum UnifyErrorSituation {
 
     /// One of the elements of a list was not the same type as the others.
     ListElementMismatch,
+
+    /// The tail of the list is not the same type as the other elements.
+    ListTailMismatch,
 }
 
 impl UnifyErrorSituation {
@@ -699,9 +702,14 @@ the same error type.",
 The returned value after a try must be of type Result.",
             ),
 
-            UnifyErrorSituation::ListElementMismatch => Some(
+            Self::ListElementMismatch => Some(
                 "All elements of a list must be the same type, but this one doesn't
 match the one before it.",
+            ),
+
+            Self::ListTailMismatch => Some(
+                "All elements of a list must be the same type, but this tail of the list
+contains elements with a different type.",
             ),
         }
     }
@@ -750,6 +758,10 @@ impl UnifyError {
 
     pub fn list_element_mismatch(self) -> Self {
         self.with_unify_error_situation(UnifyErrorSituation::ListElementMismatch)
+    }
+
+    pub fn list_tail_mismatch(self) -> Self {
+        self.with_unify_error_situation(UnifyErrorSituation::ListTailMismatch)
     }
 
     pub fn return_annotation_mismatch(self) -> Self {
