@@ -57,7 +57,7 @@ impl SourceLinker {
             url_pattern,
         }
     }
-    pub fn url(&self, span: &SrcSpan) -> String {
+    pub fn url(&self, span: SrcSpan) -> String {
         match &self.url_pattern {
             Some((base, line_sep)) => {
                 let start_line = self.line_numbers.line_number(span.start);

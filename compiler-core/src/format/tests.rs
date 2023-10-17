@@ -5106,10 +5106,20 @@ fn empty_line_after_crash() {
 "#,
         r#"pub type One {
   One
+  // Comment
 }
-// Comment
+"#
+    );
+}
 
-
+// https://github.com/gleam-lang/gleam/issues/2196
+#[test]
+fn comment_at_end_of_type() {
+    assert_format!(
+        r#"pub type X {
+  X
+  // Afterwards
+}
 "#
     );
 }
