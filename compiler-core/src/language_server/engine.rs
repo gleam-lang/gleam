@@ -228,7 +228,12 @@ where
 
             // Check if unused removal can be performed
             if let Some(ranges) = this.get_unused_ranges(&params.text_document.uri) {
-                actions.push(make_unused_code_action(params.text_document.uri, &ranges))
+                if ranges
+                    .iter()
+                    .any(|unused_range| range_includes(&params.range, unused_range))
+                {
+                    actions.push(make_unused_code_action(params.text_document.uri, &ranges))
+                }
             }
 
             Ok(if actions.is_empty() {
@@ -609,4 +614,10 @@ fn make_unused_code_action(uri: Url, ranges: &[lsp_types::Range]) -> lsp_types::
         disabled: None,
         data: None,
     }
+}
+
+// Check if the inner range is included in the outer range.
+fn range_includes(outer: &lsp_types::Range, inner: &lsp_types::Range) -> bool {
+    (outer.start >= inner.start && outer.start <= inner.end)
+        || (outer.end >= inner.start && outer.end <= inner.end)
 }

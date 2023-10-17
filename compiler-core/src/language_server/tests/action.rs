@@ -1,12 +1,12 @@
 use crate::line_numbers::LineNumbers;
 use lsp_types::{
-    CodeActionContext, CodeActionParams, Diagnostic, PartialResultParams, Position, Range,
+    CodeActionContext, CodeActionParams, PartialResultParams, Position, Range,
     TextDocumentIdentifier, Url, WorkDoneProgressParams, WorkspaceEdit,
 };
 
 use super::*;
 
-fn remove_unused_action(src: &str) -> String {
+fn remove_unused_action(src: &str, line: u32) -> String {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
 
@@ -31,25 +31,13 @@ fn remove_unused_action(src: &str) -> String {
 
     let url = Url::from_file_path(path).unwrap();
 
-    let diag = Diagnostic {
-        range: Range::new(Position::new(0, 0), Position::new(0, 0)),
-        severity: None,
-        code: None,
-        code_description: None,
-        source: None,
-        message: "Unused".to_string(),
-        related_information: None,
-        tags: None,
-        data: None,
-    };
-
     let params = CodeActionParams {
         text_document: TextDocumentIdentifier::new(url.clone()),
         context: CodeActionContext {
-            diagnostics: vec![diag],
+            diagnostics: vec![],
             only: None,
         },
-        range: Range::new(Position::new(0, 0), Position::new(0, 0)),
+        range: Range::new(Position::new(0, 0), Position::new(line + 1, 0)),
         work_done_progress_params: WorkDoneProgressParams {
             work_done_token: None,
         },
@@ -135,7 +123,7 @@ pub fn main() {
   result.is_ok
 }
 ";
-    assert_eq!(remove_unused_action(code), expected.to_string())
+    assert_eq!(remove_unused_action(code, 2), expected.to_string())
 }
 
 #[test]
@@ -158,7 +146,10 @@ pub fn main() {
   is_ok
 }
 ";
-    assert_eq!(remove_unused_action(code), expected.replace("%SPACE%", " "))
+    assert_eq!(
+        remove_unused_action(code, 2),
+        expected.replace("%SPACE%", " ")
+    )
 }
 
 /* TODO: implement qualified unused location
