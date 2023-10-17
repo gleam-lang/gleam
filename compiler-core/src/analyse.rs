@@ -323,6 +323,7 @@ fn register_values_from_custom_type(
         opaque,
         name,
         constructors,
+        deprecation,
         ..
     } = t;
     let mut hydrator = hydrators
@@ -382,7 +383,7 @@ fn register_values_from_custom_type(
         environment.insert_module_value(
             constructor.name.clone(),
             ValueConstructor {
-                deprecation: Deprecation::NotDeprecated,
+                deprecation: deprecation.clone(),
                 public: *public && !opaque,
                 type_: typ.clone(),
                 variant: constructor_info.clone(),
@@ -402,7 +403,7 @@ fn register_values_from_custom_type(
             constructor_info,
             typ,
             *public,
-            Deprecation::NotDeprecated,
+            deprecation.clone(),
         );
     }
     Ok(())
@@ -700,6 +701,7 @@ fn infer_custom_type(
         name,
         parameters,
         constructors,
+        deprecation,
         ..
     } = t;
     let constructors = constructors
@@ -768,6 +770,7 @@ fn infer_custom_type(
         parameters,
         constructors,
         typed_parameters,
+        deprecation,
     }))
 }
 

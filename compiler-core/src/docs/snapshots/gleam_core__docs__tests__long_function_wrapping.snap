@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/docs/tests.rs
-assertion_line: 56
 expression: "compile(config, modules)"
 ---
 //// app.html
@@ -264,6 +263,7 @@ expression: "compile(config, modules)"
       </h2>
       
     </div>
+    
     <div class="custom-type-constructors">
       <div class="rendered-markdown"></div>
       <pre><code class="hljs gleam">pub type Option(t) {

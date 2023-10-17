@@ -20,6 +20,7 @@ use std::sync::Arc;
 use vec1::Vec1;
 
 use camino::Utf8Path;
+use crate::type_::Deprecation;
 
 const INDENT: isize = 2;
 
@@ -1076,8 +1077,21 @@ impl<'comments> Formatter<'comments> {
     }
 
     pub fn custom_type<'a, A>(&mut self, ct: &'a CustomType<A>) -> Document<'a> {
+
         let _ = self.pop_empty_lines(ct.location.end);
-        let doc = pub_(ct.public)
+        let doc = docvec![];
+
+        // @deprecated attribute
+        let doc = match &ct.deprecation {
+            Deprecation::NotDeprecated => doc,
+            Deprecation::Deprecated { message } => doc
+                .append("@deprecated(\"")
+                .append(message)
+                .append("\")")
+                .append(line()),
+        };
+
+        let doc =  doc.append(pub_(ct.public))
             .to_doc()
             .append(if ct.opaque { "opaque type " } else { "type " })
             .append(if ct.parameters.is_empty() {
