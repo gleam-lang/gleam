@@ -667,6 +667,9 @@ pub enum UnifyErrorSituation {
 
     /// The final value of a try expression was not a Result.
     TryReturnResult,
+
+    /// One of the elements of a list was not the same type as the others.
+    ListElementMismatch,
 }
 
 impl UnifyErrorSituation {
@@ -685,15 +688,20 @@ annotation of this function.",
             }
             Self::Operator(_op) => None,
 
-            UnifyErrorSituation::TryErrorMismatch => Some(
+            Self::TryErrorMismatch => Some(
                 "This returned value has a type incompatible with the previous try expression.
 All the try expressions in a block and the final result value must have
 the same error type.",
             ),
 
-            UnifyErrorSituation::TryReturnResult => Some(
+            Self::TryReturnResult => Some(
                 "This returned value has a type incompatible with the previous try expression.
 The returned value after a try must be of type Result.",
+            ),
+
+            UnifyErrorSituation::ListElementMismatch => Some(
+                "All elements of a list must be the same type, but this one doesn't
+match the one before it.",
             ),
         }
     }
@@ -738,6 +746,10 @@ impl UnifyError {
 
     pub fn case_clause_mismatch(self) -> Self {
         self.with_unify_error_situation(UnifyErrorSituation::CaseClauseMismatch)
+    }
+
+    pub fn list_element_mismatch(self) -> Self {
+        self.with_unify_error_situation(UnifyErrorSituation::ListElementMismatch)
     }
 
     pub fn return_annotation_mismatch(self) -> Self {

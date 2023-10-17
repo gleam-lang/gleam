@@ -9,6 +9,9 @@ error: Type mismatch
 1 │ [1, 2.0]
   │     ^^^
 
+All elements of a list must be the same type, but this one doesn't
+match the one before it.
+
 Expected type:
 
     Int
