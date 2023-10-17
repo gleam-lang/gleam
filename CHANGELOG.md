@@ -10,12 +10,15 @@
   your code.
 - The `binary` and `bit_string` bit array modifier have been deprecated in favour
   of `bytes` and `bits`.
+- `gleam fix` sets the `gleam` version constraint in `gleam.toml` to `>= 0.32.0`.
 - The error message for when one element in a list doesn't match the others has
   been improved.
 - The `gleam export javascript-prelude` and `gleam export typescript-prelude`
   commands have been added to export a copy of the prelude. This command may be
   useful for build tools that use the compiler via the `gleam compile-package`
   API.
+- The `gleam` version constraint field in `gleam.toml` now disregards pre and
+  build components when checking for compatibility.
 - The prelude is no longer rendered once per package when compiling to
   JavaScript, instead one copy is rendered for the entire project. If you are
   using the `gleam compile-package` API you now need to give a path to the
