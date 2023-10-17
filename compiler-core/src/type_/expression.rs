@@ -494,7 +494,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let element = self.infer(element)?;
                 // Ensure they all have the same type
                 unify(typ.clone(), element.type_())
-                    .map_err(|e| convert_unify_error(e, location))?;
+                    .map_err(|e| convert_unify_error(e, element.location()))?;
                 Ok(element)
             })
             .try_collect()?;
