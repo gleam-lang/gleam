@@ -33,6 +33,7 @@
 - The deprecated `todo("...")` syntax has been removed.
 - Module access can now be used in case clause guards.
 - The JS target now supports bit syntax for module consts.
+- The formatter no longer moves trailing commnets out of custom type definitions.
 - The `gleam check` command supports the `target` flag now.
 - Fixed a bug where some hexidecimal numbers would generate incorrect Erlang.
 - Fixed a bug where markdown tables would not render correctly in HTML
