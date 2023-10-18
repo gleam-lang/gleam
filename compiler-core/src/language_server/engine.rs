@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     ast::{
         Arg, AssignName, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr,
@@ -17,11 +15,15 @@ use crate::{
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
+use lsp::CodeAction;
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
 use smol_str::SmolStr;
+use std::sync::Arc;
 use strum::IntoEnumIterator;
 
-use super::{src_span_to_lsp_range, DownloadDependencies, MakeLocker};
+use super::{
+    code_action::CodeActionBuilder, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Response<T> {
@@ -217,6 +219,23 @@ where
             };
 
             Ok(completions)
+        })
+    }
+
+    pub fn action(&mut self, params: lsp::CodeActionParams) -> Response<Option<Vec<CodeAction>>> {
+        self.respond(|this| {
+            let mut actions = vec![];
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(None);
+            };
+
+            code_action_unused_imports(module, &params, &mut actions);
+
+            Ok(if actions.is_empty() {
+                None
+            } else {
+                Some(actions)
+            })
         })
     }
 
@@ -561,4 +580,51 @@ fn hover_for_expression(expression: &TypedExpr, line_numbers: LineNumbers) -> Ho
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
     }
+}
+
+// Check if the inner range is included in the outer range.
+fn range_includes(outer: &lsp_types::Range, inner: &lsp_types::Range) -> bool {
+    (outer.start >= inner.start && outer.start <= inner.end)
+        || (outer.end >= inner.start && outer.end <= inner.end)
+}
+
+fn code_action_unused_imports(
+    module: &Module,
+    params: &lsp::CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let unused = &module.ast.type_info.unused_imports;
+
+    if unused.is_empty() {
+        return;
+    }
+
+    // Convert src spans to lsp range
+    let line_numbers = LineNumbers::new(&module.code);
+    let mut hovered = false;
+    let mut edits = Vec::with_capacity(unused.len());
+
+    for unused in unused {
+        let range = src_span_to_lsp_range(*unused, &line_numbers);
+        // Keep track of whether any unused import has is where the cursor is
+        hovered = hovered || range_includes(&params.range, &range);
+
+        edits.push(lsp_types::TextEdit {
+            range,
+            new_text: "".into(),
+        });
+    }
+
+    // If none of the imports are where the cursor is we do nothing
+    if !hovered {
+        return;
+    }
+    edits.sort_by_key(|edit| edit.range.start);
+
+    CodeActionBuilder::new("Remove unused imports")
+        .kind(lsp_types::CodeActionKind::QUICKFIX)
+        .changes(uri.clone(), edits)
+        .preferred(true)
+        .push_to(actions);
 }

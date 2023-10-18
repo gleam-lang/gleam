@@ -1,3 +1,4 @@
+mod code_action;
 mod compiler;
 mod engine;
 mod feedback;

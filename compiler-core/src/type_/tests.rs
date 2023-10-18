@@ -507,6 +507,7 @@ fn infer_module_type_retention_test() {
             ]),
             values: HashMap::new(),
             accessors: HashMap::new(),
+            unused_imports: Vec::new(),
         }
     );
 }

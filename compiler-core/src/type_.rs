@@ -473,6 +473,7 @@ pub struct ModuleInterface {
     pub types_constructors: HashMap<SmolStr, Vec<SmolStr>>,
     pub values: HashMap<SmolStr, ValueConstructor>,
     pub accessors: HashMap<SmolStr, AccessorsMap>,
+    pub unused_imports: Vec<SrcSpan>,
 }
 
 impl ModuleInterface {

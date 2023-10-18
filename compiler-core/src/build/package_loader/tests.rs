@@ -46,6 +46,7 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<Smol
         types_constructors: Default::default(),
         values: Default::default(),
         accessors: Default::default(),
+        unused_imports: Vec::new(),
     };
     let path = Utf8Path::new("/artefact").join(format!("{name}.cache"));
     fs.write_bytes(

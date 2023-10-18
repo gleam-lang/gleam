@@ -33,6 +33,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -76,6 +77,7 @@ fn empty_module() {
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         values: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
     };
     assert_eq!(roundtrip(&module), module);
@@ -100,7 +102,26 @@ fn module_with_private_type() {
         .into(),
         types_constructors: HashMap::new(),
         values: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
+    };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn module_with_unused_import() {
+    let module = ModuleInterface {
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a".into(),
+        types: HashMap::new(),
+        types_constructors: HashMap::new(),
+        unused_imports: vec![
+            SrcSpan { start: 0, end: 10 },
+            SrcSpan { start: 13, end: 42 },
+        ],
+        accessors: HashMap::new(),
+        values: HashMap::new(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -124,6 +145,7 @@ fn module_with_app_type() {
         .into(),
         types_constructors: HashMap::new(),
         values: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
     };
     assert_eq!(roundtrip(&module), module);
@@ -148,6 +170,7 @@ fn module_with_fn_type() {
         .into(),
         types_constructors: HashMap::new(),
         values: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
     };
     assert_eq!(roundtrip(&module), module);
@@ -172,6 +195,7 @@ fn module_with_tuple_type() {
         .into(),
         types_constructors: HashMap::new(),
         values: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
     };
     assert_eq!(roundtrip(&module), module);
@@ -202,6 +226,7 @@ fn module_with_generic_type() {
             .into(),
             types_constructors: HashMap::new(),
             values: HashMap::new(),
+            unused_imports: Vec::new(),
             accessors: HashMap::new(),
         }
     }
@@ -232,6 +257,7 @@ fn module_with_type_links() {
             .into(),
             types_constructors: HashMap::new(),
             values: HashMap::new(),
+            unused_imports: Vec::new(),
             accessors: HashMap::new(),
         }
     }
@@ -247,6 +273,7 @@ fn module_type_to_constructors_mapping() {
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: [("SomeType".into(), vec!["One".into()])].into(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: HashMap::new(),
     };
@@ -262,6 +289,7 @@ fn module_fn_value() {
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -295,6 +323,7 @@ fn deprecated_module_fn_value() {
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -330,6 +359,7 @@ fn private_module_fn_value() {
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -365,6 +395,7 @@ fn module_fn_value_regression() {
         name: "a/b/c".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -399,6 +430,7 @@ fn module_fn_value_with_field_map() {
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -435,6 +467,7 @@ fn record_value() {
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -472,6 +505,7 @@ fn record_value_with_field_map() {
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -511,6 +545,7 @@ fn accessors() {
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         values: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: [
             (
                 "one".into(),
@@ -712,6 +747,7 @@ fn constant_var() {
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
+        unused_imports: Vec::new(),
         accessors: HashMap::new(),
         values: [
             (

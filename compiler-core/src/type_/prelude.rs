@@ -178,6 +178,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         types_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
+        unused_imports: Vec::new(),
     };
 
     for t in PreludeType::iter() {

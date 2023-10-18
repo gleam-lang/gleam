@@ -530,19 +530,22 @@ impl<'a> Environment<'a> {
         }
     }
 
-    /// Converts entities with a usage count of 0 to warnings
-    pub fn emit_warnings_for_unused(&mut self) {
+    /// Converts entities with a usage count of 0 to warnings.
+    /// Returns the list of unused imported module location for the removed unused lsp action.
+    pub fn convert_unused_to_warnings(&mut self) -> Vec<SrcSpan> {
         let unused = self
             .entity_usages
             .pop()
             .expect("Expected a bottom level of entity usages.");
         self.handle_unused(unused);
 
+        let mut locations = Vec::new();
         for (name, location) in self.unused_modules.clone().into_iter() {
             self.warnings.emit(Warning::UnusedImportedModule {
                 name: name.clone(),
                 location,
             });
+            locations.push(location);
         }
 
         for (name, location) in self.unused_module_aliases.iter() {
@@ -550,9 +553,11 @@ impl<'a> Environment<'a> {
                 self.warnings.emit(Warning::UnusedImportedModuleAlias {
                     name: name.clone(),
                     location: *location,
-                })
+                });
+                locations.push(*location);
             }
         }
+        locations
     }
 
     fn handle_unused(&mut self, unused: HashMap<SmolStr, (EntityKind, SrcSpan, bool)>) {

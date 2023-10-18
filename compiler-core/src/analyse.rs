@@ -165,7 +165,8 @@ pub fn infer_module<A>(
         }
     }
 
-    env.emit_warnings_for_unused();
+    // Generate warnings for unused items
+    let unused_imports = env.convert_unused_to_warnings();
     env.emit_warnings_for_deprecated_type_imports();
 
     // Remove imported types and values to create the public interface
@@ -207,6 +208,7 @@ pub fn infer_module<A>(
             values,
             accessors,
             origin,
+            unused_imports,
             package: package.clone(),
         },
     })
