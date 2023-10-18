@@ -1158,20 +1158,20 @@ pub enum AssignName {
 impl AssignName {
     pub fn name(&self) -> &str {
         match self {
-            AssignName::Variable(name, ..) | AssignName::Discard(name) => name,
+            AssignName::Variable(name) | AssignName::Discard(name) => name,
         }
     }
 
     pub fn to_arg_names(self) -> ArgNames {
         match self {
-            AssignName::Variable(name, ..) => ArgNames::Named { name },
+            AssignName::Variable(name) => ArgNames::Named { name },
             AssignName::Discard(name) => ArgNames::Discard { name },
         }
     }
 
     pub fn assigned_name(&self) -> Option<&str> {
         match self {
-            AssignName::Variable(name, ..) => Some(name),
+            AssignName::Variable(name) => Some(name),
             AssignName::Discard(_) => None,
         }
     }

@@ -2519,7 +2519,7 @@ where
     fn expect_name(&mut self) -> Result<(u32, SmolStr, u32), ParseError> {
         let (start, token, end) = self.expect_assign_name()?;
         match token {
-            AssignName::Variable(name, ..) => Ok((start, name, end)),
+            AssignName::Variable(name) => Ok((start, name, end)),
             AssignName::Discard(_) => {
                 parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
             }

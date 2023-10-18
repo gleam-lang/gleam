@@ -88,10 +88,8 @@ fn print<'a>(
             ..
         } => {
             let right = match right {
-                AssignName::Variable(right, ..) if define_variables => {
-                    env.next_local_var_name(right)
-                }
-                AssignName::Variable(..) | AssignName::Discard(_) => "_".to_doc(),
+                AssignName::Variable(right) if define_variables => env.next_local_var_name(right),
+                AssignName::Variable(_) | AssignName::Discard(_) => "_".to_doc(),
             };
             docvec!["<<\"", left, "\"/utf8, ", right, "/binary>>"]
         }

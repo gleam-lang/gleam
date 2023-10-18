@@ -1338,8 +1338,8 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => {
                 let right = match right {
-                    AssignName::Variable(name, ..) => name.to_doc(),
-                    AssignName::Discard(name, ..) => name.to_doc(),
+                    AssignName::Variable(name) => name.to_doc(),
+                    AssignName::Discard(name) => name.to_doc(),
                 };
                 docvec![self.string(left), " <> ", right]
             }

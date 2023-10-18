@@ -313,7 +313,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
 
                 // The right hand side may assign a variable, which is the suffix of the string
-                if let AssignName::Variable(right, ..) = &right_side_assignment {
+                if let AssignName::Variable(right) = &right_side_assignment {
                     self.insert_variable(right.as_ref(), string(), right_location)
                         .map_err(|e| convert_unify_error(e, location))?;
                 };
