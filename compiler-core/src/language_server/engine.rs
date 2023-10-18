@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     ast::{
         Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern,
@@ -16,11 +14,15 @@ use crate::{
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
+use lsp::CodeAction;
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
 use smol_str::SmolStr;
+use std::sync::Arc;
 use strum::IntoEnumIterator;
 
-use super::{src_span_to_lsp_range, DownloadDependencies, MakeLocker};
+use super::{
+    code_action::CodeActionBuilder, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Response<T> {
@@ -219,22 +221,14 @@ where
         })
     }
 
-    pub fn action(
-        &mut self,
-        params: lsp::CodeActionParams,
-    ) -> Response<Option<Vec<lsp_types::CodeAction>>> {
+    pub fn action(&mut self, params: lsp::CodeActionParams) -> Response<Option<Vec<CodeAction>>> {
         self.respond(|this| {
             let mut actions = vec![];
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(None);
+            };
 
-            // Check if unused removal can be performed
-            if let Some(ranges) = this.get_unused_ranges(&params.text_document.uri) {
-                if ranges
-                    .iter()
-                    .any(|unused_range| range_includes(&params.range, unused_range))
-                {
-                    actions.push(make_unused_code_action(params.text_document.uri, &ranges))
-                }
-            }
+            code_action_unused_imports(module, &params, &mut actions);
 
             Ok(if actions.is_empty() {
                 None
@@ -242,23 +236,6 @@ where
                 Some(actions)
             })
         })
-    }
-
-    fn get_unused_ranges(&mut self, uri: &Url) -> Option<Vec<lsp_types::Range>> {
-        let module = self.module_for_uri(uri)?;
-        let unused = &module.ast.type_info.unused_imports;
-        if unused.is_empty() {
-            None
-        } else {
-            // Convert to lsp range
-            let line_numbers = LineNumbers::new(&module.code);
-            Some(
-                unused
-                    .iter()
-                    .map(|location| src_span_to_lsp_range(*location, &line_numbers))
-                    .collect(),
-            )
-        }
     }
 
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
@@ -586,38 +563,49 @@ fn hover_for_expression(expression: &TypedExpr, line_numbers: LineNumbers) -> Ho
     }
 }
 
-// Convert a list of unused range into a "Remove unused" code action.
-fn make_unused_code_action(uri: Url, ranges: &[lsp_types::Range]) -> lsp_types::CodeAction {
-    use itertools::Itertools;
-
-    let edits = ranges
-        .iter()
-        .sorted_by(|a, b| Ord::cmp(&a.start, &b.start))
-        .map(|range| lsp_types::TextEdit {
-            range: *range,
-            new_text: "".to_string(),
-        })
-        .collect();
-    let mut changes = std::collections::HashMap::new();
-    let _ = changes.insert(uri, edits);
-    lsp_types::CodeAction {
-        title: "Remove unused imports".to_string(),
-        kind: None,
-        diagnostics: None,
-        edit: Some(lsp_types::WorkspaceEdit {
-            changes: Some(changes),
-            document_changes: None,
-            change_annotations: None,
-        }),
-        command: None,
-        is_preferred: Some(true),
-        disabled: None,
-        data: None,
-    }
-}
-
 // Check if the inner range is included in the outer range.
 fn range_includes(outer: &lsp_types::Range, inner: &lsp_types::Range) -> bool {
     (outer.start >= inner.start && outer.start <= inner.end)
         || (outer.end >= inner.start && outer.end <= inner.end)
+}
+
+fn code_action_unused_imports(
+    module: &Module,
+    params: &lsp::CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let unused = &module.ast.type_info.unused_imports;
+
+    if unused.is_empty() {
+        return;
+    }
+
+    // Convert src spans to lsp range
+    let line_numbers = LineNumbers::new(&module.code);
+    let mut hovered = false;
+    let mut edits = Vec::with_capacity(unused.len());
+
+    for unused in unused {
+        let range = src_span_to_lsp_range(*unused, &line_numbers);
+        // Keep track of whether any unused import has is where the cursor is
+        hovered = hovered || range_includes(&params.range, &range);
+
+        edits.push(lsp_types::TextEdit {
+            range,
+            new_text: "".into(),
+        });
+    }
+
+    // If none of the imports are where the cursor is we do nothing
+    if !hovered {
+        return;
+    }
+    edits.sort_by_key(|edit| edit.range.start);
+
+    CodeActionBuilder::new("Remove unused imports")
+        .kind(lsp_types::CodeActionKind::QUICKFIX)
+        .changes(uri.clone(), edits)
+        .is_preferred(true)
+        .push_to(actions);
 }

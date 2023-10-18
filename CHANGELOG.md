@@ -35,6 +35,7 @@
 - The JS target now supports bit syntax for module consts.
 - The `gleam check` command supports the `target` flag now.
 - A warning is now emitted if a module alias is unused.
+- The language server now has a code action for removing unused items.
 - The language server now shows the type of variables defined using `use` on
   hover.
 - Dependencies that can be built with both `mix` and `rebar3` are now built
