@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-### Additions
+### Language changes
 
 - Using `import module.{TypeName}` to import a type has been deprecated,
   replaced by `import module.{type TypeName}`. In a future version of Gleam the
@@ -12,32 +12,40 @@
   your code.
 - The `binary` and `bit_string` bit array modifier have been deprecated in favour
   of `bytes` and `bits`.
-- `gleam fix` sets the `gleam` version constraint in `gleam.toml` to `>= 0.32.0`.
-- The `gleam` version constraint field in `gleam.toml` now disregards pre and
-  build components when checking for compatibility.
 - The error message for when one element in a list doesn't match the others has
   been improved.
 - The error message for when the elements of a list's tail don't match the
   previous ones has been improved.
-- The `gleam export javascript-prelude` and `gleam export typescript-prelude`
-  commands have been added to export a copy of the prelude. This command may be
-  useful for build tools that use the compiler via the `gleam compile-package`
-  API.
+- The `__gleam_prelude_variant__` property has been removed from the classes
+  defined in the JavaScript prelude.
+- The deprecated `todo("...")` syntax has been removed.
+- Module access can now be used in case clause guards.
+- The JS target now supports bit syntax for module constants.
+- A warning is now emitted if a module alias is unused.
+
+### Language server changes
+
+- The language server now has a code action for removing unused items.
+- The language server now shows the type of variables defined using `use` on
+  hover.
+
+### Build tool changes
+
+- The `gleam check` command supports the `target` flag.
+- The `gleam fix` command updates code to use `BitArray` rather than `BitString`.
+- The `gleam fix` command updates code to use the new import type syntax.
+- `gleam fix` sets the `gleam` version constraint in `gleam.toml` to `>= 0.32.0`.
+- The `gleam` version constraint field in `gleam.toml` now disregards pre and
+  build components when checking for compatibility.
 - The prelude is no longer rendered once per package when compiling to
   JavaScript, instead one copy is rendered for the entire project. If you are
   using the `gleam compile-package` API you now need to give a path to the
   prelude using the `--javascript-prelude` flag.
-- The `__gleam_prelude_variant__` property has been removed from the classes
-  defined in the JavaScript prelude.
+- The `gleam export javascript-prelude` and `gleam export typescript-prelude`
+  commands have been added to export a copy of the prelude. This command may be
+  useful for build tools that use the compiler via the `gleam compile-package`
+  API.
 - The content has been made wider in rendered HTML documentation.
-- The deprecated `todo("...")` syntax has been removed.
-- Module access can now be used in case clause guards.
-- The JS target now supports bit syntax for module consts.
-- The `gleam check` command supports the `target` flag now.
-- A warning is now emitted if a module alias is unused.
-- The language server now has a code action for removing unused items.
-- The language server now shows the type of variables defined using `use` on
-  hover.
 - Dependencies that can be built with both `mix` and `rebar3` are now built
   with `mix` if it exists on the system, and with `rebar3` if it doesn't.
 
