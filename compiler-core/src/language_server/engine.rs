@@ -606,6 +606,6 @@ fn code_action_unused_imports(
     CodeActionBuilder::new("Remove unused imports")
         .kind(lsp_types::CodeActionKind::QUICKFIX)
         .changes(uri.clone(), edits)
-        .is_preferred(true)
+        .preferred(true)
         .push_to(actions);
 }

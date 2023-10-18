@@ -36,7 +36,7 @@ impl CodeActionBuilder {
         self
     }
 
-    pub fn is_preferred(mut self, is_preferred: bool) -> Self {
+    pub fn preferred(mut self, is_preferred: bool) -> Self {
         self.action.is_preferred = Some(is_preferred);
         self
     }
