@@ -4,7 +4,7 @@ assertion_line: 232
 expression: "type Point { Point(x: Int, y: Int) }\n                fn x() { Point(x: 4, y: 6) Point(y: 1, x: 9) }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export_type([point/0]).
 

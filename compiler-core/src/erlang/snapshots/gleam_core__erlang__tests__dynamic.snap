@@ -4,7 +4,7 @@ assertion_line: 571
 expression: pub type Dynamic
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export_type([dynamic_/0]).
 

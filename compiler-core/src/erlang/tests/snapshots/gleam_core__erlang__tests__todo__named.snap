@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests/todo.rs
 assertion_line: 27
-expression: "\npub fn main() {\n  todo(\"testing\")\n}\n"
+expression: "\npub fn main() {\n  todo as \"testing\"\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([main/0]).
 

@@ -224,7 +224,7 @@ fn module_document<'a>(
     ));
 
     Ok(header
-        .append("-compile([no_auto_import, nowarn_unused_vars]).")
+        .append("-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).")
         .append(lines(2))
         .append(exports)
         .append(type_defs)

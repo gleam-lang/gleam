@@ -4,7 +4,7 @@ assertion_line: 577
 expression: "pub fn main() {\n            let fifteen = 15\n            let x = <<5:size(sixteen)>>\n            case x {\n              <<5:size(sixteen)>> -> <<5:size(sixteen)>>\n              <<6:size(fifteen)>> -> <<5:size(fifteen)>>\n            }\n          }\n          \n          pub const sixteen = 16"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([main/0]).
 

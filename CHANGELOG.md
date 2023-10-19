@@ -23,6 +23,8 @@
 - The deprecated `todo("...")` syntax has been removed.
 - Module access can now be used in case clause guards.
 - The JS target now supports bit syntax for module constants.
+- The Erlang compiler will no longer emit a duplicate warning for unused
+  functions.
 - A warning is now emitted if a module alias is unused.
 
 ### Language server changes

@@ -4,7 +4,7 @@ assertion_line: 212
 expression: "pub type Pair(x, y) { Pair(x: x, y: y) } pub fn x() { Pair(1, 2) Pair(3., 4.) }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([x/0]).
 -export_type([pair/2]).

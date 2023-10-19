@@ -4,7 +4,7 @@ assertion_line: 353
 expression: "\npub fn main() {\n    let a = 2 * {3 + 1} / 2\n    let b = 5 + 3 / 3 * 2 - 6 * 4\n    b\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([main/0]).
 

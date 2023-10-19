@@ -4,7 +4,7 @@ assertion_line: 172
 expression: "\npub fn main(x) {\n  let assert \"m-\" <> rest = x\n  rest\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([main/1]).
 

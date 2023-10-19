@@ -4,7 +4,7 @@ assertion_line: 522
 expression: "pub fn a() {\n  let fake_tap = fn(x) { x }\n  let b = [99]\n  [\n    1,\n    2,\n    ..b\n    |> fake_tap\n  ]\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([a/0]).
 

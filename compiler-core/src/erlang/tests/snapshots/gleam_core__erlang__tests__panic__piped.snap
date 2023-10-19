@@ -4,7 +4,7 @@ assertion_line: 28
 expression: "\npub fn main() {\n  \"lets\"\n  |> panic\n}\n    "
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([main/0]).
 

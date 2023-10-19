@@ -4,7 +4,7 @@ assertion_line: 24
 expression: "\npub fn test() {\n  case Ok(1) {\n    Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name\n  }\n}"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([test/0]).
 

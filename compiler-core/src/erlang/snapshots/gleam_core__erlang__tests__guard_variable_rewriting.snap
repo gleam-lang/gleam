@@ -4,7 +4,7 @@ assertion_line: 540
 expression: "pub fn main() {\n  case 1.0 {\n    a if a <. 0.0 -> {\n      let a = a\n      a\n    }\n  }\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([main/0]).
 
