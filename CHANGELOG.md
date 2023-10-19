@@ -22,6 +22,7 @@
 - Module access can now be used in case clause guards.
 - The JS target now supports bit syntax for module constants.
 - A warning is now emitted if a module alias is unused.
+- Imported modules can now be discarded by giving them an alias starting with `_`.
 
 ### Language server changes
 
@@ -48,8 +49,7 @@
 - The content has been made wider in rendered HTML documentation.
 - Dependencies that can be built with both `mix` and `rebar3` are now built
   with `mix` if it exists on the system, and with `rebar3` if it doesn't.
-- Imported modules can now be discarded by giving them an alias starting with `_`.
-
+  
 ### Bug fixes
 
 - "Compiling $package" is now only printed when a package has new changes to
