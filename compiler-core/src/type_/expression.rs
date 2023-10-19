@@ -146,11 +146,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => self.infer_binop(name, *left, *right, location),
 
             UntypedExpr::FieldAccess {
-                location,
+                access_location,
                 label,
                 container,
                 ..
-            } => self.infer_field_access(*container, label, location, FieldAccessUsage::Other),
+            } => {
+                self.infer_field_access(*container, label, access_location, FieldAccessUsage::Other)
+            }
 
             UntypedExpr::TupleIndex {
                 location,
@@ -2035,10 +2037,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
         let fun = match fun {
             UntypedExpr::FieldAccess {
-                location,
                 label,
                 container,
-            } => self.infer_field_access(*container, label, location, FieldAccessUsage::MethodCall),
+                access_location,
+                ..
+            } => self.infer_field_access(
+                *container,
+                label,
+                access_location,
+                FieldAccessUsage::MethodCall,
+            ),
 
             fun => self.infer(fun),
         }?;

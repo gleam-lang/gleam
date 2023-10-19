@@ -617,7 +617,7 @@ where
 
         // field access and call can stack up
         loop {
-            if let Some((_, _)) = self.maybe_one(&Token::Dot) {
+            if let Some((dot_start, _)) = self.maybe_one(&Token::Dot) {
                 let start = expr.location().start;
                 // field access
                 match self.tok0.take() {
@@ -643,6 +643,10 @@ where
                         let _ = self.next_tok();
                         expr = UntypedExpr::FieldAccess {
                             location: SrcSpan { start, end },
+                            access_location: SrcSpan {
+                                start: dot_start,
+                                end,
+                            },
                             label,
                             container: Box::new(expr),
                         }
@@ -652,6 +656,10 @@ where
                         let _ = self.next_tok();
                         expr = UntypedExpr::FieldAccess {
                             location: SrcSpan { start, end },
+                            access_location: SrcSpan {
+                                start: dot_start,
+                                end,
+                            },
                             label,
                             container: Box::new(expr),
                         }
