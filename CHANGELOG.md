@@ -16,6 +16,8 @@
   been improved.
 - The error message for when the elements of a list's tail don't match the
   previous ones has been improved.
+- The error message for when one tries to access an unknown field has been
+  improved.
 - The `__gleam_prelude_variant__` property has been removed from the classes
   defined in the JavaScript prelude.
 - The deprecated `todo("...")` syntax has been removed.
