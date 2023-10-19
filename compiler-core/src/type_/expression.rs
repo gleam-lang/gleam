@@ -1404,6 +1404,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         value_constructors: module.public_value_names(),
                     })?;
 
+            // Emit a warning if the value being used is deprecated.
+            if let Deprecation::Deprecated { message } = &constructor.deprecation {
+                self.environment.warnings.emit(Warning::DeprecatedValue {
+                    location: select_location,
+                    message: message.clone(),
+                })
+            }
+
             // Register this imported module as having been used, to inform
             // warnings of unused imports later
             let _ = self.environment.unused_modules.remove(module_alias);

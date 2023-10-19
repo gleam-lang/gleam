@@ -3,9 +3,7 @@ use smol_str::SmolStr;
 use crate::{
     ast::{Import, SrcSpan, UnqualifiedImport},
     build::Origin,
-    type_::{
-        self, Deprecation, EntityKind, Environment, Error, ModuleInterface, ValueConstructorVariant,
-    },
+    type_::{self, EntityKind, Environment, Error, ModuleInterface, ValueConstructorVariant},
     warning::TypeWarningEmitter,
 };
 
@@ -147,7 +145,7 @@ impl<'a> Importer<'a> {
                 value.variant.clone(),
                 value.type_.clone(),
                 true,
-                Deprecation::NotDeprecated,
+                value.deprecation.clone(),
             );
             variant = Some(&value.variant);
             value_imported = true;

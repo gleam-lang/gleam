@@ -915,6 +915,60 @@ pub fn b() {
 }
 
 #[test]
+fn deprecated_imported_function() {
+    assert_warning!(
+        (
+            "package",
+            "module",
+            r#"@deprecated("Don't use this!") pub fn a() { Nil }"#
+        ),
+        r#"
+import module
+
+pub fn a() {
+  module.a
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_imported_call_function() {
+    assert_warning!(
+        (
+            "package",
+            "module",
+            r#"@deprecated("Don't use this!") pub fn a() { Nil }"#
+        ),
+        r#"
+import module
+
+pub fn a() {
+  module.a()
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_imported_unqualified_function() {
+    assert_warning!(
+        (
+            "package",
+            "module",
+            r#"@deprecated("Don't use this!") pub fn a() { Nil }"#
+        ),
+        r#"
+import module.{a}
+
+pub fn b() {
+  a
+}
+"#
+    );
+}
+
+#[test]
 fn deprecated_bit_array_type() {
     assert_warning!(r#"pub type B = BitString"#);
 }
