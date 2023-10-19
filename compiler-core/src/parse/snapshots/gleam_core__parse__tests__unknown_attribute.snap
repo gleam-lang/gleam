@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 477
+assertion_line: 484
 expression: "@go_faster()\npub fn main() { 1 }"
 ---
 error: Syntax error
@@ -9,5 +9,5 @@ error: Syntax error
 1 │ @go_faster()
   │ ^^^^^^^^^^ I don't recognise this attribute
 
-Try `external` or `target` instead.
+Try `deprecated`, `external` or `target` instead.
 
