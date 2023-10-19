@@ -969,6 +969,65 @@ pub fn b() {
 }
 
 #[test]
+fn deprecated_type_used_in_alias() {
+    assert_warning!(
+        r#"
+@deprecated("Don't use this!")
+pub type Cat {
+    Cat(name: String)
+}
+
+pub type Dog = Cat
+
+pub fn b() {
+  let c = Dog("Bob")
+}
+        "#
+    );
+}
+
+#[test]
+fn deprecated_type_used_as_arg() {
+    assert_warning!(
+        r#"
+@deprecated("Don't use this!")
+pub type Cat {
+    Cat(name: String)
+}
+
+pub fn cat_name(cat: Cat) {
+  cat.name
+}
+        "#
+    );
+}
+
+#[test]
+fn deprecated_type_used_as_case_clause() {
+    assert_warning!(
+        r#"
+@deprecated("The type Animal has been deprecated.")
+pub type Animal {
+    Cat
+    Dog
+}
+
+pub fn sound(animal) -> String {
+  case animal {
+    Dog -> "Woof"
+    Cat -> "Meow"
+  }
+}
+
+pub fn main(){
+    let cat = Cat
+    sound(cat)
+}
+        "#
+    );
+}
+
+#[test]
 fn deprecated_bit_array_type() {
     assert_warning!(r#"pub type B = BitString"#);
 }

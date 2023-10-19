@@ -643,6 +643,7 @@ pub struct TypeConstructor {
     pub module: SmolStr,
     pub parameters: Vec<Arc<Type>>,
     pub typ: Arc<Type>,
+    pub deprecation: Deprecation,
 }
 impl TypeConstructor {
     pub(crate) fn with_location(mut self, location: SrcSpan) -> Self {

@@ -90,6 +90,7 @@ impl ModuleDecoder {
             module: reader.get_module()?.into(),
             parameters: read_vec!(reader.get_parameters()?, self, type_),
             typ: type_,
+            deprecation: Deprecation::NotDeprecated,
         })
     }
 

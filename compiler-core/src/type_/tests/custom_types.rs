@@ -16,7 +16,7 @@ pub type Test(a) {
 #[test]
 fn deprecated_type() {
     assert_warning!(
-               r#"
+        r#"
 @deprecated("Dont use this!")
 pub type Cat {
   Cat(name: String, cuteness: Int)

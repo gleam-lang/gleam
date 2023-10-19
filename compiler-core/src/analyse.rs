@@ -256,6 +256,7 @@ fn register_type_alias(
             public: *public,
             parameters,
             typ,
+            deprecation: Deprecation::NotDeprecated,
         },
     )?;
     if !public {
@@ -277,6 +278,7 @@ fn register_types_from_custom_type<'a>(
         parameters,
         location,
         constructors,
+        deprecation,
         ..
     } = t;
     assert_unique_type_name(names, name, *location)?;
@@ -298,6 +300,7 @@ fn register_types_from_custom_type<'a>(
             origin: *location,
             module: module.clone(),
             public: *public,
+            deprecation: deprecation.clone(),
             parameters,
             typ,
         },
