@@ -347,8 +347,6 @@ where
 
         // Imported modules
         for import in module.ast.definitions.iter().filter_map(get_import) {
-            let alias = import.used_name();
-
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
             // TODO: test getting completions from modules defined in other packages
@@ -361,7 +359,7 @@ where
                 if !type_.public {
                     continue;
                 }
-                let module = match alias.clone() {
+                let module = match import.clone().as_name {
                     Some((AssignName::Variable(name), _)) => Some(name),
                     Some((AssignName::Discard(_), _)) => None,
                     None => Some(module.name.clone()),
@@ -391,8 +389,6 @@ where
 
         // Imported modules
         for import in module.ast.definitions.iter().filter_map(get_import) {
-            let alias = import.used_name();
-
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
             // TODO: test getting completions from modules defined in other packages
@@ -406,7 +402,7 @@ where
                     continue;
                 }
 
-                let module = match alias.clone() {
+                let module = match import.as_name.clone() {
                     Some((AssignName::Variable(name), _)) => Some(name),
                     Some((AssignName::Discard(_), _)) => None,
                     None => Some(

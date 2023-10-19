@@ -229,7 +229,7 @@ impl<'a> Importer<'a> {
         import: &Import<()>,
         import_info: &'a ModuleInterface,
     ) -> Result<(), Error> {
-        match import.used_name() {
+        match import.clone().as_name {
             Some((AssignName::Variable(used_name), location)) => {
                 self.check_not_a_duplicate_import(&used_name, import.location)?;
 
