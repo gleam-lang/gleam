@@ -75,7 +75,7 @@ pub enum UntypedExpr {
         // This is the location of just the field access
         //   user.name
         //       ^^^^^
-        access_location: SrcSpan,
+        label_location: SrcSpan,
         label: SmolStr,
         container: Box<Self>,
     },

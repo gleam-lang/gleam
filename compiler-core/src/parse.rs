@@ -643,7 +643,7 @@ where
                         let _ = self.next_tok();
                         expr = UntypedExpr::FieldAccess {
                             location: SrcSpan { start, end },
-                            access_location: SrcSpan {
+                            label_location: SrcSpan {
                                 start: dot_start,
                                 end,
                             },
@@ -656,7 +656,7 @@ where
                         let _ = self.next_tok();
                         expr = UntypedExpr::FieldAccess {
                             location: SrcSpan { start, end },
-                            access_location: SrcSpan {
+                            label_location: SrcSpan {
                                 start: dot_start,
                                 end,
                             },
