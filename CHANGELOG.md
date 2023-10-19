@@ -47,6 +47,7 @@
   commands have been added to export a copy of the prelude. This command may be
   useful for build tools that use the compiler via the `gleam compile-package`
   API.
+- Fixed a bug where some deprecation messages would not be printed.
 - The content has been made wider in rendered HTML documentation.
 - Dependencies that can be built with both `mix` and `rebar3` are now built
   with `mix` if it exists on the system, and with `rebar3` if it doesn't.
