@@ -3,9 +3,9 @@ use strum::{EnumIter, IntoEnumIterator};
 use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 
 use super::{
-    Deprecation, ModuleInterface, Type, TypeConstructor, TypeVar, ValueConstructor,
-    ValueConstructorVariant,
+    ModuleInterface, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant,
 };
+use crate::type_::Deprecation::NotDeprecated;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 const BIT_ARRAY: &str = "BitArray";
@@ -165,7 +165,7 @@ pub fn link(type_: Arc<Type>) -> Arc<Type> {
 pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
     let value = |variant, type_| ValueConstructor {
         public: true,
-        deprecation: Deprecation::NotDeprecated,
+        deprecation: NotDeprecated,
         variant,
         type_,
     };
@@ -190,6 +190,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     typ: bits(),
                     module: PRELUDE_MODULE_NAME.into(),
                     public: true,
+                    deprecation: NotDeprecated,
                 };
                 let _ = prelude.types.insert(BIT_ARRAY.into(), v.clone());
                 let _ = prelude.types.insert(BIT_STRING.into(), v);
@@ -237,6 +238,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: bool(),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        deprecation: NotDeprecated,
                     },
                 );
             }
@@ -250,6 +252,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: float(),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        deprecation: NotDeprecated,
                     },
                 );
             }
@@ -263,6 +266,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         origin: Default::default(),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        deprecation: NotDeprecated,
                     },
                 );
             }
@@ -277,6 +281,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: list(list_parameter),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        deprecation: NotDeprecated,
                     },
                 );
             }
@@ -305,6 +310,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: nil(),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        deprecation: NotDeprecated,
                     },
                 );
             }
@@ -320,6 +326,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: result(result_value, result_error),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        deprecation: NotDeprecated,
                     },
                 );
                 let _ = prelude
@@ -370,6 +377,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: string(),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        deprecation: NotDeprecated,
                     },
                 );
             }
@@ -383,6 +391,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: utf_codepoint(),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        deprecation: NotDeprecated,
                     },
                 );
             }

@@ -19,8 +19,8 @@ use smol_str::SmolStr;
 use std::sync::Arc;
 use vec1::Vec1;
 
-use camino::Utf8Path;
 use crate::type_::Deprecation;
+use camino::Utf8Path;
 
 const INDENT: isize = 2;
 
@@ -1079,6 +1079,7 @@ impl<'comments> Formatter<'comments> {
     pub fn custom_type<'a, A>(&mut self, ct: &'a CustomType<A>) -> Document<'a> {
 
         let _ = self.pop_empty_lines(ct.location.end);
+    
         let doc = docvec![];
 
         // @deprecated attribute
