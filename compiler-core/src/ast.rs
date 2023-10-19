@@ -406,12 +406,6 @@ pub struct Import<PackageName> {
     pub package: PackageName,
 }
 
-impl<T> Import<T> {
-    pub(crate) fn used_name(&self) -> Option<(AssignName, SrcSpan)> {
-        self.as_name.clone()
-    }
-}
-
 pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
