@@ -50,8 +50,8 @@ impl Fixer {
 
             Definition::Import(i) => {
                 if i.module == "gleam" {
-                    self.prelude_module_import_alias = match i.clone().as_name {
-                        Some((AssignName::Variable(name), _)) => Some(name),
+                    self.prelude_module_import_alias = match i.as_name.as_ref() {
+                        Some((AssignName::Variable(name), _)) => Some(name.clone()),
                         Some((AssignName::Discard(_), _)) => None,
                         None => Some(i.module.clone()),
                     }

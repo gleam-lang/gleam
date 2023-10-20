@@ -405,14 +405,7 @@ where
                 let module = match import.as_name.clone() {
                     Some((AssignName::Variable(name), _)) => Some(name),
                     Some((AssignName::Discard(_), _)) => None,
-                    None => Some(
-                        module
-                            .name
-                            .split('/')
-                            .last()
-                            .expect("Could not identify imported module name.")
-                            .into(),
-                    ),
+                    None => Some(module.used_name()),
                 };
                 completions.push(value_completion(module.as_deref(), name, value));
             }

@@ -229,19 +229,27 @@ impl<'a> Importer<'a> {
         import: &Import<()>,
         import_info: &'a ModuleInterface,
     ) -> Result<(), Error> {
-        match import.clone().as_name {
+        let (used_name, location, aliased) = match import.as_name.as_ref() {
             Some((AssignName::Variable(used_name), location)) => {
-                self.check_not_a_duplicate_import(&used_name, import.location)?;
+                (Some(used_name.clone()), Some(*location), true)
+            }
+            None => (Some(import_info.used_name()), Some(import.location), false),
+            _ => (None, None, false),
+        };
 
-                if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
-                    // When the module has no unqualified imports, we track its usage
-                    // so we can warn if not used by the end of the type checking
-                    let _ = self
-                        .environment
-                        .unused_modules
-                        .insert(used_name.clone(), import.location);
-                }
+        if let (Some(used_name), Some(location)) = (used_name, location) {
+            self.check_not_a_duplicate_import(&used_name, import.location)?;
 
+            if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
+                // When the module has no unqualified imports, we track its usage
+                // so we can warn if not used by the end of the type checking
+                let _ = self
+                    .environment
+                    .unused_modules
+                    .insert(used_name.clone(), import.location);
+            }
+
+            if aliased {
                 // We also register it's name to differentiate between unused module
                 // and unused module name. See 'convert_unused_to_warnings'.
                 let _ = self
@@ -253,42 +261,15 @@ impl<'a> Importer<'a> {
                     .environment
                     .unused_module_aliases
                     .insert(used_name.clone(), location);
-
-                // Insert imported module into scope
-                let _ = self
-                    .environment
-                    .imported_modules
-                    .insert(used_name, (import.location, import_info));
             }
 
-            None => {
-                let module: SmolStr = import_info
-                    .name
-                    .split('/')
-                    .last()
-                    .expect("Could not identify imported module name.")
-                    .into();
-
-                self.check_not_a_duplicate_import(&module, import.location)?;
-
-                if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
-                    // When the module has no unqualified imports, we track its usage
-                    // so we can warn if not used by the end of the type checking
-                    let _ = self
-                        .environment
-                        .unused_modules
-                        .insert(module.clone(), import.location);
-                }
-
-                // Insert imported module into scope
-                let _ = self
-                    .environment
-                    .imported_modules
-                    .insert(module, (import.location, import_info));
-            }
-
-            _ => (),
+            // Insert imported module into scope
+            let _ = self
+                .environment
+                .imported_modules
+                .insert(used_name, (import.location, import_info));
         };
+
         Ok(())
     }
 

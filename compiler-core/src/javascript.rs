@@ -348,14 +348,16 @@ impl<'a> Generator<'a> {
         as_name: &'a Option<(AssignName, SrcSpan)>,
         unqualified: &'a [UnqualifiedImport],
     ) {
-        let name = module
-            .split('/')
-            .last()
-            .expect("JavaScript generator could not identify imported module name.");
+        let get_name = |module: &'a str| {
+            module
+                .split('/')
+                .last()
+                .expect("JavaScript generator could not identify imported module name.")
+        };
 
         let (discarded, module_name) = match as_name {
-            None => (false, name),
-            Some((AssignName::Discard(_), _)) => (true, name),
+            None => (false, get_name(module)),
+            Some((AssignName::Discard(_), _)) => (true, get_name(module)),
             Some((AssignName::Variable(name), _)) => (false, name.as_str()),
         };
 
