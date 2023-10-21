@@ -131,9 +131,10 @@ impl Hydrator {
                 match deprecation {
                     Deprecation::NotDeprecated => {}
                     Deprecation::Deprecated { message } => {
-                        environment.warnings.emit(Warning::DeprecatedValue {
+                        environment.warnings.emit(Warning::DeprecatedItem {
                             location: *location,
                             message: message.clone(),
+                            layer: Layer::Type,
                         })
                     }
                 }
