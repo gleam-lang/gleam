@@ -1,4 +1,3 @@
-use crate::ast::Layer;
 use crate::{
     ast::TodoKind,
     diagnostic::{self, Diagnostic, Location},

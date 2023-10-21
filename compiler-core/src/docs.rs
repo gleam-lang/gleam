@@ -610,15 +610,23 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             documentation: doc,
             parameters: args,
             location,
+            deprecation,
             ..
         }) => Some(Type {
             name,
-            definition: print(formatter.type_alias(true, name, args, typ).group()),
+            definition: print(
+                formatter
+                    .type_alias(true, name, args, typ, deprecation)
+                    .group(),
+            ),
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
             constructors: vec![],
             source_url: source_links.url(*location),
-            deprecation_message: "".to_string(),
+            deprecation_message: match deprecation {
+                Deprecation::NotDeprecated => "".to_string(),
+                Deprecation::Deprecated { message } => message.to_string(),
+            },
         }),
 
         _ => None,

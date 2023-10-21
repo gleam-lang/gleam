@@ -241,6 +241,7 @@ fn register_type_alias(
         parameters: args,
         alias: name,
         type_ast: resolved_type,
+        deprecation,
         ..
     } = t;
     assert_unique_type_name(names, name, *location)?;
@@ -256,7 +257,7 @@ fn register_type_alias(
             public: *public,
             parameters,
             typ,
-            deprecation: Deprecation::NotDeprecated,
+            deprecation: deprecation.clone(),
         },
     )?;
     if !public {
@@ -673,6 +674,7 @@ fn insert_type_alias(
         alias,
         parameters: args,
         type_ast: resolved_type,
+        deprecation,
         ..
     } = t;
     let typ = environment
@@ -688,6 +690,7 @@ fn insert_type_alias(
         parameters: args,
         type_ast: resolved_type,
         type_: typ,
+        deprecation,
     }))
 }
 

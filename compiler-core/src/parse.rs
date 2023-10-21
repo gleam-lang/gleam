@@ -1702,6 +1702,7 @@ where
                     parameters,
                     type_ast: t,
                     type_: (),
+                    deprecation: std::mem::take(&mut attributes.deprecated),
                 })));
             } else {
                 return parse_error(ParseErrorType::ExpectedType, SrcSpan::new(eq_s, eq_e));

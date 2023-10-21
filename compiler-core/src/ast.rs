@@ -505,6 +505,7 @@ pub struct TypeAlias<T> {
     pub type_: T,
     pub public: bool,
     pub documentation: Option<SmolStr>,
+    pub deprecation: Deprecation,
 }
 
 pub type TypedDefinition = Definition<Arc<Type>, TypedExpr, SmolStr, SmolStr>;
