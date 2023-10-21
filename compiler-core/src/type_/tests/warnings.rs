@@ -978,10 +978,6 @@ pub type Cat {
 }
 
 pub type Dog = Cat
-
-pub fn b() {
-  let c = Dog("Bob")
-}
         "#
     );
 }
