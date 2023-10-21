@@ -1079,7 +1079,6 @@ impl<'comments> Formatter<'comments> {
     pub fn custom_type<'a, A>(&mut self, ct: &'a CustomType<A>) -> Document<'a> {
 
         let _ = self.pop_empty_lines(ct.location.end);
-    
         let doc = docvec![];
 
         // @deprecated attribute
