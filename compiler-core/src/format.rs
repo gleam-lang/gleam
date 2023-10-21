@@ -213,8 +213,9 @@ impl<'comments> Formatter<'comments> {
                 parameters: args,
                 type_ast: resolved_type,
                 public,
+                deprecation,
                 ..
-            }) => self.type_alias(*public, alias, args, resolved_type),
+            }) => self.type_alias(*public, alias, args, resolved_type, deprecation),
 
             Definition::CustomType(ct) => self.custom_type(ct),
 
@@ -459,8 +460,12 @@ impl<'comments> Formatter<'comments> {
         name: &'a str,
         args: &'a [SmolStr],
         typ: &'a TypeAst,
+        deprecation: &'a Deprecation,
     ) -> Document<'a> {
-        let head = pub_(public).append("type ").append(name);
+        // @deprecated attribute
+        let head = self.deprecation_attr(deprecation);
+
+        let head = head.append(pub_(public)).append("type ").append(name);
 
         let head = if args.is_empty() {
             head
@@ -470,6 +475,18 @@ impl<'comments> Formatter<'comments> {
 
         head.append(" =")
             .append(line().append(self.type_ast(typ)).group().nest(INDENT))
+    }
+
+    fn deprecation_attr<'a>(&mut self, deprecation: &'a Deprecation) -> Document<'a> {
+        match deprecation {
+            Deprecation::NotDeprecated => "".to_doc(),
+            Deprecation::Deprecated { message } => ""
+                .to_doc()
+                .append("@deprecated(\"")
+                .append(message)
+                .append("\")")
+                .append(line()),
+        }
     }
 
     fn fn_arg<'a, A>(&mut self, arg: &'a Arg<A>) -> Document<'a> {
@@ -483,17 +500,8 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn statement_fn<'a>(&mut self, function: &'a Function<(), UntypedExpr>) -> Document<'a> {
-        let attributes = docvec![];
-
         // @deprecated attribute
-        let attributes = match &function.deprecation {
-            type_::Deprecation::NotDeprecated => attributes,
-            type_::Deprecation::Deprecated { message } => attributes
-                .append("@deprecated(\"")
-                .append(message)
-                .append("\")")
-                .append(line()),
-        };
+        let attributes = self.deprecation_attr(&function.deprecation);
 
         // @external attribute
         let external = |t: &'static str, m: &'a str, f: &'a str| {
@@ -1078,18 +1086,10 @@ impl<'comments> Formatter<'comments> {
 
     pub fn custom_type<'a, A>(&mut self, ct: &'a CustomType<A>) -> Document<'a> {
 
-        let _ = self.pop_empty_lines(ct.location.end);
-        let doc = docvec![];
+        let _ = self.pop_empty_lines(location.start);
 
         // @deprecated attribute
-        let doc = match &ct.deprecation {
-            Deprecation::NotDeprecated => doc,
-            Deprecation::Deprecated { message } => doc
-                .append("@deprecated(\"")
-                .append(message)
-                .append("\")")
-                .append(line()),
-        };
+        let doc = self.deprecation_attr(deprecation);
 
         let doc =  doc.append(pub_(ct.public))
             .to_doc()

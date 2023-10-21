@@ -5123,3 +5123,46 @@ fn comment_at_end_of_type() {
 "#
     );
 }
+
+#[test]
+fn deprecated_type_annotation() {
+    assert_format_rewrite!(
+        r#"
+            @deprecated(
+            "Deprecated type"
+            )
+            pub type One {
+                One
+            }
+"#,
+        r#"@deprecated("Deprecated type")
+pub type One {
+  One
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_type_alias_annotation() {
+    assert_format_rewrite!(
+        r#"
+            pub type Animal{
+                Cat(name:String)
+            }
+
+            @deprecated(
+            "Deprecated type"
+            )
+            pub type Tiger = Animal
+"#,
+        r#"pub type Animal {
+  Cat(name: String)
+}
+
+@deprecated("Deprecated type")
+pub type Tiger =
+  Animal
+"#
+    );
+}
