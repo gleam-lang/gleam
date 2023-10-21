@@ -574,9 +574,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 match constructor_deprecation {
                     Deprecation::NotDeprecated => {}
                     Deprecation::Deprecated { message } => {
-                        self.environment.warnings.emit(Warning::DeprecatedValue {
+                        self.environment.warnings.emit(Warning::DeprecatedItem {
                             location,
                             message: message.clone(),
+                            layer: Layer::Value,
                         })
                     }
                 }
