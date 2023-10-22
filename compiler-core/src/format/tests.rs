@@ -5137,7 +5137,7 @@ pub type One {
 
 #[test]
 fn deprecated_type_alias() {
-    assert_format_rewrite!(
+    assert_format!(
         r#"@deprecated("Deprecated type")
 pub type Tiger =
   Nil

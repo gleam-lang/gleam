@@ -1085,13 +1085,13 @@ impl<'comments> Formatter<'comments> {
     }
 
     pub fn custom_type<'a, A>(&mut self, ct: &'a CustomType<A>) -> Document<'a> {
-
-        let _ = self.pop_empty_lines(location.start);
+        let _ = self.pop_empty_lines(ct.location.end);
 
         // @deprecated attribute
-        let doc = self.deprecation_attr(deprecation);
+        let doc = self.deprecation_attr(&ct.deprecation);
 
-        let doc =  doc.append(pub_(ct.public))
+        let doc = doc
+            .append(pub_(ct.public))
             .to_doc()
             .append(if ct.opaque { "opaque type " } else { "type " })
             .append(if ct.parameters.is_empty() {
