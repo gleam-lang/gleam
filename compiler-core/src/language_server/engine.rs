@@ -359,7 +359,7 @@ where
                 if !type_.public {
                     continue;
                 }
-                let module = match import.clone().as_name {
+                let module = match import.as_name.as_ref() {
                     Some((AssignName::Variable(name), _)) => Some(name),
                     Some((AssignName::Discard(_), _)) => None,
                     None => Some(module.name.clone()),
