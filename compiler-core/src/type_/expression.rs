@@ -1406,9 +1406,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             // Emit a warning if the value being used is deprecated.
             if let Deprecation::Deprecated { message } = &constructor.deprecation {
-                self.environment.warnings.emit(Warning::DeprecatedValue {
+                self.environment.warnings.emit(Warning::DeprecatedItem {
                     location: select_location,
                     message: message.clone(),
+                    layer: Layer::Value,
                 })
             }
 
