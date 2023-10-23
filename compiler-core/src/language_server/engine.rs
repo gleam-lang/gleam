@@ -360,11 +360,13 @@ where
                     continue;
                 }
                 let module = match import.as_name.as_ref() {
-                    Some((AssignName::Variable(name), _)) => Some(name),
+                    Some((AssignName::Variable(name), _)) => Some(name.clone()),
                     Some((AssignName::Discard(_), _)) => None,
-                    None => Some(module.name.clone()),
+                    None => Some(module.used_name()),
                 };
-                completions.push(type_completion(module, name, type_));
+                if module.is_some() {
+                    completions.push(type_completion(module, name, type_));
+                }
             }
 
             // Unqualified types

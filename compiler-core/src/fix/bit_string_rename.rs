@@ -53,7 +53,7 @@ impl Fixer {
                     self.prelude_module_import_alias = match i.as_name.as_ref() {
                         Some((AssignName::Variable(name), _)) => Some(name.clone()),
                         Some((AssignName::Discard(_), _)) => None,
-                        None => Some(i.module.clone()),
+                        None => Some(SmolStr::from(i.name())),
                     }
                 } else {
                     for i in i.unqualified_values.iter().chain(&i.unqualified_types) {

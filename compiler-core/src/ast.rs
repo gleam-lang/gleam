@@ -406,6 +406,15 @@ pub struct Import<PackageName> {
     pub package: PackageName,
 }
 
+impl<T> Import<T> {
+    pub(crate) fn name(&self) -> &str {
+        self.module
+            .split('/')
+            .last()
+            .expect("Could not identify imported module name.")
+    }
+}
+
 pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
