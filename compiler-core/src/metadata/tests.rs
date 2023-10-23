@@ -946,3 +946,31 @@ fn constant_bit_array_native() {
     });
     assert_eq!(roundtrip(&module), module);
 }
+
+#[test]
+fn deprecated_type() {
+    let module = ModuleInterface {
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b".into(),
+        types: [(
+            "ListIntType".into(),
+            TypeConstructor {
+                typ: type_::list(type_::int()),
+                public: true,
+                origin: Default::default(),
+                module: "the/module".into(),
+                parameters: vec![],
+                deprecation: Deprecation::Deprecated {
+                    message: "oh no".into(),
+                },
+            },
+        )]
+        .into(),
+        types_constructors: HashMap::new(),
+        values: HashMap::new(),
+        unused_imports: Vec::new(),
+        accessors: HashMap::new(),
+    };
+    assert_eq!(roundtrip(&module), module);
+}
