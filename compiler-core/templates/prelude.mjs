@@ -1,5 +1,7 @@
 export class CustomType {
   inspect() {
+    // TODO: remove after next version
+    console.warn("Deprecated method UtfCodepoint.inspect");
     let field = (label) => {
       let value = inspect(this[label]);
       return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
@@ -27,6 +29,8 @@ export class List {
   }
 
   inspect() {
+    // TODO: remove after next version
+    console.warn("Deprecated method UtfCodepoint.inspect");
     return `[${this.toArray().map(inspect).join(", ")}]`;
   }
 
@@ -98,6 +102,8 @@ export class BitArray {
   }
 
   inspect() {
+    // TODO: remove after next version
+    console.warn("Deprecated method UtfCodepoint.inspect");
     return `<<${Array.from(this.buffer).join(", ")}>>`;
   }
 
@@ -135,6 +141,8 @@ export class UtfCodepoint {
   }
 
   inspect() {
+    // TODO: remove after next version
+    console.warn("Deprecated method UtfCodepoint.inspect");
     return `//utfcodepoint(${String.fromCodePoint(this.value)})`;
   }
 }
