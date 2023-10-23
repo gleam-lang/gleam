@@ -1,7 +1,6 @@
 use crate::{
     ast::{
-        Arg, AssignName, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr,
-        TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -359,11 +358,8 @@ where
                 if !type_.public {
                     continue;
                 }
-                let module = match import.as_name.as_ref() {
-                    Some((AssignName::Variable(name), _)) => Some(name.clone()),
-                    Some((AssignName::Discard(_), _)) => None,
-                    None => Some(module.used_name()),
-                };
+
+                let module = import.used_name();
                 if module.is_some() {
                     completions.push(type_completion(module, name, type_));
                 }
@@ -404,12 +400,10 @@ where
                     continue;
                 }
 
-                let module = match import.as_name.clone() {
-                    Some((AssignName::Variable(name), _)) => Some(name),
-                    Some((AssignName::Discard(_), _)) => None,
-                    None => Some(module.used_name()),
-                };
-                completions.push(value_completion(module.as_deref(), name, value));
+                let module = import.used_name();
+                if module.is_some() {
+                    completions.push(value_completion(module.as_deref(), name, value));
+                }
             }
 
             // Unqualified values

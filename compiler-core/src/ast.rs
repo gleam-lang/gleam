@@ -413,6 +413,14 @@ impl<T> Import<T> {
             .last()
             .expect("Could not identify imported module name.")
     }
+
+    pub(crate) fn used_name(&self) -> Option<SmolStr> {
+        match self.as_name.as_ref() {
+            Some((AssignName::Variable(name), _)) => Some(name.clone()),
+            Some((AssignName::Discard(_), _)) => None,
+            None => Some(SmolStr::from(self.name())),
+        }
+    }
 }
 
 pub type UntypedModuleConstant = ModuleConstant<(), ()>;
