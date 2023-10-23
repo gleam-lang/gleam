@@ -25,6 +25,7 @@
 - The JS target now supports bit syntax for module constants.
 - The Erlang compiler will no longer emit a duplicate warning for unused
   functions.
+- The `@deprecated` attribute can now be used with type definitions.
 - A warning is now emitted if a module alias is unused.
 
 ### Language server changes
