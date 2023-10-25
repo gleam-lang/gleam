@@ -407,7 +407,7 @@ pub struct Import<PackageName> {
 }
 
 impl<T> Import<T> {
-    pub(crate) fn name(&self) -> &str {
+    fn name(&self) -> &str {
         self.module
             .split('/')
             .last()
