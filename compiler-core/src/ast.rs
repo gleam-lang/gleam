@@ -421,6 +421,10 @@ impl<T> Import<T> {
             None => Some(SmolStr::from(self.name())),
         }
     }
+
+    pub(crate) fn alias_location(&self) -> Option<SrcSpan> {
+        self.as_name.as_ref().map(|(_, location)| *location)
+    }
 }
 
 pub type UntypedModuleConstant = ModuleConstant<(), ()>;
