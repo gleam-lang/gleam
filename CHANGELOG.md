@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.32.0-rc1 - 2023-10-25
 
 ### Language changes
 
