@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use smol_str::SmolStr;
 
 use crate::{
@@ -61,12 +63,14 @@ impl<'a> Importer<'a> {
         self.check_not_a_duplicate_import(&used_name, location)?;
         self.check_src_does_not_import_test(module_info, location, imported_module_name.clone())?;
 
+        // TODO: remove this when we remove the old syntax
+        let mut types = HashSet::with_capacity(import.unqualified_types.len());
         // Insert unqualified imports into scope
-        for value in &import.unqualified_values {
-            self.register_unqualified_value(value, module_info)?;
-        }
         for type_ in &import.unqualified_types {
-            self.register_unqualified_type(type_, module_info)?;
+            self.register_unqualified_type(type_, module_info, &mut types)?;
+        }
+        for value in &import.unqualified_values {
+            self.register_unqualified_value(value, module_info, &mut types)?;
         }
 
         self.register_module_usage(import);
@@ -90,6 +94,7 @@ impl<'a> Importer<'a> {
         &mut self,
         import: &UnqualifiedImport,
         module: &ModuleInterface,
+        imported_types: &mut HashSet<SmolStr>,
     ) -> Result<(), Error> {
         self.check_if_deprecated_bit_string(import, module, import.location);
 
@@ -121,6 +126,8 @@ impl<'a> Importer<'a> {
             import.location,
         );
 
+        let _ = imported_types.insert(imported_name.clone());
+
         Ok(())
     }
 
@@ -128,6 +135,7 @@ impl<'a> Importer<'a> {
         &mut self,
         import: &UnqualifiedImport,
         module: &ModuleInterface,
+        imported_types: &mut HashSet<SmolStr>,
     ) -> Result<(), Error> {
         self.check_if_deprecated_bit_string(import, module, import.location);
 
@@ -152,12 +160,14 @@ impl<'a> Importer<'a> {
         }
 
         // Register the unqualified import if it is a type constructor
-        if let Some(typ) = module.get_public_type(import_name) {
-            self.environment.insert_type_constructor(
-                imported_name.clone(),
-                typ.clone().with_location(location),
-            )?;
-            type_imported = true;
+        if !imported_types.contains(import_name) {
+            if let Some(typ) = module.get_public_type(import_name) {
+                self.environment.insert_type_constructor(
+                    imported_name.clone(),
+                    typ.clone().with_location(location),
+                )?;
+                type_imported = true;
+            }
         }
 
         if value_imported && type_imported {
@@ -192,12 +202,11 @@ impl<'a> Importer<'a> {
             };
         } else if !value_imported {
             // Error if no type or value was found with that name
-            return Err(Error::UnknownModuleField {
+            return Err(Error::UnknownModuleValue {
                 location,
                 name: import_name.clone(),
                 module_name: module.name.clone(),
                 value_constructors: module.public_value_names(),
-                type_constructors: module.public_type_names(),
             });
         }
 
