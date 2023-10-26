@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.32.0-rc3 - Unreleased
+
+### Bug fixes
+
+- Fixed a bug where `gleam fix` would fail to update the deprecated type import
+  syntax for aliased unqualified types.
+
 ## v0.32.0-rc2 - 2023-10-26
 
 ### Bug fixes
