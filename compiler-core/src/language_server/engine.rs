@@ -368,7 +368,7 @@ where
                 let Some(type_) = module.get_public_type(&unqualified.name) else {
                     continue;
                 };
-                completions.push(type_completion(None, unqualified.variable_name(), type_));
+                completions.push(type_completion(None, unqualified.used_name(), type_));
             }
         }
 
@@ -407,7 +407,7 @@ where
                 let Some(value) = module.get_public_value(&unqualified.name) else {
                     continue;
                 };
-                completions.push(value_completion(None, unqualified.variable_name(), value));
+                completions.push(value_completion(None, unqualified.used_name(), value));
             }
         }
 

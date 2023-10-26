@@ -466,7 +466,7 @@ impl<'a> Generator<'a> {
                     ..
                 }) => unqualified
                     .iter()
-                    .for_each(|unq_import| self.register_in_scope(unq_import.variable_name())),
+                    .for_each(|unq_import| self.register_in_scope(unq_import.used_name())),
 
                 Definition::TypeAlias(TypeAlias { .. })
                 | Definition::CustomType(CustomType { .. }) => (),

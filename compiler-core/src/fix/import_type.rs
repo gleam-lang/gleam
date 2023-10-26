@@ -53,9 +53,7 @@ impl Fixer {
                     used_as_type: false,
                     used_as_value: false,
                 };
-                let _ = self
-                    .imports
-                    .insert(unqualified.variable_name().into(), data);
+                let _ = self.imports.insert(unqualified.used_name().clone(), data);
             }
         }
     }
@@ -65,7 +63,7 @@ impl Fixer {
         let mut values = vec![];
 
         for unqualified in import.unqualified_values.drain(..) {
-            match self.imports.get_mut(&unqualified.name) {
+            match self.imports.get_mut(unqualified.used_name()) {
                 Some(i) if i.module == import.module => {
                     if i.used_as_type {
                         types.push(unqualified.clone());

@@ -809,7 +809,7 @@ fn record_imported_items_for_use_detection<A>(
     // Record any imports that are types only as this information is
     // needed to prevent types being imported in generated JavaScript
     for import in unqualified_values.iter_mut() {
-        if environment.imported_types.contains(import.variable_name()) {
+        if environment.imported_types.contains(import.used_name()) {
             import.layer = Layer::Type;
         }
     }
