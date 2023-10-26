@@ -59,13 +59,18 @@ impl Fixer {
     }
 
     fn fix_import(&mut self, import: &mut UntypedImport) {
+        let existing_types: HashSet<SmolStr> = import
+            .unqualified_types
+            .iter()
+            .map(|t| t.used_name().clone())
+            .collect();
         let mut types = vec![];
         let mut values = vec![];
 
         for unqualified in import.unqualified_values.drain(..) {
             match self.imports.get_mut(unqualified.used_name()) {
                 Some(i) if i.module == import.module => {
-                    if i.used_as_type {
+                    if i.used_as_type && !existing_types.contains(unqualified.used_name()) {
                         types.push(unqualified.clone());
                     }
                     if i.used_as_value {

@@ -392,3 +392,23 @@ pub type Z =
 "
     );
 }
+
+#[test]
+fn already_fixed() {
+    assert_eq!(
+        fix("import x.{type X, X}
+
+pub const x = X
+
+pub type Z =
+  X
+"),
+        "import x.{type X, X}
+
+pub const x = X
+
+pub type Z =
+  X
+",
+    );
+}
