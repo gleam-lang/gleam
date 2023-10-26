@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where the backward compatibility for the deprecated import syntax
+  could result in an import error with some valid imports.
+
 ## v0.32.0-rc1 - 2023-10-25
 
 ### Language changes
