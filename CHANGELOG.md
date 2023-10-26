@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.32.0-rc2 - 2023-10-26
 
 ### Bug fixes
 
