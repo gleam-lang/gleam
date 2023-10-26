@@ -1,4 +1,4 @@
-use smol_str::SmolStr;
+use ecow::EcoString;
 
 use crate::ast::{BitArrayOption, SrcSpan};
 use crate::type_::Type;
@@ -319,18 +319,18 @@ pub struct Error {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ErrorType {
-    ConflictingEndiannessOptions { existing_endianness: SmolStr },
-    ConflictingSignednessOptions { existing_signed: SmolStr },
+    ConflictingEndiannessOptions { existing_endianness: EcoString },
+    ConflictingSignednessOptions { existing_signed: EcoString },
     ConflictingSizeOptions,
-    ConflictingTypeOptions { existing_type: SmolStr },
+    ConflictingTypeOptions { existing_type: EcoString },
     ConflictingUnitOptions,
     FloatWithSize,
     InvalidEndianness,
     OptionNotAllowedInValue,
     SegmentMustHaveSize,
-    SignednessUsedOnNonInt { typ: SmolStr },
-    TypeDoesNotAllowSize { typ: SmolStr },
-    TypeDoesNotAllowUnit { typ: SmolStr },
+    SignednessUsedOnNonInt { typ: EcoString },
+    TypeDoesNotAllowSize { typ: EcoString },
+    TypeDoesNotAllowUnit { typ: EcoString },
     UnitMustHaveSize,
     VariableUtfSegmentInPattern,
 }

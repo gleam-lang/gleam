@@ -20,10 +20,10 @@ use crate::{
     version::COMPILER_VERSION,
 };
 use askama::Template;
+use ecow::EcoString;
 use itertools::Itertools;
 use serde::Serialize;
 use serde_json::to_string as serde_to_string;
-use smol_str::SmolStr;
 
 const MAX_COLUMNS: isize = 65;
 
@@ -511,7 +511,7 @@ fn function<'a>(
     }
 }
 
-fn text_documentation(doc: &Option<SmolStr>) -> String {
+fn text_documentation(doc: &Option<EcoString>) -> String {
     let raw_text = doc
         .as_ref()
         .map(|it| it.to_string())
@@ -521,7 +521,7 @@ fn text_documentation(doc: &Option<SmolStr>) -> String {
     raw_text.replace("```gleam", "").replace("```", "")
 }
 
-fn markdown_documentation(doc: &Option<SmolStr>) -> String {
+fn markdown_documentation(doc: &Option<EcoString>) -> String {
     doc.as_deref().map(render_markdown).unwrap_or_default()
 }
 
@@ -735,7 +735,7 @@ struct ModuleTemplate<'a> {
     unnest: String,
     page_title: &'a str,
     page_meta_description: &'a str,
-    module_name: SmolStr,
+    module_name: EcoString,
     project_name: &'a str,
     project_version: &'a str,
     pages: &'a [Link],

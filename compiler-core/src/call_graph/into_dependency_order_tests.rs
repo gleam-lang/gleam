@@ -3,19 +3,21 @@ use crate::{
     ast::{Arg, Function},
     type_::Deprecation,
 };
-use smol_str::SmolStr;
+use ecow::EcoString;
 
 type Input = (&'static str, &'static [&'static str], &'static str);
 
-fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>, Error> {
+fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<EcoString>>, Error> {
     let functions = functions
         .iter()
         .map(|(name, arguments, src)| Function {
-            name: name.into(),
+            name: EcoString::from(*name),
             arguments: arguments
                 .iter()
                 .map(|name| Arg {
-                    names: crate::ast::ArgNames::Named { name: name.into() },
+                    names: crate::ast::ArgNames::Named {
+                        name: EcoString::from(*name),
+                    },
                     location: Default::default(),
                     annotation: None,
                     type_: (),
@@ -49,7 +51,7 @@ fn empty() {
     let functions = [];
     assert_eq!(
         parse_and_order(functions.as_slice()).unwrap(),
-        Vec::<Vec<SmolStr>>::new()
+        Vec::<Vec<EcoString>>::new()
     );
 }
 

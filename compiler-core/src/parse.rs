@@ -68,9 +68,9 @@ use crate::ast::{
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
 use crate::type_::Deprecation;
+use ecow::EcoString;
 use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
-use smol_str::SmolStr;
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::str::FromStr;
@@ -91,8 +91,8 @@ pub struct Parsed {
 struct Attributes {
     target: Option<Target>,
     deprecated: Deprecation,
-    external_erlang: Option<(SmolStr, SmolStr)>,
-    external_javascript: Option<(SmolStr, SmolStr)>,
+    external_erlang: Option<(EcoString, EcoString)>,
+    external_javascript: Option<(EcoString, EcoString)>,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
@@ -624,7 +624,7 @@ where
                     // tuple access
                     Some((_, Token::Int { value }, end)) => {
                         let _ = self.next_tok();
-                        let v = value.replace('_', "");
+                        let v = value.replace("_", "");
                         if let Ok(index) = u64::from_str(&v) {
                             expr = UntypedExpr::TupleIndex {
                                 location: SrcSpan { start, end },
@@ -1243,7 +1243,7 @@ where
 
                     match self.next_tok() {
                         Some((_, Token::Int { value }, int_e)) => {
-                            let v = value.replace('_', "");
+                            let v = value.replace("_", "");
                             if let Ok(index) = u64::from_str(&v) {
                                 unit = ClauseGuard::TupleIndex {
                                     location: SrcSpan {
@@ -1309,7 +1309,7 @@ where
     //   UpName( args )
     fn expect_constructor_pattern(
         &mut self,
-        module: Option<(u32, SmolStr, u32)>,
+        module: Option<(u32, EcoString, u32)>,
     ) -> Result<UntypedPattern, ParseError> {
         let (mut start, name, end) = self.expect_upname()?;
         let (args, with_spread, end) = self.parse_constructor_pattern_args(end)?;
@@ -1443,7 +1443,7 @@ where
         } else {
             self.take_documentation(start)
         };
-        let mut name = SmolStr::new("");
+        let mut name = EcoString::from("");
         if !is_anon {
             let (_, n, _) = self.expect_name()?;
             name = n;
@@ -1727,7 +1727,7 @@ where
     // examples:
     //   A
     //   A(one, two)
-    fn expect_type_name(&mut self) -> Result<(u32, SmolStr, Vec<SmolStr>, u32), ParseError> {
+    fn expect_type_name(&mut self) -> Result<(u32, EcoString, Vec<EcoString>, u32), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args =
@@ -1898,8 +1898,8 @@ where
     fn parse_type_name_finish(
         &mut self,
         start: u32,
-        module: Option<SmolStr>,
-        name: SmolStr,
+        module: Option<EcoString>,
+        name: EcoString,
         end: u32,
     ) -> Result<Option<TypeAst>, ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
@@ -2266,8 +2266,8 @@ where
     fn parse_const_record_finish(
         &mut self,
         start: u32,
-        module: Option<SmolStr>,
-        name: SmolStr,
+        module: Option<EcoString>,
+        name: EcoString,
         end: u32,
     ) -> Result<Option<UntypedConstant>, ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
@@ -2353,7 +2353,7 @@ where
         &mut self,
         value_parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
-        to_int_segment: &impl Fn(SmolStr, u32, u32) -> A,
+        to_int_segment: &impl Fn(EcoString, u32, u32) -> A,
     ) -> Result<Option<BitArraySegment<A, ()>>, ParseError>
     where
         A: HasLocation + std::fmt::Debug,
@@ -2394,7 +2394,7 @@ where
     fn parse_bit_array_option<A: std::fmt::Debug>(
         &mut self,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
-        to_int_segment: &impl Fn(SmolStr, u32, u32) -> A,
+        to_int_segment: &impl Fn(EcoString, u32, u32) -> A,
     ) -> Result<Option<BitArrayOption<A>>, ParseError> {
         match self.next_tok() {
             // named segment
@@ -2406,7 +2406,7 @@ where
                             if let Some((int_s, Token::Int { value, .. }, int_e)) = self.next_tok()
                             {
                                 let (_, end) = self.expect_one(&Token::RightParen)?;
-                                let v = value.replace('_', "");
+                                let v = value.replace("_", "");
                                 match u8::from_str(&v) {
                                     Ok(units) if units > 0 => Ok(Some(BitArrayOption::Unit {
                                         location: SrcSpan { start, end },
@@ -2522,7 +2522,7 @@ where
     }
 
     // Expect a Name else a token dependent helpful error
-    fn expect_name(&mut self) -> Result<(u32, SmolStr, u32), ParseError> {
+    fn expect_name(&mut self) -> Result<(u32, EcoString, u32), ParseError> {
         let (start, token, end) = self.expect_assign_name()?;
         match token {
             AssignName::Variable(name) => Ok((start, name, end)),
@@ -2552,7 +2552,7 @@ where
     }
 
     // Expect an UpName else a token dependent helpful error
-    fn expect_upname(&mut self) -> Result<(u32, SmolStr, u32), ParseError> {
+    fn expect_upname(&mut self) -> Result<(u32, EcoString, u32), ParseError> {
         let t = self.next_tok();
         match t {
             Some((start, tok, end)) => {
@@ -2588,7 +2588,7 @@ where
     }
 
     // Expect a String else error
-    fn expect_string(&mut self) -> Result<(u32, SmolStr, u32), ParseError> {
+    fn expect_string(&mut self) -> Result<(u32, EcoString, u32), ParseError> {
         match self.next_tok() {
             Some((start, Token::String { value }, end)) => Ok((start, value, end)),
             _ => self.next_tok_unexpected(vec!["a string".into()]),
@@ -2638,7 +2638,7 @@ where
     }
 
     // If next token is a Name, consume it and return relevant info, otherwise, return none
-    fn maybe_name(&mut self) -> Option<(u32, SmolStr, u32)> {
+    fn maybe_name(&mut self) -> Option<(u32, EcoString, u32)> {
         match self.tok0.take() {
             Some((s, Token::Name { name }, e)) => {
                 let _ = self.next_tok();
@@ -2652,7 +2652,7 @@ where
     }
 
     // if next token is an UpName, consume it and return relevant info, otherwise, return none
-    fn maybe_upname(&mut self) -> Option<(u32, SmolStr, u32)> {
+    fn maybe_upname(&mut self) -> Option<(u32, EcoString, u32)> {
         match self.tok0.take() {
             Some((s, Token::UpName { name }, e)) => {
                 let _ = self.next_tok();
@@ -2666,7 +2666,7 @@ where
     }
 
     // if next token is a DiscardName, consume it and return relevant info, otherwise, return none
-    fn maybe_discard_name(&mut self) -> Option<(u32, SmolStr, u32)> {
+    fn maybe_discard_name(&mut self) -> Option<(u32, EcoString, u32)> {
         match self.tok0.take() {
             Some((s, Token::DiscardName { name }, e)) => {
                 let _ = self.next_tok();
@@ -2680,7 +2680,7 @@ where
     }
 
     // Error on the next token or EOF
-    fn next_tok_unexpected<A>(&mut self, expected: Vec<SmolStr>) -> Result<A, ParseError> {
+    fn next_tok_unexpected<A>(&mut self, expected: Vec<EcoString>) -> Result<A, ParseError> {
         match self.next_tok() {
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
 
@@ -2738,7 +2738,7 @@ where
         t
     }
 
-    fn take_documentation(&mut self, until: u32) -> Option<SmolStr> {
+    fn take_documentation(&mut self, until: u32) -> Option<EcoString> {
         let mut content = String::new();
         while let Some((start, line)) = self.doc_comments.front() {
             if *start >= until {
@@ -3088,21 +3088,21 @@ fn clause_guard_reduction(
 // BitArrays in patterns, guards, and expressions have a very similar structure
 // but need specific types. These are helpers for that. There is probably a
 // rustier way to do this :)
-fn bit_array_pattern_int(value: SmolStr, start: u32, end: u32) -> UntypedPattern {
+fn bit_array_pattern_int(value: EcoString, start: u32, end: u32) -> UntypedPattern {
     Pattern::Int {
         location: SrcSpan { start, end },
         value,
     }
 }
 
-fn bit_array_expr_int(value: SmolStr, start: u32, end: u32) -> UntypedExpr {
+fn bit_array_expr_int(value: EcoString, start: u32, end: u32) -> UntypedExpr {
     UntypedExpr::Int {
         location: SrcSpan { start, end },
         value,
     }
 }
 
-fn bit_array_const_int(value: SmolStr, start: u32, end: u32) -> UntypedConstant {
+fn bit_array_const_int(value: EcoString, start: u32, end: u32) -> UntypedConstant {
     Constant::Int {
         location: SrcSpan { start, end },
         value,
@@ -3171,7 +3171,7 @@ pub enum ParserArg {
     Arg(Box<CallArg<UntypedExpr>>),
     Hole {
         location: SrcSpan,
-        label: Option<SmolStr>,
+        label: Option<EcoString>,
     },
 }
 

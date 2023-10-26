@@ -30,11 +30,11 @@ impl Position {
 
 #[derive(Debug)]
 pub(crate) struct Generator<'module> {
-    module_name: SmolStr,
+    module_name: EcoString,
     line_numbers: &'module LineNumbers,
-    function_name: Option<&'module SmolStr>,
-    function_arguments: Vec<Option<&'module SmolStr>>,
-    current_scope_vars: im::HashMap<SmolStr, usize>,
+    function_name: Option<&'module EcoString>,
+    function_arguments: Vec<Option<&'module EcoString>>,
+    current_scope_vars: im::HashMap<EcoString, usize>,
     pub function_position: Position,
     pub scope_position: Position,
     // We register whether these features are used within an expression so that
@@ -49,12 +49,12 @@ pub(crate) struct Generator<'module> {
 impl<'module> Generator<'module> {
     #[allow(clippy::too_many_arguments)] // TODO: FIXME
     pub fn new(
-        module_name: SmolStr,
+        module_name: EcoString,
         line_numbers: &'module LineNumbers,
-        function_name: &'module SmolStr,
-        function_arguments: Vec<Option<&'module SmolStr>>,
+        function_name: &'module EcoString,
+        function_arguments: Vec<Option<&'module EcoString>>,
         tracker: &'module mut UsageTracker,
-        mut current_scope_vars: im::HashMap<SmolStr, usize>,
+        mut current_scope_vars: im::HashMap<EcoString, usize>,
     ) -> Self {
         for &name in function_arguments.iter().flatten() {
             let _ = current_scope_vars.insert(name.clone(), 0);
@@ -72,7 +72,7 @@ impl<'module> Generator<'module> {
         }
     }
 
-    pub fn local_var<'a>(&mut self, name: &'a SmolStr) -> Document<'a> {
+    pub fn local_var<'a>(&mut self, name: &'a EcoString) -> Document<'a> {
         match self.current_scope_vars.get(name) {
             None => {
                 let _ = self.current_scope_vars.insert(name.clone(), 0);
@@ -84,7 +84,7 @@ impl<'module> Generator<'module> {
         }
     }
 
-    pub fn next_local_var<'a>(&mut self, name: &'a SmolStr) -> Document<'a> {
+    pub fn next_local_var<'a>(&mut self, name: &'a EcoString) -> Document<'a> {
         let next = self.current_scope_vars.get(name).map_or(0, |i| i + 1);
         let _ = self.current_scope_vars.insert(name.clone(), next);
         self.local_var(name)
@@ -356,7 +356,11 @@ impl<'module> Generator<'module> {
         .group()
     }
 
-    fn variable<'a>(&mut self, name: &'a SmolStr, constructor: &'a ValueConstructor) -> Output<'a> {
+    fn variable<'a>(
+        &mut self,
+        name: &'a EcoString,
+        constructor: &'a ValueConstructor,
+    ) -> Output<'a> {
         match &constructor.variant {
             ValueConstructorVariant::LocalConstant { literal } => {
                 constant_expression(self.tracker, literal)
@@ -951,7 +955,7 @@ impl<'module> Generator<'module> {
         Ok(docvec!(left, " ", op, " ", right))
     }
 
-    fn todo<'a>(&mut self, message: &'a Option<SmolStr>, location: &'a SrcSpan) -> Document<'a> {
+    fn todo<'a>(&mut self, message: &'a Option<EcoString>, location: &'a SrcSpan) -> Document<'a> {
         let scope_position = self.scope_position;
         self.scope_position = Position::NotTail;
 

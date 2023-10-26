@@ -16,8 +16,8 @@
 #[cfg(test)]
 mod tests;
 
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 
 use crate::{io::Utf8Writer, Result};
 
@@ -51,15 +51,15 @@ impl<'a> Documentable<'a> for &'a str {
     }
 }
 
-impl<'a> Documentable<'a> for SmolStr {
+impl<'a> Documentable<'a> for EcoString {
     fn to_doc(self) -> Document<'a> {
-        Document::SmolStr(self)
+        Document::EcoString(self)
     }
 }
 
-impl<'a> Documentable<'a> for &SmolStr {
+impl<'a> Documentable<'a> for &EcoString {
     fn to_doc(self) -> Document<'a> {
-        Document::SmolStr(self.clone())
+        Document::EcoString(self.clone())
     }
 }
 
@@ -174,7 +174,7 @@ pub enum Document<'a> {
     Str(&'a str),
 
     /// A string that is cheap to copy
-    SmolStr(SmolStr),
+    EcoString(EcoString),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -227,7 +227,7 @@ fn fits(
 
             Document::Str(s) => limit -= s.len() as isize,
             Document::String(s) => limit -= s.len() as isize,
-            Document::SmolStr(s) => limit -= s.len() as isize,
+            Document::EcoString(s) => limit -= s.len() as isize,
 
             Document::Break { unbroken, .. } => match mode {
                 Mode::Broken | Mode::ForcedBroken => return true,
@@ -318,7 +318,7 @@ fn format(
                 writer.str_write(s)?;
             }
 
-            Document::SmolStr(s) => {
+            Document::EcoString(s) => {
                 width += s.len() as isize;
                 writer.str_write(s)?;
             }
@@ -429,7 +429,7 @@ impl<'a> Document<'a> {
         use Document::*;
         match self {
             Line(n) => *n == 0,
-            SmolStr(s) => s.is_empty(),
+            EcoString(s) => s.is_empty(),
             String(s) => s.is_empty(),
             Str(s) => s.is_empty(),
             // assuming `broken` and `unbroken` are equivalent

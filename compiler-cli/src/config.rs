@@ -1,12 +1,12 @@
 use camino::Utf8PathBuf;
 
+use ecow::EcoString;
 use gleam_core::{
     config::PackageConfig,
     error::{Error, FileIoAction, FileKind},
     manifest::Manifest,
     paths::ProjectPaths,
 };
-use smol_str::SmolStr;
 
 use crate::fs::get_current_directory;
 
@@ -23,7 +23,7 @@ pub fn find_package_config_for_module(
     manifest: &Manifest,
     project_paths: &ProjectPaths,
 ) -> Result<PackageConfig, Error> {
-    let gleam_projects: Vec<SmolStr> = manifest
+    let gleam_projects: Vec<EcoString> = manifest
         .packages
         .iter()
         .filter(|package| package.build_tools.contains(&"gleam".to_string()))

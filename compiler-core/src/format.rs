@@ -14,8 +14,8 @@ use crate::{
     type_::{self, Type},
     Error, Result,
 };
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 use std::sync::Arc;
 use vec1::Vec1;
 
@@ -24,7 +24,7 @@ use camino::Utf8Path;
 
 const INDENT: isize = 2;
 
-pub fn pretty(writer: &mut impl Utf8Writer, src: &SmolStr, path: &Utf8Path) -> Result<()> {
+pub fn pretty(writer: &mut impl Utf8Writer, src: &EcoString, path: &Utf8Path) -> Result<()> {
     let parsed = crate::parse::parse_module(src).map_err(|error| Error::Parse {
         path: path.to_path_buf(),
         src: src.clone(),
@@ -44,7 +44,7 @@ pub(crate) struct Intermediate<'a> {
 }
 
 impl<'a> Intermediate<'a> {
-    pub fn from_extra(extra: &'a ModuleExtra, src: &'a SmolStr) -> Intermediate<'a> {
+    pub fn from_extra(extra: &'a ModuleExtra, src: &'a EcoString) -> Intermediate<'a> {
         Intermediate {
             comments: extra
                 .comments
@@ -403,7 +403,7 @@ impl<'comments> Formatter<'comments> {
 
     fn type_ast_constructor<'a>(
         &mut self,
-        module: &'a Option<SmolStr>,
+        module: &'a Option<EcoString>,
         name: &'a str,
         args: &'a [TypeAst],
     ) -> Document<'a> {
@@ -458,7 +458,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         public: bool,
         name: &'a str,
-        args: &'a [SmolStr],
+        args: &'a [EcoString],
         typ: &'a TypeAst,
         deprecation: &'a Deprecation,
     ) -> Document<'a> {
@@ -720,7 +720,7 @@ impl<'comments> Formatter<'comments> {
         commented(document, comments)
     }
 
-    fn string<'a>(&self, string: &'a SmolStr) -> Document<'a> {
+    fn string<'a>(&self, string: &'a EcoString) -> Document<'a> {
         let doc = string.to_doc().surround("\"", "\"");
         if string.contains('\n') {
             doc.force_break()
@@ -752,7 +752,7 @@ impl<'comments> Formatter<'comments> {
         if fp_part_fractional.is_empty() {
             fp_part_fractional.push('0');
         }
-        let fp_doc = fp_part_fractional.chars().collect::<SmolStr>();
+        let fp_doc = fp_part_fractional.chars().collect::<EcoString>();
 
         integer_doc
             .append(dot_doc)
@@ -792,14 +792,14 @@ impl<'comments> Formatter<'comments> {
             j += 1;
         }
 
-        new_value.chars().rev().collect::<SmolStr>().to_doc()
+        new_value.chars().rev().collect::<EcoString>().to_doc()
     }
 
     fn pattern_constructor<'a>(
         &mut self,
         name: &'a str,
         args: &'a [CallArg<UntypedPattern>],
-        module: &'a Option<SmolStr>,
+        module: &'a Option<EcoString>,
         with_spread: bool,
     ) -> Document<'a> {
         fn is_breakable(expr: &UntypedPattern) -> bool {
@@ -1095,9 +1095,9 @@ impl<'comments> Formatter<'comments> {
             .to_doc()
             .append(if ct.opaque { "opaque type " } else { "type " })
             .append(if ct.parameters.is_empty() {
-                Document::SmolStr(ct.name.clone())
+                Document::EcoString(ct.name.clone())
             } else {
-                Document::SmolStr(ct.name.clone())
+                Document::EcoString(ct.name.clone())
                     .append(wrap_args(ct.parameters.iter().map(|e| e.to_doc())))
                     .group()
             });
@@ -1131,7 +1131,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         public: bool,
         name: &'a str,
-        args: &'a [SmolStr],
+        args: &'a [EcoString],
         location: &'a SrcSpan,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(location.start);

@@ -19,7 +19,7 @@ use crate::{
     Error, Result, Warning,
 };
 use askama::Template;
-use smol_str::SmolStr;
+use ecow::EcoString;
 use std::collections::HashSet;
 use std::{collections::HashMap, fmt::write, time::SystemTime};
 
@@ -89,8 +89,8 @@ where
     pub fn compile(
         mut self,
         warnings: &WarningEmitter,
-        existing_modules: &mut im::HashMap<SmolStr, type_::ModuleInterface>,
-        already_defined_modules: &mut im::HashMap<SmolStr, Utf8PathBuf>,
+        existing_modules: &mut im::HashMap<EcoString, type_::ModuleInterface>,
+        already_defined_modules: &mut im::HashMap<EcoString, Utf8PathBuf>,
         stale_modules: &mut StaleTracker,
         telemetry: &dyn Telemetry,
     ) -> Result<Vec<Module>, Error> {
@@ -242,7 +242,7 @@ where
 
         tracing::debug!("writing_module_caches");
         for module in modules {
-            let module_name = module.name.replace('/', "@");
+            let module_name = module.name.replace("/", "@");
 
             // Write metadata file
             let name = format!("{}.cache", &module_name);
@@ -388,7 +388,7 @@ fn analyse(
     mode: Mode,
     ids: &UniqueIdGenerator,
     mut parsed_modules: Vec<UncompiledModule>,
-    module_types: &mut im::HashMap<SmolStr, type_::ModuleInterface>,
+    module_types: &mut im::HashMap<EcoString, type_::ModuleInterface>,
     warnings: &WarningEmitter,
 ) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
@@ -533,7 +533,7 @@ where
     Ok(())
 }
 
-pub(crate) fn module_name(package_path: &Utf8Path, full_module_path: &Utf8Path) -> SmolStr {
+pub(crate) fn module_name(package_path: &Utf8Path, full_module_path: &Utf8Path) -> EcoString {
     // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
 
     // my/module.gleam
@@ -559,7 +559,7 @@ pub(crate) enum Input {
 }
 
 impl Input {
-    pub fn name(&self) -> &SmolStr {
+    pub fn name(&self) -> &EcoString {
         match self {
             Input::New(m) => &m.name,
             Input::Cached(m) => &m.name,
@@ -573,7 +573,7 @@ impl Input {
         }
     }
 
-    pub fn dependencies(&self) -> Vec<SmolStr> {
+    pub fn dependencies(&self) -> Vec<EcoString> {
         match self {
             Input::New(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
             Input::Cached(m) => m.dependencies.clone(),
@@ -599,9 +599,9 @@ impl Input {
 
 #[derive(Debug)]
 pub(crate) struct CachedModule {
-    pub name: SmolStr,
+    pub name: EcoString,
     pub origin: Origin,
-    pub dependencies: Vec<SmolStr>,
+    pub dependencies: Vec<EcoString>,
     pub source_path: Utf8PathBuf,
 }
 
@@ -609,7 +609,7 @@ pub(crate) struct CachedModule {
 pub(crate) struct CacheMetadata {
     pub mtime: SystemTime,
     pub codegen_performed: bool,
-    pub dependencies: Vec<SmolStr>,
+    pub dependencies: Vec<EcoString>,
     pub fingerprint: SourceFingerprint,
 }
 
@@ -632,12 +632,12 @@ pub(crate) struct Loaded {
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct UncompiledModule {
     pub path: Utf8PathBuf,
-    pub name: SmolStr,
-    pub code: SmolStr,
+    pub name: EcoString,
+    pub code: EcoString,
     pub mtime: SystemTime,
     pub origin: Origin,
-    pub package: SmolStr,
-    pub dependencies: Vec<(SmolStr, SrcSpan)>,
+    pub package: EcoString,
+    pub dependencies: Vec<(EcoString, SrcSpan)>,
     pub ast: UntypedModule,
     pub extra: ModuleExtra,
 }

@@ -29,9 +29,9 @@ use crate::{
     type_,
 };
 use camino::Utf8PathBuf;
+use ecow::EcoString;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use smol_str::SmolStr;
 use std::time::SystemTime;
 use std::{collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, process};
 use strum::{Display, EnumIter, EnumString, EnumVariantNames, VariantNames};
@@ -58,7 +58,7 @@ pub enum Target {
 }
 
 impl Target {
-    pub fn variant_strings() -> Vec<SmolStr> {
+    pub fn variant_strings() -> Vec<EcoString> {
         Self::VARIANTS.iter().map(|s| (*s).into()).collect()
     }
 
@@ -191,21 +191,21 @@ impl Package {
 
 #[derive(Debug)]
 pub struct Module {
-    pub name: SmolStr,
-    pub code: SmolStr,
+    pub name: EcoString,
+    pub code: EcoString,
     pub mtime: SystemTime,
     pub input_path: Utf8PathBuf,
     pub origin: Origin,
     pub ast: TypedModule,
     pub extra: ModuleExtra,
-    pub dependencies: Vec<(SmolStr, SrcSpan)>,
+    pub dependencies: Vec<(EcoString, SrcSpan)>,
 }
 
 impl Module {
     pub fn compiled_erlang_path(&self) -> Utf8PathBuf {
         let mut path = self.name.replace("/", "@");
         path.push_str(".erl");
-        Utf8PathBuf::from(path)
+        Utf8PathBuf::from(path.as_ref())
     }
 
     pub fn is_test(&self) -> bool {
@@ -262,7 +262,7 @@ impl Module {
         }
     }
 
-    pub(crate) fn dependencies_list(&self) -> Vec<SmolStr> {
+    pub(crate) fn dependencies_list(&self) -> Vec<EcoString> {
         self.dependencies
             .iter()
             .map(|(name, _)| name.clone())

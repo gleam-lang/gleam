@@ -1,6 +1,6 @@
 use debug_ignore::DebugIgnore;
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 
 use crate::{
     build::{self, Mode, Module, NullTelemetry, ProjectCompiler},
@@ -27,8 +27,8 @@ pub struct LspProjectCompiler<IO> {
     pub project_compiler: ProjectCompiler<IO>,
 
     /// Information on compiled modules.
-    pub modules: HashMap<SmolStr, Module>,
-    pub sources: HashMap<SmolStr, ModuleSourceInformation>,
+    pub modules: HashMap<EcoString, Module>,
+    pub sources: HashMap<EcoString, ModuleSourceInformation>,
 
     /// The storage for the warning emitter.
     pub warnings: Arc<VectorWarningEmitterIO>,

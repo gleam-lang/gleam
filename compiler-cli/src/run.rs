@@ -1,4 +1,5 @@
 use camino::Utf8PathBuf;
+use ecow::EcoString;
 use gleam_core::{
     build::{Codegen, Mode, Options, Runtime, Target},
     config::{DenoFlag, PackageConfig},
@@ -275,10 +276,10 @@ fn is_gleam_module(module: &str) -> bool {
 /// If provided module is not executable, suggest a possible valid module.
 fn get_or_suggest_main_function(
     built: gleam_core::build::Built,
-    module: &String,
+    module: &str,
 ) -> Result<ModuleFunction, Error> {
     // Check if the module exists
-    let error = match built.get_main_function(&module.into()) {
+    let error = match built.get_main_function(&EcoString::from(module)) {
         Ok(main_fn) => return Ok(main_fn),
         Err(error) => error,
     };
@@ -291,7 +292,7 @@ fn get_or_suggest_main_function(
         };
         if built.get_main_function(&other).is_ok() {
             return Err(Error::ModuleDoesNotExist {
-                module: module.into(),
+                module: EcoString::from(module),
                 suggestion: Some(other),
             });
         }

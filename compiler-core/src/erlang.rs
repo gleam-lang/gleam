@@ -18,12 +18,12 @@ use crate::{
     },
     Result,
 };
+use ecow::EcoString;
 use heck::ToSnakeCase;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use pattern::pattern;
 use regex::Regex;
-use smol_str::SmolStr;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
 
@@ -157,7 +157,7 @@ fn module_document<'a>(
 
     let header = "-module("
         .to_doc()
-        .append(Document::String(module.name.replace('/', "@")))
+        .append(Document::String(module.name.replace("/", "@").to_string()))
         .append(").")
         .append(line());
 
@@ -593,7 +593,7 @@ fn expr_segment<'a>(
 
     let size = |expression: &'a TypedExpr, env: &mut Env<'a>| match expression {
         TypedExpr::Int { value, .. } => {
-            let v = value.replace('_', "");
+            let v = value.replace("_", "");
             let v = u64::from_str(&v).unwrap_or(0);
             Some(Document::String(format!(":{v}")))
         }
@@ -988,7 +988,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
     }
 }
 
-fn record_constructor_function(tag: &SmolStr, arity: usize) -> Document<'_> {
+fn record_constructor_function(tag: &EcoString, arity: usize) -> Document<'_> {
     let chars = incrementing_args_list(arity);
     "fun("
         .to_doc()
@@ -1297,7 +1297,7 @@ fn docs_args_call<'a>(
             // This also enables an optimisation in the Erlang compiler in which
             // some Erlang BIFs can be replaced with literals if their arguments
             // are literals, such as `binary_to_atom`.
-            atom_string(module.replace('/', "@"))
+            atom_string(module.replace("/", "@").to_string())
                 .append(":")
                 .append(atom_string(name.to_string()))
                 .append(args)
@@ -1406,7 +1406,7 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
     }
 }
 
-fn todo<'a>(message: &'a Option<SmolStr>, location: SrcSpan, env: &Env<'a>) -> Document<'a> {
+fn todo<'a>(message: &'a Option<EcoString>, location: SrcSpan, env: &Env<'a>) -> Document<'a> {
     let message = message
         .as_deref()
         .unwrap_or("This has not yet been implemented");
@@ -1644,7 +1644,7 @@ fn id_to_type_var(id: u64) -> Document<'static> {
     }
     name.push(std::char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
     name.reverse();
-    name.into_iter().collect::<SmolStr>().to_doc()
+    name.into_iter().collect::<EcoString>().to_doc()
 }
 
 pub fn is_erlang_reserved_word(name: &str) -> bool {
