@@ -2,7 +2,7 @@ use camino::Utf8PathBuf;
 
 pub use codespan_reporting::diagnostic::{LabelStyle, Severity};
 use codespan_reporting::{diagnostic::Label as CodespanLabel, files::SimpleFile};
-use smol_str::SmolStr;
+use ecow::EcoString;
 use termcolor::Buffer;
 
 use crate::ast::SrcSpan;
@@ -21,7 +21,7 @@ pub struct Label {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Location {
-    pub src: SmolStr,
+    pub src: EcoString,
     pub path: Utf8PathBuf,
     pub label: Label,
     pub extra_labels: Vec<Label>,

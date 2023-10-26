@@ -6,7 +6,7 @@ use crate::{
 };
 use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
-use smol_str::SmolStr;
+use ecow::EcoString;
 use std::sync::atomic::AtomicUsize;
 use std::{
     io::Write,
@@ -93,12 +93,12 @@ impl WarningEmitter {
 #[derive(Debug, Clone)]
 pub struct TypeWarningEmitter {
     module_path: Utf8PathBuf,
-    module_src: SmolStr,
+    module_src: EcoString,
     emitter: WarningEmitter,
 }
 
 impl TypeWarningEmitter {
-    pub fn new(module_path: Utf8PathBuf, module_src: SmolStr, emitter: WarningEmitter) -> Self {
+    pub fn new(module_path: Utf8PathBuf, module_src: EcoString, emitter: WarningEmitter) -> Self {
         Self {
             module_path,
             module_src,
@@ -109,7 +109,7 @@ impl TypeWarningEmitter {
     pub fn null() -> Self {
         Self {
             module_path: Utf8PathBuf::new(),
-            module_src: SmolStr::new(""),
+            module_src: EcoString::from(""),
             emitter: WarningEmitter::new(Arc::new(NullWarningEmitterIO)),
         }
     }
@@ -127,12 +127,12 @@ impl TypeWarningEmitter {
 pub enum Warning {
     Type {
         path: Utf8PathBuf,
-        src: SmolStr,
+        src: EcoString,
         warning: crate::type_::Warning,
     },
     Parse {
         path: Utf8PathBuf,
-        src: SmolStr,
+        src: EcoString,
         warning: crate::parse::Warning,
     },
     InvalidSource {

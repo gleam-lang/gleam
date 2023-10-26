@@ -4,14 +4,14 @@ use crate::io::make_relative;
 use crate::requirement::Requirement;
 use crate::Result;
 use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
 use hexpm::version::Version;
 use itertools::Itertools;
-use smol_str::SmolStr;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct Manifest {
     #[serde(serialize_with = "ordered_map")]
-    pub requirements: HashMap<SmolStr, Requirement>,
+    pub requirements: HashMap<EcoString, Requirement>,
     #[serde(serialize_with = "sorted_vec")]
     pub packages: Vec<ManifestPackage>,
 }
@@ -147,7 +147,7 @@ impl<'de> serde::Deserialize<'de> for Base16Checksum {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct ManifestPackage {
-    pub name: SmolStr,
+    pub name: EcoString,
     pub version: Version,
     pub build_tools: Vec<String>,
     #[serde(default)]
@@ -181,7 +181,7 @@ pub enum ManifestPackageSource {
     #[serde(rename = "hex")]
     Hex { outer_checksum: Base16Checksum },
     #[serde(rename = "git")]
-    Git { repo: SmolStr, commit: SmolStr },
+    Git { repo: EcoString, commit: EcoString },
     #[serde(rename = "local")]
     Local { path: Utf8PathBuf }, // should be the canonical path
 }

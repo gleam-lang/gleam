@@ -1,13 +1,13 @@
 use super::Error;
 use crate::ast::{CallArg, SrcSpan};
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldMap {
     pub arity: u32,
-    pub fields: HashMap<SmolStr, u32>,
+    pub fields: HashMap<EcoString, u32>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -21,7 +21,7 @@ impl FieldMap {
         }
     }
 
-    pub fn insert(&mut self, label: SmolStr, index: u32) -> Result<(), DuplicateField> {
+    pub fn insert(&mut self, label: EcoString, index: u32) -> Result<(), DuplicateField> {
         match self.fields.insert(label, index) {
             Some(_) => Err(DuplicateField),
             None => Ok(()),
@@ -127,7 +127,7 @@ impl FieldMap {
         }
     }
 
-    pub fn incorrect_arity_labels<A>(&self, args: &[CallArg<A>]) -> Vec<SmolStr> {
+    pub fn incorrect_arity_labels<A>(&self, args: &[CallArg<A>]) -> Vec<EcoString> {
         let given: HashSet<_> = args.iter().filter_map(|arg| arg.label.as_ref()).collect();
 
         self.fields
@@ -155,7 +155,7 @@ impl FieldMapBuilder {
         }
     }
 
-    pub fn add(&mut self, label: Option<&SmolStr>, location: SrcSpan) -> Result<(), Error> {
+    pub fn add(&mut self, label: Option<&EcoString>, location: SrcSpan) -> Result<(), Error> {
         match label {
             Some(label) => self.labelled(label, location)?,
             None => self.unlabelled(location)?,
@@ -164,7 +164,7 @@ impl FieldMapBuilder {
         Ok(())
     }
 
-    fn labelled(&mut self, label: &SmolStr, location: SrcSpan) -> Result<(), Error> {
+    fn labelled(&mut self, label: &EcoString, location: SrcSpan) -> Result<(), Error> {
         if self.field_map.insert(label.clone(), self.index).is_err() {
             return Err(Error::DuplicateField {
                 label: label.clone(),

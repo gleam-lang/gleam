@@ -186,7 +186,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         location: SrcSpan,
         kind: TodoKind,
-        label: Option<SmolStr>,
+        label: Option<EcoString>,
     ) -> TypedExpr {
         let typ = self.new_unbound_var();
         self.environment.warnings.emit(Warning::Todo {
@@ -202,7 +202,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_panic(&mut self, location: SrcSpan, message: Option<SmolStr>) -> TypedExpr {
+    fn infer_panic(&mut self, location: SrcSpan, message: Option<EcoString>) -> TypedExpr {
         let typ = self.new_unbound_var();
         TypedExpr::Panic {
             location,
@@ -211,7 +211,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_string(&mut self, value: SmolStr, location: SrcSpan) -> TypedExpr {
+    fn infer_string(&mut self, value: EcoString, location: SrcSpan) -> TypedExpr {
         TypedExpr::String {
             location,
             value,
@@ -219,7 +219,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_int(&mut self, value: SmolStr, location: SrcSpan) -> TypedExpr {
+    fn infer_int(&mut self, value: EcoString, location: SrcSpan) -> TypedExpr {
         TypedExpr::Int {
             location,
             value,
@@ -227,7 +227,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_float(&mut self, value: SmolStr, location: SrcSpan) -> TypedExpr {
+    fn infer_float(&mut self, value: EcoString, location: SrcSpan) -> TypedExpr {
         TypedExpr::Float {
             location,
             value,
@@ -535,7 +535,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_var(&mut self, name: SmolStr, location: SrcSpan) -> Result<TypedExpr, Error> {
+    fn infer_var(&mut self, name: EcoString, location: SrcSpan) -> Result<TypedExpr, Error> {
         let constructor = self.infer_value_constructor(&None, &name, &location)?;
         Ok(TypedExpr::Var {
             constructor,
@@ -547,7 +547,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_field_access(
         &mut self,
         container: UntypedExpr,
-        label: SmolStr,
+        label: EcoString,
         label_location: SrcSpan,
         usage: FieldAccessUsage,
     ) -> Result<TypedExpr, Error> {
@@ -1306,10 +1306,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_guard_record_access(
         &mut self,
-        container: ClauseGuard<Arc<Type>, SmolStr>,
-        label: SmolStr,
+        container: ClauseGuard<Arc<Type>, EcoString>,
+        label: EcoString,
         location: SrcSpan,
-    ) -> Result<ClauseGuard<Arc<Type>, SmolStr>, Error> {
+    ) -> Result<ClauseGuard<Arc<Type>, EcoString>, Error> {
         let container = Box::new(container);
         let container_type = container.type_();
         let (index, label, type_) = self.infer_known_record_access(
@@ -1330,11 +1330,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_guard_module_access(
         &mut self,
-        name: SmolStr,
-        label: SmolStr,
+        name: EcoString,
+        label: EcoString,
         location: SrcSpan,
         record_access_erorr: Error,
-    ) -> Result<ClauseGuard<Arc<Type>, SmolStr>, Error> {
+    ) -> Result<ClauseGuard<Arc<Type>, EcoString>, Error> {
         let module_access = self
             .infer_module_access(&name, label, &location, location)
             .and_then(|ma| match ma {
@@ -1375,8 +1375,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_module_access(
         &mut self,
-        module_alias: &SmolStr,
-        label: SmolStr,
+        module_alias: &EcoString,
+        label: EcoString,
         module_location: &SrcSpan,
         select_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
@@ -1448,7 +1448,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_record_expression_access(
         &mut self,
         record: UntypedExpr,
-        label: SmolStr,
+        label: EcoString,
         location: SrcSpan,
         usage: FieldAccessUsage,
     ) -> Result<TypedExpr, Error> {
@@ -1460,7 +1460,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_known_record_expression_access(
         &mut self,
         record: TypedExpr,
-        label: SmolStr,
+        label: EcoString,
         location: SrcSpan,
         usage: FieldAccessUsage,
     ) -> Result<TypedExpr, Error> {
@@ -1483,8 +1483,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         record_location: SrcSpan,
         usage: FieldAccessUsage,
         location: SrcSpan,
-        label: SmolStr,
-    ) -> Result<(u64, SmolStr, Arc<Type>), Error> {
+        label: EcoString,
+    ) -> Result<(u64, EcoString, Arc<Type>), Error> {
         if record_type.is_unbound() {
             return Err(Error::RecordAccessUnknownType {
                 location: record_location,
@@ -1660,8 +1660,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_value_constructor(
         &mut self,
-        module: &Option<SmolStr>,
-        name: &SmolStr,
+        module: &Option<EcoString>,
+        name: &EcoString,
         location: &SrcSpan,
     ) -> Result<ValueConstructor, Error> {
         let constructor = match module {
@@ -2026,7 +2026,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 module_alias,
                 label,
                 ..
-            } => (Some(SmolStr::from(module_alias.as_str())), label),
+            } => (Some(EcoString::from(module_alias.as_str())), label),
 
             TypedExpr::Var { name, .. } => (None, name),
 
@@ -2241,8 +2241,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         subjects_count: usize,
         subjects: &[Arc<Type>],
-        typed_clauses: &[Clause<TypedExpr, Arc<Type>, SmolStr>],
-    ) -> Result<(), Vec<SmolStr>> {
+        typed_clauses: &[Clause<TypedExpr, Arc<Type>, EcoString>],
+    ) -> Result<(), Vec<EcoString>> {
         // Because exhaustiveness checking in presence of multiple subjects is similar
         // to full exhaustiveness checking of tuples or other nested record patterns,
         // and we currently only do only limited exhaustiveness checking of custom types
@@ -2419,7 +2419,7 @@ impl UseAssignments {
                 | Pattern::Tuple { .. }
                 | Pattern::BitArray { .. }
                 | Pattern::Concatenate { .. }) => {
-                    let name: SmolStr = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
+                    let name: EcoString = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
                     assignments.function_arguments.push(Arg {
                         location,
                         names: ArgNames::Named { name: name.clone() },

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use smol_str::SmolStr;
+use ecow::EcoString;
 
 use crate::{
     ast::{Import, SrcSpan, UnqualifiedImport},
@@ -96,7 +96,7 @@ impl<'a> Importer<'a> {
         &mut self,
         import: &UnqualifiedImport,
         module: &ModuleInterface,
-        imported_types: &mut HashSet<SmolStr>,
+        imported_types: &mut HashSet<EcoString>,
     ) -> Result<(), Error> {
         self.check_if_deprecated_bit_string(import, module, import.location);
 
@@ -133,7 +133,7 @@ impl<'a> Importer<'a> {
         &mut self,
         import: &UnqualifiedImport,
         module: &ModuleInterface,
-        imported_types: &mut HashSet<SmolStr>,
+        imported_types: &mut HashSet<EcoString>,
     ) -> Result<(), Error> {
         self.check_if_deprecated_bit_string(import, module, import.location);
 
@@ -231,7 +231,7 @@ impl<'a> Importer<'a> {
         &mut self,
         module_info: &ModuleInterface,
         location: SrcSpan,
-        imported_module: SmolStr,
+        imported_module: EcoString,
     ) -> Result<(), Error> {
         if self.origin.is_src() && !module_info.origin.is_src() {
             return Err(Error::SrcImportingTest {
@@ -269,7 +269,7 @@ impl<'a> Importer<'a> {
 
     fn check_not_a_duplicate_import(
         &self,
-        used_name: &SmolStr,
+        used_name: &EcoString,
         location: SrcSpan,
     ) -> Result<(), Error> {
         // Check if a module was already imported with this name

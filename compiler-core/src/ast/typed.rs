@@ -8,19 +8,19 @@ pub enum TypedExpr {
     Int {
         location: SrcSpan,
         typ: Arc<Type>,
-        value: SmolStr,
+        value: EcoString,
     },
 
     Float {
         location: SrcSpan,
         typ: Arc<Type>,
-        value: SmolStr,
+        value: EcoString,
     },
 
     String {
         location: SrcSpan,
         typ: Arc<Type>,
-        value: SmolStr,
+        value: EcoString,
     },
 
     Block {
@@ -42,7 +42,7 @@ pub enum TypedExpr {
     Var {
         location: SrcSpan,
         constructor: ValueConstructor,
-        name: SmolStr,
+        name: EcoString,
     },
 
     Fn {
@@ -80,13 +80,13 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         subjects: Vec<Self>,
-        clauses: Vec<Clause<Self, Arc<Type>, SmolStr>>,
+        clauses: Vec<Clause<Self, Arc<Type>, EcoString>>,
     },
 
     RecordAccess {
         location: SrcSpan,
         typ: Arc<Type>,
-        label: SmolStr,
+        label: EcoString,
         index: u64,
         record: Box<Self>,
     },
@@ -94,9 +94,9 @@ pub enum TypedExpr {
     ModuleSelect {
         location: SrcSpan,
         typ: Arc<Type>,
-        label: SmolStr,
-        module_name: SmolStr,
-        module_alias: SmolStr,
+        label: EcoString,
+        module_name: EcoString,
+        module_alias: EcoString,
         constructor: ModuleValueConstructor,
     },
 
@@ -115,13 +115,13 @@ pub enum TypedExpr {
 
     Todo {
         location: SrcSpan,
-        message: Option<SmolStr>,
+        message: Option<EcoString>,
         type_: Arc<Type>,
     },
 
     Panic {
         location: SrcSpan,
-        message: Option<SmolStr>,
+        message: Option<EcoString>,
         type_: Arc<Type>,
     },
 

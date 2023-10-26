@@ -11,38 +11,38 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Environment<'a> {
-    pub current_module: SmolStr,
+    pub current_module: EcoString,
     pub target: Target,
     pub ids: UniqueIdGenerator,
     previous_id: u64,
     /// Names of types or values that have been imported an unqualified fashion
     /// from other modules. Used to prevent multiple imports using the same name.
-    pub unqualified_imported_names: HashMap<SmolStr, SrcSpan>,
-    pub unqualified_imported_types: HashMap<SmolStr, SrcSpan>,
-    pub importable_modules: &'a im::HashMap<SmolStr, ModuleInterface>,
+    pub unqualified_imported_names: HashMap<EcoString, SrcSpan>,
+    pub unqualified_imported_types: HashMap<EcoString, SrcSpan>,
+    pub importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
 
     /// Modules that have been imported by the current module, along with the
     /// location of the import statement where they were imported.
-    pub imported_modules: HashMap<SmolStr, (SrcSpan, &'a ModuleInterface)>,
-    pub unused_modules: HashMap<SmolStr, SrcSpan>,
+    pub imported_modules: HashMap<EcoString, (SrcSpan, &'a ModuleInterface)>,
+    pub unused_modules: HashMap<EcoString, SrcSpan>,
 
     /// Names of modules that have been imported with as name.
-    pub imported_module_aliases: HashSet<SmolStr>,
+    pub imported_module_aliases: HashSet<EcoString>,
 
     /// Values defined in the current function (or the prelude)
-    pub scope: im::HashMap<SmolStr, ValueConstructor>,
+    pub scope: im::HashMap<EcoString, ValueConstructor>,
 
     /// Types defined in the current module (or the prelude)
-    pub module_types: HashMap<SmolStr, TypeConstructor>,
+    pub module_types: HashMap<EcoString, TypeConstructor>,
 
     /// Mapping from types to constructor names in the current module (or the prelude)
-    pub module_types_constructors: HashMap<SmolStr, Vec<SmolStr>>,
+    pub module_types_constructors: HashMap<EcoString, Vec<EcoString>>,
 
     /// Values defined in the current module (or the prelude)
-    pub module_values: HashMap<SmolStr, ValueConstructor>,
+    pub module_values: HashMap<EcoString, ValueConstructor>,
 
     /// Accessors defined in the current module
-    pub accessors: HashMap<SmolStr, AccessorsMap>,
+    pub accessors: HashMap<EcoString, AccessorsMap>,
 
     /// Warnings
     pub warnings: &'a TypeWarningEmitter,
@@ -51,9 +51,9 @@ pub struct Environment<'a> {
     /// added to the top scope. When an entity is used we crawl down the scope
     /// stack for an entity with that name and mark it as used.
     /// NOTE: The bool in the tuple here tracks if the entity has been used
-    pub entity_usages: Vec<HashMap<SmolStr, (EntityKind, SrcSpan, bool)>>,
+    pub entity_usages: Vec<HashMap<EcoString, (EntityKind, SrcSpan, bool)>>,
 
-    pub ambiguous_imported_items: HashMap<SmolStr, LayerUsage>,
+    pub ambiguous_imported_items: HashMap<EcoString, LayerUsage>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -75,9 +75,9 @@ impl LayerUsage {
 impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
-        current_module: SmolStr,
+        current_module: EcoString,
         target: Target,
-        importable_modules: &'a im::HashMap<SmolStr, ModuleInterface>,
+        importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
         warnings: &'a TypeWarningEmitter,
     ) -> Self {
         let prelude = importable_modules
@@ -111,7 +111,7 @@ impl<'a> Environment<'a> {
 pub enum EntityKind {
     PrivateConstant,
     // String here is the type constructor's type name
-    PrivateTypeConstructor(SmolStr),
+    PrivateTypeConstructor(EcoString),
     PrivateFunction,
     ImportedConstructor,
     ImportedType,
@@ -123,7 +123,7 @@ pub enum EntityKind {
 
 #[derive(Debug)]
 pub struct ScopeResetData {
-    local_values: im::HashMap<SmolStr, ValueConstructor>,
+    local_values: im::HashMap<EcoString, ValueConstructor>,
 }
 
 impl<'a> Environment<'a> {
@@ -190,7 +190,7 @@ impl<'a> Environment<'a> {
 
     /// Insert a variable in the current scope.
     ///
-    pub fn insert_local_variable(&mut self, name: SmolStr, location: SrcSpan, typ: Arc<Type>) {
+    pub fn insert_local_variable(&mut self, name: EcoString, location: SrcSpan, typ: Arc<Type>) {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
@@ -203,7 +203,11 @@ impl<'a> Environment<'a> {
     }
 
     /// Insert a constant in the current scope
-    pub fn insert_local_constant(&mut self, name: SmolStr, literal: Constant<Arc<Type>, SmolStr>) {
+    pub fn insert_local_constant(
+        &mut self,
+        name: EcoString,
+        literal: Constant<Arc<Type>, EcoString>,
+    ) {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
@@ -221,7 +225,7 @@ impl<'a> Environment<'a> {
     ///
     pub fn insert_variable(
         &mut self,
-        name: SmolStr,
+        name: EcoString,
         variant: ValueConstructorVariant,
         typ: Arc<Type>,
         public: bool,
@@ -241,19 +245,19 @@ impl<'a> Environment<'a> {
     /// Insert a value into the current module.
     /// Errors if the module already has a value with that name.
     ///
-    pub fn insert_module_value(&mut self, name: SmolStr, value: ValueConstructor) {
+    pub fn insert_module_value(&mut self, name: EcoString, value: ValueConstructor) {
         let _ = self.module_values.insert(name, value);
     }
 
     /// Lookup a variable in the current scope.
     ///
-    pub fn get_variable(&self, name: &SmolStr) -> Option<&ValueConstructor> {
+    pub fn get_variable(&self, name: &EcoString) -> Option<&ValueConstructor> {
         self.scope.get(name)
     }
 
     /// Lookup a module constant in the current scope.
     ///
-    pub fn get_module_const(&mut self, name: &SmolStr) -> Option<&ValueConstructor> {
+    pub fn get_module_const(&mut self, name: &EcoString) -> Option<&ValueConstructor> {
         self.increment_usage(name, Layer::Value);
         self.module_values
             .get(name)
@@ -268,7 +272,7 @@ impl<'a> Environment<'a> {
     ///
     pub fn insert_type_constructor(
         &mut self,
-        type_name: SmolStr,
+        type_name: EcoString,
         info: TypeConstructor,
     ) -> Result<(), Error> {
         let name = type_name.clone();
@@ -286,7 +290,11 @@ impl<'a> Environment<'a> {
 
     /// Map a type to constructors in the current scope.
     ///
-    pub fn insert_type_to_constructors(&mut self, type_name: SmolStr, constructors: Vec<SmolStr>) {
+    pub fn insert_type_to_constructors(
+        &mut self,
+        type_name: EcoString,
+        constructors: Vec<EcoString>,
+    ) {
         let _ = self
             .module_types_constructors
             .insert(type_name, constructors);
@@ -296,8 +304,8 @@ impl<'a> Environment<'a> {
     ///
     pub fn get_type_constructor(
         &mut self,
-        module_alias: &Option<SmolStr>,
-        name: &SmolStr,
+        module_alias: &Option<EcoString>,
+        name: &EcoString,
         // TODO: remove this once we have removed the deprecated BitString type
         location: SrcSpan,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
@@ -345,8 +353,8 @@ impl<'a> Environment<'a> {
     pub fn get_constructors_for_type(
         &mut self,
         full_module_name: Option<&str>,
-        name: &SmolStr,
-    ) -> Result<&Vec<SmolStr>, UnknownTypeConstructorError> {
+        name: &EcoString,
+    ) -> Result<&Vec<EcoString>, UnknownTypeConstructorError> {
         match full_module_name {
             None => self.module_types_constructors.get(name).ok_or_else(|| {
                 UnknownTypeConstructorError::Type {
@@ -378,8 +386,8 @@ impl<'a> Environment<'a> {
     ///
     pub fn get_value_constructor(
         &mut self,
-        module: Option<&SmolStr>,
-        name: &SmolStr,
+        module: Option<&EcoString>,
+        name: &EcoString,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
             None => self
@@ -409,7 +417,7 @@ impl<'a> Environment<'a> {
         }
     }
 
-    pub fn insert_accessors(&mut self, type_name: SmolStr, accessors: AccessorsMap) {
+    pub fn insert_accessors(&mut self, type_name: EcoString, accessors: AccessorsMap) {
         let _ = self.accessors.insert(type_name, accessors);
     }
 
@@ -480,7 +488,7 @@ impl<'a> Environment<'a> {
     }
 
     /// Inserts an entity at the current scope for usage tracking.
-    pub fn init_usage(&mut self, name: SmolStr, kind: EntityKind, location: SrcSpan) {
+    pub fn init_usage(&mut self, name: EcoString, kind: EntityKind, location: SrcSpan) {
         use EntityKind::*;
 
         match self
@@ -508,7 +516,7 @@ impl<'a> Environment<'a> {
     }
 
     /// Increments an entity's usage in the current or nearest enclosing scope
-    pub fn increment_usage(&mut self, name: &SmolStr, layer: Layer) {
+    pub fn increment_usage(&mut self, name: &EcoString, layer: Layer) {
         let mut name = name.clone();
 
         while let Some((kind, _, used)) = self
@@ -573,7 +581,7 @@ impl<'a> Environment<'a> {
         locations
     }
 
-    fn handle_unused(&mut self, unused: HashMap<SmolStr, (EntityKind, SrcSpan, bool)>) {
+    fn handle_unused(&mut self, unused: HashMap<EcoString, (EntityKind, SrcSpan, bool)>) {
         for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
             let warning = match kind {
                 EntityKind::ImportedType | EntityKind::ImportedTypeAndValue(_) => {
@@ -610,7 +618,7 @@ impl<'a> Environment<'a> {
         }
     }
 
-    pub fn local_value_names(&self) -> Vec<SmolStr> {
+    pub fn local_value_names(&self) -> Vec<EcoString> {
         self.scope
             .keys()
             .filter(|&t| PIPE_VARIABLE != t)
@@ -625,7 +633,7 @@ impl<'a> Environment<'a> {
         &mut self,
         patterns: Vec<Pattern<Arc<Type>>>,
         value_typ: Arc<Type>,
-    ) -> Result<(), Vec<SmolStr>> {
+    ) -> Result<(), Vec<EcoString>> {
         match &*value_typ {
             Type::Named {
                 name: type_name,
@@ -639,7 +647,7 @@ impl<'a> Environment<'a> {
                 };
 
                 if let Ok(constructors) = self.get_constructors_for_type(m, type_name) {
-                    let mut unmatched_constructors: HashSet<SmolStr> =
+                    let mut unmatched_constructors: HashSet<EcoString> =
                         constructors.iter().cloned().collect();
 
                     for p in &patterns {

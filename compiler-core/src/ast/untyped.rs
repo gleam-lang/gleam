@@ -6,17 +6,17 @@ use super::*;
 pub enum UntypedExpr {
     Int {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     Float {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     String {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     Block {
@@ -26,7 +26,7 @@ pub enum UntypedExpr {
 
     Var {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     // TODO: create new variant for captures specifically
@@ -76,7 +76,7 @@ pub enum UntypedExpr {
         //   user.name
         //       ^^^^^
         label_location: SrcSpan,
-        label: SmolStr,
+        label: EcoString,
         container: Box<Self>,
     },
 
@@ -94,12 +94,12 @@ pub enum UntypedExpr {
     Todo {
         kind: TodoKind,
         location: SrcSpan,
-        message: Option<SmolStr>,
+        message: Option<EcoString>,
     },
 
     Panic {
         location: SrcSpan,
-        message: Option<SmolStr>,
+        message: Option<EcoString>,
     },
 
     BitArray {

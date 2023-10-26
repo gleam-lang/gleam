@@ -22,8 +22,8 @@ use crate::{
     pretty::{break_, Document, Documentable},
     type_::{Type, TypeVar},
 };
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use super::{concat, import::Imports, line, lines, wrap_args, Output, INDENT};
@@ -36,7 +36,7 @@ fn id_to_type_var(id: u64) -> Document<'static> {
         return std::iter::once(
             std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"),
         )
-        .collect::<SmolStr>()
+        .collect::<EcoString>()
         .to_doc();
     }
     let mut name = vec![];
@@ -47,7 +47,7 @@ fn id_to_type_var(id: u64) -> Document<'static> {
     }
     name.push(std::char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
     name.reverse();
-    name.into_iter().collect::<SmolStr>().to_doc()
+    name.into_iter().collect::<EcoString>().to_doc()
 }
 
 fn name_with_generics<'a>(

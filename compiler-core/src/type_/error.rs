@@ -7,9 +7,9 @@ use camino::Utf8PathBuf;
 use std::sync::Arc;
 
 use crate::ast::Layer;
+use ecow::EcoString;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
-use smol_str::SmolStr;
 
 use super::FieldAccessUsage;
 
@@ -26,49 +26,49 @@ pub enum Error {
         location: SrcSpan,
     },
     UnknownLabels {
-        unknown: Vec<(SmolStr, SrcSpan)>,
-        valid: Vec<SmolStr>,
-        supplied: Vec<SmolStr>,
+        unknown: Vec<(EcoString, SrcSpan)>,
+        valid: Vec<EcoString>,
+        supplied: Vec<EcoString>,
     },
 
     UnknownVariable {
         location: SrcSpan,
-        name: SmolStr,
-        variables: Vec<SmolStr>,
+        name: EcoString,
+        variables: Vec<EcoString>,
     },
 
     UnknownType {
         location: SrcSpan,
-        name: SmolStr,
-        types: Vec<SmolStr>,
+        name: EcoString,
+        types: Vec<EcoString>,
     },
 
     UnknownModule {
         location: SrcSpan,
-        name: SmolStr,
-        imported_modules: Vec<SmolStr>,
+        name: EcoString,
+        imported_modules: Vec<EcoString>,
     },
 
     UnknownModuleType {
         location: SrcSpan,
-        name: SmolStr,
-        module_name: SmolStr,
-        type_constructors: Vec<SmolStr>,
+        name: EcoString,
+        module_name: EcoString,
+        type_constructors: Vec<EcoString>,
     },
 
     UnknownModuleValue {
         location: SrcSpan,
-        name: SmolStr,
-        module_name: SmolStr,
-        value_constructors: Vec<SmolStr>,
+        name: EcoString,
+        module_name: EcoString,
+        value_constructors: Vec<EcoString>,
     },
 
     UnknownModuleField {
         location: SrcSpan,
-        name: SmolStr,
-        module_name: SmolStr,
-        value_constructors: Vec<SmolStr>,
-        type_constructors: Vec<SmolStr>,
+        name: EcoString,
+        module_name: EcoString,
+        value_constructors: Vec<EcoString>,
+        type_constructors: Vec<EcoString>,
     },
 
     NotFn {
@@ -79,8 +79,8 @@ pub enum Error {
     UnknownRecordField {
         location: SrcSpan,
         typ: Arc<Type>,
-        label: SmolStr,
-        fields: Vec<SmolStr>,
+        label: EcoString,
+        fields: Vec<EcoString>,
         usage: FieldAccessUsage,
     },
 
@@ -88,7 +88,7 @@ pub enum Error {
         location: SrcSpan,
         expected: usize,
         given: usize,
-        labels: Vec<SmolStr>,
+        labels: Vec<EcoString>,
     },
 
     UpdateMultiConstructorType {
@@ -102,7 +102,7 @@ pub enum Error {
 
     IncorrectTypeArity {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
         expected: usize,
         given: usize,
     },
@@ -112,7 +112,7 @@ pub enum Error {
         situation: Option<UnifyErrorSituation>,
         expected: Arc<Type>,
         given: Arc<Type>,
-        rigid_type_names: im::HashMap<u64, SmolStr>,
+        rigid_type_names: im::HashMap<u64, EcoString>,
     },
 
     RecursiveType {
@@ -122,29 +122,29 @@ pub enum Error {
     DuplicateName {
         location_a: SrcSpan,
         location_b: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     DuplicateImport {
         location: SrcSpan,
         previous_location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     DuplicateTypeName {
         location: SrcSpan,
         previous_location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     DuplicateArgument {
         location: SrcSpan,
-        label: SmolStr,
+        label: EcoString,
     },
 
     DuplicateField {
         location: SrcSpan,
-        label: SmolStr,
+        label: EcoString,
     },
 
     PrivateTypeLeak {
@@ -154,7 +154,7 @@ pub enum Error {
 
     UnexpectedLabelledArg {
         location: SrcSpan,
-        label: SmolStr,
+        label: EcoString,
     },
 
     PositionalArgumentAfterLabelled {
@@ -169,22 +169,22 @@ pub enum Error {
 
     NonLocalClauseGuardVariable {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     ExtraVarInAlternativePattern {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     MissingVarInAlternativePattern {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     DuplicateVarInPattern {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     OutOfBoundsTupleIndex {
@@ -215,17 +215,17 @@ pub enum Error {
     },
 
     ReservedModuleName {
-        name: SmolStr,
+        name: EcoString,
     },
 
     KeywordInModuleName {
-        name: SmolStr,
-        keyword: SmolStr,
+        name: EcoString,
+        keyword: EcoString,
     },
 
     NotExhaustivePatternMatch {
         location: SrcSpan,
-        unmatched: Vec<SmolStr>,
+        unmatched: Vec<EcoString>,
         kind: PatternMatchKind,
     },
 
@@ -243,7 +243,7 @@ pub enum Error {
     /// ```
     ArgumentNameAlreadyUsed {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     /// A function was defined with an unlabelled argument after a labelled one.
@@ -257,7 +257,7 @@ pub enum Error {
     ///     type ForkBomb = #(ForkBomb, ForkBomb)
     RecursiveTypeAlias {
         location: SrcSpan,
-        cycle: Vec<SmolStr>,
+        cycle: Vec<EcoString>,
     },
 
     /// A function has been given an external implementation but not all the
@@ -278,16 +278,16 @@ pub enum Error {
     // have a valid module name.
     InvalidExternalJavascriptModule {
         location: SrcSpan,
-        module: SmolStr,
-        name: SmolStr,
+        module: EcoString,
+        name: EcoString,
     },
 
     // A function's JavaScript implementation has been given but it does not
     // have a valid function name.
     InvalidExternalJavascriptFunction {
         location: SrcSpan,
-        function: SmolStr,
-        name: SmolStr,
+        function: EcoString,
+        name: EcoString,
     },
 }
 
@@ -336,43 +336,43 @@ pub enum Warning {
     UnusedType {
         location: SrcSpan,
         imported: bool,
-        name: SmolStr,
+        name: EcoString,
     },
 
     UnusedConstructor {
         location: SrcSpan,
         imported: bool,
-        name: SmolStr,
+        name: EcoString,
     },
 
     UnusedImportedValue {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     UnusedImportedModule {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     UnusedImportedModuleAlias {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     UnusedPrivateModuleConstant {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     UnusedPrivateFunction {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     UnusedVariable {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     UnnecessaryDoubleIntNegation {
@@ -390,13 +390,13 @@ pub enum Warning {
 
     TransitiveDependencyImported {
         location: SrcSpan,
-        module: SmolStr,
-        package: SmolStr,
+        module: EcoString,
+        package: EcoString,
     },
 
     DeprecatedItem {
         location: SrcSpan,
-        message: SmolStr,
+        message: EcoString,
         layer: Layer,
     },
 
@@ -406,7 +406,7 @@ pub enum Warning {
 
     DeprecatedTypeImport {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 }
 
@@ -423,7 +423,7 @@ impl Error {
         }
     }
 
-    pub fn with_unify_error_rigid_names(mut self, new_names: &im::HashMap<u64, SmolStr>) -> Self {
+    pub fn with_unify_error_rigid_names(mut self, new_names: &im::HashMap<u64, EcoString>) -> Self {
         match self {
             Error::CouldNotUnify {
                 rigid_type_names: ref mut annotated_names,
@@ -438,7 +438,7 @@ impl Error {
 }
 
 impl Warning {
-    pub fn into_warning(self, path: Utf8PathBuf, src: SmolStr) -> crate::Warning {
+    pub fn into_warning(self, path: Utf8PathBuf, src: EcoString) -> crate::Warning {
         crate::Warning::Type {
             path,
             src,
@@ -450,19 +450,19 @@ impl Warning {
 #[derive(Debug, PartialEq, Eq)]
 pub enum UnknownValueConstructorError {
     Variable {
-        name: SmolStr,
-        variables: Vec<SmolStr>,
+        name: EcoString,
+        variables: Vec<EcoString>,
     },
 
     Module {
-        name: SmolStr,
-        imported_modules: Vec<SmolStr>,
+        name: EcoString,
+        imported_modules: Vec<EcoString>,
     },
 
     ModuleValue {
-        name: SmolStr,
-        module_name: SmolStr,
-        value_constructors: Vec<SmolStr>,
+        name: EcoString,
+        module_name: EcoString,
+        value_constructors: Vec<EcoString>,
     },
 }
 
@@ -502,19 +502,19 @@ pub fn convert_get_value_constructor_error(
 #[derive(Debug, PartialEq, Eq)]
 pub enum UnknownTypeConstructorError {
     Type {
-        name: SmolStr,
-        type_constructors: Vec<SmolStr>,
+        name: EcoString,
+        type_constructors: Vec<EcoString>,
     },
 
     Module {
-        name: SmolStr,
-        imported_modules: Vec<SmolStr>,
+        name: EcoString,
+        imported_modules: Vec<EcoString>,
     },
 
     ModuleType {
-        name: SmolStr,
-        module_name: SmolStr,
-        type_constructors: Vec<SmolStr>,
+        name: EcoString,
+        module_name: EcoString,
+        type_constructors: Vec<EcoString>,
     },
 }
 
@@ -726,15 +726,15 @@ pub enum UnifyError {
     },
 
     ExtraVarInAlternativePattern {
-        name: SmolStr,
+        name: EcoString,
     },
 
     MissingVarInAlternativePattern {
-        name: SmolStr,
+        name: EcoString,
     },
 
     DuplicateVarInPattern {
-        name: SmolStr,
+        name: EcoString,
     },
 
     RecursiveType,

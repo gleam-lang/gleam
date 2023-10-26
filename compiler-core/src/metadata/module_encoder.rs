@@ -1,4 +1,4 @@
-use smol_str::SmolStr;
+use ecow::EcoString;
 
 use crate::{
     ast::{
@@ -154,7 +154,7 @@ impl<'a> ModuleEncoder<'a> {
     fn build_types_constructors_mapping(
         &mut self,
         mut builder: capnp::text_list::Builder<'_>,
-        constructors: &[SmolStr],
+        constructors: &[EcoString],
     ) {
         for (i, s) in constructors.iter().enumerate() {
             builder.set(i as u32, s);
@@ -201,7 +201,7 @@ impl<'a> ModuleEncoder<'a> {
                 documentation: doc,
             } => {
                 let mut builder = builder.init_module_constant();
-                builder.set_documentation(doc.as_ref().map(SmolStr::as_str).unwrap_or_default());
+                builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 self.build_src_span(builder.reborrow().init_location(), *location);
                 self.build_constant(builder.reborrow().init_literal(), literal);
                 builder.reborrow().set_module(module);
@@ -220,7 +220,7 @@ impl<'a> ModuleEncoder<'a> {
                 builder.set_name(name);
                 builder.set_module(module);
                 builder.set_arity(*arity);
-                builder.set_documentation(doc.as_ref().map(SmolStr::as_str).unwrap_or_default());
+                builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 builder.set_constructors_count(*constructors_count);
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 self.build_src_span(builder.init_location(), *location);
@@ -238,7 +238,7 @@ impl<'a> ModuleEncoder<'a> {
                 builder.set_name(name);
                 builder.set_module(module);
                 builder.set_arity(*arity as u16);
-                builder.set_documentation(doc.as_ref().map(SmolStr::as_str).unwrap_or_default());
+                builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 self.build_src_span(builder.init_location(), *location);
             }

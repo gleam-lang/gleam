@@ -8,9 +8,9 @@ use crate::{
     Error, Result,
 };
 use camino::Utf8Path;
-use smol_str::SmolStr;
+use ecow::EcoString;
 
-pub fn parse_fix_and_format(src: &SmolStr, path: &Utf8Path) -> Result<String> {
+pub fn parse_fix_and_format(src: &EcoString, path: &Utf8Path) -> Result<String> {
     // Parse
     let parsed = crate::parse::parse_module(src).map_err(|error| Error::Parse {
         path: path.to_path_buf(),

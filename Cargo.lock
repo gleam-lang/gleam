@@ -504,6 +504,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ecow"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6ea5e3f9cda726431da9d1a8d5a29785d544b31e98e1ca7a210906244002e02"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "either"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -744,6 +753,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "debug-ignore",
+ "ecow",
  "flate2",
  "fs_extra",
  "fslock",
@@ -767,7 +777,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "smol_str",
  "strum",
  "symlink",
  "tar",
@@ -796,6 +805,7 @@ dependencies = [
  "codespan-reporting",
  "debug-ignore",
  "dirs-next",
+ "ecow",
  "flate2",
  "futures",
  "globset",
@@ -818,7 +828,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "smol_str",
  "spdx",
  "strsim",
  "strum",
@@ -2004,15 +2013,6 @@ name = "smawk"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7c388c1b5e93756d0c740965c41e8822f866621d41acbdf6336a6a168f8840c"
-
-[[package]]
-name = "smol_str"
-version = "0.1.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fad6c857cbab2627dcf01ec85a623ca4e7dcb5691cbaa3d7fb7653671f0d09c9"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "socket2"

@@ -1,15 +1,15 @@
 use std::fmt;
 
-use smol_str::SmolStr;
+use ecow::EcoString;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Token {
-    Name { name: SmolStr },
-    UpName { name: SmolStr },
-    DiscardName { name: SmolStr },
-    Int { value: SmolStr },
-    Float { value: SmolStr },
-    String { value: SmolStr },
+    Name { name: EcoString },
+    UpName { name: EcoString },
+    DiscardName { name: EcoString },
+    Int { value: EcoString },
+    Float { value: EcoString },
+    String { value: EcoString },
     CommentDoc { content: String },
     // Groupings
     LeftParen,   // (

@@ -11,14 +11,14 @@ use crate::{
         PatternFolder, TypeAstFolder, UntypedConstantFolder, UntypedExprFolder, UntypedModuleFolder,
     },
 };
+use ecow::EcoString;
 use im::HashSet;
-use smol_str::SmolStr;
 
 #[derive(Debug, Default)]
 pub struct Fixer {
-    imports: HashMap<SmolStr, Imported>,
-    local_types: HashSet<SmolStr>,
-    local_values: HashSet<SmolStr>,
+    imports: HashMap<EcoString, Imported>,
+    local_types: HashSet<EcoString>,
+    local_values: HashSet<EcoString>,
 }
 
 impl Fixer {
@@ -59,7 +59,7 @@ impl Fixer {
     }
 
     fn fix_import(&mut self, import: &mut UntypedImport) {
-        let existing_types: HashSet<SmolStr> = import
+        let existing_types: HashSet<EcoString> = import
             .unqualified_types
             .iter()
             .map(|t| t.used_name().clone())
@@ -113,8 +113,8 @@ impl UntypedConstantFolder for Fixer {
     fn fold_constant_record(
         &mut self,
         location: SrcSpan,
-        module: Option<SmolStr>,
-        name: SmolStr,
+        module: Option<EcoString>,
+        name: EcoString,
         args: Vec<CallArg<UntypedConstant>>,
     ) -> UntypedConstant {
         if module.is_none()
@@ -139,8 +139,8 @@ impl UntypedConstantFolder for Fixer {
     fn fold_constant_var(
         &mut self,
         location: SrcSpan,
-        module: Option<SmolStr>,
-        name: SmolStr,
+        module: Option<EcoString>,
+        name: EcoString,
     ) -> UntypedConstant {
         if module.is_none() && !self.local_values.contains(&name) {
             if let Some(import) = self.imports.get_mut(&name) {
@@ -158,7 +158,7 @@ impl UntypedConstantFolder for Fixer {
 }
 
 impl UntypedExprFolder for Fixer {
-    fn fold_var(&mut self, location: SrcSpan, name: SmolStr) -> UntypedExpr {
+    fn fold_var(&mut self, location: SrcSpan, name: EcoString) -> UntypedExpr {
         if !(self.local_values.contains(&name) || name == "Ok" || name == "Error") {
             if let Some(import) = self.imports.get_mut(&name) {
                 import.used_as_value = true;
@@ -188,9 +188,9 @@ impl PatternFolder for Fixer {
     fn fold_pattern_constructor(
         &mut self,
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
         arguments: Vec<CallArg<UntypedPattern>>,
-        module: Option<SmolStr>,
+        module: Option<EcoString>,
         with_spread: bool,
     ) -> UntypedPattern {
         if module.is_none() && !self.local_types.contains(&name) {
@@ -213,7 +213,7 @@ impl PatternFolder for Fixer {
 
 #[derive(Debug, Default)]
 struct Imported {
-    module: SmolStr,
+    module: EcoString,
     used_as_type: bool,
     used_as_value: bool,
 }

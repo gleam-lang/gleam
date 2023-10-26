@@ -1,5 +1,5 @@
+use ecow::EcoString;
 use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
-use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
 
 #[cfg(test)]
@@ -13,7 +13,7 @@ use pretty_assertions::assert_eq;
 ///
 /// Errors if there are duplicate values, unknown deps, or cycles.
 ///
-pub fn toposort_deps(inputs: Vec<(SmolStr, Vec<SmolStr>)>) -> Result<Vec<SmolStr>, Error> {
+pub fn toposort_deps(inputs: Vec<(EcoString, Vec<EcoString>)>) -> Result<Vec<EcoString>, Error> {
     let mut graph = petgraph::Graph::<(), ()>::with_capacity(inputs.len(), inputs.len() * 5);
     let mut values = HashMap::with_capacity(inputs.len());
     let mut indexes = HashMap::with_capacity(inputs.len());
@@ -46,8 +46,8 @@ pub fn toposort_deps(inputs: Vec<(SmolStr, Vec<SmolStr>)>) -> Result<Vec<SmolStr
 fn import_cycle(
     cycle: Cycle<NodeIndex>,
     graph: &petgraph::Graph<(), ()>,
-    mut values: HashMap<NodeIndex, SmolStr>,
-) -> Vec<SmolStr> {
+    mut values: HashMap<NodeIndex, EcoString>,
+) -> Vec<EcoString> {
     let origin = cycle.node_id();
     let mut path = vec![];
     let _ = find_cycle(origin, origin, graph, &mut path, &mut HashSet::new());
@@ -117,5 +117,5 @@ fn toposort_deps_test() {
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    Cycle(Vec<SmolStr>),
+    Cycle(Vec<EcoString>),
 }

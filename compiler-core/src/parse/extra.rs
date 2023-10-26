@@ -1,4 +1,4 @@
-use smol_str::SmolStr;
+use ecow::EcoString;
 
 use crate::ast::SrcSpan;
 
@@ -22,8 +22,8 @@ pub struct Comment<'a> {
     pub content: &'a str,
 }
 
-impl<'a> From<(&SrcSpan, &'a SmolStr)> for Comment<'a> {
-    fn from(value: (&SrcSpan, &'a SmolStr)) -> Self {
+impl<'a> From<(&SrcSpan, &'a EcoString)> for Comment<'a> {
+    fn from(value: (&SrcSpan, &'a EcoString)) -> Self {
         Self::from((value.0, value.1.as_str()))
     }
 }

@@ -4,18 +4,18 @@ use std::str::FromStr;
 use crate::error::Result;
 use crate::io::make_relative;
 use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
 use hexpm::version::Range;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 use serde::Deserialize;
-use smol_str::SmolStr;
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(untagged, remote = "Self")]
 pub enum Requirement {
     Hex { version: Range },
     Path { path: Utf8PathBuf },
-    Git { git: SmolStr },
+    Git { git: EcoString },
 }
 
 impl Requirement {

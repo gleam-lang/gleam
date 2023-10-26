@@ -9,8 +9,8 @@ use crate::{
     warning::WarningEmitter,
 };
 use camino::Utf8PathBuf;
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 
 #[test]
 fn hello_docs() {
@@ -75,7 +75,7 @@ pub fn lazy_or(first: Option(a), second: fn() -> Option(a)) -> Option(a) {
     insta::assert_snapshot!(compile(config, modules));
 }
 
-fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> SmolStr {
+fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
     let fs = InMemoryFileSystem::new();
     for (name, src) in modules {
         fs.write(&Utf8PathBuf::from(format!("/src/{}", name)), src)
@@ -118,5 +118,7 @@ fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> SmolStr {
                 file.content.text()?
             ))
         })
+        .collect::<String>()
+        .chars()
         .collect()
 }
