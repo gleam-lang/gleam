@@ -1,6 +1,13 @@
 # Changelog
 
-## v0.32.0-rc3 - Unreleased
+## v0.32.0-rc4 - Unreleased
+
+### Bug fixes
+
+- Fixed a bug where running `gleam fix` multiple times could produce incorrect
+  results.
+
+## v0.32.0-rc3 - 2023-10-26
 
 ### Bug fixes
 
