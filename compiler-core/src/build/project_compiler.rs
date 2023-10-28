@@ -559,7 +559,7 @@ fn order_packages(packages: &HashMap<String, ManifestPackage>) -> Result<Vec<Eco
                     package
                         .requirements
                         .iter()
-                        .map(|r| EcoString::inline(r))
+                        .map(|r| EcoString::from(r.as_ref()))
                         .collect(),
                 )
             })
