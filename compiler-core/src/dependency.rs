@@ -382,7 +382,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            EcoString::inline("app"),
+            "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![locked_stdlib].into_iter().collect(),
         )
@@ -400,7 +400,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            EcoString::inline("app"),
+            "app".into(),
             vec![].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -413,7 +413,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            EcoString::inline("app"),
+            "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -431,7 +431,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            EcoString::inline("app"),
+            "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -452,7 +452,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            EcoString::inline("app"),
+            "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.1.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -473,7 +473,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            EcoString::inline("app"),
+            "app".into(),
             vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -495,7 +495,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            EcoString::inline("app"),
+            "app".into(),
             vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
             &vec![("package_with_retired".into(), Version::new(0, 2, 0))]
                 .into_iter()
@@ -519,7 +519,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            EcoString::inline("app"),
+            "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.3.0-rc1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -540,7 +540,7 @@ mod tests {
         let _ = resolve_versions(
             make_remote(),
             HashMap::new(),
-            EcoString::inline("app"),
+            "app".into(),
             vec![("unknown".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -552,7 +552,7 @@ mod tests {
         let _ = resolve_versions(
             make_remote(),
             HashMap::new(),
-            EcoString::inline("app"),
+            "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 99.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -564,7 +564,7 @@ mod tests {
         let err = resolve_versions(
             make_remote(),
             HashMap::new(),
-            EcoString::inline("app"),
+            "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1.0".into()))].into_iter(),
             &vec![("gleam_stdlib".into(), Version::new(0, 2, 0))]
                 .into_iter()

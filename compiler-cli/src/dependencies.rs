@@ -298,7 +298,7 @@ impl LocalPackages {
             .collect();
         self.packages
             .iter()
-            .filter(|(n, v)| !manifest_packages.contains(&(&EcoString::inline(n), v)))
+            .filter(|(n, v)| !manifest_packages.contains(&(&EcoString::from(n.as_ref()), v)))
             .map(|(n, v)| (n.clone(), v.clone()))
             .collect()
     }
@@ -718,8 +718,8 @@ fn provide_git_package(
     _provided: &mut HashMap<EcoString, ProvidedPackage>,
 ) -> Result<hexpm::version::Range> {
     let _git = ProvidedPackageSource::Git {
-        repo: EcoString::inline("repo"),
-        commit: EcoString::inline("commit"),
+        repo: "repo".into(),
+        commit: "commit".into(),
     };
     Err(Error::GitDependencyUnsupported)
 }
@@ -1066,7 +1066,7 @@ fn provided_local_to_hex() {
     };
 
     assert_eq!(
-        provided_package.to_hex_package(&EcoString::inline("package")),
+        provided_package.to_hex_package(&"package".into()),
         hex_package
     );
 }
@@ -1125,7 +1125,7 @@ fn provided_git_to_hex() {
     };
 
     assert_eq!(
-        provided_package.to_hex_package(&EcoString::inline("package")),
+        provided_package.to_hex_package(&"package".into()),
         hex_package
     );
 }
@@ -1162,7 +1162,7 @@ fn provided_local_to_manifest() {
     };
 
     assert_eq!(
-        provided_package.to_manifest_package(&EcoString::inline("package")),
+        provided_package.to_manifest_package("package"),
         manifest_package
     );
 }
@@ -1201,7 +1201,7 @@ fn provided_git_to_manifest() {
     };
 
     assert_eq!(
-        provided_package.to_manifest_package(&EcoString::inline("package")),
+        provided_package.to_manifest_package("package"),
         manifest_package
     );
 }
