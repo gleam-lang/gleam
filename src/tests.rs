@@ -402,7 +402,7 @@ async fn remove_docs_bad_package_name() {
 #[tokio::test]
 async fn publish_docs_success() {
     let key = "my-api-key-here";
-    let package = "gleam_experimental_stdlib";
+    let package = "gleam_experimental_stdlib_123";
     let version = "0.8.0";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
