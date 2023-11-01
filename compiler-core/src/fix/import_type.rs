@@ -117,7 +117,10 @@ impl UntypedConstantFolder for Fixer {
         name: SmolStr,
         args: Vec<CallArg<UntypedConstant>>,
     ) -> UntypedConstant {
-        if module.is_none() && !self.local_values.contains(&name) {
+        if module.is_none()
+            && !(name == "Ok" || name == "Error")
+            && !self.local_values.contains(&name)
+        {
             if let Some(import) = self.imports.get_mut(&name) {
                 import.used_as_value = true;
             }
@@ -156,7 +159,7 @@ impl UntypedConstantFolder for Fixer {
 
 impl UntypedExprFolder for Fixer {
     fn fold_var(&mut self, location: SrcSpan, name: SmolStr) -> UntypedExpr {
-        if !self.local_values.contains(&name) {
+        if !self.local_values.contains(&name) && !(name == "Ok" || name == "Error") {
             if let Some(import) = self.imports.get_mut(&name) {
                 import.used_as_value = true;
             }
@@ -167,7 +170,11 @@ impl UntypedExprFolder for Fixer {
 
 impl TypeAstFolder for Fixer {
     fn fold_type_constructor(&mut self, constructor: TypeAstConstructor) -> TypeAst {
-        if constructor.module.is_none() && !self.local_types.contains(&constructor.name) {
+        let name = &constructor.name;
+        if constructor.module.is_none()
+            && !(name == "Result" || name == "List")
+            && !self.local_types.contains(name)
+        {
             if let Some(import) = self.imports.get_mut(&constructor.name) {
                 import.used_as_type = true;
             }
