@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where `gleam fix` would not produce correct results for code that
+  shadowed a prelude name with an import of the same name but a different kind.
+
 ## v0.32.0 - 2023-11-01
 
 ### Bug fixes
