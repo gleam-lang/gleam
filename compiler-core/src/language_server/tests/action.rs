@@ -47,15 +47,11 @@ fn remove_unused_action(src: &str, line: u32) -> String {
     };
 
     // find the remove unused action response
-    let response = engine
-        .action(params)
-        .result
-        .unwrap()
-        .and_then(|actions| {
-            actions
-                .into_iter()
-                .find(|action| action.title == "Remove unused imports")
-        });
+    let response = engine.action(params).result.unwrap().and_then(|actions| {
+        actions
+            .into_iter()
+            .find(|action| action.title == "Remove unused imports")
+    });
     if let Some(action) = response {
         apply_code_action(src, &url, &action)
     } else {
