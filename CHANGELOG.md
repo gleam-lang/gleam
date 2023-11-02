@@ -6,6 +6,8 @@
 
 - Fixed a bug where `gleam fix` would not produce correct results for code that
   shadowed a prelude name with an import of the same name but a different kind.
+- Fixed a bug where incorrect JavaScript could be generated due to backwards
+  compatibility with the deprecated import syntax.
 
 ## v0.32.0 - 2023-11-01
 
