@@ -533,15 +533,6 @@ impl ModuleInterface {
             .cloned()
             .collect_vec()
     }
-
-    pub fn used_name(&self) -> SmolStr {
-        SmolStr::from(
-            self.name
-                .split('/')
-                .last()
-                .expect("Could not identify imported module name."),
-        )
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

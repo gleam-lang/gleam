@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use smol_str::SmolStr;
 
 use crate::{
-    ast::{AssignName, Import, SrcSpan, UnqualifiedImport},
+    ast::{Import, SrcSpan, UnqualifiedImport},
     build::Origin,
     type_::{self, EntityKind, Environment, Error, ModuleInterface, ValueConstructorVariant},
     warning::TypeWarningEmitter,
@@ -236,15 +236,7 @@ impl<'a> Importer<'a> {
         import: &Import<()>,
         import_info: &'a ModuleInterface,
     ) -> Result<(), Error> {
-        let (used_name, location, aliased) = match import.as_name.as_ref() {
-            Some((AssignName::Variable(used_name), location)) => {
-                (Some(used_name.clone()), Some(*location), true)
-            }
-            None => (Some(import_info.used_name()), Some(import.location), false),
-            _ => (None, None, false),
-        };
-
-        if let (Some(used_name), Some(location)) = (used_name, location) {
+        if let Some(used_name) = import.used_name() {
             self.check_not_a_duplicate_import(&used_name, import.location)?;
 
             if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
@@ -256,18 +248,18 @@ impl<'a> Importer<'a> {
                     .insert(used_name.clone(), import.location);
             }
 
-            if aliased {
+            if let Some(alias_location) = import.alias_location() {
                 // We also register it's name to differentiate between unused module
                 // and unused module name. See 'convert_unused_to_warnings'.
                 let _ = self
                     .environment
                     .imported_module_aliases
-                    .insert(used_name.clone(), location);
+                    .insert(used_name.clone(), alias_location);
 
                 let _ = self
                     .environment
                     .unused_module_aliases
-                    .insert(used_name.clone(), location);
+                    .insert(used_name.clone(), alias_location);
             }
 
             // Insert imported module into scope
