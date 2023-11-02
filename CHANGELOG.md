@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed a bug where documentation would not publish to Hexdocs for packages with
+  a number in the name.
 - Fixed a bug where aliased unqualified types and values of the same name could
   produce an incorrect error.
 
