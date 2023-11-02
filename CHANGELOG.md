@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Build tool changes
+
+- Added Windows support for the `gleam export erlang-shipment` command.
+
 ## v0.32.2 - 2023-11-03
 
 ### Build tool changes
