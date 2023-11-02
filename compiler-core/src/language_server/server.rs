@@ -241,7 +241,7 @@ where
             register_options: Some(
                 serde_json::value::to_value(lsp::DidChangeWatchedFilesRegistrationOptions {
                     watchers: vec![lsp::FileSystemWatcher {
-                        glob_pattern: "**/gleam.toml".into(),
+                        glob_pattern: "**/gleam.toml".to_string().into(),
                         kind: Some(lsp::WatchKind::Change),
                     }],
                 })
@@ -470,6 +470,7 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
             work_done_progress_options: lsp::WorkDoneProgressOptions {
                 work_done_progress: None,
             },
+            completion_item: None,
         }),
         signature_help_provider: None,
         definition_provider: Some(lsp::OneOf::Left(true)),
@@ -496,6 +497,10 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         moniker_provider: None,
         linked_editing_range_provider: None,
         experimental: None,
+        position_encoding: None,
+        inline_value_provider: None,
+        inlay_hint_provider: None,
+        diagnostic_provider: None,
     };
     let server_capabilities_json =
         serde_json::to_value(server_capabilities).expect("server_capabilities_serde");
