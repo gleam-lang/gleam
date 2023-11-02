@@ -125,11 +125,11 @@ jobs:
         working-directory: ./test/project_erlang
         if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }}
 
-      - name: test/project_erlang export erlang-shipment (windows)
+      - name: test/project_erlang_min export erlang-shipment (windows)
         run: |
           gleam export erlang-shipment
           .\build\erlang-shipment\entrypoint.ps1 run
-        working-directory: ./test/project_erlang
+        working-directory: ./test/project_erlang_min
         if: ${{ matrix.os == 'windows-latest' && matrix.run-integration-tests }}
 
       - name: test/project_javascript
