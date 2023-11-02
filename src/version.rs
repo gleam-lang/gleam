@@ -384,16 +384,14 @@ where
             Some(locked_version) => {
                 let compatible = range
                     .to_pubgrub()
-                    .map_err(|e| {
-                        ResolutionError::Failure(format!("Failed to parse range {}", e.to_string()))
-                    })?
+                    .map_err(|e| ResolutionError::Failure(format!("Failed to parse range {}", e)))?
                     .contains(locked_version);
                 if !compatible {
                     return Err(ResolutionError::Failure(format!(
                         "{package} is specified with the requirement `{requirement}`, \
 but it is locked to {version}, which is incompatible.",
                         package = name,
-                        requirement = range.to_string(),
+                        requirement = range,
                         version = locked_version,
                     )));
                 }

@@ -26,7 +26,7 @@ pub enum Error {
     EmptyRange,
 }
 
-impl<'input> From<lexer::Error> for Error {
+impl From<lexer::Error> for Error {
     fn from(value: lexer::Error) -> Self {
         Error::Lexer(value)
     }

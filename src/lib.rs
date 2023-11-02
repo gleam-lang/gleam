@@ -56,6 +56,11 @@ impl Config {
         make_request(self.repository_base.clone(), method, path_suffix, api_key)
     }
 }
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 fn make_request(
     base: http::Uri,
@@ -447,7 +452,7 @@ pub fn publish_package_response(response: http::Response<Vec<u8>>) -> Result<(),
             if body.contains("--replace") {
                 return Err(ApiError::NotReplacing);
             }
-            return Err(ApiError::LateModification);
+            Err(ApiError::LateModification)
         }
         status => Err(ApiError::unexpected_response(status, body)),
     }
@@ -737,8 +742,8 @@ static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_
 
 fn validate_package_and_version(package: &str, version: &str) -> Result<(), ApiError> {
     lazy_static! {
-        static ref PACKAGE_PATTERN: Regex = Regex::new(r#"^[a-z]\w*$"#).unwrap();
-        static ref VERSION_PATTERN: Regex = Regex::new(r#"^[a-zA-Z-0-9\._-]+$"#).unwrap();
+        static ref PACKAGE_PATTERN: Regex = Regex::new(r"^[a-z]\w*$").unwrap();
+        static ref VERSION_PATTERN: Regex = Regex::new(r"^[a-zA-Z-0-9\._-]+$").unwrap();
     }
     if !PACKAGE_PATTERN.is_match(package) {
         return Err(ApiError::InvalidPackageNameFormat(package.to_string()));
