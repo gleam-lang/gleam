@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Language changes
+
+- Imported modules can now be discarded by giving them an alias starting with `_`.
+
 ### Bug fixes
 
 - Fixed a bug where `gleam fix` would not produce correct results for code that
@@ -55,7 +59,6 @@
   functions.
 - The `@deprecated` attribute can now be used with type definitions.
 - A warning is now emitted if a module alias is unused.
-- Imported modules can now be discarded by giving them an alias starting with `_`.
 
 ### Language server changes
 
