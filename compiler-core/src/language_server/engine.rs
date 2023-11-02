@@ -15,7 +15,7 @@ use crate::{
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
-use lsp::CodeAction;
+use lsp::{CodeAction, InlayHint, Position};
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
 use std::sync::Arc;
 use strum::IntoEnumIterator;
@@ -229,6 +229,7 @@ where
             };
 
             code_action_unused_imports(module, &params, &mut actions);
+            code_action_annotate_types(module, &params, &mut actions);
 
             Ok(if actions.is_empty() {
                 None
@@ -282,24 +283,12 @@ where
         })
     }
 
-    fn module_node_at_position(
-        &self,
-        params: &lsp::TextDocumentPositionParams,
-        module: &'a Module,
-    ) -> Option<(LineNumbers, Located<'a>)> {
-        let line_numbers = LineNumbers::new(&module.code);
-        let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
-        let node = module.find_node(byte_index);
-        let node = node?;
-        Some((line_numbers, node))
-    }
-
     fn node_at_position(
         &self,
         params: &lsp::TextDocumentPositionParams,
     ) -> Option<(LineNumbers, Located<'_>)> {
         let module = self.module_for_uri(&params.text_document.uri)?;
-        self.module_node_at_position(params, module)
+        module_node_at_position(&params.position, module)
     }
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
@@ -417,6 +406,31 @@ where
 
         completions
     }
+
+    pub fn inlay_hint(&mut self, params: lsp::InlayHintParams) -> Response<Option<Vec<InlayHint>>> {
+        self.respond(|this| {
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(None);
+            };
+            let line_numbers = LineNumbers::new(&module.code);
+
+            let mut hints = vec![];
+            add_hints_for_definitions(&module.ast.definitions, &line_numbers, &mut hints);
+
+            Ok(Some(hints))
+        })
+    }
+}
+
+fn module_node_at_position<'a>(
+    position: &Position,
+    module: &'a Module,
+) -> Option<(LineNumbers, Located<'a>)> {
+    let line_numbers = LineNumbers::new(&module.code);
+    let byte_index = line_numbers.byte_index(position.line, position.character);
+    let node = module.find_node(byte_index);
+    let node = node?;
+    Some((line_numbers, node))
 }
 
 fn type_completion(
@@ -612,4 +626,183 @@ fn code_action_unused_imports(
         .changes(uri.clone(), edits)
         .preferred(true)
         .push_to(actions);
+}
+
+fn code_action_annotate_types(
+    module: &Module,
+    params: &lsp::CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let Some((line_numbers, located)) = module_node_at_position(&params.range.start, module) else {
+        return;
+    };
+
+    match located {
+        Located::Pattern(_) => {}
+        Located::Statement(_) => {}
+        Located::Expression(_) => {}
+        Located::ModuleStatement(Definition::Function(func)) => {
+            code_action_annotate_types_for_function_def(func, &line_numbers, uri, actions)
+        }
+        Located::ModuleStatement(Definition::ModuleConstant(con)) => {
+            code_action_annotate_types_for_module_constant(con, &line_numbers, uri, actions)
+        }
+        Located::ModuleStatement(_) => {}
+        Located::FunctionBody(_) => {}
+        Located::Arg(_) => {}
+    }
+}
+
+fn code_action_annotate_types_for_function_def(
+    func: &Function<Arc<Type>, TypedExpr>,
+    line_numbers: &LineNumbers,
+    uri: &Url,
+    actions: &mut Vec<CodeAction>,
+) {
+    let mut edits = vec![];
+    if func.return_annotation.is_none() {
+        let linecol = line_numbers.line_and_column_number(func.location.end);
+        let position = Position::new(linecol.line - 1, linecol.column - 1);
+        let hint_text = Printer::new().pretty_print(&func.return_type, 0);
+        edits.push(lsp::TextEdit {
+            range: lsp::Range::new(position, position),
+            new_text: format!(" -> {hint_text}"),
+        })
+    }
+    for arg in &func.arguments {
+        if arg.annotation.is_none() {
+            let linecol = line_numbers.line_and_column_number(arg.location.end);
+            let position = Position::new(linecol.line - 1, linecol.column - 1);
+            let hint_text = Printer::new().pretty_print(&arg.type_, 0);
+            edits.push(lsp::TextEdit {
+                range: lsp::Range::new(position, position),
+                new_text: format!(": {hint_text}"),
+            });
+        }
+    }
+
+    if !edits.is_empty() {
+        CodeActionBuilder::new("Add type annotations")
+            .kind(lsp_types::CodeActionKind::REFACTOR_REWRITE)
+            .changes(uri.clone(), edits)
+            .preferred(true)
+            .push_to(actions);
+    }
+}
+
+fn code_action_annotate_types_for_module_constant(
+    con: &ModuleConstant<Arc<Type>, EcoString>,
+    line_numbers: &LineNumbers,
+    uri: &Url,
+    actions: &mut Vec<CodeAction>,
+) {
+    if con.annotation.is_none() {
+        let linecol = line_numbers.line_and_column_number(con.location.end);
+        let position = Position::new(linecol.line - 1, linecol.column - 1);
+        let hint_text = Printer::new().pretty_print(&con.type_, 0);
+
+        CodeActionBuilder::new("Add type annotation")
+            .kind(lsp_types::CodeActionKind::REFACTOR_REWRITE)
+            .changes(
+                uri.clone(),
+                vec![lsp::TextEdit::new(
+                    lsp::Range::new(position, position),
+                    format!(": {hint_text}"),
+                )],
+            )
+            .preferred(true)
+            .push_to(actions);
+    }
+}
+
+fn add_hints_for_definitions(
+    definitions: &[Definition<Arc<Type>, TypedExpr, EcoString, EcoString>],
+    line_numbers: &LineNumbers,
+    hints: &mut Vec<InlayHint>,
+) {
+    for def in definitions {
+        match def {
+            Definition::Function(func) => {
+                add_hints_for_function_def(func, line_numbers, hints);
+            }
+            Definition::TypeAlias(_) => {}
+            Definition::CustomType(_) => {}
+            Definition::Import(_) => {}
+            Definition::ModuleConstant(con) => {
+                add_hints_for_module_constant(con, line_numbers, hints);
+            }
+        }
+    }
+}
+
+fn add_hints_for_function_def(
+    func: &Function<Arc<Type>, TypedExpr>,
+    line_numbers: &LineNumbers,
+    hints: &mut Vec<InlayHint>,
+) {
+    if func.return_annotation.is_none() {
+        let linecol = line_numbers.line_and_column_number(func.location.end);
+        let position = Position::new(linecol.line - 1, linecol.column - 1);
+        let hint_text = Printer::new().pretty_print(&func.return_type, 0);
+        hints.push(InlayHint {
+            position,
+            kind: Some(lsp::InlayHintKind::TYPE),
+            text_edits: Some(vec![lsp::TextEdit {
+                range: lsp::Range::new(position, position),
+                new_text: format!(" -> {hint_text}"),
+            }]),
+            label: lsp::InlayHintLabel::String(format!("-> {hint_text}")),
+            tooltip: None,
+            padding_left: Some(true),
+            padding_right: None,
+            data: None,
+        })
+    }
+
+    for arg in &func.arguments {
+        if arg.annotation.is_none() {
+            let linecol = line_numbers.line_and_column_number(arg.location.end);
+            let position = Position::new(linecol.line - 1, linecol.column - 1);
+            let hint_text = Printer::new().pretty_print(&arg.type_, 0);
+            hints.push(InlayHint {
+                position,
+                kind: Some(lsp::InlayHintKind::TYPE),
+                text_edits: Some(vec![lsp::TextEdit {
+                    range: lsp::Range::new(position, position),
+                    new_text: format!(": {hint_text}"),
+                }]),
+                label: lsp::InlayHintLabel::String(format!(": {hint_text}")),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            })
+        }
+    }
+}
+
+fn add_hints_for_module_constant(
+    con: &ModuleConstant<Arc<Type>, EcoString>,
+    line_numbers: &LineNumbers,
+    hints: &mut Vec<InlayHint>,
+) {
+    if con.annotation.is_none() {
+        let linecol = line_numbers.line_and_column_number(con.location.end);
+        let position = Position::new(linecol.line - 1, linecol.column - 1);
+        let hint_text = Printer::new().pretty_print(&con.type_, 0);
+        hints.push(InlayHint {
+            position,
+            kind: Some(lsp::InlayHintKind::TYPE),
+            text_edits: Some(vec![lsp::TextEdit {
+                range: lsp::Range::new(position, position),
+                new_text: format!(": {hint_text}"),
+            }]),
+            label: lsp::InlayHintLabel::String(format!(": {hint_text}")),
+            tooltip: None,
+            padding_left: None,
+            padding_right: None,
+            data: None,
+        })
+    }
 }
