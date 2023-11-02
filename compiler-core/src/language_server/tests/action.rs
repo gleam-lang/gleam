@@ -24,7 +24,7 @@ fn remove_unused_action(src: &str, line: u32) -> String {
 
     // create the code action request
     let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-        r#"\\?\C:\src\app.gleam"#
+        r"\\?\C:\src\app.gleam"
     } else {
         "/src/app.gleam"
     });
@@ -51,12 +51,11 @@ fn remove_unused_action(src: &str, line: u32) -> String {
         .action(params)
         .result
         .unwrap()
-        .map(|actions| {
+        .and_then(|actions| {
             actions
                 .into_iter()
                 .find(|action| action.title == "Remove unused imports")
-        })
-        .flatten();
+        });
     if let Some(action) = response {
         apply_code_action(src, &url, &action)
     } else {
