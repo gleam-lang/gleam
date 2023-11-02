@@ -230,3 +230,12 @@ fn deprecated_type_import_conflict() {
         vec![]
     );
 }
+
+#[test]
+fn aliased_unqualified_type_and_value() {
+    assert_infer_with_module!(
+        ("one", "pub type X { X }"),
+        "import one.{X as XX, type X as XX}",
+        vec![]
+    );
+}

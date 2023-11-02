@@ -139,7 +139,7 @@ impl<'a> Importer<'a> {
 
         let import_name = &import.name;
         let location = import.location;
-        let imported_name = import.as_name.as_ref().unwrap_or(&import.name);
+        let used_name = import.as_name.as_ref().unwrap_or(&import.name);
         let mut type_imported = false;
         let mut value_imported = false;
         let mut variant = None;
@@ -147,7 +147,7 @@ impl<'a> Importer<'a> {
         // Register the unqualified import if it is a value
         if let Some(value) = module.get_public_value(import_name) {
             self.environment.insert_variable(
-                imported_name.clone(),
+                used_name.clone(),
                 value.variant.clone(),
                 value.type_.clone(),
                 true,
@@ -158,10 +158,10 @@ impl<'a> Importer<'a> {
         }
 
         // Register the unqualified import if it is a type constructor
-        if !imported_types.contains(import_name) {
+        if !imported_types.contains(used_name) {
             if let Some(typ) = module.get_public_type(import_name) {
                 self.environment.insert_type_constructor(
-                    imported_name.clone(),
+                    used_name.clone(),
                     typ.clone().with_location(location),
                 )?;
                 type_imported = true;
@@ -170,13 +170,13 @@ impl<'a> Importer<'a> {
 
         if value_imported && type_imported {
             self.environment.init_usage(
-                imported_name.clone(),
+                used_name.clone(),
                 EntityKind::ImportedTypeAndValue(location),
                 location,
             );
         } else if type_imported {
             self.environment
-                .init_usage(imported_name.clone(), EntityKind::ImportedType, location);
+                .init_usage(used_name.clone(), EntityKind::ImportedType, location);
             let _ = self.environment.ambiguous_imported_items.insert(
                 import_name.clone(),
                 LayerUsage {
@@ -188,12 +188,12 @@ impl<'a> Importer<'a> {
         } else if value_imported {
             match variant {
                 Some(&ValueConstructorVariant::Record { .. }) => self.environment.init_usage(
-                    imported_name.clone(),
+                    used_name.clone(),
                     EntityKind::ImportedConstructor,
                     location,
                 ),
                 _ => self.environment.init_usage(
-                    imported_name.clone(),
+                    used_name.clone(),
                     EntityKind::ImportedValue,
                     location,
                 ),
@@ -209,11 +209,7 @@ impl<'a> Importer<'a> {
         }
 
         // Check if value already was imported
-        if let Some(previous) = self
-            .environment
-            .unqualified_imported_names
-            .get(imported_name)
-        {
+        if let Some(previous) = self.environment.unqualified_imported_names.get(used_name) {
             return Err(Error::DuplicateImport {
                 location,
                 previous_location: *previous,
@@ -226,7 +222,7 @@ impl<'a> Importer<'a> {
         let _ = self
             .environment
             .unqualified_imported_names
-            .insert(imported_name.clone(), location);
+            .insert(used_name.clone(), location);
 
         Ok(())
     }
