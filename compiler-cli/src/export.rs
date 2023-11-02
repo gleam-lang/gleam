@@ -85,11 +85,12 @@ pub(crate) fn erlang_shipment() -> Result<()> {
 Your Erlang shipment has been generated to {path}.
 
 It can be copied to a compatible server with Erlang installed and run with
-the entrypoint.sh script.
+the {file} script.
 
     {entrypoint}
 ",
         path = out,
+        file = ENTRYPOINT_FILENAME,
         entrypoint = entrypoint,
     );
 
