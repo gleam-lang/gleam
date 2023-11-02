@@ -175,7 +175,7 @@ fn write_src(fs: &InMemoryFileSystem, source: &str, path: &str, seconds: u64) {
 
 fn make_loader<'a>(
     warnings: &'a WarningEmitter,
-    package_name: &'a SmolStr,
+    package_name: &'a EcoString,
     fs: &InMemoryFileSystem,
     src: &'a Utf8Path,
     artefact: &'a Utf8Path,

@@ -4,6 +4,7 @@ use crate::{
     CompilePackage,
 };
 use camino::Utf8Path;
+use ecow::EcoString;
 use gleam_core::{
     build::{
         Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
@@ -15,7 +16,6 @@ use gleam_core::{
     warning::WarningEmitter,
     Error, Result,
 };
-use smol_str::SmolStr;
 use std::sync::Arc;
 
 pub fn command(options: CompilePackage) -> Result<()> {
@@ -65,7 +65,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
 fn load_libraries(
     ids: &UniqueIdGenerator,
     lib: &Utf8Path,
-) -> Result<im::HashMap<SmolStr, ModuleInterface>> {
+) -> Result<im::HashMap<EcoString, ModuleInterface>> {
     tracing::info!("Reading precompiled module metadata files");
     let mut manifests = im::HashMap::new();
     for lib in fs::read_dir(lib)?.filter_map(Result::ok) {

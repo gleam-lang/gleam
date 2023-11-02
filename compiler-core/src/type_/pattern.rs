@@ -15,12 +15,12 @@ pub struct PatternTyper<'a, 'b> {
     environment: &'a mut Environment<'b>,
     hydrator: &'a Hydrator,
     mode: PatternMode,
-    initial_pattern_vars: HashSet<SmolStr>,
+    initial_pattern_vars: HashSet<EcoString>,
 }
 
 enum PatternMode {
     Initial,
-    Alternative(Vec<SmolStr>),
+    Alternative(Vec<EcoString>),
 }
 
 impl<'a, 'b> PatternTyper<'a, 'b> {
@@ -78,7 +78,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     fn insert_constant(
         &mut self,
         name: &str,
-        literal: Constant<Arc<Type>, SmolStr>,
+        literal: Constant<Arc<Type>, EcoString>,
         location: SrcSpan,
     ) -> Result<(), UnifyError> {
         match &mut self.mode {

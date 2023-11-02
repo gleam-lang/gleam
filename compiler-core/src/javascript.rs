@@ -13,8 +13,8 @@ use crate::{
     pretty::*,
 };
 use camino::Utf8Path;
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 
 use self::import::{Imports, Member};
 
@@ -36,7 +36,7 @@ pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
     module: &'a TypedModule,
     tracker: UsageTracker,
-    module_scope: im::HashMap<SmolStr, usize>,
+    module_scope: im::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
 }
 
@@ -366,7 +366,13 @@ impl<'a> Generator<'a> {
         let unqualified_imports = unqualified
             .iter()
             // We do not create a JS import for types as they are not used at runtime
-            .filter(|import| import.is_value())
+            .filter(|import| {
+                !self
+                    .module
+                    .type_info
+                    .type_only_unqualified_imports
+                    .contains(&import.name)
+            })
             .map(|i| {
                 let alias = i.as_name.as_ref().map(|n| {
                     self.register_in_scope(n);
@@ -428,7 +434,7 @@ impl<'a> Generator<'a> {
     fn module_function(
         &mut self,
         public: bool,
-        name: &'a SmolStr,
+        name: &'a EcoString,
         args: &'a [TypedArg],
         body: &'a [TypedStatement],
     ) -> Output<'a> {
@@ -485,7 +491,7 @@ pub fn module(
     module: &TypedModule,
     line_numbers: &LineNumbers,
     path: &Utf8Path,
-    src: &SmolStr,
+    src: &EcoString,
 ) -> Result<String, crate::Error> {
     let document = Generator::new(line_numbers, module)
         .compile()
@@ -500,7 +506,7 @@ pub fn module(
 pub fn ts_declaration(
     module: &TypedModule,
     path: &Utf8Path,
-    src: &SmolStr,
+    src: &EcoString,
 ) -> Result<String, crate::Error> {
     let document = typescript::TypeScriptGenerator::new(module)
         .compile()

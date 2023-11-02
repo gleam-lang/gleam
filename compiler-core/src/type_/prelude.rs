@@ -171,6 +171,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
     };
 
     let mut prelude = ModuleInterface {
+        type_only_unqualified_imports: Vec::new(),
         name: PRELUDE_MODULE_NAME.into(),
         package: "".into(),
         origin: Origin::Src,

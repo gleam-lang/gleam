@@ -8,13 +8,13 @@ use crate::{
     },
     build::Target,
 };
-use smol_str::SmolStr;
+use ecow::EcoString;
 
 #[derive(Debug, Default)]
 pub struct Fixer {
-    prelude_module_import_alias: Option<SmolStr>,
-    bit_string_name: SmolStr,
-    bit_array_name: SmolStr,
+    prelude_module_import_alias: Option<EcoString>,
+    bit_string_name: EcoString,
+    bit_array_name: EcoString,
 }
 
 impl Fixer {
@@ -80,8 +80,8 @@ impl UntypedConstantFolder for Fixer {
     fn fold_constant_record(
         &mut self,
         location: SrcSpan,
-        module: Option<SmolStr>,
-        name: SmolStr,
+        module: Option<EcoString>,
+        name: EcoString,
         args: Vec<CallArg<UntypedConstant>>,
     ) -> UntypedConstant {
         let name = if name == self.bit_string_name {

@@ -10,9 +10,9 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 // TODO: emit warnings for cached modules even if they are not compiled again.
 
+use ecow::EcoString;
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use smol_str::SmolStr;
 
 use crate::{
     build::{module_loader::ModuleLoader, package_compiler::module_name, Module, Origin},
@@ -57,10 +57,10 @@ pub struct PackageLoader<'a, IO> {
     warnings: &'a WarningEmitter,
     codegen: CodegenRequired,
     artefact_directory: &'a Utf8Path,
-    package_name: &'a SmolStr,
+    package_name: &'a EcoString,
     target: Target,
     stale_modules: &'a mut StaleTracker,
-    already_defined_modules: &'a mut im::HashMap<SmolStr, Utf8PathBuf>,
+    already_defined_modules: &'a mut im::HashMap<EcoString, Utf8PathBuf>,
 }
 
 impl<'a, IO> PackageLoader<'a, IO>
@@ -76,9 +76,9 @@ where
         codegen: CodegenRequired,
         artefact_directory: &'a Utf8Path,
         target: Target,
-        package_name: &'a SmolStr,
+        package_name: &'a EcoString,
         stale_modules: &'a mut StaleTracker,
-        already_defined_modules: &'a mut im::HashMap<SmolStr, Utf8PathBuf>,
+        already_defined_modules: &'a mut im::HashMap<EcoString, Utf8PathBuf>,
     ) -> Self {
         Self {
             io,
@@ -151,7 +151,7 @@ where
     fn load_cached_module(&self, info: CachedModule) -> Result<type_::ModuleInterface, Error> {
         let path = self
             .artefact_directory
-            .join(info.name.replace('/', "@"))
+            .join(info.name.replace("/", "@").as_ref())
             .with_extension("cache");
         let bytes = self.io.read_bytes(&path)?;
         metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())
@@ -175,7 +175,7 @@ where
         )
     }
 
-    fn read_sources_and_caches(&self) -> Result<HashMap<SmolStr, Input>> {
+    fn read_sources_and_caches(&self) -> Result<HashMap<EcoString, Input>> {
         let span = tracing::info_span!("load");
         let _enter = span.enter();
 
@@ -241,14 +241,14 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
 }
 
 #[derive(Debug, Default)]
-pub struct StaleTracker(HashSet<SmolStr>);
+pub struct StaleTracker(HashSet<EcoString>);
 
 impl StaleTracker {
-    fn add(&mut self, name: SmolStr) {
+    fn add(&mut self, name: EcoString) {
         _ = self.0.insert(name);
     }
 
-    fn includes_any(&self, names: &[SmolStr]) -> bool {
+    fn includes_any(&self, names: &[EcoString]) -> bool {
         names.iter().any(|n| self.0.contains(n.as_str()))
     }
 
@@ -259,12 +259,12 @@ impl StaleTracker {
 
 #[derive(Debug)]
 pub struct Inputs<'a> {
-    collection: HashMap<SmolStr, Input>,
-    already_defined_modules: &'a im::HashMap<SmolStr, Utf8PathBuf>,
+    collection: HashMap<EcoString, Input>,
+    already_defined_modules: &'a im::HashMap<EcoString, Utf8PathBuf>,
 }
 
 impl<'a> Inputs<'a> {
-    fn new(already_defined_modules: &'a im::HashMap<SmolStr, Utf8PathBuf>) -> Self {
+    fn new(already_defined_modules: &'a im::HashMap<EcoString, Utf8PathBuf>) -> Self {
         Self {
             collection: Default::default(),
             already_defined_modules,

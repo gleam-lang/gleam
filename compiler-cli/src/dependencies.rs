@@ -4,6 +4,7 @@ use std::{
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
 use flate2::read::GzDecoder;
 use futures::future;
 use gleam_core::{
@@ -21,7 +22,6 @@ use gleam_core::{
 use hexpm::version::Version;
 use itertools::Itertools;
 use same_file::is_same_file;
-use smol_str::SmolStr;
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -200,7 +200,7 @@ async fn add_missing_packages<Telem: Telemetry>(
     fs: Box<ProjectIO>,
     manifest: &Manifest,
     local: &LocalPackages,
-    project_name: SmolStr,
+    project_name: EcoString,
     telemetry: &Telem,
 ) -> Result<(), Error> {
     let missing_packages = local.missing_local_packages(manifest, &project_name);
@@ -298,7 +298,7 @@ impl LocalPackages {
             .collect();
         self.packages
             .iter()
-            .filter(|(n, v)| !manifest_packages.contains(&(&SmolStr::from(n), v)))
+            .filter(|(n, v)| !manifest_packages.contains(&(&EcoString::from(n.as_ref()), v)))
             .map(|(n, v)| (n.clone(), v.clone()))
             .collect()
     }
@@ -516,17 +516,17 @@ fn get_manifest<Telem: Telemetry>(
 struct ProvidedPackage {
     version: Version,
     source: ProvidedPackageSource,
-    requirements: HashMap<SmolStr, hexpm::version::Range>,
+    requirements: HashMap<EcoString, hexpm::version::Range>,
 }
 
 #[derive(Clone, Eq, Debug)]
 enum ProvidedPackageSource {
-    Git { repo: SmolStr, commit: SmolStr },
+    Git { repo: EcoString, commit: EcoString },
     Local { path: Utf8PathBuf },
 }
 
 impl ProvidedPackage {
-    fn to_hex_package(&self, name: &SmolStr) -> hexpm::Package {
+    fn to_hex_package(&self, name: &EcoString) -> hexpm::Package {
         let requirements = self
             .requirements
             .iter()
@@ -685,12 +685,12 @@ fn resolve_versions<Telem: Telemetry>(
 
 /// Provide a package from a local project
 fn provide_local_package(
-    package_name: SmolStr,
+    package_name: EcoString,
     package_path: &Utf8Path,
     parent_path: &Utf8Path,
     project_paths: &ProjectPaths,
-    provided: &mut HashMap<SmolStr, ProvidedPackage>,
-    parents: &mut Vec<SmolStr>,
+    provided: &mut HashMap<EcoString, ProvidedPackage>,
+    parents: &mut Vec<EcoString>,
 ) -> Result<hexpm::version::Range> {
     let package_path = if package_path.is_absolute() {
         package_path.to_path_buf()
@@ -712,26 +712,26 @@ fn provide_local_package(
 
 /// Provide a package from a git repository
 fn provide_git_package(
-    _package_name: SmolStr,
+    _package_name: EcoString,
     _repo: &str,
     _project_paths: &ProjectPaths,
-    _provided: &mut HashMap<SmolStr, ProvidedPackage>,
+    _provided: &mut HashMap<EcoString, ProvidedPackage>,
 ) -> Result<hexpm::version::Range> {
     let _git = ProvidedPackageSource::Git {
-        repo: SmolStr::new_inline("repo"),
-        commit: SmolStr::new_inline("commit"),
+        repo: "repo".into(),
+        commit: "commit".into(),
     };
     Err(Error::GitDependencyUnsupported)
 }
 
 /// Adds a gleam project located at a specific path to the list of "provided packages"
 fn provide_package(
-    package_name: SmolStr,
+    package_name: EcoString,
     package_path: Utf8PathBuf,
     package_source: ProvidedPackageSource,
     project_paths: &ProjectPaths,
-    provided: &mut HashMap<SmolStr, ProvidedPackage>,
-    parents: &mut Vec<SmolStr>,
+    provided: &mut HashMap<EcoString, ProvidedPackage>,
+    parents: &mut Vec<EcoString>,
 ) -> Result<hexpm::version::Range> {
     // Return early if a package cycle is detected
     if parents.contains(&package_name) {
@@ -935,7 +935,7 @@ fn provided_recursive() {
 async fn lookup_package(
     name: String,
     version: Version,
-    provided: &HashMap<SmolStr, ProvidedPackage>,
+    provided: &HashMap<EcoString, ProvidedPackage>,
 ) -> Result<ManifestPackage> {
     match provided.get(name.as_str()) {
         Some(provided_package) => Ok(provided_package.to_manifest_package(name.as_str())),
@@ -1066,7 +1066,7 @@ fn provided_local_to_hex() {
     };
 
     assert_eq!(
-        provided_package.to_hex_package(&SmolStr::new_inline("package")),
+        provided_package.to_hex_package(&"package".into()),
         hex_package
     );
 }
@@ -1125,7 +1125,7 @@ fn provided_git_to_hex() {
     };
 
     assert_eq!(
-        provided_package.to_hex_package(&SmolStr::new_inline("package")),
+        provided_package.to_hex_package(&"package".into()),
         hex_package
     );
 }
@@ -1162,7 +1162,7 @@ fn provided_local_to_manifest() {
     };
 
     assert_eq!(
-        provided_package.to_manifest_package(&SmolStr::new_inline("package")),
+        provided_package.to_manifest_package("package"),
         manifest_package
     );
 }
@@ -1201,7 +1201,7 @@ fn provided_git_to_manifest() {
     };
 
     assert_eq!(
-        provided_package.to_manifest_package(&SmolStr::new_inline("package")),
+        provided_package.to_manifest_package("package"),
         manifest_package
     );
 }

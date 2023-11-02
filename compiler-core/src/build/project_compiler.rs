@@ -17,8 +17,8 @@ use crate::{
     warning::{self, WarningEmitter, WarningEmitterIO},
     Error, Result, Warning,
 };
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
@@ -54,12 +54,12 @@ pub struct Options {
 #[derive(Debug)]
 pub struct Built {
     pub root_package: Package,
-    module_interfaces: im::HashMap<SmolStr, type_::ModuleInterface>,
+    module_interfaces: im::HashMap<EcoString, type_::ModuleInterface>,
     compiled_dependency_modules: Vec<Module>,
 }
 
 impl Built {
-    pub fn get_main_function(&self, module: &SmolStr) -> Result<ModuleFunction, Error> {
+    pub fn get_main_function(&self, module: &EcoString) -> Result<ModuleFunction, Error> {
         match self.module_interfaces.get(module) {
             Some(module_data) => module_data.get_main_function(),
             None => Err(Error::ModuleDoesNotExist {
@@ -75,8 +75,8 @@ pub struct ProjectCompiler<IO> {
     // The gleam.toml config for the root package of the project
     pub(crate) config: PackageConfig,
     pub(crate) packages: HashMap<String, ManifestPackage>,
-    importable_modules: im::HashMap<SmolStr, type_::ModuleInterface>,
-    defined_modules: im::HashMap<SmolStr, Utf8PathBuf>,
+    importable_modules: im::HashMap<EcoString, type_::ModuleInterface>,
+    defined_modules: im::HashMap<EcoString, Utf8PathBuf>,
     stale_modules: StaleTracker,
     warnings: WarningEmitter,
     telemetry: Box<dyn Telemetry>,
@@ -126,7 +126,7 @@ where
         }
     }
 
-    pub fn get_importable_modules(&self) -> &im::HashMap<SmolStr, type_::ModuleInterface> {
+    pub fn get_importable_modules(&self) -> &im::HashMap<EcoString, type_::ModuleInterface> {
         &self.importable_modules
     }
 
@@ -549,14 +549,18 @@ where
     }
 }
 
-fn order_packages(packages: &HashMap<String, ManifestPackage>) -> Result<Vec<SmolStr>, Error> {
+fn order_packages(packages: &HashMap<String, ManifestPackage>) -> Result<Vec<EcoString>, Error> {
     dep_tree::toposort_deps(
         packages
             .values()
             .map(|package| {
                 (
                     package.name.as_str().into(),
-                    package.requirements.iter().map(|r| r.into()).collect(),
+                    package
+                        .requirements
+                        .iter()
+                        .map(|r| EcoString::from(r.as_ref()))
+                        .collect(),
                 )
             })
             .collect(),

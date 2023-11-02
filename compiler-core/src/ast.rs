@@ -17,9 +17,9 @@ use crate::type_::{
 };
 use std::sync::Arc;
 
+use ecow::EcoString;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
-use smol_str::SmolStr;
 use vec1::Vec1;
 
 pub const TRY_VARIABLE: &str = "_try";
@@ -39,8 +39,8 @@ pub type UntypedModule = Module<(), TargetedDefinition>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module<Info, Statements> {
-    pub name: SmolStr,
-    pub documentation: Vec<SmolStr>,
+    pub name: EcoString,
+    pub documentation: Vec<EcoString>,
     pub type_info: Info,
     pub definitions: Vec<Statements>,
 }
@@ -76,7 +76,7 @@ impl TargetedDefinition {
 }
 
 impl UntypedModule {
-    pub fn dependencies(&self, target: Target) -> Vec<(SmolStr, SrcSpan)> {
+    pub fn dependencies(&self, target: Target) -> Vec<(EcoString, SrcSpan)> {
         self.iter_statements(target)
             .flat_map(|s| match s {
                 Definition::Import(Import {
@@ -148,7 +148,7 @@ impl<A> Arg<A> {
         }
     }
 
-    pub fn get_variable_name(&self) -> Option<&SmolStr> {
+    pub fn get_variable_name(&self) -> Option<&EcoString> {
         self.names.get_variable_name()
     }
 }
@@ -165,14 +165,14 @@ impl TypedArg {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgNames {
-    Discard { name: SmolStr },
-    LabelledDiscard { label: SmolStr, name: SmolStr },
-    Named { name: SmolStr },
-    NamedLabelled { name: SmolStr, label: SmolStr },
+    Discard { name: EcoString },
+    LabelledDiscard { label: EcoString, name: EcoString },
+    Named { name: EcoString },
+    NamedLabelled { name: EcoString, label: EcoString },
 }
 
 impl ArgNames {
-    pub fn get_label(&self) -> Option<&SmolStr> {
+    pub fn get_label(&self) -> Option<&EcoString> {
         match self {
             ArgNames::Discard { .. } | ArgNames::Named { .. } => None,
             ArgNames::LabelledDiscard { label, .. } | ArgNames::NamedLabelled { label, .. } => {
@@ -180,7 +180,7 @@ impl ArgNames {
             }
         }
     }
-    pub fn get_variable_name(&self) -> Option<&SmolStr> {
+    pub fn get_variable_name(&self) -> Option<&EcoString> {
         match self {
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
             ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name } => Some(name),
@@ -193,13 +193,13 @@ pub type TypedRecordConstructor = RecordConstructor<Arc<Type>>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructor<T> {
     pub location: SrcSpan,
-    pub name: SmolStr,
+    pub name: EcoString,
     pub arguments: Vec<RecordConstructorArg<T>>,
-    pub documentation: Option<SmolStr>,
+    pub documentation: Option<EcoString>,
 }
 
 impl<A> RecordConstructor<A> {
-    pub fn put_doc(&mut self, new_doc: SmolStr) {
+    pub fn put_doc(&mut self, new_doc: EcoString) {
         self.documentation = Some(new_doc);
     }
 }
@@ -208,15 +208,15 @@ pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructorArg<T> {
-    pub label: Option<SmolStr>,
+    pub label: Option<EcoString>,
     pub ast: TypeAst,
     pub location: SrcSpan,
     pub type_: T,
-    pub doc: Option<SmolStr>,
+    pub doc: Option<EcoString>,
 }
 
 impl<T: PartialEq> RecordConstructorArg<T> {
-    pub fn put_doc(&mut self, new_doc: SmolStr) {
+    pub fn put_doc(&mut self, new_doc: EcoString) {
         self.doc = Some(new_doc);
     }
 }
@@ -224,8 +224,8 @@ impl<T: PartialEq> RecordConstructorArg<T> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAstConstructor {
     pub location: SrcSpan,
-    pub module: Option<SmolStr>,
-    pub name: SmolStr,
+    pub module: Option<EcoString>,
+    pub name: EcoString,
     pub arguments: Vec<TypeAst>,
 }
 
@@ -239,7 +239,7 @@ pub struct TypeAstFn {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAstVar {
     pub location: SrcSpan,
-    pub name: SmolStr,
+    pub name: EcoString,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -251,7 +251,7 @@ pub struct TypeAstTuple {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAstHole {
     pub location: SrcSpan,
-    pub name: SmolStr,
+    pub name: EcoString,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -362,16 +362,16 @@ impl TypeAst {
 pub struct Function<T, Expr> {
     pub location: SrcSpan,
     pub end_position: u32,
-    pub name: SmolStr,
+    pub name: EcoString,
     pub arguments: Vec<Arg<T>>,
     pub body: Vec1<Statement<T, Expr>>,
     pub public: bool,
     pub deprecation: Deprecation,
     pub return_annotation: Option<TypeAst>,
     pub return_type: T,
-    pub documentation: Option<SmolStr>,
-    pub external_erlang: Option<(SmolStr, SmolStr)>,
-    pub external_javascript: Option<(SmolStr, SmolStr)>,
+    pub documentation: Option<EcoString>,
+    pub external_erlang: Option<(EcoString, EcoString)>,
+    pub external_javascript: Option<(EcoString, EcoString)>,
 }
 
 pub type TypedFunction = Function<Arc<Type>, TypedExpr>;
@@ -397,9 +397,9 @@ pub type UntypedImport = Import<()>;
 /// import animal/cat as kitty
 /// ```
 pub struct Import<PackageName> {
-    pub documentation: Option<SmolStr>,
+    pub documentation: Option<EcoString>,
     pub location: SrcSpan,
-    pub module: SmolStr,
+    pub module: EcoString,
     pub as_name: Option<(AssignName, SrcSpan)>,
     pub unqualified_values: Vec<UnqualifiedImport>,
     pub unqualified_types: Vec<UnqualifiedImport>,
@@ -414,11 +414,11 @@ impl<T> Import<T> {
             .expect("Could not identify imported module name.")
     }
 
-    pub(crate) fn used_name(&self) -> Option<SmolStr> {
+    pub(crate) fn used_name(&self) -> Option<EcoString> {
         match self.as_name.as_ref() {
             Some((AssignName::Variable(name), _)) => Some(name.clone()),
             Some((AssignName::Discard(_), _)) => None,
-            None => Some(SmolStr::from(self.name())),
+            None => Some(EcoString::from(self.name())),
         }
     }
 
@@ -439,10 +439,10 @@ pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 /// pub const end_year = 2111
 /// ```
 pub struct ModuleConstant<T, ConstantRecordTag> {
-    pub documentation: Option<SmolStr>,
+    pub documentation: Option<EcoString>,
     pub location: SrcSpan,
     pub public: bool,
-    pub name: SmolStr,
+    pub name: EcoString,
     pub annotation: Option<TypeAst>,
     pub value: Box<Constant<T, ConstantRecordTag>>,
     pub type_: T,
@@ -469,14 +469,14 @@ pub type UntypedCustomType = CustomType<()>;
 pub struct CustomType<T> {
     pub location: SrcSpan,
     pub end_position: u32,
-    pub name: SmolStr,
+    pub name: EcoString,
     pub public: bool,
     pub constructors: Vec<RecordConstructor<T>>,
-    pub documentation: Option<SmolStr>,
+    pub documentation: Option<EcoString>,
     pub deprecation: Deprecation,
     pub opaque: bool,
     /// The names of the type parameters.
-    pub parameters: Vec<SmolStr>,
+    pub parameters: Vec<EcoString>,
     /// Once type checked this field will contain the type information for the
     /// type parameters.
     pub typed_parameters: Vec<T>,
@@ -504,16 +504,16 @@ pub type UntypedTypeAlias = TypeAlias<()>;
 /// ```
 pub struct TypeAlias<T> {
     pub location: SrcSpan,
-    pub alias: SmolStr,
-    pub parameters: Vec<SmolStr>,
+    pub alias: EcoString,
+    pub parameters: Vec<EcoString>,
     pub type_ast: TypeAst,
     pub type_: T,
     pub public: bool,
-    pub documentation: Option<SmolStr>,
+    pub documentation: Option<EcoString>,
     pub deprecation: Deprecation,
 }
 
-pub type TypedDefinition = Definition<Arc<Type>, TypedExpr, SmolStr, SmolStr>;
+pub type TypedDefinition = Definition<Arc<Type>, TypedExpr, EcoString, EcoString>;
 pub type UntypedDefinition = Definition<(), UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -612,7 +612,7 @@ impl<A, B, C, E> Definition<A, B, C, E> {
         matches!(self, Self::Function(..))
     }
 
-    pub fn put_doc(&mut self, new_doc: SmolStr) {
+    pub fn put_doc(&mut self, new_doc: EcoString) {
         match self {
             Definition::Import(Import { .. }) => (),
 
@@ -637,18 +637,13 @@ impl<A, B, C, E> Definition<A, B, C, E> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnqualifiedImport {
     pub location: SrcSpan,
-    pub name: SmolStr,
-    pub as_name: Option<SmolStr>,
-    pub layer: Layer,
+    pub name: EcoString,
+    pub as_name: Option<EcoString>,
 }
 
 impl UnqualifiedImport {
-    pub fn used_name(&self) -> &SmolStr {
+    pub fn used_name(&self) -> &EcoString {
         self.as_name.as_ref().unwrap_or(&self.name)
-    }
-
-    pub fn is_value(&self) -> bool {
-        self.layer.is_value()
     }
 }
 
@@ -763,7 +758,7 @@ impl BinOp {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CallArg<A> {
-    pub label: Option<SmolStr>,
+    pub label: Option<EcoString>,
     pub location: SrcSpan,
     pub value: A,
     // This is true if this argument is given as the callback in a `use`
@@ -803,14 +798,14 @@ pub struct RecordUpdateSpread {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UntypedRecordUpdateArg {
-    pub label: SmolStr,
+    pub label: EcoString,
     pub location: SrcSpan,
     pub value: UntypedExpr,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypedRecordUpdateArg {
-    pub label: SmolStr,
+    pub label: EcoString,
     pub location: SrcSpan,
     pub value: TypedExpr,
     pub index: u32,
@@ -827,7 +822,7 @@ pub type MultiPattern<Type> = Vec<Pattern<Type>>;
 pub type UntypedMultiPattern = MultiPattern<()>;
 pub type TypedMultiPattern = MultiPattern<Arc<Type>>;
 
-pub type TypedClause = Clause<TypedExpr, Arc<Type>, SmolStr>;
+pub type TypedClause = Clause<TypedExpr, Arc<Type>, EcoString>;
 
 pub type UntypedClause = Clause<UntypedExpr, (), ()>;
 
@@ -861,7 +856,7 @@ impl TypedClause {
 }
 
 pub type UntypedClauseGuard = ClauseGuard<(), ()>;
-pub type TypedClauseGuard = ClauseGuard<Arc<Type>, SmolStr>;
+pub type TypedClauseGuard = ClauseGuard<Arc<Type>, EcoString>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ClauseGuard<Type, RecordTag> {
@@ -940,7 +935,7 @@ pub enum ClauseGuard<Type, RecordTag> {
     Var {
         location: SrcSpan,
         type_: Type,
-        name: SmolStr,
+        name: EcoString,
     },
 
     TupleIndex {
@@ -953,7 +948,7 @@ pub enum ClauseGuard<Type, RecordTag> {
     FieldAccess {
         location: SrcSpan,
         index: Option<u64>,
-        label: SmolStr,
+        label: EcoString,
         type_: Type,
         container: Box<Self>,
     },
@@ -961,9 +956,9 @@ pub enum ClauseGuard<Type, RecordTag> {
     ModuleSelect {
         location: SrcSpan,
         type_: Type,
-        label: SmolStr,
-        module_name: SmolStr,
-        module_alias: SmolStr,
+        label: EcoString,
+        module_name: EcoString,
+        module_alias: EcoString,
         literal: Constant<Type, RecordTag>,
     },
 
@@ -1073,24 +1068,24 @@ pub type TypedPattern = Pattern<Arc<Type>>;
 pub enum Pattern<Type> {
     Int {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     Float {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     String {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     /// The creation of a variable.
     /// e.g. `assert [this_is_a_var, .._] = x`
     Var {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
         type_: Type,
     },
 
@@ -1099,7 +1094,7 @@ pub enum Pattern<Type> {
     /// e.g. `assert <<y:size(somevar)>> = x`
     VarUsage {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
         constructor: Option<ValueConstructor>,
         type_: Type,
     },
@@ -1107,7 +1102,7 @@ pub enum Pattern<Type> {
     /// A name given to a sub-pattern using the `as` keyword.
     /// e.g. `assert #(1, [_, _] as the_list) = x`
     Assign {
-        name: SmolStr,
+        name: EcoString,
         location: SrcSpan,
         pattern: Box<Self>,
     },
@@ -1115,7 +1110,7 @@ pub enum Pattern<Type> {
     /// A pattern that binds to any value but does not assign a variable.
     /// Always starts with an underscore.
     Discard {
-        name: SmolStr,
+        name: EcoString,
         location: SrcSpan,
         type_: Type,
     },
@@ -1130,9 +1125,9 @@ pub enum Pattern<Type> {
     /// The constructor for a custom type. Starts with an uppercase letter.
     Constructor {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
         arguments: Vec<CallArg<Self>>,
-        module: Option<SmolStr>,
+        module: Option<EcoString>,
         constructor: Inferred<PatternConstructor>,
         with_spread: bool,
         type_: Type,
@@ -1152,9 +1147,9 @@ pub enum Pattern<Type> {
     Concatenate {
         location: SrcSpan,
         left_location: SrcSpan,
-        left_side_assignment: Option<(SmolStr, SrcSpan)>,
+        left_side_assignment: Option<(EcoString, SrcSpan)>,
         right_location: SrcSpan,
-        left_side_string: SmolStr,
+        left_side_string: EcoString,
         /// The variable on the right hand side of the `<>`.
         right_side_assignment: AssignName,
     },
@@ -1168,8 +1163,8 @@ impl Default for Inferred<()> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AssignName {
-    Variable(SmolStr),
-    Discard(SmolStr),
+    Variable(EcoString),
+    Discard(EcoString),
 }
 
 impl AssignName {
@@ -1473,7 +1468,7 @@ impl<A> BitArrayOption<A> {
         }
     }
 
-    pub fn label(&self) -> SmolStr {
+    pub fn label(&self) -> EcoString {
         match self {
             BitArrayOption::Binary { .. } => "bytes".into(),
             BitArrayOption::Bytes { .. } => "bytes".into(),

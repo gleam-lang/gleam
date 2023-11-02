@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] // Needed for macro
 
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 
 use crate::{
     ast::{
@@ -76,6 +76,7 @@ impl ModuleDecoder {
             values: read_hashmap!(reader.get_values()?, self, value_constructor),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
             unused_imports: read_vec!(reader.get_unused_imports()?, self, src_span),
+            type_only_unqualified_imports: Vec::new(),
         })
     }
 
@@ -146,8 +147,11 @@ impl ModuleDecoder {
         Ok(type_::generic_var(id))
     }
 
-    fn constructors_list(&mut self, reader: &capnp::text_list::Reader<'_>) -> Result<Vec<SmolStr>> {
-        Ok(reader.iter().map_ok(SmolStr::new).try_collect()?)
+    fn constructors_list(
+        &mut self,
+        reader: &capnp::text_list::Reader<'_>,
+    ) -> Result<Vec<EcoString>> {
+        Ok(reader.iter().map_ok(EcoString::from).try_collect()?)
     }
 
     fn value_constructor(
@@ -272,7 +276,7 @@ impl ModuleDecoder {
         let constructor = self.value_constructor(&reader.get_constructor()?)?;
         Ok(Constant::Var {
             location: Default::default(),
-            module: module.map(SmolStr::from),
+            module: module.map(EcoString::from),
             name: name.into(),
             constructor: Some(Box::from(constructor)),
             typ: type_,
@@ -378,7 +382,7 @@ impl ModuleDecoder {
         })
     }
 
-    fn optional_string(&self, str: &str) -> Option<SmolStr> {
+    fn optional_string(&self, str: &str) -> Option<EcoString> {
         if str.is_empty() {
             None
         } else {

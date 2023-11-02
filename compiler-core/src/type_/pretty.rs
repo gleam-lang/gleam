@@ -3,8 +3,8 @@ use crate::{
     docvec,
     pretty::{nil, *},
 };
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -19,10 +19,10 @@ const INDENT: isize = 2;
 
 #[derive(Debug, Default)]
 pub struct Printer {
-    names: im::HashMap<u64, SmolStr>,
+    names: im::HashMap<u64, EcoString>,
     uid: u64,
     // A mapping of printd type names to the module that they are defined in.
-    printed_types: im::HashMap<SmolStr, SmolStr>,
+    printed_types: im::HashMap<EcoString, EcoString>,
 }
 
 impl Printer {
@@ -30,7 +30,7 @@ impl Printer {
         Default::default()
     }
 
-    pub fn with_names(&mut self, names: im::HashMap<u64, SmolStr>) {
+    pub fn with_names(&mut self, names: im::HashMap<u64, EcoString>) {
         self.names = names;
     }
 
@@ -88,7 +88,7 @@ impl Printer {
         }
     }
 
-    fn name_clashes_if_unqualified(&mut self, type_: &SmolStr, module: &str) -> bool {
+    fn name_clashes_if_unqualified(&mut self, type_: &EcoString, module: &str) -> bool {
         match self.printed_types.get(type_) {
             None => false,
             Some(previous_module) if module == previous_module => false,
@@ -118,7 +118,7 @@ impl Printer {
         }
     }
 
-    fn next_letter(&mut self) -> SmolStr {
+    fn next_letter(&mut self) -> EcoString {
         let alphabet_length = 26;
         let char_offset = 97;
         let mut chars = vec![];

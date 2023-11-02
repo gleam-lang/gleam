@@ -10,12 +10,12 @@ pub mod pretty;
 #[cfg(test)]
 pub mod tests;
 
+use ecow::EcoString;
 pub use environment::*;
 pub use error::{Error, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
-use smol_str::SmolStr;
 
 use crate::{
     ast::{
@@ -52,8 +52,8 @@ pub enum Type {
     ///
     Named {
         public: bool,
-        module: SmolStr,
-        name: SmolStr,
+        module: EcoString,
+        name: EcoString,
         args: Vec<Arc<Type>>,
     },
 
@@ -264,14 +264,14 @@ pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
 pub struct AccessorsMap {
     pub public: bool,
     pub type_: Arc<Type>,
-    pub accessors: HashMap<SmolStr, RecordAccessor>,
+    pub accessors: HashMap<EcoString, RecordAccessor>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordAccessor {
     // TODO: smaller int. Doesn't need to be this big
     pub index: u64,
-    pub label: SmolStr,
+    pub label: EcoString,
     pub type_: Arc<Type>,
 }
 
@@ -282,36 +282,36 @@ pub enum ValueConstructorVariant {
 
     /// A module constant
     ModuleConstant {
-        documentation: Option<SmolStr>,
+        documentation: Option<EcoString>,
         location: SrcSpan,
-        module: SmolStr,
-        literal: Constant<Arc<Type>, SmolStr>,
+        module: EcoString,
+        literal: Constant<Arc<Type>, EcoString>,
     },
 
     /// A constant defined locally, for example when pattern matching on string literals
     LocalConstant {
-        literal: Constant<Arc<Type>, SmolStr>,
+        literal: Constant<Arc<Type>, EcoString>,
     },
 
     /// A function belonging to the module
     ModuleFn {
-        name: SmolStr,
+        name: EcoString,
         field_map: Option<FieldMap>,
-        module: SmolStr,
+        module: EcoString,
         arity: usize,
         location: SrcSpan,
-        documentation: Option<SmolStr>,
+        documentation: Option<EcoString>,
     },
 
     /// A constructor for a custom type
     Record {
-        name: SmolStr,
+        name: EcoString,
         arity: u16,
         field_map: Option<FieldMap>,
         location: SrcSpan,
-        module: SmolStr,
+        module: EcoString,
         constructors_count: u16,
-        documentation: Option<SmolStr>,
+        documentation: Option<EcoString>,
     },
 }
 
@@ -319,8 +319,8 @@ impl ValueConstructorVariant {
     fn to_module_value_constructor(
         &self,
         type_: Arc<Type>,
-        module_name: &SmolStr,
-        function_name: &SmolStr,
+        module_name: &EcoString,
+        function_name: &EcoString,
     ) -> ModuleValueConstructor {
         match self {
             Self::Record {
@@ -406,12 +406,12 @@ impl ValueConstructorVariant {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleValueConstructor {
     Record {
-        name: SmolStr,
+        name: EcoString,
         arity: u16,
         type_: Arc<Type>,
         field_map: Option<FieldMap>,
         location: SrcSpan,
-        documentation: Option<SmolStr>,
+        documentation: Option<EcoString>,
     },
 
     Fn {
@@ -429,15 +429,15 @@ pub enum ModuleValueConstructor {
         ///     @external(erlang, "other", "whoop")
         ///     pub fn wibble() -> Nil
         ///
-        module: SmolStr,
-        name: SmolStr,
-        documentation: Option<SmolStr>,
+        module: EcoString,
+        name: EcoString,
+        documentation: Option<EcoString>,
     },
 
     Constant {
         literal: TypedConstant,
         location: SrcSpan,
-        documentation: Option<SmolStr>,
+        documentation: Option<EcoString>,
     },
 }
 
@@ -461,19 +461,20 @@ impl ModuleValueConstructor {
 
 #[derive(Debug, Clone)]
 pub struct ModuleFunction {
-    pub package: SmolStr,
+    pub package: EcoString,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModuleInterface {
-    pub name: SmolStr,
+    pub name: EcoString,
     pub origin: Origin,
-    pub package: SmolStr,
-    pub types: HashMap<SmolStr, TypeConstructor>,
-    pub types_constructors: HashMap<SmolStr, Vec<SmolStr>>,
-    pub values: HashMap<SmolStr, ValueConstructor>,
-    pub accessors: HashMap<SmolStr, AccessorsMap>,
+    pub package: EcoString,
+    pub types: HashMap<EcoString, TypeConstructor>,
+    pub types_constructors: HashMap<EcoString, Vec<EcoString>>,
+    pub values: HashMap<EcoString, ValueConstructor>,
+    pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
+    pub type_only_unqualified_imports: Vec<EcoString>,
 }
 
 impl ModuleInterface {
@@ -496,7 +497,7 @@ impl ModuleInterface {
     }
 
     pub fn get_main_function(&self) -> Result<ModuleFunction, crate::Error> {
-        match self.values.get(&SmolStr::from("main")) {
+        match self.values.get(&EcoString::from("main")) {
             Some(ValueConstructor {
                 variant: ValueConstructorVariant::ModuleFn { arity: 0, .. },
                 ..
@@ -516,7 +517,7 @@ impl ModuleInterface {
         }
     }
 
-    pub fn public_value_names(&self) -> Vec<SmolStr> {
+    pub fn public_value_names(&self) -> Vec<EcoString> {
         self.values
             .iter()
             .filter(|(_, v)| v.public)
@@ -525,7 +526,7 @@ impl ModuleInterface {
             .collect_vec()
     }
 
-    pub fn public_type_names(&self) -> Vec<SmolStr> {
+    pub fn public_type_names(&self) -> Vec<EcoString> {
         self.types
             .iter()
             .filter(|(_, v)| v.public)
@@ -538,10 +539,10 @@ impl ModuleInterface {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PatternConstructor {
     Record {
-        name: SmolStr,
+        name: EcoString,
         field_map: Option<FieldMap>,
-        documentation: Option<SmolStr>,
-        module: Option<SmolStr>,
+        documentation: Option<EcoString>,
+        module: Option<EcoString>,
         location: SrcSpan,
     },
 }
@@ -640,7 +641,7 @@ impl TypeVar {
 pub struct TypeConstructor {
     pub public: bool,
     pub origin: SrcSpan,
-    pub module: SmolStr,
+    pub module: EcoString,
     pub parameters: Vec<Arc<Type>>,
     pub typ: Arc<Type>,
     pub deprecation: Deprecation,
@@ -663,7 +664,7 @@ pub struct ValueConstructor {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Deprecation {
     NotDeprecated,
-    Deprecated { message: SmolStr },
+    Deprecated { message: EcoString },
 }
 
 impl Deprecation {
@@ -729,7 +730,7 @@ impl ValueConstructor {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAliasConstructor {
     pub public: bool,
-    pub module: SmolStr,
+    pub module: EcoString,
     pub type_: Type,
     pub arity: usize,
 }

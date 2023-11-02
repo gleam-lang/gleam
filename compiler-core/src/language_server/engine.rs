@@ -14,9 +14,9 @@ use crate::{
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
+use ecow::EcoString;
 use lsp::CodeAction;
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
-use smol_str::SmolStr;
 use std::sync::Arc;
 use strum::IntoEnumIterator;
 
@@ -318,7 +318,7 @@ where
             .components()
             .skip(1)
             .map(|c| c.as_os_str().to_string_lossy());
-        let module_name: SmolStr = Itertools::intersperse(components, "/".into())
+        let module_name: EcoString = Itertools::intersperse(components, "/".into())
             .collect::<String>()
             .strip_suffix(".gleam")?
             .into();
@@ -361,7 +361,7 @@ where
 
                 let module = import.used_name();
                 if module.is_some() {
-                    completions.push(type_completion(module, name, type_));
+                    completions.push(type_completion(module.as_ref(), name, type_));
                 }
             }
 
@@ -420,7 +420,7 @@ where
 }
 
 fn type_completion(
-    module: Option<SmolStr>,
+    module: Option<&EcoString>,
     name: &str,
     type_: &crate::type_::TypeConstructor,
 ) -> lsp::CompletionItem {
@@ -480,7 +480,7 @@ fn value_completion(
     }
 }
 
-fn get_import(statement: &TypedDefinition) -> Option<&Import<SmolStr>> {
+fn get_import(statement: &TypedDefinition) -> Option<&Import<EcoString>> {
     match statement {
         Definition::Import(import) => Some(import),
         _ => None,
@@ -508,8 +508,8 @@ fn hover_for_function_head(
     fun: &Function<Arc<Type>, TypedExpr>,
     line_numbers: LineNumbers,
 ) -> Hover {
-    let empty_smolstr = SmolStr::from("");
-    let documentation = fun.documentation.as_ref().unwrap_or(&empty_smolstr);
+    let empty_str = EcoString::from("");
+    let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
     let function_type = Type::Fn {
         args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
         retrn: fun.return_type.clone(),
@@ -537,12 +537,12 @@ fn hover_for_function_argument(argument: &Arg<Arc<Type>>, line_numbers: LineNumb
 }
 
 fn hover_for_module_constant(
-    constant: &ModuleConstant<Arc<Type>, SmolStr>,
+    constant: &ModuleConstant<Arc<Type>, EcoString>,
     line_numbers: LineNumbers,
 ) -> Hover {
-    let empty_smolstr = SmolStr::from("");
+    let empty_str = EcoString::from("");
     let type_ = Printer::new().pretty_print(&constant.type_, 0);
-    let documentation = constant.documentation.as_ref().unwrap_or(&empty_smolstr);
+    let documentation = constant.documentation.as_ref().unwrap_or(&empty_str);
     let contents = format!("```gleam\n{type_}\n```\n{documentation}");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),

@@ -10,10 +10,10 @@ use crate::{
     javascript,
     type_::{pretty::Printer, UnifyErrorSituation},
 };
+use ecow::EcoString;
 use hexpm::version::pubgrub_report::{DefaultStringReporter, Reporter};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
-use smol_str::SmolStr;
 use std::env;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -22,7 +22,7 @@ use thiserror::Error;
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-pub type Name = SmolStr;
+pub type Name = EcoString;
 
 pub type Result<Ok, Err = Error> = std::result::Result<Ok, Err>;
 
@@ -37,8 +37,8 @@ pub struct UnknownImportDetails {
     pub module: Name,
     pub location: crate::ast::SrcSpan,
     pub path: Utf8PathBuf,
-    pub src: SmolStr,
-    pub modules: Vec<SmolStr>,
+    pub src: EcoString,
+    pub modules: Vec<EcoString>,
 }
 
 #[derive(Debug, Eq, PartialEq, Error, Clone)]
@@ -46,20 +46,20 @@ pub enum Error {
     #[error("failed to parse Gleam source code")]
     Parse {
         path: Utf8PathBuf,
-        src: SmolStr,
+        src: EcoString,
         error: crate::parse::error::ParseError,
     },
 
     #[error("type checking failed")]
     Type {
         path: Utf8PathBuf,
-        src: SmolStr,
+        src: EcoString,
         error: crate::type_::Error,
     },
 
     #[error("unknown import {import}")]
     UnknownImport {
-        import: SmolStr,
+        import: EcoString,
         // Boxed to prevent this variant from being overly large
         details: Box<UnknownImportDetails>,
     },
@@ -75,10 +75,10 @@ pub enum Error {
     DuplicateSourceFile { file: String },
 
     #[error("cyclical module imports")]
-    ImportCycle { modules: Vec<SmolStr> },
+    ImportCycle { modules: Vec<EcoString> },
 
     #[error("cyclical package dependencies")]
-    PackageCycle { packages: Vec<SmolStr> },
+    PackageCycle { packages: Vec<EcoString> },
 
     #[error("file operation failed")]
     FileIo {
@@ -138,15 +138,15 @@ pub enum Error {
 
     #[error("{module} is not module")]
     ModuleDoesNotExist {
-        module: SmolStr,
-        suggestion: Option<SmolStr>,
+        module: EcoString,
+        suggestion: Option<EcoString>,
     },
 
     #[error("{module} does not have a main function")]
-    ModuleDoesNotHaveMainFunction { module: SmolStr },
+    ModuleDoesNotHaveMainFunction { module: EcoString },
 
     #[error("{module} has the wrong arity so it can not be run.")]
-    MainFunctionHasWrongArity { module: SmolStr, arity: usize },
+    MainFunctionHasWrongArity { module: EcoString, arity: usize },
 
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
@@ -169,7 +169,7 @@ pub enum Error {
     #[error("javascript codegen failed")]
     JavaScript {
         path: Utf8PathBuf,
-        src: SmolStr,
+        src: EcoString,
         error: crate::javascript::Error,
     },
 
@@ -199,7 +199,7 @@ pub enum Error {
     DependencyResolutionFailed(String),
 
     #[error("The package {0} is listed in dependencies and dev-dependencies")]
-    DuplicateDependency(SmolStr),
+    DuplicateDependency(EcoString),
 
     #[error("Expected package {expected} at path {path} but found {found} instead")]
     WrongDependencyProvided {
@@ -398,7 +398,7 @@ impl FileKind {
     }
 }
 
-fn did_you_mean(name: &str, options: &[SmolStr]) -> Option<String> {
+fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
     // Find best match
     options
         .iter()
@@ -2688,7 +2688,7 @@ fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
     }
 }
 
-fn write_cycle(buffer: &mut String, cycle: &[SmolStr]) {
+fn write_cycle(buffer: &mut String, cycle: &[EcoString]) {
     buffer.push_str(
         "
     ┌─────┐\n",
@@ -2746,7 +2746,7 @@ functions from the `gleam/string` module",
 pub struct Unformatted {
     pub source: Utf8PathBuf,
     pub destination: Utf8PathBuf,
-    pub input: SmolStr,
+    pub input: EcoString,
     pub output: String,
 }
 

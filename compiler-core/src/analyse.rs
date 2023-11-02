@@ -5,7 +5,7 @@ mod tests;
 use crate::{
     ast::{
         self, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
-        GroupedStatements, Import, Layer, ModuleConstant, RecordConstructor, RecordConstructorArg,
+        GroupedStatements, Import, ModuleConstant, RecordConstructor, RecordConstructorArg,
         SrcSpan, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple,
         TypeAstVar, TypedDefinition, TypedModule, UntypedArg, UntypedModule, UntypedStatement,
     },
@@ -27,8 +27,8 @@ use crate::{
     warning::TypeWarningEmitter,
     GLEAM_CORE_PACKAGE_NAME,
 };
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 use std::{collections::HashMap, sync::Arc};
 use vec1::Vec1;
 
@@ -74,10 +74,10 @@ pub fn infer_module<A>(
     ids: &UniqueIdGenerator,
     mut module: UntypedModule,
     origin: Origin,
-    package: &SmolStr,
-    modules: &im::HashMap<SmolStr, ModuleInterface>,
+    package: &EcoString,
+    modules: &im::HashMap<EcoString, ModuleInterface>,
     warnings: &TypeWarningEmitter,
-    direct_dependencies: &HashMap<SmolStr, A>,
+    direct_dependencies: &HashMap<EcoString, A>,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
@@ -194,8 +194,15 @@ pub fn infer_module<A>(
         module_types_constructors: types_constructors,
         module_values: values,
         accessors,
+        ambiguous_imported_items,
         ..
     } = env;
+
+    let type_only_unqualified_imports = ambiguous_imported_items
+        .into_iter()
+        .filter(|(_, item)| item.type_ && !item.value)
+        .map(|(name, _)| name)
+        .collect();
 
     Ok(ast::Module {
         documentation,
@@ -210,11 +217,12 @@ pub fn infer_module<A>(
             origin,
             unused_imports,
             package: package.clone(),
+            type_only_unqualified_imports,
         },
     })
 }
 
-fn validate_module_name(name: &SmolStr) -> Result<(), Error> {
+fn validate_module_name(name: &EcoString) -> Result<(), Error> {
     if is_prelude_module(name) {
         return Err(Error::ReservedModuleName { name: name.clone() });
     };
@@ -231,9 +239,9 @@ fn validate_module_name(name: &SmolStr) -> Result<(), Error> {
 
 fn register_type_alias(
     t: &TypeAlias<()>,
-    names: &mut HashMap<SmolStr, SrcSpan>,
+    names: &mut HashMap<EcoString, SrcSpan>,
     environment: &mut Environment<'_>,
-    module: &SmolStr,
+    module: &EcoString,
 ) -> Result<(), Error> {
     let TypeAlias {
         location,
@@ -268,10 +276,10 @@ fn register_type_alias(
 
 fn register_types_from_custom_type<'a>(
     t: &CustomType<()>,
-    names: &mut HashMap<SmolStr, SrcSpan>,
+    names: &mut HashMap<EcoString, SrcSpan>,
     environment: &mut Environment<'a>,
-    module: &'a SmolStr,
-    hydrators: &mut HashMap<SmolStr, Hydrator>,
+    module: &'a EcoString,
+    hydrators: &mut HashMap<EcoString, Hydrator>,
 ) -> Result<(), Error> {
     let CustomType {
         name,
@@ -316,10 +324,10 @@ fn register_types_from_custom_type<'a>(
 
 fn register_values_from_custom_type(
     t: &CustomType<()>,
-    hydrators: &mut HashMap<SmolStr, Hydrator>,
+    hydrators: &mut HashMap<EcoString, Hydrator>,
     environment: &mut Environment<'_>,
-    names: &mut HashMap<SmolStr, SrcSpan>,
-    module_name: &SmolStr,
+    names: &mut HashMap<EcoString, SrcSpan>,
+    module_name: &EcoString,
 ) -> Result<(), Error> {
     let CustomType {
         location,
@@ -415,10 +423,10 @@ fn register_values_from_custom_type(
 
 fn register_value_from_function(
     f: &Function<(), ast::UntypedExpr>,
-    names: &mut HashMap<SmolStr, SrcSpan>,
+    names: &mut HashMap<EcoString, SrcSpan>,
     environment: &mut Environment<'_>,
-    hydrators: &mut HashMap<SmolStr, Hydrator>,
-    module_name: &SmolStr,
+    hydrators: &mut HashMap<EcoString, Hydrator>,
+    module_name: &EcoString,
 ) -> Result<(), Error> {
     let Function {
         name,
@@ -475,8 +483,8 @@ fn register_value_from_function(
 }
 
 fn assert_valid_javascript_external(
-    function_name: &SmolStr,
-    external_javascript: Option<&(SmolStr, SmolStr)>,
+    function_name: &EcoString,
+    external_javascript: Option<&(EcoString, EcoString)>,
     location: SrcSpan,
 ) -> Result<(), Error> {
     use regex::Regex;
@@ -509,8 +517,8 @@ fn assert_valid_javascript_external(
 fn infer_function(
     f: Function<(), ast::UntypedExpr>,
     environment: &mut Environment<'_>,
-    hydrators: &mut HashMap<SmolStr, Hydrator>,
-    module_name: &SmolStr,
+    hydrators: &mut HashMap<EcoString, Hydrator>,
+    module_name: &EcoString,
 ) -> Result<TypedDefinition, Error> {
     let Function {
         documentation: doc,
@@ -612,10 +620,10 @@ fn infer_function(
 /// same as the name of the module and function. If the function has an external
 /// implementation then it is the name of the external module and function.
 fn implementation_names(
-    external: &Option<(SmolStr, SmolStr)>,
-    module_name: &SmolStr,
-    name: &SmolStr,
-) -> (SmolStr, SmolStr) {
+    external: &Option<(EcoString, EcoString)>,
+    module_name: &EcoString,
+    name: &EcoString,
+) -> (EcoString, EcoString) {
     match external {
         None => (module_name.clone(), name.clone()),
         Some((m, f)) => (m.clone(), f.clone()),
@@ -624,9 +632,9 @@ fn implementation_names(
 
 fn target_function_implementation<'a>(
     target: Target,
-    external_erlang: &'a Option<(SmolStr, SmolStr)>,
-    external_javascript: &'a Option<(SmolStr, SmolStr)>,
-) -> &'a Option<(SmolStr, SmolStr)> {
+    external_erlang: &'a Option<(EcoString, EcoString)>,
+    external_javascript: &'a Option<(EcoString, EcoString)>,
+) -> &'a Option<(EcoString, EcoString)> {
     match target {
         Target::Erlang => external_erlang,
         Target::JavaScript => external_javascript,
@@ -783,7 +791,7 @@ fn infer_custom_type(
 fn record_imported_items_for_use_detection<A>(
     i: Import<()>,
     current_package: &str,
-    direct_dependencies: &HashMap<SmolStr, A>,
+    direct_dependencies: &HashMap<EcoString, A>,
     warnings: &TypeWarningEmitter,
     environment: &Environment<'_>,
 ) -> Result<TypedDefinition, Error> {
@@ -792,7 +800,7 @@ fn record_imported_items_for_use_detection<A>(
         location,
         module,
         as_name,
-        mut unqualified_values,
+        unqualified_values,
         unqualified_types,
         ..
     } = i;
@@ -806,13 +814,6 @@ fn record_imported_items_for_use_detection<A>(
                 name: module.clone(),
                 imported_modules: environment.imported_modules.keys().cloned().collect(),
             })?;
-    // Record any imports that are types only as this information is
-    // needed to prevent types being imported in generated JavaScript
-    for import in unqualified_values.iter_mut() {
-        if environment.imported_types.contains(import.used_name()) {
-            import.layer = Layer::Type;
-        }
-    }
 
     // Modules should belong to a package that is a direct dependency of the
     // current package to be imported.
@@ -842,7 +843,7 @@ fn record_imported_items_for_use_detection<A>(
 fn infer_module_constant(
     c: ModuleConstant<(), ()>,
     environment: &mut Environment<'_>,
-    module_name: &SmolStr,
+    module_name: &EcoString,
 ) -> Result<TypedDefinition, Error> {
     let ModuleConstant {
         documentation: doc,
@@ -943,7 +944,7 @@ where
 
 fn generalise_statement(
     s: TypedDefinition,
-    module_name: &SmolStr,
+    module_name: &EcoString,
     environment: &mut Environment<'_>,
 ) -> TypedDefinition {
     match s {
@@ -959,7 +960,7 @@ fn generalise_statement(
 fn generalise_function(
     function: Function<Arc<Type>, ast::TypedExpr>,
     environment: &mut Environment<'_>,
-    module_name: &SmolStr,
+    module_name: &EcoString,
 ) -> TypedDefinition {
     let Function {
         documentation: doc,
@@ -1032,7 +1033,7 @@ fn generalise_function(
 }
 
 fn make_type_vars(
-    args: &[SmolStr],
+    args: &[EcoString],
     location: &SrcSpan,
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
@@ -1049,8 +1050,8 @@ fn make_type_vars(
 }
 
 fn assert_unique_type_name(
-    names: &mut HashMap<SmolStr, SrcSpan>,
-    name: &SmolStr,
+    names: &mut HashMap<EcoString, SrcSpan>,
+    name: &EcoString,
     location: SrcSpan,
 ) -> Result<(), Error> {
     match names.insert(name.clone(), location) {
@@ -1064,8 +1065,8 @@ fn assert_unique_type_name(
 }
 
 fn assert_unique_name(
-    names: &mut HashMap<SmolStr, SrcSpan>,
-    name: &SmolStr,
+    names: &mut HashMap<EcoString, SrcSpan>,
+    name: &EcoString,
     location: SrcSpan,
 ) -> Result<(), Error> {
     match names.insert(name.clone(), location) {
@@ -1082,7 +1083,7 @@ fn custom_type_accessors<A>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
-) -> Result<Option<HashMap<SmolStr, RecordAccessor>>, Error> {
+) -> Result<Option<HashMap<EcoString, RecordAccessor>>, Error> {
     let args = get_compatible_record_fields(constructors);
 
     let mut fields = HashMap::with_capacity(args.len());
@@ -1105,7 +1106,7 @@ fn custom_type_accessors<A>(
 /// the given type.
 fn get_compatible_record_fields<A>(
     constructors: &[RecordConstructor<A>],
-) -> Vec<(usize, &SmolStr, &TypeAst)> {
+) -> Vec<(usize, &EcoString, &TypeAst)> {
     let mut compatible = vec![];
 
     let first = match constructors.get(0) {
@@ -1150,7 +1151,7 @@ fn get_compatible_record_fields<A>(
 }
 
 /// Given a type, return a list of all the types it depends on
-fn get_type_dependencies(typ: &TypeAst) -> Vec<SmolStr> {
+fn get_type_dependencies(typ: &TypeAst) -> Vec<EcoString> {
     let mut deps = Vec::with_capacity(1);
 
     match typ {
@@ -1190,7 +1191,7 @@ fn get_type_dependencies(typ: &TypeAst) -> Vec<SmolStr> {
 }
 
 fn sorted_type_aliases(aliases: &Vec<TypeAlias<()>>) -> Result<Vec<&TypeAlias<()>>, Error> {
-    let mut deps: Vec<(SmolStr, Vec<SmolStr>)> = Vec::with_capacity(aliases.len());
+    let mut deps: Vec<(EcoString, Vec<EcoString>)> = Vec::with_capacity(aliases.len());
 
     for alias in aliases {
         deps.push((alias.alias.clone(), get_type_dependencies(&alias.type_ast)))

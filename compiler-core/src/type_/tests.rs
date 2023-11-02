@@ -7,8 +7,8 @@ use crate::{
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, VectorWarningEmitterIO, WarningEmitter, WarningEmitterIO},
 };
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 use std::sync::Arc;
 use vec1::Vec1;
 
@@ -226,7 +226,7 @@ fn infer(src: &str) -> String {
     printer.pretty_print(result.last().type_().as_ref(), 0)
 }
 
-pub fn stringify_tuple_strs(module: Vec<(&str, &str)>) -> Vec<(SmolStr, String)> {
+pub fn stringify_tuple_strs(module: Vec<(&str, &str)>) -> Vec<(EcoString, String)> {
     module
         .into_iter()
         .map(|(k, v)| (k.into(), v.into()))
@@ -241,7 +241,7 @@ pub fn stringify_tuple_strs(module: Vec<(&str, &str)>) -> Vec<(SmolStr, String)>
 /// 3. The module source.
 type DependencyModule<'a> = (&'a str, &'a str, &'a str);
 
-pub fn infer_module(src: &str, dep: Vec<DependencyModule<'_>>) -> Vec<(SmolStr, String)> {
+pub fn infer_module(src: &str, dep: Vec<DependencyModule<'_>>) -> Vec<(EcoString, String)> {
     let ast = compile_module(src, None, dep).expect("should successfully infer");
     ast.type_info
         .values
@@ -342,7 +342,7 @@ fn field_map_reorder_test() {
 
     struct Case {
         arity: u32,
-        fields: HashMap<SmolStr, u32>,
+        fields: HashMap<EcoString, u32>,
         args: Vec<CallArg<UntypedExpr>>,
         expected_result: Result<(), crate::type_::Error>,
         expected_args: Vec<CallArg<UntypedExpr>>,
@@ -496,6 +496,7 @@ fn infer_module_type_retention_test() {
     assert_eq!(
         module.type_info,
         ModuleInterface {
+            type_only_unqualified_imports: Vec::new(),
             origin: Origin::Src,
             package: "thepackage".into(),
             name: "ok".into(),

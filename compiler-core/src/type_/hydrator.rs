@@ -20,20 +20,20 @@ use im::hashmap;
 ///
 #[derive(Debug)]
 pub struct Hydrator {
-    created_type_variables: im::HashMap<SmolStr, Arc<Type>>,
+    created_type_variables: im::HashMap<EcoString, Arc<Type>>,
     /// A rigid type is a generic type that was specified as being generic in
     /// an annotation. As such it should never be instantiated into an unbound
     /// variable. This type_id => name map is used for reporting the original
     /// annotated name on error.
-    rigid_type_names: im::HashMap<u64, SmolStr>,
+    rigid_type_names: im::HashMap<u64, EcoString>,
     permit_new_type_variables: bool,
     permit_holes: bool,
 }
 
 #[derive(Debug)]
 pub struct ScopeResetData {
-    created_type_variables: im::HashMap<SmolStr, Arc<Type>>,
-    rigid_type_names: im::HashMap<u64, SmolStr>,
+    created_type_variables: im::HashMap<EcoString, Arc<Type>>,
+    rigid_type_names: im::HashMap<u64, EcoString>,
 }
 
 impl Default for Hydrator {
@@ -81,7 +81,7 @@ impl Hydrator {
         self.rigid_type_names.contains_key(id)
     }
 
-    pub fn rigid_names(&self) -> im::HashMap<u64, SmolStr> {
+    pub fn rigid_names(&self) -> im::HashMap<u64, EcoString> {
         self.rigid_type_names.clone()
     }
 

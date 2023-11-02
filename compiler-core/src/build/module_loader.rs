@@ -5,8 +5,8 @@ use std::time::SystemTime;
 
 use camino::{Utf8Path, Utf8PathBuf};
 
+use ecow::EcoString;
 use serde::{Deserialize, Serialize};
-use smol_str::SmolStr;
 
 use super::{
     package_compiler::{module_name, CacheMetadata, CachedModule, Input, UncompiledModule},
@@ -36,7 +36,7 @@ pub(crate) struct ModuleLoader<'a, IO> {
     pub mode: Mode,
     pub target: Target,
     pub codegen: CodegenRequired,
-    pub package_name: &'a SmolStr,
+    pub package_name: &'a EcoString,
     pub source_directory: &'a Utf8Path,
     pub artefact_directory: &'a Utf8Path,
     pub origin: Origin,
@@ -115,7 +115,7 @@ where
     fn read_source(
         &self,
         path: Utf8PathBuf,
-        name: SmolStr,
+        name: EcoString,
         mtime: SystemTime,
     ) -> Result<UncompiledModule, Error> {
         read_source(
@@ -130,7 +130,7 @@ where
         )
     }
 
-    fn cached(&self, name: SmolStr, meta: CacheMetadata) -> CachedModule {
+    fn cached(&self, name: EcoString, meta: CacheMetadata) -> CachedModule {
         CachedModule {
             dependencies: meta.dependencies,
             source_path: self.source_directory.join(format!("{}.gleam", name)),
@@ -146,14 +146,14 @@ pub(crate) fn read_source<IO>(
     target: Target,
     origin: Origin,
     path: Utf8PathBuf,
-    name: SmolStr,
-    package_name: SmolStr,
+    name: EcoString,
+    package_name: EcoString,
     mtime: SystemTime,
 ) -> Result<UncompiledModule>
 where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
 {
-    let code: SmolStr = io.read(&path)?.into();
+    let code: EcoString = io.read(&path)?.into();
 
     let parsed = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
         path: path.clone(),

@@ -2,6 +2,7 @@ use std::{borrow::Borrow, cell::RefCell, collections::HashMap, error::Error as S
 
 use crate::{Error, Result};
 
+use ecow::EcoString;
 use hexpm::{
     version::{Range, Version},
     Dependency, Release,
@@ -11,7 +12,6 @@ use pubgrub::{
     solver::{choose_package_with_fewest_versions, Dependencies},
     type_aliases::Map,
 };
-use smol_str::SmolStr;
 
 pub type PackageVersions = HashMap<String, Version>;
 
@@ -21,13 +21,13 @@ type PubgrubRange = pubgrub::range::Range<Version>;
 
 pub fn resolve_versions<Requirements>(
     package_fetcher: Box<dyn PackageFetcher>,
-    provided_packages: HashMap<SmolStr, hexpm::Package>,
-    root_name: SmolStr,
+    provided_packages: HashMap<EcoString, hexpm::Package>,
+    root_name: EcoString,
     dependencies: Requirements,
-    locked: &HashMap<SmolStr, Version>,
+    locked: &HashMap<EcoString, Version>,
 ) -> Result<PackageVersions>
 where
-    Requirements: Iterator<Item = (SmolStr, Range)>,
+    Requirements: Iterator<Item = (EcoString, Range)>,
 {
     tracing::info!("resolving_versions");
     let root_version = Version::new(0, 0, 0);
@@ -59,10 +59,10 @@ where
 
 fn root_dependencies<Requirements>(
     base_requirements: Requirements,
-    locked: &HashMap<SmolStr, Version>,
+    locked: &HashMap<EcoString, Version>,
 ) -> Result<HashMap<String, Dependency>, ResolutionError>
 where
-    Requirements: Iterator<Item = (SmolStr, Range)>,
+    Requirements: Iterator<Item = (EcoString, Range)>,
 {
     // Record all of the already locked versions as hard requirements
     let mut requirements: HashMap<_, _> = locked
@@ -124,17 +124,17 @@ pub trait PackageFetcher {
 }
 
 struct DependencyProvider<'a> {
-    packages: RefCell<HashMap<SmolStr, hexpm::Package>>,
+    packages: RefCell<HashMap<EcoString, hexpm::Package>>,
     remote: Box<dyn PackageFetcher>,
-    locked: &'a HashMap<SmolStr, Version>,
+    locked: &'a HashMap<EcoString, Version>,
 }
 
 impl<'a> DependencyProvider<'a> {
     fn new(
         remote: Box<dyn PackageFetcher>,
-        mut packages: HashMap<SmolStr, hexpm::Package>,
+        mut packages: HashMap<EcoString, hexpm::Package>,
         root: hexpm::Package,
-        locked: &'a HashMap<SmolStr, Version>,
+        locked: &'a HashMap<EcoString, Version>,
     ) -> Self {
         let _ = packages.insert(root.name.as_str().into(), root);
         Self {
@@ -382,7 +382,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![locked_stdlib].into_iter().collect(),
         )
@@ -400,7 +400,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -413,7 +413,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -431,7 +431,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -452,7 +452,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.1.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -473,7 +473,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -495,7 +495,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
             &vec![("package_with_retired".into(), Version::new(0, 2, 0))]
                 .into_iter()
@@ -519,7 +519,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.3.0-rc1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -540,7 +540,7 @@ mod tests {
         let _ = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("unknown".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -552,7 +552,7 @@ mod tests {
         let _ = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 99.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -564,7 +564,7 @@ mod tests {
         let err = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1.0".into()))].into_iter(),
             &vec![("gleam_stdlib".into(), Version::new(0, 2, 0))]
                 .into_iter()

@@ -1,4 +1,4 @@
-use smol_str::SmolStr;
+use ecow::EcoString;
 use vec1::Vec1;
 
 use crate::{
@@ -610,15 +610,15 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         }
     }
 
-    fn fold_int(&mut self, location: SrcSpan, value: SmolStr) -> UntypedExpr {
+    fn fold_int(&mut self, location: SrcSpan, value: EcoString) -> UntypedExpr {
         UntypedExpr::Int { location, value }
     }
 
-    fn fold_float(&mut self, location: SrcSpan, value: SmolStr) -> UntypedExpr {
+    fn fold_float(&mut self, location: SrcSpan, value: EcoString) -> UntypedExpr {
         UntypedExpr::Float { location, value }
     }
 
-    fn fold_string(&mut self, location: SrcSpan, value: SmolStr) -> UntypedExpr {
+    fn fold_string(&mut self, location: SrcSpan, value: EcoString) -> UntypedExpr {
         UntypedExpr::String { location, value }
     }
 
@@ -629,7 +629,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         }
     }
 
-    fn fold_var(&mut self, location: SrcSpan, name: SmolStr) -> UntypedExpr {
+    fn fold_var(&mut self, location: SrcSpan, name: EcoString) -> UntypedExpr {
         UntypedExpr::Var { location, name }
     }
 
@@ -712,7 +712,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         &mut self,
         location: SrcSpan,
         label_location: SrcSpan,
-        label: SmolStr,
+        label: EcoString,
         container: Box<UntypedExpr>,
     ) -> UntypedExpr {
         UntypedExpr::FieldAccess {
@@ -744,7 +744,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         &mut self,
         kind: TodoKind,
         location: SrcSpan,
-        message: Option<SmolStr>,
+        message: Option<EcoString>,
     ) -> UntypedExpr {
         UntypedExpr::Todo {
             kind,
@@ -753,7 +753,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         }
     }
 
-    fn fold_panic(&mut self, location: SrcSpan, message: Option<SmolStr>) -> UntypedExpr {
+    fn fold_panic(&mut self, location: SrcSpan, message: Option<EcoString>) -> UntypedExpr {
         UntypedExpr::Panic { location, message }
     }
 
@@ -849,15 +849,15 @@ pub trait UntypedConstantFolder {
         }
     }
 
-    fn fold_constant_int(&mut self, location: SrcSpan, value: SmolStr) -> UntypedConstant {
+    fn fold_constant_int(&mut self, location: SrcSpan, value: EcoString) -> UntypedConstant {
         Constant::Int { location, value }
     }
 
-    fn fold_constant_float(&mut self, location: SrcSpan, value: SmolStr) -> UntypedConstant {
+    fn fold_constant_float(&mut self, location: SrcSpan, value: EcoString) -> UntypedConstant {
         Constant::Float { location, value }
     }
 
-    fn fold_constant_string(&mut self, location: SrcSpan, value: SmolStr) -> UntypedConstant {
+    fn fold_constant_string(&mut self, location: SrcSpan, value: EcoString) -> UntypedConstant {
         Constant::String { location, value }
     }
 
@@ -884,8 +884,8 @@ pub trait UntypedConstantFolder {
     fn fold_constant_record(
         &mut self,
         location: SrcSpan,
-        module: Option<SmolStr>,
-        name: SmolStr,
+        module: Option<EcoString>,
+        name: EcoString,
         args: Vec<CallArg<UntypedConstant>>,
     ) -> UntypedConstant {
         Constant::Record {
@@ -910,8 +910,8 @@ pub trait UntypedConstantFolder {
     fn fold_constant_var(
         &mut self,
         location: SrcSpan,
-        module: Option<SmolStr>,
-        name: SmolStr,
+        module: Option<EcoString>,
+        name: EcoString,
     ) -> UntypedConstant {
         Constant::Var {
             location,
@@ -1070,19 +1070,19 @@ pub trait PatternFolder {
         }
     }
 
-    fn fold_pattern_int(&mut self, location: SrcSpan, value: SmolStr) -> UntypedPattern {
+    fn fold_pattern_int(&mut self, location: SrcSpan, value: EcoString) -> UntypedPattern {
         Pattern::Int { location, value }
     }
 
-    fn fold_pattern_float(&mut self, location: SrcSpan, value: SmolStr) -> UntypedPattern {
+    fn fold_pattern_float(&mut self, location: SrcSpan, value: EcoString) -> UntypedPattern {
         Pattern::Float { location, value }
     }
 
-    fn fold_pattern_string(&mut self, location: SrcSpan, value: SmolStr) -> UntypedPattern {
+    fn fold_pattern_string(&mut self, location: SrcSpan, value: EcoString) -> UntypedPattern {
         Pattern::String { location, value }
     }
 
-    fn fold_pattern_var(&mut self, location: SrcSpan, name: SmolStr) -> UntypedPattern {
+    fn fold_pattern_var(&mut self, location: SrcSpan, name: EcoString) -> UntypedPattern {
         Pattern::Var {
             location,
             name,
@@ -1090,7 +1090,7 @@ pub trait PatternFolder {
         }
     }
 
-    fn fold_pattern_var_usage(&mut self, location: SrcSpan, name: SmolStr) -> UntypedPattern {
+    fn fold_pattern_var_usage(&mut self, location: SrcSpan, name: EcoString) -> UntypedPattern {
         Pattern::VarUsage {
             location,
             name,
@@ -1101,7 +1101,7 @@ pub trait PatternFolder {
 
     fn fold_pattern_assign(
         &mut self,
-        name: SmolStr,
+        name: EcoString,
         location: SrcSpan,
         pattern: Box<UntypedPattern>,
     ) -> UntypedPattern {
@@ -1112,7 +1112,7 @@ pub trait PatternFolder {
         }
     }
 
-    fn fold_pattern_discard(&mut self, name: SmolStr, location: SrcSpan) -> UntypedPattern {
+    fn fold_pattern_discard(&mut self, name: EcoString, location: SrcSpan) -> UntypedPattern {
         Pattern::Discard {
             name,
             location,
@@ -1137,9 +1137,9 @@ pub trait PatternFolder {
     fn fold_pattern_constructor(
         &mut self,
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
         arguments: Vec<CallArg<UntypedPattern>>,
-        module: Option<SmolStr>,
+        module: Option<EcoString>,
         with_spread: bool,
     ) -> UntypedPattern {
         Pattern::Constructor {
@@ -1173,9 +1173,9 @@ pub trait PatternFolder {
         &mut self,
         location: SrcSpan,
         left_location: SrcSpan,
-        left_side_assignment: Option<(SmolStr, SrcSpan)>,
+        left_side_assignment: Option<(EcoString, SrcSpan)>,
         right_location: SrcSpan,
-        left_side_string: SmolStr,
+        left_side_string: EcoString,
         right_side_assignment: AssignName,
     ) -> UntypedPattern {
         Pattern::Concatenate {

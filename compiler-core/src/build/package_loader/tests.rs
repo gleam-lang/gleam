@@ -1,4 +1,4 @@
-use smol_str::SmolStr;
+use ecow::EcoString;
 
 use super::*;
 use crate::{
@@ -13,8 +13,8 @@ use std::time::Duration;
 
 #[derive(Debug)]
 struct LoaderTestOutput {
-    to_compile: Vec<SmolStr>,
-    cached: Vec<SmolStr>,
+    to_compile: Vec<EcoString>,
+    cached: Vec<EcoString>,
     warnings: Vec<Warning>,
 }
 
@@ -27,7 +27,7 @@ fn write_src(fs: &InMemoryFileSystem, path: &str, seconds: u64, src: &str) {
     fs.set_modification_time(&path, SystemTime::UNIX_EPOCH + Duration::from_secs(seconds));
 }
 
-fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<SmolStr>, src: &str) {
+fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<EcoString>, src: &str) {
     let mtime = SystemTime::UNIX_EPOCH + Duration::from_secs(seconds);
     let cache_metadata = CacheMetadata {
         mtime,
@@ -47,6 +47,7 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<Smol
         values: Default::default(),
         accessors: Default::default(),
         unused_imports: Vec::new(),
+        type_only_unqualified_imports: Vec::new(),
     };
     let path = Utf8Path::new("/artefact").join(format!("{name}.cache"));
     fs.write_bytes(
@@ -103,7 +104,7 @@ fn one_src_module() {
     write_src(&fs, "/src/main.gleam", 0, "const x = 1");
 
     let loaded = run_loader(fs, root, artefact);
-    assert_eq!(loaded.to_compile, vec![SmolStr::new("main")]);
+    assert_eq!(loaded.to_compile, vec![EcoString::from("main")]);
     assert!(loaded.cached.is_empty());
 }
 
@@ -116,7 +117,7 @@ fn one_test_module() {
     write_src(&fs, "/test/main.gleam", 0, "const x = 1");
 
     let loaded = run_loader(fs, root, artefact);
-    assert_eq!(loaded.to_compile, vec![SmolStr::new("main")]);
+    assert_eq!(loaded.to_compile, vec![EcoString::from("main")]);
     assert!(loaded.cached.is_empty());
 }
 
@@ -134,9 +135,9 @@ fn importing() {
     assert_eq!(
         loaded.to_compile,
         vec![
-            SmolStr::new("one"),
-            SmolStr::new("two"),
-            SmolStr::new("three")
+            EcoString::from("one"),
+            EcoString::from("two"),
+            EcoString::from("three")
         ]
     );
     assert!(loaded.cached.is_empty());
@@ -153,7 +154,7 @@ fn reading_cache() {
 
     let loaded = run_loader(fs, root, artefact);
     assert!(loaded.to_compile.is_empty());
-    assert_eq!(loaded.cached, vec![SmolStr::new("one")]);
+    assert_eq!(loaded.cached, vec![EcoString::from("one")]);
 }
 
 #[test]
@@ -166,7 +167,7 @@ fn module_is_stale_if_cache_older() {
     write_cache(&fs, "one", 0, vec![], TEST_SOURCE_1);
 
     let loaded = run_loader(fs, root, artefact);
-    assert_eq!(loaded.to_compile, vec![SmolStr::new("one")]);
+    assert_eq!(loaded.to_compile, vec![EcoString::from("one")]);
     assert!(loaded.cached.is_empty());
 }
 
@@ -182,7 +183,7 @@ fn module_is_stale_if_deps_are_stale() {
 
     // Cache is fresh but dep is stale
     write_src(&fs, "/src/two.gleam", 1, "import one");
-    write_cache(&fs, "two", 2, vec![SmolStr::new("one")], "import one");
+    write_cache(&fs, "two", 2, vec![EcoString::from("one")], "import one");
 
     // Cache is fresh
     write_src(&fs, "/src/three.gleam", 1, TEST_SOURCE_1);
@@ -191,9 +192,9 @@ fn module_is_stale_if_deps_are_stale() {
     let loaded = run_loader(fs, root, artefact);
     assert_eq!(
         loaded.to_compile,
-        vec![SmolStr::new("one"), SmolStr::new("two")]
+        vec![EcoString::from("one"), EcoString::from("two")]
     );
-    assert_eq!(loaded.cached, vec![SmolStr::new("three")]);
+    assert_eq!(loaded.cached, vec![EcoString::from("three")]);
 }
 
 #[test]

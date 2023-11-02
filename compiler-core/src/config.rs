@@ -5,11 +5,11 @@ use crate::requirement::Requirement;
 use crate::version::COMPILER_VERSION;
 use crate::{Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
 use globset::{Glob, GlobSetBuilder};
 use hexpm::version::Version;
 use http::Uri;
 use serde::Deserialize;
-use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::marker::PhantomData;
@@ -31,7 +31,7 @@ fn default_javascript_runtime() -> Runtime {
     Runtime::NodeJs
 }
 
-pub type Dependencies = HashMap<SmolStr, Requirement>;
+pub type Dependencies = HashMap<EcoString, Requirement>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SpdxLicense {
@@ -70,15 +70,15 @@ impl AsRef<str> for SpdxLicense {
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct PackageConfig {
     #[serde(with = "package_name")]
-    pub name: SmolStr,
+    pub name: EcoString,
     #[serde(default = "default_version")]
     pub version: Version,
     #[serde(default, rename = "gleam")]
-    pub gleam_version: Option<SmolStr>,
+    pub gleam_version: Option<EcoString>,
     #[serde(default, alias = "licenses")]
     pub licences: Vec<SpdxLicense>,
     #[serde(default)]
-    pub description: SmolStr,
+    pub description: EcoString,
     #[serde(default, alias = "docs")]
     pub documentation: Docs,
     #[serde(default)]
@@ -144,7 +144,7 @@ impl PackageConfig {
     /// outdated deps are removed from the manifest and not locked to the
     /// previously selected versions.
     ///
-    pub fn locked(&self, manifest: Option<&Manifest>) -> Result<HashMap<SmolStr, Version>> {
+    pub fn locked(&self, manifest: Option<&Manifest>) -> Result<HashMap<EcoString, Version>> {
         Ok(match manifest {
             None => HashMap::new(),
             Some(manifest) => {
@@ -212,14 +212,14 @@ struct StalePackageRemover<'a> {
     // These are the packages for which the requirement or their parents
     // requirement has not changed.
     fresh: HashSet<&'a str>,
-    locked: HashMap<SmolStr, &'a Vec<String>>,
+    locked: HashMap<EcoString, &'a Vec<String>>,
 }
 
 impl<'a> StalePackageRemover<'a> {
     pub fn fresh_and_locked(
-        requirements: &'a HashMap<SmolStr, Requirement>,
+        requirements: &'a HashMap<EcoString, Requirement>,
         manifest: &'a Manifest,
-    ) -> HashMap<SmolStr, Version> {
+    ) -> HashMap<EcoString, Version> {
         let locked = manifest
             .packages
             .iter()
@@ -234,9 +234,9 @@ impl<'a> StalePackageRemover<'a> {
 
     fn run(
         &mut self,
-        requirements: &'a HashMap<SmolStr, Requirement>,
+        requirements: &'a HashMap<EcoString, Requirement>,
         manifest: &'a Manifest,
-    ) -> HashMap<SmolStr, Version> {
+    ) -> HashMap<EcoString, Version> {
         // Record all the requirements that have not changed
         for (name, requirement) in requirements {
             if manifest.requirements.get(name) != Some(requirement) {
@@ -597,7 +597,7 @@ fn manifest_package(
 }
 
 #[cfg(test)]
-fn locked_version(name: &'static str, version: &'static str) -> (SmolStr, Version) {
+fn locked_version(name: &'static str, version: &'static str) -> (EcoString, Version) {
     (name.into(), Version::parse(version).unwrap())
 }
 
@@ -625,9 +625,9 @@ impl Default for PackageConfig {
 #[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct ErlangConfig {
     #[serde(default)]
-    pub application_start_module: Option<SmolStr>,
+    pub application_start_module: Option<EcoString>,
     #[serde(default)]
-    pub extra_applications: Vec<SmolStr>,
+    pub extra_applications: Vec<EcoString>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Default, Clone)]
@@ -786,17 +786,17 @@ mod uri_serde {
 }
 
 mod package_name {
+    use ecow::EcoString;
     use lazy_static::lazy_static;
     use regex::Regex;
     use serde::Deserializer;
-    use smol_str::SmolStr;
 
     lazy_static! {
         static ref PACKAGE_NAME_PATTERN: Regex =
             Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex");
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<SmolStr, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<EcoString, D::Error>
     where
         D: Deserializer<'de>,
     {

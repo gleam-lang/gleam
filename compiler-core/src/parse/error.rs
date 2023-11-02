@@ -1,7 +1,7 @@
 use crate::ast::SrcSpan;
 use crate::error::wrap;
+use ecow::EcoString;
 use heck::{ToSnakeCase, ToUpperCamelCase};
-use smol_str::SmolStr;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LexicalError {
@@ -244,8 +244,8 @@ pub enum ParseErrorType {
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken {
-        expected: Vec<SmolStr>,
-        hint: Option<SmolStr>,
+        expected: Vec<EcoString>,
+        hint: Option<EcoString>,
     },
     ExpectedBoolean,
     UnexpectedFunction, // a function was used called outside of another function

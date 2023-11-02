@@ -1,6 +1,6 @@
 [package]
 name = "gleam"
-version = "0.32.0"
+version = "0.32.1"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
@@ -76,8 +76,8 @@ lsp-server = "0.5"
 lsp-types = "0.92"
 # File locking
 fslock = "0.2.1"
-# Compact and cheap to clone immutable string type
-smol_str = "0.1"
+# Compact clone-on-write vector & string type
+ecow = "0.2.0"
 # Provides a way to determine if two files are the same using filesystem node ids
 same-file = "1.0.6"
 # Open generated docs in browser
