@@ -159,7 +159,7 @@ impl UntypedConstantFolder for Fixer {
 
 impl UntypedExprFolder for Fixer {
     fn fold_var(&mut self, location: SrcSpan, name: SmolStr) -> UntypedExpr {
-        if !self.local_values.contains(&name) && !(name == "Ok" || name == "Error") {
+        if !(self.local_values.contains(&name) || name == "Ok" || name == "Error") {
             if let Some(import) = self.imports.get_mut(&name) {
                 import.used_as_value = true;
             }
