@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where aliased unqualified types and values of the same name could
+  produce an incorrect error.
+
+### Bug fixes
+
+- Fixed a bug where `gleam fix` would not produce correct results for code that
+  shadowed a prelude name with an import of the same name but a different kind.
+
 ## v0.32.1 - 2023-11-02
 
 ### Bug fixes
