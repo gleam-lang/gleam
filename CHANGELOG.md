@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.1.1 - 2023-11-02
+
+- Fixed a bug where the package name validation regex was too strict.
+
 ## v2.1.0 - 2023-08-30
 
 - Updated for latest Hex API.
