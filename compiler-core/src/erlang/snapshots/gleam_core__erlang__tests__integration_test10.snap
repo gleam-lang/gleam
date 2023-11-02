@@ -4,7 +4,7 @@ assertion_line: 219
 expression: "type Null { Null } fn x() { Null }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export_type([null/0]).
 

@@ -4,7 +4,7 @@ assertion_line: 40
 expression: "pub fn x(f) {\n  [\n    1 |> f\n  ]\n}"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([x/1]).
 

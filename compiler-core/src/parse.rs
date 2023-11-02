@@ -259,18 +259,18 @@ where
             // Custom Types, and Type Aliases
             (Some((start, Token::Type, _)), _) => {
                 let _ = self.next_tok();
-                self.parse_custom_type(start, false, false)
+                self.parse_custom_type(start, false, false, &mut attributes)
             }
             (Some((start, Token::Pub, _)), Some((_, Token::Opaque, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::Type)?;
-                self.parse_custom_type(start, true, true)
+                self.parse_custom_type(start, true, true, &mut attributes)
             }
             (Some((start, Token::Pub, _)), Some((_, Token::Type, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
-                self.parse_custom_type(start, true, false)
+                self.parse_custom_type(start, true, false, &mut attributes)
             }
 
             (t0, _) => {
@@ -616,7 +616,7 @@ where
 
         // field access and call can stack up
         loop {
-            if let Some((_, _)) = self.maybe_one(&Token::Dot) {
+            if let Some((dot_start, _)) = self.maybe_one(&Token::Dot) {
                 let start = expr.location().start;
                 // field access
                 match self.tok0.take() {
@@ -642,6 +642,10 @@ where
                         let _ = self.next_tok();
                         expr = UntypedExpr::FieldAccess {
                             location: SrcSpan { start, end },
+                            label_location: SrcSpan {
+                                start: dot_start,
+                                end,
+                            },
                             label,
                             container: Box::new(expr),
                         }
@@ -651,6 +655,10 @@ where
                         let _ = self.next_tok();
                         expr = UntypedExpr::FieldAccess {
                             location: SrcSpan { start, end },
+                            label_location: SrcSpan {
+                                start: dot_start,
+                                end,
+                            },
                             label,
                             container: Box::new(expr),
                         }
@@ -1649,6 +1657,7 @@ where
         start: u32,
         public: bool,
         opaque: bool,
+        attributes: &mut Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
         let (_, name, parameters, end) = self.expect_type_name()?;
@@ -1692,6 +1701,7 @@ where
                     parameters,
                     type_ast: t,
                     type_: (),
+                    deprecation: std::mem::take(&mut attributes.deprecated),
                 })));
             } else {
                 return parse_error(ParseErrorType::ExpectedType, SrcSpan::new(eq_s, eq_e));
@@ -1709,6 +1719,7 @@ where
             parameters,
             constructors,
             typed_parameters: vec![],
+            deprecation: std::mem::take(&mut attributes.deprecated),
         })))
     }
 

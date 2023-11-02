@@ -84,12 +84,19 @@ impl ModuleDecoder {
         reader: &type_constructor::Reader<'_>,
     ) -> Result<TypeConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
+        let deprecation = match reader.get_deprecated()? {
+            "" => Deprecation::NotDeprecated,
+            message => Deprecation::Deprecated {
+                message: message.into(),
+            },
+        };
         Ok(TypeConstructor {
             public: reader.get_public(),
             origin: Default::default(),
             module: reader.get_module()?.into(),
             parameters: read_vec!(reader.get_parameters()?, self, type_),
             typ: type_,
+            deprecation,
         })
     }
 

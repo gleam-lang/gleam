@@ -97,6 +97,7 @@ fn module_with_private_type() {
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
+                deprecation: Deprecation::NotDeprecated,
             },
         )]
         .into(),
@@ -140,6 +141,7 @@ fn module_with_app_type() {
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
+                deprecation: Deprecation::NotDeprecated,
             },
         )]
         .into(),
@@ -165,6 +167,7 @@ fn module_with_fn_type() {
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
+                deprecation: Deprecation::NotDeprecated,
             },
         )]
         .into(),
@@ -190,6 +193,7 @@ fn module_with_tuple_type() {
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
+                deprecation: Deprecation::NotDeprecated,
             },
         )]
         .into(),
@@ -221,6 +225,7 @@ fn module_with_generic_type() {
                     origin: Default::default(),
                     module: "the/module".into(),
                     parameters: vec![t1, t2],
+                    deprecation: Deprecation::NotDeprecated,
                 },
             )]
             .into(),
@@ -252,6 +257,7 @@ fn module_with_type_links() {
                     origin: Default::default(),
                     module: "a".into(),
                     parameters: vec![],
+                    deprecation: Deprecation::NotDeprecated,
                 },
             )]
             .into(),
@@ -938,5 +944,33 @@ fn constant_bit_array_native() {
     let module = bit_array_segment_option_module(BitArrayOption::Native {
         location: Default::default(),
     });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn deprecated_type() {
+    let module = ModuleInterface {
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b".into(),
+        types: [(
+            "ListIntType".into(),
+            TypeConstructor {
+                typ: type_::list(type_::int()),
+                public: true,
+                origin: Default::default(),
+                module: "the/module".into(),
+                parameters: vec![],
+                deprecation: Deprecation::Deprecated {
+                    message: "oh no".into(),
+                },
+            },
+        )]
+        .into(),
+        types_constructors: HashMap::new(),
+        values: HashMap::new(),
+        unused_imports: Vec::new(),
+        accessors: HashMap::new(),
+    };
     assert_eq!(roundtrip(&module), module);
 }

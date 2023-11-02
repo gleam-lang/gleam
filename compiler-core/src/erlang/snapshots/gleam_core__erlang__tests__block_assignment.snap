@@ -4,7 +4,7 @@ assertion_line: 397
 expression: "\npub fn main() {\n  let x = {\n    1\n    2\n  }\n  x\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([main/0]).
 

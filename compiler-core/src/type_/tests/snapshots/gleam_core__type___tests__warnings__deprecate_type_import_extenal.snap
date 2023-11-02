@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 959
+assertion_line: 1013
 expression: "\nimport module.{X}\npub type Y = X\n"
 ---
 

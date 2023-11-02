@@ -5123,3 +5123,24 @@ fn comment_at_end_of_type() {
 "#
     );
 }
+
+#[test]
+fn deprecated_custom_type() {
+    assert_format!(
+        r#"@deprecated("Deprecated type")
+pub type One {
+  One
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_type_alias() {
+    assert_format!(
+        r#"@deprecated("Deprecated type")
+pub type Tiger =
+  Nil
+"#
+    );
+}

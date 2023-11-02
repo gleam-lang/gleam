@@ -146,11 +146,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => self.infer_binop(name, *left, *right, location),
 
             UntypedExpr::FieldAccess {
-                location,
+                label_location,
                 label,
                 container,
                 ..
-            } => self.infer_field_access(*container, label, location, FieldAccessUsage::Other),
+            } => {
+                self.infer_field_access(*container, label, label_location, FieldAccessUsage::Other)
+            }
 
             UntypedExpr::TupleIndex {
                 location,
@@ -546,7 +548,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         container: UntypedExpr,
         label: SmolStr,
-        access_location: SrcSpan,
+        label_location: SrcSpan,
         usage: FieldAccessUsage,
     ) -> Result<TypedExpr, Error> {
         // Attempt to infer the container as a record access. If that fails, we may be shadowing the name
@@ -555,14 +557,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         match self.infer_record_expression_access(
             container.clone(),
             label.clone(),
-            access_location,
+            label_location,
             usage,
         ) {
             Ok(record_access) => Ok(record_access),
             Err(err) => match container {
                 UntypedExpr::Var { name, location, .. } => {
                     let module_access =
-                        self.infer_module_access(&name, label, &location, access_location);
+                        self.infer_module_access(&name, label, &location, label_location);
 
                     // If the name is in the environment, use the original error from
                     // inferring the record access, so that we can suggest possible
@@ -1402,6 +1404,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         value_constructors: module.public_value_names(),
                     })?;
 
+            // Emit a warning if the value being used is deprecated.
+            if let Deprecation::Deprecated { message } = &constructor.deprecation {
+                self.environment.warnings.emit(Warning::DeprecatedItem {
+                    location: select_location,
+                    message: message.clone(),
+                    layer: Layer::Value,
+                })
+            }
+
             // Register this imported module as having been used, to inform
             // warnings of unused imports later
             let _ = self.environment.unused_modules.remove(module_alias);
@@ -1711,9 +1722,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Emit a warning if the value being used is deprecated.
         if let Deprecation::Deprecated { message } = &deprecation {
-            self.environment.warnings.emit(Warning::DeprecatedValue {
+            self.environment.warnings.emit(Warning::DeprecatedItem {
                 location: *location,
                 message: message.clone(),
+                layer: Layer::Value,
             })
         }
 
@@ -2039,10 +2051,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
         let fun = match fun {
             UntypedExpr::FieldAccess {
-                location,
                 label,
                 container,
-            } => self.infer_field_access(*container, label, location, FieldAccessUsage::MethodCall),
+                label_location,
+                ..
+            } => self.infer_field_access(
+                *container,
+                label,
+                label_location,
+                FieldAccessUsage::MethodCall,
+            ),
 
             fun => self.infer(fun),
         }?;

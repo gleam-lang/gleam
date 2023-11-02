@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Bug fixes
+
+- Fixed a bug where `gleam fix` would not produce correct results for code that
+  shadowed a prelude name with an import of the same name but a different kind.
+
+## v0.32.0 - 2023-11-01
+
+### Bug fixes
+
+- Fixed a bug where running `gleam fix` multiple times could produce incorrect
+  results.
+
+## v0.32.0-rc3 - 2023-10-26
+
+### Bug fixes
+
+- Fixed a bug where `gleam fix` would fail to update the deprecated type import
+  syntax for aliased unqualified types.
+
+## v0.32.0-rc2 - 2023-10-26
+
+### Bug fixes
+
+- Fixed a bug where the backward compatibility for the deprecated import syntax
+  could result in an import error with some valid imports.
+
+## v0.32.0-rc1 - 2023-10-25
+
 ### Language changes
 
 - Using `import module.{TypeName}` to import a type has been deprecated,
@@ -16,11 +44,16 @@
   been improved.
 - The error message for when the elements of a list's tail don't match the
   previous ones has been improved.
+- The error message for when one tries to access an unknown field has been
+  improved.
 - The `__gleam_prelude_variant__` property has been removed from the classes
   defined in the JavaScript prelude.
 - The deprecated `todo("...")` syntax has been removed.
 - Module access can now be used in case clause guards.
 - The JS target now supports bit syntax for module constants.
+- The Erlang compiler will no longer emit a duplicate warning for unused
+  functions.
+- The `@deprecated` attribute can now be used with type definitions.
 - A warning is now emitted if a module alias is unused.
 - Imported modules can now be discarded by giving them an alias starting with `_`.
 
@@ -46,6 +79,7 @@
   commands have been added to export a copy of the prelude. This command may be
   useful for build tools that use the compiler via the `gleam compile-package`
   API.
+- Fixed a bug where some deprecation messages would not be printed.
 - The content has been made wider in rendered HTML documentation.
 - Dependencies that can be built with both `mix` and `rebar3` are now built
   with `mix` if it exists on the system, and with `rebar3` if it doesn't.

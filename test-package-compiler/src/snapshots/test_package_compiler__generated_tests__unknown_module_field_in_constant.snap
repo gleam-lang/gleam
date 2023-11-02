@@ -9,5 +9,5 @@ error: Unknown module field
 3 │ pub const it = one.B
   │                ^ Did you mean `A`?
 
-The module `one` does not have a `B` field.
+The module `one` does not have a `B` value.
 

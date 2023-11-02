@@ -4,7 +4,7 @@ assertion_line: 487
 expression: "fn id(x) {\n  x\n}\n        \npub fn bool_expr(x, y) {\n  y || x |> id \n}"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([bool_expr/2]).
 

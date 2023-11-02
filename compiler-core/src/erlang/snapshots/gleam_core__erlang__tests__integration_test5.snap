@@ -4,7 +4,7 @@ assertion_line: 195
 expression: "pub fn tail(list) { case list { [x, ..] -> x } }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([tail/1]).
 

@@ -4,7 +4,7 @@ assertion_line: 471
 expression: "pub type X { Fun(Int) }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export_type([x/0]).
 

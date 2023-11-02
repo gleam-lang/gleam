@@ -6,6 +6,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use std::sync::Arc;
 
+use crate::ast::Layer;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use smol_str::SmolStr;
@@ -393,9 +394,10 @@ pub enum Warning {
         package: SmolStr,
     },
 
-    DeprecatedValue {
+    DeprecatedItem {
         location: SrcSpan,
         message: SmolStr,
+        layer: Layer,
     },
 
     DeprecatedBitString {

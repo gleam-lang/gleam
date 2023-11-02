@@ -559,10 +559,26 @@ Run this command to add it to your dependencies:
                     }
                 }
 
-                type_::Warning::DeprecatedValue { location, message } => {
+                type_::Warning::DeprecatedItem {
+                    location,
+                    message,
+                    layer,
+                } => {
                     let text = wrap(&format!("It was deprecated with this message: {message}"));
+                    let (title, diagnostic_label_text) = if layer.is_value() {
+                        (
+                            "Deprecated value used".into(),
+                            Some("This value has been deprecated".into()),
+                        )
+                    } else {
+                        (
+                            "Deprecated type used".into(),
+                            Some("This type has been deprecated".into()),
+                        )
+                    };
+
                     Diagnostic {
-                        title: "Deprecated value used".into(),
+                        title,
                         text,
                         hint: None,
                         level: diagnostic::Level::Warning,
@@ -570,7 +586,7 @@ Run this command to add it to your dependencies:
                             src: src.clone(),
                             path: path.to_path_buf(),
                             label: diagnostic::Label {
-                                text: Some("This value has been deprecated".into()),
+                                text: diagnostic_label_text,
                                 span: *location,
                             },
                             extra_labels: Vec::new(),

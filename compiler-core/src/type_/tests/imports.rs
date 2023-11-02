@@ -220,3 +220,13 @@ pub fn main() -> One {
 ",
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2379
+#[test]
+fn deprecated_type_import_conflict() {
+    assert_infer_with_module!(
+        ("one", "pub type X { X }"),
+        "import one.{X, type X}",
+        vec![]
+    );
+}

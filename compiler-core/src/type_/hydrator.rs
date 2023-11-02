@@ -121,11 +121,23 @@ impl Hydrator {
                 let TypeConstructor {
                     parameters,
                     typ: return_type,
+                    deprecation,
                     ..
                 } = environment
                     .get_type_constructor(module, name, *location)
                     .map_err(|e| convert_get_type_constructor_error(e, location))?
                     .clone();
+
+                match deprecation {
+                    Deprecation::NotDeprecated => {}
+                    Deprecation::Deprecated { message } => {
+                        environment.warnings.emit(Warning::DeprecatedItem {
+                            location: *location,
+                            message: message.clone(),
+                            layer: Layer::Type,
+                        })
+                    }
+                }
 
                 // Register the type constructor as being used if it is unqualified.
                 // We do not track use of qualified type constructors as they may be

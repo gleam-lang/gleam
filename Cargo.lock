@@ -734,7 +734,7 @@ checksum = "6fb8d784f27acf97159b40fc4db5ecd8aa23b9ad5ef69cdd136d3bc80665f0c0"
 
 [[package]]
 name = "gleam"
-version = "0.32.0-dev"
+version = "0.32.0"
 dependencies = [
  "async-trait",
  "atty",
@@ -783,7 +783,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "0.32.0-dev"
+version = "0.32.0"
 dependencies = [
  "askama",
  "async-trait",
@@ -834,7 +834,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "0.32.0-dev"
+version = "0.32.0"
 dependencies = [
  "camino",
  "console_error_panic_hook",
@@ -1758,9 +1758,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.17"
+version = "0.38.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f25469e9ae0f3d0047ca8b93fc56843f38e6774f0914a107ff8b41be8be8e0b7"
+checksum = "745ecfa778e66b2b63c88a61cb36e0eea109e803b0b86bf9879fbc77c70e86ed"
 dependencies = [
  "bitflags 2.4.0",
  "errno",
@@ -2183,7 +2183,7 @@ dependencies = [
 
 [[package]]
 name = "test-package-compiler"
-version = "0.32.0-dev"
+version = "0.32.0"
 dependencies = [
  "camino",
  "gleam-core",

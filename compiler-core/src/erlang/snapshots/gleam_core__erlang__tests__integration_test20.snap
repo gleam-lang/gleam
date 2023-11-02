@@ -4,7 +4,7 @@ assertion_line: 287
 expression: "\npub fn go(a) {\n  let a = a + 1\n  a\n}\n\n                    "
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([go/1]).
 

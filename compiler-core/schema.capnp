@@ -37,6 +37,7 @@ struct TypeConstructor {
   parameters @1 :List(Type); 
   module @2 :Text;
   public @3 :Bool;
+  deprecated @4 :Text;
 }
 
 struct AccessorsMap {

@@ -1562,7 +1562,7 @@ Private types can only be used within the module that defines them.",
                     value_constructors,
                 } => {
                     let text =
-                        format!("The module `{module_name}` does not have a `{name}` field.",);
+                        format!("The module `{module_name}` does not have a `{name}` value.",);
                     Diagnostic {
                         title: "Unknown module field".into(),
                         text,

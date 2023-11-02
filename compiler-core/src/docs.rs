@@ -551,6 +551,10 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             definition: print(formatter.custom_type(ct)),
             documentation: markdown_documentation(&ct.documentation),
             text_documentation: text_documentation(&ct.documentation),
+            deprecation_message: match &ct.deprecation {
+                Deprecation::NotDeprecated => "".to_string(),
+                Deprecation::Deprecated { message } => message.to_string(),
+            },
             constructors: ct
                 .constructors
                 .iter()
@@ -580,6 +584,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             parameters,
             documentation: doc,
             location,
+            deprecation,
             ..
         }) => Some(Type {
             name,
@@ -592,6 +597,10 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             text_documentation: text_documentation(doc),
             constructors: vec![],
             source_url: source_links.url(*location),
+            deprecation_message: match deprecation {
+                Deprecation::NotDeprecated => "".to_string(),
+                Deprecation::Deprecated { message } => message.to_string(),
+            },
         }),
 
         Definition::TypeAlias(TypeAlias {
@@ -601,14 +610,23 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             documentation: doc,
             parameters: args,
             location,
+            deprecation,
             ..
         }) => Some(Type {
             name,
-            definition: print(formatter.type_alias(true, name, args, typ).group()),
+            definition: print(
+                formatter
+                    .type_alias(true, name, args, typ, deprecation)
+                    .group(),
+            ),
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
             constructors: vec![],
             source_url: source_links.url(*location),
+            deprecation_message: match deprecation {
+                Deprecation::NotDeprecated => "".to_string(),
+                Deprecation::Deprecated { message } => message.to_string(),
+            },
         }),
 
         _ => None,
@@ -682,6 +700,7 @@ struct Type<'a> {
     constructors: Vec<TypeConstructor>,
     text_documentation: String,
     source_url: String,
+    deprecation_message: String,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]

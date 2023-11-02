@@ -469,6 +469,7 @@ pub struct CustomType<T> {
     pub public: bool,
     pub constructors: Vec<RecordConstructor<T>>,
     pub documentation: Option<SmolStr>,
+    pub deprecation: Deprecation,
     pub opaque: bool,
     /// The names of the type parameters.
     pub parameters: Vec<SmolStr>,
@@ -505,6 +506,7 @@ pub struct TypeAlias<T> {
     pub type_: T,
     pub public: bool,
     pub documentation: Option<SmolStr>,
+    pub deprecation: Deprecation,
 }
 
 pub type TypedDefinition = Definition<Arc<Type>, TypedExpr, SmolStr, SmolStr>;
@@ -637,8 +639,8 @@ pub struct UnqualifiedImport {
 }
 
 impl UnqualifiedImport {
-    pub fn variable_name(&self) -> &str {
-        self.as_name.as_deref().unwrap_or(&self.name)
+    pub fn used_name(&self) -> &SmolStr {
+        self.as_name.as_ref().unwrap_or(&self.name)
     }
 
     pub fn is_value(&self) -> bool {

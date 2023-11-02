@@ -44,8 +44,8 @@ type X =
 #[test]
 fn import_aliased() {
     assert_eq!(
-        fix("import gleam.{BitString as B}"),
-        "import gleam.{BitArray as B}\n"
+        fix("import gleam.{type BitString as B}"),
+        "import gleam.{type BitArray as B}\n"
     );
 }
 
@@ -373,6 +373,197 @@ pub fn main(x) {
     _ -> 0
   }
 }
+"
+    );
+}
+
+#[test]
+fn aliased_type_import() {
+    assert_eq!(
+        fix("import x.{X as Y}
+
+pub type Z =
+  Y
+"),
+        "import x.{type X as Y}
+
+pub type Z =
+  Y
+"
+    );
+}
+
+#[test]
+fn already_fixed() {
+    assert_eq!(
+        fix("import x.{type X, X}
+
+pub const x = X
+
+pub type Z =
+  X
+"),
+        "import x.{type X, X}
+
+pub const x = X
+
+pub type Z =
+  X
+",
+    );
+}
+
+#[test]
+fn error_type() {
+    assert_eq!(
+        fix("import thing.{Error}
+
+pub fn main() -> Result(Nil, Error) {
+  Error(thing.make_error())
+}
+"),
+        "import thing.{type Error}
+
+pub fn main() -> Result(Nil, Error) {
+  Error(thing.make_error())
+}
+"
+    );
+}
+
+#[test]
+fn ok_type() {
+    assert_eq!(
+        fix("import thing.{Ok}
+
+pub fn main() -> Result(Ok, Nil) {
+  Ok(thing.make_ok())
+}
+"),
+        "import thing.{type Ok}
+
+pub fn main() -> Result(Ok, Nil) {
+  Ok(thing.make_ok())
+}
+"
+    );
+}
+
+#[test]
+fn list_value() {
+    assert_eq!(
+        fix("import thing.{List}
+
+pub fn main() -> List(Int) {
+  List
+  []
+}
+"),
+        "import thing.{List}
+
+pub fn main() -> List(Int) {
+  List
+  []
+}
+"
+    );
+}
+#[test]
+fn result_value() {
+    assert_eq!(
+        fix("import thing.{Result}
+
+pub fn main() -> Result(Int, Nil) {
+  Result
+  Ok(1)
+}
+"),
+        "import thing.{Result}
+
+pub fn main() -> Result(Int, Nil) {
+  Result
+  Ok(1)
+}
+"
+    );
+}
+
+#[test]
+fn const_error_type() {
+    assert_eq!(
+        fix("import thing.{Error}
+
+pub const x = Error
+
+pub type Y =
+  Error
+"),
+        "import thing.{type Error}
+
+pub const x = Error
+
+pub type Y =
+  Error
+"
+    );
+}
+
+#[test]
+fn const_ok_type() {
+    assert_eq!(
+        fix("import thing.{Ok}
+
+pub const x = Ok
+
+pub type Y =
+  Ok
+"),
+        "import thing.{type Ok}
+
+pub const x = Ok
+
+pub type Y =
+  Ok
+"
+    );
+}
+
+#[test]
+fn const_list_value() {
+    assert_eq!(
+        fix("import thing.{List}
+
+pub const x = List
+
+pub type Y =
+  List(Int)
+"),
+        "import thing.{List}
+
+pub const x = List
+
+pub type Y =
+  List(Int)
+"
+    );
+}
+
+#[test]
+fn const_result_value() {
+    assert_eq!(
+        fix("import thing.{Result}
+
+pub const x = Result
+
+pub type Y =
+  Result(Int, Nil)
+"),
+        "import thing.{Result}
+
+pub const x = Result
+
+pub type Y =
+  Result(Int, Nil)
 "
     );
 }

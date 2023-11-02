@@ -9,5 +9,5 @@ error: Unknown module field
 4 │   let one.Two = x
   │       ^^^^^^^
 
-The module `one` does not have a `Two` field.
+The module `one` does not have a `Two` value.
 

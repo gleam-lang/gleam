@@ -241,6 +241,7 @@ fn register_type_alias(
         parameters: args,
         alias: name,
         type_ast: resolved_type,
+        deprecation,
         ..
     } = t;
     assert_unique_type_name(names, name, *location)?;
@@ -256,6 +257,7 @@ fn register_type_alias(
             public: *public,
             parameters,
             typ,
+            deprecation: deprecation.clone(),
         },
     )?;
     if !public {
@@ -277,6 +279,7 @@ fn register_types_from_custom_type<'a>(
         parameters,
         location,
         constructors,
+        deprecation,
         ..
     } = t;
     assert_unique_type_name(names, name, *location)?;
@@ -298,6 +301,7 @@ fn register_types_from_custom_type<'a>(
             origin: *location,
             module: module.clone(),
             public: *public,
+            deprecation: deprecation.clone(),
             parameters,
             typ,
         },
@@ -323,6 +327,7 @@ fn register_values_from_custom_type(
         opaque,
         name,
         constructors,
+        deprecation,
         ..
     } = t;
     let mut hydrator = hydrators
@@ -382,7 +387,7 @@ fn register_values_from_custom_type(
         environment.insert_module_value(
             constructor.name.clone(),
             ValueConstructor {
-                deprecation: Deprecation::NotDeprecated,
+                deprecation: deprecation.clone(),
                 public: *public && !opaque,
                 type_: typ.clone(),
                 variant: constructor_info.clone(),
@@ -402,7 +407,7 @@ fn register_values_from_custom_type(
             constructor_info,
             typ,
             *public,
-            Deprecation::NotDeprecated,
+            deprecation.clone(),
         );
     }
     Ok(())
@@ -669,6 +674,7 @@ fn insert_type_alias(
         alias,
         parameters: args,
         type_ast: resolved_type,
+        deprecation,
         ..
     } = t;
     let typ = environment
@@ -684,6 +690,7 @@ fn insert_type_alias(
         parameters: args,
         type_ast: resolved_type,
         type_: typ,
+        deprecation,
     }))
 }
 
@@ -700,6 +707,7 @@ fn infer_custom_type(
         name,
         parameters,
         constructors,
+        deprecation,
         ..
     } = t;
     let constructors = constructors
@@ -768,6 +776,7 @@ fn infer_custom_type(
         parameters,
         constructors,
         typed_parameters,
+        deprecation,
     }))
 }
 
@@ -800,7 +809,7 @@ fn record_imported_items_for_use_detection<A>(
     // Record any imports that are types only as this information is
     // needed to prevent types being imported in generated JavaScript
     for import in unqualified_values.iter_mut() {
-        if environment.imported_types.contains(import.variable_name()) {
+        if environment.imported_types.contains(import.used_name()) {
             import.layer = Layer::Type;
         }
     }

@@ -193,7 +193,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ),
             ParseErrorType::UnknownAttribute => (
                 "I don't recognise this attribute",
-                vec!["Try `external` or `target` instead.".into()],
+                vec!["Try `deprecated`, `external` or `target` instead.".into()],
             ),
             ParseErrorType::DuplicateAttribute => (
                 "Duplicate attribute",

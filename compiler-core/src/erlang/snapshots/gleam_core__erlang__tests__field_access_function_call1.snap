@@ -4,7 +4,7 @@ assertion_line: 383
 expression: "\npub fn main() {\n    let t = #(fn(x) { x })\n\n    t.0(5)\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([main/0]).
 

@@ -4,7 +4,7 @@ assertion_line: 5
 expression: "\npub fn go(x, y) {\n  x <> y\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([go/2]).
 

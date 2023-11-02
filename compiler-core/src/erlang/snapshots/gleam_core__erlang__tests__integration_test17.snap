@@ -4,7 +4,7 @@ assertion_line: 264
 expression: "\ntype User { User(id: Int, name: String, age: Int) }\nfn create_user(user_id) { User(age: 22, id: user_id, name: \"\") }\n                    "
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export_type([user/0]).
 

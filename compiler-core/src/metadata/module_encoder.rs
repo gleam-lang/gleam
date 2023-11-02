@@ -137,6 +137,10 @@ impl<'a> ModuleEncoder<'a> {
     ) {
         builder.set_public(constructor.public);
         builder.set_module(&constructor.module);
+        builder.set_deprecated(match &constructor.deprecation {
+            Deprecation::NotDeprecated => "",
+            Deprecation::Deprecated { message } => message,
+        });
         let type_builder = builder.reborrow().init_type();
         self.build_type(type_builder, &constructor.typ);
         self.build_types(

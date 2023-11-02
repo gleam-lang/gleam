@@ -3,14 +3,11 @@ source: compiler-core/src/type_/tests/imports.rs
 assertion_line: 213
 expression: "import one.{One, type One}\n\npub fn main() -> One {\n  todo\n}\n"
 ---
-error: Duplicate type definition
+error: Unknown module field
   ┌─ /src/one/two.gleam:1:13
   │
 1 │ import one.{One, type One}
-  │             ^^^  ^^^^^^^^ Redefined here
-  │             │     
-  │             First defined here
+  │             ^^^
 
-The type `One` has been defined multiple times.
-Names in a Gleam module must be unique so one will need to be renamed.
+The module `one` does not have a `One` value.
 

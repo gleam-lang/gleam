@@ -570,6 +570,18 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 };
 
+                let constructor_deprecation = cons.deprecation.clone();
+                match constructor_deprecation {
+                    Deprecation::NotDeprecated => {}
+                    Deprecation::Deprecated { message } => {
+                        self.environment.warnings.emit(Warning::DeprecatedItem {
+                            location,
+                            message: message.clone(),
+                            layer: Layer::Value,
+                        })
+                    }
+                }
+
                 let instantiated_constructor_type =
                     self.environment
                         .instantiate(constructor_typ, &mut hashmap![], self.hydrator);

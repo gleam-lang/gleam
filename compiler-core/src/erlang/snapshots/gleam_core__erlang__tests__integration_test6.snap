@@ -4,7 +4,7 @@ assertion_line: 200
 expression: "pub fn x() { let x = 1 let x = x + 1 x }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([x/0]).
 

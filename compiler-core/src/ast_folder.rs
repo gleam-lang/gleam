@@ -282,9 +282,10 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
 
             UntypedExpr::FieldAccess {
                 location,
+                label_location,
                 label,
                 container,
-            } => self.fold_field_access(location, label, container),
+            } => self.fold_field_access(location, label_location, label, container),
 
             UntypedExpr::Tuple { location, elems } => self.fold_tuple(location, elems),
 
@@ -449,12 +450,14 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
 
             UntypedExpr::FieldAccess {
                 location,
+                label_location,
                 label,
                 container,
             } => {
                 let container = Box::new(self.fold_expr(*container));
                 UntypedExpr::FieldAccess {
                     location,
+                    label_location,
                     label,
                     container,
                 }
@@ -708,11 +711,13 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
     fn fold_field_access(
         &mut self,
         location: SrcSpan,
+        label_location: SrcSpan,
         label: SmolStr,
         container: Box<UntypedExpr>,
     ) -> UntypedExpr {
         UntypedExpr::FieldAccess {
             location,
+            label_location,
             label,
             container,
         }

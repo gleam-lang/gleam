@@ -9,5 +9,5 @@ error: Unknown module field
 1 │ import one.{Two}
   │             ^^^
 
-The module `one` does not have a `Two` field.
+The module `one` does not have a `Two` value.
 

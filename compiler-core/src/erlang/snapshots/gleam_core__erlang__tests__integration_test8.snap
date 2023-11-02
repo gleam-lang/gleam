@@ -4,7 +4,7 @@ assertion_line: 206
 expression: "pub fn x() { 1. <. 2.3 }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
 -export([x/0]).
 

@@ -1,4 +1,4 @@
-use crate::assert_module_infer;
+use crate::{assert_module_infer, assert_warning};
 
 // https://github.com/gleam-lang/gleam/issues/2215
 #[test]
@@ -10,5 +10,22 @@ pub type Test(a) {
 }
 "#,
         vec![("MakeTest", "fn(Test(Int)) -> Test(a)")]
+    );
+}
+
+#[test]
+fn deprecated_type() {
+    assert_warning!(
+        r#"
+@deprecated("Dont use this!")
+pub type Cat {
+  Cat(name: String, cuteness: Int)
+}
+
+pub fn name() -> String {
+  let c = Cat("Numi", 20)
+  c.name
+}
+        "#
     );
 }
