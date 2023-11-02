@@ -362,7 +362,13 @@ impl<'a> Generator<'a> {
         let unqualified_imports = unqualified
             .iter()
             // We do not create a JS import for types as they are not used at runtime
-            .filter(|import| import.is_value())
+            .filter(|import| {
+                !self
+                    .module
+                    .type_info
+                    .type_only_unqualified_imports
+                    .contains(&import.name)
+            })
             .map(|i| {
                 let alias = i.as_name.as_ref().map(|n| {
                     self.register_in_scope(n);

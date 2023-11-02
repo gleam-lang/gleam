@@ -634,16 +634,11 @@ pub struct UnqualifiedImport {
     pub location: SrcSpan,
     pub name: SmolStr,
     pub as_name: Option<SmolStr>,
-    pub layer: Layer,
 }
 
 impl UnqualifiedImport {
     pub fn used_name(&self) -> &SmolStr {
         self.as_name.as_ref().unwrap_or(&self.name)
-    }
-
-    pub fn is_value(&self) -> bool {
-        self.layer.is_value()
     }
 }
 

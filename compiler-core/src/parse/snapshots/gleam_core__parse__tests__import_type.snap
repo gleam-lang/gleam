@@ -27,7 +27,6 @@ Parsed {
                                 },
                                 name: "Wobble",
                                 as_name: None,
-                                layer: Value,
                             },
                         ],
                         unqualified_types: [
@@ -38,7 +37,6 @@ Parsed {
                                 },
                                 name: "Wobble",
                                 as_name: None,
-                                layer: Value,
                             },
                             UnqualifiedImport {
                                 location: SrcSpan {
@@ -47,7 +45,6 @@ Parsed {
                                 },
                                 name: "Wabble",
                                 as_name: None,
-                                layer: Value,
                             },
                         ],
                         package: (),

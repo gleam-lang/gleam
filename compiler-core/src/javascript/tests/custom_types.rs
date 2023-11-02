@@ -678,3 +678,18 @@ pub type One { One }
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2386
+#[test]
+fn new_type_import_syntax() {
+    assert_js!(
+        ("package", "a", r#"pub type A { A }"#),
+        r#"
+import a.{type A, A}
+
+pub fn main() {
+  A
+}
+"#
+    );
+}

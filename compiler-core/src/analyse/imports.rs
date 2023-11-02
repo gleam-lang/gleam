@@ -5,7 +5,9 @@ use smol_str::SmolStr;
 use crate::{
     ast::{Import, SrcSpan, UnqualifiedImport},
     build::Origin,
-    type_::{self, EntityKind, Environment, Error, ModuleInterface, ValueConstructorVariant},
+    type_::{
+        self, EntityKind, Environment, Error, LayerUsage, ModuleInterface, ValueConstructorVariant,
+    },
     warning::TypeWarningEmitter,
 };
 
@@ -116,10 +118,6 @@ impl<'a> Importer<'a> {
         self.environment
             .insert_type_constructor(imported_name.clone(), type_info)?;
 
-        let _ = self
-            .environment
-            .imported_types
-            .insert(imported_name.clone());
         self.environment.init_usage(
             imported_name.clone(),
             EntityKind::ImportedType,
@@ -173,20 +171,20 @@ impl<'a> Importer<'a> {
         if value_imported && type_imported {
             self.environment.init_usage(
                 imported_name.clone(),
-                EntityKind::ImportedTypeAndConstructor(location),
+                EntityKind::ImportedTypeAndValue(location),
                 location,
             );
         } else if type_imported {
-            let _ = self
-                .environment
-                .imported_types
-                .insert(imported_name.clone());
             self.environment
                 .init_usage(imported_name.clone(), EntityKind::ImportedType, location);
-            let _ = self
-                .environment
-                .types_imported_using_deprecated_syntax
-                .insert(import_name.clone(), location);
+            let _ = self.environment.ambiguous_imported_items.insert(
+                import_name.clone(),
+                LayerUsage {
+                    import_location: location,
+                    type_: true,
+                    value: false,
+                },
+            );
         } else if value_imported {
             match variant {
                 Some(&ValueConstructorVariant::Record { .. }) => self.environment.init_usage(

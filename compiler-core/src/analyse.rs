@@ -5,7 +5,7 @@ mod tests;
 use crate::{
     ast::{
         self, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
-        GroupedStatements, Import, Layer, ModuleConstant, RecordConstructor, RecordConstructorArg,
+        GroupedStatements, Import, ModuleConstant, RecordConstructor, RecordConstructorArg,
         SrcSpan, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple,
         TypeAstVar, TypedDefinition, TypedModule, UntypedArg, UntypedModule, UntypedStatement,
     },
@@ -194,8 +194,15 @@ pub fn infer_module<A>(
         module_types_constructors: types_constructors,
         module_values: values,
         accessors,
+        ambiguous_imported_items,
         ..
     } = env;
+
+    let type_only_unqualified_imports = ambiguous_imported_items
+        .into_iter()
+        .filter(|(_, item)| item.type_ && !item.value)
+        .map(|(name, _)| name)
+        .collect();
 
     Ok(ast::Module {
         documentation,
@@ -210,6 +217,7 @@ pub fn infer_module<A>(
             origin,
             unused_imports,
             package: package.clone(),
+            type_only_unqualified_imports,
         },
     })
 }
@@ -792,7 +800,7 @@ fn record_imported_items_for_use_detection<A>(
         location,
         module,
         as_name,
-        mut unqualified_values,
+        unqualified_values,
         unqualified_types,
         ..
     } = i;
@@ -806,13 +814,6 @@ fn record_imported_items_for_use_detection<A>(
                 name: module.clone(),
                 imported_modules: environment.imported_modules.keys().cloned().collect(),
             })?;
-    // Record any imports that are types only as this information is
-    // needed to prevent types being imported in generated JavaScript
-    for import in unqualified_values.iter_mut() {
-        if environment.imported_types.contains(import.used_name()) {
-            import.layer = Layer::Type;
-        }
-    }
 
     // Modules should belong to a package that is a direct dependency of the
     // current package to be imported.

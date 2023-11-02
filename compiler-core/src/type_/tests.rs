@@ -482,6 +482,7 @@ fn infer_module_type_retention_test() {
     assert_eq!(
         module.type_info,
         ModuleInterface {
+            type_only_unqualified_imports: Vec::new(),
             origin: Origin::Src,
             package: "thepackage".into(),
             name: "ok".into(),

@@ -25,7 +25,6 @@ pub struct Environment<'a> {
     /// location of the import statement where they were imported.
     pub imported_modules: HashMap<SmolStr, (SrcSpan, &'a ModuleInterface)>,
     pub unused_modules: HashMap<SmolStr, SrcSpan>,
-    pub imported_types: HashSet<SmolStr>,
 
     /// Names of modules that have been imported with as name.
     pub imported_module_aliases: HashSet<SmolStr>,
@@ -54,7 +53,23 @@ pub struct Environment<'a> {
     /// NOTE: The bool in the tuple here tracks if the entity has been used
     pub entity_usages: Vec<HashMap<SmolStr, (EntityKind, SrcSpan, bool)>>,
 
-    pub types_imported_using_deprecated_syntax: HashMap<SmolStr, SrcSpan>,
+    pub ambiguous_imported_items: HashMap<SmolStr, LayerUsage>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LayerUsage {
+    pub import_location: SrcSpan,
+    pub type_: bool,
+    pub value: bool,
+}
+
+impl LayerUsage {
+    fn used(&mut self, layer: Layer) {
+        match layer {
+            Layer::Value => self.value = true,
+            Layer::Type => self.type_ = true,
+        }
+    }
 }
 
 impl<'a> Environment<'a> {
@@ -82,12 +97,11 @@ impl<'a> Environment<'a> {
             accessors: prelude.accessors.clone(),
             scope: prelude.values.clone().into(),
             importable_modules,
-            imported_types: HashSet::new(),
             imported_module_aliases: HashSet::new(),
             current_module,
             warnings,
             entity_usages: vec![HashMap::new()],
-            types_imported_using_deprecated_syntax: HashMap::new(),
+            ambiguous_imported_items: HashMap::new(),
         }
     }
 }
@@ -101,7 +115,7 @@ pub enum EntityKind {
     PrivateFunction,
     ImportedConstructor,
     ImportedType,
-    ImportedTypeAndConstructor(SrcSpan),
+    ImportedTypeAndValue(SrcSpan),
     ImportedValue,
     PrivateType,
     Variable,
@@ -480,7 +494,7 @@ impl<'a> Environment<'a> {
             // TODO: Improve this so that we can tell if an imported overriden
             // type is actually used or not by tracking whether usages apply to
             // the value or type scope
-            Some((ImportedType | ImportedTypeAndConstructor(_) | PrivateType, _, _)) => {}
+            Some((ImportedType | ImportedTypeAndValue(_) | PrivateType, _, _)) => {}
 
             Some((kind, location, false)) => {
                 // an entity was overwritten in the top most scope without being used
@@ -510,10 +524,15 @@ impl<'a> Environment<'a> {
                 EntityKind::PrivateTypeConstructor(type_name) if *type_name != name => {
                     name = type_name.clone();
                 }
-                EntityKind::ImportedTypeAndConstructor(location) if layer == Layer::Type => {
-                    let _ = self
-                        .types_imported_using_deprecated_syntax
-                        .insert(name.clone(), *location);
+                EntityKind::ImportedTypeAndValue(location) => {
+                    self.ambiguous_imported_items
+                        .entry(name.clone())
+                        .or_insert_with(|| LayerUsage {
+                            import_location: *location,
+                            type_: false,
+                            value: false,
+                        })
+                        .used(layer);
                     break;
                 }
                 _ => break,
@@ -522,9 +541,13 @@ impl<'a> Environment<'a> {
     }
 
     pub fn emit_warnings_for_deprecated_type_imports(&mut self) {
-        for (name, location) in self.types_imported_using_deprecated_syntax.drain() {
-            self.warnings
-                .emit(Warning::DeprecatedTypeImport { name, location })
+        for (name, usage) in &self.ambiguous_imported_items {
+            if usage.type_ {
+                self.warnings.emit(Warning::DeprecatedTypeImport {
+                    name: name.clone(),
+                    location: usage.import_location,
+                })
+            }
         }
     }
 
@@ -553,7 +576,7 @@ impl<'a> Environment<'a> {
     fn handle_unused(&mut self, unused: HashMap<SmolStr, (EntityKind, SrcSpan, bool)>) {
         for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
             let warning = match kind {
-                EntityKind::ImportedType | EntityKind::ImportedTypeAndConstructor(_) => {
+                EntityKind::ImportedType | EntityKind::ImportedTypeAndValue(_) => {
                     Warning::UnusedType {
                         name,
                         imported: true,

@@ -2022,7 +2022,6 @@ where
                         name,
                         location,
                         as_name: None,
-                        layer: Default::default(),
                     };
                     if self.maybe_one(&Token::As).is_some() {
                         let (_, as_name, _) = self.expect_name()?;
@@ -2038,7 +2037,6 @@ where
                         name,
                         location,
                         as_name: None,
-                        layer: Default::default(),
                     };
                     if self.maybe_one(&Token::As).is_some() {
                         let (_, as_name, _) = self.expect_upname()?;
@@ -2055,7 +2053,6 @@ where
                         name,
                         location,
                         as_name: None,
-                        layer: Default::default(),
                     };
                     if self.maybe_one(&Token::As).is_some() {
                         let (_, as_name, _) = self.expect_upname()?;
