@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.32.2 - 2023-11-03
 
 ### Build tool changes
 
