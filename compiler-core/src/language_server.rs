@@ -6,6 +6,7 @@ mod files;
 mod progress;
 mod router;
 mod server;
+mod type_annotations;
 
 #[cfg(test)]
 mod tests;
