@@ -420,6 +420,7 @@ impl<T> Import<T> {
     }
 }
 
+pub type TypedModuleConstant = ModuleConstant<Arc<Type>, EcoString>;
 pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
