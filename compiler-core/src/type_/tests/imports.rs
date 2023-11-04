@@ -239,3 +239,16 @@ fn aliased_unqualified_type_and_value() {
         vec![]
     );
 }
+
+#[test]
+fn deprecated_type_import_conflict_two_modules() {
+    assert_infer_with_module!(
+        ("one", "pub type X { X }"),
+        ("two", "pub type X { X }"),
+        "
+        import one.{type X as Y}
+        import two.{X}
+        ",
+        vec![]
+    );
+}

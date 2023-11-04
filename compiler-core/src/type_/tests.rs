@@ -37,6 +37,22 @@ macro_rules! assert_infer {
 
 #[macro_export]
 macro_rules! assert_infer_with_module {
+    (
+        ($name1:expr, $module_src1:literal),
+        ($name2:expr, $module_src2:literal),
+        $src:expr, $module:expr $(,)?
+    ) => {
+        let constructors = $crate::type_::tests::infer_module(
+            $src,
+            vec![
+                ("thepackage", $name1, $module_src1),
+                ("thepackage", $name2, $module_src2),
+            ],
+        );
+        let expected = $crate::type_::tests::stringify_tuple_strs($module);
+
+        assert_eq!(($src, constructors), ($src, expected));
+    };
     (($name:expr, $module_src:literal), $src:expr, $module:expr $(,)?) => {
         let constructors =
             $crate::type_::tests::infer_module($src, vec![("thepackage", $name, $module_src)]);
