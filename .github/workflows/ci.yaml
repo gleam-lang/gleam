@@ -53,7 +53,7 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             use-cross: false
-            run-integration-tests: false # https://github.com/erlef/setup-beam/issues/147
+            run-integration-tests: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -109,22 +109,37 @@ jobs:
           args: "--workspace --target ${{ matrix.target }}"
           use-cross: ${{ matrix.use-cross }}
 
-      - name: test/project_erlang
+      - name: test/project_erlang (non-windows)
         run: |
           gleam run
           gleam check
           gleam test
           gleam docs build
         working-directory: ./test/project_erlang
-        if: ${{ matrix.run-integration-tests }}
+        if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }}
 
-      - name: test/project_erlang export erlang-shipment
+      - name: test/project_erlang (windows)
+        run: |
+          gleam run
+          gleam check
+          gleam test
+          gleam docs build
+        working-directory: ./test/project_erlang_windows
+        if: ${{ matrix.os == 'windows-latest' && matrix.run-integration-tests }}
+
+      - name: test/project_erlang export erlang-shipment (non-windows)
         run: |
           gleam export erlang-shipment
           ./build/erlang-shipment/entrypoint.sh run
         working-directory: ./test/project_erlang
-        # erlang-shipment does not support Windows
         if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }}
+
+      - name: test/project_erlang export erlang-shipment (windows)
+        run: |
+          gleam export erlang-shipment
+          .\build\erlang-shipment\entrypoint.ps1 run
+        working-directory: ./test/project_erlang_windows
+        if: ${{ matrix.os == 'windows-latest' && matrix.run-integration-tests }}
 
       - name: test/project_javascript
         run: |

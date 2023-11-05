@@ -3,6 +3,16 @@ use gleam_core::{
     Result,
 };
 
+#[cfg(target_os = "windows")]
+static ENTRYPOINT_FILENAME: &str = "entrypoint.ps1";
+#[cfg(not(target_os = "windows"))]
+static ENTRYPOINT_FILENAME: &str = "entrypoint.sh";
+
+#[cfg(target_os = "windows")]
+static ENTRYPOINT_TEMPLATE: &str = include_str!("../templates/erlang-shipment-entrypoint.ps1");
+#[cfg(not(target_os = "windows"))]
+static ENTRYPOINT_TEMPLATE: &str = include_str!("../templates/erlang-shipment-entrypoint.sh");
+
 // TODO: start in embedded mode
 // TODO: test
 
@@ -62,9 +72,9 @@ pub(crate) fn erlang_shipment() -> Result<()> {
     }
 
     // Write entrypoint script
-    let entrypoint = out.join("entrypoint.sh");
-    let text = include_str!("../templates/erlang-shipment-entrypoint.sh")
-        .replace("$PACKAGE_NAME_FROM_GLEAM", &built.root_package.config.name);
+    let entrypoint = out.join(ENTRYPOINT_FILENAME);
+    let text =
+        ENTRYPOINT_TEMPLATE.replace("$PACKAGE_NAME_FROM_GLEAM", &built.root_package.config.name);
     crate::fs::write(&entrypoint, &text)?;
     crate::fs::make_executable(&entrypoint)?;
 
@@ -75,11 +85,12 @@ pub(crate) fn erlang_shipment() -> Result<()> {
 Your Erlang shipment has been generated to {path}.
 
 It can be copied to a compatible server with Erlang installed and run with
-the entrypoint.sh script.
+the {file} script.
 
     {entrypoint}
 ",
         path = out,
+        file = ENTRYPOINT_FILENAME,
         entrypoint = entrypoint,
     );
 
