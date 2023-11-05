@@ -162,25 +162,35 @@ pub fn main() {
 #[test]
 fn test_add_function_types() {
     let code = "
-pub fn main() {
-    add(1, 2)
-}
-
 fn add(lhs, rhs) {
     lhs + rhs
 }
 ";
     let expected = "
-pub fn main() {
-    add(1, 2)
-}
-
 fn add(lhs: Int, rhs: Int) -> Int {
     lhs + rhs
 }
 ";
     assert_eq!(
-        trigger_action(code, Position::new(5, 0), ANNOTATE_TYPES_ACTION),
+        trigger_action(code, Position::new(1, 0), ANNOTATE_TYPES_ACTION),
+        expected.to_string()
+    )
+}
+
+#[test]
+fn test_add_function_types_partially_annotated() {
+    let code = "
+fn add(lhs, rhs: Int) {
+    lhs + rhs
+}
+";
+    let expected = "
+fn add(lhs: Int, rhs: Int) -> Int {
+    lhs + rhs
+}
+";
+    assert_eq!(
+        trigger_action(code, Position::new(1, 0), ANNOTATE_TYPES_ACTION),
         expected.to_string()
     )
 }
