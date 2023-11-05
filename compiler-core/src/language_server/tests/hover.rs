@@ -199,7 +199,7 @@ Int
             range: Some(Range {
                 start: Position {
                     line: 3,
-                    character: 6
+                    character: 0
                 },
                 end: Position {
                     line: 3,
