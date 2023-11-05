@@ -75,6 +75,21 @@ const n = 42
 }
 
 #[test]
+fn module_constants_already_annotated() {
+    let code = "
+const n: Int = 42
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            module_constants: true,
+            ..Default::default()
+        },
+        vec![],
+    );
+}
+
+#[test]
 fn module_constants_disabled() {
     let code = "
 const n = 42
@@ -135,6 +150,67 @@ fn add(lhs, rhs) {
                 kind: Some(InlayHintKind::TYPE),
                 text_edits: Some(vec![TextEdit {
                     range: Range::new(Position::new(1, 15), Position::new(1, 15)),
+                    new_text: ": Int".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+        ],
+    );
+}
+
+#[test]
+fn function_definitions_already_annotated() {
+    let code = "
+fn add(lhs: Int, rhs: Int) -> Int {
+    lhs + rhs
+}
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            function_definitions: true,
+            ..Default::default()
+        },
+        vec![],
+    );
+}
+
+#[test]
+fn function_definitions_partially_annotated() {
+    let code = "
+fn add(lhs, rhs: Int) {
+    lhs + rhs
+}
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            function_definitions: true,
+            ..Default::default()
+        },
+        vec![
+            InlayHint {
+                position: Position::new(1, 21),
+                label: "-> Int".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(1, 21), Position::new(1, 21)),
+                    new_text: " -> Int".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: Some(true),
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(1, 10),
+                label: ": Int".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(1, 10), Position::new(1, 10)),
                     new_text: ": Int".to_owned(),
                 }]),
                 tooltip: None,
