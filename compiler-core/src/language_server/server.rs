@@ -547,6 +547,19 @@ where
     }
 
     fn request_configuration(&mut self) {
+        let supports_configuration = self
+            .initialise_params
+            .capabilities
+            .workspace
+            .as_ref()
+            .and_then(|w| w.configuration)
+            .unwrap_or(false);
+
+        if !supports_configuration {
+            tracing::warn!("lsp_client_cannot_request_configuration");
+            return;
+        }
+
         self.request(
             "workspace/configuration",
             lsp::ConfigurationParams {
