@@ -6,7 +6,10 @@ use lsp_types::{
 
 use super::*;
 
-fn remove_unused_action(src: &str, line: u32) -> String {
+const REMOVE_UNUSED_ACTION: &str = "Remove unused imports";
+const ANNOTATE_TYPES_ACTION: &str = "Annotate type(s)";
+
+fn trigger_action(src: &str, pos: Position, title: &str) -> String {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
 
@@ -29,7 +32,7 @@ fn remove_unused_action(src: &str, line: u32) -> String {
         "/src/app.gleam"
     });
 
-    let url = Url::from_file_path(path).unwrap();
+    let url = Url::from_file_path(path).expect("should be valid path for url");
 
     let params = CodeActionParams {
         text_document: TextDocumentIdentifier::new(url.clone()),
@@ -38,7 +41,7 @@ fn remove_unused_action(src: &str, line: u32) -> String {
             only: None,
             trigger_kind: None,
         },
-        range: Range::new(Position::new(0, 0), Position::new(line + 1, 0)),
+        range: Range::new(pos, pos),
         work_done_progress_params: WorkDoneProgressParams {
             work_done_token: None,
         },
@@ -47,16 +50,17 @@ fn remove_unused_action(src: &str, line: u32) -> String {
         },
     };
 
-    // find the remove unused action response
-    let response = engine.action(params).result.unwrap().and_then(|actions| {
-        actions
-            .into_iter()
-            .find(|action| action.title == "Remove unused imports")
-    });
-    if let Some(action) = response {
-        apply_code_action(src, &url, &action)
+    let actions = engine
+        .action(params)
+        .result
+        .expect("action request should not fail")
+        .unwrap_or_default();
+
+    let action = actions.iter().find(|action| action.title == title);
+    if let Some(action) = action {
+        apply_code_action(src, &url, action)
     } else {
-        panic!("No code action produced by the engine")
+        panic!("Expected code action '{title}' was not produced by the engine. Got: {actions:?}")
     }
 }
 
@@ -78,18 +82,22 @@ fn apply_code_edit(
 ) -> String {
     let mut result = src.to_string();
     let line_numbers = LineNumbers::new(src);
-    let mut offset = 0;
+    let mut offset: i32 = 0;
     for (change_url, change) in changes {
         if url != change_url {
             panic!("Unknown url {}", change_url)
         }
+        let mut change = change.to_owned();
+        change.sort_by_key(|f| f.range.start);
         for edit in change {
-            let start =
-                line_numbers.byte_index(edit.range.start.line, edit.range.start.character) - offset;
-            let end =
-                line_numbers.byte_index(edit.range.end.line, edit.range.end.character) - offset;
+            let start = line_numbers.byte_index(edit.range.start.line, edit.range.start.character)
+                as i32
+                + offset;
+            let end = line_numbers.byte_index(edit.range.end.line, edit.range.end.character) as i32
+                + offset;
             let range = (start as usize)..(end as usize);
-            offset += end - start;
+            offset -= end - start;
+            offset += edit.new_text.len() as i32;
             result.replace_range(range, &edit.new_text);
         }
     }
@@ -119,7 +127,10 @@ pub fn main() {
   result.is_ok
 }
 ";
-    assert_eq!(remove_unused_action(code, 2), expected.to_string())
+    assert_eq!(
+        trigger_action(code, Position::new(3, 0), REMOVE_UNUSED_ACTION),
+        expected.to_string()
+    )
 }
 
 #[test]
@@ -143,8 +154,48 @@ pub fn main() {
 }
 ";
     assert_eq!(
-        remove_unused_action(code, 2),
+        trigger_action(code, Position::new(3, 0), REMOVE_UNUSED_ACTION),
         expected.replace("%SPACE%", " ")
+    )
+}
+
+#[test]
+fn test_add_function_types() {
+    let code = "
+pub fn main() {
+    add(1, 2)
+}
+
+fn add(lhs, rhs) {
+    lhs + rhs
+}
+";
+    let expected = "
+pub fn main() {
+    add(1, 2)
+}
+
+fn add(lhs: Int, rhs: Int) -> Int {
+    lhs + rhs
+}
+";
+    assert_eq!(
+        trigger_action(code, Position::new(5, 0), ANNOTATE_TYPES_ACTION),
+        expected.to_string()
+    )
+}
+
+#[test]
+fn test_add_const_types() {
+    let code = "
+const n = 42
+";
+    let expected = "
+const n: Int = 42
+";
+    assert_eq!(
+        trigger_action(code, Position::new(1, 0), ANNOTATE_TYPES_ACTION),
+        expected.to_string()
     )
 }
 
