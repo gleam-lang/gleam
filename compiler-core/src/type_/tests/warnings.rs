@@ -338,7 +338,7 @@ fn unused_private_const_warnings_test() {
         "const a = 1",
         Warning::UnusedPrivateModuleConstant {
             name: "a".into(),
-            location: SrcSpan { start: 6, end: 7 },
+            location: SrcSpan { start: 0, end: 7 },
         }
     );
 }
