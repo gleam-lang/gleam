@@ -1,6 +1,6 @@
 [package]
 name = "gleam"
-version = "0.32.1"
+version = "0.32.2"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
@@ -72,8 +72,8 @@ toml_edit = "0.9"
 # Cross platform symlink creation helper
 symlink = "0.1"
 # Language server protocol server plumbing
-lsp-server = "0.5"
-lsp-types = "0.92"
+lsp-server = "0.7"
+lsp-types = "0.94"
 # File locking
 fslock = "0.2.1"
 # Compact clone-on-write vector & string type

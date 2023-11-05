@@ -1,6 +1,6 @@
 [package]
 name = "gleam-core"
-version = "0.32.1"
+version = "0.32.2"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
@@ -75,8 +75,8 @@ ecow = { version = "0.2.0", features = ["serde"] }
 # Checksums
 xxhash-rust = { version = "0.8.6", features = ["xxh3"] }
 # Language server protocol server plumbing
-lsp-server = "0.5"
-lsp-types = "0.92"
+lsp-server = "0.7"
+lsp-types = "0.94"
 # Pubgrub dependency resolution algorithm
 pubgrub = "0.2"
 # Drop in replacement for std::path but with only utf-8

@@ -36,6 +36,7 @@ fn remove_unused_action(src: &str, line: u32) -> String {
         context: CodeActionContext {
             diagnostics: vec![],
             only: None,
+            trigger_kind: None,
         },
         range: Range::new(Position::new(0, 0), Position::new(line + 1, 0)),
         work_done_progress_params: WorkDoneProgressParams {

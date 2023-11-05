@@ -6,14 +6,20 @@
 
 - Imported modules can now be discarded by giving them an alias starting with `_`.
 
+## v0.32.2 - 2023-11-03
+
+### Build tool changes
+
+- New Gleam projects are created with `gleam_stdlib` v0.32 and `gleeunit` v1.0.
+
 ### Bug fixes
 
+- Fixed a bug where `gleam fix` would not produce correct results for code that
+  shadowed a prelude name with an import of the same name but a different kind.
 - Fixed a bug where documentation would not publish to Hexdocs for packages with
   a number in the name.
 - Fixed a bug where aliased unqualified types and values of the same name could
-  produce an incorrect error.
-- Fixed a bug where `gleam fix` would not produce correct results for code that
-  shadowed a prelude name with an import of the same name but a different kind.
+  produce an incorrect error. 
 
 ## v0.32.1 - 2023-11-02
 
