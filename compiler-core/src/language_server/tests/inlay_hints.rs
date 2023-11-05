@@ -1,11 +1,12 @@
 use super::*;
+use crate::language_server::configuration::InlayHintsConfig;
 use lsp_types::{
     InlayHint, InlayHintKind, InlayHintParams, Position, Range, TextDocumentIdentifier, TextEdit,
     Url,
 };
 
-fn expect_hints(src: &str, expected_hints: Vec<InlayHint>) {
-    let hints = inlay_hints(src).expect("should return hints");
+fn expect_hints(src: &str, config: InlayHintsConfig, expected_hints: Vec<InlayHint>) {
+    let hints = inlay_hints(src, config).expect("should return hints");
 
     // InlayHint doesn't implement PartialEq so we're serialising to compare them
     let hints = serde_json::to_value(hints).expect("serialisation shouldn't fail");
@@ -14,9 +15,15 @@ fn expect_hints(src: &str, expected_hints: Vec<InlayHint>) {
     assert_eq!(hints, expected_hints);
 }
 
-fn inlay_hints(src: &str) -> Option<Vec<InlayHint>> {
+fn inlay_hints(src: &str, config: InlayHintsConfig) -> Option<Vec<InlayHint>> {
     let io = LanguageServerTestIO::new();
-    let mut engine = setup_engine(&io);
+    let mut engine = setup_engine_with_config(
+        &io,
+        Configuration {
+            inlay_hints: config,
+            ..Default::default()
+        },
+    );
 
     _ = io.src_module("app", src);
     let response = engine.compile_please();
@@ -47,6 +54,10 @@ const n = 42
 ";
     expect_hints(
         code,
+        InlayHintsConfig {
+            module_constants: true,
+            ..Default::default()
+        },
         vec![InlayHint {
             position: Position::new(1, 7),
             label: ": Int".to_owned().into(),
@@ -64,6 +75,21 @@ const n = 42
 }
 
 #[test]
+fn module_constants_disabled() {
+    let code = "
+const n = 42
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            module_constants: false,
+            ..Default::default()
+        },
+        vec![],
+    );
+}
+
+#[test]
 fn function_definitions() {
     let code = "
 fn add(lhs, rhs) {
@@ -72,6 +98,10 @@ fn add(lhs, rhs) {
 ";
     expect_hints(
         code,
+        InlayHintsConfig {
+            function_definitions: true,
+            ..Default::default()
+        },
         vec![
             InlayHint {
                 position: Position::new(1, 16),
@@ -113,5 +143,22 @@ fn add(lhs, rhs) {
                 data: None,
             },
         ],
+    );
+}
+
+#[test]
+fn function_definitions_disabled() {
+    let code = "
+fn add(lhs, rhs) {
+    lhs + rhs
+}
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            function_definitions: false,
+            ..Default::default()
+        },
+        vec![],
     );
 }
