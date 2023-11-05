@@ -22,7 +22,10 @@ use std::sync::Arc;
 use strum::IntoEnumIterator;
 
 use super::{
-    code_action::CodeActionBuilder, src_span_to_lsp_range, type_annotations::TypeAnnotations,
+    code_action::CodeActionBuilder,
+    configuration::{InlayHintsConfig, VersionedConfig},
+    src_span_to_lsp_range,
+    type_annotations::TypeAnnotations,
     DownloadDependencies, MakeLocker,
 };
 
@@ -57,6 +60,8 @@ pub struct LanguageServerEngine<IO, Reporter> {
     // Used to publish progress notifications to the client without waiting for
     // the usual request-response loop.
     progress_reporter: Reporter,
+
+    pub(crate) user_config: VersionedConfig,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -76,6 +81,7 @@ where
         progress_reporter: Reporter,
         io: FileSystemProxy<IO>,
         paths: ProjectPaths,
+        user_config: VersionedConfig,
     ) -> Result<Self> {
         let locker = io.inner().make_locker(&paths, config.target)?;
 
@@ -97,6 +103,7 @@ where
             progress_reporter,
             compiler,
             paths,
+            user_config,
         })
     }
 
@@ -417,7 +424,12 @@ where
             let line_numbers = LineNumbers::new(&module.code);
 
             let mut hints = vec![];
-            add_hints_for_definitions(&module.ast.definitions, &line_numbers, &mut hints);
+            add_hints_for_definitions(
+                &this.user_config.inlay_hints,
+                &module.ast.definitions,
+                &line_numbers,
+                &mut hints,
+            );
 
             Ok(Some(hints))
         })
@@ -661,17 +673,18 @@ fn code_action_annotate_types(
 }
 
 fn add_hints_for_definitions(
+    config: &InlayHintsConfig,
     definitions: &[TypedDefinition],
     line_numbers: &LineNumbers,
     hints: &mut Vec<InlayHint>,
 ) {
     for def in definitions {
         match def {
-            Definition::Function(function) => hints.extend(
+            Definition::Function(function) if config.function_definitions => hints.extend(
                 TypeAnnotations::from_function_definition(function, line_numbers)
                     .into_inlay_hints(),
             ),
-            Definition::ModuleConstant(constant) => hints.extend(
+            Definition::ModuleConstant(constant) if config.module_constants => hints.extend(
                 TypeAnnotations::from_module_constant(constant, line_numbers).into_inlay_hints(),
             ),
             _ => {}

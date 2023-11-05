@@ -12,7 +12,7 @@ use std::collections::{hash_map::Entry, HashMap};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-use super::feedback::FeedbackBookKeeper;
+use super::{configuration::VersionedConfig, feedback::FeedbackBookKeeper};
 
 /// The language server instance serves a language client, typically a text
 /// editor. The editor could have multiple Gleam projects open at once, so run
@@ -51,6 +51,7 @@ where
     pub fn project_for_path(
         &mut self,
         path: &Utf8Path,
+        user_config: &VersionedConfig,
     ) -> Result<Option<&mut Project<IO, Reporter>>> {
         let path = match find_gleam_project_parent(&self.io, path) {
             Some(x) => x,
@@ -78,6 +79,7 @@ where
             self.progress_reporter.clone(),
             self.io.clone(),
             paths,
+            user_config.clone(),
         )?;
         let project = Project {
             engine,

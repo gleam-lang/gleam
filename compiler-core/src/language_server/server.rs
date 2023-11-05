@@ -15,7 +15,7 @@ use debug_ignore::DebugIgnore;
 use lsp::{
     notification::{DidChangeWatchedFiles, DidOpenTextDocument},
     request::{GotoDefinition, InlayHintRequest},
-    HoverProviderCapability, Position, Range, TextEdit, Url,
+    ConfigurationItem, HoverProviderCapability, Position, Range, TextEdit, Url,
 };
 use lsp_types::{
     self as lsp,
@@ -28,7 +28,11 @@ use std::collections::HashMap;
 
 use camino::Utf8PathBuf;
 
-use super::progress::ConnectionProgressReporter;
+use super::{
+    configuration::{Configuration, VersionedConfig},
+    progress::ConnectionProgressReporter,
+};
+use lsp_server::RequestId;
 
 /// This class is responsible for handling the language server protocol and
 /// delegating the work to the engine.
@@ -47,6 +51,9 @@ pub struct LanguageServer<'a, IO> {
     outside_of_project_feedback: FeedbackBookKeeper,
     router: Router<IO, ConnectionProgressReporter<'a>>,
     io: FileSystemProxy<IO>,
+    next_request_id: i32,
+    response_handlers: HashMap<RequestId, ResponseHandler>,
+    config: VersionedConfig,
 }
 
 impl<'a, IO> LanguageServer<'a, IO>
@@ -69,11 +76,16 @@ where
             outside_of_project_feedback: FeedbackBookKeeper::default(),
             router,
             io,
+            next_request_id: 1,
+            response_handlers: Default::default(),
+            config: Default::default(),
         })
     }
 
     pub fn run(&mut self) -> Result<()> {
         self.start_watching_gleam_toml();
+        self.start_watching_configuration();
+        self.request_configuration();
 
         // Enter the message loop, handling each message that comes in from the client
         for message in &self.connection.receiver {
@@ -100,7 +112,14 @@ where
                 Next::Continue
             }
 
-            lsp_server::Message::Response(_) => Next::Continue,
+            lsp_server::Message::Response(response) => {
+                if let Some(handler) = self.response_handlers.remove(&response.id) {
+                    if let Some(result) = response.result {
+                        self.handle_response(handler, result)
+                    }
+                }
+                Next::Continue
+            }
         }
     }
 
@@ -186,10 +205,55 @@ where
                 self.watched_files_changed(params)
             }
 
+            "workspace/didChangeConfiguration" => {
+                self.request_configuration();
+                Feedback::default()
+            }
+
             _ => return,
         };
 
         self.publish_feedback(feedback);
+    }
+
+    fn handle_response(&mut self, handler: ResponseHandler, result: Json) {
+        match handler {
+            ResponseHandler::UpdateConfiguration => {
+                match serde_json::from_value::<Vec<Configuration>>(result) {
+                    Ok(result) => {
+                        if let Some(config) = result.into_iter().next() {
+                            self.config = VersionedConfig {
+                                version: self.config.version + 1,
+                                config,
+                            };
+                        }
+                    }
+                    Err(err) => eprintln!("unable to parse configuration: {err}"),
+                }
+            }
+        }
+    }
+
+    fn request(
+        &mut self,
+        method: impl Into<String>,
+        params: impl serde::Serialize,
+        handler: Option<ResponseHandler>,
+    ) {
+        let id = self.next_request_id;
+        self.next_request_id += 1;
+        let request = lsp_server::Request {
+            id: id.into(),
+            method: method.into(),
+            params: serde_json::value::to_value(params).expect("serialisation should never fail"),
+        };
+        if let Some(handler) = handler {
+            _ = self.response_handlers.insert(id.into(), handler);
+        }
+        self.connection
+            .sender
+            .send(lsp_server::Message::Request(request))
+            .expect("should send request");
     }
 
     fn publish_feedback(&self, feedback: Feedback) {
@@ -253,18 +317,42 @@ where
                 .expect("workspace/didChangeWatchedFiles to json"),
             ),
         };
-        let request = lsp_server::Request {
-            id: 1.into(),
-            method: "client/registerCapability".into(),
-            params: serde_json::value::to_value(lsp::RegistrationParams {
+        self.request(
+            "client/registerCapability",
+            lsp::RegistrationParams {
                 registrations: vec![watch_config],
-            })
-            .expect("client/registerCapability to json"),
+            },
+            None,
+        );
+    }
+
+    fn start_watching_configuration(&mut self) {
+        let supports_configuration = self
+            .initialise_params
+            .capabilities
+            .workspace
+            .as_ref()
+            .and_then(|w| w.did_change_configuration)
+            .map(|wf| wf.dynamic_registration == Some(true))
+            .unwrap_or(false);
+
+        if !supports_configuration {
+            tracing::warn!("lsp_client_cannot_watch_configuration");
+            return;
+        }
+
+        let watch_config = lsp::Registration {
+            id: "watch-configuration".into(),
+            method: "workspace/didChangeConfiguration".into(),
+            register_options: None,
         };
-        self.connection
-            .sender
-            .send(lsp_server::Message::Request(request))
-            .expect("send client/registerCapability");
+        self.request(
+            "client/registerCapability",
+            lsp::RegistrationParams {
+                registrations: vec![watch_config],
+            },
+            None,
+        );
     }
 
     fn publish_messages(&self, messages: Vec<Diagnostic>) {
@@ -298,8 +386,11 @@ where
             &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
         ) -> engine::Response<T>,
     {
-        match self.router.project_for_path(&path) {
+        match self.router.project_for_path(&path, &self.config) {
             Ok(Some(project)) => {
+                if project.engine.user_config.version != self.config.version {
+                    project.engine.user_config = self.config.clone();
+                }
                 let engine::Response {
                     result,
                     warnings,
@@ -338,7 +429,7 @@ where
         let path = path(&params.text_document.uri);
         let mut new_text = String::new();
         let mut error_response = |error| {
-            let feedback = match self.router.project_for_path(&path) {
+            let feedback = match self.router.project_for_path(&path, &self.config) {
                 Ok(Some(project)) => project.feedback.error(error),
                 Ok(None) | Err(_) => self.outside_of_project_feedback.error(error),
             };
@@ -453,6 +544,19 @@ where
         let path = path(&changes.uri);
         self.router.delete_engine_for_path(&path);
         self.notified_with_engine(path, LanguageServerEngine::compile_please)
+    }
+
+    fn request_configuration(&mut self) {
+        self.request(
+            "workspace/configuration",
+            lsp::ConfigurationParams {
+                items: vec![ConfigurationItem {
+                    scope_uri: None,
+                    section: Some("gleam".into()),
+                }],
+            },
+            Some(ResponseHandler::UpdateConfiguration),
+        )
     }
 }
 
@@ -602,6 +706,11 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
         }
         None => vec![main],
     }
+}
+
+#[derive(Debug)]
+enum ResponseHandler {
+    UpdateConfiguration,
 }
 
 fn path_to_uri(path: Utf8PathBuf) -> Url {

@@ -14,6 +14,7 @@ use hexpm::version::Version;
 
 use camino::{Utf8Path, Utf8PathBuf};
 
+use super::configuration::{Configuration, VersionedConfig};
 use crate::{
     config::PackageConfig,
     io::{
@@ -283,11 +284,19 @@ version = "1.0.0""#
 fn setup_engine(
     io: &LanguageServerTestIO,
 ) -> LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO> {
+    setup_engine_with_config(io, Configuration::default())
+}
+
+fn setup_engine_with_config(
+    io: &LanguageServerTestIO,
+    config: Configuration,
+) -> LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO> {
     LanguageServerEngine::new(
         PackageConfig::default(),
         io.clone(),
         FileSystemProxy::new(io.clone()),
         io.paths.clone(),
+        VersionedConfig { version: 0, config },
     )
     .unwrap()
 }
