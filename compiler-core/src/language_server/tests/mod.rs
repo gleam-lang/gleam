@@ -2,6 +2,7 @@ mod action;
 mod compilation;
 mod completion;
 mod hover;
+mod inlay_hints;
 
 use std::{
     collections::HashMap,
