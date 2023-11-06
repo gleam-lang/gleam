@@ -229,12 +229,7 @@ fn fits(
                 Mode::ForcedBroken => docs.push_front((indent, mode, doc)),
             },
 
-            Document::Line(_) => match mode {
-                Mode::Broken | Mode::ForcedBroken => return true,
-                Mode::Unbroken | Mode::ForcedUnbroken => (),
-                // ^-- Here the original algorithms sets a var to false, I have to
-                //     understand what that does
-            },
+            Document::Line(_) => return true,
 
             Document::Nest(i, doc) => docs.push_front((i + indent, mode, doc)),
 
@@ -324,7 +319,7 @@ fn format(
                 kind: BreakKind::Strict,
             } => {
                 width = match mode {
-                    Mode::Broken => {
+                    Mode::Broken | Mode::ForcedBroken => {
                         writer.str_write(broken)?;
                         writer.str_write("\n")?;
                         for _ in 0..indent {
@@ -332,7 +327,7 @@ fn format(
                         }
                         indent
                     }
-                    Mode::Unbroken | Mode::ForcedUnbroken | Mode::ForcedBroken => {
+                    Mode::Unbroken | Mode::ForcedUnbroken => {
                         writer.str_write(unbroken)?;
                         width + unbroken.len() as isize
                     }
