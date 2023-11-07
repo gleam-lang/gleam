@@ -183,9 +183,9 @@ jobs:
           gleam-version: "{}"
           rebar3-version: "{}"
           # elixir-version: "{}"
-      - run: gleam format --check src test
       - run: gleam deps download
       - run: gleam test
+      - run: gleam format --check src test
 "#,
                 ERLANG_OTP_VERSION, self.gleam_version, REBAR3_VERSION, ELIXIR_VERSION,
             ),

@@ -8,6 +8,9 @@
 
 ### Build tool changes
 
+- New projects are now generated with the call to `gleam format` coming last in
+  the GitHub Actions workflow. This is so that feedback from tests is presented
+  even if formatting is incorrect.
 - Added Windows support for the `gleam export erlang-shipment` command.
 
 ## v0.32.2 - 2023-11-03
