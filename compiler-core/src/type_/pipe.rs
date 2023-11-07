@@ -17,6 +17,19 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         expr_typer: &'a mut ExprTyper<'b, 'c>,
         expressions: Vec1<UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
+        // The scope is reset as pipelines are rewritten into a series of
+        // assignments, and we don't want these variables to leak out of the
+        // pipeline.
+        let scope = expr_typer.environment.scope.clone();
+        let result = PipeTyper::run(expr_typer, expressions);
+        expr_typer.environment.scope = scope;
+        result
+    }
+
+    fn run(
+        expr_typer: &'a mut ExprTyper<'b, 'c>,
+        expressions: Vec1<UntypedExpr>,
+    ) -> Result<TypedExpr, Error> {
         let size = expressions.len();
         let end = &expressions[..]
             .last()
@@ -39,24 +52,22 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         };
         // No need to update self.argument_* as we set it above
         typer.push_assignment_no_update(first);
+
         // Perform the type checking
         typer.infer_expressions(expressions)
     }
 
     fn infer_expressions(
-        mut self,
+        &mut self,
         expressions: impl IntoIterator<Item = UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let finally = self.infer_each_expression(expressions);
-
-        // Clean-up the pipe variables inserted so they cannot be used outside this pipeline
-        let _ = self.expr_typer.environment.scope.remove(PIPE_VARIABLE);
 
         // Return any errors after clean-up
         let finally = finally?;
 
         Ok(TypedExpr::Pipeline {
-            assignments: self.assignments,
+            assignments: std::mem::take(&mut self.assignments),
             location: self.location,
             finally: Box::new(finally),
         })

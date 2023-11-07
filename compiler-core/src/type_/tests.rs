@@ -22,6 +22,7 @@ mod errors;
 mod functions;
 mod guards;
 mod imports;
+mod pipes;
 mod pretty;
 mod type_alias;
 mod use_;
