@@ -5,8 +5,13 @@ use lsp_types::{
     Url,
 };
 
-fn expect_hints(src: &str, config: InlayHintsConfig, expected_hints: Vec<InlayHint>) {
-    let hints = inlay_hints(src, config).expect("should return hints");
+fn expect_hints(
+    src: &str,
+    config: InlayHintsConfig,
+    range: Option<Range>,
+    expected_hints: Vec<InlayHint>,
+) {
+    let hints = inlay_hints(src, config, range).expect("should return hints");
 
     // InlayHint doesn't implement PartialEq so we're serialising to compare them
     let hints = serde_json::to_value(hints).expect("serialisation shouldn't fail");
@@ -15,7 +20,11 @@ fn expect_hints(src: &str, config: InlayHintsConfig, expected_hints: Vec<InlayHi
     assert_eq!(hints, expected_hints);
 }
 
-fn inlay_hints(src: &str, config: InlayHintsConfig) -> Option<Vec<InlayHint>> {
+fn inlay_hints(
+    src: &str,
+    config: InlayHintsConfig,
+    range: Option<Range>,
+) -> Option<Vec<InlayHint>> {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine_with_config(
         &io,
@@ -40,11 +49,132 @@ fn inlay_hints(src: &str, config: InlayHintsConfig) -> Option<Vec<InlayHint>> {
     let params = InlayHintParams {
         text_document: TextDocumentIdentifier::new(url),
         work_done_progress_params: Default::default(),
-        range: Range::new(Position::new(0, 0), Position::new(0, 0)),
+        range: range.unwrap_or_else(|| {
+            Range::new(
+                Position::new(0, 0),
+                Position::new(
+                    src.lines().count() as u32,
+                    src.lines().last().unwrap_or_default().len() as u32,
+                ),
+            )
+        }),
     };
     let response = engine.inlay_hint(params);
 
     response.result.expect("inlay hint request should not fail")
+}
+
+#[test]
+fn whole_range() {
+    let code = "
+const a = 42
+const b = 43
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            module_constants: true,
+            ..Default::default()
+        },
+        Some(Range::new(Position::new(1, 0), Position::new(2, 0))),
+        vec![InlayHint {
+            position: Position::new(1, 7),
+            label: ": Int".to_owned().into(),
+            kind: Some(InlayHintKind::TYPE),
+            text_edits: Some(vec![TextEdit {
+                range: Range::new(Position::new(1, 7), Position::new(1, 7)),
+                new_text: ": Int".to_owned(),
+            }]),
+            tooltip: None,
+            padding_left: None,
+            padding_right: None,
+            data: None,
+        }],
+    );
+}
+
+#[test]
+fn starts_near_end_of_range() {
+    let code = "
+const a = 42
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            module_constants: true,
+            ..Default::default()
+        },
+        Some(Range::new(Position::new(0, 0), Position::new(1, 5))),
+        vec![InlayHint {
+            position: Position::new(1, 7),
+            label: ": Int".to_owned().into(),
+            kind: Some(InlayHintKind::TYPE),
+            text_edits: Some(vec![TextEdit {
+                range: Range::new(Position::new(1, 7), Position::new(1, 7)),
+                new_text: ": Int".to_owned(),
+            }]),
+            tooltip: None,
+            padding_left: None,
+            padding_right: None,
+            data: None,
+        }],
+    );
+}
+
+#[test]
+fn ends_near_start_of_range() {
+    let code = "
+const a = 42
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            module_constants: true,
+            ..Default::default()
+        },
+        Some(Range::new(Position::new(1, 6), Position::new(2, 0))),
+        vec![InlayHint {
+            position: Position::new(1, 7),
+            label: ": Int".to_owned().into(),
+            kind: Some(InlayHintKind::TYPE),
+            text_edits: Some(vec![TextEdit {
+                range: Range::new(Position::new(1, 7), Position::new(1, 7)),
+                new_text: ": Int".to_owned(),
+            }]),
+            tooltip: None,
+            padding_left: None,
+            padding_right: None,
+            data: None,
+        }],
+    );
+}
+
+#[test]
+fn start_and_end_between_range() {
+    let code = "
+const a = 42
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            module_constants: true,
+            ..Default::default()
+        },
+        Some(Range::new(Position::new(1, 2), Position::new(1, 4))),
+        vec![InlayHint {
+            position: Position::new(1, 7),
+            label: ": Int".to_owned().into(),
+            kind: Some(InlayHintKind::TYPE),
+            text_edits: Some(vec![TextEdit {
+                range: Range::new(Position::new(1, 7), Position::new(1, 7)),
+                new_text: ": Int".to_owned(),
+            }]),
+            tooltip: None,
+            padding_left: None,
+            padding_right: None,
+            data: None,
+        }],
+    );
 }
 
 #[test]
@@ -58,6 +188,7 @@ const n = 42
             module_constants: true,
             ..Default::default()
         },
+        None,
         vec![InlayHint {
             position: Position::new(1, 7),
             label: ": Int".to_owned().into(),
@@ -85,6 +216,7 @@ const n: Int = 42
             module_constants: true,
             ..Default::default()
         },
+        None,
         vec![],
     );
 }
@@ -100,6 +232,7 @@ const n = 42
             module_constants: false,
             ..Default::default()
         },
+        None,
         vec![],
     );
 }
@@ -117,6 +250,7 @@ fn add(lhs, rhs) {
             function_definitions: true,
             ..Default::default()
         },
+        None,
         vec![
             InlayHint {
                 position: Position::new(1, 16),
@@ -174,6 +308,7 @@ fn add(lhs: Int, rhs: Int) -> Int {
             function_definitions: true,
             ..Default::default()
         },
+        None,
         vec![],
     );
 }
@@ -191,6 +326,7 @@ fn add(lhs, rhs: Int) {
             function_definitions: true,
             ..Default::default()
         },
+        None,
         vec![
             InlayHint {
                 position: Position::new(1, 21),
@@ -235,6 +371,7 @@ fn add(lhs, rhs) {
             function_definitions: false,
             ..Default::default()
         },
+        None,
         vec![],
     );
 }

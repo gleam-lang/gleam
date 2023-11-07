@@ -424,9 +424,17 @@ where
             let line_numbers = LineNumbers::new(&module.code);
 
             let mut hints = vec![];
+            let start =
+                line_numbers.byte_index(params.range.start.line, params.range.start.character);
+            let end = line_numbers.byte_index(params.range.end.line, params.range.end.character);
             add_hints_for_definitions(
                 &this.user_config.inlay_hints,
-                &module.ast.definitions,
+                module.ast.definitions.iter().filter(|stmt| {
+                    let loc = stmt.location();
+                    (loc.start > start && loc.start < end) // Is the start of the node in the range
+                        || (loc.end > start && loc.end < end) // or is the end of the node in the range
+                        || (start > loc.start && end < loc.end) // or is range within the node
+                }),
                 &line_numbers,
                 &mut hints,
             );
@@ -672,9 +680,9 @@ fn code_action_annotate_types(
     }
 }
 
-fn add_hints_for_definitions(
+fn add_hints_for_definitions<'a>(
     config: &InlayHintsConfig,
-    definitions: &[TypedDefinition],
+    definitions: impl Iterator<Item = &'a TypedDefinition>,
     line_numbers: &LineNumbers,
     hints: &mut Vec<InlayHint>,
 ) {
