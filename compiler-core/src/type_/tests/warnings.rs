@@ -1060,7 +1060,7 @@ fn unused_alias_warning_test() {
         "#,
         Warning::UnusedPrivateModuleConstant {
             name: "one".into(),
-            location: SrcSpan { start: 61, end: 64 },
+            location: SrcSpan { start: 55, end: 64 },
         },
         Warning::UnusedImportedModuleAlias {
             name:"bar".into(),
@@ -1094,7 +1094,7 @@ fn unused_alias_for_duplicate_module_no_warning_for_alias_test() {
         "#,
         Warning::UnusedPrivateModuleConstant {
             name: "one".into(),
-            location: SrcSpan { start: 76, end: 79 },
+            location: SrcSpan { start: 70, end: 79 },
         },
         Warning::UnusedImportedModule {
             name: "bar".into(),
