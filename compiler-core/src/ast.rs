@@ -407,18 +407,11 @@ pub struct Import<PackageName> {
 }
 
 impl<T> Import<T> {
-    fn name(&self) -> &str {
-        self.module
-            .split('/')
-            .last()
-            .expect("Could not identify imported module name.")
-    }
-
     pub(crate) fn used_name(&self) -> Option<EcoString> {
         match self.as_name.as_ref() {
             Some((AssignName::Variable(name), _)) => Some(name.clone()),
             Some((AssignName::Discard(_), _)) => None,
-            None => Some(EcoString::from(self.name())),
+            None => self.module.split('/').last().map(EcoString::from),
         }
     }
 
