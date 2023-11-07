@@ -13,6 +13,10 @@
   even if formatting is incorrect.
 - Added Windows support for the `gleam export erlang-shipment` command.
 
+### Bug fixes
+
+- Fixed a bug where some nested pipelines could fail to type check.
+
 ## v0.32.2 - 2023-11-03
 
 ### Build tool changes
