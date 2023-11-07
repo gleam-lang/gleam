@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixed
+
+- Fixed the `target` property of `gleam.toml` being ignored for local path
+  dependencies by `gleam run -m module/name`
+
+
 ## v0.32.3 - 2023-11-07
 
 ### Language changes
@@ -17,6 +25,7 @@
 
 - Fixed a bug where some nested pipelines could fail to type check.
 
+
 ## v0.32.2 - 2023-11-03
 
 ### Build tool changes
@@ -32,6 +41,7 @@
 - Fixed a bug where aliased unqualified types and values of the same name could
   produce an incorrect error.
 
+
 ## v0.32.1 - 2023-11-02
 
 ### Bug fixes
@@ -41,12 +51,14 @@
 - Fixed a bug where incorrect JavaScript could be generated due to backwards
   compatibility with the deprecated import syntax.
 
+
 ## v0.32.0 - 2023-11-01
 
 ### Bug fixes
 
 - Fixed a bug where running `gleam fix` multiple times could produce incorrect
   results.
+
 
 ## v0.32.0-rc3 - 2023-10-26
 
@@ -55,12 +67,14 @@
 - Fixed a bug where `gleam fix` would fail to update the deprecated type import
   syntax for aliased unqualified types.
 
+
 ## v0.32.0-rc2 - 2023-10-26
 
 ### Bug fixes
 
 - Fixed a bug where the backward compatibility for the deprecated import syntax
   could result in an import error with some valid imports.
+
 
 ## v0.32.0-rc1 - 2023-10-25
 
