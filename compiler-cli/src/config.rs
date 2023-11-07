@@ -1,10 +1,9 @@
 use camino::Utf8PathBuf;
 
-use ecow::EcoString;
 use gleam_core::{
     config::PackageConfig,
     error::{Error, FileIoAction, FileKind},
-    manifest::Manifest,
+    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
 };
 
@@ -23,37 +22,93 @@ pub fn find_package_config_for_module(
     manifest: &Manifest,
     project_paths: &ProjectPaths,
 ) -> Result<PackageConfig, Error> {
-    let gleam_projects: Vec<EcoString> = manifest
-        .packages
-        .iter()
-        .filter(|package| package.build_tools.contains(&"gleam".to_string()))
-        .map(|package| package.name.clone())
-        .collect();
-
-    let maybe_package_path = gleam_projects.into_iter().find(|package_to_check| {
-        let mut path = project_paths.build_packages_directory();
-        path.push(package_to_check.as_str());
-
-        path.push("src");
-
-        for file in mod_path.split('/') {
-            path.push(file);
+    for package in &manifest.packages {
+        // Not a Gleam package
+        if !package.build_tools.contains(&"gleam".into()) {
+            continue;
         }
 
-        let _ = path.set_extension("gleam");
+        let root = package_root(&package, project_paths);
+        let mut module_path = root.join("src").join(mod_path);
+        _ = module_path.set_extension("gleam");
 
-        path.is_file()
-    });
-
-    match maybe_package_path {
-        Some(package_path) => {
-            let mut config_path = project_paths.build_packages_directory();
-            config_path.push(package_path.as_str());
-            config_path.push("gleam.toml");
-            read(config_path)
+        // This package doesn't have the module we're looking for
+        if !module_path.is_file() {
+            continue;
         }
-        None => root_config(),
+
+        return read(root.join("gleam.toml"));
     }
+
+    root_config()
+}
+
+fn package_root(package: &ManifestPackage, project_paths: &ProjectPaths) -> Utf8PathBuf {
+    match &package.source {
+        ManifestPackageSource::Local { path } => project_paths.root().join(path),
+
+        ManifestPackageSource::Hex { .. } | ManifestPackageSource::Git { .. } => {
+            project_paths.build_packages_package(&package.name)
+        }
+    }
+}
+
+#[test]
+fn package_root_hex() {
+    let paths = ProjectPaths::new(Utf8PathBuf::from("/app"));
+    let package = ManifestPackage {
+        name: "the_package".into(),
+        version: hexpm::version::Version::new(1, 0, 0),
+        build_tools: vec!["gleam".into()],
+        otp_app: None,
+        requirements: vec![],
+        source: ManifestPackageSource::Hex {
+            outer_checksum: Base16Checksum(vec![]),
+        },
+    };
+    assert_eq!(
+        package_root(&package, &paths),
+        Utf8PathBuf::from("/app/build/packages/the_package")
+    );
+}
+
+#[test]
+fn package_root_git() {
+    let paths = ProjectPaths::new(Utf8PathBuf::from("/app"));
+    let package = ManifestPackage {
+        name: "the_package".into(),
+        version: hexpm::version::Version::new(1, 0, 0),
+        build_tools: vec!["gleam".into()],
+        otp_app: None,
+        requirements: vec![],
+        source: ManifestPackageSource::Git {
+            repo: "repo".into(),
+            commit: "commit".into(),
+        },
+    };
+    assert_eq!(
+        package_root(&package, &paths),
+        Utf8PathBuf::from("/app/build/packages/the_package")
+    );
+}
+
+#[test]
+fn package_root_local() {
+    let paths = ProjectPaths::new(Utf8PathBuf::from("/app"));
+    let package = ManifestPackage {
+        name: "the_package".into(),
+        version: hexpm::version::Version::new(1, 0, 0),
+        build_tools: vec!["gleam".into()],
+        otp_app: None,
+        requirements: vec![],
+        source: ManifestPackageSource::Local {
+            path: Utf8PathBuf::from("../wibble"),
+        },
+    };
+    assert_eq!(
+        package_root(&package, &paths),
+        Utf8PathBuf::from("/app/../wibble")
+    );
 }
 
 pub fn read(config_path: Utf8PathBuf) -> Result<PackageConfig, Error> {
