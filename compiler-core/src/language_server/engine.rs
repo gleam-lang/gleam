@@ -346,8 +346,6 @@ where
 
         // Imported modules
         for import in module.ast.definitions.iter().filter_map(get_import) {
-            let alias = import.used_name();
-
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
             // TODO: test getting completions from modules defined in other packages
@@ -360,7 +358,11 @@ where
                 if !type_.public {
                     continue;
                 }
-                completions.push(type_completion(Some(&alias), name, type_));
+
+                let module = import.used_name();
+                if module.is_some() {
+                    completions.push(type_completion(module.as_ref(), name, type_));
+                }
             }
 
             // Unqualified types
@@ -385,8 +387,6 @@ where
 
         // Imported modules
         for import in module.ast.definitions.iter().filter_map(get_import) {
-            let alias = import.used_name();
-
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
             // TODO: test getting completions from modules defined in other packages
@@ -399,7 +399,11 @@ where
                 if !value.public {
                     continue;
                 }
-                completions.push(value_completion(Some(&alias), name, value));
+
+                let module = import.used_name();
+                if module.is_some() {
+                    completions.push(value_completion(module.as_deref(), name, value));
+                }
             }
 
             // Unqualified values

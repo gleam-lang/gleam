@@ -50,7 +50,7 @@ impl Fixer {
 
             Definition::Import(i) => {
                 if i.module == "gleam" {
-                    self.prelude_module_import_alias = Some(i.used_name());
+                    self.prelude_module_import_alias = i.used_name();
                 } else {
                     for i in i.unqualified_values.iter().chain(&i.unqualified_types) {
                         if i.used_name() == "BitString" && self.bit_string_name == "BitString" {

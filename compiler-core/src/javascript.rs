@@ -345,18 +345,22 @@ impl<'a> Generator<'a> {
         imports: &mut Imports<'a>,
         package: &'a str,
         module: &'a str,
-        as_name: &'a Option<ImportName>,
+        as_name: &'a Option<(AssignName, SrcSpan)>,
         unqualified: &'a [UnqualifiedImport],
     ) {
-        let module_name = as_name
-            .as_ref()
-            .map(|n| EcoString::as_str(&n.name))
-            .unwrap_or_else(|| {
-                module
-                    .split('/')
-                    .last()
-                    .expect("JavaScript generator could not identify imported module name.")
-            });
+        let get_name = |module: &'a str| {
+            module
+                .split('/')
+                .last()
+                .expect("JavaScript generator could not identify imported module name.")
+        };
+
+        let (discarded, module_name) = match as_name {
+            None => (false, get_name(module)),
+            Some((AssignName::Discard(_), _)) => (true, get_name(module)),
+            Some((AssignName::Variable(name), _)) => (false, name.as_str()),
+        };
+
         let module_name = format!("${module_name}");
         let path = self.import_path(package, module);
         let unqualified_imports = unqualified
@@ -377,7 +381,9 @@ impl<'a> Generator<'a> {
                 let name = maybe_escape_identifier_doc(&i.name);
                 Member { name, alias }
             });
-        imports.register_module(path, [module_name], unqualified_imports);
+
+        let aliases = if discarded { vec![] } else { vec![module_name] };
+        imports.register_module(path, aliases, unqualified_imports);
     }
 
     fn register_external_function(

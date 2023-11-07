@@ -11,6 +11,7 @@
 //! <https://www.typescriptlang.org/>
 //! <https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html>
 
+use crate::ast::AssignName;
 use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{
@@ -248,9 +249,13 @@ impl<'a> TypeScriptGenerator<'a> {
                     as_name,
                     ..
                 }) => {
-                    if let Some(alias) = as_name {
-                        let _ = self.aliased_module_names.insert(module, &alias.name);
+                    match as_name {
+                        Some((AssignName::Variable(name), _)) => {
+                            let _ = self.aliased_module_names.insert(module, name);
+                        }
+                        Some((AssignName::Discard(_), _)) | None => (),
                     }
+
                     self.register_import(&mut imports, package, module);
                 }
             }

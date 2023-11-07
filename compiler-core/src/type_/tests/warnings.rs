@@ -1,6 +1,6 @@
 use super::*;
 use crate::ast::TodoKind;
-use crate::{assert_no_warnings, assert_warning};
+use crate::{assert_no_warnings, assert_warning, assert_warnings_with_imports};
 
 #[test]
 fn unknown_label() {
@@ -1104,5 +1104,65 @@ fn deprecate_type_import_type_custom_type_not_using_type() {
 import module.{X}
 pub const x = X
 "
+    );
+}
+
+#[test]
+fn unused_module_wuth_alias_warning_test() {
+    assert_warning!(
+        ("gleam/foo", "pub const one = 1"),
+        "import gleam/foo as bar",
+        Warning::UnusedImportedModule {
+            name: "bar".into(),
+            location: SrcSpan { start: 0, end: 23 },
+        }
+    );
+}
+
+#[test]
+fn unused_alias_warning_test() {
+    assert_warnings_with_imports!(
+        ("gleam/foo", "pub const one = 1");
+        r#"
+            import gleam/foo.{one} as bar
+            const one = one
+        "#,
+        Warning::UnusedPrivateModuleConstant {
+            name: "one".into(),
+            location: SrcSpan { start: 61, end: 64 },
+        },
+        Warning::UnusedImportedModuleAlias {
+            name:"bar".into(),
+            location: SrcSpan { start: 36, end: 42 }
+        }
+    );
+}
+
+#[test]
+fn discarded_module_no_warnings_test() {
+    assert_no_warnings!(
+        ("gleam", "foo", "pub const one = 1"),
+        "import gleam/foo as _bar"
+    );
+}
+
+#[test]
+fn unused_alias_for_duplicate_module_no_warning_for_alias_test() {
+    assert_warnings_with_imports!(
+        ("a/foo", "pub const one = 1"),
+        ("b/foo", "pub const two = 2");
+        r#"
+            import a/foo
+            import b/foo as bar
+            const one = foo.one
+        "#,
+        Warning::UnusedPrivateModuleConstant {
+            name: "one".into(),
+            location: SrcSpan { start: 76, end: 79 },
+        },
+        Warning::UnusedImportedModule {
+            name: "bar".into(),
+            location: SrcSpan { start: 38, end: 57 },
+        }
     );
 }

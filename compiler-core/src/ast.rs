@@ -386,12 +386,6 @@ impl<T, E> Function<T, E> {
 pub type UntypedImport = Import<()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ImportName {
-    pub location: SrcSpan,
-    pub name: EcoString,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 /// Import another Gleam module so the current module can use the types and
 /// values it defines.
 ///
@@ -406,19 +400,30 @@ pub struct Import<PackageName> {
     pub documentation: Option<EcoString>,
     pub location: SrcSpan,
     pub module: EcoString,
-    pub as_name: Option<ImportName>,
+    pub as_name: Option<(AssignName, SrcSpan)>,
     pub unqualified_values: Vec<UnqualifiedImport>,
     pub unqualified_types: Vec<UnqualifiedImport>,
     pub package: PackageName,
 }
 
 impl<T> Import<T> {
-    pub(crate) fn used_name(&self) -> EcoString {
-        self.as_name
-            .as_ref()
-            .map(|as_name| as_name.name.clone())
-            .or_else(|| self.module.split('/').last().map(|s| s.into()))
-            .expect("Import could not identify variable name.")
+    fn name(&self) -> &str {
+        self.module
+            .split('/')
+            .last()
+            .expect("Could not identify imported module name.")
+    }
+
+    pub(crate) fn used_name(&self) -> Option<EcoString> {
+        match self.as_name.as_ref() {
+            Some((AssignName::Variable(name), _)) => Some(name.clone()),
+            Some((AssignName::Discard(_), _)) => None,
+            None => Some(EcoString::from(self.name())),
+        }
+    }
+
+    pub(crate) fn alias_location(&self) -> Option<SrcSpan> {
+        self.as_name.as_ref().map(|(_, location)| *location)
     }
 }
 

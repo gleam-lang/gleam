@@ -249,10 +249,11 @@ impl<'comments> Formatter<'comments> {
                     ".{".to_doc().append(unqualified).append("}")
                 };
                 let doc = docvec!["import ", module.as_str(), second];
-                if let Some(as_name) = as_name {
-                    doc.append(" as ").append(&as_name.name)
-                } else {
-                    doc
+                match as_name {
+                    Some((AssignName::Variable(name) | AssignName::Discard(name), _)) => {
+                        doc.append(" as ").append(name)
+                    }
+                    None => doc,
                 }
             }
 

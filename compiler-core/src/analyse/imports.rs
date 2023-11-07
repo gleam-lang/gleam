@@ -45,9 +45,6 @@ impl<'a> Importer<'a> {
     }
 
     fn register_import(&mut self, import: &Import<()>) -> Result<(), Error> {
-        // Determine local alias of imported module
-        let used_name = import.used_name();
-
         let location = import.location;
         let imported_module_name = import.module.clone();
 
@@ -62,8 +59,8 @@ impl<'a> Importer<'a> {
                 imported_modules: self.environment.imported_modules.keys().cloned().collect(),
             })?;
 
-        self.check_not_a_duplicate_import(&used_name, location)?;
         self.check_src_does_not_import_test(module_info, location, imported_module_name.clone())?;
+        self.register_module(import, module_info)?;
 
         // TODO: remove this when we remove the old syntax
         let mut types = HashSet::with_capacity(import.unqualified_types.len());
@@ -74,21 +71,6 @@ impl<'a> Importer<'a> {
         for value in &import.unqualified_values {
             self.register_unqualified_value(value, module_info, &mut types)?;
         }
-
-        self.register_module_usage(import);
-
-        // Register the name as imported so it can't be imported a
-        // second time in future
-        let _ = self
-            .environment
-            .unqualified_imported_names
-            .insert(used_name.clone(), location);
-
-        // Insert imported module into scope
-        let _ = self
-            .environment
-            .imported_modules
-            .insert(used_name, (location, module_info));
         Ok(())
     }
 
@@ -243,28 +225,45 @@ impl<'a> Importer<'a> {
         Ok(())
     }
 
-    fn register_module_usage(&mut self, import: &Import<()>) {
-        if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
-            // When the module has no unqualified imports, we track its usage
-            // so we can warn if not used by the end of the type checking
+    fn register_module(
+        &mut self,
+        import: &Import<()>,
+        import_info: &'a ModuleInterface,
+    ) -> Result<(), Error> {
+        if let Some(used_name) = import.used_name() {
+            self.check_not_a_duplicate_import(&used_name, import.location)?;
+
+            if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
+                // When the module has no unqualified imports, we track its usage
+                // so we can warn if not used by the end of the type checking
+                let _ = self
+                    .environment
+                    .unused_modules
+                    .insert(used_name.clone(), import.location);
+            }
+
+            if let Some(alias_location) = import.alias_location() {
+                // We also register it's name to differentiate between unused module
+                // and unused module name. See 'convert_unused_to_warnings'.
+                let _ = self
+                    .environment
+                    .imported_module_aliases
+                    .insert(used_name.clone(), alias_location);
+
+                let _ = self
+                    .environment
+                    .unused_module_aliases
+                    .insert(used_name.clone(), alias_location);
+            }
+
+            // Insert imported module into scope
             let _ = self
                 .environment
-                .unused_modules
-                .insert(import.used_name(), import.location);
-        } else if let Some(as_name) = &import.as_name {
-            // When the module has a name, we also track its as_name usage
-            // so we can warn if not used by the end of the type checking
-            let _ = self
-                .environment
-                .unused_modules
-                .insert(as_name.name.clone(), as_name.location);
-            // We also register it's name to differentiate between unused module
-            // and unused module name. See 'convert_unused_to_warnings'.
-            let _ = self
-                .environment
-                .imported_module_aliases
-                .insert(as_name.name.clone());
-        }
+                .imported_modules
+                .insert(used_name, (import.location, import_info));
+        };
+
+        Ok(())
     }
 
     fn check_not_a_duplicate_import(

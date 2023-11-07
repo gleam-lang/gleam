@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Language changes
+
+- Imported modules can now be discarded by giving them an alias starting with `_`.
+
 ### Build tool changes
 
 - Added Windows support for the `gleam export erlang-shipment` command.
@@ -105,7 +109,7 @@
 - The content has been made wider in rendered HTML documentation.
 - Dependencies that can be built with both `mix` and `rebar3` are now built
   with `mix` if it exists on the system, and with `rebar3` if it doesn't.
-
+  
 ### Bug fixes
 
 - "Compiling $package" is now only printed when a package has new changes to

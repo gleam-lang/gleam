@@ -1,5 +1,5 @@
 use crate::javascript::tests::CURRENT_PACKAGE;
-use crate::{assert_js, assert_ts_def};
+use crate::{assert_js, assert_js_with_multiple_imports, assert_ts_def};
 
 #[test]
 fn empty_module() {
@@ -202,5 +202,32 @@ type Dup { Thingy }
 
 pub fn go(x: Thingy) -> List(Thingy) { [x, x] }
 "#,
+    );
+}
+
+#[test]
+fn discarded_duplicate_import() {
+    assert_js_with_multiple_imports!(
+        ("esa/rocket_ship", r#"pub fn go() { 1 }"#),
+        ("nasa/rocket_ship", r#"pub fn go() { 1 }"#);
+        r#"
+import esa/rocket_ship
+import nasa/rocket_ship as _nasa_rocket
+pub fn go() { rocket_ship.go() }
+"#
+    );
+}
+
+#[test]
+fn discarded_duplicate_import_with_unqualified() {
+    assert_js_with_multiple_imports!(
+        ("esa/rocket_ship", r#"pub fn go() { 1 }"#),
+        ("nasa/rocket_ship", r#"pub fn go() { 1 }"#);
+        r#"
+import esa/rocket_ship
+import nasa/rocket_ship.{go} as _nasa_rocket
+pub fn esa_go() { rocket_ship.go() }
+pub fn nasa_go() { go() }
+"#
     );
 }
