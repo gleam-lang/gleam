@@ -735,7 +735,7 @@ checksum = "6fb8d784f27acf97159b40fc4db5ecd8aa23b9ad5ef69cdd136d3bc80665f0c0"
 
 [[package]]
 name = "gleam"
-version = "0.32.2"
+version = "0.32.3"
 dependencies = [
  "async-trait",
  "atty",
@@ -784,7 +784,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "0.32.2"
+version = "0.32.3"
 dependencies = [
  "askama",
  "async-trait",
@@ -835,7 +835,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "0.32.2"
+version = "0.32.3"
 dependencies = [
  "camino",
  "console_error_panic_hook",
@@ -2210,7 +2210,7 @@ dependencies = [
 
 [[package]]
 name = "test-package-compiler"
-version = "0.32.2"
+version = "0.32.3"
 dependencies = [
  "camino",
  "gleam-core",
