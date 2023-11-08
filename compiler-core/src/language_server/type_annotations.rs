@@ -69,7 +69,7 @@ impl TypeAnnotations {
             })
     }
 
-    pub fn into_code_action(self, uri: Url) -> Option<CodeActionBuilder> {
+    pub fn into_code_action(self, uri: &Url) -> Option<CodeActionBuilder> {
         if self.annotations.is_empty() {
             None
         } else {
@@ -77,7 +77,7 @@ impl TypeAnnotations {
                 CodeActionBuilder::new("Annotate type(s)")
                     .kind(CodeActionKind::REFACTOR_REWRITE)
                     .changes(
-                        uri,
+                        uri.clone(),
                         self.annotations
                             .into_iter()
                             .map(|(position, text)| {

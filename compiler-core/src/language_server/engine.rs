@@ -661,14 +661,14 @@ fn code_action_annotate_types(
         Located::ModuleStatement(Definition::Function(function)) => {
             if let Some(annotation) =
                 TypeAnnotations::from_function_definition(function, &line_numbers)
-                    .into_code_action(uri.clone())
+                    .into_code_action(uri)
             {
                 annotation.push_to(actions)
             }
         }
         Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
-            if let Some(annotation) = TypeAnnotations::from_module_constant(constant, &line_numbers)
-                .into_code_action(uri.clone())
+            if let Some(annotation) =
+                TypeAnnotations::from_module_constant(constant, &line_numbers).into_code_action(uri)
             {
                 annotation.push_to(actions)
             }
