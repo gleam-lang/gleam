@@ -61,6 +61,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
     // the usual request-response loop.
     progress_reporter: Reporter,
 
+    /// Cached version of the user's settings. Updates automatically as the user makes changes.
     pub(crate) user_config: VersionedConfig,
 }
 
@@ -436,7 +437,7 @@ where
                 &mut hints,
             );
 
-            Ok(Some(hints))
+            Ok(hints)
         })
     }
 }
@@ -677,6 +678,7 @@ fn code_action_annotate_types(
     }
 }
 
+/// Collect inlay hints for top level definitions such as functions and constants.
 fn add_hints_for_definitions<'a>(
     config: &InlayHintsConfig,
     definitions: impl Iterator<Item = &'a TypedDefinition>,
