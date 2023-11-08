@@ -450,16 +450,13 @@ where
             let line_numbers = LineNumbers::new(&module.code);
 
             let mut hints = vec![];
-            let start =
-                line_numbers.byte_index(params.range.start.line, params.range.start.character);
-            let end = line_numbers.byte_index(params.range.end.line, params.range.end.character);
+            let requested_range = line_numbers.src_span(params.range);
+
             add_hints_for_definitions(
                 &this.user_config.inlay_hints,
                 module.ast.definitions.iter().filter(|stmt| {
-                    let loc = stmt.location();
-                    (loc.start > start && loc.start < end) // Is the start of the node in the range
-                        || (loc.end > start && loc.end < end) // or is the end of the node in the range
-                        || (start > loc.start && end < loc.end) // or is range within the node
+                    // Only consider definitions in the requested range
+                    requested_range.overlaps(&stmt.location())
                 }),
                 &line_numbers,
                 &mut hints,

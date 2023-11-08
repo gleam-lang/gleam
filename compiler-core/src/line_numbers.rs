@@ -1,3 +1,5 @@
+use crate::ast::SrcSpan;
+
 #[derive(Debug)]
 pub struct LineNumbers {
     line_starts: Vec<u32>,
@@ -42,6 +44,13 @@ impl LineNumbers {
             Some(line_index) => *line_index + character,
             None => self.length,
         }
+    }
+
+    /// Convert an LSP `Range` into a `SrcSpan`
+    pub fn src_span(&self, range: lsp_types::Range) -> SrcSpan {
+        let start = self.byte_index(range.start.line, range.start.character);
+        let end = self.byte_index(range.end.line, range.end.character);
+        SrcSpan::new(start, end)
     }
 }
 
