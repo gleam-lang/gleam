@@ -82,12 +82,17 @@ fn apply_code_edit(
 ) -> String {
     let mut result = src.to_string();
     let line_numbers = LineNumbers::new(src);
+    // Offset applied to the ranges as a result of text replacements differing in length. This is
+    // needed as text edit ranges all refer to the original source location, but as the edits are
+    // made, the locations will inevitably differ.
     let mut offset: i32 = 0;
     for (change_url, change) in changes {
         if url != change_url {
             panic!("Unknown url {}", change_url)
         }
         let mut change = change.to_owned();
+        // Sort the edits to ensure we apply them in order, otherwise the offset applied may be
+        // invalid. This assumes none of the edits overlap.
         change.sort_by_key(|f| f.range.start);
         for edit in change {
             let start = line_numbers.byte_index(edit.range.start.line, edit.range.start.character)
@@ -96,7 +101,9 @@ fn apply_code_edit(
             let end = line_numbers.byte_index(edit.range.end.line, edit.range.end.character) as i32
                 + offset;
             let range = (start as usize)..(end as usize);
+            // Remove the length of the text being removed
             offset -= end - start;
+            // Add back the length of the text that is being inserted
             offset += edit.new_text.len() as i32;
             result.replace_range(range, &edit.new_text);
         }
