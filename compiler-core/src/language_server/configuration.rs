@@ -6,6 +6,11 @@ pub struct VersionedConfig {
     config: Configuration,
 }
 impl VersionedConfig {
+    #[cfg(test)]
+    pub fn new(config: Configuration) -> Self {
+        Self { version: 0, config }
+    }
+
     pub fn update(&mut self, config: Configuration) {
         self.version += 1;
         self.config = config;

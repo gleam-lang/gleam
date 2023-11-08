@@ -332,7 +332,7 @@ fn setup_engine_with_config(
         io.clone(),
         FileSystemProxy::new(io.clone()),
         io.paths.clone(),
-        VersionedConfig { version: 0, config },
+        VersionedConfig::new(config),
     )
     .unwrap()
 }
