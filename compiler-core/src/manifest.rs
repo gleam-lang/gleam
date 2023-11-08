@@ -149,11 +149,11 @@ impl<'de> serde::Deserialize<'de> for Base16Checksum {
 pub struct ManifestPackage {
     pub name: EcoString,
     pub version: Version,
-    pub build_tools: Vec<String>,
+    pub build_tools: Vec<EcoString>,
     #[serde(default)]
-    pub otp_app: Option<String>,
+    pub otp_app: Option<EcoString>,
     #[serde(serialize_with = "sorted_vec")]
-    pub requirements: Vec<String>,
+    pub requirements: Vec<EcoString>,
     #[serde(flatten)]
     pub source: ManifestPackageSource,
 }
@@ -162,6 +162,13 @@ impl ManifestPackage {
     pub fn with_build_tools(mut self, build_tools: &'static [&'static str]) -> Self {
         self.build_tools = build_tools.iter().map(|s| (*s).into()).collect();
         self
+    }
+
+    pub fn application_name(&self) -> &EcoString {
+        match self.otp_app {
+            Some(ref app) => &self.name,
+            None => &self.name,
+        }
     }
 
     #[inline]

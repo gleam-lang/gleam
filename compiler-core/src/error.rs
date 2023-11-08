@@ -227,7 +227,7 @@ pub enum Error {
     #[error("The package {package} uses unsupported build tools {build_tools:?}")]
     UnsupportedBuildTool {
         package: String,
-        build_tools: Vec<String>,
+        build_tools: Vec<EcoString>,
     },
 
     #[error("Opening docs at {path} failed: {error}")]

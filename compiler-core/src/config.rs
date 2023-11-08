@@ -212,7 +212,7 @@ struct StalePackageRemover<'a> {
     // These are the packages for which the requirement or their parents
     // requirement has not changed.
     fresh: HashSet<&'a str>,
-    locked: HashMap<EcoString, &'a Vec<String>>,
+    locked: HashMap<EcoString, &'a Vec<EcoString>>,
 }
 
 impl<'a> StalePackageRemover<'a> {
@@ -223,7 +223,7 @@ impl<'a> StalePackageRemover<'a> {
         let locked = manifest
             .packages
             .iter()
-            .map(|p| (p.name.as_str().into(), &p.requirements))
+            .map(|p| (p.name.clone(), &p.requirements))
             .collect();
         Self {
             fresh: HashSet::new(),
