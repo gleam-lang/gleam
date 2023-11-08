@@ -3,7 +3,7 @@ use camino::Utf8PathBuf;
 use gleam_core::{
     config::PackageConfig,
     error::{Error, FileIoAction, FileKind},
-    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
+    manifest::{Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
 };
 
