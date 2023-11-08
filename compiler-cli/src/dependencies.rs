@@ -562,7 +562,7 @@ impl ProvidedPackage {
             version: self.version.clone(),
             otp_app: None, // Note, this will probably need to be set to something eventually
             build_tools: vec!["gleam".into()],
-            requirements: self.requirements.keys().map(|e| e.to_string()).collect(),
+            requirements: self.requirements.keys().cloned().collect(),
             source: self.source.to_manifest_package_source(),
         };
         package.requirements.sort();
@@ -943,12 +943,23 @@ async fn lookup_package(
             let config = hexpm::Config::new();
             let release =
                 hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
+            let build_tools = release
+                .meta
+                .build_tools
+                .iter()
+                .map(|s| EcoString::from(s.as_str()))
+                .collect_vec();
+            let requirements = release
+                .requirements
+                .keys()
+                .map(|s| EcoString::from(s.as_str()))
+                .collect_vec();
             Ok(ManifestPackage {
                 name: name.into(),
                 version,
-                otp_app: Some(release.meta.app),
-                build_tools: release.meta.build_tools,
-                requirements: release.requirements.keys().cloned().collect_vec(),
+                otp_app: Some(release.meta.app.into()),
+                build_tools,
+                requirements,
                 source: ManifestPackageSource::Hex {
                     outer_checksum: Base16Checksum(release.outer_checksum),
                 },
