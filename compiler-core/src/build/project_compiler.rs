@@ -278,9 +278,11 @@ where
         // TODO: test. This one is not covered by the integration tests.
         if result.is_err() {
             tracing::debug!(package=%name, "removing_failed_build");
-            let path = self
-                .paths
-                .build_directory_for_package(self.mode(), self.target(), name);
+            let path = self.paths.build_directory_for_package(
+                self.mode(),
+                self.target(),
+                package.application_name(),
+            );
             self.io.delete(&path)?;
         }
 
@@ -289,41 +291,45 @@ where
 
     // TODO: extract and unit test
     fn compile_rebar3_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
-        let name = &package.name;
+        let application_name = package.application_name();
+        let package_name = &package.name;
         let mode = self.mode();
         let target = self.target();
 
-        let package_build = self.paths.build_directory_for_package(mode, target, name);
+        dbg!(application_name);
+        let package_build = self
+            .paths
+            .build_directory_for_package(mode, target, application_name);
 
         // TODO: test
         if self.io.is_directory(&package_build) {
-            tracing::debug!(%name, "using_precompiled_rebar3_package");
+            tracing::debug!(%package_name, "using_precompiled_rebar3_package");
             return Ok(());
         }
 
         // TODO: test
         if !self.options.codegen.should_codegen(false) {
-            tracing::debug!(%name, "skipping_rebar3_build_as_codegen_disabled");
+            tracing::debug!(%package_name, "skipping_rebar3_build_as_codegen_disabled");
             return Ok(());
         }
 
         // TODO: test
         if target != Target::Erlang {
-            tracing::debug!(%name, "skipping_rebar3_build_for_non_erlang_target");
+            tracing::debug!(%package_name, "skipping_rebar3_build_for_non_erlang_target");
             return Ok(());
         }
 
         // Print that work is being done
-        self.telemetry.compiling_package(name);
+        self.telemetry.compiling_package(package_name);
 
-        let package = self.paths.build_packages_package(name);
+        let package = self.paths.build_packages_package(package_name);
         let build_packages = self.paths.build_directory_for_target(mode, target);
         let ebins = self.paths.build_packages_ebins_glob(mode, target);
         let rebar3_path = |path: &Utf8Path| format!("../{}", path);
 
         tracing::debug!("copying_package_to_build");
-        self.io.mkdir(&build_packages)?;
-        self.io.copy_dir(&package, &build_packages)?;
+        self.io.mkdir(&package_build)?;
+        self.io.copy_dir(&package, &package_build)?;
 
         let env = [
             ("ERL_LIBS", "../*/ebin".into()),
@@ -331,12 +337,12 @@ where
             ("REBAR_PROFILE", "prod".into()),
             ("TERM", "dumb".into()),
         ];
-        let args = [
+        let args = dbg!([
             "bare".into(),
             "compile".into(),
             "--paths".into(),
             "../*/ebin".into(),
-        ];
+        ]);
         let status = self.io.exec(
             REBAR_EXECUTABLE,
             &args,
@@ -356,36 +362,39 @@ where
     }
 
     fn compile_mix_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
-        let name = &package.name;
+        let application_name = package.application_name();
+        let package_name = &package.name;
         let mode = self.mode();
         let target = self.target();
         let mix_target = "prod";
 
-        let dest = self.paths.build_directory_for_package(mode, target, name);
+        let dest = self
+            .paths
+            .build_directory_for_package(mode, target, application_name);
 
         // TODO: test
         if self.io.is_directory(&dest) {
-            tracing::debug!(%name, "using_precompiled_mix_package");
+            tracing::debug!(%package_name, "using_precompiled_mix_package");
             return Ok(());
         }
 
         // TODO: test
         if !self.options.codegen.should_codegen(false) {
-            tracing::debug!(%name, "skipping_mix_build_as_codegen_disabled");
+            tracing::debug!(%package_name, "skipping_mix_build_as_codegen_disabled");
             return Ok(());
         }
 
         // TODO: test
         if target != Target::Erlang {
-            tracing::debug!(%name, "skipping_mix_build_for_non_erlang_target");
+            tracing::debug!(%package_name, "skipping_mix_build_for_non_erlang_target");
             return Ok(());
         }
 
         // Print that work is being done
-        self.telemetry.compiling_package(name);
+        self.telemetry.compiling_package(package_name);
 
         let build_dir = self.paths.build_directory_for_target(mode, target);
-        let project_dir = self.paths.build_packages_package(name);
+        let project_dir = self.paths.build_packages_package(package_name);
         let mix_build_dir = project_dir.join("_build").join(mix_target);
         let mix_build_lib_dir = mix_build_dir.join("lib");
         let up = paths::unnest(&project_dir);
@@ -436,9 +445,9 @@ where
 
         if status == 0 {
             // TODO: unit test
-            let source = mix_build_dir.join("lib").join(name.as_str());
+            let source = mix_build_dir.join("lib").join(application_name.as_str());
             if self.io.is_directory(&source) && !self.io.is_directory(&dest) {
-                tracing::debug!("linking_{}_to_build", name);
+                tracing::debug!("linking_{}_to_build", application_name);
                 self.io.symlink_dir(&source, &dest)?;
             }
             Ok(())
@@ -509,11 +518,23 @@ where
             .build_directory_for_target(self.mode(), self.target());
         let mode = if is_root { self.mode() } else { Mode::Prod };
         let target = match self.target() {
-            Target::Erlang => super::TargetCodegenConfiguration::Erlang {
-                app_file: Some(ErlangAppCodegenConfiguration {
-                    include_dev_deps: is_root,
-                }),
-            },
+            Target::Erlang => {
+                let package_name_overrides = self
+                    .packages
+                    .values()
+                    .flat_map(|p| {
+                        let overriden = p.otp_app.as_ref()?;
+                        Some((p.name.clone(), overriden.clone()))
+                    })
+                    .collect();
+                super::TargetCodegenConfiguration::Erlang {
+                    app_file: Some(ErlangAppCodegenConfiguration {
+                        include_dev_deps: is_root,
+                        package_name_overrides,
+                    }),
+                }
+            }
+
             Target::JavaScript => super::TargetCodegenConfiguration::JavaScript {
                 emit_typescript_definitions: self.config.javascript.typescript_declarations,
                 // This path is relative to each package output directory

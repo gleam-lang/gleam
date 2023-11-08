@@ -166,7 +166,7 @@ impl ManifestPackage {
 
     pub fn application_name(&self) -> &EcoString {
         match self.otp_app {
-            Some(ref app) => &self.name,
+            Some(ref app) => app,
             None => &self.name,
         }
     }
