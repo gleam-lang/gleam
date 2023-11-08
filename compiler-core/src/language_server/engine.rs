@@ -64,6 +64,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
     /// Used to know if to show the "View on HexDocs" link
     /// when hovering on an imported value
     hex_deps: std::collections::HashSet<EcoString>,
+    /// Cached version of the user's settings. Updates automatically as the user makes changes.
     pub(crate) user_config: VersionedConfig,
 }
 
@@ -462,7 +463,7 @@ where
                 &mut hints,
             );
 
-            Ok(Some(hints))
+            Ok(hints)
         })
     }
 }
@@ -758,6 +759,7 @@ fn code_action_annotate_types(
     }
 }
 
+/// Collect inlay hints for top level definitions such as functions and constants.
 fn add_hints_for_definitions<'a>(
     config: &InlayHintsConfig,
     definitions: impl Iterator<Item = &'a TypedDefinition>,

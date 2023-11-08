@@ -2,10 +2,20 @@ use serde::Deserialize;
 
 #[derive(Debug, Clone, Default)]
 pub struct VersionedConfig {
-    pub version: u32,
-    pub config: Configuration,
+    version: u32,
+    config: Configuration,
 }
-
+impl VersionedConfig {
+    pub fn update(&mut self, config: Configuration) {
+        self.version += 1;
+        self.config = config;
+    }
+}
+impl PartialEq for VersionedConfig {
+    fn eq(&self, other: &Self) -> bool {
+        self.version == other.version
+    }
+}
 impl std::ops::Deref for VersionedConfig {
     type Target = Configuration;
 

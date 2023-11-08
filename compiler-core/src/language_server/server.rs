@@ -218,19 +218,7 @@ where
 
     fn handle_response(&mut self, handler: ResponseHandler, result: Json) {
         match handler {
-            ResponseHandler::UpdateConfiguration => {
-                match serde_json::from_value::<Vec<Configuration>>(result) {
-                    Ok(result) => {
-                        if let Some(config) = result.into_iter().next() {
-                            self.config = VersionedConfig {
-                                version: self.config.version + 1,
-                                config,
-                            };
-                        }
-                    }
-                    Err(err) => eprintln!("unable to parse configuration: {err}"),
-                }
-            }
+            ResponseHandler::UpdateConfiguration => self.configuration_update_received(result),
         }
     }
 
@@ -388,7 +376,7 @@ where
     {
         match self.router.project_for_path(&path, &self.config) {
             Ok(Some(project)) => {
-                if project.engine.user_config.version != self.config.version {
+                if project.engine.user_config != self.config {
                     project.engine.user_config = self.config.clone();
                 }
                 let engine::Response {
@@ -570,6 +558,19 @@ where
             },
             Some(ResponseHandler::UpdateConfiguration),
         )
+    }
+
+    /// Response handler for the `workspace/configuration` request
+    fn configuration_update_received(&mut self, result: Json) {
+        let configs = match serde_json::from_value::<Vec<Configuration>>(result) {
+            Ok(result) => result,
+            Err(err) => panic!("unable to parse configuration: {err}"),
+        };
+
+        // We only requested one configuration item, so we only pick out one
+        if let Some(config) = configs.into_iter().next() {
+            self.config.update(config);
+        }
     }
 }
 
