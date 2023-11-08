@@ -500,7 +500,7 @@ pub fn copy(
     tracing::trace!(from=?path, to=?to, "copying_file");
 
     // TODO: include the destination in the error message
-    std::fs::copy(dbg!(path.as_ref()), dbg!(to.as_ref()))
+    std::fs::copy(path.as_ref(), to.as_ref())
         .map_err(|err| Error::FileIo {
             action: FileIoAction::Copy,
             kind: FileKind::File,
