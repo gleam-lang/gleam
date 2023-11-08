@@ -32,6 +32,7 @@ pub fn prepare(path: &str) -> String {
         Target::Erlang => TargetCodegenConfiguration::Erlang {
             app_file: Some(ErlangAppCodegenConfiguration {
                 include_dev_deps: true,
+                package_name_overrides: HashMap::new(),
             }),
         },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {

@@ -1,6 +1,11 @@
 use crate::{
-    build::Module, config::PackageConfig, erlang, io::FileSystemWriter, javascript,
-    line_numbers::LineNumbers, Result,
+    build::{ErlangAppCodegenConfiguration, Module},
+    config::PackageConfig,
+    erlang,
+    io::FileSystemWriter,
+    javascript,
+    line_numbers::LineNumbers,
+    Result,
 };
 use itertools::Itertools;
 use std::fmt::Debug;
@@ -69,14 +74,14 @@ impl<'a> Erlang<'a> {
 #[derive(Debug)]
 pub struct ErlangApp<'a> {
     output_directory: &'a Utf8Path,
-    include_dev_deps: bool,
+    config: &'a ErlangAppCodegenConfiguration,
 }
 
 impl<'a> ErlangApp<'a> {
-    pub fn new(output_directory: &'a Utf8Path, include_dev_deps: bool) -> Self {
+    pub fn new(output_directory: &'a Utf8Path, config: &'a ErlangAppCodegenConfiguration) -> Self {
         Self {
             output_directory,
-            include_dev_deps,
+            config,
         }
     }
 
@@ -114,8 +119,33 @@ impl<'a> ErlangApp<'a> {
                 config
                     .dev_dependencies
                     .keys()
-                    .take_while(|_| self.include_dev_deps),
+                    .take_while(|_| self.config.include_dev_deps),
             )
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            // TODO: test this!
+            .map(|name| self.config.package_name_overrides.get(name).unwrap_or(name))
             .chain(config.erlang.extra_applications.iter())
             .sorted()
             .join(",\n                    ");

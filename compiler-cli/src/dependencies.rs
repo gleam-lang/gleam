@@ -238,12 +238,12 @@ fn remove_extra_packages<Telem: Telemetry>(
 ) -> Result<()> {
     let _guard = BuildLock::lock_all_build(paths, telemetry)?;
 
-    for (package, version) in local.extra_local_packages(manifest) {
+    for (package_name, version) in local.extra_local_packages(manifest) {
         // TODO: test
         // Delete the package source
-        let path = paths.build_packages_package(&package);
+        let path = paths.build_packages_package(&package_name);
         if path.exists() {
-            tracing::debug!(package=%package, version=%version, "removing_unneeded_package");
+            tracing::debug!(package=%package_name, version=%version, "removing_unneeded_package");
             fs::delete_dir(&path)?;
         }
 
@@ -251,9 +251,15 @@ fn remove_extra_packages<Telem: Telemetry>(
         // Delete any build artefacts for the package
         for mode in Mode::iter() {
             for target in Target::iter() {
-                let path = paths.build_directory_for_package(mode, target, &package);
+                let name = manifest
+                    .packages
+                    .iter()
+                    .find(|p| p.name == package_name)
+                    .map(|p| p.application_name().as_str())
+                    .unwrap_or(package_name.as_str());
+                let path = paths.build_directory_for_package(mode, target, name);
                 if path.exists() {
-                    tracing::debug!(package=%package, version=%version, "deleting_build_cache");
+                    tracing::debug!(package=%package_name, version=%version, "deleting_build_cache");
                     fs::delete_dir(&path)?;
                 }
             }

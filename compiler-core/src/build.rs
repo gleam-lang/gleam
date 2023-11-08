@@ -129,6 +129,10 @@ impl TargetCodegenConfiguration {
 #[derive(Debug)]
 pub struct ErlangAppCodegenConfiguration {
     pub include_dev_deps: bool,
+    /// Some packages have a different OTP application name than their package
+    /// name, as rebar3 (and Mix?) support this. The .app file must use the OTP
+    /// name, not the package name.
+    pub package_name_overrides: HashMap<EcoString, EcoString>,
 }
 
 #[derive(

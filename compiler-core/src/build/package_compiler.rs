@@ -288,7 +288,7 @@ where
     fn perform_erlang_codegen(
         &mut self,
         modules: &[Module],
-        app_file: Option<&ErlangAppCodegenConfiguration>,
+        app_file_config: Option<&ErlangAppCodegenConfiguration>,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
         let build_dir = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
@@ -303,8 +303,8 @@ where
             tracing::debug!("skipping_native_file_copying");
         }
 
-        if let Some(config) = app_file {
-            ErlangApp::new(&self.out.join("ebin"), config.include_dev_deps).render(
+        if let Some(config) = app_file_config {
+            ErlangApp::new(&self.out.join("ebin"), config).render(
                 io.clone(),
                 &self.config,
                 modules,
