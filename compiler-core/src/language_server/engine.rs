@@ -442,10 +442,10 @@ where
         completions
     }
 
-    pub fn inlay_hint(&mut self, params: lsp::InlayHintParams) -> Response<Option<Vec<InlayHint>>> {
+    pub fn inlay_hint(&mut self, params: lsp::InlayHintParams) -> Response<Vec<InlayHint>> {
         self.respond(|this| {
             let Some(module) = this.module_for_uri(&params.text_document.uri) else {
-                return Ok(None);
+                return Ok(vec![]);
             };
             let line_numbers = LineNumbers::new(&module.code);
 

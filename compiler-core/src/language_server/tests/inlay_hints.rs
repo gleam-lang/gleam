@@ -11,7 +11,7 @@ fn expect_hints(
     range: Option<Range>,
     expected_hints: Vec<InlayHint>,
 ) {
-    let hints = inlay_hints(src, config, range).expect("should return hints");
+    let hints = inlay_hints(src, config, range);
 
     // InlayHint doesn't implement PartialEq so we're serialising to compare them
     let hints = serde_json::to_value(hints).expect("serialisation shouldn't fail");
@@ -20,11 +20,7 @@ fn expect_hints(
     assert_eq!(hints, expected_hints);
 }
 
-fn inlay_hints(
-    src: &str,
-    config: InlayHintsConfig,
-    range: Option<Range>,
-) -> Option<Vec<InlayHint>> {
+fn inlay_hints(src: &str, config: InlayHintsConfig, range: Option<Range>) -> Vec<InlayHint> {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine_with_config(
         &io,
