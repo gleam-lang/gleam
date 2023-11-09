@@ -29,7 +29,10 @@ use crate::{
 };
 use ecow::EcoString;
 use itertools::Itertools;
-use std::{cell::OnceCell, collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, OnceLock},
+};
 use vec1::Vec1;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -489,8 +492,8 @@ fn assert_valid_javascript_external(
 ) -> Result<(), Error> {
     use regex::Regex;
 
-    const MODULE: OnceCell<Regex> = OnceCell::new();
-    const FUNCTION: OnceCell<Regex> = OnceCell::new();
+    static MODULE: OnceLock<Regex> = OnceLock::new();
+    static FUNCTION: OnceLock<Regex> = OnceLock::new();
 
     let (module, function) = match external_javascript {
         None => return Ok(()),

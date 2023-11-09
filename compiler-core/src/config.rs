@@ -789,9 +789,9 @@ mod package_name {
     use ecow::EcoString;
     use regex::Regex;
     use serde::Deserializer;
-    use std::cell::OnceCell;
+    use std::sync::OnceLock;
 
-    const PACKAGE_NAME_PATTERN: OnceCell<Regex> = OnceCell::new();
+    static PACKAGE_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<EcoString, D::Error>
     where

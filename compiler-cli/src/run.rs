@@ -1,4 +1,4 @@
-use std::cell::OnceCell;
+use std::sync::OnceLock;
 
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -262,7 +262,7 @@ fn add_deno_flag(args: &mut Vec<String>, flag: &str, flags: &DenoFlag) {
 /// Check if a module name is a valid gleam module name.
 fn is_gleam_module(module: &str) -> bool {
     use regex::Regex;
-    const RE: OnceCell<Regex> = OnceCell::new();
+    static RE: OnceLock<Regex> = OnceLock::new();
 
     RE.get_or_init(|| {
         Regex::new(&format!(
