@@ -1349,6 +1349,9 @@ fn call_arguments<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Eleme
     let elements = Itertools::intersperse(elements.into_iter(), Ok(break_(",", ", ")))
         .collect::<Result<Vec<_>, _>>()?
         .to_doc();
+    if elements.is_empty() {
+        return Ok("()".to_doc());
+    }
     Ok(docvec![
         "(",
         docvec![break_("", ""), elements].nest(INDENT),

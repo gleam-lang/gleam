@@ -405,3 +405,24 @@ pub const compound: #(fn(Int) -> Int, fn(Int) -> Int) =
     #(int_identity, int_identity_alias)"#
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/2399
+#[test]
+fn bad_comma() {
+    assert_js!(
+        r#"
+fn function_with_a_long_name_that_is_intended_to_sit_right_on_the_limit() {
+  Nil
+}
+
+fn identity(x) {
+  x
+}
+
+pub fn main() {
+  function_with_a_long_name_that_is_intended_to_sit_right_on_the_limit()
+  |> identity
+}
+"#
+    )
+}
