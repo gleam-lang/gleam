@@ -21,9 +21,9 @@ use crate::{
 use ecow::EcoString;
 use heck::ToSnakeCase;
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use pattern::pattern;
 use regex::Regex;
+use std::sync::OnceLock;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
 
@@ -433,15 +433,16 @@ fn atom_string(value: String) -> Document<'static> {
     Document::String(escape_atom_string(value))
 }
 
-lazy_static! {
-    static ref ATOM_PATTERN: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").expect("atom RE regex");
+fn atom_pattern() -> &'static Regex {
+    static ATOM_PATTERN: OnceLock<Regex> = OnceLock::new();
+    ATOM_PATTERN.get_or_init(|| Regex::new(r"^[a-z][a-z0-9_@]*$").expect("atom RE regex"))
 }
 
 fn atom(value: &str) -> Document<'_> {
     if is_erlang_reserved_word(value) {
         // Escape because of keyword collision
         Document::String(format!("'{value}'"))
-    } else if ATOM_PATTERN.is_match(value) {
+    } else if atom_pattern().is_match(value) {
         // No need to escape
         Document::Str(value)
     } else {
@@ -454,7 +455,7 @@ fn escape_atom_string(value: String) -> String {
     if is_erlang_reserved_word(&value) {
         // Escape because of keyword collision
         format!("'{value}'")
-    } else if ATOM_PATTERN.is_match(&value) {
+    } else if atom_pattern().is_match(&value) {
         // No need to escape
         value
     } else {

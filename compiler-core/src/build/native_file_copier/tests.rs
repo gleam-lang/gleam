@@ -3,17 +3,22 @@ use crate::{
     build::native_file_copier::CopiedNativeFiles,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
 };
-use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
+    sync::OnceLock,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-lazy_static! {
-    static ref ROOT: Utf8PathBuf = Utf8PathBuf::from("/");
-    static ref OUT: Utf8PathBuf = Utf8PathBuf::from("/out");
+fn root() -> &'static Utf8PathBuf {
+    static ROOT: OnceLock<Utf8PathBuf> = OnceLock::new();
+    ROOT.get_or_init(|| Utf8PathBuf::from("/").to_owned())
+}
+
+fn root_out() -> &'static Utf8PathBuf {
+    static OUT: OnceLock<Utf8PathBuf> = OnceLock::new();
+    OUT.get_or_init(|| Utf8PathBuf::from("/out"))
 }
 
 #[test]
@@ -21,7 +26,7 @@ fn javascript_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.js"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -40,7 +45,7 @@ fn javascript_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.js"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -59,7 +64,7 @@ fn mjavascript_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.mjs"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -78,7 +83,7 @@ fn mjavascript_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.mjs"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -97,7 +102,7 @@ fn typescript_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.ts"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -116,7 +121,7 @@ fn typescript_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.ts"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -135,7 +140,7 @@ fn erlang_header_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.hrl"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -154,7 +159,7 @@ fn erlang_header_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.hrl"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -173,7 +178,7 @@ fn erlang_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.erl"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -192,7 +197,7 @@ fn erlang_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.erl"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -211,7 +216,7 @@ fn elixir_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.ex"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(copied.any_elixir);
@@ -230,7 +235,7 @@ fn elixir_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.ex"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(copied.any_elixir);
@@ -249,7 +254,7 @@ fn other_files_are_ignored() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.cpp"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -270,7 +275,7 @@ fn files_do_not_get_copied_if_there_already_is_a_new_version() {
     fs.set_modification_time(&out, UNIX_EPOCH + Duration::from_secs(1));
     fs.set_modification_time(&src, UNIX_EPOCH);
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -294,7 +299,7 @@ fn files_get_copied_if_the_previously_copied_version_is_older() {
     fs.set_modification_time(&out, UNIX_EPOCH);
     fs.set_modification_time(&src, UNIX_EPOCH + Duration::from_secs(1));
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -314,6 +319,6 @@ fn duplicate_native_files_result_in_an_error() {
     fs.write(&Utf8Path::new("/src/wibble.mjs"), "1").unwrap();
     fs.write(&Utf8Path::new("/test/wibble.mjs"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     assert!(copier.run().is_err());
 }

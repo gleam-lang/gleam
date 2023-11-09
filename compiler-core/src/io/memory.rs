@@ -1,5 +1,4 @@
-use lazy_static::__Deref;
-
+use std::ops::Deref;
 use super::*;
 use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Duration};
 

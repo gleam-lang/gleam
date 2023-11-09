@@ -21,8 +21,6 @@ heck = "0.4.0"
 regex = "1.5.4"
 # Graph data structures
 petgraph = "0.6.0"
-# Initialize complex static values at runtime
-lazy_static = "1.4.0"
 # Levenshtein string distance for typo suggestions
 strsim = "0.10.0"
 # Data (de)serialisation

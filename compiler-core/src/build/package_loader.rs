@@ -12,7 +12,6 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use ecow::EcoString;
 use itertools::Itertools;
-use lazy_static::lazy_static;
 
 use crate::{
     build::{module_loader::ModuleLoader, package_compiler::module_name, Module, Origin},
@@ -159,16 +158,18 @@ where
 
     pub fn is_gleam_path(&self, path: &Utf8Path, dir: &Utf8Path) -> bool {
         use regex::Regex;
-        lazy_static! {
-            static ref RE: Regex = Regex::new(&format!(
+        use std::cell::OnceCell;
+        const RE: OnceCell<Regex> = OnceCell::new();
+
+        RE.get_or_init(|| {
+            Regex::new(&format!(
                 "^({module}{slash})*{module}\\.gleam$",
                 module = "[a-z][_a-z0-9]*",
                 slash = "(/|\\\\)",
             ))
-            .expect("is_gleam_path() RE regex");
-        }
-
-        RE.is_match(
+            .expect("is_gleam_path() RE regex")
+        })
+        .is_match(
             path.strip_prefix(dir)
                 .expect("is_gleam_path(): strip_prefix")
                 .as_str(),
