@@ -32,7 +32,7 @@ impl Position {
 pub(crate) struct Generator<'module> {
     module_name: EcoString,
     line_numbers: &'module LineNumbers,
-    function_name: Option<&'module EcoString>,
+    function_name: Option<EcoString>,
     function_arguments: Vec<Option<&'module EcoString>>,
     current_scope_vars: im::HashMap<EcoString, usize>,
     pub function_position: Position,
@@ -51,19 +51,27 @@ impl<'module> Generator<'module> {
     pub fn new(
         module_name: EcoString,
         line_numbers: &'module LineNumbers,
-        function_name: &'module EcoString,
+        function_name: EcoString,
         function_arguments: Vec<Option<&'module EcoString>>,
         tracker: &'module mut UsageTracker,
         mut current_scope_vars: im::HashMap<EcoString, usize>,
     ) -> Self {
+        let mut function_name = Some(function_name);
         for &name in function_arguments.iter().flatten() {
+            // Initialise the function arguments
             let _ = current_scope_vars.insert(name.clone(), 0);
+
+            // If any of the function arguments shadow the current function then
+            // recursion is no longer possible.
+            if function_name.as_ref() == Some(name) {
+                function_name = None;
+            }
         }
         Self {
             tracker,
             module_name,
             line_numbers,
-            function_name: Some(function_name),
+            function_name,
             function_arguments,
             tail_recursion_used: false,
             current_scope_vars,
@@ -739,7 +747,7 @@ impl<'module> Generator<'module> {
             // and we are in tail position we can avoid creating a new stack
             // frame, enabling recursion with constant memory usage.
             TypedExpr::Var { name, .. }
-                if self.function_name == Some(name)
+                if self.function_name.as_ref() == Some(name)
                     && self.function_position.is_tail()
                     && self.current_scope_vars.get(name) == Some(&0) =>
             {
@@ -999,7 +1007,7 @@ impl<'module> Generator<'module> {
         let module = self.module_name.clone().to_doc().surround('"', '"');
         let function = self
             .function_name
-            .cloned()
+            .clone()
             .unwrap_or_default()
             .to_doc()
             .surround("\"", "\"");

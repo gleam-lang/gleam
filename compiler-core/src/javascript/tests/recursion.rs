@@ -46,3 +46,16 @@ pub fn main(x) {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2400
+#[test]
+fn shadowing_so_not_recursive() {
+    // This funtion is calling an argument with the same name as itself, so it is not recursive
+    assert_js!(
+        r#"
+pub fn map(map) {
+  map()
+}
+"#
+    );
+}

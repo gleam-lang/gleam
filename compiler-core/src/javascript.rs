@@ -445,7 +445,7 @@ impl<'a> Generator<'a> {
         let mut generator = expression::Generator::new(
             self.module.name.clone(),
             self.line_numbers,
-            name,
+            name.clone(),
             argument_names,
             &mut self.tracker,
             self.module_scope.clone(),
