@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Build tool changes
+
+- The build tool now supports rebar3 and Mix Hex packages where the package name
+  differs from the OTP application name.
+
 ### Bug fixed
 
 - Fixed a bug where invalid JavaScript code could be generated when a module
