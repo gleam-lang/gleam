@@ -1,7 +1,7 @@
 //// Here are some things that have been previously been incorrectly reported as
 //// unused.
 
-import test.{Test, assert_equal, example, operator_test, suite}
+import test.{type Test, assert_equal, example, operator_test, suite}
 import importable.{NoFields}
 import mod_with_numbers_0123456789
 import record_update
@@ -252,7 +252,16 @@ fn tail_call_optimisation_tests() -> List(Test) {
     |> example(fn() {
       assert_equal([1, 2, 3], tail_recursive_accumulate_down(3, []))
     }),
+    // https://github.com/gleam-lang/gleam/issues/2400
+    "not recursion, the function is shadowed its argument"
+    |> example(fn() {
+      assert_equal(function_shadowed_by_own_argument(fn() { 1 }), 1)
+    }),
   ]
+}
+
+fn function_shadowed_by_own_argument(function_shadowed_by_own_argument) {
+  function_shadowed_by_own_argument()
 }
 
 fn count_down(from i) {

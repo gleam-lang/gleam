@@ -1,4 +1,4 @@
-import ffi.{Dynamic}
+import ffi.{type Dynamic}
 
 pub opaque type Test {
   Example(name: String, proc: fn() -> Outcome)
