@@ -787,21 +787,21 @@ mod uri_serde {
 
 mod package_name {
     use ecow::EcoString;
-    use lazy_static::lazy_static;
     use regex::Regex;
     use serde::Deserializer;
+    use std::cell::OnceCell;
 
-    lazy_static! {
-        static ref PACKAGE_NAME_PATTERN: Regex =
-            Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex");
-    }
+    const PACKAGE_NAME_PATTERN: OnceCell<Regex> = OnceCell::new();
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<EcoString, D::Error>
     where
         D: Deserializer<'de>,
     {
         let name: &str = serde::de::Deserialize::deserialize(deserializer)?;
-        if PACKAGE_NAME_PATTERN.is_match(name) {
+        if PACKAGE_NAME_PATTERN
+            .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
+            .is_match(name)
+        {
             Ok(name.into())
         } else {
             let error =

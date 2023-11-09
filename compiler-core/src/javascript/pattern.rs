@@ -1,15 +1,12 @@
+use std::sync::OnceLock;
+
 use super::{expression::is_js_scalar, *};
 use crate::{
     analyse::Inferred,
     type_::{FieldMap, PatternConstructor},
 };
-use lazy_static::lazy_static;
 
 pub static ASSIGNMENT_VAR: &str = "$";
-
-lazy_static! {
-    pub static ref ASSIGNMENT_VAR_ECO_STR: EcoString = ASSIGNMENT_VAR.into();
-}
 
 #[derive(Debug)]
 enum Index<'a> {
@@ -800,6 +797,8 @@ pub(crate) fn assign_subject<'a>(
     expression_generator: &mut expression::Generator<'_>,
     subject: &'a TypedExpr,
 ) -> (Document<'a>, Option<Document<'a>>) {
+    static ASSIGNMENT_VAR_ECO_STR: OnceLock<EcoString> = OnceLock::new();
+
     match subject {
         // If the value is a variable we don't need to assign it to a new
         // variable, we can the value expression safely without worrying about
@@ -810,7 +809,8 @@ pub(crate) fn assign_subject<'a>(
         // If it's not a variable we need to assign it to a variable
         // to avoid rendering the subject expression multiple times
         _ => {
-            let subject = expression_generator.next_local_var(&ASSIGNMENT_VAR_ECO_STR);
+            let subject = expression_generator
+                .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()));
             (subject.clone(), Some(subject))
         }
     }

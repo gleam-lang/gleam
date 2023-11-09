@@ -1,7 +1,7 @@
+use std::cell::OnceCell;
+
 use super::*;
 use crate::type_::{bool, HasType, Type};
-
-use lazy_static::lazy_static;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypedExpr {
@@ -246,13 +246,14 @@ impl TypedExpr {
 
     pub fn non_zero_compile_time_number(&self) -> bool {
         use regex::Regex;
-        lazy_static! {
-            static ref NON_ZERO: Regex = Regex::new(r"[1-9]").expect("NON_ZERO regex");
-        }
+        const NON_ZERO: OnceCell<Regex> = OnceCell::new();
 
         matches!(
             self,
-            Self::Int{ value, .. } | Self::Float { value, .. } if NON_ZERO.is_match(value)
+            Self::Int{ value, .. } | Self::Float { value, .. } if NON_ZERO.get_or_init(||
+
+
+                Regex::new(r"[1-9]").expect("NON_ZERO regex")).is_match(value)
         )
     }
 
