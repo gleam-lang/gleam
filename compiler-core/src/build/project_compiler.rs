@@ -296,7 +296,6 @@ where
         let mode = self.mode();
         let target = self.target();
 
-        dbg!(application_name);
         let package_build = self
             .paths
             .build_directory_for_package(mode, target, application_name);
@@ -337,12 +336,12 @@ where
             ("REBAR_PROFILE", "prod".into()),
             ("TERM", "dumb".into()),
         ];
-        let args = dbg!([
+        let args = [
             "bare".into(),
             "compile".into(),
             "--paths".into(),
             "../*/ebin".into(),
-        ]);
+        ];
         let status = self.io.exec(
             REBAR_EXECUTABLE,
             &args,
