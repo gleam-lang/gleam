@@ -1,15 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where the JavaScript code generator could generate invalid code
+  when pretty printing a zero arity function call when the line is over 80
+  columns wide.
+
+
 ## v0.32.4 - 2023-11-09
 
 ### Build tool changes
 
-- The build tool now supports rebar3 and Mix Hex packages where the package name
-  differs from the OTP application name.
+- The build tool now supports rebar3 and mix hex packages where the package name
+  differs from the otp application name.
 
-### Bug fixed
+### bug fixes
 
-- Fixed a bug where invalid JavaScript code could be generated when a module
+- Fixed a bug where invalid javascript code could be generated when a module
   function calls another function that was passed as an argument and the
   argument has the same name as the module function.
 - Fixed the `target` property of `gleam.toml` being ignored for local path
