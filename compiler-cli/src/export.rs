@@ -66,6 +66,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
             let source = build.join(subdirectory);
             if source.is_dir() {
                 let source = crate::fs::canonicalise(&source)?;
+                let out = out.join(subdirectory);
                 crate::fs::copy_dir(source, &out)?;
             }
         }

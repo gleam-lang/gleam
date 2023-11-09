@@ -2,7 +2,7 @@
 set -eu
 
 PACKAGE=$PACKAGE_NAME_FROM_GLEAM
-BASE=$(dirname $0)
+BASE=$(dirname "$0")
 COMMAND="${1-default}"
 
 run() {
