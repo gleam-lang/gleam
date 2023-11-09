@@ -4,6 +4,9 @@
 
 ### Bug fixed
 
+- Fixed a bug where invalid JavaScript code could be generated when a module
+  function calls another function that was passed as an argument and the
+  argument has the same name as the module function.
 - Fixed the `target` property of `gleam.toml` being ignored for local path
   dependencies by `gleam run -m module/name`
 
