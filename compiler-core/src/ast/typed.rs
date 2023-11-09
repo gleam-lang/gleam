@@ -1,4 +1,4 @@
-use std::cell::OnceCell;
+use std::sync::OnceLock;
 
 use super::*;
 use crate::type_::{bool, HasType, Type};
@@ -246,7 +246,7 @@ impl TypedExpr {
 
     pub fn non_zero_compile_time_number(&self) -> bool {
         use regex::Regex;
-        const NON_ZERO: OnceCell<Regex> = OnceCell::new();
+        static NON_ZERO: OnceLock<Regex> = OnceLock::new();
 
         matches!(
             self,

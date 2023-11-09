@@ -12,11 +12,11 @@ use gleam_core::{
     Result, Warning,
 };
 use std::{
-    cell::OnceCell,
     ffi::OsStr,
     fmt::Debug,
     fs::File,
     io::{self, BufRead, BufReader, Write},
+    sync::OnceLock,
     time::SystemTime,
 };
 
@@ -325,7 +325,7 @@ pub fn write_bytes(path: &Utf8Path, bytes: &[u8]) -> Result<(), Error> {
 fn is_gleam_path(path: &Utf8Path, dir: impl AsRef<Utf8Path>) -> bool {
     use regex::Regex;
 
-    const RE: OnceCell<Regex> = OnceCell::new();
+    static RE: OnceLock<Regex> = OnceLock::new();
 
     RE.get_or_init(|| {
         Regex::new(&format!(

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use gleam_core::{Error, Result};
 use http::{Request, Response};
 
-const REQWEST_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+static REQWEST_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
 #[derive(Debug)]
 pub struct HttpClient;
@@ -27,7 +27,7 @@ impl gleam_core::io::HttpClient for HttpClient {
             .try_into()
             .expect("Unable to convert HTTP request for use by reqwest library");
         let mut response = REQWEST_CLIENT
-            .get_or_init(|| reqwest::Client::new())
+            .get_or_init(reqwest::Client::new)
             .execute(request)
             .await
             .map_err(Error::http)?;
