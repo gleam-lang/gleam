@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Build tool changes
+
+- The `gleam run` and `gleam test` commands gain the `-t` flag, which is an
+  alias of the `--target` flag.
+
 ### Bug fixes
 
 - Fixed a bug where the JavaScript code generator could generate invalid code
