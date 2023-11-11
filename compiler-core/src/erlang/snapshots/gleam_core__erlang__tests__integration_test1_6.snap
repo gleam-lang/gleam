@@ -26,7 +26,8 @@ remainder(X, Y) ->
 -spec fdiv(float(), float()) -> float().
 fdiv(X, Y) ->
     case Y of
-        0.0 -> 0.0;
+        +0.0 -> +0.0;
+        -0.0 -> -0.0;
         Gleam@denominator -> X / Gleam@denominator
     end.
 

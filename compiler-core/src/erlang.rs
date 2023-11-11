@@ -723,17 +723,57 @@ fn statement_sequence<'a>(statements: &'a [TypedStatement], env: &mut Env<'a>) -
     }
 }
 
+fn float_div<'a>(left: &'a TypedExpr, right: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
+    if right.non_zero_compile_time_number() {
+        return binop_exprs(left, "/", right, env);
+    }
+
+    let left = expr(left, env);
+    let right = expr(right, env);
+    let denominator = env.next_local_var_name("gleam@denominator");
+    let clauses = docvec![
+        line(),
+        "+0.0 -> +0.0;",
+        line(),
+        "-0.0 -> -0.0;",
+        line(),
+        denominator.clone(),
+        " -> ",
+        binop_documents(left, "/", denominator)
+    ];
+    docvec!["case ", right, " of", clauses.nest(INDENT), line(), "end"]
+}
+
+fn int_div<'a>(
+    left: &'a TypedExpr,
+    right: &'a TypedExpr,
+    op: &'static str,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    if right.non_zero_compile_time_number() {
+        return binop_exprs(left, op, right, env);
+    }
+
+    let left = expr(left, env);
+    let right = expr(right, env);
+    let denominator = env.next_local_var_name("gleam@denominator");
+    let clauses = docvec![
+        line(),
+        "0 -> 0;",
+        line(),
+        denominator.clone(),
+        " -> ",
+        binop_documents(left, op, denominator)
+    ];
+    docvec!["case ", right, " of", clauses.nest(INDENT), line(), "end"]
+}
+
 fn bin_op<'a>(
     name: &'a BinOp,
     left: &'a TypedExpr,
     right: &'a TypedExpr,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let div_zero = match name {
-        BinOp::DivInt | BinOp::RemainderInt => Some("0"),
-        BinOp::DivFloat => Some("0.0"),
-        _ => None,
-    };
     let op = match name {
         BinOp::And => "andalso",
         BinOp::Or => "orelse",
@@ -749,56 +789,38 @@ fn bin_op<'a>(
         BinOp::SubFloat => "-",
         BinOp::MultInt => "*",
         BinOp::MultFloat => "*",
-        BinOp::DivInt => "div",
-        BinOp::DivFloat => "/",
-        BinOp::RemainderInt => "rem",
+        BinOp::DivFloat => return float_div(left, right, env),
+        BinOp::DivInt => return int_div(left, right, "div", env),
+        BinOp::RemainderInt => return int_div(left, right, "rem", env),
         BinOp::Concatenate => return string_concatenate(left, right, env),
     };
 
-    let left_expr = match left {
+    binop_exprs(left, op, right, env)
+}
+
+fn binop_exprs<'a>(
+    left: &'a TypedExpr,
+    op: &'static str,
+    right: &'a TypedExpr,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let left = match left {
         TypedExpr::BinOp { .. } => expr(left, env).surround("(", ")"),
         _ => maybe_block_expr(left, env),
     };
-
-    let right_expr = match right {
+    let right = match right {
         TypedExpr::BinOp { .. } => expr(right, env).surround("(", ")"),
         _ => maybe_block_expr(right, env),
     };
+    binop_documents(left, op, right)
+}
 
-    let div = |left: Document<'a>, right: Document<'a>| {
-        left.append(break_("", " "))
-            .append(op)
-            .group()
-            .append(" ")
-            .append(right)
-    };
-
-    match div_zero {
-        Some(_) if right.non_zero_compile_time_number() => div(left_expr, right_expr),
-        None => div(left_expr, right_expr),
-
-        Some(zero) => {
-            let denominator = "gleam@denominator";
-            "case "
-                .to_doc()
-                .append(right_expr)
-                .append(" of")
-                .append(
-                    line()
-                        .append(zero)
-                        .append(" -> ")
-                        .append(zero)
-                        .append(";")
-                        .append(line())
-                        .append(env.next_local_var_name(denominator))
-                        .append(" -> ")
-                        .append(div(left_expr, env.local_var_name(denominator)))
-                        .nest(INDENT),
-                )
-                .append(line())
-                .append("end")
-        }
-    }
+fn binop_documents<'a>(left: Document<'a>, op: &'static str, right: Document<'a>) -> Document<'a> {
+    left.append(break_("", " "))
+        .append(op)
+        .group()
+        .append(" ")
+        .append(right)
 }
 
 fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
