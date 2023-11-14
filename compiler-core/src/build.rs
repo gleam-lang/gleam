@@ -51,9 +51,11 @@ use strum::{Display, EnumIter, EnumString, EnumVariantNames, VariantNames};
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Target {
-    #[serde(rename = "erlang")]
+    #[strum(serialize = "erlang", serialize = "erl")]
+    #[serde(rename = "erlang", alias = "erl")]
     Erlang,
-    #[serde(rename = "javascript")]
+    #[strum(serialize = "javascript", serialize = "js")]
+    #[serde(rename = "javascript", alias = "js")]
     JavaScript,
 }
 

@@ -100,14 +100,14 @@ enum Command {
         warnings_as_errors: bool,
 
         /// The platform to target
-        #[clap(short, long, ignore_case = true, possible_values = Target::VARIANTS)]
+        #[clap(short, long, ignore_case = true)]
         target: Option<Target>,
     },
 
     /// Type check the project
     Check {
         /// The platform to target
-        #[clap(short, long, ignore_case = true, possible_values = Target::VARIANTS)]
+        #[clap(short, long, ignore_case = true)]
         target: Option<Target>,
     },
 
@@ -167,7 +167,7 @@ enum Command {
     #[clap(trailing_var_arg = true)]
     Run {
         /// The platform to target
-        #[clap(short, long, ignore_case = true, possible_values = Target::VARIANTS)]
+        #[clap(short, long, ignore_case = true)]
         target: Option<Target>,
 
         #[clap(long, ignore_case = true)]
@@ -184,7 +184,7 @@ enum Command {
     #[clap(trailing_var_arg = true)]
     Test {
         /// The platform to target
-        #[clap(short, long, ignore_case = true, possible_values = Target::VARIANTS)]
+        #[clap(short, long, ignore_case = true)]
         target: Option<Target>,
 
         #[clap(long, ignore_case = true)]
