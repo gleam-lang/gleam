@@ -6,6 +6,8 @@
 
 - The `gleam run` and `gleam test` commands gain the `-t` flag, which is an
   alias of the `--target` flag.
+- The `gleam build`, `gleam check`, `gleam run` and `gleam test` commands now
+  also accept `js` and `erl` as values for the `--target` flag.
 
 ### Bug fixes
 
