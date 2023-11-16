@@ -1139,6 +1139,21 @@ fn unused_alias_warning_test() {
 }
 
 #[test]
+fn used_type_with_import_alias_no_warning_test() {
+    assert_warnings_with_imports!(
+        ("gleam/foo", "pub type A");
+        r#"
+            import gleam/foo as bar
+            fn fun(a: bar.A) { a }
+        "#,
+        Warning::UnusedPrivateFunction {
+            name:"fun".into(),
+            location: SrcSpan { start: 49, end: 65}
+        }
+    );
+}
+
+#[test]
 fn discarded_module_no_warnings_test() {
     assert_no_warnings!(
         ("gleam", "foo", "pub const one = 1"),
