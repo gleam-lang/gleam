@@ -328,6 +328,7 @@ impl<'a> Environment<'a> {
                     }
                 })?;
                 let _ = self.unused_modules.remove(module_name);
+                let _ = self.unused_module_aliases.remove(module_name);
                 module
                     .types
                     .get(name)
