@@ -76,11 +76,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // body, instead only giving an external implementation for this
             // target. This placeholder implementation will never be used so we
             // treat it as a `panic` expression during analysis.
-            UntypedExpr::Placeholder { location } => Ok(self.infer_panic(location, None)),
+            UntypedExpr::Placeholder { location } => {
+                self.infer_panic(location, None)
+            }
 
             UntypedExpr::Panic {
                 location, message, ..
-            } => Ok(self.infer_panic(location, message)),
+            } => self.infer_panic(location, message),
 
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 
@@ -202,12 +204,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_panic(&mut self, location: SrcSpan, message: Option<EcoString>) -> TypedExpr {
+    fn infer_panic(
+        &mut self,
+        location: SrcSpan,
+        message: Option<Box<UntypedExpr>>,
+    ) -> Result<TypedExpr, Error> {
+        let message = message.map(|untyped_expr| self.infer(*untyped_expr));
         let typ = self.new_unbound_var();
-        TypedExpr::Panic {
-            location,
-            type_: typ,
-            message,
+        match message {
+            Some(Ok(message)) => {
+                // Making sure that the panic message evaluates to a string.
+                unify(string(), message.type_())
+                    .map_err(|e| convert_unify_error(e, message.location()))?;
+                Ok(TypedExpr::Panic {
+                    location,
+                    type_: typ,
+                    message: Some(Box::new(message)),
+                })
+            }
+            None => Ok(TypedExpr::Panic {
+                location,
+                type_: typ,
+                message: None,
+            }),
+            Some(Err(e)) => Err(e),
         }
     }
 

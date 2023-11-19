@@ -121,7 +121,7 @@ pub enum TypedExpr {
 
     Panic {
         location: SrcSpan,
-        message: Option<EcoString>,
+        message: Option<Box<Self>>,
         type_: Arc<Type>,
     },
 

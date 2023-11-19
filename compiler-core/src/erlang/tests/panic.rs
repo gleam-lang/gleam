@@ -22,6 +22,20 @@ pub fn main() {
     );
 }
 
+#[test]
+fn panic_as_function() {
+    assert_erl!(
+        r#"
+pub fn retstring() {
+  "wibble"
+}
+pub fn main() {
+  panic as retstring() <> "wobble"
+}
+"#
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/2176
 #[test]
 fn piped() {

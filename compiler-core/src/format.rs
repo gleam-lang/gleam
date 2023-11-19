@@ -630,7 +630,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::Panic {
                 message: Some(m), ..
-            } => docvec!["panic as \"", m, "\""],
+            } => docvec!["panic as ", self.expr(m)],
 
             UntypedExpr::Panic { .. } => "panic".to_doc(),
 
