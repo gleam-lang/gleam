@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/panic.rs
+expression: "\nfn go() {\n  let x = \"wibble\"\n  panic as x\n}\n"
+---
+import { makeError } from "../gleam.mjs";
+
+function go() {
+  let x = "wibble";
+  throw makeError("todo", "my/mod", 4, "go", x, {})
+}
+

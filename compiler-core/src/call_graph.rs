@@ -115,9 +115,14 @@ impl<'a> CallGraphBuilder<'a> {
             UntypedExpr::Todo { .. }
             | UntypedExpr::Int { .. }
             | UntypedExpr::Float { .. }
-            | UntypedExpr::Panic { .. }
             | UntypedExpr::String { .. }
             | UntypedExpr::Placeholder { .. } => (),
+
+            UntypedExpr::Panic { message, .. } => {
+                if let Some(msg_expr) = message {
+                    self.expression(msg_expr)
+                }
+            }
 
             // Aha! A variable is being referenced.
             UntypedExpr::Var { name, .. } => {

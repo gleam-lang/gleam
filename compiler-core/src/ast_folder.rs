@@ -326,12 +326,16 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::Int { .. }
             | UntypedExpr::Var { .. }
             | UntypedExpr::Todo { .. }
-            | UntypedExpr::Panic { .. }
             | UntypedExpr::Float { .. }
             | UntypedExpr::String { .. }
             | UntypedExpr::NegateInt { .. }
             | UntypedExpr::NegateBool { .. }
             | UntypedExpr::Placeholder { .. } => e,
+
+            UntypedExpr::Panic { location, message } => UntypedExpr::Panic {
+                location,
+                message: message.map(|msg_expr| Box::new(self.fold_expr(*msg_expr))),
+            },
 
             UntypedExpr::Block {
                 location,
@@ -753,7 +757,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         }
     }
 
-    fn fold_panic(&mut self, location: SrcSpan, message: Option<EcoString>) -> UntypedExpr {
+    fn fold_panic(&mut self, location: SrcSpan, message: Option<Box<UntypedExpr>>) -> UntypedExpr {
         UntypedExpr::Panic { location, message }
     }
 

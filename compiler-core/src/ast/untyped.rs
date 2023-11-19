@@ -99,7 +99,7 @@ pub enum UntypedExpr {
 
     Panic {
         location: SrcSpan,
-        message: Option<EcoString>,
+        message: Option<Box<Self>>,
     },
 
     BitArray {

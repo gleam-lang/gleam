@@ -416,9 +416,10 @@ where
                 let mut label = None;
                 let _ = self.next_tok();
                 if self.maybe_one(&Token::As).is_some() {
-                    let (_, l, e) = self.expect_string()?;
-                    label = Some(l);
-                    end = e;
+                    label = self.parse_expression()?.map(Box::new);
+                    if let Some(msg_expr_val) = &label {
+                        end = msg_expr_val.location().end;
+                    }
                 }
                 UntypedExpr::Panic {
                     location: SrcSpan { start, end },
