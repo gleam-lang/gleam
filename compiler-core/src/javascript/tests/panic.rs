@@ -12,7 +12,7 @@ fn go() {
 }
 
 #[test]
-fn panic_as(){
+fn panic_as() {
     assert_js!(
         r#"
 fn go() {

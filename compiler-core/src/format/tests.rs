@@ -3158,7 +3158,7 @@ fn expr_panic_as() {
 }
 
 #[test]
-fn expr_panic_as_value(){
+fn expr_panic_as_value() {
     assert_format!(
         r#"fn main() {
   let x = "panicking" <> "with a value"
@@ -3167,7 +3167,6 @@ fn expr_panic_as_value(){
 "#
     );
 }
-
 
 #[test]
 fn expr_todo() {
