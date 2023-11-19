@@ -19,7 +19,6 @@ use crate::{
     Result,
 };
 use ecow::EcoString;
-use futures::future::err;
 use heck::ToSnakeCase;
 use itertools::Itertools;
 use pattern::pattern;
