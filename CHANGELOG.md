@@ -8,7 +8,9 @@
   alias of the `--target` flag.
 - The `gleam build`, `gleam check`, `gleam run` and `gleam test` commands now
   also accept `js` and `erl` as values for the `--target` flag.
-- The `gleam new` command now creates packages at version v1.0.0.
+- The `gleam new` command now creates packages at version 1.0.0.
+- The `gleam publish` command now asks for confirmation if the package being
+  published is not yet version 1.0.0.
 
 ### Bug fixes
 
