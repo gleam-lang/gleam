@@ -16,7 +16,12 @@ use std::{io::Write, time::Instant};
 use crate::{build, cli, docs, fs, hex::ApiKeyCommand, http::HttpClient};
 
 pub fn command(replace: bool, yes: bool) -> Result<()> {
-    PublishCommand::setup(replace, yes)?.run()
+    let command = PublishCommand::setup(replace, yes)?;
+
+    if let Some(mut command) = command {
+        command.run()?;
+    }
+    Ok(())
 }
 
 pub struct PublishCommand {
@@ -27,9 +32,27 @@ pub struct PublishCommand {
 }
 
 impl PublishCommand {
-    pub fn setup(replace: bool, i_am_sure: bool) -> Result<Self> {
+    pub fn setup(replace: bool, i_am_sure: bool) -> Result<Option<Self>> {
         let paths = crate::project_paths_at_current_directory();
         let config = crate::config::root_config()?;
+
+        // Ask for confirmation if the package is below version 1
+        if config.version.major == 0 {
+            println!(
+                "You are about to publish a release that is below version 1.0.0.
+
+Semantic versioning doesn't apply to version 0.x.x releases, so your 
+users will not be protected from breaking changes. This can result
+in a poor user experience where packages can break unexpectedly with 
+updates that would normally be safe."
+            );
+            let should_publish = i_am_sure || cli::confirm("\nDo you wish to continue?")?;
+            if !should_publish {
+                println!("Not publishing.");
+                std::process::exit(0);
+            }
+        }
+
         let Tarball {
             mut compile_result,
             data: package_tarball,
@@ -55,21 +78,18 @@ impl PublishCommand {
         println!("\nName: {}", config.name);
         println!("Version: {}", config.version);
 
-        let should_publish = i_am_sure || {
-            let answer = cli::ask("\nDo you wish to publish this package? [y/n]")?;
-            answer == "y" || answer == "Y"
-        };
+        let should_publish = i_am_sure || cli::confirm("\nDo you wish to publish this package?")?;
         if !should_publish {
             println!("Not publishing.");
             std::process::exit(0);
         }
 
-        Ok(Self {
+        Ok(Some(Self {
             config,
             docs_tarball,
             package_tarball,
             replace,
-        })
+        }))
     }
 }
 
