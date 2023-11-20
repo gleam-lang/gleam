@@ -1129,11 +1129,54 @@ impl<'module> Generator<'module> {
 }
 
 pub fn int(value: &str) -> Document<'_> {
-    value.to_doc()
+    let mut out = EcoString::with_capacity(value.len());
+
+    if value.starts_with('-') {
+        out.push('-');
+    } else if value.starts_with('+') {
+        out.push('+');
+    };
+    let value = value.trim_start_matches(['+', '-'].as_ref());
+
+    let value = if value.starts_with("0x") {
+        out.push_str("0x");
+        value.trim_start_matches("0x")
+    } else if value.starts_with("0o") {
+        out.push_str("0o");
+        value.trim_start_matches("0o")
+    } else if value.starts_with("0b") {
+        out.push_str("0b");
+        value.trim_start_matches("0b")
+    } else {
+        value
+    };
+
+    let value = value.trim_start_matches('0');
+    if value.is_empty() {
+        out.push('0');
+    }
+    out.push_str(value);
+
+    out.to_doc()
 }
 
 pub fn float(value: &str) -> Document<'_> {
-    value.to_doc()
+    let mut out = EcoString::with_capacity(value.len());
+
+    if value.starts_with('-') {
+        out.push('-');
+    } else if value.starts_with('+') {
+        out.push('+');
+    };
+    let value = value.trim_start_matches(['+', '-'].as_ref());
+
+    let value = value.trim_start_matches('0');
+    if value.starts_with(['.', 'e', 'E']) {
+        out.push('0');
+    }
+    out.push_str(value);
+
+    out.to_doc()
 }
 
 pub(crate) fn guard_constant_expression<'a>(

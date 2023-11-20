@@ -203,3 +203,71 @@ fn go() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2412
+#[test]
+fn preceeding_zeros_int() {
+    assert_js!(
+        r#"
+fn main() {
+  09_179
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2412
+#[test]
+fn preceeding_zeros_float() {
+    assert_js!(
+        r#"
+fn main() {
+  09_179.1
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2412
+#[test]
+fn preceeding_zeros_int_const() {
+    assert_js!(
+        r#"
+const x = 09_179
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2412
+#[test]
+fn preceeding_zeros_float_const() {
+    assert_js!(
+        r#"
+const x = 09_179.1
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2412
+#[test]
+fn preceeding_zeros_int_pattern() {
+    assert_js!(
+        r#"
+fn main(x) {
+  let assert 09_179 = x
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2412
+#[test]
+fn preceeding_zeros_float_pattern() {
+    assert_js!(
+        r#"
+fn main(x) {
+  let assert 09_179.1 = x
+}
+"#
+    );
+}
