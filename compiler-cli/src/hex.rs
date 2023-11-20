@@ -5,14 +5,13 @@ use gleam_core::{
 
 use crate::{cli, http::HttpClient};
 
+const USER_PROMPT: &'static str = "https://hex.pm username";
+const USER_KEY: &'static str = "HEXPM_USER";
+const PASS_PROMPT: &'static str = "https://hex.pm password";
+const PASS_KEY: &'static str = "HEXPM_PASS";
+
 /// A helper trait that handles the provisioning and destruction of a Hex API key.
 pub trait ApiKeyCommand {
-    const USER_PROMPT: &'static str = "https://hex.pm username";
-    const USER_KEY: &'static str = "HEXPM_USER";
-
-    const PASS_PROMPT: &'static str = "https://hex.pm password";
-    const PASS_KEY: &'static str = "HEXPM_PASS";
-
     fn with_api_key(
         &mut self,
         runtime: &tokio::runtime::Handle,
@@ -28,9 +27,8 @@ pub trait ApiKeyCommand {
 
         // Get login creds from user
 
-        let username = std::env::var(Self::USER_KEY).or_else(|_| cli::ask(Self::USER_PROMPT))?;
-        let password =
-            std::env::var(Self::PASS_KEY).or_else(|_| cli::ask_password(Self::PASS_PROMPT))?;
+        let username = std::env::var(USER_KEY).or_else(|_| cli::ask(USER_PROMPT))?;
+        let password = std::env::var(PASS_KEY).or_else(|_| cli::ask_password(PASS_PROMPT))?;
 
         // Get API key
         let api_key = runtime.block_on(gleam_core::hex::create_api_key(
