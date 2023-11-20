@@ -554,13 +554,18 @@ pub fn symlink_dir(
     dest: impl AsRef<Utf8Path> + Debug,
 ) -> Result<(), Error> {
     tracing::trace!(src=?src, dest=?dest, "symlinking");
-    symlink::symlink_dir(canonicalise(src.as_ref())?, dest.as_ref()).map_err(|err| {
-        Error::FileIo {
-            action: FileIoAction::Link,
-            kind: FileKind::File,
-            path: Utf8PathBuf::from(dest.as_ref()),
-            err: Some(err.to_string()),
-        }
+    let src = canonicalise(src.as_ref())?;
+
+    #[cfg(target_family = "windows")]
+    let result = std::os::windows::fs::symlink_dir(src, dest.as_ref());
+    #[cfg(not(target_family = "windows"))]
+    let result = std::os::unix::fs::symlink(src, dest.as_ref());
+
+    result.map_err(|err| Error::FileIo {
+        action: FileIoAction::Link,
+        kind: FileKind::File,
+        path: Utf8PathBuf::from(dest.as_ref()),
+        err: Some(err.to_string()),
     })?;
     Ok(())
 }
