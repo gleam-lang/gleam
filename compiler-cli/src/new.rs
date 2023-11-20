@@ -197,7 +197,7 @@ jobs:
             self.root.join("gleam.toml"),
             &format!(
                 r#"name = "{name}"
-version = "0.1.0"
+version = "1.0.0"
 
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
