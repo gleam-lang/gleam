@@ -5,10 +5,10 @@ use gleam_core::{
 
 use crate::{cli, http::HttpClient};
 
-const USER_PROMPT: &'static str = "https://hex.pm username";
-const USER_KEY: &'static str = "HEXPM_USER";
-const PASS_PROMPT: &'static str = "https://hex.pm password";
-const PASS_KEY: &'static str = "HEXPM_PASS";
+const USER_PROMPT: &str = "https://hex.pm username";
+const USER_KEY: &str = "HEXPM_USER";
+const PASS_PROMPT: &str = "https://hex.pm password";
+const PASS_KEY: &str = "HEXPM_PASS";
 
 /// A helper trait that handles the provisioning and destruction of a Hex API key.
 pub trait ApiKeyCommand {
