@@ -1,5 +1,6 @@
 #![allow(warnings)]
 
+mod elixir_libraries;
 mod module_loader;
 mod native_file_copier;
 pub mod package_compiler;

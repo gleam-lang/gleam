@@ -27,7 +27,7 @@ use std::{
     time::Instant,
 };
 
-use super::{Codegen, ErlangAppCodegenConfiguration};
+use super::{elixir_libraries::ElixirLibraries, Codegen, ErlangAppCodegenConfiguration};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -401,7 +401,7 @@ where
         let ebins = self.paths.build_packages_ebins_glob(mode, target);
 
         // Elixir core libs must be loaded
-        package_compiler::maybe_link_elixir_libs(&self.io, &build_dir, self.subprocess_stdio)?;
+        ElixirLibraries::make_available(&self.io, &build_dir, self.subprocess_stdio)?;
 
         // Prevent Mix.Compilers.ApplicationTracer warnings
         // mix would make this if it didn't exist, but we make it anyway as
