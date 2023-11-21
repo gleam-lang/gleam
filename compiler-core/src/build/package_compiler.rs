@@ -2,6 +2,7 @@ use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
+        elixir_libraries::ElixirLibraries,
         module_loader::SourceFingerprint,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader, StaleTracker},
@@ -26,11 +27,6 @@ use std::{collections::HashMap, fmt::write, time::SystemTime};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
-
-#[cfg(not(target_os = "windows"))]
-const ELIXIR_EXECUTABLE: &str = "elixir";
-#[cfg(target_os = "windows")]
-const ELIXIR_EXECUTABLE: &str = "elixir.bat";
 
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
@@ -223,7 +219,11 @@ where
         // If there are any Elixir files then we need to locate Elixir
         // installed on this system for use in compilation.
         if copied.any_elixir {
-            maybe_link_elixir_libs(&self.io, &self.lib.to_path_buf(), self.subprocess_stdio)?;
+            ElixirLibraries::make_available(
+                &self.io,
+                &self.lib.to_path_buf(),
+                self.subprocess_stdio,
+            )?;
         }
 
         Ok(())
@@ -450,87 +450,6 @@ fn analyse(
     }
 
     Ok(modules)
-}
-
-pub fn maybe_link_elixir_libs<IO>(
-    io: &IO,
-    build_dir: &Utf8PathBuf,
-    subprocess_stdio: Stdio,
-) -> Result<(), Error>
-where
-    IO: CommandExecutor + FileSystemReader + FileSystemWriter + Clone,
-{
-    // These Elixir core libs will be loaded with the current project
-    // Each should be linked into build/{target}/erlang if:
-    // - It isn't already
-    // - Its ebin dir doesn't exist (e.g. Elixir's path changed)
-    let elixir_libs = ["eex", "elixir", "logger", "mix"];
-
-    // The pathfinder is a file in build/{target}/erlang
-    // It contains the full path for each Elixir core lib we need, new-line delimited
-    // The pathfinder saves us from repeatedly loading Elixir to get this info
-    let mut update_links = false;
-    let pathfinder_name = "gleam_elixir_paths";
-    let pathfinder = build_dir.join(pathfinder_name);
-    if !io.is_file(&pathfinder) {
-        // The pathfinder must be written
-        // Any existing core lib links will get updated
-        update_links = true;
-        // TODO: test
-        let env = [("TERM", "dumb".into())];
-        // Prepare the libs for Erlang's code:lib_dir function
-        let elixir_atoms: Vec<String> = elixir_libs.iter().map(|lib| format!(":{}", lib)).collect();
-        // Use Elixir to find its core lib paths and write the pathfinder file
-        let args = [
-            "--eval".into(),
-            format!(
-                ":ok = File.write(~s({}), [{}] |> Stream.map(fn(lib) -> lib |> :code.lib_dir |> Path.expand end) |> Enum.join(~s(\\n)))",
-                pathfinder_name,
-                elixir_atoms.join(", "),
-            )
-            .into(),
-        ];
-        tracing::debug!("writing_elixir_paths_to_build");
-        let status = io.exec(
-            ELIXIR_EXECUTABLE,
-            &args,
-            &env,
-            Some(&build_dir),
-            subprocess_stdio,
-        )?;
-        if status != 0 {
-            return Err(Error::ShellCommand {
-                program: "elixir".into(),
-                err: None,
-            });
-        }
-    }
-
-    // Each pathfinder line is a system path for an Elixir core library
-    let read_pathfinder = io.read(&pathfinder)?;
-    for lib_path in read_pathfinder.split('\n') {
-        let source = Utf8PathBuf::from(lib_path);
-        let name = source
-            .as_path()
-            .file_name()
-            .expect(&format!("Unexpanded path in {}", pathfinder_name));
-        let dest = build_dir.join(name);
-        let ebin = dest.join("ebin");
-        if !update_links || io.is_directory(&ebin) {
-            // Either links don't need updating
-            // Or this library is already linked
-            continue;
-        }
-        // TODO: unit test
-        if io.is_directory(&dest) {
-            // Delete the existing link
-            io.delete(&dest)?;
-        }
-        tracing::debug!("linking_{}_to_build", name,);
-        io.symlink_dir(&source, &dest)?;
-    }
-
-    Ok(())
 }
 
 pub(crate) fn module_name(package_path: &Utf8Path, full_module_path: &Utf8Path) -> EcoString {
