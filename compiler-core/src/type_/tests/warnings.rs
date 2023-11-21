@@ -1143,7 +1143,7 @@ fn used_type_with_import_alias_no_warning_test() {
     assert_no_warnings!(
         ("gleam", "foo", "pub type A"),
         r#"
-            import gleam/foo as bar
+            import foo as bar
             pub fn fun(a: bar.A) { a }
         "#
     );
@@ -1151,10 +1151,7 @@ fn used_type_with_import_alias_no_warning_test() {
 
 #[test]
 fn discarded_module_no_warnings_test() {
-    assert_no_warnings!(
-        ("gleam", "foo", "pub const one = 1"),
-        "import gleam/foo as _bar"
-    );
+    assert_no_warnings!(("gleam", "foo", "pub const one = 1"), "import foo as _bar");
 }
 
 #[test]
