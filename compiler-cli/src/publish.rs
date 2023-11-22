@@ -11,7 +11,7 @@ use gleam_core::{
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
-use std::{io::Write, time::Instant};
+use std::{io::Write, path::PathBuf, time::Instant};
 
 use crate::{build, cli, docs, fs, hex::ApiKeyCommand, http::HttpClient};
 
@@ -140,6 +140,23 @@ impl ApiKeyCommand for PublishCommand {
             "\nView your package at https://hex.pm/packages/{}",
             &self.config.name
         );
+
+        // Prompt the user to make a git tag if they have not.
+        let has_repo = self.config.repository.url().is_some();
+        let git = PathBuf::from(".git");
+        let version = format!("v{}", &self.config.version);
+        let git_tag = git.join("refs").join("tags").join(&version);
+        if has_repo && git.exists() && !git_tag.exists() {
+            println!(
+                "
+Please push a git tag for this release so source code links in the
+HTML documentation will work:
+
+    git tag v{version}
+    git push origin v{version}
+"
+            )
+        }
         Ok(())
     }
 }
