@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Language changes
+
+- The `!` operator can now be used in clause guards.
+
 ### Build tool changes
 
 - The `gleam run` and `gleam test` commands gain the `-t` flag, which is an
