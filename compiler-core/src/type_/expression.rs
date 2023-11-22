@@ -2337,7 +2337,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let mut add = |multi_pattern: &[TypedPattern]| {
                 for (subject_index, pattern) in multi_pattern.iter().enumerate() {
                     let pattern = arena.register(pattern);
-                    let column = Column::new(subject_variables[subject_index].clone(), pattern);
+                    let var = subject_variables
+                        .get(subject_index)
+                        .expect("Subject variable")
+                        .clone();
+                    let column = Column::new(var, pattern);
                     // TODO: add guard (replace None)
                     // TODO: test guard
                     let guard = None;

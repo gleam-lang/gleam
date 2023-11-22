@@ -12,7 +12,7 @@ pub fn missing_patterns(matches: &Match, environment: &Environment<'_>) -> Vec<E
     let mut names = HashSet::new();
     let mut steps = Vec::new();
 
-    add_missing_patterns(matches, &matches.tree, &mut steps, &mut names, environment);
+    add_missing_patterns(&matches.tree, &mut steps, &mut names, environment);
 
     let mut missing: Vec<EcoString> = names.into_iter().collect();
 
@@ -129,7 +129,6 @@ impl Term {
 }
 
 fn add_missing_patterns(
-    matches: &Match,
     node: &Decision,
     terms: &mut Vec<Term>,
     missing: &mut HashSet<EcoString>,
@@ -167,7 +166,7 @@ fn add_missing_patterns(
         }
 
         Decision::Guard(_, _, fallback) => {
-            add_missing_patterns(matches, fallback, terms, missing, environment);
+            add_missing_patterns(fallback, terms, missing, environment);
         }
 
         Decision::Switch(variable, cases, fallback) => {
@@ -210,12 +209,12 @@ fn add_missing_patterns(
                     }
                 }
 
-                add_missing_patterns(matches, &case.body, terms, missing, environment);
+                add_missing_patterns(&case.body, terms, missing, environment);
                 _ = terms.pop();
             }
 
             if let Some(node) = fallback {
-                add_missing_patterns(matches, node, terms, missing, environment);
+                add_missing_patterns(node, terms, missing, environment);
             }
         }
 
@@ -227,7 +226,7 @@ fn add_missing_patterns(
             terms.push(Term::EmptyList {
                 variable: variable.clone(),
             });
-            add_missing_patterns(matches, empty, terms, missing, environment);
+            add_missing_patterns(empty, terms, missing, environment);
             _ = terms.pop();
 
             terms.push(Term::List {
@@ -235,7 +234,7 @@ fn add_missing_patterns(
                 first: non_empty.first.clone(),
                 rest: non_empty.rest.clone(),
             });
-            add_missing_patterns(matches, &non_empty.decision, terms, missing, environment);
+            add_missing_patterns(&non_empty.decision, terms, missing, environment);
             _ = terms.pop();
         }
     }
