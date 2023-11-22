@@ -15,6 +15,8 @@
 - The `gleam new` command now creates packages at version 1.0.0.
 - The `gleam publish` command now asks for confirmation if the package being
   published is not yet version 1.0.0.
+- The `gleam publish` command now asks for confirmation if the package name is
+  one that implies the package is maintained by the Gleam core team.
 
 ### Bug fixes
 

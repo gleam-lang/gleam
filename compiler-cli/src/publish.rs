@@ -36,6 +36,22 @@ impl PublishCommand {
         let paths = crate::project_paths_at_current_directory();
         let config = crate::config::root_config()?;
 
+        // Ask for confirmation if the package name if `gleam_*`
+        if config.name.starts_with("gleam_") && !config.name.starts_with("gleam_community_") {
+            println!(
+                "You are about to publish a package named {}.
+
+The `gleam_` prefix is for packages maintained by the Gleam core team.",
+                config.name
+            );
+            let should_publish =
+                i_am_sure || cli::confirm("\nAre you sure you want to use this package name?")?;
+            if !should_publish {
+                println!("Not publishing.");
+                std::process::exit(0);
+            }
+        }
+
         // Ask for confirmation if the package is below version 1
         if config.version.major == 0 {
             println!(
