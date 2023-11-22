@@ -43,7 +43,8 @@ use crate::{
     ast::AssignName,
     type_::{
         collapse_links, environment, error::UnknownTypeConstructorError, is_prelude_module,
-        Environment, ModuleInterface, Type, TypeValueConstructor,
+        Environment, ModuleInterface, Type, TypeValueConstructor, TypeValueConstructorParameter,
+        TypeVar,
     },
 };
 use ecow::EcoString;
@@ -347,16 +348,10 @@ impl<'a> Compiler<'a> {
                             type_: variable.type_.clone(),
                             index: idx as u16,
                         };
-                        // TODO: This is using the type of the variant as
-                        // defined, but it actually needs to use the type of
-                        // this specific instance. If it is a generic type
-                        // parameter then it will have been instantiated with a
-                        // specific type.
-                        dbg!("fixme!");
-                        dbg!("fixme!");
-                        dbg!("fixme!");
-                        dbg!("fixme!");
-                        let new_variables = self.new_variables(&constructor.parameters);
+                        let new_variables = self.constructor_parameter_variables(
+                            &variable.type_,
+                            &constructor.parameters,
+                        );
                         (variant, new_variables, Vec::new())
                     })
                     .collect();
@@ -777,19 +772,55 @@ impl<'a> Compiler<'a> {
         var
     }
 
-    fn new_variables(&mut self, type_ids: &[Arc<Type>]) -> Vec<Variable> {
-        type_ids
-            .iter()
-            .map(|t| self.new_variable(t.clone()))
-            .collect()
-    }
-
     fn custom_type_info(
         &self,
         module: &EcoString,
         name: &EcoString,
     ) -> Result<&Vec<TypeValueConstructor>, UnknownTypeConstructorError> {
         self.environment.get_constructors_for_type(module, name)
+    }
+
+    fn constructor_parameter_variables(
+        &mut self,
+        type_: &Arc<Type>,
+        parameters: &[TypeValueConstructorParameter],
+    ) -> Vec<Variable> {
+        parameters
+            .iter()
+            .map(|p| self.constructor_parameter_variable(type_, p))
+            .collect_vec()
+    }
+
+    fn constructor_parameter_variable(
+        &mut self,
+        type_: &Arc<Type>,
+        parameter: &TypeValueConstructorParameter,
+    ) -> Variable {
+        let type_ = match parameter.generic_type_parameter_index {
+            None => parameter.type_.clone(),
+            Some(i) => generic_named_type_parameter(type_, i).unwrap(),
+        };
+        self.new_variable(type_)
+    }
+
+    fn new_variables(&mut self, type_ids: &[Arc<Type>]) -> Vec<Variable> {
+        type_ids
+            .iter()
+            .map(|t| self.new_variable(t.clone()))
+            .collect()
+    }
+}
+
+fn generic_named_type_parameter(t: &Type, i: usize) -> Option<Arc<Type>> {
+    match t {
+        Type::Named { args, .. } => args.get(i).cloned(),
+
+        Type::Var { type_, .. } => match &*type_.borrow() {
+            TypeVar::Link { type_ } => generic_named_type_parameter(&type_, i),
+            TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
+        },
+
+        Type::Fn { .. } | Type::Tuple { .. } => None,
     }
 }
 

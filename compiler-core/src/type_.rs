@@ -489,7 +489,18 @@ pub struct ModuleInterface {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeValueConstructor {
     pub name: EcoString,
-    pub parameters: Vec<Arc<Type>>,
+    pub parameters: Vec<TypeValueConstructorParameter>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeValueConstructorParameter {
+    /// This type of this parameter
+    pub type_: Arc<Type>,
+    /// If this type is a generic type parameter then this is the index of the
+    /// parameter.
+    /// For example, in `type Type(a) { Value(a) }` the `a` in Value(a)` has an
+    /// index of 0.
+    pub generic_type_parameter_index: Option<usize>,
 }
 
 impl ModuleInterface {

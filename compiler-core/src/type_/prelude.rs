@@ -3,8 +3,8 @@ use strum::{EnumIter, IntoEnumIterator};
 use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 
 use super::{
-    ModuleInterface, Type, TypeConstructor, TypeValueConstructor, TypeVar, ValueConstructor,
-    ValueConstructorVariant,
+    ModuleInterface, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorParameter,
+    TypeVar, ValueConstructor, ValueConstructorVariant,
 };
 use crate::type_::Deprecation::NotDeprecated;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
@@ -365,11 +365,17 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     vec![
                         TypeValueConstructor {
                             name: "Ok".into(),
-                            parameters: vec![result_value],
+                            parameters: vec![TypeValueConstructorParameter {
+                                type_: result_value,
+                                generic_type_parameter_index: Some(0),
+                            }],
                         },
                         TypeValueConstructor {
                             name: "Error".into(),
-                            parameters: vec![result_error],
+                            parameters: vec![TypeValueConstructorParameter {
+                                type_: result_error,
+                                generic_type_parameter_index: Some(1),
+                            }],
                         },
                     ],
                 );

@@ -12,7 +12,8 @@ use crate::{
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, RecordAccessor, Type,
-        TypeConstructor, TypeValueConstructor, ValueConstructor, ValueConstructorVariant,
+        TypeConstructor, TypeValueConstructor, TypeValueConstructorParameter, ValueConstructor,
+        ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     Result,
@@ -163,7 +164,25 @@ impl ModuleDecoder {
     ) -> Result<TypeValueConstructor> {
         Ok(TypeValueConstructor {
             name: reader.get_name()?.into(),
-            parameters: read_vec!(reader.get_parameters()?, self, type_),
+            parameters: read_vec!(
+                reader.get_parameters()?,
+                self,
+                type_value_constructor_parameter
+            ),
+        })
+    }
+
+    fn type_value_constructor_parameter(
+        &mut self,
+        reader: &type_value_constructor_parameter::Reader<'_>,
+    ) -> Result<TypeValueConstructorParameter> {
+        let generic_type_parameter_index = match reader.get_generic_type_parameter_index() {
+            -1 => None,
+            index => Some(index as usize),
+        };
+        Ok(TypeValueConstructorParameter {
+            type_: self.type_(&reader.get_type()?)?,
+            generic_type_parameter_index,
         })
     }
 

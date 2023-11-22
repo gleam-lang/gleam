@@ -31,7 +31,12 @@ struct Module {
 
 struct TypeValueConstructor {
   name @0 :Text;
-  parameters @1 :List(Type);
+  parameters @1 :List(TypeValueConstructorParameter);
+}
+
+struct TypeValueConstructorParameter {
+  type @0 :Type;
+  genericTypeParameterIndex @1 :Int16;
 }
 
 struct TypeConstructor {
