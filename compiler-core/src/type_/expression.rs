@@ -2353,10 +2353,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         compiler.set_pattern_arena(arena.into_inner());
-        let _output = compiler.compile(rows);
+        let output = compiler.compile(rows);
 
         // TODO: use result
         // dbg!(output);
+
+        if output.diagnostics.missing {
+            panic!()
+        }
 
         Ok(())
     }

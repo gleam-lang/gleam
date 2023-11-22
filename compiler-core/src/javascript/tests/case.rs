@@ -123,7 +123,8 @@ fn pipe() {
         r#"
 fn go(x, f) {
   case x |> f {
-    0 -> Nil
+    0 -> 1
+    _ -> 2
   }
 }
 "#,

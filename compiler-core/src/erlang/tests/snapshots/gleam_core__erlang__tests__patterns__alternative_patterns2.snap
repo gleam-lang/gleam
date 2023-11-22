@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
-assertion_line: 37
-expression: "\npub fn test() {\n    let duplicate_name = 1\n\n    case 1 {\n        1 | 2 if duplicate_name == 1 -> duplicate_name\n    }\n}"
+assertion_line: 38
+expression: "\npub fn test() {\n    let duplicate_name = 1\n\n    case 1 {\n        1 | 2 if duplicate_name == 1 -> duplicate_name\n        _ -> 0\n    }\n}"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
@@ -16,6 +16,9 @@ test() ->
             Duplicate_name;
 
         2 when Duplicate_name =:= 1 ->
-            Duplicate_name
+            Duplicate_name;
+
+        _ ->
+            0
     end.
 

@@ -13,6 +13,7 @@ pub fn test() {
       let duplicate_name = duplicate_name + 1
       duplicate_name
     }
+    _ -> 0
   }
 }"#
     );
@@ -41,6 +42,7 @@ pub fn test() {
 
     case 1 {
         1 | 2 if duplicate_name == 1 -> duplicate_name
+        _ -> 0
     }
 }"#
     );
