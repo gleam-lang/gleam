@@ -1480,6 +1480,8 @@ impl<'comments> Formatter<'comments> {
             } => module_name.to_doc().append(".").append(label).to_doc(),
 
             ClauseGuard::Constant(constant) => self.const_expr(constant),
+
+            ClauseGuard::Not { expression, .. } => docvec!["!", self.clause_guard(expression)],
         }
     }
 

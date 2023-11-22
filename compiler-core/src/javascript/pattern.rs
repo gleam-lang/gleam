@@ -175,6 +175,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             ClauseGuard::Var { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::Constant(_)
+            | ClauseGuard::Not { .. }
             | ClauseGuard::FieldAccess { .. } => self.guard(guard),
 
             ClauseGuard::Equals { .. }
@@ -276,6 +277,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             ClauseGuard::ModuleSelect {
                 module_name, label, ..
             } => docvec!("$", module_name, ".", label),
+
+            ClauseGuard::Not { expression, .. } => {
+                docvec!["!", self.guard(expression)?]
+            }
 
             ClauseGuard::Constant(constant) => {
                 return expression::guard_constant_expression(

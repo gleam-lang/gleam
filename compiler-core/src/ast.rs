@@ -925,6 +925,11 @@ pub enum ClauseGuard<Type, RecordTag> {
         right: Box<Self>,
     },
 
+    Not {
+        location: SrcSpan,
+        expression: Box<Self>,
+    },
+
     Var {
         location: SrcSpan,
         type_: Type,
@@ -964,6 +969,7 @@ impl<A, B> ClauseGuard<A, B> {
             ClauseGuard::Constant(constant) => constant.location(),
             ClauseGuard::Or { location, .. }
             | ClauseGuard::And { location, .. }
+            | ClauseGuard::Not { location, .. }
             | ClauseGuard::Var { location, .. }
             | ClauseGuard::TupleIndex { location, .. }
             | ClauseGuard::Equals { location, .. }
@@ -1000,6 +1006,7 @@ impl<A, B> ClauseGuard<A, B> {
 
             ClauseGuard::Constant(_)
             | ClauseGuard::Var { .. }
+            | ClauseGuard::Not { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
             | ClauseGuard::ModuleSelect { .. } => 5,
@@ -1017,6 +1024,7 @@ impl TypedClauseGuard {
             ClauseGuard::Constant(constant) => constant.type_(),
 
             ClauseGuard::Or { .. }
+            | ClauseGuard::Not { .. }
             | ClauseGuard::And { .. }
             | ClauseGuard::Equals { .. }
             | ClauseGuard::NotEquals { .. }

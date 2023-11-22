@@ -1082,6 +1082,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Err(Error::RecordAccessUnknownType { location })
             }
 
+            ClauseGuard::Not {
+                location,
+                expression,
+            } => {
+                let expression = self.infer_clause_guard(*expression)?;
+                unify(bool(), expression.type_())
+                    .map_err(|e| convert_unify_error(e, expression.location()))?;
+                Ok(ClauseGuard::Not {
+                    location,
+                    expression: Box::new(expression),
+                })
+            }
+
             ClauseGuard::And {
                 location,
                 left,

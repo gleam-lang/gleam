@@ -368,3 +368,29 @@ fn module_nested_access() {
         "#
     );
 }
+
+#[test]
+fn not() {
+    assert_js!(
+        r#"pub fn main(x, y) {
+  case x {
+    _ if !y -> 0
+    _ -> 1
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn not_two() {
+    assert_js!(
+        r#"pub fn main(x, y) {
+  case x {
+    _ if !y && !x -> 0
+    _ -> 1
+  }
+}
+"#,
+    );
+}

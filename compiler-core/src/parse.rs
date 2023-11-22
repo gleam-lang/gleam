@@ -1226,6 +1226,22 @@ where
     // a < b || b < c
     fn parse_case_clause_guard_unit(&mut self) -> Result<Option<UntypedClauseGuard>, ParseError> {
         match self.tok0.take() {
+            Some((start, Token::Bang, _)) => {
+                let _ = self.next_tok();
+                match self.parse_case_clause_guard_unit()? {
+                    Some(unit) => Ok(Some(ClauseGuard::Not {
+                        location: SrcSpan {
+                            start,
+                            end: unit.location().end,
+                        },
+                        expression: Box::new(unit),
+                    })),
+                    None => {
+                        parse_error(ParseErrorType::ExpectedValue, SrcSpan { start, end: start })
+                    }
+                }
+            }
+
             Some((start, Token::Name { name }, end)) => {
                 let _ = self.next_tok();
                 let mut unit = ClauseGuard::Var {

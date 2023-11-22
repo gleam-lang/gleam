@@ -343,6 +343,8 @@ impl<'a> CallGraphBuilder<'a> {
                 self.guard(right);
             }
 
+            ClauseGuard::Not { expression, .. } => self.guard(expression),
+
             ClauseGuard::Var { name, .. } => self.referenced(name),
 
             ClauseGuard::TupleIndex { tuple, .. } => self.guard(tuple),

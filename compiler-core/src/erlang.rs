@@ -1091,6 +1091,8 @@ fn optional_clause_guard<'a>(
 
 fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
     match guard {
+        ClauseGuard::Not { expression, .. } => docvec!["not ", bare_clause_guard(expression, env)],
+
         ClauseGuard::Or { left, right, .. } => clause_guard(left, env)
             .append(" orelse ")
             .append(clause_guard(right, env)),
@@ -1169,7 +1171,7 @@ fn tuple_index_inline<'a>(
 
 fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
     match guard {
-        // Binary ops are wrapped in parens
+        // Binary operators are wrapped in parens
         ClauseGuard::Or { .. }
         | ClauseGuard::And { .. }
         | ClauseGuard::Equals { .. }
@@ -1186,8 +1188,9 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
             .append(bare_clause_guard(guard, env))
             .append(")"),
 
-        // Values are not wrapped
+        // Other expressions are not
         ClauseGuard::Constant(_)
+        | ClauseGuard::Not { .. }
         | ClauseGuard::Var { .. }
         | ClauseGuard::TupleIndex { .. }
         | ClauseGuard::FieldAccess { .. }
