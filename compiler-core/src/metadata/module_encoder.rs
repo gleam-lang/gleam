@@ -167,12 +167,27 @@ impl<'a> ModuleEncoder<'a> {
         constructor: &TypeValueConstructor,
     ) {
         builder.set_name(&constructor.name);
-        self.build_types(
-            builder
-                .reborrow()
-                .init_parameters(constructor.parameters.len() as u32),
-            &constructor.parameters,
-        )
+        let mut builder = builder.init_parameters(constructor.parameters.len() as u32);
+        for (i, parameter) in constructor.parameters.iter().enumerate() {
+            self.build_type_value_constructor_parameter(
+                builder.reborrow().get(i as u32),
+                parameter,
+            );
+        }
+    }
+
+    fn build_type_value_constructor_parameter(
+        &mut self,
+        mut builder: type_value_constructor_parameter::Builder<'_>,
+        parameter: &type_::TypeValueConstructorParameter,
+    ) {
+        builder.set_generic_type_parameter_index(
+            parameter
+                .generic_type_parameter_index
+                .map(|x| x as i16)
+                .unwrap_or(-1),
+        );
+        self.build_type(builder.init_type(), parameter.type_.as_ref())
     }
 
     fn build_value_constructor(

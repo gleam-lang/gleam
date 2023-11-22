@@ -538,11 +538,17 @@ fn infer_module_type_retention_test() {
                     vec![
                         TypeValueConstructor {
                             name: "Ok".into(),
-                            parameters: vec![generic_var(1)]
+                            parameters: vec![TypeValueConstructorParameter {
+                                type_: generic_var(1),
+                                generic_type_parameter_index: Some(0)
+                            }]
                         },
                         TypeValueConstructor {
                             name: "Error".into(),
-                            parameters: vec![generic_var(2)]
+                            parameters: vec![TypeValueConstructorParameter {
+                                type_: generic_var(2),
+                                generic_type_parameter_index: Some(1)
+                            }]
                         }
                     ]
                 ),
