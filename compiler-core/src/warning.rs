@@ -636,6 +636,41 @@ Run this command to add it to your dependencies:
                         }),
                     }
                 }
+
+                type_::Warning::InexhaustiveCaseExpression { location, missing } => {
+                    let mut text: String =
+                        "This case expression does not have a pattern for all possible values.
+If is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:\n"
+                            .into();
+                    for missing in missing {
+                        text.push_str("\n    ");
+                        text.push_str(&missing);
+                    }
+                    text.push_str(
+                        "
+
+In a future version of Gleam this will become a compile error.
+",
+                    );
+
+                    Diagnostic {
+                        title: "Inexhaustive Patterns".into(),
+                        text,
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
             },
         }
     }

@@ -408,6 +408,11 @@ pub enum Warning {
         location: SrcSpan,
         name: EcoString,
     },
+
+    InexhaustiveCaseExpression {
+        location: SrcSpan,
+        missing: Vec<EcoString>,
+    },
 }
 
 impl Error {
