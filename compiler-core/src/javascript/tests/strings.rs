@@ -83,18 +83,23 @@ fn string_prefix_utf16() {
 pub fn go(x) {
   case "Θ foo bar" {
     "Θ" <> rest -> rest
+    _ -> ""
   }
   case "🫥 is neutral dotted" {
     "🫥" <> rest -> rest
+    _ -> ""
   }
   case "🇺🇸 is a cluster" {
     "🇺🇸" <> rest -> rest
+    _ -> ""
   }
   case "\" is a an escaped quote" {
     "\"" <> rest -> rest
+    _ -> ""
   }
   case "\\ is a an escaped backslash" {
     "\\" <> rest -> rest
+    _ -> ""
   }
 }
 "#,

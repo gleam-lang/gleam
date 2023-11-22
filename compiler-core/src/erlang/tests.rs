@@ -192,7 +192,14 @@ pub fn tail(list) { case list { [x, ..xs] -> xs z -> list } }
 
 #[test]
 fn integration_test5() {
-    assert_erl!("pub fn tail(list) { case list { [x, ..] -> x } }");
+    assert_erl!(
+        "pub fn tail(list) {
+  case list {
+    [x, ..] -> x
+    _ -> 0
+  }
+}"
+    );
 }
 
 #[test]
@@ -581,6 +588,7 @@ fn inline_const_pattern_option() {
             case x {
               <<5:size(sixteen)>> -> <<5:size(sixteen)>>
               <<6:size(fifteen)>> -> <<5:size(fifteen)>>
+              _ -> <<>>
             }
           }
           

@@ -216,13 +216,13 @@ pub struct NonEmptyListDecision {
 #[derive(Debug)]
 pub struct Diagnostics {
     /// A flag indicating the match is missing one or more pattern.
-    missing: bool,
+    pub missing: bool,
 
     /// The right-hand sides that are reachable.
     ///
     /// If a right-hand side isn't in this list it means its pattern is
     /// redundant.
-    reachable: Vec<u16>,
+    pub reachable: Vec<u16>,
 }
 
 /// The result of compiling a pattern match expression.
