@@ -2359,7 +2359,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // dbg!(output);
 
         if output.diagnostics.missing {
-            panic!()
+            let missing = output.missing_patterns(self.environment);
+            panic!("missing patterns {:?}", missing);
         }
 
         Ok(())
