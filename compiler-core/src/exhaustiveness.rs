@@ -798,7 +798,9 @@ impl<'a> Compiler<'a> {
     ) -> Variable {
         let type_ = match parameter.generic_type_parameter_index {
             None => parameter.type_.clone(),
-            Some(i) => generic_named_type_parameter(type_, i).unwrap(),
+            Some(i) => {
+                generic_named_type_parameter(type_, i).expect("Generic type parameter index")
+            }
         };
         self.new_variable(type_)
     }
@@ -816,7 +818,7 @@ fn generic_named_type_parameter(t: &Type, i: usize) -> Option<Arc<Type>> {
         Type::Named { args, .. } => args.get(i).cloned(),
 
         Type::Var { type_, .. } => match &*type_.borrow() {
-            TypeVar::Link { type_ } => generic_named_type_parameter(&type_, i),
+            TypeVar::Link { type_ } => generic_named_type_parameter(type_, i),
             TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
         },
 
