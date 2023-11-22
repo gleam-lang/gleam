@@ -916,7 +916,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         // TODO: check exhaustive
-        self.check_case_exhaustiveness_new(&subject_types, &typed_clauses)?;
+        self.check_case_exhaustiveness_new(location, &subject_types, &typed_clauses)?;
 
         Ok(TypedExpr::Case {
             location,
@@ -2317,6 +2317,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     // TODO: hook it all up!!!
     fn check_case_exhaustiveness_new(
         &self,
+        location: SrcSpan,
         subject_types: &[Arc<Type>],
         clauses: &[Clause<TypedExpr, Arc<Type>, EcoString>],
     ) -> Result<(), Error> {
@@ -2355,12 +2356,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         compiler.set_pattern_arena(arena.into_inner());
         let output = compiler.compile(rows);
 
-        // TODO: use result
-        // dbg!(output);
-
         if output.diagnostics.missing {
-            let missing = output.missing_patterns(self.environment);
-            panic!("missing patterns {:?}", missing);
+            self.environment
+                .warnings
+                .emit(Warning::InexhaustiveCaseExpression {
+                    location,
+                    missing: output.missing_patterns(self.environment),
+                })
         }
 
         Ok(())
