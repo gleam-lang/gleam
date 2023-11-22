@@ -39,10 +39,9 @@ impl PublishCommand {
         // Ask for confirmation if the package name if `gleam_*`
         if config.name.starts_with("gleam_") && !config.name.starts_with("gleam_community_") {
             println!(
-                "You are about to publish a package named {}.
-
-The `gleam_` prefix is for packages maintained by the Gleam core team.",
-                config.name
+                "You are about to publish a package with a name that starts with
+the prefix `gleam_`, which is for packages maintained by the Gleam
+core team.",
             );
             let should_publish =
                 i_am_sure || cli::confirm("\nAre you sure you want to use this package name?")?;
