@@ -646,7 +646,7 @@ The missing patterns are:\n"
                             .into();
                     for missing in missing {
                         text.push_str("\n    ");
-                        text.push_str(&missing);
+                        text.push_str(missing);
                     }
                     text.push_str(
                         "
