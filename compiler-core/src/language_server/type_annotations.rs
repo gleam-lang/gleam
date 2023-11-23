@@ -33,11 +33,38 @@ impl TypeAnnotations {
     }
 
     pub fn from_function_definition(function: &TypedFunction, line_numbers: &LineNumbers) -> Self {
+        let mut type_parameters = im::HashMap::new();
+        if let Some(annotation) = &function.return_annotation {
+            if let crate::type_::Type::Var { type_ } = &*function.return_type {
+                if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
+                    let _ = type_parameters.insert(*id, annotation);
+                }
+            }
+        }
+        for argument in &function.arguments {
+            if let Some(annotation) = &argument.annotation {
+                if let crate::type_::Type::Var { type_ } = &*argument.type_ {
+                    if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
+                        let _ = type_parameters.insert(*id, annotation);
+                    }
+                }
+            }
+        }
+
         let mut annotations = vec![];
         if function.return_annotation.is_none() {
             let linecol = line_numbers.line_and_column_number(function.location.end);
             let position = Position::new(linecol.line - 1, linecol.column - 1);
-            let type_text = Printer::new().pretty_print(&function.return_type, 0);
+            let mut type_text = Printer::new().pretty_print(&function.return_type, 0);
+
+            if let crate::type_::Type::Var { type_ } = &*function.return_type {
+                if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
+                    if let Some(crate::ast::TypeAst::Var(type_var)) = type_parameters.get(id) {
+                        type_text = type_var.name.to_string();
+                    }
+                }
+            }
+
             let text = format!(" -> {type_text}");
             annotations.push((position, text))
         }
@@ -45,7 +72,16 @@ impl TypeAnnotations {
             if argument.annotation.is_none() {
                 let linecol = line_numbers.line_and_column_number(argument.location.end);
                 let position = Position::new(linecol.line - 1, linecol.column - 1);
-                let type_text = Printer::new().pretty_print(&argument.type_, 0);
+                let mut type_text = Printer::new().pretty_print(&argument.type_, 0);
+
+                if let crate::type_::Type::Var { type_ } = &*argument.type_ {
+                    if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
+                        if let Some(crate::ast::TypeAst::Var(type_var)) = type_parameters.get(id) {
+                            type_text = type_var.name.to_string();
+                        }
+                    }
+                }
+
                 let text = format!(": {type_text}");
                 annotations.push((position, text));
             }
