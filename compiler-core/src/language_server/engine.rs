@@ -23,7 +23,7 @@ use strum::IntoEnumIterator;
 
 use super::{
     code_action::CodeActionBuilder,
-    configuration::{InlayHintsConfig, VersionedConfig},
+    configuration::{InlayHintsConfig, SharedConfig},
     src_span_to_lsp_range,
     type_annotations::TypeAnnotations,
     DownloadDependencies, MakeLocker,
@@ -64,8 +64,9 @@ pub struct LanguageServerEngine<IO, Reporter> {
     /// Used to know if to show the "View on HexDocs" link
     /// when hovering on an imported value
     hex_deps: std::collections::HashSet<EcoString>,
-    /// Cached version of the user's settings. Updates automatically as the user makes changes.
-    pub(crate) user_config: VersionedConfig,
+    
+    /// Configuration the user has set in their editor.
+    pub(crate) user_config: SharedConfig,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -85,7 +86,7 @@ where
         progress_reporter: Reporter,
         io: FileSystemProxy<IO>,
         paths: ProjectPaths,
-        user_config: VersionedConfig,
+        user_config: SharedConfig,
     ) -> Result<Self> {
         let locker = io.inner().make_locker(&paths, config.target)?;
 
@@ -453,8 +454,9 @@ where
             let mut hints = vec![];
             let requested_range = line_numbers.src_span(params.range);
 
+            let config = this.user_config.read().expect("lock is poisoned");
             add_hints_for_definitions(
-                &this.user_config.inlay_hints,
+                &config.inlay_hints,
                 module.ast.definitions.iter().filter(|stmt| {
                     // Only consider definitions in the requested range
                     requested_range.overlaps(&stmt.location())
