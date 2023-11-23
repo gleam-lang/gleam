@@ -49,7 +49,7 @@ where
 
     fn cleanup(&self) {
         self.io
-            .delete(&self.paths_cache_path())
+            .delete_file(&self.paths_cache_path())
             .expect("deleting paths cache in cleanup");
     }
 
