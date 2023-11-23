@@ -371,3 +371,124 @@ fn add(lhs, rhs) {
         vec![],
     );
 }
+
+#[test]
+fn function_definition_with_single_type_parameter() {
+    let code = "
+fn identity(value: some_value) {
+    value
+}
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            function_definitions: true,
+            ..Default::default()
+        },
+        None,
+        vec![InlayHint {
+            position: Position::new(1, 30),
+            label: "-> some_value".to_owned().into(),
+            kind: Some(InlayHintKind::TYPE),
+            text_edits: Some(vec![TextEdit {
+                range: Range::new(Position::new(1, 30), Position::new(1, 30)),
+                new_text: " -> some_value".to_owned(),
+            }]),
+            tooltip: None,
+            padding_left: Some(true),
+            padding_right: None,
+            data: None,
+        }],
+    );
+}
+
+#[test]
+fn function_definition_with_type_parameter_within_function_body() {
+    let code = "
+fn identity(x) {
+    let y: value = x
+    y
+}
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            function_definitions: true,
+            ..Default::default()
+        },
+        None,
+        vec![
+            InlayHint {
+                position: Position::new(1, 14),
+                label: "-> value".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(1, 14), Position::new(1, 14)),
+                    new_text: " -> value".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: Some(true),
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(1, 13),
+                label: ": value".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(1, 13), Position::new(1, 13)),
+                    new_text: ": value".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+        ],
+    );
+}
+
+#[test]
+fn function_definition_with_partially_defined_type_parameter() {
+    let code = "
+fn equals(a: value, b) {
+    a == b
+}
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            function_definitions: true,
+            ..Default::default()
+        },
+        None,
+        vec![
+            InlayHint {
+                position: Position::new(1, 22),
+                label: "-> Bool".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(1, 22), Position::new(1, 22)),
+                    new_text: " -> Bool".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: Some(true),
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(1, 21),
+                label: ": value".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(1, 21), Position::new(1, 21)),
+                    new_text: ": value".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+        ],
+    );
+}
