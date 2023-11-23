@@ -6,7 +6,7 @@ mod inlay_hints;
 
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
     time::SystemTime,
 };
 
@@ -14,7 +14,7 @@ use hexpm::version::Version;
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-use super::configuration::{Configuration, VersionedConfig};
+use super::configuration::Configuration;
 use crate::{
     config::PackageConfig,
     io::{
@@ -296,7 +296,7 @@ fn setup_engine_with_config(
         io.clone(),
         FileSystemProxy::new(io.clone()),
         io.paths.clone(),
-        VersionedConfig::new(config),
+        Arc::new(RwLock::new(config)),
     )
     .unwrap()
 }

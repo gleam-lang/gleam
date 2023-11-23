@@ -29,7 +29,7 @@ use std::collections::HashMap;
 use camino::Utf8PathBuf;
 
 use super::{
-    configuration::{Configuration, VersionedConfig},
+    configuration::{Configuration, SharedConfig},
     progress::ConnectionProgressReporter,
 };
 use lsp_server::RequestId;
@@ -53,7 +53,7 @@ pub struct LanguageServer<'a, IO> {
     io: FileSystemProxy<IO>,
     next_request_id: i32,
     response_handlers: HashMap<RequestId, ResponseHandler>,
-    config: VersionedConfig,
+    config: SharedConfig,
 }
 
 impl<'a, IO> LanguageServer<'a, IO>
@@ -69,7 +69,8 @@ where
         let initialise_params = initialisation_handshake(connection);
         let reporter = ConnectionProgressReporter::new(connection, &initialise_params);
         let io = FileSystemProxy::new(io);
-        let router = Router::new(reporter, io.clone());
+        let config = SharedConfig::default();
+        let router = Router::new(reporter, io.clone(), config.clone());
         Ok(Self {
             connection: connection.into(),
             initialise_params,
@@ -78,7 +79,7 @@ where
             io,
             next_request_id: 1,
             response_handlers: Default::default(),
-            config: Default::default(),
+            config,
         })
     }
 
@@ -374,11 +375,8 @@ where
             &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
         ) -> engine::Response<T>,
     {
-        match self.router.project_for_path(&path, &self.config) {
+        match self.router.project_for_path(&path) {
             Ok(Some(project)) => {
-                if project.engine.user_config != self.config {
-                    project.engine.user_config = self.config.clone();
-                }
                 let engine::Response {
                     result,
                     warnings,
@@ -417,7 +415,7 @@ where
         let path = path(&params.text_document.uri);
         let mut new_text = String::new();
         let mut error_response = |error| {
-            let feedback = match self.router.project_for_path(&path, &self.config) {
+            let feedback = match self.router.project_for_path(&path) {
                 Ok(Some(project)) => project.feedback.error(error),
                 Ok(None) | Err(_) => self.outside_of_project_feedback.error(error),
             };
@@ -568,8 +566,9 @@ where
         };
 
         // We only requested one configuration item, so we only pick out one
-        if let Some(config) = configs.into_iter().next() {
-            self.config.update(config);
+        if let Some(new_config) = configs.into_iter().next() {
+            let mut config = self.config.write().expect("lock is poisoned");
+            *config = new_config;
         }
     }
 }

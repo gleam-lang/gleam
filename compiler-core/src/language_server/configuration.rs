@@ -1,33 +1,7 @@
 use serde::Deserialize;
+use std::sync::{Arc, RwLock};
 
-#[derive(Debug, Clone, Default)]
-pub struct VersionedConfig {
-    version: u32,
-    config: Configuration,
-}
-impl VersionedConfig {
-    #[cfg(test)]
-    pub fn new(config: Configuration) -> Self {
-        Self { version: 0, config }
-    }
-
-    pub fn update(&mut self, config: Configuration) {
-        self.version += 1;
-        self.config = config;
-    }
-}
-impl PartialEq for VersionedConfig {
-    fn eq(&self, other: &Self) -> bool {
-        self.version == other.version
-    }
-}
-impl std::ops::Deref for VersionedConfig {
-    type Target = Configuration;
-
-    fn deref(&self) -> &Self::Target {
-        &self.config
-    }
-}
+pub type SharedConfig = Arc<RwLock<Configuration>>;
 
 #[derive(Debug, Default, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
