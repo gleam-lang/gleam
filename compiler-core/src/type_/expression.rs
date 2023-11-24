@@ -905,18 +905,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             typed_clauses.push(typed_clause);
         }
 
-        if let Err(unmatched) =
-            self.check_case_exhaustiveness(subjects_count, &subject_types, &typed_clauses)
-        {
-            return Err(Error::NotExhaustivePatternMatch {
-                location,
-                unmatched,
-                kind: PatternMatchKind::Case,
-            });
-        }
-
-        // TODO: check exhaustive
-        self.check_case_exhaustiveness_new(location, &subject_types, &typed_clauses)?;
+        self.check_case_exhaustiveness(location, &subject_types, &typed_clauses)?;
 
         Ok(TypedExpr::Case {
             location,
@@ -2259,47 +2248,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn check_case_exhaustiveness(
-        &mut self,
-        subjects_count: usize,
-        subjects: &[Arc<Type>],
-        typed_clauses: &[Clause<TypedExpr, Arc<Type>, EcoString>],
-    ) -> Result<(), Vec<EcoString>> {
-        // Because exhaustiveness checking in presence of multiple subjects is similar
-        // to full exhaustiveness checking of tuples or other nested record patterns,
-        // and we currently only do only limited exhaustiveness checking of custom types
-        // at the top level of patterns, only consider case expressions with one subject.
-        if subjects_count != 1 {
-            return Ok(());
-        }
-        let subject_type = subjects
-            .get(0)
-            .expect("Asserted there's one case subject but found none");
-        let value_typ = collapse_links(subject_type.clone());
-
-        // Currently guards in exhaustiveness checking are assumed that they can fail,
-        // so we go through all clauses and pluck out only the patterns
-        // for clauses that don't have guards.
-        let mut patterns = Vec::new();
-        for clause in typed_clauses {
-            if let Clause { guard: None, .. } = clause {
-                // clause.pattern is a list of patterns for all subjects
-                if let Some(pattern) = clause.pattern.get(0) {
-                    patterns.push(pattern.clone());
-                }
-                // A clause can be built with alternative patterns as well, e.g. `Audio(_) | Text(_) ->`.
-                // We're interested in all patterns so we build a flattened list.
-                for alternative_pattern in &clause.alternative_patterns {
-                    // clause.alternative_pattern is a list of patterns for all subjects
-                    if let Some(pattern) = alternative_pattern.get(0) {
-                        patterns.push(pattern.clone());
-                    }
-                }
-            }
-        }
-        self.environment.check_exhaustiveness(patterns, value_typ)
-    }
-
     fn infer_block(
         &mut self,
         statements: Vec1<UntypedStatement>,
@@ -2314,8 +2262,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    // TODO: hook it all up!!!
-    fn check_case_exhaustiveness_new(
+    fn check_case_exhaustiveness(
         &self,
         location: SrcSpan,
         subject_types: &[Arc<Type>],
@@ -2360,7 +2307,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         compiler.set_pattern_arena(arena.into_inner());
         let output = compiler.compile(rows);
 
-        if output.diagnostics.missing {
+        if dbg!(output.diagnostics.missing) {
             self.environment
                 .warnings
                 .emit(Warning::InexhaustiveCaseExpression {

@@ -19,6 +19,7 @@ mod assignments;
 mod conditional_compilation;
 mod custom_types;
 mod errors;
+mod exhaustiveness;
 mod functions;
 mod guards;
 mod imports;
