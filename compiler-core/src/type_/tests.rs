@@ -177,6 +177,7 @@ macro_rules! assert_warnings_with_imports {
 macro_rules! assert_warning {
     ($src:expr) => {
         let output = $crate::type_::tests::get_printed_warnings($src, vec![]);
+        assert!(!output.is_empty());
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
@@ -185,6 +186,7 @@ macro_rules! assert_warning {
             $src,
             vec![$(($package, $name, $module_src)),*]
         );
+        assert!(!output.is_empty());
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 

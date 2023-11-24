@@ -640,6 +640,8 @@ pub fn main(x) {
   case x {
     Thing(a: True, ..) -> 1
     Thing(b: True, ..) -> 1
+    Thing(a: False, ..) -> 1
+    Thing(b: False, ..) -> 1
   }
 }
 "#
@@ -674,6 +676,75 @@ pub type Thing {
 pub fn main(x) {
   case x {
     Thing(a: False, ..) -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn discard_4() {
+    assert_warning!(
+        r#"
+pub type Thing {
+  Thing(a: Bool, b: Bool)
+}
+
+pub fn main(x) {
+  case x {
+    Thing(a: True, ..) -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn discard_5() {
+    assert_warning!(
+        r#"
+pub type Thing {
+  Thing(a: Bool, b: Bool)
+}
+
+pub fn main(x) {
+  case x {
+    Thing(a: False, ..) -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn discard_6() {
+    assert_warning!(
+        r#"
+pub type Thing {
+  Thing(a: Bool, b: Bool)
+}
+
+pub fn main(x) {
+  case x {
+    Thing(False, ..) -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn label_1() {
+    assert_warning!(
+        r#"
+pub type Thing {
+  Thing(a: Bool, b: Bool)
+}
+
+pub fn main(x) {
+  case x {
+    Thing(a: False, b: True) -> 1
+    Thing(b: False, a: True) -> 1
   }
 }
 "#
