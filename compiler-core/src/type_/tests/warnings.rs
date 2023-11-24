@@ -897,15 +897,15 @@ pub const x = some_module.x
 
 #[test]
 fn no_unused_warnings_for_broken_code() {
-    assert_no_warnings!(
-        r#"
+    let src = r#"
 pub fn main() {
   let x = 1
   1 + ""
   x
-}
-        "#
-    );
+}"#;
+    let warnings = VectorWarningEmitterIO::default();
+    _ = compile_module(src, Some(Arc::new(warnings.clone())), vec![]).unwrap_err();
+    assert!(warnings.take().is_empty());
 }
 
 #[test]
