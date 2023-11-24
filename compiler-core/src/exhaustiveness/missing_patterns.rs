@@ -70,7 +70,7 @@ impl Term {
                             .get(&variable.id)
                             .map(|&idx| {
                                 terms
-                                    .get(idx)
+                                    .get(dbg!(idx))
                                     .expect("Term must exist")
                                     .pattern_string(terms, mapping)
                             })
@@ -105,7 +105,7 @@ impl Term {
                         terms
                             .get(idx)
                             .expect("Term must exist")
-                            .list_pattern_string(terms, mapping)
+                            .pattern_string(terms, mapping)
                     })
                     .unwrap_or_else(|| "_".into());
                 let rest = mapping

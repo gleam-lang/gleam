@@ -2307,7 +2307,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         compiler.set_pattern_arena(arena.into_inner());
         let output = compiler.compile(rows);
 
-        if dbg!(output.diagnostics.missing) {
+        if output.diagnostics.missing {
             self.environment
                 .warnings
                 .emit(Warning::InexhaustiveCaseExpression {
