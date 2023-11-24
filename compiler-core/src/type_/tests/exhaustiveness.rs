@@ -277,7 +277,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn result_list() {
+fn list() {
     assert_no_warnings!(
         "
 pub fn main(x) {
@@ -291,7 +291,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn result_list_empty() {
+fn list_empty() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -304,7 +304,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn result_list_non_empty() {
+fn list_non_empty() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -317,7 +317,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn result_list_one() {
+fn list_one() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -330,7 +330,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn result_list_one_two() {
+fn list_one_two() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -344,7 +344,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn result_list_zero_one_two() {
+fn list_zero_one_two() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -359,7 +359,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn result_list_zero_one_two_any() {
+fn list_zero_one_two_any() {
     assert_no_warnings!(
         "
 pub fn main(x) {
@@ -375,7 +375,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn result_list_zero_two_any() {
+fn list_zero_two_any() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -386,6 +386,228 @@ pub fn main(x) {
   }
 }
 "
+    );
+}
+
+#[test]
+fn string() {
+    assert_no_warnings!(
+        r#"
+pub fn main(x) {
+  case x {
+    "" -> 1
+    "a" -> 1
+    "b" -> 1
+    _ -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn string_1() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    "" -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn string_2() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    "a" -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn string_3() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    "a" -> 1
+    "b" -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array() {
+    assert_no_warnings!(
+        r#"
+pub fn main(x) {
+  case x {
+    <<>> -> 1
+    <<1>> -> 1
+    <<2>> -> 1
+    _ -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array_1() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    <<>> -> 1
+    <<1>> -> 1
+    <<2>> -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn bit_array_2() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    <<>> -> 1
+    <<1>> -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn int() {
+    assert_no_warnings!(
+        r#"
+pub fn main(x) {
+  case x {
+    0 -> 1
+    1 -> 1
+    2 -> 1
+    _ -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn int_1() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    0 -> 1
+    1 -> 1
+    2 -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn int_2() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    0 -> 1
+    1 -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn float() {
+    assert_no_warnings!(
+        r#"
+pub fn main(x) {
+  case x {
+    0.0 -> 1
+    1.1 -> 1
+    2.2 -> 1
+    _ -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn float_1() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    0.0 -> 1
+    1.1 -> 1
+    2.2 -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn float_2() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    0.0 -> 1
+    1.1 -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn list_bool_1() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    [] -> 1
+    [True] -> 2
+    [_, _, ..] -> 2
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn list_bool_2() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    [] -> 1
+    [True] -> 2
+    [_, False] -> 2
+    [_, _, _, ..] -> 2
+  }
+}
+"#
     );
 }
 
