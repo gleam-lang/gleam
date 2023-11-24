@@ -611,8 +611,75 @@ pub fn main(x) {
     );
 }
 
-// TODO: labels
-// TODO: spread
+#[test]
+fn discard_all_fields() {
+    assert_no_warnings!(
+        r#"
+pub type Thing {
+  Thing(a: Bool, b: Bool)
+}
+
+pub fn main(x) {
+  case x {
+    Thing(..) -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn discard_1() {
+    assert_no_warnings!(
+        r#"
+pub type Thing {
+  Thing(a: Bool, b: Bool)
+}
+
+pub fn main(x) {
+  case x {
+    Thing(a: True, ..) -> 1
+    Thing(b: True, ..) -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn discard_2() {
+    assert_warning!(
+        r#"
+pub type Thing {
+  Thing(a: Bool, b: Bool)
+}
+
+pub fn main(x) {
+  case x {
+    Thing(a: True, ..) -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn discard_3() {
+    assert_warning!(
+        r#"
+pub type Thing {
+  Thing(a: Bool, b: Bool)
+}
+
+pub fn main(x) {
+  case x {
+    Thing(a: False, ..) -> 1
+  }
+}
+"#
+    );
+}
+
 // TODO: guards
 // TODO: custom types
 // TODO: redundant patterns

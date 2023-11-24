@@ -136,7 +136,7 @@ macro_rules! assert_with_module_error {
 
 fn get_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> Vec<Warning> {
     let warnings = VectorWarningEmitterIO::default();
-    _ = compile_module(src, Some(Arc::new(warnings.clone())), deps);
+    _ = compile_module(src, Some(Arc::new(warnings.clone())), deps).unwrap();
     warnings
         .take()
         .into_iter()

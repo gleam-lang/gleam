@@ -1151,11 +1151,8 @@ fn unused_alias_warning_test() {
 #[test]
 fn used_type_with_import_alias_no_warning_test() {
     assert_no_warnings!(
-        ("gleam", "foo", "pub type A"),
-        r#"
-            import foo as bar
-            pub fn fun(a: bar.A) { a }
-        "#
+        ("gleam", "gleam/foo", "pub const one = 1"),
+        "import gleam/foo as _bar"
     );
 }
 
