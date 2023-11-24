@@ -70,7 +70,7 @@ impl Term {
                             .get(&variable.id)
                             .map(|&idx| {
                                 terms
-                                    .get(dbg!(idx))
+                                    .get(idx)
                                     .expect("Term must exist")
                                     .pattern_string(terms, mapping)
                             })
