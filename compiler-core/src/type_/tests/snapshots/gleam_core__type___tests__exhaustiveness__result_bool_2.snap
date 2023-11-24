@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 182
+expression: "\npub fn main(x) {\n  case x {\n    Ok(True) -> 1\n    Error(True) -> 2\n    Error(False) -> 3\n  }\n}\n"
+---
+
+warning: Inexhaustive Patterns
+  ┌─ /src/warning/wrn.gleam:3:3
+  │  
+3 │ ╭   case x {
+4 │ │     Ok(True) -> 1
+5 │ │     Error(True) -> 2
+6 │ │     Error(False) -> 3
+7 │ │   }
+  │ ╰───^
+
+This case expression does not have a pattern for all possible values.
+If is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    Ok(False)
+
+In a future version of Gleam this will become a compile error.
+
+
