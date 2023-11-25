@@ -148,9 +148,6 @@ pub enum Document<'a> {
     /// Forces contained groups to break
     ForceBroken(Box<Self>),
 
-    /// May break contained document based on best fit, thus flex break
-    FlexBreak(Box<Self>),
-
     /// Ignore the next break
     NextBreakFits(Box<Self>, NextBreakFitsMode),
 
@@ -273,10 +270,6 @@ fn fits(
                 // normal string.
                 Mode::Unbroken | Mode::ForcedUnbroken => current_width += unbroken.len() as isize,
             },
-
-            // A `FlexBreak` doesn't change the way we determine if a document
-            // fits so we just go on checking its wrapped document.
-            Document::FlexBreak(doc) => docs.push_front((indent, mode, doc)),
 
             // The `NextBreakFits` can alter the current mode to `ForcedBroken`
             // or `ForcedUnbroken` based on its enabled flag.
@@ -405,7 +398,7 @@ fn format(
                 docs.push_front((indent + i, mode, doc));
             }
 
-            Document::Group(doc) | Document::FlexBreak(doc) => {
+            Document::Group(doc) => {
                 let group_docs = im::vector![(indent, Mode::Unbroken, doc.as_ref())];
                 if fits(limit, width, group_docs) {
                     docs.push_front((indent, Mode::Unbroken, doc));
@@ -505,9 +498,7 @@ impl<'a> Document<'a> {
             Str(s) => s.is_empty(),
             // assuming `broken` and `unbroken` are equivalent
             Break { broken, .. } => broken.is_empty(),
-            ForceBroken(d) | FlexBreak(d) | Nest(_, d) | Group(d) | NextBreakFits(d, _) => {
-                d.is_empty()
-            }
+            ForceBroken(d) | Nest(_, d) | Group(d) | NextBreakFits(d, _) => d.is_empty(),
             Vec(docs) => docs.iter().all(|d| d.is_empty()),
         }
     }
