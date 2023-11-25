@@ -202,63 +202,109 @@ pub enum NextBreakFitsMode {
     Disabled,
 }
 
-impl Mode {
-    fn is_forced(&self) -> bool {
-        matches!(self, Mode::ForcedBroken)
-    }
-}
-
 fn fits(
     limit: isize,
     mut current_width: isize,
     mut docs: im::Vector<(isize, Mode, &Document<'_>)>,
 ) -> bool {
     loop {
+        // If we've exceeded the maximum width allowed for a line it means that
+        // the document won't fit on a single line, we can break the loop.
         if current_width > limit {
             return false;
         };
 
+        // We start by checking the first document of the queue. If there's no
+        // documents then we can safely say that it fits (if reached this point
+        // it means that the limit wasn't exceeded).
         let (indent, mode, document) = match docs.pop_front() {
             Some(x) => x,
             None => return true,
         };
 
         match document {
-            Document::ForceBroken(doc) => match mode {
-                Mode::Broken | Mode::Unbroken | Mode::ForcedUnbroken => return false,
-                Mode::ForcedBroken => docs.push_front((indent, mode, doc)),
-            },
+            // If a document is marked as `ForceBroken` we can immediately say
+            // that is doesn't fit, so that every break is going to be
+            // forcefully broken.
+            Document::ForceBroken(_) => return false,
 
+            // When we run into a line we know that the document has a bit that
+            // fits in the current line; if it didn't fit (that is, it exceeded
+            // the maximum allowed width) the loop would have been broken by one
+            // of the earlier checks.
             Document::Line(_) => return true,
 
+            // If the nesting level is increased we go on checking the wrapped
+            // document and increase its indentation level.
             Document::Nest(i, doc) => docs.push_front((i + indent, mode, doc)),
 
-            Document::Group(doc) if mode.is_forced() => docs.push_front((indent, mode, doc)),
-            Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, doc)),
-            // ^-- Here the original algorithm does a strange thing with {:tail} that I do not
-            //     really get but I'm guessing is important
+            // As a general rule, a group fits if it can stay on a single line
+            // without its breaks being broken down.
+            Document::Group(doc) => match mode {
+                // If an outer group was broken, we still try to fit the inner
+                // group on a single line, that's why for the inner document
+                // we change the mode back to `Unbroken`.
+                Mode::Broken => docs.push_front((indent, Mode::Unbroken, doc)),
+                // Any other mode is preserved as is: if the mode is forced it
+                // has to be left unchanged, and if the mode is already unbroken
+                // there's no need to change it.
+                _ => docs.push_front((indent, mode, doc)),
+            },
+
+            // When we run into a string we increase the current_width; looping
+            // back we will check if we've exceeded the maximum allowed width.
             Document::Str(s) => current_width += s.len() as isize,
             Document::String(s) => current_width += s.len() as isize,
             Document::EcoString(s) => current_width += s.len() as isize,
 
+            // If we get to a break we need to first see if it has to be
+            // rendered as its unbroken or broken string, depending on the mode.
             Document::Break { unbroken, .. } => match mode {
+                // [tag:break-fit] If the break has to be broken we're done!
+                // We haven't exceeded the maximum length (otherwise the loop
+                // iteration would have stopped with one of the earlier checks),
+                // and - since it needs to be broken - we'll have to go on a new
+                // line anyway.
+                // This means that the document inspected so far will fit on a
+                // single line, thus we return true.
                 Mode::Broken | Mode::ForcedBroken => return true,
+                // If the break is not broken then it will be rendered inline as
+                // its unbroken string, so we treat it exactly as if it were a
+                // normal string.
                 Mode::Unbroken | Mode::ForcedUnbroken => current_width += unbroken.len() as isize,
             },
 
+            // A `FlexBreak` doesn't change the way we determine if a document
+            // fits so we just go on checking its wrapped document.
             Document::FlexBreak(doc) => docs.push_front((indent, mode, doc)),
 
+            // The `NextBreakFits` can alter the current mode to `ForcedBroken`
+            // or `ForcedUnbroken` based on its enabled flag.
             Document::NextBreakFits(doc, enabled) => match enabled {
+                // [tag:disable-next-break] If it is disabled then we check the
+                // wrapped document changing the mode to `ForcedUnbroken`.
                 NextBreakFitsMode::Disabled => docs.push_front((indent, Mode::ForcedUnbroken, doc)),
                 NextBreakFitsMode::Enabled => match mode {
+                    // If we're in `ForcedUnbroken` mode it means that the check
+                    // was disabled by a document wrapping this one
+                    // [ref:disable-next-break]; that's why we do nothing and
+                    // check the wrapped document as if it were a normal one.
                     Mode::ForcedUnbroken => docs.push_front((indent, mode, doc)),
-                    Mode::Broken | Mode::Unbroken | Mode::ForcedBroken => {
-                        docs.push_front((indent, Mode::ForcedBroken, doc))
-                    }
+                    // Any other mode is turned into `ForcedBroken` so that,
+                    // when we run into a break the response to the question
+                    // "does the document fit?" will be yes [ref:break-fit].
+                    // This is why this is called `NextBreakFit` I think.
+                    _ => docs.push_front((indent, Mode::ForcedBroken, doc)),
                 },
             },
 
+            // If there's a sequence of documents we will check each one, one
+            // after the other to see if - as a whole - they can fit on a single
+            // line.
             Document::Vec(vec) => {
+                // The array needs to be reversed to preserve the order of the
+                // documents since each one is pushed _to the front_ of the
+                // queue of documents to check.
                 for doc in vec.iter().rev() {
                     docs.push_front((indent, mode, doc));
                 }
