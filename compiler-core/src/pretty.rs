@@ -179,20 +179,25 @@ pub enum Document<'a> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Mode {
+    /// The mode used when a group doesn't fit on a single line: when `Broken`
+    /// the `Break`s inside it will be rendered as newlines, splitting the
+    /// group.
     Broken,
+
+    /// The default mode used when a group can fit on a single line: all its
+    /// `Break`s will be rendered as their unbroken string and kept on a single
+    /// line.
     Unbroken,
 
-    //
-    // These are used for the Fits variant, taken from Elixir's
-    // Inspect.Algebra's `fits` extension.
-    //
-    /// Broken and forced to remain broken
+    /// This mode is used by the `NextBreakFit` document to force a break to be
+    /// considered as broken.
     ForcedBroken,
 
-    /// Not broken and forced to remain flat
+    /// This mode is used to disable a `NextBreakFit` document.
     ForcedUnbroken,
 }
 
+/// A flag that can be used to enable or disable a `NextBreakFit` document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NextBreakFitsMode {
     Enabled,
@@ -318,8 +323,22 @@ fn format(
     mut width: isize,
     mut docs: im::Vector<(isize, Mode, &Document<'_>)>,
 ) -> Result<()> {
+    // As long as there's documents to print we'll take each one by one and
+    // output the corresponding string to the given writer.
+    //
+    // Each document in the `docs` queue also has an accompanying indentation
+    // and mode:
+    // - the indentation is used to keep track of the current indentation,
+    //    you might notice in [ref:format-nest] that it adds documents to the
+    //    queue increasing their current indentation.
+    // - the mode is used to keep track of the state of the documents inside a
+    //   group. For example, if a group doesn't fit on a single line its
+    //   documents will be split on multiple lines and the mode set to `Broken`
+    //   to keep track of this.
     while let Some((indent, mode, document)) = docs.pop_front() {
         match document {
+            // When we run into a line we print the given number of newlines and
+            // add the indentation required by the given document.
             Document::Line(i) => {
                 for _ in 0..*i {
                     writer.str_write("\n")?;
@@ -330,14 +349,20 @@ fn format(
                 width = indent;
             }
 
-            // Flex breaks are NOT conditional to the mode
+            // Flex breaks are NOT conditional to the mode: if the mode is
+            // already `Unbroken`, then the break is left unbroken (like strict
+            // breaks); any other mode is ignored.
+            // A flexible break will only be split if the following documents
+            // can't fit on the same line; otherwise it is just displayed as an
+            // unbroken `Break`.
             Document::Break {
                 broken,
                 unbroken,
                 kind: BreakKind::Flex,
             } => {
                 let unbroken_width = width + unbroken.len() as isize;
-
+                // Every time we need to check again if the remaining piece can
+                // fit. If it does, the flexible break is not broken.
                 if mode == Mode::Unbroken || fits(limit, unbroken_width, docs.clone()) {
                     writer.str_write(unbroken)?;
                     width = unbroken_width;
@@ -351,28 +376,40 @@ fn format(
                 }
             }
 
-            // Strict breaks are conditional to the mode
+            // Strict breaks are conditional to the mode. They differ from
+            // flexible break because, if a group gets split - that is the mode
+            // is `Broken` or `ForceBroken` - ALL of the break in that group
+            // will be split. You can notice the difference with flexible breaks
+            // because here we only check the mode and then take action; before
+            // we would try and see if the remaining documents fit on a single
+            // line before deciding if the (flexible) break can be split or not.
             Document::Break {
                 broken,
                 unbroken,
                 kind: BreakKind::Strict,
-            } => {
-                width = match mode {
-                    Mode::Broken | Mode::ForcedBroken => {
-                        writer.str_write(broken)?;
-                        writer.str_write("\n")?;
-                        for _ in 0..indent {
-                            writer.str_write(" ")?;
-                        }
-                        indent
+            } => match mode {
+                // If the mode requires the break to be broken, then its broken
+                // string is printed, then we start a newline and add indent it
+                // according to the current indentation level.
+                Mode::Broken | Mode::ForcedBroken => {
+                    writer.str_write(broken)?;
+                    writer.str_write("\n")?;
+                    for _ in 0..indent {
+                        writer.str_write(" ")?;
                     }
-                    Mode::Unbroken | Mode::ForcedUnbroken => {
-                        writer.str_write(unbroken)?;
-                        width + unbroken.len() as isize
-                    }
-                };
-            }
+                    width = indent;
+                }
+                // If the mode doesn't require the break to be broken, then its
+                // unbroken string is printed as if it were a normal string;
+                // also updating the width of the current line.
+                Mode::Unbroken | Mode::ForcedUnbroken => {
+                    writer.str_write(unbroken)?;
+                    width = width + unbroken.len() as isize
+                }
+            },
 
+            // Strings are printed as they are and the current width is
+            // increased accordingly.
             Document::String(s) => {
                 width += s.len() as isize;
                 writer.str_write(s)?;
@@ -388,25 +425,48 @@ fn format(
                 writer.str_write(s)?;
             }
 
+            // If multiple documents need to be printed, then they are all
+            // pushed to the front of the queue and will be printed one by one.
             Document::Vec(vec) => {
+                // Just like `fits`, the elements will be pushed _on the front_
+                // of the queue. In order to keep their original order they need
+                // to be pushed in reverse order.
                 for doc in vec.iter().rev() {
                     docs.push_front((indent, mode, doc));
                 }
             }
 
+            // A `Nest` document doesn't result in anything being printed, its
+            // only effect is to increase the current nesting level for the
+            // wrapped document. [tag:format-nest]
             Document::Nest(i, doc) => {
                 docs.push_front((indent + i, mode, doc));
             }
 
             Document::Group(doc) => {
+                // When we see a group we first try and see if it can fit on a
+                // single line without breaking any break; that is why we use
+                // the `Unborken` mode here: we want to try fit everything on a
+                // single line.
                 let group_docs = im::vector![(indent, Mode::Unbroken, doc.as_ref())];
                 if fits(limit, width, group_docs) {
+                    // If everything can stay on a single line we print the
+                    // wrapped document with the `Unbroken` mode, leaving all
+                    // the group's break as unbroken.
                     docs.push_front((indent, Mode::Unbroken, doc));
                 } else {
+                    // Otherwise, we need to break the group. We print the
+                    // wrapped document changing its mode to `Broken` so that
+                    // all its breaks will be split on newlines.
                     docs.push_front((indent, Mode::Broken, doc));
                 }
             }
 
+            // `ForceBroken` and `NextBreakFits` only change the way the `fit`
+            // function works but do not actually change the formatting of a
+            // document by themselves. That's why when we run into those we
+            // just go on printing the wrapped document without altering the
+            // current mode.
             Document::ForceBroken(document) | Document::NextBreakFits(document, _) => {
                 docs.push_front((indent, mode, document));
             }
