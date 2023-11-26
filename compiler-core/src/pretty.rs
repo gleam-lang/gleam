@@ -209,9 +209,25 @@ fn fits(
     mut current_width: isize,
     mut docs: im::Vector<(isize, Mode, &Document<'_>)>,
 ) -> bool {
+    // The `fits` function is going to take each document from the `docs` queue
+    // and check if those can fit on a single line. In order to do so documents
+    // are going to be pushed in front of this queue and have to be accompanied
+    // by additional information:
+    // - the document indentation, that can be increased by the `Nest` block.
+    // - the current mode; this is needed to know if a group is being broken or
+    //   not and treat `Break`s differently as a consequence. You can see how
+    //   the behaviour changes in [ref:break-fit].
+    //
+    // The loop might be broken earlier without checking all documents under one
+    // of two conditions:
+    // - the documents exceed the line `limit` and surely won't fit
+    //   [ref:document-unfit].
+    // - the documents are sure to fit the line - for example if we meet a
+    //   broken `Break` [ref:break-fit] or a newline [ref:newline-fit].
     loop {
-        // If we've exceeded the maximum width allowed for a line it means that
-        // the document won't fit on a single line, we can break the loop.
+        // [tag:document-unfit] If we've exceeded the maximum width allowed for
+        // a line it means that the document won't fit on a single line, we can
+        // break the loop.
         if current_width > limit {
             return false;
         };
@@ -230,10 +246,10 @@ fn fits(
             // forcefully broken.
             Document::ForceBroken(_) => return false,
 
-            // When we run into a line we know that the document has a bit that
-            // fits in the current line; if it didn't fit (that is, it exceeded
-            // the maximum allowed width) the loop would have been broken by one
-            // of the earlier checks.
+            // [tag:newline-fit] When we run into a line we know that the
+            // document has a bit that fits in the current line; if it didn't
+            // fit (that is, it exceeded the maximum allowed width) the loop
+            // would have been broken by one of the earlier checks.
             Document::Line(_) => return true,
 
             // If the nesting level is increased we go on checking the wrapped
