@@ -222,11 +222,11 @@ fn fits(
     // of two conditions:
     // - the documents exceed the line `limit` and surely won't fit
     //   [ref:document-unfit].
-    // - the documents are sure to fit the line - for example if we meet a
+    // - the documents are sure to fit the line - for example, if we meet a
     //   broken `Break` [ref:break-fit] or a newline [ref:newline-fit].
     loop {
         // [tag:document-unfit] If we've exceeded the maximum width allowed for
-        // a line it means that the document won't fit on a single line, we can
+        // a line, it means that the document won't fit on a single line, we can
         // break the loop.
         if current_width > limit {
             return false;
@@ -242,7 +242,7 @@ fn fits(
 
         match document {
             // If a document is marked as `ForceBroken` we can immediately say
-            // that is doesn't fit, so that every break is going to be
+            // that it doesn't fit, so that every break is going to be
             // forcefully broken.
             Document::ForceBroken(_) => return false,
 
@@ -263,7 +263,7 @@ fn fits(
                 // group on a single line, that's why for the inner document
                 // we change the mode back to `Unbroken`.
                 Mode::Broken => docs.push_front((indent, Mode::Unbroken, doc)),
-                // Any other mode is preserved as is: if the mode is forced it
+                // Any other mode is preserved as-is: if the mode is forced it
                 // has to be left unchanged, and if the mode is already unbroken
                 // there's no need to change it.
                 _ => docs.push_front((indent, mode, doc)),
@@ -304,9 +304,9 @@ fn fits(
                     // [ref:disable-next-break]; that's why we do nothing and
                     // check the wrapped document as if it were a normal one.
                     Mode::ForcedUnbroken => docs.push_front((indent, mode, doc)),
-                    // Any other mode is turned into `ForcedBroken` so that,
-                    // when we run into a break the response to the question
-                    // "does the document fit?" will be yes [ref:break-fit].
+                    // Any other mode is turned into `ForcedBroken` so that
+                    // when we run into a break, the response to the question
+                    // "Does the document fit?" will be yes [ref:break-fit].
                     // This is why this is called `NextBreakFit` I think.
                     _ => docs.push_front((indent, Mode::ForcedBroken, doc)),
                 },
@@ -339,18 +339,18 @@ fn format(
     mut width: isize,
     mut docs: im::Vector<(isize, Mode, &Document<'_>)>,
 ) -> Result<()> {
-    // As long as there's documents to print we'll take each one by one and
+    // As long as there are documents to print we'll take each one by one and
     // output the corresponding string to the given writer.
     //
     // Each document in the `docs` queue also has an accompanying indentation
     // and mode:
     // - the indentation is used to keep track of the current indentation,
-    //    you might notice in [ref:format-nest] that it adds documents to the
-    //    queue increasing their current indentation.
+    //   you might notice in [ref:format-nest] that it adds documents to the
+    //   queue increasing their current indentation.
     // - the mode is used to keep track of the state of the documents inside a
     //   group. For example, if a group doesn't fit on a single line its
-    //   documents will be split on multiple lines and the mode set to `Broken`
-    //   to keep track of this.
+    //   documents will be split into multiple lines and the mode set to
+    //   `Broken` to keep track of this.
     while let Some((indent, mode, document)) = docs.pop_front() {
         match document {
             // When we run into a line we print the given number of newlines and
@@ -369,7 +369,7 @@ fn format(
             // already `Unbroken`, then the break is left unbroken (like strict
             // breaks); any other mode is ignored.
             // A flexible break will only be split if the following documents
-            // can't fit on the same line; otherwise it is just displayed as an
+            // can't fit on the same line; otherwise, it is just displayed as an
             // unbroken `Break`.
             Document::Break {
                 broken,
@@ -394,7 +394,7 @@ fn format(
 
             // Strict breaks are conditional to the mode. They differ from
             // flexible break because, if a group gets split - that is the mode
-            // is `Broken` or `ForceBroken` - ALL of the break in that group
+            // is `Broken` or `ForceBroken` - ALL of the breaks in that group
             // will be split. You can notice the difference with flexible breaks
             // because here we only check the mode and then take action; before
             // we would try and see if the remaining documents fit on a single
@@ -405,7 +405,7 @@ fn format(
                 kind: BreakKind::Strict,
             } => match mode {
                 // If the mode requires the break to be broken, then its broken
-                // string is printed, then we start a newline and add indent it
+                // string is printed, then we start a newline and indent it
                 // according to the current indentation level.
                 Mode::Broken | Mode::ForcedBroken => {
                     writer.str_write(broken)?;
@@ -462,8 +462,8 @@ fn format(
             Document::Group(doc) => {
                 // When we see a group we first try and see if it can fit on a
                 // single line without breaking any break; that is why we use
-                // the `Unborken` mode here: we want to try fit everything on a
-                // single line.
+                // the `Unbroken` mode here: we want to try to fit everything on
+                // a single line.
                 let group_docs = im::vector![(indent, Mode::Unbroken, doc.as_ref())];
                 if fits(limit, width, group_docs) {
                     // If everything can stay on a single line we print the
