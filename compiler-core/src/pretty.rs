@@ -145,7 +145,9 @@ pub enum Document<'a> {
     /// A mandatory linebreak
     Line(usize),
 
-    /// Forces contained groups to break
+    /// Forces the breaks of the wrapped document to be considered as not
+    /// fitting on a single line. Used in combination with a `Group` it can be
+    /// used to force its `Break`s to always break.
     ForceBroken(Box<Self>),
 
     /// Ignore the next break
