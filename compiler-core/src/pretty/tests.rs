@@ -87,14 +87,14 @@ fn fits_test() {
     assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
 
     // Nest fits if combined smaller than limit
-    let doc = Nest(1, Box::new(String("12".into())));
+    let doc = Nest(1, NestCondition::Always, Box::new(String("12".into())));
     assert!(fits(2, 0, vector![(0, Broken, &doc)]));
     assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
     assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
     assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
 
     // Nest fits if combined smaller than limit
-    let doc = Nest(0, Box::new(String("12".into())));
+    let doc = Nest(0, NestCondition::Always, Box::new(String("12".into())));
     assert!(fits(2, 0, vector![(0, Broken, &doc)]));
     assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
     assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
@@ -127,6 +127,7 @@ fn format_test() {
 
     let doc = Nest(
         2,
+        NestCondition::Always,
         Box::new(String("1".into()).append(Line(1).append(String("2".into())))),
     );
     assert_eq!("1\n  2", doc.to_pretty_string(1));

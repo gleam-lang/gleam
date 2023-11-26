@@ -163,8 +163,9 @@ pub enum Document<'a> {
     /// Join multiple documents together
     Vec(Vec<Self>),
 
-    /// Nests the given document by the given indent
-    Nest(isize, Box<Self>),
+    /// Nests the given document by the given indent, depending on the specified
+    /// condition
+    Nest(isize, NestCondition, Box<Self>),
 
     /// Nests the given document to the current cursor position
     Group(Box<Self>),
@@ -204,6 +205,17 @@ enum Mode {
 pub enum NextBreakFitsMode {
     Enabled,
     Disabled,
+}
+
+/// A flag that can be used to conditionally disable a `Nest` document.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NestCondition {
+    /// This always applies the nesting. This is a sensible default that will
+    /// work for most of the cases.
+    Always,
+    /// Only applies the nesting if the wrapping `Group` couldn't fit on a
+    /// single line and has been broken.
+    IfBroken,
 }
 
 fn fits(
@@ -261,8 +273,12 @@ fn fits(
             Document::Line(_) => return true,
 
             // If the nesting level is increased we go on checking the wrapped
-            // document and increase its indentation level.
-            Document::Nest(i, doc) => docs.push_front((i + indent, mode, doc)),
+            // document and increase its indentation level based on the nesting
+            // condition.
+            Document::Nest(i, condition, doc) => match condition {
+                NestCondition::Always => docs.push_front((i + indent, mode, doc)),
+                NestCondition::IfBroken => docs.push_front((indent, mode, doc)),
+            },
 
             // As a general rule, a group fits if it can stay on a single line
             // without its breaks being broken down.
@@ -463,10 +479,19 @@ fn format(
 
             // A `Nest` document doesn't result in anything being printed, its
             // only effect is to increase the current nesting level for the
-            // wrapped document. [tag:format-nest]
-            Document::Nest(i, doc) => {
-                docs.push_front((indent + i, mode, doc));
-            }
+            // wrapped document [tag:format-nest].
+            Document::Nest(i, condition, doc) => match (condition, mode) {
+                // The nesting is only applied under two conditions:
+                // - either the nesting condition is `Always`.
+                // - or the condition is `IfBroken` and the group was actually
+                //   broken (that is, the current mode is `Broken`).
+                (NestCondition::Always, _) | (NestCondition::IfBroken, Mode::Broken) => {
+                    docs.push_front((indent + i, mode, doc))
+                }
+                // If none of the above conditions is met, then the nesting is
+                // not applied.
+                _ => docs.push_front((indent, mode, doc)),
+            },
 
             Document::Group(doc) => {
                 // When we see a group we first try and see if it can fit on a
@@ -534,7 +559,11 @@ impl<'a> Document<'a> {
     }
 
     pub fn nest(self, indent: isize) -> Self {
-        Self::Nest(indent, Box::new(self))
+        Self::Nest(indent, NestCondition::Always, Box::new(self))
+    }
+
+    pub fn nest_if_broken(self, indent: isize) -> Self {
+        Self::Nest(indent, NestCondition::IfBroken, Box::new(self))
     }
 
     pub fn force_break(self) -> Self {
@@ -583,7 +612,7 @@ impl<'a> Document<'a> {
             Str(s) => s.is_empty(),
             // assuming `broken` and `unbroken` are equivalent
             Break { broken, .. } => broken.is_empty(),
-            ForceBroken(d) | Nest(_, d) | Group(d) | NextBreakFits(d, _) => d.is_empty(),
+            ForceBroken(d) | Nest(_, _, d) | Group(d) | NextBreakFits(d, _) => d.is_empty(),
             Vec(docs) => docs.iter().all(|d| d.is_empty()),
         }
     }
