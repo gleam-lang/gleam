@@ -422,7 +422,7 @@ fn format(
                 // also updating the width of the current line.
                 Mode::Unbroken | Mode::ForcedUnbroken => {
                     writer.str_write(unbroken)?;
-                    width = width + unbroken.len() as isize
+                    width += unbroken.len() as isize
                 }
             },
 
