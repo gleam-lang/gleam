@@ -184,6 +184,65 @@ fn forcing_test() {
 }
 
 #[test]
+fn nest_if_broken_test() {
+    assert_eq!(
+        "hello\n  world",
+        concat(["hello".to_doc(), break_("", " "), "world".to_doc()])
+            .nest_if_broken(2)
+            .group()
+            .to_pretty_string(10)
+    );
+
+    let list_doc = concat([
+        concat([
+            break_("[", "["),
+            "a,".to_doc(),
+            break_("", " "),
+            "b".to_doc(),
+        ])
+        .nest(2),
+        break_(",", ""),
+        "]".to_doc(),
+    ])
+    .group();
+
+    let args_doc = concat([
+        break_("", ""),
+        "one".to_doc(),
+        ",".to_doc(),
+        break_("", " "),
+        list_doc.group().next_break_fits(NextBreakFitsMode::Enabled),
+    ])
+    .nest_if_broken(2)
+    .group();
+
+    let function_call_doc = concat([
+        "some_function_call(".to_doc(),
+        args_doc,
+        break_("", ""),
+        ")".to_doc(),
+    ])
+    .group();
+
+    assert_eq!(
+        "some_function_call(\n  one,\n  [\n    a,\n    b,\n  ]\n)",
+        function_call_doc.clone().to_pretty_string(2)
+    );
+    assert_eq!(
+        "some_function_call(\n  one,\n  [a, b]\n)",
+        function_call_doc.clone().to_pretty_string(20)
+    );
+    assert_eq!(
+        "some_function_call(one, [\n  a,\n  b,\n])",
+        function_call_doc.clone().to_pretty_string(25)
+    );
+    assert_eq!(
+        "some_function_call(one, [a, b])",
+        function_call_doc.clone().to_pretty_string(80)
+    );
+}
+
+#[test]
 fn let_left_side_fits_test() {
     let elems = break_("", "").append("1").nest(2).append(break_("", ""));
     let list = "[".to_doc().append(elems).append("]").group();
