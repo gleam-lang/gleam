@@ -147,6 +147,42 @@ fn format_test() {
 }
 
 #[test]
+fn forcing_test() {
+    let docs = join(
+        [
+            "hello".to_doc(),
+            "a".to_doc(),
+            "b".to_doc(),
+            "c".to_doc(),
+            "d".to_doc(),
+        ],
+        break_("", " "),
+    );
+
+    assert_eq!(
+        "hello\na\nb\nc\nd",
+        docs.clone().force_break().group().to_pretty_string(80)
+    );
+    assert_eq!(
+        "hello a b c d",
+        docs.clone()
+            .force_break()
+            .next_break_fits(NextBreakFitsMode::Enabled)
+            .group()
+            .to_pretty_string(80)
+    );
+    assert_eq!(
+        "hello\na\nb\nc\nd",
+        docs.clone()
+            .force_break()
+            .next_break_fits(NextBreakFitsMode::Enabled)
+            .next_break_fits(NextBreakFitsMode::Disabled)
+            .group()
+            .to_pretty_string(80)
+    );
+}
+
+#[test]
 fn let_left_side_fits_test() {
     let elems = break_("", "").append("1").nest(2).append(break_("", ""));
     let list = "[".to_doc().append(elems).append("]").group();

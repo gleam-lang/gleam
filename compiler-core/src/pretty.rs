@@ -246,7 +246,13 @@ fn fits(
             // If a document is marked as `ForceBroken` we can immediately say
             // that it doesn't fit, so that every break is going to be
             // forcefully broken.
-            Document::ForceBroken(_) => return false,
+            Document::ForceBroken(doc) => match mode {
+                // If the mode is `ForcedBroken` it means that we have to ignore
+                // this break [ref:forced-broken], so we go check the inner
+                // document ignoring the effects of this one.
+                Mode::ForcedBroken => docs.push_front((indent, mode, doc)),
+                _ => return false,
+            },
 
             // [tag:newline-fit] When we run into a line we know that the
             // document has a bit that fits in the current line; if it didn't
@@ -306,9 +312,10 @@ fn fits(
                     // [ref:disable-next-break]; that's why we do nothing and
                     // check the wrapped document as if it were a normal one.
                     Mode::ForcedUnbroken => docs.push_front((indent, mode, doc)),
-                    // Any other mode is turned into `ForcedBroken` so that
-                    // when we run into a break, the response to the question
-                    // "Does the document fit?" will be yes [ref:break-fit].
+                    // [tag:forced-broken] Any other mode is turned into
+                    // `ForcedBroken` so that when we run into a break, the
+                    // response to the question "Does the document fit?" will be
+                    // yes [ref:break-fit].
                     // This is why this is called `NextBreakFit` I think.
                     _ => docs.push_front((indent, Mode::ForcedBroken, doc)),
                 },
