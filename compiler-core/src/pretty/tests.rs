@@ -131,11 +131,11 @@ fn format_test() {
     );
     assert_eq!("1\n  2", doc.to_pretty_string(1));
 
-    let doc = ForceBroken(Box::new(Break {
+    let doc = Group(Box::new(ForceBroken(Box::new(Break {
         broken: "broken",
         unbroken: "unbroken",
         kind: BreakKind::Strict,
-    }));
+    }))));
     assert_eq!("broken\n".to_string(), doc.to_pretty_string(100));
 
     let doc = ForceBroken(Box::new(Break {
