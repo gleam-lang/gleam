@@ -525,13 +525,10 @@ fn expr_call() {
 
     assert_format!(
         "fn main() {
-  Ok(
-    1,
-    {
-      1
-      2
-    },
-  )
+  Ok(1, {
+    1
+    2
+  })
 }
 "
     );
@@ -4501,7 +4498,9 @@ fn no_newline_before_comments() {
 fn list_at_end_of_long_expr_line() {
     assert_format!(
         "pub fn example() {
-  Ok(RecordConstructorWithALongName(a_field: RecordConstructorWithALongName(a_field: Record(a_field: []))))
+  Ok(RecordConstructorWithALongName(a_field: RecordConstructorWithALongName(
+    a_field: Record(a_field: []),
+  )))
 }
 "
     );
