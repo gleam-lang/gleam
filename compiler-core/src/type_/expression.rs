@@ -851,16 +851,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
         if kind.performs_exhaustiveness_check() {
-            if let Err(unmatched) = self
-                .environment
-                .check_exhaustiveness(vec![pattern.clone()], collapse_links(value_typ))
-            {
-                return Err(Error::NotExhaustivePatternMatch {
-                    location,
-                    unmatched,
-                    kind: PatternMatchKind::Assignment,
-                });
-            }
+            self.check_let_exhaustiveness(location, value.type_(), &pattern)?;
         }
 
         Ok(Assignment {
@@ -2258,6 +2249,45 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
             })
         })
+    }
+
+    fn check_let_exhaustiveness(
+        &self,
+        location: SrcSpan,
+        subject: Arc<Type>,
+        pattern: &TypedPattern,
+    ) -> Result<(), Error> {
+        use exhaustiveness::{Body, Column, Compiler, PatternArena, Row};
+
+        let mut compiler = Compiler::new(self.environment, Arena::new());
+        let mut arena = PatternArena::new();
+
+        let subject_variable = compiler.new_variable(subject.clone());
+
+        let mut rows = Vec::with_capacity(1);
+
+        let pattern = arena.register(pattern);
+        let column = Column::new(subject_variable.clone(), pattern);
+        let guard = None;
+        let body = Body::new(0);
+        let row = Row::new(vec![column], guard, body);
+        rows.push(row);
+
+        // Perform exhaustiveness checking, building a decision tree
+        compiler.set_pattern_arena(arena.into_inner());
+        let output = compiler.compile(rows);
+
+        // Emit warnings for missing clauses that would cause a crash
+        if output.diagnostics.missing {
+            self.environment
+                .warnings
+                .emit(Warning::InexhaustiveLetAssignment {
+                    location,
+                    missing: output.missing_patterns(self.environment),
+                })
+        }
+
+        Ok(())
     }
 
     fn check_case_exhaustiveness(

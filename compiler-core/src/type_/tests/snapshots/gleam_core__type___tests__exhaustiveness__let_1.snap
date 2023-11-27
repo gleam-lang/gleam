@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 849
+expression: "\npub fn main(x) {\n  let True = x\n  0\n}\n"
+---
+
+warning: Inexhaustive patterns
+  ┌─ /src/warning/wrn.gleam:3:3
+  │
+3 │   let True = x
+  │   ^^^^^^^^^^^^
+
+This assignment uses a pattern that does not match all possible
+values. If one of the other values is used then the assignment
+will crash.
+
+The missing patterns are:
+
+    False
+
+In a future version of Gleam this will become a compile error.
+
+Hint: Use a more general pattern or use `let assert` instead.
+

@@ -843,3 +843,15 @@ pub fn main(x) {
 "#
     );
 }
+
+#[test]
+fn let_1() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  let True = x
+  0
+}
+"#
+    );
+}

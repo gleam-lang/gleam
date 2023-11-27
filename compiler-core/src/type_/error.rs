@@ -414,6 +414,11 @@ pub enum Warning {
         missing: Vec<EcoString>,
     },
 
+    InexhaustiveLetAssignment {
+        location: SrcSpan,
+        missing: Vec<EcoString>,
+    },
+
     UnreachableCaseClause {
         location: SrcSpan,
     },

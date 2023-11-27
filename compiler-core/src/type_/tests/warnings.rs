@@ -526,7 +526,7 @@ fn bit_pattern_var_use() {
     assert_no_warnings!(
         "
 pub fn main(x) {
-  let <<name_size:8, name:binary-size(name_size)>> = x
+  let assert <<name_size:8, name:binary-size(name_size)>> = x
   name
 }",
     );

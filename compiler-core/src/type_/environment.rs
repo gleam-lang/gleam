@@ -1,5 +1,4 @@
 use crate::{
-    analyse::Inferred,
     ast::{Layer, PIPE_VARIABLE},
     build::Target,
     uid::UniqueIdGenerator,
@@ -639,62 +638,6 @@ impl<'a> Environment<'a> {
             .filter(|&t| PIPE_VARIABLE != t)
             .cloned()
             .collect()
-    }
-
-    /// Checks that the given patterns are exhaustive for given type.
-    /// Currently only performs exhaustiveness checking for custom types,
-    /// only at the top level (without recursing into constructor arguments).
-    pub fn check_exhaustiveness(
-        &mut self,
-        patterns: Vec<Pattern<Arc<Type>>>,
-        value_typ: Arc<Type>,
-    ) -> Result<(), Vec<EcoString>> {
-        match &*value_typ {
-            Type::Named {
-                name: type_name,
-                module: module_name,
-                ..
-            } => {
-                if let Ok(constructors) = self.get_constructors_for_type(module_name, type_name) {
-                    let mut unmatched_constructors: HashSet<EcoString> =
-                        constructors.iter().map(|e| e.name.clone()).collect();
-
-                    for p in &patterns {
-                        // ignore Assign patterns
-                        let mut pattern = p;
-                        while let Pattern::Assign {
-                            pattern: assign_pattern,
-                            ..
-                        } = pattern
-                        {
-                            pattern = assign_pattern;
-                        }
-
-                        match pattern {
-                            // If the pattern is a Discard or Var, all constructors are covered by it
-                            Pattern::Discard { .. } => return Ok(()),
-                            Pattern::Variable { .. } => return Ok(()),
-
-                            // If the pattern is a constructor, remove it from unmatched patterns
-                            Pattern::Constructor {
-                                constructor: Inferred::Known(PatternConstructor { name, .. }),
-                                ..
-                            } => {
-                                let _ = unmatched_constructors.remove(name);
-                            }
-
-                            _ => return Ok(()),
-                        }
-                    }
-
-                    if !unmatched_constructors.is_empty() {
-                        return Err(unmatched_constructors.into_iter().sorted().collect());
-                    }
-                }
-                Ok(())
-            }
-            _ => Ok(()),
-        }
     }
 }
 
