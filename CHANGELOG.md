@@ -43,6 +43,8 @@
   compiler from emitting an unused alias warning for that import.
 - Fixed a bug where the formatter would remove the ` as name` from string prefix
   patterns.
+- Fixed a bug where the formatter would misplace comments at the start of a
+  block.
 
 
 ## v0.32.4 - 2023-11-09
