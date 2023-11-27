@@ -36,6 +36,8 @@
   for the upcoming negative zero float change in Erlang OTP 27.
 - Fixed a bug where using only types from an aliased import, wouldn't stop the
   compiler from emitting an unused alias warning for that import.
+- Fixed a bug where the formatter would remove the ` as name` from string prefix
+  patterns.
 
 
 ## v0.32.4 - 2023-11-09
