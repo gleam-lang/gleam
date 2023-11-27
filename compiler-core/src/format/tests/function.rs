@@ -22,12 +22,61 @@ pub fn main() -> Nil
 }
 
 #[test]
-fn lambda_as_final_function_argument() {
+fn anonymous_function_as_final_function_argument() {
     assert_format!(
         r#"pub fn main() {
   some_function(123, 456, fn(x) {
     let y = x + 1
     y
+  })
+}
+"#
+    );
+}
+
+#[test]
+fn anonymous_function_with_single_line_body_as_final_function_argument() {
+    assert_format!(
+        r#"pub fn main() {
+  some_function(123, 456, fn(x) { x })
+}
+"#
+    );
+}
+
+#[test]
+fn anonymous_function_with_multi_line_unbreakable_body_as_final_function_argument() {
+    assert_format!(
+        r#"pub fn main() {
+  some_function(123, 456, fn(x) {
+    call_to_other_function(a, b, c, d, e, f, g, h)
+  })
+}
+"#
+    );
+}
+
+#[test]
+fn anonymous_function_with_multi_line_breakable_body_as_final_function_argument() {
+    assert_format!(
+        r#"pub fn main() {
+  some_function(123, 456, fn(x) {
+    call_to_other_function(a, b, c, d, e, f, g, { x + x })
+  })
+}
+"#
+    );
+}
+
+#[test]
+fn anonymous_function_with_multi_line_long_breakable_body_as_final_function_argument() {
+    assert_format!(
+        r#"pub fn main() {
+  some_function(123, 456, fn(x) {
+    call_to_other_function(a, b, c, d, e, f, g, case foo {
+      Bar -> 1
+      Baz -> 2
+    })
   })
 }
 "#
