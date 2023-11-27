@@ -4,6 +4,10 @@
 
 ### Language changes
 
+- Gleam now has full exhaustiveness checking. Exhaustiveness issues have been
+  downgraded from errors to warnings so that existing Gleam code can be
+  upgraded to be exhaustive without breaking existing code. In a future version
+  they will be upgraded to errors.
 - The `!` operator can now be used in clause guards.
 
 ### Build tool changes
