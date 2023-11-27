@@ -511,7 +511,7 @@ fn print_config() -> Result<()> {
 
 fn clean() -> Result<()> {
     let paths = project_paths_at_current_directory();
-    fs::delete_dir(&paths.build_directory())
+    fs::delete_directory(&paths.build_directory())
 }
 
 fn initialise_logger() {

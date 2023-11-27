@@ -139,8 +139,8 @@ impl FileSystemWriter for LanguageServerTestIO {
         self.io.mkdir(path)
     }
 
-    fn delete(&self, path: &Utf8Path) -> Result<()> {
-        self.io.delete(path)
+    fn delete_directory(&self, path: &Utf8Path) -> Result<()> {
+        self.io.delete_directory(path)
     }
 
     fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {

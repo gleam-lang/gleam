@@ -221,7 +221,7 @@ pub trait FileSystemWriter {
     fn mkdir(&self, path: &Utf8Path) -> Result<(), Error>;
     fn write(&self, path: &Utf8Path, content: &str) -> Result<(), Error>;
     fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<(), Error>;
-    fn delete(&self, path: &Utf8Path) -> Result<(), Error>;
+    fn delete_directory(&self, path: &Utf8Path) -> Result<(), Error>;
     fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
     fn copy_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
     fn hardlink(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;

@@ -49,7 +49,7 @@ where
     }
 
     pub fn delete_mem_cache(&self, path: &Utf8Path) -> Result<()> {
-        self.edit_cache.delete(path)
+        self.edit_cache.delete_directory(path)
     }
 }
 
@@ -70,8 +70,8 @@ where
         self.io.write_bytes(path, content)
     }
 
-    fn delete(&self, path: &Utf8Path) -> Result<()> {
-        self.io.delete(path)
+    fn delete_directory(&self, path: &Utf8Path) -> Result<()> {
+        self.io.delete_directory(path)
     }
 
     fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {

@@ -34,9 +34,9 @@ impl CommandExecutor for WasmFileSystem {
 }
 
 impl FileSystemWriter for WasmFileSystem {
-    fn delete(&self, path: &Utf8Path) -> Result<(), Error> {
+    fn delete_directory(&self, path: &Utf8Path) -> Result<(), Error> {
         tracing::trace!("delete {:?}", path);
-        self.imfs.delete(path)
+        self.imfs.delete_directory(path)
     }
 
     fn copy(&self, _from: &Utf8Path, _to: &Utf8Path) -> Result<(), Error> {

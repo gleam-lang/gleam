@@ -244,7 +244,7 @@ fn remove_extra_packages<Telem: Telemetry>(
         let path = paths.build_packages_package(&package_name);
         if path.exists() {
             tracing::debug!(package=%package_name, version=%version, "removing_unneeded_package");
-            fs::delete_dir(&path)?;
+            fs::delete_directory(&path)?;
         }
 
         // TODO: test
@@ -260,7 +260,7 @@ fn remove_extra_packages<Telem: Telemetry>(
                 let path = paths.build_directory_for_package(mode, target, name);
                 if path.exists() {
                     tracing::debug!(package=%package_name, version=%version, "deleting_build_cache");
-                    fs::delete_dir(&path)?;
+                    fs::delete_directory(&path)?;
                 }
             }
         }

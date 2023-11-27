@@ -120,7 +120,7 @@ where
             // TODO: unit test
             if self.io.is_directory(&dest) {
                 // Delete the existing link
-                self.io.delete(&dest)?;
+                self.io.delete_directory(&dest)?;
             }
             tracing::debug!("linking_{}_to_build", name,);
             self.io.symlink_dir(&source, &dest)?;

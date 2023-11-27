@@ -130,8 +130,8 @@ impl FileSystemReader for ProjectIO {
 }
 
 impl FileSystemWriter for ProjectIO {
-    fn delete(&self, path: &Utf8Path) -> Result<()> {
-        delete_dir(path)
+    fn delete_directory(&self, path: &Utf8Path) -> Result<()> {
+        delete_directory(path)
     }
 
     fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
@@ -215,7 +215,7 @@ impl DownloadDependencies for ProjectIO {
     }
 }
 
-pub fn delete_dir(dir: &Utf8Path) -> Result<(), Error> {
+pub fn delete_directory(dir: &Utf8Path) -> Result<(), Error> {
     tracing::trace!(path=?dir, "deleting_directory");
     if dir.exists() {
         std::fs::remove_dir_all(dir).map_err(|e| Error::FileIo {

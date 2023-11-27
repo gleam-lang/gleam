@@ -178,7 +178,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
     check_config_for_publishing(config)?;
 
     // Reset the build directory so we know the state of the project
-    fs::delete_dir(&paths.build_directory_for_target(Mode::Prod, target))?;
+    fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, target))?;
 
     // Build the project to check that it is valid
     let built = build::main(

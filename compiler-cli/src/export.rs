@@ -34,8 +34,8 @@ pub(crate) fn erlang_shipment() -> Result<()> {
     crate::fs::mkdir(&out)?;
 
     // Reset the directories to ensure we have a clean slate and no old code
-    crate::fs::delete_dir(&build)?;
-    crate::fs::delete_dir(&out)?;
+    crate::fs::delete_directory(&build)?;
+    crate::fs::delete_directory(&out)?;
 
     // Build project in production mode
     let built = crate::build::main(

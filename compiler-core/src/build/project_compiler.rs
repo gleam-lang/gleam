@@ -201,7 +201,7 @@ where
 
         // Either file is missing our the versions do not match. Time to rebuild
         tracing::info!("removing_build_state_from_different_gleam_version");
-        self.io.delete(&build_path)?;
+        self.io.delete_directory(&build_path)?;
 
         // Recreate build directory with new updated version file
         self.io.mkdir(&build_path)?;
@@ -283,7 +283,7 @@ where
                 self.target(),
                 package.application_name(),
             );
-            self.io.delete(&path)?;
+            self.io.delete_directory(&path)?;
         }
 
         result

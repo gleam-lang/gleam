@@ -78,7 +78,7 @@ impl InMemoryFileSystem {
 }
 
 impl FileSystemWriter for InMemoryFileSystem {
-    fn delete(&self, path: &Utf8Path) -> Result<(), Error> {
+    fn delete_directory(&self, path: &Utf8Path) -> Result<(), Error> {
         let mut files = self.files.deref().borrow_mut();
         let _ = files.remove(path);
         Ok(())
