@@ -637,6 +637,44 @@ Run this command to add it to your dependencies:
                     }
                 }
 
+                type_::Warning::InexhaustiveLetAssignment { location, missing } => {
+                    let mut text: String =
+                        "This assignment uses a pattern that does not match all possible
+values. If one of the other values is used then the assignment
+will crash.
+
+The missing patterns are:\n"
+                            .into();
+                    for missing in missing {
+                        text.push_str("\n    ");
+                        text.push_str(missing);
+                    }
+                    text.push_str(
+                        "
+
+In a future version of Gleam this will become a compile error.
+",
+                    );
+
+                    Diagnostic {
+                        title: "Inexhaustive pattern".into(),
+                        text,
+                        hint: Some(
+                            "Use a more general pattern or use `let assert` instead.".into(),
+                        ),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
                 type_::Warning::InexhaustiveCaseExpression { location, missing } => {
                     let mut text: String =
                         "This case expression does not have a pattern for all possible values.
