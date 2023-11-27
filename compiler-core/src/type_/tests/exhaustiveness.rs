@@ -777,5 +777,44 @@ pub fn main(x, y) {
 "#
     );
 }
-// TODO: custom types
+
+#[test]
+fn custom_1() {
+    assert_warning!(
+        r#"
+pub type Type {
+  One
+  Two
+}
+
+pub fn main(x) {
+  case x {
+    One -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn custom_2() {
+    assert_warning!(
+        r#"
+pub type Type {
+  One
+  Two
+  Three(Type)
+}
+
+pub fn main(x) {
+  case x {
+    One -> 1
+    Two -> 2
+    Three(One) -> 4
+  }
+}
+"#
+    );
+}
+
 // TODO: redundant patterns
