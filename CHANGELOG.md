@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Formatter
+
+- The formatter now tries to keep a function body and its arguments on a single
+  line by first trying to split only its last argument on multiple lines
+
 ### Language changes
 
 - Gleam now has full exhaustiveness checking. Exhaustiveness issues have been
