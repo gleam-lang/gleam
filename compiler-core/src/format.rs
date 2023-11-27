@@ -1247,6 +1247,7 @@ impl<'comments> Formatter<'comments> {
 
             _ => break_("", " ").append(self.expr(expr)).nest(INDENT),
         }
+        .next_break_fits(NextBreakFitsMode::Disabled)
         .group()
     }
 
