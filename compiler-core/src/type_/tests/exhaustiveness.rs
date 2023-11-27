@@ -751,6 +751,31 @@ pub fn main(x) {
     );
 }
 
-// TODO: guards
+#[test]
+fn guard() {
+    assert_warning!(
+        r#"
+pub fn main(x, y) {
+  case x {
+    _ if y -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn guard_1() {
+    assert_warning!(
+        r#"
+pub fn main(x, y) {
+  case x {
+    True if y -> 1
+    False -> 2
+  }
+}
+"#
+    );
+}
 // TODO: custom types
 // TODO: redundant patterns
