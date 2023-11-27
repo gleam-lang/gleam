@@ -1,11 +1,8 @@
-use std::collections::{HashMap, HashSet};
-
+use super::{Constructor, Decision, Match, Variable};
+use crate::type_::environment::Environment;
 use ecow::EcoString;
 use itertools::Itertools;
-
-use crate::type_::{environment::Environment, Type, TypeValueConstructor};
-
-use super::{Constructor, Decision, Match, Variable};
+use std::collections::{HashMap, HashSet};
 
 /// Returns a list of patterns not covered by the match expression.
 pub fn missing_patterns(matches: &Match, environment: &Environment<'_>) -> Vec<EcoString> {
@@ -56,9 +53,7 @@ impl Term {
     fn pattern_string(&self, terms: &[Term], mapping: &HashMap<usize, usize>) -> EcoString {
         match self {
             Term::Variant {
-                variable,
-                name,
-                arguments,
+                name, arguments, ..
             } => {
                 if arguments.is_empty() {
                     return name.clone();
@@ -80,9 +75,9 @@ impl Term {
                 format!("{}({})", name, args).into()
             }
 
-            Term::Infinite { variable } => "_".into(),
+            Term::Infinite { .. } => "_".into(),
 
-            Term::EmptyList { variable } => "[]".into(),
+            Term::EmptyList { .. } => "[]".into(),
 
             Term::List { .. } => format!("[{}]", self.list_pattern_string(terms, mapping)).into(),
         }
@@ -94,11 +89,7 @@ impl Term {
 
             Term::EmptyList { .. } => "".into(),
 
-            Term::List {
-                variable,
-                first,
-                rest,
-            } => {
+            Term::List { first, rest, .. } => {
                 let first = mapping
                     .get(&first.id)
                     .map(|&idx| {

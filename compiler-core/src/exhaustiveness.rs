@@ -1,6 +1,3 @@
-// TODO: remove
-#![allow(unused)]
-
 //! An implementation of the algorithm described at
 //! <https://julesjacobs.com/notes/patternmatching/patternmatching.pdf>.
 //!
@@ -40,18 +37,14 @@ use self::pattern::{Constructor, Pattern, PatternId};
 use crate::{
     ast::AssignName,
     type_::{
-        collapse_links, environment, error::UnknownTypeConstructorError, is_prelude_module,
-        Environment, ModuleInterface, Type, TypeValueConstructor, TypeValueConstructorParameter,
-        TypeVar,
+        collapse_links, error::UnknownTypeConstructorError, is_prelude_module, Environment, Type,
+        TypeValueConstructor, TypeValueConstructorParameter, TypeVar,
     },
 };
 use ecow::EcoString;
 use id_arena::Arena;
 use itertools::Itertools;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 pub use self::pattern::PatternArena;
 
@@ -528,7 +521,6 @@ impl<'a> Compiler<'a> {
                     | Pattern::Int { .. }
                     | Pattern::List { .. }
                     | Pattern::Float { .. }
-                    | Pattern::Tuple { .. }
                     | Pattern::String { .. }
                     | Pattern::Assign { .. }
                     | Pattern::Discard

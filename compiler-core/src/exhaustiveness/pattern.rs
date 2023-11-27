@@ -13,6 +13,8 @@ pub type PatternId = Id<Pattern>;
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Pattern {
     Discard,
+    // TODO: support nested or patterns in the parser + codegen
+    #[allow(unused)]
     Or {
         left: PatternId,
         right: PatternId,
@@ -95,12 +97,9 @@ impl PatternArena {
         Self::default()
     }
 
+    #[cfg(test)]
     pub fn get(&self, id: PatternId) -> Option<&Pattern> {
         self.arena.get(id)
-    }
-
-    pub fn get_mut(&mut self, id: PatternId) -> Option<&mut Pattern> {
-        self.arena.get_mut(id)
     }
 
     pub fn register(&mut self, pattern: &TypedPattern) -> PatternId {
@@ -138,7 +137,6 @@ impl PatternArena {
                 self.insert(Pattern::Tuple { elements })
             }
 
-            // TODO: test
             TypedPattern::List { elements, tail, .. } => {
                 let mut list = match tail {
                     Some(tail) => self.register(tail),
@@ -151,13 +149,9 @@ impl PatternArena {
                 list
             }
 
-            // TODO: test
             TypedPattern::Constructor {
-                name,
                 arguments,
-                module,
                 constructor,
-                with_spread,
                 type_,
                 ..
             } => {
@@ -165,11 +159,6 @@ impl PatternArena {
                     type_: type_.clone(),
                     index: constructor.expect_ref("must be inferred").constructor_index,
                 };
-                // TODO: The arguments may not be given in the same order as the
-                // definition if labels are used. We need to check if that is
-                // the case (or if it has been expanded + reordered during
-                // earlier type checking) and then reorder the arguments if
-                // needed.
                 let arguments = arguments
                     .iter()
                     .map(|argument| self.register(&argument.value))
@@ -180,7 +169,6 @@ impl PatternArena {
                 })
             }
 
-            // TODO: test
             TypedPattern::BitArray { location, .. } => {
                 // TODO: in future support bit strings fully and check the
                 // exhaustiveness of their segment patterns.
@@ -191,7 +179,6 @@ impl PatternArena {
                 })
             }
 
-            // TODO: test
             TypedPattern::StringPrefix {
                 left_side_string,
                 right_side_assignment,
