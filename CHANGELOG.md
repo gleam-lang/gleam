@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Formatter
+
+- The formatter now tries to keep a function body and its arguments on a single
+  line by first trying to split only its last argument on multiple lines
+
 ### Language changes
 
 - The `!` operator can now be used in clause guards.
