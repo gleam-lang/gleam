@@ -849,8 +849,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         }
 
-        // We currently only do only limited exhaustiveness checking of custom types
-        // at the top level of patterns.
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
         if kind.performs_exhaustiveness_check() {
             if let Err(unmatched) = self
@@ -2289,9 +2287,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         .expect("Subject variable")
                         .clone();
                     let column = Column::new(var, pattern);
-                    // TODO: add guard (replace None)
-                    // TODO: test guard
-                    let guard = None;
+                    let guard = clause.guard.as_ref().map(|_| clause_index);
                     let body = Body::new(clause_index as u16);
                     let row = Row::new(vec![column], guard, body);
                     rows.push(row);
