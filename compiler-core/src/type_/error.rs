@@ -413,6 +413,10 @@ pub enum Warning {
         location: SrcSpan,
         missing: Vec<EcoString>,
     },
+
+    UnreachableCaseClause {
+        location: SrcSpan,
+    },
 }
 
 impl Error {

@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 756
+assertion_line: 754
 expression: "\npub fn main(x, y) {\n  case x {\n    _ if y -> 1\n  }\n}\n"
 ---
 
-warning: Inexhaustive Patterns
+warning: Inexhaustive patterns
   ┌─ /src/warning/wrn.gleam:3:3
   │  
 3 │ ╭   case x {

@@ -2300,9 +2300,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         }
 
+        // Perform exhaustiveness checking, building a decision tree
         compiler.set_pattern_arena(arena.into_inner());
         let output = compiler.compile(rows);
 
+        // Emit warnings for missing clauses that would cause a crash
         if output.diagnostics.missing {
             self.environment
                 .warnings
@@ -2310,6 +2312,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     location,
                     missing: output.missing_patterns(self.environment),
                 })
+        }
+
+        // Emit warnings for unreachable clauses
+        for (clause_index, clause) in clauses.iter().enumerate() {
+            if !output.is_reachable(clause_index) {
+                self.environment
+                    .warnings
+                    .emit(Warning::UnreachableCaseClause {
+                        location: clause.location,
+                    })
+            }
         }
 
         Ok(())

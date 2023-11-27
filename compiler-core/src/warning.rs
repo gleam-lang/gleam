@@ -656,9 +656,31 @@ In a future version of Gleam this will become a compile error.
                     );
 
                     Diagnostic {
-                        title: "Inexhaustive Patterns".into(),
+                        title: "Inexhaustive patterns".into(),
                         text,
                         hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
+                type_::Warning::UnreachableCaseClause { location } => {
+                    let text: String =
+                        "This case clause cannot be reached as a previous clause matches
+the same values.\n"
+                            .into();
+                    Diagnostic {
+                        title: "Unreachable case clause".into(),
+                        text,
+                        hint: Some("It can be safely removed.".into()),
                         level: diagnostic::Level::Warning,
                         location: Some(Location {
                             src: src.clone(),

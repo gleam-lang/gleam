@@ -4,7 +4,7 @@ assertion_line: 197
 expression: "\npub fn main(x) {\n  case x {\n    Ok(True) -> 1\n    Ok(False) -> 2\n    Error(False) -> 3\n  }\n}\n"
 ---
 
-warning: Inexhaustive Patterns
+warning: Inexhaustive patterns
   ┌─ /src/warning/wrn.gleam:3:3
   │  
 3 │ ╭   case x {
