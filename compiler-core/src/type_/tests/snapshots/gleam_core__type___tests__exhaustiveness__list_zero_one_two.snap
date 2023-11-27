@@ -14,12 +14,12 @@ warning: Inexhaustive patterns
 7 │ │   }
   │ ╰───^
 
-This case expression does not have a pattern for all possible values.
+This case expression does not have patterns for all possible values.
 If is run on one of the values without a pattern then it will crash.
 
-The missing patterns are:
+The missing clauses are:
 
-    [_, _, _, ..]
+    [_, _, _, ..] -> todo
 
 In a future version of Gleam this will become a compile error.
 

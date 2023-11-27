@@ -677,14 +677,15 @@ In a future version of Gleam this will become a compile error.
 
                 type_::Warning::InexhaustiveCaseExpression { location, missing } => {
                     let mut text: String =
-                        "This case expression does not have a pattern for all possible values.
+                        "This case expression does not have patterns for all possible values.
 If is run on one of the values without a pattern then it will crash.
 
-The missing patterns are:\n"
+The missing clauses are:\n"
                             .into();
                     for missing in missing {
                         text.push_str("\n    ");
                         text.push_str(missing);
+                        text.push_str(" -> todo");
                     }
                     text.push_str(
                         "
