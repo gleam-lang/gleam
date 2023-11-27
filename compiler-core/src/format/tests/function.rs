@@ -84,13 +84,14 @@ fn anonymous_function_with_multi_line_long_breakable_body_as_final_function_argu
 }
 
 #[test]
-fn function_call_as_final_function_argument() {
+fn function_call_as_final_function_argument_goes_on_its_own_line() {
     assert_format!(
         r#"pub fn main() {
-  some_function_with_a_long_name(123, 456, another_function_being_called(
+  some_function_with_a_long_name(
     123,
     456,
-  ))
+    another_function_being_called(123, 456),
+  )
 }
 "#
     );

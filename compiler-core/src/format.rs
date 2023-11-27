@@ -875,7 +875,7 @@ impl<'comments> Formatter<'comments> {
 
         match init_and_last(args) {
             Some((initial_args, last_arg))
-                if is_breakable_expr(&last_arg.value)
+                if is_breakable_argument(&last_arg.value)
                     && !self.any_comments(last_arg.location.start) =>
             {
                 let last_arg_doc = self
@@ -1935,6 +1935,18 @@ fn is_breakable_expr(expr: &UntypedExpr) -> bool {
         UntypedExpr::Fn { .. }
             | UntypedExpr::Block { .. }
             | UntypedExpr::Call { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::BitArray { .. }
+    )
+}
+
+fn is_breakable_argument(expr: &UntypedExpr) -> bool {
+    matches!(
+        expr,
+        UntypedExpr::Fn { .. }
+            | UntypedExpr::Block { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::List { .. }
             | UntypedExpr::Tuple { .. }

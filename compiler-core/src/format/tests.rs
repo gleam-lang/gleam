@@ -595,11 +595,15 @@ fn compact_single_argument_call() {
 
     assert_format!(
         r#"fn main() {
-  thingy(wiggle(my_function(
-    // ok!
-    one(),
-    two(),
-  )))
+  thingy(
+    wiggle(
+      my_function(
+        // ok!
+        one(),
+        two(),
+      ),
+    ),
+  )
 }
 "#
     );
@@ -4495,9 +4499,11 @@ fn no_newline_before_comments() {
 fn list_at_end_of_long_expr_line() {
     assert_format!(
         "pub fn example() {
-  Ok(RecordConstructorWithALongName(a_field: RecordConstructorWithALongName(
-    a_field: Record(a_field: []),
-  )))
+  Ok(
+    RecordConstructorWithALongName(
+      a_field: RecordConstructorWithALongName(a_field: Record(a_field: [])),
+    ),
+  )
 }
 "
     );
