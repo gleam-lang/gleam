@@ -855,3 +855,16 @@ pub fn main(x) {
 "#
     );
 }
+
+#[test]
+fn tuple_0() {
+    assert_warning!(
+        r#"
+pub fn main(x, y) {
+  case #(x, y) {
+    #(True, _) -> 1
+  }
+}
+"#
+    );
+}

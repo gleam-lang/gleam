@@ -2310,18 +2310,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         for (clause_index, clause) in clauses.iter().enumerate() {
             let mut add = |multi_pattern: &[TypedPattern]| {
+                let mut columns = Vec::with_capacity(multi_pattern.len());
                 for (subject_index, pattern) in multi_pattern.iter().enumerate() {
                     let pattern = arena.register(pattern);
                     let var = subject_variables
                         .get(subject_index)
                         .expect("Subject variable")
                         .clone();
-                    let column = Column::new(var, pattern);
-                    let guard = clause.guard.as_ref().map(|_| clause_index);
-                    let body = Body::new(clause_index as u16);
-                    let row = Row::new(vec![column], guard, body);
-                    rows.push(row);
+                    columns.push(Column::new(var, pattern));
                 }
+                let guard = clause.guard.as_ref().map(|_| clause_index);
+                let body = Body::new(clause_index as u16);
+                rows.push(Row::new(columns, guard, body));
             };
 
             add(&clause.pattern);
