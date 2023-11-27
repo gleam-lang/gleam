@@ -159,3 +159,33 @@ fn when_all_arguments_are_too_long_each_one_is_on_its_own_line() {
 "#
     );
 }
+
+#[test]
+fn nested_breakable_lists_in_function_calls() {
+    assert_format!(
+        r#"pub fn main() {
+  html([attribute("lang", "en")], [
+    head([attribute("foo", "bar")], [
+      title([], [text("Hello this is some HTML")]),
+    ]),
+    body([], [h1([], [text("Hello, world!")])]),
+  ])
+}
+"#
+    );
+}
+
+#[test]
+fn nested_breakable_tuples_in_function_calls() {
+    assert_format!(
+        r#"pub fn main() {
+  html(#(attribute("lang", "en")), #(
+    head(#(attribute("foo", "bar")), #(
+      title(#(), #(text("Hello this is some HTML"))),
+    )),
+    body(#(), #(h1(#(), #(text("Hello, lisp!"))))),
+  ))
+}
+"#
+    );
+}
