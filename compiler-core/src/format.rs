@@ -568,7 +568,12 @@ impl<'comments> Formatter<'comments> {
             Some(t) => header.append(" -> ").append(self.type_ast(t)),
         };
 
-        header.append(" ").append(wrap_block(body)).group()
+        header
+            .append(" ")
+            .append(wrap_block(
+                body.next_break_fits(NextBreakFitsMode::Disabled),
+            ))
+            .group()
     }
 
     fn statements<'a>(&mut self, statements: &'a Vec1<UntypedStatement>) -> Document<'a> {
