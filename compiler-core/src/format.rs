@@ -1349,13 +1349,18 @@ impl<'comments> Formatter<'comments> {
             Pattern::StringPrefix {
                 left_side_string: left,
                 right_side_assignment: right,
+                left_side_assignment: left_assign,
                 ..
             } => {
+                let left = self.string(left);
                 let right = match right {
                     AssignName::Variable(name) => name.to_doc(),
                     AssignName::Discard(name) => name.to_doc(),
                 };
-                docvec![self.string(left), " <> ", right]
+                match left_assign {
+                    Some((name, _)) => docvec![left, " as ", name, " <> ", right],
+                    None => docvec![left, " <> ", right],
+                }
             }
         };
         commented(doc, comments)
