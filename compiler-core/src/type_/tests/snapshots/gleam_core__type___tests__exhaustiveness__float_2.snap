@@ -4,7 +4,7 @@ assertion_line: 571
 expression: "\npub fn main(x) {\n  case x {\n    0.0 -> 1\n    1.1 -> 1\n  }\n}\n"
 ---
 
-warning: Inexhaustive Patterns
+warning: Inexhaustive patterns
   ┌─ /src/warning/wrn.gleam:3:3
   │  
 3 │ ╭   case x {

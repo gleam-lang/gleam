@@ -639,9 +639,7 @@ pub type Thing {
 pub fn main(x) {
   case x {
     Thing(a: True, ..) -> 1
-    Thing(b: True, ..) -> 1
     Thing(a: False, ..) -> 1
-    Thing(b: False, ..) -> 1
   }
 }
 "#
@@ -817,4 +815,31 @@ pub fn main(x) {
     );
 }
 
-// TODO: redundant patterns
+#[test]
+fn redundant_1() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    _ -> 1
+    _ -> 2
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_2() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+  case x {
+    True -> 1
+    False -> 2
+    True -> 3
+  }
+}
+"#
+    );
+}

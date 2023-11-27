@@ -230,6 +230,10 @@ pub struct Match {
 }
 
 impl Match {
+    pub fn is_reachable(&self, clause: usize) -> bool {
+        self.diagnostics.reachable.contains(&(clause as u16))
+    }
+
     pub fn missing_patterns(&self, environment: &Environment<'_>) -> Vec<EcoString> {
         missing_patterns::missing_patterns(self, environment)
     }
