@@ -165,7 +165,7 @@ impl UntypedExpr {
 
     pub fn start_byte_index(&self) -> u32 {
         match self {
-            Self::Block { statements, .. } => statements.first().start_byte_index(),
+            Self::Block { location, .. } => location.start,
             Self::PipeLine { expressions, .. } => expressions.first().start_byte_index(),
             _ => self.location().start,
         }
