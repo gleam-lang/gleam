@@ -45,3 +45,42 @@ fn block_comment() {
 "#
     );
 }
+
+#[test]
+fn last_comments_are_not_moved_out_of_blocks() {
+    assert_format!(
+        r#"fn main() {
+  {
+    hello
+    // Hope I'm not yeeted out of this block!
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  {
+    hello
+    {
+      { hi }
+      // Some nested comments
+    }
+    // At the end of multiple blocks
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  case foo {
+    bar -> {
+      1
+      // Hope I can stay inside this clause
+    }
+  }
+}
+"#
+    );
+}
