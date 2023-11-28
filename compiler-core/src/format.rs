@@ -654,7 +654,11 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::String { value, .. } => self.string(value),
 
-            UntypedExpr::Block { statements, .. } => self.block(statements),
+            UntypedExpr::Block {
+                statements,
+                location,
+                ..
+            } => self.block(location, statements, false),
 
             UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => "_".to_doc(),
 
@@ -1236,14 +1240,11 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::Case { .. } => line().append(self.expr(expr)).nest(INDENT),
 
-            UntypedExpr::Block { statements, .. } => {
-                docvec![
-                    " {",
-                    docvec![line(), self.statements(statements)].nest(INDENT),
-                    line(),
-                    "}"
-                ]
-            }
+            UntypedExpr::Block {
+                statements,
+                location,
+                ..
+            } => " ".to_doc().append(self.block(location, statements, true)),
 
             _ => break_("", " ").append(self.expr(expr)).nest(INDENT),
         }
@@ -1603,14 +1604,33 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn block<'a>(&mut self, statements: &'a Vec1<UntypedStatement>) -> Document<'a> {
-        docvec![
-            "{",
-            docvec![break_("", " "), self.statements(statements)].nest(INDENT),
-            break_("", " "),
-            "}"
-        ]
-        .group()
+    fn block<'a>(
+        &mut self,
+        location: &SrcSpan,
+        statements: &'a Vec1<UntypedStatement>,
+        force_breaks: bool,
+    ) -> Document<'a> {
+        let statements_doc = docvec![break_("", " "), self.statements(statements)].nest(INDENT);
+        let trailing_comments = self.pop_comments(location.end);
+        let trailing_comments = printed_comments(trailing_comments, false);
+        let block_doc = match trailing_comments {
+            Some(trailing_comments_doc) => docvec![
+                "{",
+                statements_doc,
+                line().nest(INDENT),
+                trailing_comments_doc.nest(INDENT),
+                line(),
+                "}"
+            ]
+            .force_break(),
+            None => docvec!["{", statements_doc, break_("", " "), "}"],
+        };
+
+        if force_breaks {
+            block_doc.force_break().group()
+        } else {
+            block_doc.group()
+        }
     }
 }
 

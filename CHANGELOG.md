@@ -5,7 +5,8 @@
 ### Formatter
 
 - The formatter now tries to keep a function body and its arguments on a single
-  line by first trying to split only its last argument on multiple lines
+  line by first trying to split only its last argument on multiple lines.
+- Fixed a bug where the formatter would move comments out of blocks.
 
 ### Language changes
 
