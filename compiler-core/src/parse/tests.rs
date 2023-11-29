@@ -557,3 +557,38 @@ fn deprecated_option_binary_pattern() {
 fn import_type() {
     assert_parse_module!(r#"import wibble.{type Wobble, Wobble, type Wabble}"#);
 }
+
+#[test]
+fn reserved_auto() {
+    assert_warning!(r#"const auto = 1"#);
+}
+
+#[test]
+fn reserved_delegate() {
+    assert_warning!(r#"const delegate = 1"#);
+}
+
+#[test]
+fn reserved_derive() {
+    assert_warning!(r#"const derive = 1"#);
+}
+
+#[test]
+fn reserved_else() {
+    assert_warning!(r#"const else = 1"#);
+}
+
+#[test]
+fn reserved_implement() {
+    assert_warning!(r#"const implement = 1"#);
+}
+
+#[test]
+fn reserved_macro() {
+    assert_warning!(r#"const macro = 1"#);
+}
+
+#[test]
+fn reserved_test() {
+    assert_warning!(r#"const test = 1"#);
+}

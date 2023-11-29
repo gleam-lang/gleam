@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 568
+expression: const delegate = 1
+---
+
+warning: Reserved word used
+  ┌─ :1:7
+  │
+1 │ const delegate = 1
+  │       ^^^^^^^^
+
+The word `delegate` has been reserved for future use.
+
+If you do not rename this then your code may stop working in
+a future version of Gleam.
+

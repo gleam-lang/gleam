@@ -181,6 +181,29 @@ impl Warning {
                         }),
                     }
                 }
+                crate::parse::Warning::ReservedWord { location, word } => {
+                    let text = format!(
+                        "The word `{word}` has been reserved for future use.
+
+If you do not rename this then your code may stop working in
+a future version of Gleam."
+                    );
+                    Diagnostic {
+                        title: "Reserved word used".into(),
+                        text,
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            path: path.to_path_buf(),
+                            src: src.clone(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
             },
 
             Warning::InvalidSource { path } => Diagnostic {

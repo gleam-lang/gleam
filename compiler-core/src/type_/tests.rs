@@ -1601,8 +1601,8 @@ fn module_constants() {
 fn custom_type_module_constants() {
     assert_module_infer!(
         "pub type Test { A }
-        pub const test = A",
-        vec![("A", "Test"), ("test", "Test")],
+        pub const some_test = A",
+        vec![("A", "Test"), ("some_test", "Test")],
     );
 }
 

@@ -1,15 +1,15 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
 assertion_line: 6
-expression: "\npub fn test() {\n  let duplicate_name = 1\n\n  case 1 {\n    1 | 2 -> {\n      let duplicate_name = duplicate_name + 1\n      duplicate_name\n    }\n    _ -> 0\n  }\n}"
+expression: "\npub fn main() {\n  let duplicate_name = 1\n\n  case 1 {\n    1 | 2 -> {\n      let duplicate_name = duplicate_name + 1\n      duplicate_name\n    }\n    _ -> 0\n  }\n}"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
 
--export([test/0]).
+-export([main/0]).
 
--spec test() -> integer().
-test() ->
+-spec main() -> integer().
+main() ->
     Duplicate_name = 1,
     case 1 of
         1 ->

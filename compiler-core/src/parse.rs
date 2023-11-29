@@ -94,12 +94,13 @@ struct Attributes {
     external_javascript: Option<(EcoString, EcoString)>,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Warning {
     // TODO: remove after next release
     DeprecatedOptionBitString { location: SrcSpan },
     // TODO: remove after next release
     DeprecatedOptionBinary { location: SrcSpan },
+    ReservedWord { location: SrcSpan, word: EcoString },
 }
 
 //
@@ -2744,6 +2745,17 @@ where
                 }
 
                 Some(Ok(tok)) => {
+                    if let (start, Token::Name { name }, end) = &tok {
+                        if let "auto" | "delegate" | "derive" | "else" | "implement" | "macro"
+                        | "test" = name.as_str()
+                        {
+                            self.warnings.push(Warning::ReservedWord {
+                                location: SrcSpan::new(*start, *end),
+                                word: name.clone(),
+                            });
+                        }
+                    }
+
                     nxt = Some(tok);
                     break;
                 }
