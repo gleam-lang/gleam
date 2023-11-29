@@ -49,7 +49,7 @@ pub fn reset_filesystem() {
 }
 
 fn get_filesystem() -> WasmFileSystem {
-    FILE_SYSTEM.with(|cell| cell.get_or_init(|| WasmFileSystem::new()).clone())
+    FILE_SYSTEM.with(|cell| cell.get_or_init(WasmFileSystem::new).clone())
 }
 
 /// Write a Gleam module to the `/src` directory of the virtual file system.
@@ -123,7 +123,7 @@ pub fn read_compiled_erlang(module_name: &str) -> Option<String> {
     let fs = get_filesystem();
     let path = format!(
         "/build/_gleam_artefacts/{}.erl",
-        module_name.replace("/", "@")
+        module_name.replace('/', "@")
     );
     fs.read(&Utf8PathBuf::from(path)).ok()
 }
