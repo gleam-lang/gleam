@@ -1,6 +1,17 @@
 import CodeFlask from "https://cdn.jsdelivr.net/npm/codeflask@1.4.1/+esm";
 import initGleamCompiler from "./compiler.js";
 
+const problems = document.querySelector("#problems");
+const output = document.querySelector("#output");
+const initialCode = `pub fn main() {
+  greet("Joe")
+}
+
+fn greet(name: String) -> String {
+  "Hello, " <> name <> "!"
+}
+`;
+
 const prismGrammar = {
   comment: {
     pattern: /\/\/.*/,
@@ -40,20 +51,28 @@ async function compileEval(project, code) {
     project.compilePackage("javascript");
     const js = project.readCompiledJavaScript("main");
     const main = await loadProgram(js);
-    if (main) console.log(main());
+    if (main) output.textContent = main();
+    problems.textContent = "";
   } catch (error) {
-    console.warn(error);
-    return;
+    output.textContent = "";
+    problems.textContent = error.toString();
   }
 }
 
 async function loadProgram(js) {
   const href = import.meta.url.toString();
   const js1 = js.replaceAll(/from\s+"(.+)"/g, `from "${href}/../vendor/$1"`);
-  console.log(js1);
   const js2 = btoa(unescape(encodeURIComponent(js1)));
   const module = await import("data:text/javascript;base64," + js2);
   return module.main;
+}
+
+function debounce(fn, delay) {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
 }
 
 const editor = new CodeFlask("#editor", {
@@ -61,8 +80,10 @@ const editor = new CodeFlask("#editor", {
   lineNumbers: true,
 });
 editor.addLanguage("gleam", prismGrammar);
+editor.updateCode(initialCode);
 
 const compiler = await initGleamCompiler();
 const project = compiler.newProject();
 
-editor.onUpdate((code) => compileEval(project, code));
+editor.onUpdate(debounce((code) => compileEval(project, code), 250));
+compileEval(project, initialCode);
