@@ -23,35 +23,29 @@ use wasm_bindgen::prelude::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CompileOptions {
+pub struct CompileModulesOptions {
     target: Target,
     modules: HashMap<String, String>,
 }
 
-impl Default for CompileOptions {
-    fn default() -> Self {
-        CompileOptions {
-            target: Target::JavaScript,
-            modules: HashMap::default(),
-        }
-    }
-}
-
 /// Compile a set of `modules` into a different set of source files for the
 /// `target` language.
-pub fn compile_(options: CompileOptions) -> Result<HashMap<String, String>, String> {
+pub fn compile_modules(
+    modules: HashMap<String, String>,
+    target: Target,
+) -> Result<HashMap<String, String>, String> {
     let wfs = WasmFileSystem::new();
 
-    for (name, source) in options.modules.iter() {
+    for (name, source) in modules.iter() {
         let mut path = Utf8PathBuf::from("/src");
         path.push(name);
         path.set_extension("gleam");
         write_source_file(source, path, &wfs);
     }
 
-    compile_package(&wfs, options.target).map_err(|e| e.pretty_string())?;
+    compile_package(&wfs, target).map_err(|e| e.pretty_string())?;
 
-    Ok(gather_compiled_files(&wfs, options.target).unwrap())
+    Ok(gather_compiled_files(&wfs, target).unwrap())
 }
 
 fn write_source_file<P: AsRef<Utf8Path>>(source: &str, path: P, wfs: &WasmFileSystem) {
@@ -157,11 +151,11 @@ pub fn init(debug: bool) {
 }
 
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-pub fn compile(options: JsValue) -> JsValue {
-    match serde_wasm_bindgen::from_value(options) {
-        Ok(compile_options) => {
-            let result = compile_(compile_options);
+#[wasm_bindgen(js_name = "compile_modules")]
+pub fn js_compile_modules(options: JsValue) -> JsValue {
+    match serde_wasm_bindgen::from_value::<CompileModulesOptions>(options) {
+        Ok(options) => {
+            let result = compile_modules(options.modules, options.target);
             serde_wasm_bindgen::to_value(&result)
         }
         Err(error) => serde_wasm_bindgen::to_value::<Result<HashMap<String, String>, String>>(
@@ -173,9 +167,8 @@ pub fn compile(options: JsValue) -> JsValue {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-
     use super::*;
+    use itertools::Itertools;
     use std::collections::HashMap;
 
     fn source(source: &str) -> HashMap<String, String> {
@@ -206,11 +199,7 @@ mod tests {
             .to_string(),
         );
 
-        let result = compile_(CompileOptions {
-            modules,
-            ..Default::default()
-        })
-        .unwrap();
+        let result = compile_modules(modules, Target::JavaScript).unwrap();
 
         assert_eq!(
             result.keys().sorted().collect_vec(),
@@ -266,12 +255,7 @@ export function main() {
             .to_string(),
         );
 
-        let result = compile_(CompileOptions {
-            modules,
-            target: Target::Erlang,
-            ..Default::default()
-        })
-        .unwrap();
+        let result = compile_modules(modules, Target::Erlang).unwrap();
 
         assert_eq!(
             result.keys().sorted().collect_vec(),
@@ -324,10 +308,10 @@ mod wasm_tests {
         modules
     }
 
-    fn compile_wrapper(options: CompileOptions) -> Result<HashMap<String, String>, String> {
+    fn compile_wrapper(options: CompileModulesOptions) -> Result<HashMap<String, String>, String> {
         init(false);
 
-        let result = compile(serde_wasm_bindgen::to_value(&options).unwrap());
+        let result = js_compile_modules(serde_wasm_bindgen::to_value(&options).unwrap());
         serde_wasm_bindgen::from_value(result).unwrap()
     }
 
@@ -353,9 +337,9 @@ mod wasm_tests {
             .to_string(),
         );
 
-        let result = compile_wrapper(CompileOptions {
+        let result = compile_wrapper(CompileModulesOptions {
             modules,
-            ..Default::default()
+            target: Target::JavaScript,
         })
         .unwrap();
 
@@ -413,10 +397,9 @@ export function main() {
             .to_string(),
         );
 
-        let result = compile_wrapper(CompileOptions {
+        let result = compile_wrapper(CompileModulesOptions {
             modules,
             target: Target::Erlang,
-            ..Default::default()
         })
         .unwrap();
 
