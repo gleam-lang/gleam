@@ -62,12 +62,7 @@ pub fn delete_project(project_id: usize) {
 }
 
 fn get_project(project_id: usize) -> Project {
-    PROJECTS.with(|lock| {
-        lock.borrow_mut()
-            .entry(project_id)
-            .or_insert_with(Project::default)
-            .clone()
-    })
+    PROJECTS.with(|lock| lock.borrow_mut().entry(project_id).or_default().clone())
 }
 
 fn get_filesystem(project_id: usize) -> WasmFileSystem {
