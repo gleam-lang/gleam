@@ -15,7 +15,7 @@ use gleam_core::{
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
     uid::UniqueIdGenerator,
-    warning::{NullWarningEmitterIO, WarningEmitter},
+    warning::{VectorWarningEmitterIO, WarningEmitter},
     Error,
 };
 use hexpm::version::Version;
@@ -26,6 +26,7 @@ use wasm_bindgen::prelude::*;
 
 thread_local! {
     static FILE_SYSTEM: OnceCell<WasmFileSystem> = OnceCell::new();
+    static WARNINGS: OnceCell<VectorWarningEmitterIO> = OnceCell::new();
 }
 
 /// Should be called once to setup any state that persists across compilation
@@ -50,6 +51,10 @@ pub fn reset_filesystem() {
 
 fn get_filesystem() -> WasmFileSystem {
     FILE_SYSTEM.with(|cell| cell.get_or_init(WasmFileSystem::new).clone())
+}
+
+fn get_warnings() -> VectorWarningEmitterIO {
+    WARNINGS.with(|cell| cell.get_or_init(VectorWarningEmitterIO::new).clone())
 }
 
 /// Write a Gleam module to the `/src` directory of the virtual file system.
@@ -128,11 +133,23 @@ pub fn read_compiled_erlang(module_name: &str) -> Option<String> {
     fs.read(&Utf8PathBuf::from(path)).ok()
 }
 
+/// Clear any stored warnings. This is performed automatically when before compilation.
+///
+pub fn reset_warnings() {
+    get_warnings().reset();
+}
+
+/// Pop the latest warning from the compiler.
+///
+pub fn pop_warning() -> Option<String> {
+    get_warnings().pop().map(|w| w.to_pretty_string())
+}
+
 fn do_compile_package(wfs: &WasmFileSystem, target: Target) -> Result<(), Error> {
     let ids = UniqueIdGenerator::new();
     let mut type_manifests = im::HashMap::new();
     let mut defined_modules = im::HashMap::new();
-    let warnings = WarningEmitter::new(Arc::new(NullWarningEmitterIO));
+    let warning_emitter = WarningEmitter::new(Arc::new(get_warnings()));
     let config = PackageConfig {
         name: "library".into(),
         version: Version::new(1, 0, 0),
@@ -167,7 +184,7 @@ fn do_compile_package(wfs: &WasmFileSystem, target: Target) -> Result<(), Error>
     compiler.write_metadata = false;
     compiler.compile_beam_bytecode = true;
     _ = compiler.compile(
-        &warnings,
+        &warning_emitter,
         &mut type_manifests,
         &mut defined_modules,
         &mut StaleTracker::default(),
