@@ -72,3 +72,14 @@ export function go() {
         Some("export const y = 1;\n".into())
     );
 }
+
+#[test]
+fn test_warnings() {
+    reset_filesystem();
+    write_module("one", "const x = 1");
+    assert!(pop_warning().is_none());
+
+    assert!(compile_package("javascript").is_ok());
+    assert!(pop_warning().is_some());
+    assert!(pop_warning().is_none());
+}

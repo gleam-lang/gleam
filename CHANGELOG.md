@@ -34,7 +34,7 @@
 ### Compiler WASM API
 
 - The WASM API for the compiler has been rewritten to be simpler.
-- The WASM API for the compiler now supports incremental compilation.
+- The WASM API for the compiler now exposes warnings.
 
 ### Bug fixes
 

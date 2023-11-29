@@ -31,9 +31,23 @@ pub struct VectorWarningEmitterIO {
 }
 
 impl VectorWarningEmitterIO {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn take(&self) -> Vec<Warning> {
         let mut warnings = self.write_lock();
         std::mem::take(&mut *warnings)
+    }
+
+    pub fn reset(&self) {
+        let mut warnings = self.write_lock();
+        warnings.clear();
+    }
+
+    pub fn pop(&self) -> Option<Warning> {
+        let mut warnings = self.write_lock();
+        warnings.pop()
     }
 
     fn write_lock(&self) -> std::sync::RwLockWriteGuard<'_, Vec<Warning>> {
