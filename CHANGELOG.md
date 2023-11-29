@@ -31,6 +31,11 @@
 - The `gleam publish` command now asks for confirmation if the package name is
   one that implies the package is maintained by the Gleam core team.
 
+### Compiler WASM API
+
+- The WASM API for the compiler has been rewritten to be simpler.
+- The WASM API for the compiler now supports incremental compilation.
+
 ### Bug fixes
 
 - Fixed a bug where the JavaScript code generator could generate invalid code
