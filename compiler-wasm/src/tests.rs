@@ -2,53 +2,53 @@ use super::*;
 
 #[test]
 fn test_reset_filesystem() {
-    reset_filesystem();
-    assert_eq!(read_file_bytes("hello"), None);
-    write_file_bytes("hello", vec![1, 2, 3].as_slice());
-    assert_eq!(read_file_bytes("hello"), Some(vec![1, 2, 3]));
-    reset_filesystem();
-    assert_eq!(read_file_bytes("hello"), None);
+    reset_filesystem(0);
+    assert_eq!(read_file_bytes(0, "hello"), None);
+    write_file_bytes(0, "hello", vec![1, 2, 3].as_slice());
+    assert_eq!(read_file_bytes(0, "hello"), Some(vec![1, 2, 3]));
+    reset_filesystem(0);
+    assert_eq!(read_file_bytes(0, "hello"), None);
 }
 
 #[test]
 fn test_write_module() {
-    reset_filesystem();
-    assert_eq!(read_file_bytes("/src/some/module.gleam"), None);
-    write_module("some/module", "const x = 1");
+    reset_filesystem(0);
+    assert_eq!(read_file_bytes(0, "/src/some/module.gleam"), None);
+    write_module(0, "some/module", "const x = 1");
     assert_eq!(
-        read_file_bytes("/src/some/module.gleam"),
+        read_file_bytes(0, "/src/some/module.gleam"),
         Some(vec![99, 111, 110, 115, 116, 32, 120, 32, 61, 32, 49]),
     );
-    reset_filesystem();
-    assert_eq!(read_file_bytes("/src/some/module.gleam"), None);
+    reset_filesystem(0);
+    assert_eq!(read_file_bytes(0, "/src/some/module.gleam"), None);
 }
 
 #[test]
 fn test_compile_package_bad_target() {
-    reset_filesystem();
-    assert!(compile_package("ruby").is_err());
+    reset_filesystem(0);
+    assert!(compile_package(0, "ruby").is_err());
 }
 
 #[test]
 fn test_compile_package_empty() {
-    reset_filesystem();
-    assert!(compile_package("javascript").is_ok());
+    reset_filesystem(0);
+    assert!(compile_package(0, "javascript").is_ok());
 }
 
 #[test]
 fn test_compile_package_js() {
-    reset_filesystem();
-    write_module("one/two", "pub const x = 1");
-    write_module("up/down", "import one/two pub fn go() { two.x }");
-    assert!(compile_package("javascript").is_ok());
+    reset_filesystem(0);
+    write_module(0, "one/two", "pub const x = 1");
+    write_module(0, "up/down", "import one/two pub fn go() { two.x }");
+    assert!(compile_package(0, "javascript").is_ok());
 
     assert_eq!(
-        read_compiled_javascript("one/two"),
+        read_compiled_javascript(0, "one/two"),
         Some("export const x = 1;\n".into())
     );
 
     assert_eq!(
-        read_compiled_javascript("up/down"),
+        read_compiled_javascript(0, "up/down"),
         Some(
             r#"import * as $two from "../one/two.mjs";
 
@@ -61,25 +61,25 @@ export function go() {
     );
 
     // And now an error!
-    write_module("up/down", "import one/two/three");
-    assert!(compile_package("javascript").is_err());
+    write_module(0, "up/down", "import one/two/three");
+    assert!(compile_package(0, "javascript").is_err());
 
     // Let's fix that.
-    write_module("up/down", "pub const y = 1");
-    assert!(compile_package("javascript").is_ok());
+    write_module(0, "up/down", "pub const y = 1");
+    assert!(compile_package(0, "javascript").is_ok());
     assert_eq!(
-        read_compiled_javascript("up/down"),
+        read_compiled_javascript(0, "up/down"),
         Some("export const y = 1;\n".into())
     );
 }
 
 #[test]
 fn test_warnings() {
-    reset_filesystem();
-    write_module("one", "const x = 1");
-    assert!(pop_warning().is_none());
+    reset_filesystem(0);
+    write_module(0, "one", "const x = 1");
+    assert!(pop_warning(0).is_none());
 
-    assert!(compile_package("javascript").is_ok());
-    assert!(pop_warning().is_some());
-    assert!(pop_warning().is_none());
+    assert!(compile_package(0, "javascript").is_ok());
+    assert!(pop_warning(0).is_some());
+    assert!(pop_warning(0).is_none());
 }

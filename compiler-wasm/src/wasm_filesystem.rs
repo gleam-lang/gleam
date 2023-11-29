@@ -7,18 +7,12 @@ use gleam_core::{
     Error, Result,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WasmFileSystem {
     imfs: InMemoryFileSystem,
 }
 
 impl WasmFileSystem {
-    pub fn new() -> WasmFileSystem {
-        WasmFileSystem {
-            imfs: InMemoryFileSystem::new(),
-        }
-    }
-
     pub fn reset(&self) {
         self.imfs.reset();
     }
