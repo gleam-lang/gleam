@@ -26,6 +26,10 @@ impl InMemoryFileSystem {
         Self::default()
     }
 
+    pub fn reset(&self) {
+        self.files.deref().borrow_mut().clear();
+    }
+
     /// # Panics
     ///
     /// Panics if this is not the only reference to the underlying files.

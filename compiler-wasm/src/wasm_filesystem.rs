@@ -18,6 +18,10 @@ impl WasmFileSystem {
             imfs: InMemoryFileSystem::new(),
         }
     }
+
+    pub fn reset(&self) {
+        self.imfs.reset();
+    }
 }
 
 impl CommandExecutor for WasmFileSystem {
