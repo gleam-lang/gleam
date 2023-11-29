@@ -85,5 +85,5 @@ editor.updateCode(initialCode);
 const compiler = await initGleamCompiler();
 const project = compiler.newProject();
 
-editor.onUpdate(debounce((code) => compileEval(project, code), 250));
+editor.onUpdate(debounce((code) => compileEval(project, code), 200));
 compileEval(project, initialCode);
