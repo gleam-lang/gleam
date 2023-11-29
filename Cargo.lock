@@ -839,6 +839,7 @@ dependencies = [
  "console_error_panic_hook",
  "gleam-core",
  "hexpm",
+ "im",
  "itertools",
  "serde",
  "serde-wasm-bindgen",
