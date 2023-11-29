@@ -15,6 +15,9 @@
   upgraded to be exhaustive without breaking existing code. In a future version
   they will be upgraded to errors.
 - The `!` operator can now be used in clause guards.
+- The words `auto`, `delegate`, `derive`, `else`, `implement`, `macro`, and
+  `test` are now reserved for future use. If used they will emit a warning. In
+  a future version this may be upgraded to an error.
 
 ### Build tool changes
 
