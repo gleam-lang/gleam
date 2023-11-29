@@ -190,3 +190,36 @@ fn nested_breakable_tuples_in_function_calls() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2435
+#[test]
+fn only_last_argument_can_be_broken() {
+    assert_format!(
+        r#"pub fn main() {
+  tbd.workbook(for: "my_project")
+  |> task(
+    doc: "Run the project tests",
+    tags: list.concat([["test", "ci"], gleam, typescript]),
+    action: fn(_, _) { tbd.command(run: "gleam", with: ["test"]) },
+  )
+  |> run
+}
+"#
+    );
+
+    assert_format!(
+        r#"pub fn main() {
+  Theme(
+    flag: styler([32]),
+    heading: styler([1, 95]),
+    highlight: styler([1, 36]),
+    parameter: styler([34]),
+    tag: styler([33]),
+    given_tag: styler([3]),
+    first_tag: styler([1]),
+    tab: "    ",
+  )
+}
+"#
+    );
+}
