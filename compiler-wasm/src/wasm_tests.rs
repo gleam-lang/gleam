@@ -1,143 +1,75 @@
 use super::*;
-use itertools::Itertools;
-use std::collections::HashMap;
 use wasm_bindgen_test::wasm_bindgen_test;
 
-fn source(source: &str) -> HashMap<String, String> {
-    let mut modules = HashMap::new();
-    modules.insert("main".into(), source.to_string());
-    modules
-}
-
-fn compile_wrapper(options: CompileModulesOptions) -> Result<HashMap<String, String>, String> {
-    init(false);
-
-    let result = js_compile_modules(serde_wasm_bindgen::to_value(&options).unwrap());
-    serde_wasm_bindgen::from_value(result).unwrap()
+#[wasm_bindgen_test]
+fn test_reset_filesystem() {
+    reset_filesystem();
+    assert_eq!(read_file_bytes("hello"), None);
+    write_file_bytes("hello", vec![1, 2, 3].as_slice());
+    assert_eq!(read_file_bytes("hello"), Some(vec![1, 2, 3]));
+    reset_filesystem();
+    assert_eq!(read_file_bytes("hello"), None);
 }
 
 #[wasm_bindgen_test]
-fn import_library_compile_javascript_test_wasm() {
+fn test_write_module() {
     reset_filesystem();
-    let mut modules = source(
-        r#"
-            import some/library
-
-            pub fn main() {
-                library.fun("Hello, world!")
-            }
-            "#,
-    );
-
-    modules.insert(
-        "some/library".into(),
-        r#"
-            pub fn fun(string: String) -> Nil {
-              Nil
-            }
-        "#
-        .to_string(),
-    );
-
-    let result = compile_wrapper(CompileModulesOptions {
-        modules,
-        target: Target::JavaScript,
-    })
-    .unwrap();
-
+    assert_eq!(read_file_bytes("/src/some/module.gleam"), None);
+    write_module("some/module", "const x = 1");
     assert_eq!(
-        result.keys().sorted().collect_vec(),
-        vec!["gleam.mjs", "main.mjs", "some/library.mjs"]
+        read_file_bytes("/src/some/module.gleam"),
+        Some(vec![99, 111, 110, 115, 116, 32, 120, 32, 61, 32, 49]),
     );
-    assert_eq!(
-        result.get("gleam.mjs"),
-        Some(&"export * from \"./todo/prelude/location.mjs\";\n".to_string())
-    );
-    assert_eq!(
-        result.get("main.mjs"),
-        Some(
-            &"import * as $library from \"./some/library.mjs\";
-
-export function main() {
-  return $library.fun(\"Hello, world!\");
-}
-"
-            .to_string()
-        )
-    );
-    assert_eq!(
-        result.get("some/library.mjs"),
-        Some(
-            &"export function fun(string) {
-  return undefined;
-}
-"
-            .to_string()
-        )
-    );
+    reset_filesystem();
+    assert_eq!(read_file_bytes("/src/some/module.gleam"), None);
 }
 
 #[wasm_bindgen_test]
-fn import_library_compile_erlang_test_wasm() {
+fn test_compile_package_bad_target() {
     reset_filesystem();
-    let mut modules = source(
-        r#"
-            import some/library
+    assert!(compile_package("ruby").is_err());
+}
 
-            pub fn main() {
-                library.fun("Hello, world!")
-            }
-            "#,
-    );
+#[wasm_bindgen_test]
+fn test_compile_package_empty() {
+    reset_filesystem();
+    assert!(compile_package("javascript").is_ok());
+}
 
-    modules.insert(
-        "some/library".into(),
-        r#"
-            pub fn fun(string: String) -> Nil {
-                Nil
-            }
-        "#
-        .to_string(),
-    );
-
-    let result = compile_wrapper(CompileModulesOptions {
-        modules,
-        target: Target::Erlang,
-    })
-    .unwrap();
+#[wasm_bindgen_test]
+fn test_compile_package_js() {
+    reset_filesystem();
+    write_module("one/two", "pub const x = 1");
+    write_module("up/down", "import one/two pub fn go() { two.x }");
+    assert!(compile_package("javascript").is_ok());
 
     assert_eq!(
-        result.keys().sorted().collect_vec(),
-        vec!["main.erl", "some@library.erl"]
+        read_compiled_javascript("one/two"),
+        Some("export const x = 1;\n".into())
     );
+
     assert_eq!(
-        result.get("main.erl"),
+        read_compiled_javascript("up/down"),
         Some(
-            &"-module(main).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+            r#"import * as $two from "../one/two.mjs";
 
--export([main/0]).
-
--spec main() -> nil.
-main() ->
-    some@library:'fun'(<<\"Hello, world!\"/utf8>>).
-"
+export function go() {
+  return $two.x;
+}
+"#
             .into()
         )
     );
+
+    // And now an error!
+    write_module("up/down", "import one/two/three");
+    assert!(compile_package("javascript").is_err());
+
+    // Let's fix that.
+    write_module("up/down", "pub const y = 1");
+    assert!(compile_package("javascript").is_ok());
     assert_eq!(
-        result.get("some@library.erl"),
-        Some(
-            &"-module(some@library).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
-
--export(['fun'/1]).
-
--spec 'fun'(binary()) -> nil.
-'fun'(String) ->
-    nil.
-"
-            .into()
-        )
+        read_compiled_javascript("up/down"),
+        Some("export const y = 1;\n".into())
     );
 }
