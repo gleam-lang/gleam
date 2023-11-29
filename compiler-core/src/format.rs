@@ -893,6 +893,7 @@ impl<'comments> Formatter<'comments> {
                         .map(|a| self.call_arg(a))
                         .chain(std::iter::once(last_arg_doc)),
                 ))
+                .next_break_fits(NextBreakFitsMode::Disabled)
                 .group()
             }
 
