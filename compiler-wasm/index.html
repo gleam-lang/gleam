@@ -1,16 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Try Gleam</title>
+  <style>
+    .playground {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .codeflask {
+      position: normal;
+    }
+  </style>
 </head>
+
 <body>
-  <pre id="editor">
-pub fn main() {
-  Ok("Hello, world!")
-}
+  <div class="playground">
+    <div class="results">
+      <div id="output">
+      </div>
+      <pre id="problems">
 </pre>
+    </div>
+    <pre id="editor">
+</pre>
+  </div>
   <script type="module" src="playground.js"></script>
 </body>
+
 </html>

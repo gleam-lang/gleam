@@ -1,18 +1,11 @@
 # Compiler WASM
 
 ```shell
-# Install the build tool
+# Install the build tool with cargo or brew etc
 cargo install wasm-pack
 
-# Build the library
-wasm-pack build
+# Build the wasm library
+wasm-pack build --release --target web
 
-# Or, build and copy to a directory
-wasm-pack build --out-dir /home/${USER}/projects/gleam-playground/gleam-wasm
-```
-
-Run tests using `node` with the compiled WebAssembly.
-
-```shell
-wasm-pack test --node
+# Now open up this directory using a web server
 ```
