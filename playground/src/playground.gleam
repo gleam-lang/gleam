@@ -1,5 +1,6 @@
 import gleam/io
 import gleam/list
+import gleam/pair
 import gleam/string
 import gleam/result
 import simplifile
@@ -21,6 +22,8 @@ const stdlib_sources = "build/packages/gleam_stdlib/src/gleam"
 const stdlib_external = "build/packages/gleam_stdlib/src"
 
 const compiler_wasm = "../compiler-wasm/pkg"
+
+const lessons_src = "lessons/src"
 
 // Don't include deprecated stdlib modules
 const skipped_stdlib_modules = [
@@ -47,9 +50,51 @@ pub fn main() {
 }
 
 fn write_pages() -> snag.Result(Nil) {
-  let html = html.page()
-  simplifile.write(public <> "/index.html", html)
-  |> file_error("Failed to write index.html")
+  use lessons <- result.try(
+    simplifile.read_directory(lessons_src)
+    |> file_error("Failed to read lessons directory"),
+  )
+
+  let lessons =
+    lessons
+    |> list.sort(by: string.compare)
+    |> list.index_map(pair.new)
+
+  use _ <- result.try(list.try_each(lessons, fn(pair) {
+    let #(index, lesson) = pair
+    let path = lessons_src <> "/" <> lesson
+    let name =
+      lesson
+      |> string.split("_")
+      |> list.drop(1)
+      |> string.join("-")
+
+    use code <- result.try(
+      simplifile.read(path <> "/code.gleam")
+      |> file_error("Failed to read code.gleam"),
+    )
+
+    use text <- result.try(
+      simplifile.read(path <> "/text.html")
+      |> file_error("Failed to read text.html"),
+    )
+
+    let path = case index {
+      0 -> public
+      _ -> public <> "/" <> name
+    }
+
+    use _ <- result.try(
+      simplifile.create_directory_all(path)
+      |> file_error("Failed to make " <> path),
+    )
+
+    let html = html.page(code: code, words: text)
+    simplifile.write(path <> "/index.html", html)
+    |> file_error("Failed to write " <> path <> "/index.html")
+  }))
+
+  Ok(Nil)
 }
 
 fn copy_wasm_compiler() -> snag.Result(Nil) {

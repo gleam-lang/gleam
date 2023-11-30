@@ -3,11 +3,7 @@ import initGleamCompiler from "./compiler.js";
 import stdlib from "./stdlib.js";
 
 const output = document.querySelector("#output");
-const initialCode = `import gleam/io
-
-pub fn main() {
-  io.println("Hello, Joe!")
-}
+const initialCode = `
 `;
 
 const prismGrammar = {
