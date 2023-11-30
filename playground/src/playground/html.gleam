@@ -23,12 +23,11 @@ pub fn page(words words: String, code code: String) -> String {
           htmb.dangerous_unescaped_fragment(string_builder.from_string(words)),
         ]),
         h("section", [#("id", "editor")], [
-          h("pre", [#("id", "editor-target")], [
-            htmb.dangerous_unescaped_fragment(string_builder.from_string(code)),
-          ]),
+          h("div", [#("id", "editor-target")], []),
         ]),
         h("aside", [#("id", "output")], []),
       ]),
+      h("script", [#("type", "gleam"), #("id", "code")], [text(code)]),
       h("script", [#("type", "module"), #("src", "/playground.js")], []),
     ]),
   ])
