@@ -33,6 +33,33 @@ pub fn page() -> String {
               " will be shown in the lower right, along with any compile errors and warnings.",
             ),
           ]),
+          h("p", [], [
+            text(
+              "To compile your code, this playground has a WASM version of the Gleam compiler, which is used to compile Gleam to JavaScript code. It is then evaluated in the browser.",
+            ),
+          ]),
+          h("p", [], [
+            text("The "),
+            h("a", [#("href", "https://hexdocs.pm/gleam_stdlib")], [
+              text("Gleam standard library"),
+            ]),
+            text(
+              " is loaded into the playground, allowing you to import any of the modules it contains. ",
+            ),
+            h(
+              "a",
+              [#("href", "https://hexdocs.pm/gleam_stdlib/gleam/list.html")],
+              [h("code", [], [text("gleam/list")])],
+            ),
+            text(" and "),
+            h(
+              "a",
+              [#("href", "https://hexdocs.pm/gleam_stdlib/gleam/result.html")],
+              [h("code", [], [text("gleam/result")])],
+            ),
+            text(" are Gleamlin favorites."),
+          ]),
+          h("p", [], [text("Happy hacking!")]),
         ]),
         h("section", [#("id", "editor")], [
           h("div", [#("id", "editor-target")], []),
