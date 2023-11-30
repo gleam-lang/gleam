@@ -102,14 +102,6 @@ function appendOutput(content, className) {
   output.appendChild(element);
 }
 
-function debounce(fn, delay) {
-  let timer = null;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
-}
-
 const editor = new CodeFlask("#editor-target", {
   language: "gleam",
 });
@@ -120,6 +112,14 @@ const compiler = await initGleamCompiler();
 const project = compiler.newProject();
 for (const [name, code] of Object.entries(stdlib)) {
   project.writeModule(name, code);
+}
+
+function debounce(fn, delay) {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
 }
 
 editor.onUpdate(debounce((code) => compileEval(project, code), 200));
