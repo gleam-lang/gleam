@@ -37,6 +37,11 @@ body {
 
 #text {
   flex: 1;
+  line-height: 1.2;
+}
+
+#text > :first-child {
+  margin-top: 0;
 }
 
 #editor {
