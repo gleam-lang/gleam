@@ -51,9 +51,12 @@ async function compileEval(project, code) {
     project.compilePackage("javascript");
     const js = project.readCompiledJavaScript("main");
     const main = await loadProgram(js);
-    if (main) appendOutput(main());
+    if (main) appendOutput(main(), "success");
   } catch (error) {
     appendOutput(error.toString(), "error");
+  }
+  for (const warning of project.takeWarnings()) {
+    appendOutput(warning, "warning");
   }
 }
 
@@ -74,7 +77,7 @@ function clearOutput() {
 function appendOutput(content, className) {
   const element = document.createElement("pre");
   element.textContent = content;
-  if (className) element.className = className;
+  element.className = className;
   output.appendChild(element);
 }
 

@@ -84,7 +84,7 @@ class Project {
     while (true) {
       const warning = compiler.wasm.pop_warning(this.#id);
       if (!warning) return warnings;
-      warnings.push(warning);
+      warnings.push(warning.trimStart());
     }
   }
 }
