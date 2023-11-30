@@ -3,6 +3,7 @@ import gleam/list
 import gleam/string
 import gleam/result
 import simplifile
+import playground/html
 import snag
 
 const static = "static"
@@ -32,6 +33,7 @@ pub fn main() {
     use _ <- result.try(make_prelude_available())
     use _ <- result.try(make_stdlib_available())
     use _ <- result.try(copy_wasm_compiler())
+    use _ <- result.try(write_pages())
     Ok(Nil)
   }
 
@@ -42,6 +44,12 @@ pub fn main() {
       panic
     }
   }
+}
+
+fn write_pages() -> snag.Result(Nil) {
+  let html = html.page()
+  simplifile.write(public <> "/index.html", html)
+  |> file_error("Failed to write index.html")
 }
 
 fn copy_wasm_compiler() -> snag.Result(Nil) {

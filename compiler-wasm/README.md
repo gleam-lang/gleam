@@ -6,6 +6,4 @@ cargo install wasm-pack
 
 # Build the wasm library
 wasm-pack build --release --target web
-
-# Now open up this directory using a web server
 ```

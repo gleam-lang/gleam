@@ -11,9 +11,9 @@ version = "1.0.0"
 
 [dependencies]
 gleam_stdlib = "~> 0.32"
-lustre = "~> 3.0"
 simplifile = "~> 1.0"
 snag = "~> 0.2"
+htmb = "~> 1.1"
 
 [dev-dependencies]
 gleeunit = "~> 1.0"
