@@ -1,13 +1,12 @@
 import CodeFlask from "https://cdn.jsdelivr.net/npm/codeflask@1.4.1/+esm";
 import initGleamCompiler from "./compiler.js";
+import stdlib from "./stdlib.js";
 
 const output = document.querySelector("#output");
-const initialCode = `pub fn main() {
-  greet("Joe")
-}
+const initialCode = `import gleam/io
 
-fn greet(name: String) -> String {
-  "Hello, " <> name <> "!"
+pub fn main() {
+  io.println("Hello, Joe!")
 }
 `;
 
@@ -49,7 +48,7 @@ let logged = "";
 const log = console.log;
 console.log = (...args) => {
   log(...args);
-  logged += args.map((e) => e.toString()).join(" ") + "\n";
+  logged += args.map((e) => `${e}`).join(" ") + "\n";
 };
 
 function resetLogCapture() {
@@ -63,11 +62,9 @@ async function compileEval(project, code) {
     project.compilePackage("javascript");
     const js = project.readCompiledJavaScript("main");
     const main = await loadProgram(js);
-    if (main) {
-      resetLogCapture();
-      console.log(main());
-      appendOutput(logged, "log");
-    }
+    resetLogCapture();
+    if (main) main();
+    appendOutput(logged, "log");
   } catch (error) {
     appendOutput(error.toString(), "error");
   }
@@ -113,6 +110,9 @@ editor.updateCode(initialCode);
 
 const compiler = await initGleamCompiler();
 const project = compiler.newProject();
+for (const [name, code] of Object.entries(stdlib)) {
+  project.writeModule(name, code);
+}
 
 editor.onUpdate(debounce((code) => compileEval(project, code), 1));
 compileEval(project, initialCode);

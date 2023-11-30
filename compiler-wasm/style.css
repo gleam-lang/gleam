@@ -82,16 +82,11 @@ body {
   margin: 0;
 }
 
-.success,
 .error,
 .warning {
   border: var(--gap) solid var(--border-color);
   border-top: 0;
   border-bottom: 0;
-}
-
-.success {
-  --border-color: var(--color-green);
 }
 
 .error {
