@@ -74,11 +74,14 @@ async function compileEval(project, code) {
 
 async function loadProgram(js) {
   const url = new URL(import.meta.url);
-  url.pathname = url.pathname.replace("playground.js", "");
+  url.pathname = "";
   url.hash = "";
   url.search = "";
   const href = url.toString();
-  const js1 = js.replaceAll(/from\s+"(.+)"/g, `from "${href}vendor/$1"`);
+  const js1 = js.replaceAll(
+    /from\s+"\.\/(.+)"/g,
+    `from "${href}precompiled/$1"`
+  );
   const js2 = btoa(unescape(encodeURIComponent(js1)));
   const module = await import("data:text/javascript;base64," + js2);
   return module.main;
