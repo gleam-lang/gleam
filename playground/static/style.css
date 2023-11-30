@@ -66,6 +66,10 @@ body {
   #editor {
     flex: 1.62;
   }
+  #output,
+  #editor {
+    max-height: 50vh;
+  }
 }
 
 #text,
