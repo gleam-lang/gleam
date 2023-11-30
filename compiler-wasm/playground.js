@@ -44,6 +44,18 @@ const prismGrammar = {
     /\b(?:0b[0-1]+|0o[0-7]+|[[:digit:]][[:digit:]_]*(\\.[[:digit:]]*)?|0x[[:xdigit:]]+)\b/,
 };
 
+// Monkey patch console.log to keep a copy of the output
+let logged = "";
+const log = console.log;
+console.log = (...args) => {
+  log(...args);
+  logged += args.map((e) => e.toString()).join(" ") + "\n";
+};
+
+function resetLogCapture() {
+  logged = "";
+}
+
 async function compileEval(project, code) {
   clearOutput();
   try {
@@ -51,7 +63,11 @@ async function compileEval(project, code) {
     project.compilePackage("javascript");
     const js = project.readCompiledJavaScript("main");
     const main = await loadProgram(js);
-    if (main) appendOutput(main(), "success");
+    if (main) {
+      resetLogCapture();
+      console.log(main());
+      appendOutput(logged, "log");
+    }
   } catch (error) {
     appendOutput(error.toString(), "error");
   }
