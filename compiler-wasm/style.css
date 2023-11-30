@@ -2,6 +2,7 @@
   --color-pink: #ffaff3;
   --color-red: #ff6262;
   --color-orange: #ffd596;
+  --color-green: #c8ffa7;
   --gap: 12px;
 }
 
@@ -77,18 +78,26 @@ body {
   margin: 0;
 }
 
-#output pre {
-  margin: 0 0 var(--gap) 0;
+#output > * {
+  margin: 0;
+}
+
+.success,
+.error,
+.warning {
+  border: var(--gap) solid var(--border-color);
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.success {
+  --border-color: var(--color-green);
 }
 
 .error {
-  border: var(--gap) solid var(--color-red);
-  border-top: 0;
-  border-bottom: 0;
+  --border-color: var(--color-red);
 }
 
 .warning {
-  border: var(--gap) solid var(--color-orange);
-  border-top: 0;
-  border-bottom: 0;
+  --border-color: var(--color-orange);
 }
