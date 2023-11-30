@@ -24,7 +24,7 @@ pub fn page() -> String {
           h("p", [], [text("Welcome to the Gleam playground.")]),
           h("p", [], [
             text(
-              "The Gleam code on the left is editable and will be compiled and evaluated as you type. Anything you print using",
+              "The Gleam code on the left is editable and will be compiled and evaluated as you type. Anything you print using ",
             ),
             h("code", [], [text("io.println")]),
             text(" or "),
