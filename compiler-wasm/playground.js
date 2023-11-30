@@ -1,7 +1,6 @@
 import CodeFlask from "https://cdn.jsdelivr.net/npm/codeflask@1.4.1/+esm";
 import initGleamCompiler from "./compiler.js";
 
-const problems = document.querySelector("#problems");
 const output = document.querySelector("#output");
 const initialCode = `pub fn main() {
   greet("Joe")
@@ -46,16 +45,15 @@ const prismGrammar = {
 };
 
 async function compileEval(project, code) {
+  clearOutput();
   try {
     project.writeModule("main", code);
     project.compilePackage("javascript");
     const js = project.readCompiledJavaScript("main");
     const main = await loadProgram(js);
-    if (main) output.textContent = main();
-    problems.textContent = "";
+    if (main) appendOutput(main());
   } catch (error) {
-    output.textContent = "";
-    problems.textContent = error.toString();
+    appendOutput(error.toString(), "error");
   }
 }
 
@@ -67,6 +65,19 @@ async function loadProgram(js) {
   return module.main;
 }
 
+function clearOutput() {
+  while (output.firstChild) {
+    output.removeChild(output.firstChild);
+  }
+}
+
+function appendOutput(content, className) {
+  const element = document.createElement("pre");
+  element.textContent = content;
+  if (className) element.className = className;
+  output.appendChild(element);
+}
+
 function debounce(fn, delay) {
   let timer = null;
   return (...args) => {
@@ -75,9 +86,8 @@ function debounce(fn, delay) {
   };
 }
 
-const editor = new CodeFlask("#editor", {
+const editor = new CodeFlask("#editor-target", {
   language: "gleam",
-  lineNumbers: true,
 });
 editor.addLanguage("gleam", prismGrammar);
 editor.updateCode(initialCode);
@@ -85,5 +95,5 @@ editor.updateCode(initialCode);
 const compiler = await initGleamCompiler();
 const project = compiler.newProject();
 
-editor.onUpdate(debounce((code) => compileEval(project, code), 200));
+editor.onUpdate(debounce((code) => compileEval(project, code), 1));
 compileEval(project, initialCode);
