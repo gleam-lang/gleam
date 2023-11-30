@@ -74,7 +74,7 @@ async function compileEval(project, code) {
 
 async function loadProgram(js) {
   const url = new URL(import.meta.url);
-  url.pathname = "";
+  url.pathname = url.pathname.replace("playground.js", "");
   url.hash = "";
   url.search = "";
   const href = url.toString();
