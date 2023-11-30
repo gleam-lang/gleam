@@ -78,13 +78,16 @@ body {
 #output,
 #editor {
   min-width: 50%;
+  max-width: 100%;
   overflow-y: auto;
   border-bottom: 2px solid var(--color-pink);
   margin: 0;
+  overflow-wrap: break-word;
 }
 
 #output > * {
   margin: 0;
+  white-space: pre-wrap;
 }
 
 .error,
