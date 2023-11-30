@@ -56,7 +56,6 @@ function resetLogCapture() {
 }
 
 async function compileEval(project, code) {
-  clearOutput();
   try {
     project.writeModule("main", code);
     project.compilePackage("javascript");
@@ -64,9 +63,9 @@ async function compileEval(project, code) {
     const main = await loadProgram(js);
     resetLogCapture();
     if (main) main();
-    appendOutput(logged, "log");
+    replaceOutput(logged, "log");
   } catch (error) {
-    appendOutput(error.toString(), "error");
+    replaceOutput(error.toString(), "error");
   }
   for (const warning of project.takeWarnings()) {
     appendOutput(warning, "warning");
@@ -85,6 +84,11 @@ function clearOutput() {
   while (output.firstChild) {
     output.removeChild(output.firstChild);
   }
+}
+
+function replaceOutput(content, className) {
+  clearOutput();
+  appendOutput(content, className);
 }
 
 function appendOutput(content, className) {
@@ -114,5 +118,5 @@ for (const [name, code] of Object.entries(stdlib)) {
   project.writeModule(name, code);
 }
 
-editor.onUpdate(debounce((code) => compileEval(project, code), 1));
+editor.onUpdate(debounce((code) => compileEval(project, code), 200));
 compileEval(project, initialCode);
