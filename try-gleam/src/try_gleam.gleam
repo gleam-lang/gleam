@@ -356,12 +356,12 @@ fn page_html(page: Page) -> String {
         ],
         [],
       ),
-      h("title", [], [text("Gleam Playground")]),
+      h("title", [], [text("Try Gleam")]),
       h("link", [#("rel", "stylesheet"), #("href", "/style.css")], []),
     ]),
     h("body", [], [
       h("nav", [#("class", "navbar")], [
-        h("a", [#("href", "/")], [text("Gleam Playground")]),
+        h("a", [#("href", "/")], [text("Try Gleam")]),
       ]),
       h("article", [#("class", "playground")], [
         h("section", [#("id", "text")], [
@@ -382,7 +382,7 @@ fn page_html(page: Page) -> String {
         h("aside", [#("id", "output")], []),
       ]),
       h("script", [#("type", "gleam"), #("id", "code")], [text(page.code)]),
-      h("script", [#("type", "module"), #("src", "/playground.js")], []),
+      h("script", [#("type", "module"), #("src", "/index.js")], []),
     ]),
   ])
   |> htmb.render_page("html")
