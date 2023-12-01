@@ -48,7 +48,7 @@ codeflask__textarea,
 pre,
 code {
   font-weight: normal;
-  letter-spacing: unset;
+  letter-spacing: initial;
 }
 
 p code {
