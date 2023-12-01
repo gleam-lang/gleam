@@ -1,4 +1,27 @@
+@font-face {
+  font-family: "Lexend";
+  font-display: swap;
+  font-weight: 400;
+  src: url("https://gleam.run/fonts/Lexend.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Lexend";
+  font-display: swap;
+  font-weight: 700;
+  src: url("https://gleam.run/fonts/Lexend-700.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Outfit";
+  font-display: swap;
+  src: url("https://gleam.run/fonts/Outfit.woff") format("woff");
+}
+
 :root {
+  --font-family-normal: "Outfit", sans-serif;
+  --font-family-title: "Lexend", sans-serif;
+
   --color-pink: #ffaff3;
   --color-red: #ff6262;
   --color-orange: #ffd596;
@@ -13,10 +36,34 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: sans-serif;
   height: 100vh;
   display: flex;
   flex-direction: column;
+  font-family: var(--font-family-normal);
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+codeflask__textarea,
+pre,
+code {
+  font-weight: normal;
+  letter-spacing: unset;
+}
+
+p code {
+  padding: 1px 2px;
+  background-color: #f5f5f5;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-family-title);
+  font-weight: normal;
 }
 
 .navbar {
@@ -37,7 +84,6 @@ body {
 
 #text {
   flex: 1;
-  line-height: 1.2;
 }
 
 #text > :first-child {
