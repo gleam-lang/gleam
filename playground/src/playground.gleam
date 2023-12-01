@@ -1,10 +1,12 @@
 import gleam/io
 import gleam/list
+import htmb.{h, text}
+import gleam/string_builder
+import gleam/option.{type Option, None, Some}
 import gleam/pair
 import gleam/string
 import gleam/result
 import simplifile
-import playground/html
 import snag
 
 const static = "static"
@@ -49,6 +51,17 @@ pub fn main() {
   }
 }
 
+type Page {
+  Page(
+    name: String,
+    text: String,
+    code: String,
+    path: String,
+    previous: Option(String),
+    next: Option(String),
+  )
+}
+
 fn write_pages() -> snag.Result(Nil) {
   use lessons <- result.try(
     simplifile.read_directory(lessons_src)
@@ -60,7 +73,7 @@ fn write_pages() -> snag.Result(Nil) {
     |> list.sort(by: string.compare)
     |> list.index_map(pair.new)
 
-  use _ <- result.try(list.try_each(lessons, fn(pair) {
+  use pages <- result.try(list.try_map(lessons, fn(pair) {
     let #(index, lesson) = pair
     let path = lessons_src <> "/" <> lesson
     let name =
@@ -80,21 +93,54 @@ fn write_pages() -> snag.Result(Nil) {
     )
 
     let path = case index {
-      0 -> public
-      _ -> public <> "/" <> name
+      0 -> "/"
+      _ -> "/" <> name
     }
 
     use _ <- result.try(
-      simplifile.create_directory_all(path)
+      simplifile.create_directory_all(public <> path)
       |> file_error("Failed to make " <> path),
     )
 
-    let html = html.page(code: code, words: text)
-    simplifile.write(path <> "/index.html", html)
-    |> file_error("Failed to write " <> path <> "/index.html")
+    Ok(
+      Page(
+        name: name,
+        text: text,
+        code: code,
+        path: path,
+        previous: None,
+        next: None,
+      ),
+    )
+  }))
+
+  let pages = add_previous_next(pages, [], None)
+
+  use _ <- result.try(list.try_each(pages, fn(page) {
+    let path = public <> page.path <> "/index.html"
+    simplifile.write(to: path, contents: page_html(page))
+    |> file_error("Failed to write page " <> path)
   }))
 
   Ok(Nil)
+}
+
+fn add_previous_next(
+  rest: List(Page),
+  acc: List(Page),
+  previous: Option(String),
+) -> List(Page) {
+  case rest {
+    [] -> acc
+    [page, next, ..rest] -> {
+      let page = Page(..page, previous: previous, next: Some(next.path))
+      add_previous_next([next, ..rest], [page, ..acc], Some(page.path))
+    }
+    [page, ..rest] -> {
+      let page = Page(..page, previous: previous, next: None)
+      add_previous_next(rest, [page, ..acc], Some(page.path))
+    }
+  }
 }
 
 fn copy_wasm_compiler() -> snag.Result(Nil) {
@@ -251,4 +297,56 @@ fn file_error(
       snag.error("File error: " <> string.inspect(error))
       |> snag.context(context)
   }
+}
+
+fn page_html(page: Page) -> String {
+  let nav = case page {
+    Page(previous: None, next: None, ..) -> []
+    Page(previous: Some(prev), next: None, ..) -> [
+      h("a", [#("href", prev)], [text("Previous")]),
+    ]
+    Page(previous: None, next: Some(next), ..) -> [
+      h("a", [#("href", next)], [text("Next")]),
+    ]
+    Page(previous: Some(prev), next: Some(next), ..) -> [
+      h("a", [#("href", prev)], [text("Previous")]),
+      text(" — "),
+      h("a", [#("href", next)], [text("Next")]),
+    ]
+  }
+
+  h("html", [#("lang", "en-gb")], [
+    h("head", [], [
+      h("meta", [#("charset", "utf-8")], []),
+      h(
+        "meta",
+        [
+          #("name", "viewport"),
+          #("content", "width=device-width, initial-scale=1"),
+        ],
+        [],
+      ),
+      h("title", [], [text("Gleam Playground")]),
+      h("link", [#("rel", "stylesheet"), #("href", "/style.css")], []),
+    ]),
+    h("body", [], [
+      h("nav", [#("class", "navbar")], [text("Gleam Playground")]),
+      h("article", [#("class", "playground")], [
+        h("section", [#("id", "text")], [
+          htmb.dangerous_unescaped_fragment(
+            string_builder.from_string(page.text),
+          ),
+          h("nav", [#("class", "prev-next")], nav),
+        ]),
+        h("section", [#("id", "editor")], [
+          h("div", [#("id", "editor-target")], []),
+        ]),
+        h("aside", [#("id", "output")], []),
+      ]),
+      h("script", [#("type", "gleam"), #("id", "code")], [text(page.code)]),
+      h("script", [#("type", "module"), #("src", "/playground.js")], []),
+    ]),
+  ])
+  |> htmb.render_page("html")
+  |> string_builder.to_string
 }
