@@ -27,6 +27,13 @@ const compiler_wasm = "../compiler-wasm/pkg"
 
 const lessons_src = "lessons/src"
 
+const hello_joe = "import gleam/io
+
+pub fn main() {
+  io.println(\"Hello, Joe!\")
+}
+"
+
 // Don't include deprecated stdlib modules
 const skipped_stdlib_modules = [
   "bit_string.gleam", "bit_builder.gleam", "map.gleam",
@@ -38,7 +45,8 @@ pub fn main() {
     use _ <- result.try(make_prelude_available())
     use _ <- result.try(make_stdlib_available())
     use _ <- result.try(copy_wasm_compiler())
-    use _ <- result.try(write_pages())
+    use p <- result.try(load_pages())
+    use _ <- result.try(write_pages(p))
     Ok(Nil)
   }
 
@@ -62,7 +70,7 @@ type Page {
   )
 }
 
-fn write_pages() -> snag.Result(Nil) {
+fn load_pages() -> snag.Result(List(Page)) {
   use lessons <- result.try(
     simplifile.read_directory(lessons_src)
     |> file_error("Failed to read lessons directory"),
@@ -97,11 +105,6 @@ fn write_pages() -> snag.Result(Nil) {
       _ -> "/" <> name
     }
 
-    use _ <- result.try(
-      simplifile.create_directory_all(public <> path)
-      |> file_error("Failed to make " <> path),
-    )
-
     Ok(
       Page(
         name: name,
@@ -114,15 +117,50 @@ fn write_pages() -> snag.Result(Nil) {
     )
   }))
 
-  let pages = add_previous_next(pages, [], None)
+  Ok(add_previous_next(pages, [], None))
+}
 
-  use _ <- result.try(list.try_each(pages, fn(page) {
-    let path = public <> page.path <> "/index.html"
-    simplifile.write(to: path, contents: page_html(page))
-    |> file_error("Failed to write page " <> path)
-  }))
+fn write_pages(pages: List(Page)) -> snag.Result(Nil) {
+  use _ <- result.try(list.try_each(pages, write_page))
 
-  Ok(Nil)
+  let render = fn(h) { string_builder.to_string(htmb.render(h)) }
+  let html =
+    string.concat([
+      render(h("h2", [], [text("Table of contents")])),
+      render(h("ul", [], list.map(pages, fn(page) {
+        h("li", [], [
+          h("a", [#("href", page.path)], [
+            page.name
+            |> string.replace("-", " ")
+            |> string.capitalise
+            |> text,
+          ]),
+        ])
+      }))),
+    ])
+
+  let page =
+    Page(
+      name: "Index",
+      text: html,
+      code: hello_joe,
+      path: "/index",
+      previous: None,
+      next: None,
+    )
+  write_page(page)
+}
+
+fn write_page(page: Page) -> snag.Result(Nil) {
+  let path = public <> page.path
+  use _ <- result.try(
+    simplifile.create_directory_all(path)
+    |> file_error("Failed to make " <> path),
+  )
+
+  let path = path <> "/index.html"
+  simplifile.write(to: path, contents: page_html(page))
+  |> file_error("Failed to write page " <> path)
 }
 
 fn add_previous_next(
@@ -131,7 +169,7 @@ fn add_previous_next(
   previous: Option(String),
 ) -> List(Page) {
   case rest {
-    [] -> acc
+    [] -> list.reverse(acc)
     [page, next, ..rest] -> {
       let page = Page(..page, previous: previous, next: Some(next.path))
       add_previous_next([next, ..rest], [page, ..acc], Some(page.path))
@@ -300,19 +338,11 @@ fn file_error(
 }
 
 fn page_html(page: Page) -> String {
-  let nav = case page {
-    Page(previous: None, next: None, ..) -> []
-    Page(previous: Some(prev), next: None, ..) -> [
-      h("a", [#("href", prev)], [text("Previous")]),
-    ]
-    Page(previous: None, next: Some(next), ..) -> [
-      h("a", [#("href", next)], [text("Next")]),
-    ]
-    Page(previous: Some(prev), next: Some(next), ..) -> [
-      h("a", [#("href", prev)], [text("Previous")]),
-      text(" — "),
-      h("a", [#("href", next)], [text("Next")]),
-    ]
+  let navlink = fn(name, link) {
+    case link {
+      None -> h("span", [], [text(name)])
+      Some(path) -> h("a", [#("href", path)], [text(name)])
+    }
   }
 
   h("html", [#("lang", "en-gb")], [
@@ -330,13 +360,21 @@ fn page_html(page: Page) -> String {
       h("link", [#("rel", "stylesheet"), #("href", "/style.css")], []),
     ]),
     h("body", [], [
-      h("nav", [#("class", "navbar")], [text("Gleam Playground")]),
+      h("nav", [#("class", "navbar")], [
+        h("a", [#("href", "/")], [text("Gleam Playground")]),
+      ]),
       h("article", [#("class", "playground")], [
         h("section", [#("id", "text")], [
           htmb.dangerous_unescaped_fragment(
             string_builder.from_string(page.text),
           ),
-          h("nav", [#("class", "prev-next")], nav),
+          h("nav", [#("class", "prev-next")], [
+            navlink("Back", page.previous),
+            text(" — "),
+            h("a", [#("href", "/index")], [text("Index")]),
+            text(" — "),
+            navlink("Next", page.next),
+          ]),
         ]),
         h("section", [#("id", "editor")], [
           h("div", [#("id", "editor-target")], []),

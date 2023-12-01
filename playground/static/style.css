@@ -74,6 +74,12 @@ h6 {
   background-color: var(--color-pink);
 }
 
+.navbar a:visited,
+.navbar a {
+  text-decoration: none;
+  color: #000;
+}
+
 .playground {
   display: flex;
   flex-direction: column;
@@ -161,4 +167,8 @@ h6 {
   align-items: center;
   padding: 0 var(--gap);
   gap: 0.5em;
+}
+
+.prev-next span {
+  opacity: 0.5;
 }
