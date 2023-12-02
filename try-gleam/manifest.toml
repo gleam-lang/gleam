@@ -2,7 +2,7 @@
 # You typically do not need to edit this file
 
 packages = [
-  { name = "gleam_stdlib", version = "0.33.0", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "539E37A2AA5EBE8E75F4B74755E4CC604BD957C3000AC8D705A2024886A2738B" },
+  { name = "gleam_stdlib", version = "0.33.1", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "3CEAD7B153D896499C78390B22CC968620C27500C922AED3A5DD7B536F922B25" },
   { name = "gleeunit", version = "1.0.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "D3682ED8C5F9CAE1C928F2506DE91625588CC752495988CBE0F5653A42A6F334" },
   { name = "htmb", version = "1.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "htmb", source = "hex", outer_checksum = "30D448F0E15DFCF7283AAAC2F351D77B9D54E318219C9FDDB1877572B67C27B7" },
   { name = "simplifile", version = "1.0.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "simplifile", source = "hex", outer_checksum = "0BD6F0E7DA1A7E11D18B8AD48453225CAFCA4C8CFB4513D217B372D2866C501C" },
