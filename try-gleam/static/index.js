@@ -60,6 +60,7 @@ async function compileEval(project, code) {
     if (main) main();
     replaceOutput(logged, "log");
   } catch (error) {
+    console.error(error);
     replaceOutput(error.toString(), "error");
   }
   for (const warning of project.takeWarnings()) {
