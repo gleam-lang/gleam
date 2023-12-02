@@ -49,6 +49,7 @@ core team.",
                 println!("Not publishing.");
                 std::process::exit(0);
             }
+            println!("");
         }
 
         // Ask for confirmation if the package is below version 1
@@ -66,6 +67,7 @@ updates that would normally be safe."
                 println!("Not publishing.");
                 std::process::exit(0);
             }
+            println!("");
         }
 
         let Tarball {
@@ -152,8 +154,8 @@ impl ApiKeyCommand for PublishCommand {
 Please push a git tag for this release so source code links in the
 HTML documentation will work:
 
-    git tag v{version}
-    git push origin v{version}
+    git tag {version}
+    git push origin {version}
 "
             )
         }
