@@ -49,7 +49,7 @@ core team.",
                 println!("Not publishing.");
                 std::process::exit(0);
             }
-            println!("");
+            println!();
         }
 
         // Ask for confirmation if the package is below version 1
@@ -67,7 +67,7 @@ updates that would normally be safe."
                 println!("Not publishing.");
                 std::process::exit(0);
             }
-            println!("");
+            println!();
         }
 
         let Tarball {
