@@ -343,9 +343,12 @@ fn is_gleam_path(path: &Utf8Path, dir: impl AsRef<Utf8Path>) -> bool {
 }
 
 pub fn gleam_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
+    let build_path = Utf8Path::new("./build");
+
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
         .require_git(false)
+        .filter_entry(move |e| e.path() != build_path)
         .build()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
