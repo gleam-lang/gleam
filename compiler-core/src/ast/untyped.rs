@@ -94,7 +94,7 @@ pub enum UntypedExpr {
     Todo {
         kind: TodoKind,
         location: SrcSpan,
-        message: Option<EcoString>,
+        message: Option<Box<Self>>,
     },
 
     Panic {

@@ -3170,6 +3170,17 @@ fn expr_panic_as_value() {
 }
 
 #[test]
+fn expr_todo_as_value() {
+    assert_format!(
+        r#"fn main() {
+  let x = "Need to" <> "do this"
+  todo as x
+}
+"#
+    );
+}
+
+#[test]
 fn expr_todo() {
     assert_format!(
         "fn main() {

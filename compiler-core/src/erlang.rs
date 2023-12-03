@@ -1455,11 +1455,12 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
     }
 }
 
-fn todo<'a>(message: &'a Option<EcoString>, location: SrcSpan, env: &Env<'a>) -> Document<'a> {
-    let message = message
-        .as_deref()
-        .unwrap_or("This has not yet been implemented");
-    erlang_error("todo", &string(message), location, vec![], env)
+fn todo<'a>(message: Option<&'a TypedExpr>, location: SrcSpan, env: &mut Env<'a>) -> Document<'a> {
+    let message = match message {
+        Some(m) => expr(m, env),
+        None => string("This has not yet been implemented"),
+    };
+    erlang_error("todo", &message, location, vec![], env)
 }
 
 fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a>) -> Document<'a> {
@@ -1520,7 +1521,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             message: label,
             location,
             ..
-        } => todo(label, *location, env),
+        } => todo(label.as_deref(), *location, env),
 
         TypedExpr::Panic {
             location, message, ..
