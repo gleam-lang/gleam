@@ -298,6 +298,11 @@ fn generate_stdlib_bundle(modules: List(String)) -> snag.Result(Nil) {
 }
 
 fn reset_output() -> snag.Result(Nil) {
+  use _ <- result.try(
+    simplifile.create_directory_all(public)
+    |> file_error("Failed to delete public directory"),
+  )
+
   use files <- result.try(
     simplifile.read_directory(public)
     |> file_error("Failed to read public directory"),
