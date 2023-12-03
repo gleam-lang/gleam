@@ -70,7 +70,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 message: label,
                 kind,
                 ..
-            } => Ok(self.infer_todo(location, kind, label)),
+            } => self.infer_todo(location, kind, label),
 
             // A placeholder is used when the author has not provided a function
             // body, instead only giving an external implementation for this
@@ -186,19 +186,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         location: SrcSpan,
         kind: TodoKind,
-        label: Option<EcoString>,
-    ) -> TypedExpr {
+        label: Option<Box<UntypedExpr>>,
+    ) -> Result<TypedExpr, Error> {
         let typ = self.new_unbound_var();
         self.environment.warnings.emit(Warning::Todo {
             kind,
             location,
             typ: typ.clone(),
         });
-
-        TypedExpr::Todo {
-            location,
-            message: label,
-            type_: typ,
+        match label {
+            Some(message) => {
+                let message = self.infer(*message)?;
+                unify(string(), message.type_())
+                    .map_err(|e| convert_unify_error(e, message.location()))?;
+                Ok(TypedExpr::Todo {
+                    location,
+                    type_: typ,
+                    message: Some(Box::new(message)),
+                })
+            }
+            None => Ok(TypedExpr::Todo {
+                location,
+                type_: typ,
+                message: None,
+            }),
         }
     }
 
@@ -207,11 +218,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         message: Option<Box<UntypedExpr>>,
     ) -> Result<TypedExpr, Error> {
-        let message = message.map(|untyped_expr| self.infer(*untyped_expr));
         let typ = self.new_unbound_var();
         match message {
-            Some(Ok(message)) => {
-                // Making sure that the panic message evaluates to a string.
+            Some(message) => {
+                let message = self.infer(*message)?;
                 unify(string(), message.type_())
                     .map_err(|e| convert_unify_error(e, message.location()))?;
                 Ok(TypedExpr::Panic {
@@ -225,7 +235,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 type_: typ,
                 message: None,
             }),
-            Some(Err(e)) => Err(e),
         }
     }
 

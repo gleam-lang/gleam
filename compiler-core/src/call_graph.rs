@@ -112,11 +112,16 @@ impl<'a> CallGraphBuilder<'a> {
 
     fn expression(&mut self, expression: &'a UntypedExpr) {
         match expression {
-            UntypedExpr::Todo { .. }
-            | UntypedExpr::Int { .. }
+            UntypedExpr::Int { .. }
             | UntypedExpr::Float { .. }
             | UntypedExpr::String { .. }
             | UntypedExpr::Placeholder { .. } => (),
+
+            UntypedExpr::Todo { message, .. } => {
+                if let Some(msg_expr) = message {
+                    self.expression(msg_expr)
+                }
+            }
 
             UntypedExpr::Panic { message, .. } => {
                 if let Some(msg_expr) = message {

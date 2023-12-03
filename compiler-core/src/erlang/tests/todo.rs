@@ -34,6 +34,21 @@ pub fn main() {
 }
 
 #[test]
+fn todo_as_function() {
+    assert_erl!(
+        r#"
+pub fn retstring() {
+  "wibble"
+}
+pub fn main() {
+  todo as retstring() <> "wobble"
+}
+"#
+    );
+}
+
+#[ignore = "This would fail now. See https://github.com/gleam-lang/gleam/issues/2440"]
+#[test]
 fn piped() {
     assert_erl!(
         r#"

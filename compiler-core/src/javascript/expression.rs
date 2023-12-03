@@ -180,7 +180,7 @@ impl<'module> Generator<'module> {
 
             TypedExpr::Todo {
                 message, location, ..
-            } => Ok(self.todo(message, location)),
+            } => self.todo(message.as_ref().map(|m| &**m), location),
 
             TypedExpr::Panic {
                 location, message, ..
@@ -955,20 +955,21 @@ impl<'module> Generator<'module> {
         Ok(docvec!(left, " ", op, " ", right))
     }
 
-    fn todo<'a>(&mut self, message: &'a Option<EcoString>, location: &'a SrcSpan) -> Document<'a> {
+    fn todo<'a>(&mut self, message: Option<&'a TypedExpr>, location: &'a SrcSpan) -> Output<'a> {
         let scope_position = self.scope_position;
         self.scope_position = Position::NotTail;
 
-        let message = message
-            .as_deref()
-            .unwrap_or("This has not yet been implemented");
-        let doc = self.throw_error("todo", &string(message), *location, vec![]);
+        let message = match message {
+            Some(m) => self.expression(m)?,
+            None => string("This has not yet been implemented"),
+        };
+        let doc = self.throw_error("todo", &message, *location, vec![]);
 
         // Reset tail position so later values are returned as needed. i.e.
         // following clauses in a case expression.
         self.scope_position = scope_position;
 
-        doc
+        Ok(doc)
     }
 
     fn panic<'a>(&mut self, location: &'a SrcSpan, message: Option<&'a TypedExpr>) -> Output<'a> {
