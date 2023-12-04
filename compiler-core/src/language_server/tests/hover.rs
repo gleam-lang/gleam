@@ -99,9 +99,8 @@ fn main() {
 fn() -> Nil
 ```
 
-View on [hexdocs](https://hexdocs.pm//example_module.html#my_fn)
-"
-                .to_string()
+View on [hexdocs](https://hexdocs.pm/example_module.html#my_fn)"
+                    .to_string()
             )),
             range: Some(Range {
                 start: Position {
@@ -111,6 +110,45 @@ View on [hexdocs](https://hexdocs.pm//example_module.html#my_fn)
                 end: Position {
                     line: 3,
                     character: 30,
+                },
+            },),
+        })
+    );
+}
+
+#[test]
+fn hover_imported_constants() {
+    let code = "
+import example_module
+fn main() {
+  let _ = example_module.my_const
+  Nil
+}
+";
+
+    assert_eq!(
+        positioned_hover_with_imports(
+            code,
+            Position::new(3, 28),
+            HashMap::from([("example_module", "pub const my_const = 42")])
+        ),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+Int
+```
+
+View on [hexdocs](https://hexdocs.pm/example_module.html#my_const)"
+                    .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 3,
+                    character: 24,
+                },
+                end: Position {
+                    line: 3,
+                    character: 33,
                 },
             },),
         })

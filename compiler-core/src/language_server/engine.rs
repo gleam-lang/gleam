@@ -564,7 +564,7 @@ fn hover_for_expression(
     let link_opt = module.and_then(|m| get_expr_link(expression, m));
     let link_section = match link_opt {
         None => "".to_string(),
-        Some(link) => format!("View on [hexdocs]({link})"),
+        Some(link) => format!("\nView on [hexdocs]({link})"),
     };
 
     // Show the type of the hovered node to the user
@@ -573,9 +573,7 @@ fn hover_for_expression(
         "```gleam
 {type_}
 ```
-{documentation}
-{link_section}
-"
+{documentation}{link_section}"
     );
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
@@ -653,6 +651,13 @@ fn get_expr_link(expression: &TypedExpr, module: &Module) -> Option<String> {
             ..
         } => (module_name, name),
 
+        TypedExpr::ModuleSelect {
+            label: name,
+            module_name,
+            constructor: crate::type_::ModuleValueConstructor::Constant { .. },
+            ..
+        } => (module_name, name),
+
         _ => return None,
     };
 
@@ -661,6 +666,6 @@ fn get_expr_link(expression: &TypedExpr, module: &Module) -> Option<String> {
         _ => None,
     })?;
 
-    let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
+    let link = format!("https://hexdocs.pm/{package_name}{module_name}.html#{name}");
     Some(link)
 }
