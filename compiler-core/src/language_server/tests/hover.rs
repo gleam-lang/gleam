@@ -82,15 +82,15 @@ fn hover_imported_function() {
     let code = "
 import example_module
 fn main() {
-  let _ = example_module.my_fn
-  Nil
+  example_module.my_fn
 }
 ";
 
     assert_eq!(
+        // hovering over "my_fn"
         positioned_hover_with_imports(
             code,
-            Position::new(3, 28),
+            Position::new(3, 19),
             HashMap::from([("example_module", "pub fn my_fn() { Nil }")])
         ),
         Some(Hover {
@@ -105,11 +105,11 @@ View on [hexdocs](https://hexdocs.pm/example_module.html#my_fn)"
             range: Some(Range {
                 start: Position {
                     line: 3,
-                    character: 24,
+                    character: 16,
                 },
                 end: Position {
                     line: 3,
-                    character: 30,
+                    character: 22,
                 },
             },),
         })
@@ -121,15 +121,15 @@ fn hover_imported_constants() {
     let code = "
 import example_module
 fn main() {
-  let _ = example_module.my_const
-  Nil
+  example_module.my_const
 }
 ";
 
     assert_eq!(
+        // hovering over "my_const"
         positioned_hover_with_imports(
             code,
-            Position::new(3, 28),
+            Position::new(3, 19),
             HashMap::from([("example_module", "pub const my_const = 42")])
         ),
         Some(Hover {
@@ -144,11 +144,11 @@ View on [hexdocs](https://hexdocs.pm/example_module.html#my_const)"
             range: Some(Range {
                 start: Position {
                     line: 3,
-                    character: 24,
+                    character: 16,
                 },
                 end: Position {
                     line: 3,
-                    character: 33,
+                    character: 25,
                 },
             },),
         })
