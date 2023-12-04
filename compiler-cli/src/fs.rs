@@ -342,13 +342,34 @@ fn is_gleam_path(path: &Utf8Path, dir: impl AsRef<Utf8Path>) -> bool {
     )
 }
 
-pub fn gleam_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
-    let build_path = Utf8Path::new("./build");
+fn is_gleam_build_dir(e: &ignore::DirEntry) -> Option<bool> {
+    if !e.path().is_dir() || e.path() != Utf8Path::new("./build") {
+        return Some(false);
+    }
 
+    let has_gleam_toml_as_sibiling = e
+        .path()
+        .parent()?
+        .read_dir()
+        .ok()?
+        .any(|e| e.unwrap().file_name().to_str() == Some("gleam.toml"));
+
+    Some(has_gleam_toml_as_sibiling)
+}
+
+pub fn gleam_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
         .require_git(false)
-        .filter_entry(move |e| e.path() != build_path)
+        .filter_entry(|e| {
+            let is_gleam_build_dir = is_gleam_build_dir(e).unwrap_or(
+                // In case we are not sure if the /build folder contains a gleam.toml,
+                // we assume it doesn't
+                false,
+            );
+
+            !is_gleam_build_dir
+        })
         .build()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
