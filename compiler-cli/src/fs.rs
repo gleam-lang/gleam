@@ -343,7 +343,7 @@ fn is_gleam_path(path: &Utf8Path, dir: impl AsRef<Utf8Path>) -> bool {
 }
 
 fn is_gleam_build_dir(e: &ignore::DirEntry) -> Option<bool> {
-    if !e.path().is_dir() || e.path() != Utf8Path::new("./build") {
+    if !e.path().is_dir() || !e.path().ends_with("build") {
         return Some(false);
     }
 
