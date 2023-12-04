@@ -81,6 +81,43 @@ fn(Int) -> Int
 }
 
 #[test]
+fn hover_local_function() {
+    let code = "
+fn my_fn() {
+  Nil
+}
+
+fn main() {
+  my_fn
+}
+";
+
+    assert_eq!(
+        positioned_hover(code, Position::new(6, 3)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn() -> Nil
+```
+
+View on [hexdocs](https://hexdocs.pm/my_project/app.html#my_fn)"
+                    .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 6,
+                    character: 2,
+                },
+                end: Position {
+                    line: 6,
+                    character: 7,
+                },
+            },),
+        })
+    );
+}
+
+#[test]
 fn hover_imported_function() {
     let code = "
 import example_module
@@ -409,9 +446,13 @@ fn do_stuff() {
     assert_eq!(
         positioned_hover(code, Position::new(8, 11)),
         Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nfn(fn(Int) -> String) -> String\n```\n".to_string()
-            )),
+            contents: HoverContents::Scalar(MarkedString::String(format!(
+                "```gleam
+fn(fn(Int) -> String) -> String
+```
+
+View on [hexdocs](https://hexdocs.pm/my_project/app.html#b)"
+            ))),
             range: Some(Range::new(Position::new(8, 11), Position::new(8, 12))),
         })
     );
