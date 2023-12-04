@@ -54,6 +54,8 @@
   patterns.
 - Fixed a bug where the formatter would misplace comments at the start of a
   block.
+- Searching in rendered HTML documentation now also matches words that do not
+  start with the input but do contain it.
 
 
 ## v0.32.4 - 2023-11-09
