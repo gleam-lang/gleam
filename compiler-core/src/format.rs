@@ -377,8 +377,6 @@ impl<'comments> Formatter<'comments> {
             .append(name)
             .append(": ")
             .append(printer.print(&value.type_()))
-            .append(" = ")
-            .append(self.const_expr(value))
     }
 
     fn documented_definition<'a>(&mut self, s: &'a UntypedDefinition) -> Document<'a> {
