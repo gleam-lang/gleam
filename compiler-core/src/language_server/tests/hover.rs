@@ -5,6 +5,8 @@ use lsp_types::{
 
 use super::*;
 
+static PROJECT_NAME: &'static str = "my_project";
+
 fn positioned_hover_with_imports(
     src: &str,
     position: Position,
@@ -12,6 +14,7 @@ fn positioned_hover_with_imports(
 ) -> Option<Hover> {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
+    engine.compiler.project_compiler.config.name = PROJECT_NAME.into();
 
     _ = io.src_module("app", src);
     for (k, src) in modules {
@@ -99,7 +102,7 @@ fn main() {
 fn() -> Nil
 ```
 
-View on [hexdocs](https://hexdocs.pm/example_module.html#my_fn)"
+View on [hexdocs](https://hexdocs.pm/my_project/example_module.html#my_fn)"
                     .to_string()
             )),
             range: Some(Range {
@@ -138,7 +141,7 @@ fn main() {
 fn() -> Nil
 ```
 
-View on [hexdocs](https://hexdocs.pm/example_module.html#my_fn)"
+View on [hexdocs](https://hexdocs.pm/my_project/example_module.html#my_fn)"
                     .to_string()
             )),
             range: Some(Range {
@@ -177,7 +180,7 @@ fn main() {
 Int
 ```
 
-View on [hexdocs](https://hexdocs.pm/example_module.html#my_const)"
+View on [hexdocs](https://hexdocs.pm/my_project/example_module.html#my_const)"
                     .to_string()
             )),
             range: Some(Range {
@@ -216,7 +219,7 @@ fn main() {
 Int
 ```
 
-View on [hexdocs](https://hexdocs.pm/example_module.html#my_const)"
+View on [hexdocs](https://hexdocs.pm/my_project/example_module.html#my_const)"
                     .to_string()
             )),
             range: Some(Range {
