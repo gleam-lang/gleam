@@ -386,7 +386,9 @@ fn page_html(page: Page) -> String {
         ]),
         h("aside", [#("id", "output")], []),
       ]),
-      h("script", [#("type", "gleam"), #("id", "code")], [text(page.code)]),
+      h("script", [#("type", "gleam"), #("id", "code")], [
+        htmb.dangerous_unescaped_fragment(string_builder.from_string(page.code)),
+      ]),
       h("script", [#("type", "module"), #("src", "/index.js")], []),
     ]),
   ])

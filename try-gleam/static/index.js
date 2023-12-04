@@ -3,7 +3,7 @@ import initGleamCompiler from "./compiler.js";
 import stdlib from "./stdlib.js";
 
 const output = document.querySelector("#output");
-const initialCode = document.querySelector("#code").textContent;
+const initialCode = document.querySelector("#code").innerHTML;
 
 const prismGrammar = {
   comment: {
