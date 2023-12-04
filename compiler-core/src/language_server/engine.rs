@@ -667,6 +667,6 @@ fn get_expr_link(expression: &TypedExpr, module: &Module) -> Option<String> {
         _ => None,
     })?;
 
-    let link = format!("https://hexdocs.pm/{package_name}{module_name}.html#{name}");
+    let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
     Some(link)
 }
