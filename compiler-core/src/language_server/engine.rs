@@ -10,7 +10,7 @@ use crate::{
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
-    type_::{pretty::Printer, PreludeType, Type, ValueConstructorVariant},
+    type_::{pretty::Printer, PreludeType, Type, ValueConstructor, ValueConstructorVariant},
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
@@ -450,7 +450,7 @@ fn type_completion(
 fn value_completion(
     module: Option<&str>,
     name: &str,
-    value: &crate::type_::ValueConstructor,
+    value: &ValueConstructor,
 ) -> lsp::CompletionItem {
     let label = match module {
         Some(module) => format!("{module}.{name}"),
@@ -631,22 +631,36 @@ fn code_action_unused_imports(
 }
 
 fn get_expr_link(expression: &TypedExpr, module: &Module) -> Option<String> {
-    match expression {
+    let (module_name, name) = match expression {
+        TypedExpr::Var {
+            name: _,
+            constructor:
+                ValueConstructor {
+                    variant:
+                        ValueConstructorVariant::ModuleFn {
+                            name,
+                            module: module_name,
+                            ..
+                        },
+                    ..
+                },
+            ..
+        } => (module_name, name),
+
         TypedExpr::ModuleSelect {
             module_name,
             constructor: crate::type_::ModuleValueConstructor::Fn { name, .. },
             ..
-        } => {
-            let package_name = module.ast.definitions.iter().find_map(|def| match def {
-                Definition::Import(p) if &p.module == module_name => Some(&p.package),
-                _ => None,
-            })?;
+        } => (module_name, name),
 
-            Some(format!(
-                "https://hexdocs.pm/{package_name}/{module_name}.html#{name}"
-            ))
-        }
+        _ => return None,
+    };
 
+    let package_name = module.ast.definitions.iter().find_map(|def| match def {
+        Definition::Import(p) if &p.module == module_name => Some(&p.package),
         _ => None,
-    }
+    })?;
+
+    let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
+    Some(link)
 }
