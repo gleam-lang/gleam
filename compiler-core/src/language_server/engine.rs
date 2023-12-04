@@ -662,10 +662,15 @@ fn get_expr_link(expression: &TypedExpr, module: &Module) -> Option<String> {
         _ => return None,
     };
 
-    let package_name = module.ast.definitions.iter().find_map(|def| match def {
-        Definition::Import(p) if &p.module == module_name => Some(&p.package),
-        _ => None,
-    })?;
+    let package_name = module
+        .ast
+        .definitions
+        .iter()
+        .find_map(|def| match def {
+            Definition::Import(p) if &p.module == module_name => Some(&p.package),
+            _ => None,
+        })
+        .unwrap_or(&module.ast.type_info.package);
 
     let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
     Some(link)
