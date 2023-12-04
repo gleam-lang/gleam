@@ -631,12 +631,25 @@ fn code_action_unused_imports(
 fn get_expr_link(expression: &TypedExpr, module: &Module) -> Option<String> {
     let (module_name, name) = match expression {
         TypedExpr::Var {
-            name: _,
+            name,
             constructor:
                 ValueConstructor {
                     variant:
                         ValueConstructorVariant::ModuleFn {
-                            name,
+                            module: module_name,
+                            ..
+                        },
+                    ..
+                },
+            ..
+        } => (module_name, name),
+
+        TypedExpr::Var {
+            name,
+            constructor:
+                ValueConstructor {
+                    variant:
+                        ValueConstructorVariant::ModuleConstant {
                             module: module_name,
                             ..
                         },

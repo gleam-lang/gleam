@@ -117,6 +117,45 @@ View on [hexdocs](https://hexdocs.pm/example_module.html#my_fn)"
 }
 
 #[test]
+fn hover_imported_unqualified_function() {
+    let code = "
+import example_module.{my_fn}
+fn main() {
+  my_fn
+}
+";
+
+    assert_eq!(
+        // hovering over "my_fn"
+        positioned_hover_with_imports(
+            code,
+            Position::new(3, 5),
+            HashMap::from([("example_module", "pub fn my_fn() { Nil }")])
+        ),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn() -> Nil
+```
+
+View on [hexdocs](https://hexdocs.pm/example_module.html#my_fn)"
+                    .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 3,
+                    character: 2,
+                },
+                end: Position {
+                    line: 3,
+                    character: 7,
+                },
+            },),
+        })
+    );
+}
+
+#[test]
 fn hover_imported_constants() {
     let code = "
 import example_module
@@ -149,6 +188,45 @@ View on [hexdocs](https://hexdocs.pm/example_module.html#my_const)"
                 end: Position {
                     line: 3,
                     character: 25,
+                },
+            },),
+        })
+    );
+}
+
+#[test]
+fn hover_imported_unqualified_constants() {
+    let code = "
+import example_module.{my_const}
+fn main() {
+  my_const
+}
+";
+
+    assert_eq!(
+        // hovering over "my_const"
+        positioned_hover_with_imports(
+            code,
+            Position::new(3, 5),
+            HashMap::from([("example_module", "pub const my_const = 42")])
+        ),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+Int
+```
+
+View on [hexdocs](https://hexdocs.pm/example_module.html#my_const)"
+                    .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 3,
+                    character: 2,
+                },
+                end: Position {
+                    line: 3,
+                    character: 10,
                 },
             },),
         })
