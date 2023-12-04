@@ -5,11 +5,19 @@ use lsp_types::{
 
 use super::*;
 
-fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
+fn positioned_hover_with_imports(
+    src: &str,
+    position: Position,
+    modules: HashMap<&str, &str>,
+) -> Option<Hover> {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
 
     _ = io.src_module("app", src);
+    for (k, src) in modules {
+        _ = io.src_module(k, src);
+    }
+
     let response = engine.compile_please();
     assert!(response.result.is_ok());
 
@@ -31,6 +39,10 @@ fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
     let response = engine.hover(params);
 
     response.result.unwrap()
+}
+
+fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
+    positioned_hover_with_imports(src, position, HashMap::new())
 }
 
 #[test]
@@ -59,6 +71,46 @@ fn(Int) -> Int
                 end: Position {
                     line: 1,
                     character: 11,
+                },
+            },),
+        })
+    );
+}
+
+#[test]
+fn hover_imported_function() {
+    let code = "
+import example_module
+fn main() {
+  let _ = example_module.my_fn
+  Nil
+}
+";
+
+    assert_eq!(
+        positioned_hover_with_imports(
+            code,
+            Position::new(3, 28),
+            HashMap::from([("example_module", "pub fn my_fn() { Nil }")])
+        ),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn() -> Nil
+```
+
+View on [hexdocs](https://hexdocs.pm//example_module.html#my_fn)
+"
+                .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 3,
+                    character: 24,
+                },
+                end: Position {
+                    line: 3,
+                    character: 30,
                 },
             },),
         })

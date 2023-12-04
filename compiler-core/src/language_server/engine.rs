@@ -564,7 +564,7 @@ fn hover_for_expression(
     let link_opt = module.and_then(|m| get_expr_link(expression, m));
     let link_section = match link_opt {
         None => "".to_string(),
-        Some(link) => format!("\nView on [hexdocs]({link})"),
+        Some(link) => format!("View on [hexdocs]({link})"),
     };
 
     // Show the type of the hovered node to the user
