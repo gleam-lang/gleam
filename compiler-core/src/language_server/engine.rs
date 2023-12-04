@@ -275,7 +275,11 @@ where
                 }
                 Located::ModuleStatement(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
-                Located::Expression(expression) => Some(hover_for_expression(expression, lines)),
+                Located::Expression(expression) => Some(hover_for_expression(
+                    expression,
+                    lines,
+                    this.module_for_uri(&params.text_document.uri),
+                )),
                 Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
                 Located::FunctionBody(_) => None,
             })
@@ -550,8 +554,18 @@ fn hover_for_module_constant(
     }
 }
 
-fn hover_for_expression(expression: &TypedExpr, line_numbers: LineNumbers) -> Hover {
+fn hover_for_expression(
+    expression: &TypedExpr,
+    line_numbers: LineNumbers,
+    module: Option<&Module>,
+) -> Hover {
     let documentation = expression.get_documentation().unwrap_or_default();
+
+    let link_opt = module.and_then(|m| get_expr_link(expression, m));
+    let link_section = match link_opt {
+        None => "".to_string(),
+        Some(link) => format!("\nView on [hexdocs]({link})"),
+    };
 
     // Show the type of the hovered node to the user
     let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
@@ -559,7 +573,9 @@ fn hover_for_expression(expression: &TypedExpr, line_numbers: LineNumbers) -> Ho
         "```gleam
 {type_}
 ```
-{documentation}"
+{documentation}
+{link_section}
+"
     );
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
@@ -612,4 +628,25 @@ fn code_action_unused_imports(
         .changes(uri.clone(), edits)
         .preferred(true)
         .push_to(actions);
+}
+
+fn get_expr_link(expression: &TypedExpr, module: &Module) -> Option<String> {
+    match expression {
+        TypedExpr::ModuleSelect {
+            module_name,
+            constructor: crate::type_::ModuleValueConstructor::Fn { name, .. },
+            ..
+        } => {
+            let package_name = module.ast.definitions.iter().find_map(|def| match def {
+                Definition::Import(p) if &p.module == module_name => Some(&p.package),
+                _ => None,
+            })?;
+
+            Some(format!(
+                "https://hexdocs.pm/{package_name}/{module_name}.html#{name}"
+            ))
+        }
+
+        _ => None,
+    }
 }
