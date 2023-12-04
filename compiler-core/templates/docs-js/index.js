@@ -215,7 +215,11 @@ window.Gleam = (function () {
           boost: 10,
         });
         query.term(tokens, {
+          boost: 5,
           wildcard: lunr.Query.wildcard.TRAILING,
+        });
+        query.term(tokens, {
+          wildcard: lunr.Query.wildcard.LEADING | lunr.Query.wildcard.TRAILING,
         });
       });
 
