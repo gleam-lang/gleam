@@ -342,10 +342,23 @@ fn is_gleam_path(path: &Utf8Path, dir: impl AsRef<Utf8Path>) -> bool {
     )
 }
 
+fn is_gleam_build_dir(e: &ignore::DirEntry) -> bool {
+    if !e.path().is_dir() || !e.path().ends_with("build") {
+        return false;
+    }
+
+    let Some(parent_path) = e.path().parent() else {
+        return false;
+    };
+
+    parent_path.join("gleam.toml").exists()
+}
+
 pub fn gleam_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
         .require_git(false)
+        .filter_entry(|e| !is_gleam_build_dir(e))
         .build()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
