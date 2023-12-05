@@ -30,6 +30,7 @@
   published is not yet version 1.0.0.
 - The `gleam publish` command now asks for confirmation if the package name is
   one that implies the package is maintained by the Gleam core team.
+- The error messages shown when dependency resolution fails have been improved.
 
 ### Compiler WASM API
 
