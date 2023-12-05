@@ -272,7 +272,7 @@ where
                     Some(hover_for_function_head(fun, lines, module))
                 }
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
-                    Some(hover_for_module_constant(constant, lines))
+                    Some(hover_for_module_constant(constant, lines, module))
                 }
                 Located::ModuleStatement(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
@@ -548,11 +548,24 @@ fn hover_for_function_argument(argument: &Arg<Arc<Type>>, line_numbers: LineNumb
 fn hover_for_module_constant(
     constant: &ModuleConstant<Arc<Type>, EcoString>,
     line_numbers: LineNumbers,
+    module: Option<&Module>,
 ) -> Hover {
     let empty_str = EcoString::from("");
     let type_ = Printer::new().pretty_print(&constant.type_, 0);
     let documentation = constant.documentation.as_ref().unwrap_or(&empty_str);
-    let contents = format!("```gleam\n{type_}\n```\n{documentation}");
+    let link_section = module
+        .and_then(|m| get_hexdocs_link_section(&m.name, &constant.name, m))
+        .unwrap_or("".to_string());
+
+    dbg!(&link_section);
+
+    let contents = format!(
+        "```gleam
+{type_}
+```
+{documentation}{link_section}"
+    );
+
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constant.location, &line_numbers)),

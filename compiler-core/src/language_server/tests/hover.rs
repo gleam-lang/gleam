@@ -403,8 +403,9 @@ Int
 ```
  Exciting documentation
  Maybe even multiple lines
-"
-                .to_string()
+
+View on [hexdocs](https://hexdocs.pm/my_project/app.html#one)"
+                    .to_string()
             )),
             range: Some(Range {
                 start: Position {
