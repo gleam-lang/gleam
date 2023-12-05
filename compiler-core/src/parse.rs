@@ -401,7 +401,7 @@ where
                 let _ = self.next_tok();
                 let mut message = None;
                 if self.maybe_one(&Token::As).is_some() {
-                    let msg_expr = self.expect_expression()?;
+                    let msg_expr = self.expect_expression_unit()?;
                     end = msg_expr.location().end;
                     message = Some(Box::new(msg_expr));
                 }
@@ -416,7 +416,7 @@ where
                 let _ = self.next_tok();
                 let mut label = None;
                 if self.maybe_one(&Token::As).is_some() {
-                    let msg_expr = self.expect_expression()?;
+                    let msg_expr = self.expect_expression_unit()?;
                     end = msg_expr.location().end;
                     label = Some(Box::new(msg_expr));
                 }
@@ -2506,6 +2506,14 @@ where
             Ok(e)
         } else {
             self.next_tok_unexpected(vec!["An expression".into()])
+        }
+    }
+
+    fn expect_expression_unit(&mut self) -> Result<UntypedExpr, ParseError> {
+        if let Some(e) = self.parse_expression_unit()? {
+            Ok(e)
+        } else {
+            self.next_tok_unexpected(vec!["An expression unit".into()])
         }
     }
 
