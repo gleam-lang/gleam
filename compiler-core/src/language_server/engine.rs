@@ -259,6 +259,7 @@ where
     pub fn hover(&mut self, params: lsp::HoverParams) -> Response<Option<Hover>> {
         self.respond(|this| {
             let params = params.text_document_position_params;
+            let module = this.module_for_uri(&params.text_document.uri);
 
             let (lines, found) = match this.node_at_position(&params) {
                 Some(value) => value,
@@ -268,18 +269,16 @@ where
             Ok(match found {
                 Located::Statement(_) => None, // TODO: hover for statement
                 Located::ModuleStatement(Definition::Function(fun)) => {
-                    Some(hover_for_function_head(fun, lines))
+                    Some(hover_for_function_head(fun, lines, module))
                 }
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
                     Some(hover_for_module_constant(constant, lines))
                 }
                 Located::ModuleStatement(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
-                Located::Expression(expression) => Some(hover_for_expression(
-                    expression,
-                    lines,
-                    this.module_for_uri(&params.text_document.uri),
-                )),
+                Located::Expression(expression) => {
+                    Some(hover_for_expression(expression, lines, module))
+                }
                 Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
                 Located::FunctionBody(_) => None,
             })
@@ -511,6 +510,7 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover
 fn hover_for_function_head(
     fun: &Function<Arc<Type>, TypedExpr>,
     line_numbers: LineNumbers,
+    module: Option<&Module>,
 ) -> Hover {
     let empty_str = EcoString::from("");
     let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
@@ -519,11 +519,16 @@ fn hover_for_function_head(
         retrn: fun.return_type.clone(),
     };
     let formatted_type = Printer::new().pretty_print(&function_type, 0);
+
+    let link_section = module
+        .and_then(|m| get_hexdocs_link_section(&m.name, &fun.name, m))
+        .unwrap_or("".to_string());
+
     let contents = format!(
         "```gleam
 {formatted_type}
 ```
-{documentation}"
+{documentation}{link_section}"
     );
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
@@ -561,11 +566,12 @@ fn hover_for_expression(
 ) -> Hover {
     let documentation = expression.get_documentation().unwrap_or_default();
 
-    let link_opt = module.and_then(|m| get_expr_link(expression, m));
-    let link_section = match link_opt {
-        None => "".to_string(),
-        Some(link) => format!("\nView on [hexdocs]({link})"),
-    };
+    let link_section = module
+        .and_then(|m| {
+            let (module_name, name) = get_expr_qualified_name(expression)?;
+            get_hexdocs_link_section(module_name, name, m)
+        })
+        .unwrap_or("".to_string());
 
     // Show the type of the hovered node to the user
     let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
@@ -628,41 +634,47 @@ fn code_action_unused_imports(
         .push_to(actions);
 }
 
-fn get_expr_link(expression: &TypedExpr, module: &Module) -> Option<String> {
-    let (module_name, name) = match expression {
+fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoString)> {
+    match expression {
         TypedExpr::Var {
             name, constructor, ..
         } => match &constructor.variant {
             ValueConstructorVariant::ModuleFn {
                 module: module_name,
                 ..
-            } => (module_name, name),
+            } => Some((module_name, name)),
 
             ValueConstructorVariant::ModuleConstant {
                 module: module_name,
                 ..
-            } => (module_name, name),
+            } => Some((module_name, name)),
 
-            _ => return None,
+            _ => None,
         },
 
         TypedExpr::ModuleSelect {
             module_name,
             constructor: crate::type_::ModuleValueConstructor::Fn { name, .. },
             ..
-        } => (module_name, name),
+        } => Some((module_name, name)),
 
         TypedExpr::ModuleSelect {
             label: name,
             module_name,
             constructor: crate::type_::ModuleValueConstructor::Constant { .. },
             ..
-        } => (module_name, name),
+        } => Some((module_name, name)),
 
-        _ => return None,
-    };
+        _ => None,
+    }
+}
 
-    let package_name = module
+fn get_hexdocs_link_section(
+    module_name: &str,
+    name: &str,
+    current_module: &Module,
+) -> Option<String> {
+    let package_name = current_module
         .ast
         .definitions
         .iter()
@@ -670,8 +682,8 @@ fn get_expr_link(expression: &TypedExpr, module: &Module) -> Option<String> {
             Definition::Import(p) if &p.module == module_name => Some(&p.package),
             _ => None,
         })
-        .unwrap_or(&module.ast.type_info.package);
+        .unwrap_or(&current_module.ast.type_info.package);
 
     let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
-    Some(link)
+    Some(format!("\nView on [hexdocs]({link})"))
 }

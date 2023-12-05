@@ -63,8 +63,9 @@ fn add_2(x) {
                 "```gleam
 fn(Int) -> Int
 ```
-"
-                .to_string()
+
+View on [hexdocs](https://hexdocs.pm/my_project/app.html#add_2)"
+                    .to_string()
             )),
             range: Some(Range {
                 start: Position {
@@ -292,8 +293,9 @@ fn(String, String) -> String
 ```
  Exciting documentation
  Maybe even multiple lines
-"
-                .to_string()
+
+View on [hexdocs](https://hexdocs.pm/my_project/app.html#append)"
+                    .to_string()
             )),
             range: Some(Range {
                 start: Position {
