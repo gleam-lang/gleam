@@ -35,7 +35,6 @@ pub fn not_unicode_escape_sequence() -> String {
     );
 }
 
-
 #[test]
 fn not_unicode_escape_sequence2() {
     assert_erl!(
@@ -46,7 +45,6 @@ pub fn not_unicode_escape_sequence() -> String {
 "#,
     );
 }
-
 
 #[test]
 fn unicode3() {
