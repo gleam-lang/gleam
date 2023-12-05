@@ -575,7 +575,7 @@ mod tests {
         match err {
         Error::DependencyResolutionFailed(msg) => assert_eq!(
             msg,
-            "gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
+            "An unrecoverable error happened while solving dependencies: gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
         ),
         _ => panic!("wrong error: {}", err),
         }

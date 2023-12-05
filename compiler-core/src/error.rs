@@ -285,13 +285,40 @@ impl Error {
                 wrap(&report)
             }
 
-            // TODO: Custom error here
-            // ResolutionError::ErrorRetrievingDependencies {
-            //     package,
-            //     version,
-            //     source,
-            // } => Use the source, it'll provide a better error message
-            error => error.to_string(),
+            ResolutionError::ErrorRetrievingDependencies {
+                package,
+                version,
+                source,
+            } => format!(
+                "An error occured while trying to retrieve dependencies of {}@{}: {}",
+                package, version, source
+            ),
+
+            ResolutionError::DependencyOnTheEmptySet {
+                package,
+                version,
+                dependent,
+            } => format!(
+                "{}@{} has an imposible dependency on {}",
+                package, version, dependent
+            ),
+
+            ResolutionError::SelfDependency { package, version } => {
+                format!("{}@{} somehow depends on itself", package, version)
+            }
+
+            ResolutionError::ErrorChoosingPackageVersion(err) => {
+                format!("Unable to determine package versions: {}", err)
+            }
+
+            ResolutionError::ErrorInShouldCancel(err) => {
+                format!("Dependency resolution was cancelled. {}", err)
+            }
+
+            ResolutionError::Failure(err) => format!(
+                "An unrecoverable error happened while solving dependencies: {}",
+                err
+            ),
         })
     }
 
