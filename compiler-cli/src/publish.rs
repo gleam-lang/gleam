@@ -189,8 +189,9 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
             mode: Mode::Prod,
             target: Some(target),
             codegen: Codegen::All,
+            print_progress: true,
         },
-        build::download_dependencies()?,
+        build::download_dependencies(true)?,
     )?;
 
     let generated_files = match target {

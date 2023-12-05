@@ -26,6 +26,7 @@ pub fn command(
     runtime: Option<Runtime>,
     module: Option<String>,
     which: Which,
+    print_progress: bool,
 ) -> Result<(), Error> {
     let paths = crate::project_paths_at_current_directory();
 
@@ -39,7 +40,7 @@ pub fn command(
     };
 
     // Download dependencies
-    let manifest = crate::build::download_dependencies()?;
+    let manifest = crate::build::download_dependencies(print_progress)?;
 
     // Get the config for the module that is being run to check the target.
     let mod_config = match &module {
@@ -67,6 +68,7 @@ pub fn command(
             codegen: Codegen::All,
             mode: Mode::Dev,
             target: Some(target),
+            print_progress,
         },
         manifest,
     )?;
@@ -77,7 +79,7 @@ pub fn command(
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 
-    crate::cli::print_running(&format!("{module}.main"));
+    if print_progress { crate::cli::print_running(&format!("{module}.main")); }
 
     // Run the command
     let status = match target {

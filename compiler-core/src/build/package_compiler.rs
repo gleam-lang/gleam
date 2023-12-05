@@ -44,6 +44,7 @@ pub struct PackageCompiler<'a, IO> {
     pub copy_native_files: bool,
     pub compile_beam_bytecode: bool,
     pub subprocess_stdio: Stdio,
+    pub print_progress: bool,
 }
 
 impl<'a, IO> PackageCompiler<'a, IO>
@@ -59,6 +60,7 @@ where
         target: &'a TargetCodegenConfiguration,
         ids: UniqueIdGenerator,
         io: IO,
+        print_progress: bool,
     ) -> Self {
         Self {
             io,
@@ -75,6 +77,7 @@ where
             copy_native_files: true,
             compile_beam_bytecode: true,
             subprocess_stdio: Stdio::Inherit,
+            print_progress,
         }
     }
 
@@ -125,7 +128,7 @@ where
         if !loaded.to_compile.is_empty() {
             // Print that work is being done
             if self.perform_codegen {
-                telemetry.compiling_package(&self.config.name);
+                telemetry.compiling_package(&self.config.name, self.print_progress);
             } else {
                 telemetry.checking_package(&self.config.name)
             }

@@ -180,6 +180,7 @@ fn do_compile_package(wfs: &WasmFileSystem, target: Target) -> Result<(), Error>
         &target,
         ids,
         wfs.clone(),
+        true,
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = false;

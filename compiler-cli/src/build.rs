@@ -14,9 +14,9 @@ use crate::{
     fs::{self, get_current_directory, ConsoleWarningEmitter},
 };
 
-pub fn download_dependencies() -> Result<Manifest> {
+pub fn download_dependencies(print_progress: bool) -> Result<Manifest> {
     let paths = crate::project_paths_at_current_directory();
-    crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)
+    crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes, print_progress)
 }
 
 pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
@@ -32,6 +32,7 @@ pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
         options.target.unwrap_or(root_config.target),
     )?;
     let current_dir = get_current_directory().expect("Failed to get current directory");
+    let print_progress = options.print_progress;
 
     tracing::info!("Compiling packages");
     let compiled = {
@@ -44,13 +45,17 @@ pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
             Arc::new(ConsoleWarningEmitter),
             ProjectPaths::new(current_dir),
             io,
+            print_progress,
         );
         compiler.compile()?
     };
 
-    match perform_codegen {
-        Codegen::All | Codegen::DepsOnly => cli::print_compiled(start.elapsed()),
-        Codegen::None => cli::print_checked(start.elapsed()),
-    };
+    if print_progress {
+        match perform_codegen {
+            Codegen::All | Codegen::DepsOnly => cli::print_compiled(start.elapsed()),
+            Codegen::None => cli::print_checked(start.elapsed()),
+        };
+    }
+
     Ok(compiled)
 }

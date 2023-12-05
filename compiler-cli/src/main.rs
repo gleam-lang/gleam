@@ -102,6 +102,10 @@ enum Command {
         /// The platform to target
         #[clap(short, long, ignore_case = true)]
         target: Option<Target>,
+
+        /// Don't print progress information
+        #[clap(long)]
+        no_print_progress: bool,
     },
 
     /// Type check the project
@@ -176,6 +180,10 @@ enum Command {
         /// The module to run
         #[clap(short, long)]
         module: Option<String>,
+
+        /// Don't print progress information
+        #[clap(long)]
+        no_print_progress: bool,
 
         arguments: Vec<String>,
     },
@@ -389,7 +397,8 @@ fn main() {
         Command::Build {
             target,
             warnings_as_errors,
-        } => command_build(target, warnings_as_errors),
+            no_print_progress,
+        } => command_build(target, warnings_as_errors, !no_print_progress),
 
         Command::Check { target } => command_check(target),
 
@@ -422,13 +431,14 @@ fn main() {
             arguments,
             runtime,
             module,
-        } => run::command(arguments, target, runtime, module, run::Which::Src),
+            no_print_progress,
+        } => run::command(arguments, target, runtime, module, run::Which::Src, !no_print_progress),
 
         Command::Test {
             target,
             arguments,
             runtime,
-        } => run::command(arguments, target, runtime, None, run::Which::Test),
+        } => run::command(arguments, target, runtime, None, run::Which::Test, true),
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 
@@ -484,21 +494,23 @@ fn command_check(target: Option<Target>) -> Result<(), Error> {
             codegen: Codegen::DepsOnly,
             mode: Mode::Dev,
             target,
+            print_progress: true,
         },
-        build::download_dependencies()?,
+        build::download_dependencies(true)?,
     )?;
     Ok(())
 }
 
-fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<(), Error> {
+fn command_build(target: Option<Target>, warnings_as_errors: bool, print_progress: bool) -> Result<(), Error> {
     let _ = build::main(
         Options {
             warnings_as_errors,
             codegen: Codegen::All,
             mode: Mode::Dev,
             target,
+            print_progress,
         },
-        build::download_dependencies()?,
+        build::download_dependencies(print_progress)?,
     )?;
     Ok(())
 }
@@ -532,6 +544,6 @@ fn project_paths_at_current_directory() -> ProjectPaths {
 
 fn download_dependencies() -> Result<(), Error> {
     let paths = project_paths_at_current_directory();
-    _ = dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
+    _ = dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes, true)?;
     Ok(())
 }

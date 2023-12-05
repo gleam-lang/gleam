@@ -47,6 +47,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
         &target,
         ids,
         ProjectIO::new(),
+        true,
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;

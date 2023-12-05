@@ -69,6 +69,7 @@ where
             mode: build::Mode::Lsp,
             target: None,
             codegen: build::Codegen::None,
+            print_progress: false,
         };
         let mut project_compiler = ProjectCompiler::new(
             config,
@@ -78,6 +79,7 @@ where
             warnings.clone(),
             paths,
             io,
+            true,
         );
 
         // To avoid the Erlang compiler printing to stdout (and thus

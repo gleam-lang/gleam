@@ -33,7 +33,7 @@ pub fn command(packages: Vec<String>) -> Result<()> {
     // Write the updated config
     fs::write(Utf8Path::new("gleam.toml"), &toml.to_string())?;
     let paths = crate::project_paths_at_current_directory();
-    _ = crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
+    _ = crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes, true)?;
     for package_to_remove in packages {
         cli::print_removed(&package_to_remove);
     }
