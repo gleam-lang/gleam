@@ -559,8 +559,6 @@ fn hover_for_module_constant(
         .filter(|_| constant.public)
         .unwrap_or("".to_string());
 
-    dbg!(&link_section);
-
     let contents = format!(
         "```gleam
 {type_}
@@ -694,7 +692,7 @@ fn get_hexdocs_link_section(
         .definitions
         .iter()
         .find_map(|def| match def {
-            Definition::Import(p) if &p.module == module_name => Some(&p.package),
+            Definition::Import(p) if p.module == module_name => Some(&p.package),
             _ => None,
         })
         .unwrap_or(&current_module.ast.type_info.package);
