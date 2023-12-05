@@ -1,6 +1,39 @@
 use crate::assert_js;
 
 #[test]
+fn unicode1() {
+    assert_js!(
+        r#"
+pub fn emoji() -> String {
+  "\u{0001f600}"
+}
+"#,
+    );
+}
+
+#[test]
+fn unicode2() {
+    assert_js!(
+        r#"
+pub fn y_with_dieresis() -> String {
+  "\u{0308}y"
+}
+"#,
+    );
+}
+
+#[test]
+fn ascii_as_unicode_escape_sequence() {
+    assert_js!(
+        r#"
+pub fn y() -> String {
+  "\u{79}"
+}
+"#,
+    )
+}
+
+#[test]
 fn string_literals() {
     assert_js!(
         r#"

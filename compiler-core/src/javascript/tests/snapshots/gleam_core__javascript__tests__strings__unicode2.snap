@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn y_with_dieresis() -> String {\n  \"\\u{0308}y\"\n}\n"
+---
+export function y_with_dieresis() {
+  return "\u{0308}y";
+}
+

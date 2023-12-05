@@ -1,5 +1,7 @@
 use crate::ast::SrcSpan;
-use crate::parse::error::{LexicalError, LexicalErrorType, ParseError, ParseErrorType};
+use crate::parse::error::{
+    InvalidUnicodeEscapeError, LexicalError, LexicalErrorType, ParseError, ParseErrorType,
+};
 use camino::Utf8PathBuf;
 
 use pretty_assertions::assert_eq;
@@ -162,6 +164,96 @@ fn string2() {
                 }
             },
             location: SrcSpan { start: 3, end: 4 },
+        }
+    );
+}
+
+#[test]
+fn string3() {
+    assert_error!(
+        r#""\u{0011f601}""#,
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidUnicodeEscape(
+                        InvalidUnicodeEscapeError::InvalidCodepoint,
+                    ),
+                    location: SrcSpan { start: 1, end: 13 },
+                }
+            },
+            location: SrcSpan { start: 1, end: 13 },
+        }
+    );
+}
+
+#[test]
+fn string4() {
+    assert_error!(
+        r#""\u""#,
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidUnicodeEscape(
+                        InvalidUnicodeEscapeError::MissingOpeningBrace,
+                    ),
+                    location: SrcSpan { start: 2, end: 3 },
+                }
+            },
+            location: SrcSpan { start: 2, end: 3 },
+        }
+    );
+}
+
+#[test]
+fn string5() {
+    assert_error!(
+        r#""\u{z}""#,
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidUnicodeEscape(
+                        InvalidUnicodeEscapeError::ExpectedHexDigitOrCloseBrace,
+                    ),
+                    location: SrcSpan { start: 4, end: 5 },
+                }
+            },
+            location: SrcSpan { start: 4, end: 5 },
+        }
+    );
+}
+
+#[test]
+fn string6() {
+    assert_error!(
+        r#""\u{039a""#,
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidUnicodeEscape(
+                        InvalidUnicodeEscapeError::ExpectedHexDigitOrCloseBrace,
+                    ),
+                    location: SrcSpan { start: 8, end: 9 },
+                }
+            },
+            location: SrcSpan { start: 8, end: 9 },
+        }
+    );
+}
+
+#[test]
+fn string7() {
+    assert_error!(
+        r#""\u{039}""#,
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidUnicodeEscape(
+                        InvalidUnicodeEscapeError::InvalidNumberOfHexDigits,
+                    ),
+                    location: SrcSpan { start: 1, end: 8 },
+                }
+            },
+            location: SrcSpan { start: 1, end: 8 },
         }
     );
 }

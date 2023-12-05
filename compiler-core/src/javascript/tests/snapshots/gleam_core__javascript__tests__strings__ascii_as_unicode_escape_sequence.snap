@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn y() -> String {\n  \"\\u{79}\"\n}\n"
+---
+export function y() {
+  return "\u{79}";
+}
+
