@@ -20,6 +20,8 @@
 - The words `auto`, `delegate`, `derive`, `else`, `implement`, `macro`, and
   `test` are now reserved for future use. If used they will emit a warning. In
   a future version this may be upgraded to an error.
+- The `\u{...}` syntax can be used in strings to specify unicode codepoints via a
+  hexadecimal number. 2, 4, or 8 digits can be used.
 
 ### Build tool changes
 
