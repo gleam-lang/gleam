@@ -2513,7 +2513,7 @@ where
         if let Some(e) = self.parse_expression_unit()? {
             Ok(e)
         } else {
-            self.next_tok_unexpected(vec!["An expression unit".into()])
+            self.next_tok_unexpected(vec!["An expression".into()])
         }
     }
 
