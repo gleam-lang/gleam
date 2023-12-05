@@ -63,6 +63,38 @@ fn add_2(x) {
                 "```gleam
 fn(Int) -> Int
 ```
+"
+                .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 1,
+                    character: 0,
+                },
+                end: Position {
+                    line: 1,
+                    character: 11,
+                },
+            },),
+        })
+    );
+}
+
+#[test]
+fn hover_pub_function_definition() {
+    let code = "
+pub fn add_2(x) {
+  x + 2
+}
+";
+
+    assert_eq!(
+        positioned_hover(code, Position::new(1, 8)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn(Int) -> Int
+```
 
 View on [hexdocs](https://hexdocs.pm/my_project/app.html#add_2)"
                     .to_string()
@@ -74,7 +106,7 @@ View on [hexdocs](https://hexdocs.pm/my_project/app.html#add_2)"
                 },
                 end: Position {
                     line: 1,
-                    character: 11,
+                    character: 15,
                 },
             },),
         })
@@ -293,9 +325,8 @@ fn(String, String) -> String
 ```
  Exciting documentation
  Maybe even multiple lines
-
-View on [hexdocs](https://hexdocs.pm/my_project/app.html#append)"
-                    .to_string()
+"
+                .to_string()
             )),
             range: Some(Range {
                 start: Position {
@@ -403,9 +434,8 @@ Int
 ```
  Exciting documentation
  Maybe even multiple lines
-
-View on [hexdocs](https://hexdocs.pm/my_project/app.html#one)"
-                    .to_string()
+"
+                .to_string()
             )),
             range: Some(Range {
                 start: Position {
@@ -415,6 +445,37 @@ View on [hexdocs](https://hexdocs.pm/my_project/app.html#one)"
                 end: Position {
                     line: 3,
                     character: 9
+                },
+            }),
+        })
+    );
+}
+
+#[test]
+fn hover_pub_module_constant() {
+    let code = "
+pub const one = 1
+";
+
+    assert_eq!(
+        positioned_hover(code, Position::new(1, 11)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+Int
+```
+
+View on [hexdocs](https://hexdocs.pm/my_project/app.html#one)"
+                    .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 1,
+                    character: 10
+                },
+                end: Position {
+                    line: 1,
+                    character: 13
                 },
             }),
         })

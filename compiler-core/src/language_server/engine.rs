@@ -522,6 +522,7 @@ fn hover_for_function_head(
 
     let link_section = module
         .and_then(|m| get_hexdocs_link_section(&m.name, &fun.name, m))
+        .filter(|_| fun.public)
         .unwrap_or("".to_string());
 
     let contents = format!(
@@ -555,6 +556,7 @@ fn hover_for_module_constant(
     let documentation = constant.documentation.as_ref().unwrap_or(&empty_str);
     let link_section = module
         .and_then(|m| get_hexdocs_link_section(&m.name, &constant.name, m))
+        .filter(|_| constant.public)
         .unwrap_or("".to_string());
 
     dbg!(&link_section);
