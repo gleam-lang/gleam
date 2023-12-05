@@ -36,8 +36,21 @@ pub fn main() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/2176
 #[test]
 fn piped() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  "lets"
+  |> panic
+}
+    "#
+    );
+}
+
+#[test]
+fn piped_chain() {
     assert_erl!(
         r#"
      pub fn main() {
