@@ -467,7 +467,7 @@ fn escape_atom_string(value: String) -> String {
 fn unicode_escape_sequence_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
     PATTERN.get_or_init(|| {
-        Regex::new(r#"\\(\\)?u"#).expect("Unicode escape sequence regex cannot be constructed")
+        Regex::new(r#"(\\+)(u)"#).expect("Unicode escape sequence regex cannot be constructed")
     })
 }
 
@@ -478,13 +478,12 @@ fn string(value: &str) -> Document<'_> {
             // "\\x...". That's why capturing groups is used to exclude cases that
             // shouldn't be replaced.
             .replace_all(value, |caps: &Captures<'_>| {
-                if caps.get(1).is_some() {
-                    caps.get(0)
-                        .expect("Cannot resolve the first capture group")
-                        .as_str()
-                        .to_string()
+                let slashes = caps.get(1).map_or("", |m| m.as_str());
+
+                if slashes.len() % 2 == 0 {
+                    format!("{slashes}u")
                 } else {
-                    "\\x".to_owned()
+                    format!("{slashes}x")
                 }
             })
             .to_string(),
