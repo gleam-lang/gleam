@@ -22,8 +22,7 @@ use ecow::EcoString;
 use heck::ToSnakeCase;
 use itertools::Itertools;
 use pattern::pattern;
-use regex::Regex;
-use std::str::Chars;
+use regex::{Captures, Regex};
 use std::sync::OnceLock;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
@@ -465,73 +464,32 @@ fn escape_atom_string(value: String) -> String {
     }
 }
 
-// Extracts hex digits from \u{...} in chars.
-fn resolve_unicode_escape_sequence(chars: &mut Chars<'_>) -> Option<String> {
-    if chars.next() != Some('{') {
-        return None;
-    }
-
-    Some(chars.take_while(|c| *c != '}').collect())
+fn unicode_escape_sequence_pattern() -> &'static Regex {
+    static PATTERN: OnceLock<Regex> = OnceLock::new();
+    PATTERN.get_or_init(|| {
+        Regex::new(r#"\\(\\)?u"#).expect("Unicode escape sequence regex cannot be constructed")
+    })
 }
 
 fn string(value: &str) -> Document<'_> {
-    if value.is_empty() {
-        return "<<\"\"/utf8>>".to_doc();
-    }
-
-    let mut chars = value.chars();
-
-    // The erlang string literal.
-    let mut result = "".to_owned();
-
-    // Everything except unicode escape sequences.
-    // "hello\u{...}world"
-    //  ^^^^^       ^^^^^
-    let mut regular_string_part = "".to_owned();
-
-    loop {
-        let Some(c) = chars.next() else {
-            break;
-        };
-
-        if c == '\\' {
-            // Erlang accepts other escape sequences like '\n' or '\t'.
-            let c = chars
-                .next()
-                .expect("Malformed escape sequence produced by lexer.");
-
-            if c != 'u' {
-                regular_string_part.push('\\');
-                regular_string_part.push(c);
-                continue;
-            }
-
-            // Hex digits in '\u{...}' escape sequence.
-            let hex_digits = resolve_unicode_escape_sequence(&mut chars)
-                .expect("Malformed Unicode escape sequence produced by lexer.");
-
-            // <...,regular,unicode_escape_sequence,...>
-            if !regular_string_part.is_empty() {
-                result.push_str(&format!("\"{regular_string_part}\"/utf8,"));
-                regular_string_part.clear();
-            }
-
-            result.push_str(&format!(
-                "(erlang:binary_to_integer(<<\"{hex_digits}\">>, 16))/utf8,"
-            ));
-        } else {
-            regular_string_part.push(c);
-        }
-    }
-
-    // <...,unicode_escape_sequence,regular,>
-    //                                     ^ removed by result.pop()
-    if !regular_string_part.is_empty() {
-        result.push_str(&format!("\"{regular_string_part}\"/utf8,"));
-    }
-    let _ = result.pop();
-
-    Document::String(format!("<<{result}>>"))
+    Document::String(
+        unicode_escape_sequence_pattern()
+            // `\\u`-s should not be affected, so that "\\u..." is not converted to
+            // "\\x...". That's why capturing groups is used to exclude cases that
+            // shouldn't be replaced.
+            .replace_all(value, |caps: &Captures<'_>| {
+                if caps.get(1).is_some() {
+                    caps.get(0)
+                        .expect("Cannot resolve the first capture group")
+                        .as_str()
+                        .to_string()
+                } else {
+                    "\\x".to_owned()
+                }
+            })
+            .to_string(),
+    )
+    .surround("<<\"", "\"/utf8>>")
 }
 
 fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {

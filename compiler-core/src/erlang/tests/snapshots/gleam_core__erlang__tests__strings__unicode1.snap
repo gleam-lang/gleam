@@ -9,5 +9,5 @@ expression: "\npub fn emoji() -> String {\n  \"\\u{0001f600}\"\n}\n"
 
 -spec emoji() -> binary().
 emoji() ->
-    <<(erlang:binary_to_integer(<<"0001f600">>, 16))/utf8>>.
+    <<"\x{0001f600}"/utf8>>.
 

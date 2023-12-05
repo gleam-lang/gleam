@@ -9,5 +9,5 @@ expression: "\npub fn y_with_dieresis() -> String {\n  \"\\u{0308}y\"\n}\n"
 
 -spec y_with_dieresis() -> binary().
 y_with_dieresis() ->
-    <<(erlang:binary_to_integer(<<"0308">>, 16))/utf8,"y"/utf8>>.
+    <<"\x{0308}y"/utf8>>.
 

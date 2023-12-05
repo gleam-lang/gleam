@@ -9,5 +9,5 @@ expression: "\npub fn y() -> String {\n  \"\\u{79}\"\n}\n"
 
 -spec y() -> binary().
 y() ->
-    <<(erlang:binary_to_integer(<<"79">>, 16))/utf8>>.
+    <<"\x{79}"/utf8>>.
 

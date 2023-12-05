@@ -23,6 +23,19 @@ pub fn y_with_dieresis() -> String {
 }
 
 #[test]
+fn not_unicode() {
+    // '\u'-s must be converted to '\x' in the Erlang codegen.
+    // but '\\u'-s mustn't.
+    assert_erl!(
+        r#"
+pub fn not_unicode_escape_sequence() -> String {
+  "\\u{03a9}"
+}
+"#,
+    );
+}
+
+#[test]
 fn ascii_as_unicode_escape_sequence() {
     assert_erl!(
         r#"
