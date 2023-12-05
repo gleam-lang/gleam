@@ -9,13 +9,22 @@ pub struct LexicalError {
     pub location: SrcSpan,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum InvalidUnicodeEscapeError {
+    MissingOpeningBrace,          // Expected '{'
+    ExpectedHexDigitOrCloseBrace, // Expected hex digit or '}'
+    InvalidNumberOfHexDigits,     // Expected 2, 4, or 8 hex digits
+    InvalidCodepoint,             // Invalid Unicode codepoint
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum LexicalErrorType {
-    BadStringEscape,       // string contains an unescaped slash
-    DigitOutOfRadix,       // 0x012 , 2 is out of radix
-    NumTrailingUnderscore, // 1_000_ is not allowed
-    RadixIntNoValue,       // 0x, 0b, 0o without a value
-    UnexpectedStringEnd,   // Unterminated string literal
+    BadStringEscape,                                 // string contains an unescaped slash
+    InvalidUnicodeEscape(InvalidUnicodeEscapeError), // \u{...} escape sequence is invalid
+    DigitOutOfRadix,                                 // 0x012 , 2 is out of radix
+    NumTrailingUnderscore,                           // 1_000_ is not allowed
+    RadixIntNoValue,                                 // 0x, 0b, 0o without a value
+    UnexpectedStringEnd,                             // Unterminated string literal
     UnrecognizedToken { tok: char },
     BadName { name: String },
     BadDiscardName { name: String },
@@ -310,6 +319,30 @@ impl LexicalError {
                     format!("Try: {}", name.to_upper_camel_case()),
                 ],
             ),
+            LexicalErrorType::InvalidUnicodeEscape(
+                InvalidUnicodeEscapeError::MissingOpeningBrace,
+            ) => (
+                "Expected '{' in Unicode escape sequence",
+                vec!["Hint: Add it.".into()],
+            ),
+            LexicalErrorType::InvalidUnicodeEscape(
+                InvalidUnicodeEscapeError::ExpectedHexDigitOrCloseBrace,
+            ) => (
+                "Expected hex digit or '}' in Unicode escape sequence",
+                vec![
+                    "Hint: Hex digits are digits from 0 to 9 and letters from a to f or A to F."
+                        .into(),
+                ],
+            ),
+            LexicalErrorType::InvalidUnicodeEscape(
+                InvalidUnicodeEscapeError::InvalidNumberOfHexDigits,
+            ) => (
+                "Expected 2, 4, or 8 hex digits in Unicode escape sequence",
+                vec!["Hint: Consider adding leading zeroes.".into()],
+            ),
+            LexicalErrorType::InvalidUnicodeEscape(InvalidUnicodeEscapeError::InvalidCodepoint) => {
+                ("Invalid Unicode codepoint", vec![])
+            }
         }
     }
 }

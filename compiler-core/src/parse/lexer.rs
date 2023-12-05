@@ -3,6 +3,8 @@ use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Token;
 use std::char;
 
+use super::error::InvalidUnicodeEscapeError;
+
 #[derive(Debug)]
 pub struct Lexer<T: Iterator<Item = (u32, char)>> {
     chars: T,
@@ -755,6 +757,101 @@ where
                                 let _ = self.next_char();
                                 string_content.push('\\');
                                 string_content.push(c);
+                            }
+                            'u' => {
+                                let _ = self.next_char();
+
+                                if self.chr0 != Some('{') {
+                                    return Err(LexicalError {
+                                        error: LexicalErrorType::InvalidUnicodeEscape(
+                                            InvalidUnicodeEscapeError::MissingOpeningBrace,
+                                        ),
+                                        location: SrcSpan {
+                                            start: self.get_pos() - 1,
+                                            end: self.get_pos(),
+                                        },
+                                    });
+                                }
+
+                                // All digits inside \u{...}.
+                                let mut hex_digits = String::new();
+
+                                loop {
+                                    let _ = self.next_char();
+
+                                    let Some(chr) = self.chr0 else {
+                                        break;
+                                    };
+
+                                    if chr == '}' || hex_digits.len() > 8 {
+                                        break;
+                                    }
+
+                                    hex_digits.push(chr);
+
+                                    if !chr.is_ascii_hexdigit() {
+                                        return Err(LexicalError {
+                                            error: LexicalErrorType::InvalidUnicodeEscape(
+                                                InvalidUnicodeEscapeError::ExpectedHexDigitOrCloseBrace,
+                                            ),
+                                            location: SrcSpan {
+                                                start: self.get_pos(),
+                                                end: self.get_pos() + 1,
+                                            },
+                                        });
+                                    }
+                                }
+
+                                if self.chr0 != Some('}') {
+                                    return Err(LexicalError {
+                                        error: LexicalErrorType::InvalidUnicodeEscape(
+                                            InvalidUnicodeEscapeError::ExpectedHexDigitOrCloseBrace,
+                                        ),
+                                        location: SrcSpan {
+                                            start: self.get_pos() - 1,
+                                            end: self.get_pos(),
+                                        },
+                                    });
+                                }
+
+                                let _ = self.next_char();
+
+                                let hex_digits_amount = hex_digits.len();
+                                if hex_digits_amount != 2
+                                    && hex_digits_amount != 4
+                                    && hex_digits_amount != 8
+                                {
+                                    return Err(LexicalError {
+                                        error: LexicalErrorType::InvalidUnicodeEscape(
+                                            InvalidUnicodeEscapeError::InvalidNumberOfHexDigits,
+                                        ),
+                                        location: SrcSpan {
+                                            start: slash_pos,
+                                            end: self.get_pos(),
+                                        },
+                                    });
+                                }
+
+                                // Checks for i >= 0x110000 || (i >= 0xD800 && i < 0xE000),
+                                // where i is the unicode codepoint.
+                                if char::from_u32(u32::from_str_radix(&hex_digits, 16).expect(
+                                    "Cannot parse codepoint number in Unicode escape
+                                        sequence",
+                                ))
+                                .is_none()
+                                {
+                                    return Err(LexicalError {
+                                        error: LexicalErrorType::InvalidUnicodeEscape(
+                                            InvalidUnicodeEscapeError::InvalidCodepoint,
+                                        ),
+                                        location: SrcSpan {
+                                            start: slash_pos,
+                                            end: self.get_pos(),
+                                        },
+                                    });
+                                }
+
+                                string_content.push_str(&format!("\\u{{{hex_digits}}}"));
                             }
                             _ => {
                                 return Err(LexicalError {
