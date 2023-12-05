@@ -41,13 +41,12 @@ pub fn retstring() {
   "wibble"
 }
 pub fn main() {
-  todo as retstring() <> "wobble"
+  todo as { retstring() <> "wobble" }
 }
 "#
     );
 }
 
-#[ignore = "This would fail now. See https://github.com/gleam-lang/gleam/issues/2440"]
 #[test]
 fn piped() {
     assert_erl!(
