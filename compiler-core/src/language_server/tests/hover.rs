@@ -546,12 +546,9 @@ fn do_stuff() {
     assert_eq!(
         positioned_hover(code, Position::new(8, 11)),
         Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(format!(
-                "```gleam
-fn(fn(Int) -> String) -> String
-```
-"
-            ))),
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nfn(fn(Int) -> String) -> String\n```\n".to_string()
+            )),
             range: Some(Range::new(Position::new(8, 11), Position::new(8, 12))),
         })
     );
