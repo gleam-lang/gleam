@@ -7,6 +7,8 @@
 - The formatter now tries to keep a function body and its arguments on a single
   line by first trying to split only its last argument on multiple lines.
 - Fixed a bug where the formatter would move comments out of blocks.
+- `gleam format` now ignores the Gleam build directory by default, even when not
+  in a git repository.
 
 ### Language changes
 
@@ -37,6 +39,11 @@
 - The WASM API for the compiler has been rewritten to be simpler.
 - The WASM API for the compiler now exposes warnings.
 
+### HTML documentation generator
+
+- Searching in rendered HTML documentation now also matches words that do not
+  start with the input but do contain it.
+
 ### Bug fixes
 
 - Fixed a bug where the JavaScript code generator could generate invalid code
@@ -55,8 +62,6 @@
   patterns.
 - Fixed a bug where the formatter would misplace comments at the start of a
   block.
-- Searching in rendered HTML documentation now also matches words that do not
-  start with the input but do contain it.
 
 
 ## v0.32.4 - 2023-11-09
