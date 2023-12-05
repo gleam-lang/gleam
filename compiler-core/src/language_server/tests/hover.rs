@@ -132,6 +132,42 @@ fn main() {
                 "```gleam
 fn() -> Nil
 ```
+"
+                .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 6,
+                    character: 2,
+                },
+                end: Position {
+                    line: 6,
+                    character: 7,
+                },
+            },),
+        })
+    );
+}
+
+#[test]
+fn hover_local_pub_function_expr() {
+    let code = "
+pub fn my_fn() {
+  Nil
+}
+
+fn main() {
+  my_fn
+}
+";
+
+    assert_eq!(
+        positioned_hover(code, Position::new(6, 3)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn() -> Nil
+```
 
 View on [hexdocs](https://hexdocs.pm/my_project/app.html#my_fn)"
                     .to_string()
@@ -514,8 +550,7 @@ fn do_stuff() {
                 "```gleam
 fn(fn(Int) -> String) -> String
 ```
-
-View on [hexdocs](https://hexdocs.pm/my_project/app.html#b)"
+"
             ))),
             range: Some(Range::new(Position::new(8, 11), Position::new(8, 12))),
         })

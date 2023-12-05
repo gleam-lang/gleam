@@ -653,7 +653,7 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
     match expression {
         TypedExpr::Var {
             name, constructor, ..
-        } => match &constructor.variant {
+        } if constructor.public => match &constructor.variant {
             ValueConstructorVariant::ModuleFn {
                 module: module_name,
                 ..
