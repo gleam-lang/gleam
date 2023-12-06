@@ -95,6 +95,7 @@ function replaceOutput(content, className) {
 }
 
 function appendOutput(content, className) {
+  if (!content) return;
   const element = document.createElement("pre");
   element.textContent = content;
   element.className = className;

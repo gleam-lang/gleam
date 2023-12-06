@@ -1,0 +1,23 @@
+<p>
+  Blocks are one or more expressions grouped together with curly braces. Each
+  expression is evaluated in order and the value of the last expression is
+  returned.
+</p>
+<p>
+  Any variables assigned within the block can only be used within the block.
+</p>
+<p>
+  Try uncommenting <code>io.debug(degrees)</code> to see the compile error from
+  trying to use a variable that is not in scope.
+</p>
+<p>
+  Blocks can also be used to change the order of evaluation of binary operators
+  expressions. 
+</p>
+<p>
+ <code>*</code> binds more tightly than <code>+</code>so the expression
+ <code>1 + 2 * 3</code> evaluates to 7. If the <code>1 + 2</code> should be
+ evaluated first to make the expression evaluate to 9 then the expression can be
+ wrapped in a block: <code>{ 1 + 2 } * 3</code>. This is similar to grouping
+ with parentheses in some other languages.
+</p>

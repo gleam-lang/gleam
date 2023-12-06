@@ -1,8 +1,9 @@
 <p>
-  In Gleam Strings are written as text surrounded by double quotes.
+  In Gleam Strings are written as text surrounded by double quotes, and
+  can span multiple lines and contain unicode characters.
 </p>
 <p>
-  They can span multiple lines and support unicode characters.
+  The <code>&lt;&gt;</code> operator can be used to concatenate strings.
 </p>
 <p>
   Several escape sequences are supported:
@@ -14,7 +15,7 @@
   <li><code>\n</code> - newline</li>
   <li><code>\r</code> - carriage return</li>
   <li><code>\t</code> - tab</li>
-  <li><code>\u{1F600}</code> - unicode codepoint</li>
+  <li><code>\u{xxxxxx}</code> - unicode codepoint</li>
 </ul>
 <p>
   The <a href="https://hexdocs.pm/gleam_stdlib/gleam/string.html"><code>gleam/string</code></a>

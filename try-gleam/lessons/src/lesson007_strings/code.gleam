@@ -11,6 +11,9 @@ pub fn main() {
   )
   io.debug("\u{1F600}")
 
+  // String concatenation
+  io.debug("One " <> "Two")
+
   // String functions
   io.debug(string.reverse("1 2 3 4 5"))
   io.debug(string.append("abc", "def"))
