@@ -12,6 +12,7 @@ fn positioned_with_hex_deps(
     deps: &[&str],
 ) -> Option<Hover> {
     let mut engine = setup_engine(&io);
+
     _ = io.src_module("app", src);
     for dep in deps {
         add_hex_path_dep(&mut engine, dep);

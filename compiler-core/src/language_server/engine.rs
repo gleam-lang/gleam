@@ -1,7 +1,6 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedModule,
-        TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -260,6 +259,7 @@ where
     pub fn hover(&mut self, params: lsp::HoverParams) -> Response<Option<Hover>> {
         self.respond(|this| {
             let params = params.text_document_position_params;
+
             let (lines, found) = match this.node_at_position(&params) {
                 Some(value) => value,
                 None => return Ok(None),
@@ -530,7 +530,6 @@ fn hover_for_function_head(
         retrn: fun.return_type.clone(),
     };
     let formatted_type = Printer::new().pretty_print(&function_type, 0);
-
     let contents = format!(
         "```gleam
 {formatted_type}
@@ -560,7 +559,6 @@ fn hover_for_module_constant(
     let type_ = Printer::new().pretty_print(&constant.type_, 0);
     let documentation = constant.documentation.as_ref().unwrap_or(&empty_str);
     let contents = format!("```gleam\n{type_}\n```\n{documentation}");
-
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constant.location, &line_numbers)),
@@ -681,7 +679,7 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
 fn get_hexdocs_link_section(
     module_name: &str,
     name: &str,
-    ast: &TypedModule,
+    ast: &crate::ast::TypedModule,
     hex_deps: &std::collections::HashSet<&String>,
 ) -> Option<String> {
     let package_name = ast.definitions.iter().find_map(|def| match def {
