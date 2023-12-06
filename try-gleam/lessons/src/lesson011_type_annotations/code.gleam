@@ -1,5 +1,3 @@
-import gleam/io
-
 pub fn main() {
   let _name: String = "Gleam"
 
