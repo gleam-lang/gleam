@@ -11,7 +11,7 @@ use crate::{
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
-    type_::{pretty::Printer, PreludeType, Type, ValueConstructor, ValueConstructorVariant},
+    type_::{pretty::Printer, PreludeType, Type, ValueConstructorVariant},
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
@@ -260,8 +260,6 @@ where
     pub fn hover(&mut self, params: lsp::HoverParams) -> Response<Option<Hover>> {
         self.respond(|this| {
             let params = params.text_document_position_params;
-            let module = this.module_for_uri(&params.text_document.uri);
-
             let (lines, found) = match this.node_at_position(&params) {
                 Some(value) => value,
                 None => return Ok(None),
@@ -278,6 +276,7 @@ where
                 Located::ModuleStatement(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::Expression(expression) => {
+                    let module = this.module_for_uri(&params.text_document.uri);
                     let external_deps: std::collections::HashSet<_> =
                         this.compiler.project_compiler.packages.keys().collect();
 
@@ -458,7 +457,7 @@ fn type_completion(
 fn value_completion(
     module: Option<&str>,
     name: &str,
-    value: &ValueConstructor,
+    value: &crate::type_::ValueConstructor,
 ) -> lsp::CompletionItem {
     let label = match module {
         Some(module) => format!("{module}.{name}"),
@@ -556,13 +555,7 @@ fn hover_for_module_constant(
     let empty_str = EcoString::from("");
     let type_ = Printer::new().pretty_print(&constant.type_, 0);
     let documentation = constant.documentation.as_ref().unwrap_or(&empty_str);
-
-    let contents = format!(
-        "```gleam
-{type_}
-```
-{documentation}"
-    );
+    let contents = format!("```gleam\n{type_}\n```\n{documentation}");
 
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
