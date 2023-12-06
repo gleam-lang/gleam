@@ -277,15 +277,19 @@ where
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::Expression(expression) => {
                     let module = this.module_for_uri(&params.text_document.uri);
-                    let external_deps: std::collections::HashSet<_> =
-                        this.compiler.project_compiler.packages.keys().collect();
 
-                    Some(hover_for_expression(
-                        expression,
-                        lines,
-                        module,
-                        external_deps,
-                    ))
+                    let hex_deps = this
+                        .compiler
+                        .project_compiler
+                        .packages
+                        .iter()
+                        .flat_map(|(k, v)| match &v.source {
+                            crate::manifest::ManifestPackageSource::Hex { .. } => Some(k),
+                            _ => None,
+                        })
+                        .collect();
+
+                    Some(hover_for_expression(expression, lines, module, hex_deps))
                 }
                 Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
                 Located::FunctionBody(_) => None,
@@ -567,14 +571,14 @@ fn hover_for_expression(
     expression: &TypedExpr,
     line_numbers: LineNumbers,
     module: Option<&Module>,
-    external_deps: std::collections::HashSet<&String>,
+    hex_deps: std::collections::HashSet<&String>,
 ) -> Hover {
     let documentation = expression.get_documentation().unwrap_or_default();
 
     let link_section = module
         .and_then(|m: &Module| {
             let (module_name, name) = get_expr_qualified_name(expression)?;
-            get_hexdocs_link_section(module_name, name, &m.ast, &external_deps)
+            get_hexdocs_link_section(module_name, name, &m.ast, &hex_deps)
         })
         .unwrap_or("".to_string());
 
@@ -678,11 +682,11 @@ fn get_hexdocs_link_section(
     module_name: &str,
     name: &str,
     ast: &TypedModule,
-    external_deps: &std::collections::HashSet<&String>,
+    hex_deps: &std::collections::HashSet<&String>,
 ) -> Option<String> {
     let package_name = ast.definitions.iter().find_map(|def| match def {
         Definition::Import(p)
-            if p.module == module_name && external_deps.contains(&p.package.to_string()) =>
+            if p.module == module_name && hex_deps.contains(&p.package.to_string()) =>
         {
             Some(&p.package)
         }
