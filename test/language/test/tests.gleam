@@ -102,7 +102,7 @@ fn run_list_of_tests(suite_name, tests, stats) -> Stats {
 fn run_test(test: Test, suite_name: String, stats) {
   case test.proc() {
     Ok(Pass) -> {
-      ffi.print(ffi.ansi_green("."))
+      ffi.print("\u{001b}[32m.\u{001b}[0m")
       Stats(..stats, passes: stats.passes + 1)
     }
     Error(Fail(left: left, right: right)) -> {

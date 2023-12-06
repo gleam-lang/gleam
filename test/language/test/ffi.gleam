@@ -12,10 +12,6 @@ pub fn append(a: String, b: String) -> String
 @external(javascript, "./ffi_javascript.mjs", "toString")
 pub fn to_string(a: anything) -> String
 
-@external(erlang, "ffi_erlang", "ansi_green")
-@external(javascript, "./ffi_javascript.mjs", "ansiGreen")
-pub fn ansi_green(a: String) -> String
-
 @external(erlang, "ffi_erlang", "file_exists")
 @external(javascript, "./ffi_javascript.mjs", "fileExists")
 pub fn file_exists(a: String) -> Bool

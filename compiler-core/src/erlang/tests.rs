@@ -463,7 +463,7 @@ fn variable_name_underscores_preserved() {
 
 #[test]
 fn allowed_string_escapes() {
-    assert_erl!(r#"pub fn a() { "\n" "\r" "\t" "\\" "\"" "\e" "\\^" }"#);
+    assert_erl!(r#"pub fn a() { "\n" "\r" "\t" "\\" "\"" "\\^" }"#);
 }
 
 // https://github.com/gleam-lang/gleam/issues/1006

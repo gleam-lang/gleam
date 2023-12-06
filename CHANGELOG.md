@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.33.0-rc2 - Unreleased
+
+### Language changes
+
+- The `\e` string escape sequence has been removed. Use `\u{001b}` instead.
+
 ## v0.33.0-rc1 - 2023-12-06
 
 ### Formatter

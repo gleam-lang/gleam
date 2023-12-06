@@ -1,8 +1,7 @@
 -module(ffi_erlang).
 
 -export([
-    to_string/1, append/2, print/1, ansi_green/1, file_exists/1, halt/1,
-    to_dynamic/1
+    to_string/1, append/2, print/1, file_exists/1, halt/1, to_dynamic/1
 ]).
 
 append(A, B) ->
@@ -15,9 +14,6 @@ print(S) ->
 to_string(Term) ->
     List = io_lib:format("~p", [Term]),
     iolist_to_binary(List).
-
-ansi_green(String) ->
-    <<"\e[32m", String/binary, "\e[0m">>.
 
 file_exists(Path) ->
     filelib:is_regular(Path).
