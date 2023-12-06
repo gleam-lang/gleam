@@ -1,12 +1,9 @@
 import gleam/io
 
 pub fn main() {
-  let name: String = "Gleam"
-  io.debug(name)
+  let _name: String = "Gleam"
 
-  let is_cool: Bool = True
-  io.debug(is_cool)
+  let _is_cool: Bool = True
 
-  let version: Int = 1
-  io.debug(version)
+  let _version: Int = 1
 }
