@@ -92,15 +92,15 @@ fn run_list_of_suites(suites: List(Suite), stats) -> Stats {
 fn run_list_of_tests(suite_name, tests, stats) -> Stats {
   case tests {
     [] -> stats
-    [test, ..tests] -> {
-      let stats = run_test(test, suite_name, stats)
+    [testcase, ..tests] -> {
+      let stats = run_test(testcase, suite_name, stats)
       run_list_of_tests(suite_name, tests, stats)
     }
   }
 }
 
-fn run_test(test: Test, suite_name: String, stats) {
-  case test.proc() {
+fn run_test(testcase: Test, suite_name: String, stats) {
+  case testcase.proc() {
     Ok(Pass) -> {
       ffi.print("\u{001b}[32m.\u{001b}[0m")
       Stats(..stats, passes: stats.passes + 1)
@@ -110,7 +110,7 @@ fn run_test(test: Test, suite_name: String, stats) {
       ffi.print("❌ ")
       ffi.print(suite_name)
       ffi.print(":")
-      ffi.print(test.name)
+      ffi.print(testcase.name)
       ffi.print(" failed!\n")
       ffi.print(" left: ")
       ffi.print(ffi.to_string(left))
