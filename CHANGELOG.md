@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.33.0-rc1 - 2023-12-06
 
 ### Formatter
 
