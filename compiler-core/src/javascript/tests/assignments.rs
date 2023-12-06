@@ -172,3 +172,15 @@ pub const compound: #(Int, Int) = #(int, int_alias)
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2443
+#[test]
+fn let_assert_string_prefix() {
+    assert_js!(
+        r#"
+pub fn main() {
+  let assert "Game " <> id = "Game 1"
+}
+"#
+    );
+}

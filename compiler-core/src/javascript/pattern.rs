@@ -792,7 +792,11 @@ impl<'a> Check<'a> {
                 prefix,
             } => {
                 let prefix = super::expression::string(prefix);
-                docvec![subject, path, ".startsWith(", prefix, ")"]
+                if match_desired {
+                    docvec![subject, path, ".startsWith(", prefix, ")"]
+                } else {
+                    docvec!["!", subject, path, ".startsWith(", prefix, ")"]
+                }
             }
         }
     }
