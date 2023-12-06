@@ -5,22 +5,17 @@ use lsp_types::{
 
 use super::*;
 
-static PROJECT_NAME: &'static str = "my_project";
-
-fn positioned_hover_with_imports(
+fn positioned_hover_custom(
     src: &str,
     position: Position,
-    modules: HashMap<&str, &str>,
+    io: LanguageServerTestIO,
+    deps: &[&str],
 ) -> Option<Hover> {
-    let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
-    engine.compiler.project_compiler.config.name = PROJECT_NAME.into();
-
     _ = io.src_module("app", src);
-    for (k, src) in modules {
-        _ = io.src_module(k, src);
+    for dep in deps {
+        add_path_dep(&mut engine, dep);
     }
-
     let response = engine.compile_please();
     assert!(response.result.is_ok());
 
@@ -45,7 +40,7 @@ fn positioned_hover_with_imports(
 }
 
 fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
-    positioned_hover_with_imports(src, position, HashMap::new())
+    positioned_hover_custom(src, position, LanguageServerTestIO::new(), &[])
 }
 
 #[test]
@@ -74,39 +69,6 @@ fn(Int) -> Int
                 end: Position {
                     line: 1,
                     character: 11,
-                },
-            },),
-        })
-    );
-}
-
-#[test]
-fn hover_pub_function_definition() {
-    let code = "
-pub fn add_2(x) {
-  x + 2
-}
-";
-
-    assert_eq!(
-        positioned_hover(code, Position::new(1, 8)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn(Int) -> Int
-```
-
-View on [hexdocs](https://hexdocs.pm/my_project/app.html#add_2)"
-                    .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 1,
-                    character: 0,
-                },
-                end: Position {
-                    line: 1,
-                    character: 15,
                 },
             },),
         })
@@ -150,44 +112,10 @@ fn() -> Nil
 }
 
 #[test]
-fn hover_local_pub_function_expr() {
-    let code = "
-pub fn my_fn() {
-  Nil
-}
-
-fn main() {
-  my_fn
-}
-";
-
-    assert_eq!(
-        positioned_hover(code, Position::new(6, 3)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn() -> Nil
-```
-
-View on [hexdocs](https://hexdocs.pm/my_project/app.html#my_fn)"
-                    .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 6,
-                    character: 2,
-                },
-                end: Position {
-                    line: 6,
-                    character: 7,
-                },
-            },),
-        })
-    );
-}
-
-#[test]
 fn hover_imported_function() {
+    let io = LanguageServerTestIO::new();
+    _ = io.src_module("example_module", "pub fn my_fn() { Nil }");
+
     let code = "
 import example_module
 fn main() {
@@ -197,18 +125,51 @@ fn main() {
 
     assert_eq!(
         // hovering over "my_fn"
-        positioned_hover_with_imports(
-            code,
-            Position::new(3, 19),
-            HashMap::from([("example_module", "pub fn my_fn() { Nil }")])
-        ),
+        positioned_hover_custom(code, Position::new(3, 19), io, &[]),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn() -> Nil
+```
+"
+                .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 3,
+                    character: 16,
+                },
+                end: Position {
+                    line: 3,
+                    character: 22,
+                },
+            },),
+        })
+    );
+}
+
+#[test]
+fn hover_external_imported_function() {
+    let io = LanguageServerTestIO::new();
+    _ = io.dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+
+    let code = "
+import example_module
+fn main() {
+  example_module.my_fn
+}
+";
+
+    assert_eq!(
+        // hovering over "my_fn"
+        positioned_hover_custom(code, Position::new(3, 19), io, &["my_dep"]),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
 fn() -> Nil
 ```
 
-View on [hexdocs](https://hexdocs.pm/my_project/example_module.html#my_fn)"
+View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_fn)"
                     .to_string()
             )),
             range: Some(Range {
@@ -226,7 +187,10 @@ View on [hexdocs](https://hexdocs.pm/my_project/example_module.html#my_fn)"
 }
 
 #[test]
-fn hover_imported_unqualified_function() {
+fn hover_external_imported_unqualified_function() {
+    let io = LanguageServerTestIO::new();
+    _ = io.dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+
     let code = "
 import example_module.{my_fn}
 fn main() {
@@ -236,18 +200,14 @@ fn main() {
 
     assert_eq!(
         // hovering over "my_fn"
-        positioned_hover_with_imports(
-            code,
-            Position::new(3, 5),
-            HashMap::from([("example_module", "pub fn my_fn() { Nil }")])
-        ),
+        positioned_hover_custom(code, Position::new(3, 5), io, &["my_dep"]),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
 fn() -> Nil
 ```
 
-View on [hexdocs](https://hexdocs.pm/my_project/example_module.html#my_fn)"
+View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_fn)"
                     .to_string()
             )),
             range: Some(Range {
@@ -265,7 +225,48 @@ View on [hexdocs](https://hexdocs.pm/my_project/example_module.html#my_fn)"
 }
 
 #[test]
-fn hover_imported_constants() {
+fn hover_external_imported_external_unqualified_function() {
+    let io = LanguageServerTestIO::new();
+    _ = io.dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+
+    let code = "
+import example_module.{my_fn}
+fn main() {
+  my_fn
+}
+";
+
+    assert_eq!(
+        // hovering over "my_fn"
+        positioned_hover_custom(code, Position::new(3, 5), io, &["my_dep"]),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn() -> Nil
+```
+
+View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_fn)"
+                    .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 3,
+                    character: 2,
+                },
+                end: Position {
+                    line: 3,
+                    character: 7,
+                },
+            },),
+        })
+    );
+}
+
+#[test]
+fn hover_external_imported_constants() {
+    let io = LanguageServerTestIO::new();
+    _ = io.dep_module("my_dep", "example_module", "pub const my_const = 42");
+
     let code = "
 import example_module
 fn main() {
@@ -275,18 +276,14 @@ fn main() {
 
     assert_eq!(
         // hovering over "my_const"
-        positioned_hover_with_imports(
-            code,
-            Position::new(3, 19),
-            HashMap::from([("example_module", "pub const my_const = 42")])
-        ),
+        positioned_hover_custom(code, Position::new(3, 19), io, &["my_dep"]),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
 Int
 ```
 
-View on [hexdocs](https://hexdocs.pm/my_project/example_module.html#my_const)"
+View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_const)"
                     .to_string()
             )),
             range: Some(Range {
@@ -304,7 +301,10 @@ View on [hexdocs](https://hexdocs.pm/my_project/example_module.html#my_const)"
 }
 
 #[test]
-fn hover_imported_unqualified_constants() {
+fn hover_external_imported_unqualified_constants() {
+    let io = LanguageServerTestIO::new();
+    _ = io.dep_module("my_dep", "example_module", "pub const my_const = 42");
+
     let code = "
 import example_module.{my_const}
 fn main() {
@@ -314,18 +314,14 @@ fn main() {
 
     assert_eq!(
         // hovering over "my_const"
-        positioned_hover_with_imports(
-            code,
-            Position::new(3, 5),
-            HashMap::from([("example_module", "pub const my_const = 42")])
-        ),
+        positioned_hover_custom(code, Position::new(3, 5), io, &["my_dep"]),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
 Int
 ```
 
-View on [hexdocs](https://hexdocs.pm/my_project/example_module.html#my_const)"
+View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_const)"
                     .to_string()
             )),
             range: Some(Range {
@@ -481,37 +477,6 @@ Int
                 end: Position {
                     line: 3,
                     character: 9
-                },
-            }),
-        })
-    );
-}
-
-#[test]
-fn hover_pub_module_constant() {
-    let code = "
-pub const one = 1
-";
-
-    assert_eq!(
-        positioned_hover(code, Position::new(1, 11)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-Int
-```
-
-View on [hexdocs](https://hexdocs.pm/my_project/app.html#one)"
-                    .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 1,
-                    character: 10
-                },
-                end: Position {
-                    line: 1,
-                    character: 13
                 },
             }),
         })
