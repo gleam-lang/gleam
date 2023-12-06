@@ -66,6 +66,8 @@
   patterns.
 - Fixed a bug where the formatter would misplace comments at the start of a
   block.
+- Fixed a bug where using a string prefix pattern in `let assert` would generate
+  incorrect JavaScript.
 
 
 ## v0.32.4 - 2023-11-09
