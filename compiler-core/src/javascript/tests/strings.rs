@@ -5,7 +5,7 @@ fn unicode1() {
     assert_js!(
         r#"
 pub fn emoji() -> String {
-  "\u{0001f600}"
+  "\u{1f600}"
 }
 "#,
     );
@@ -31,6 +31,17 @@ pub fn y() -> String {
 }
 "#,
     )
+}
+
+#[test]
+fn unicode_escape_sequence_6_digits() {
+    assert_js!(
+        r#"
+pub fn unicode_escape_sequence_6_digits() -> String {
+  "\u{10abcd}"
+}
+"#,
+    );
 }
 
 #[test]

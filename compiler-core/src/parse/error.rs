@@ -13,7 +13,7 @@ pub struct LexicalError {
 pub enum InvalidUnicodeEscapeError {
     MissingOpeningBrace,          // Expected '{'
     ExpectedHexDigitOrCloseBrace, // Expected hex digit or '}'
-    InvalidNumberOfHexDigits,     // Expected 2, 4, or 8 hex digits
+    InvalidNumberOfHexDigits,     // Expected between 1 and 6 hex digits
     InvalidCodepoint,             // Invalid Unicode codepoint
 }
 
@@ -337,8 +337,8 @@ impl LexicalError {
             LexicalErrorType::InvalidUnicodeEscape(
                 InvalidUnicodeEscapeError::InvalidNumberOfHexDigits,
             ) => (
-                "Expected 2, 4, or 8 hex digits in Unicode escape sequence",
-                vec!["Hint: Consider adding leading zeroes.".into()],
+                "Expected between 1 and 6 hex digits in Unicode escape sequence",
+                vec![],
             ),
             LexicalErrorType::InvalidUnicodeEscape(InvalidUnicodeEscapeError::InvalidCodepoint) => {
                 ("Invalid Unicode codepoint", vec![])

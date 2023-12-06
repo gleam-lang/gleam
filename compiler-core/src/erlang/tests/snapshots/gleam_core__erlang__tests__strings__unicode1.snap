@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-expression: "\npub fn emoji() -> String {\n  \"\\u{0001f600}\"\n}\n"
+expression: "\npub fn emoji() -> String {\n  \"\\u{1f600}\"\n}\n"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
@@ -9,5 +9,5 @@ expression: "\npub fn emoji() -> String {\n  \"\\u{0001f600}\"\n}\n"
 
 -spec emoji() -> binary().
 emoji() ->
-    <<"\x{0001f600}"/utf8>>.
+    <<"\x{1f600}"/utf8>>.
 

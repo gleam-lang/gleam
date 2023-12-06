@@ -783,7 +783,9 @@ where
                                         break;
                                     };
 
-                                    if chr == '}' || hex_digits.len() > 8 {
+                                    // Don't break early when we've reached 6 digits to ensure a
+                                    // useful error message
+                                    if chr == '}' {
                                         break;
                                     }
 
@@ -816,11 +818,7 @@ where
 
                                 let _ = self.next_char();
 
-                                let hex_digits_amount = hex_digits.len();
-                                if hex_digits_amount != 2
-                                    && hex_digits_amount != 4
-                                    && hex_digits_amount != 8
-                                {
+                                if !(1..=6).contains(&hex_digits.len()) {
                                     return Err(LexicalError {
                                         error: LexicalErrorType::InvalidUnicodeEscape(
                                             InvalidUnicodeEscapeError::InvalidNumberOfHexDigits,
@@ -851,7 +849,9 @@ where
                                     });
                                 }
 
-                                string_content.push_str(&format!("\\u{{{hex_digits}}}"));
+                                string_content.push_str("\\u{");
+                                string_content.push_str(&hex_digits);
+                                string_content.push('}');
                             }
                             _ => {
                                 return Err(LexicalError {

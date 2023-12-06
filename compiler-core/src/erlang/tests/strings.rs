@@ -5,7 +5,7 @@ fn unicode1() {
     assert_erl!(
         r#"
 pub fn emoji() -> String {
-  "\u{0001f600}"
+  "\u{1f600}"
 }
 "#,
     );
@@ -52,6 +52,17 @@ fn unicode3() {
         r#"
 pub fn y_with_dieresis_with_slash() -> String {
   "\\\u{0308}y"
+}
+"#,
+    );
+}
+
+#[test]
+fn unicode_escape_sequence_6_digits() {
+    assert_erl!(
+        r#"
+pub fn unicode_escape_sequence_6_digits() -> String {
+  "\u{10abcd}"
 }
 "#,
     );
