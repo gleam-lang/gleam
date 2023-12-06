@@ -1,8 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-expression: "\npub fn emoji() -> String {\n  \"\\u{0001f600}\"\n}\n"
+expression: "\npub fn emoji() -> String {\n  \"\\u{1f600}\"\n}\n"
 ---
 export function emoji() {
-  return "\u{0001f600}";
+  return "\u{1f600}";
 }
 

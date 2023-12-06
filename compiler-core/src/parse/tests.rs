@@ -135,8 +135,7 @@ fn int_tests() {
 }
 
 #[test]
-fn string() {
-    // bad character escape
+fn string_bad_character_escape() {
     assert_error!(
         r#""\g""#,
         ParseError {
@@ -152,8 +151,7 @@ fn string() {
 }
 
 #[test]
-fn string2() {
-    // still bad character escape
+fn string_bad_character_escape_leading_backslash() {
     assert_error!(
         r#""\\\g""#,
         ParseError {
@@ -169,25 +167,7 @@ fn string2() {
 }
 
 #[test]
-fn string3() {
-    assert_error!(
-        r#""\u{0011f601}""#,
-        ParseError {
-            error: ParseErrorType::LexError {
-                error: LexicalError {
-                    error: LexicalErrorType::InvalidUnicodeEscape(
-                        InvalidUnicodeEscapeError::InvalidCodepoint,
-                    ),
-                    location: SrcSpan { start: 1, end: 13 },
-                }
-            },
-            location: SrcSpan { start: 1, end: 13 },
-        }
-    );
-}
-
-#[test]
-fn string4() {
+fn string_freestanding_unicode_escape_sequence() {
     assert_error!(
         r#""\u""#,
         ParseError {
@@ -205,7 +185,25 @@ fn string4() {
 }
 
 #[test]
-fn string5() {
+fn string_unicode_escape_sequence_no_braces() {
+    assert_error!(
+        r#""\u65""#,
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidUnicodeEscape(
+                        InvalidUnicodeEscapeError::MissingOpeningBrace,
+                    ),
+                    location: SrcSpan { start: 2, end: 3 },
+                }
+            },
+            location: SrcSpan { start: 2, end: 3 },
+        }
+    );
+}
+
+#[test]
+fn string_unicode_escape_sequence_invalid_hex() {
     assert_error!(
         r#""\u{z}""#,
         ParseError {
@@ -223,7 +221,7 @@ fn string5() {
 }
 
 #[test]
-fn string6() {
+fn string_unclosed_unicode_escape_sequence() {
     assert_error!(
         r#""\u{039a""#,
         ParseError {
@@ -241,19 +239,55 @@ fn string6() {
 }
 
 #[test]
-fn string7() {
+fn string_empty_unicode_escape_sequence() {
     assert_error!(
-        r#""\u{039}""#,
+        r#""\u{}""#,
         ParseError {
             error: ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::InvalidUnicodeEscape(
                         InvalidUnicodeEscapeError::InvalidNumberOfHexDigits,
                     ),
-                    location: SrcSpan { start: 1, end: 8 },
+                    location: SrcSpan { start: 1, end: 5 },
                 }
             },
-            location: SrcSpan { start: 1, end: 8 },
+            location: SrcSpan { start: 1, end: 5 },
+        }
+    );
+}
+
+#[test]
+fn string_overlong_unicode_escape_sequence() {
+    assert_error!(
+        r#""\u{0011f601}""#,
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidUnicodeEscape(
+                        InvalidUnicodeEscapeError::InvalidNumberOfHexDigits,
+                    ),
+                    location: SrcSpan { start: 1, end: 13 },
+                }
+            },
+            location: SrcSpan { start: 1, end: 13 },
+        }
+    );
+}
+
+#[test]
+fn string_invalid_unicode_escape_sequence() {
+    assert_error!(
+        r#""\u{110000}""#,
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidUnicodeEscape(
+                        InvalidUnicodeEscapeError::InvalidCodepoint,
+                    ),
+                    location: SrcSpan { start: 1, end: 11 },
+                }
+            },
+            location: SrcSpan { start: 1, end: 11 },
         }
     );
 }
