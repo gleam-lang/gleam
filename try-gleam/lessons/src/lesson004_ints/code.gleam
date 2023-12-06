@@ -1,4 +1,5 @@
 import gleam/io
+import gleam/int
 
 pub fn main() {
   // Int arithmetic
@@ -13,4 +14,8 @@ pub fn main() {
   io.debug(2 < 1)
   io.debug(2 >= 1)
   io.debug(2 <= 1)
+
+  // Standard library int functions
+  io.debug(int.max(42, 77))
+  io.debug(int.clamp(5, 10, 20))
 }
