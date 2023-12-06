@@ -596,13 +596,11 @@ fn compact_single_argument_call() {
     assert_format!(
         r#"fn main() {
   thingy(
-    wiggle(
-      my_function(
-        // ok!
-        one(),
-        two(),
-      ),
-    ),
+    wiggle(my_function(
+      // ok!
+      one(),
+      two(),
+    )),
   )
 }
 "#
@@ -5193,6 +5191,102 @@ fn case_splits_function_on_newline() {
       ])
     _ -> todo
   }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_list() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok([
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+  ])
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_function() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(fn() {
+    some_long_variable_name_to_force_wrapping()
+    some_long_variable_name_to_force_wrapping()
+    some_long_variable_name_to_force_wrapping()
+  })
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_tuple() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(#(
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+  ))
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_call() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(do_something(
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+  ))
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_call_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(
+    do_something(do_something_else(
+      some_long_variable_name_to_force_wrapping,
+      some_long_variable_name_to_force_wrapping,
+      some_long_variable_name_to_force_wrapping,
+    )),
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_call_nested_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(
+    do_something(
+      do_something_else(do_a_last_thing(
+        some_long_variable_name_to_force_wrapping,
+        some_long_variable_name_to_force_wrapping,
+        some_long_variable_name_to_force_wrapping,
+      )),
+    ),
+  )
 }
 "#
     );
