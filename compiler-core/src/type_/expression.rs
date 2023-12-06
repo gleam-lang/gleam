@@ -188,31 +188,28 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         location: SrcSpan,
         kind: TodoKind,
-        label: Option<Box<UntypedExpr>>,
+        message: Option<Box<UntypedExpr>>,
     ) -> Result<TypedExpr, Error> {
-        let typ = self.new_unbound_var();
+        let type_ = self.new_unbound_var();
         self.environment.warnings.emit(Warning::Todo {
             kind,
             location,
-            typ: typ.clone(),
+            typ: type_.clone(),
         });
-        match label {
+        let message = match message {
             Some(message) => {
                 let message = self.infer(*message)?;
                 unify(string(), message.type_())
                     .map_err(|e| convert_unify_error(e, message.location()))?;
-                Ok(TypedExpr::Todo {
-                    location,
-                    type_: typ,
-                    message: Some(Box::new(message)),
-                })
+                Some(Box::new(message))
             }
-            None => Ok(TypedExpr::Todo {
-                location,
-                type_: typ,
-                message: None,
-            }),
-        }
+            None => None,
+        };
+        Ok(TypedExpr::Todo {
+            location,
+            type_,
+            message,
+        })
     }
 
     fn infer_panic(
@@ -220,24 +217,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         message: Option<Box<UntypedExpr>>,
     ) -> Result<TypedExpr, Error> {
-        let typ = self.new_unbound_var();
-        match message {
+        let type_ = self.new_unbound_var();
+        let message = match message {
             Some(message) => {
                 let message = self.infer(*message)?;
                 unify(string(), message.type_())
                     .map_err(|e| convert_unify_error(e, message.location()))?;
-                Ok(TypedExpr::Panic {
-                    location,
-                    type_: typ,
-                    message: Some(Box::new(message)),
-                })
+                Some(Box::new(message))
             }
-            None => Ok(TypedExpr::Panic {
-                location,
-                type_: typ,
-                message: None,
-            }),
-        }
+            None => None,
+        };
+        Ok(TypedExpr::Panic {
+            location,
+            type_,
+            message,
+        })
     }
 
     fn infer_string(&mut self, value: EcoString, location: SrcSpan) -> TypedExpr {
