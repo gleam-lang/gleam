@@ -156,6 +156,11 @@ fn strings_tests() -> List(Test) {
 ",
       "\n",
     ),
+    "let assert string prefix"
+    |> example(fn() {
+      let assert "ab" <> rest = "abcdef"
+      assert_equal("cdef", rest)
+    }),
   ]
 }
 
