@@ -5,7 +5,7 @@ use lsp_types::{
 
 use super::*;
 
-fn positioned_hover_custom(
+fn positioned_with_hex_deps(
     src: &str,
     position: Position,
     io: LanguageServerTestIO,
@@ -14,7 +14,7 @@ fn positioned_hover_custom(
     let mut engine = setup_engine(&io);
     _ = io.src_module("app", src);
     for dep in deps {
-        add_path_dep(&mut engine, dep);
+        add_hex_path_dep(&mut engine, dep);
     }
     let response = engine.compile_please();
     assert!(response.result.is_ok());
@@ -40,7 +40,7 @@ fn positioned_hover_custom(
 }
 
 fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
-    positioned_hover_custom(src, position, LanguageServerTestIO::new(), &[])
+    positioned_with_hex_deps(src, position, LanguageServerTestIO::new(), &[])
 }
 
 #[test]
@@ -125,7 +125,7 @@ fn main() {
 
     assert_eq!(
         // hovering over "my_fn"
-        positioned_hover_custom(code, Position::new(3, 19), io, &[]),
+        positioned_with_hex_deps(code, Position::new(3, 19), io, &[]),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -151,7 +151,7 @@ fn() -> Nil
 #[test]
 fn hover_external_imported_function() {
     let io = LanguageServerTestIO::new();
-    _ = io.dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
 
     let code = "
 import example_module
@@ -162,7 +162,7 @@ fn main() {
 
     assert_eq!(
         // hovering over "my_fn"
-        positioned_hover_custom(code, Position::new(3, 19), io, &["my_dep"]),
+        positioned_with_hex_deps(code, Position::new(3, 19), io, &["my_dep"]),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -189,7 +189,7 @@ View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_fn)"
 #[test]
 fn hover_external_imported_unqualified_function() {
     let io = LanguageServerTestIO::new();
-    _ = io.dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
 
     let code = "
 import example_module.{my_fn}
@@ -200,7 +200,7 @@ fn main() {
 
     assert_eq!(
         // hovering over "my_fn"
-        positioned_hover_custom(code, Position::new(3, 5), io, &["my_dep"]),
+        positioned_with_hex_deps(code, Position::new(3, 5), io, &["my_dep"]),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -227,7 +227,7 @@ View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_fn)"
 #[test]
 fn hover_external_imported_external_unqualified_function() {
     let io = LanguageServerTestIO::new();
-    _ = io.dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
 
     let code = "
 import example_module.{my_fn}
@@ -238,7 +238,7 @@ fn main() {
 
     assert_eq!(
         // hovering over "my_fn"
-        positioned_hover_custom(code, Position::new(3, 5), io, &["my_dep"]),
+        positioned_with_hex_deps(code, Position::new(3, 5), io, &["my_dep"]),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -265,7 +265,7 @@ View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_fn)"
 #[test]
 fn hover_external_imported_constants() {
     let io = LanguageServerTestIO::new();
-    _ = io.dep_module("my_dep", "example_module", "pub const my_const = 42");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub const my_const = 42");
 
     let code = "
 import example_module
@@ -276,7 +276,7 @@ fn main() {
 
     assert_eq!(
         // hovering over "my_const"
-        positioned_hover_custom(code, Position::new(3, 19), io, &["my_dep"]),
+        positioned_with_hex_deps(code, Position::new(3, 19), io, &["my_dep"]),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -303,7 +303,7 @@ View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_const)"
 #[test]
 fn hover_external_imported_unqualified_constants() {
     let io = LanguageServerTestIO::new();
-    _ = io.dep_module("my_dep", "example_module", "pub const my_const = 42");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub const my_const = 42");
 
     let code = "
 import example_module.{my_const}
@@ -314,7 +314,7 @@ fn main() {
 
     assert_eq!(
         // hovering over "my_const"
-        positioned_hover_custom(code, Position::new(3, 5), io, &["my_dep"]),
+        positioned_with_hex_deps(code, Position::new(3, 5), io, &["my_dep"]),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam

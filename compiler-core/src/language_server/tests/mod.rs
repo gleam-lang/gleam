@@ -82,6 +82,21 @@ impl LanguageServerTestIO {
         path
     }
 
+    pub fn hex_dep_module(&self, dep: &str, name: &str, code: &str) -> Utf8PathBuf {
+        let path = self
+            .paths
+            .root()
+            .join("build")
+            .join("packages")
+            .join(dep)
+            .join("src")
+            .join(name)
+            .with_extension("gleam");
+
+        self.module(&path, code);
+        path
+    }
+
     fn module(&self, path: &Utf8Path, code: &str) {
         self.io.write(path, code).unwrap();
         self.io.set_modification_time(path, SystemTime::now());
@@ -252,6 +267,44 @@ impl ProgressReporter for LanguageServerTestIO {
     fn dependency_downloading_finished(&self) {
         self.record(Action::DependencyDownloadingFinished);
     }
+}
+
+fn add_hex_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, name: &str) {
+    let compiler = &mut engine.compiler.project_compiler;
+    _ = compiler.config.dependencies.insert(
+        name.into(),
+        Requirement::Hex {
+            version: hexpm::version::Range::new("1.0".to_string()),
+        },
+    );
+    _ = compiler.packages.insert(
+        name.into(),
+        ManifestPackage {
+            name: name.into(),
+            version: Version::new(1, 0, 0),
+            build_tools: vec!["gleam".into()],
+            otp_app: None,
+            requirements: vec![],
+            source: ManifestPackageSource::Hex {
+                outer_checksum: crate::manifest::Base16Checksum(vec![]),
+            },
+        },
+    );
+
+    let toml_path = engine
+        .paths
+        .root()
+        .join("build")
+        .join("packages")
+        .join(name)
+        .join("gleam.toml");
+
+    let toml = format!(
+        r#"name = "{name}"
+    version = "1.0.0""#
+    );
+
+    _ = compiler.io.write(toml_path.as_path(), &toml).unwrap();
 }
 
 fn add_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, name: &str) {
