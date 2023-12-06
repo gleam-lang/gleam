@@ -1,6 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedModule,
+        TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -269,15 +270,23 @@ where
             Ok(match found {
                 Located::Statement(_) => None, // TODO: hover for statement
                 Located::ModuleStatement(Definition::Function(fun)) => {
-                    Some(hover_for_function_head(fun, lines, module))
+                    Some(hover_for_function_head(fun, lines))
                 }
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
-                    Some(hover_for_module_constant(constant, lines, module))
+                    Some(hover_for_module_constant(constant, lines))
                 }
                 Located::ModuleStatement(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::Expression(expression) => {
-                    Some(hover_for_expression(expression, lines, module))
+                    let external_deps: std::collections::HashSet<_> =
+                        this.compiler.project_compiler.packages.keys().collect();
+
+                    Some(hover_for_expression(
+                        expression,
+                        lines,
+                        module,
+                        external_deps,
+                    ))
                 }
                 Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
                 Located::FunctionBody(_) => None,
@@ -510,7 +519,6 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover
 fn hover_for_function_head(
     fun: &Function<Arc<Type>, TypedExpr>,
     line_numbers: LineNumbers,
-    module: Option<&Module>,
 ) -> Hover {
     let empty_str = EcoString::from("");
     let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
@@ -520,16 +528,11 @@ fn hover_for_function_head(
     };
     let formatted_type = Printer::new().pretty_print(&function_type, 0);
 
-    let link_section = module
-        .and_then(|m| get_hexdocs_link_section(&m.name, &fun.name, m))
-        .filter(|_| fun.public)
-        .unwrap_or("".to_string());
-
     let contents = format!(
         "```gleam
 {formatted_type}
 ```
-{documentation}{link_section}"
+{documentation}"
     );
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
@@ -549,21 +552,16 @@ fn hover_for_function_argument(argument: &Arg<Arc<Type>>, line_numbers: LineNumb
 fn hover_for_module_constant(
     constant: &ModuleConstant<Arc<Type>, EcoString>,
     line_numbers: LineNumbers,
-    module: Option<&Module>,
 ) -> Hover {
     let empty_str = EcoString::from("");
     let type_ = Printer::new().pretty_print(&constant.type_, 0);
     let documentation = constant.documentation.as_ref().unwrap_or(&empty_str);
-    let link_section = module
-        .and_then(|m| get_hexdocs_link_section(&m.name, &constant.name, m))
-        .filter(|_| constant.public)
-        .unwrap_or("".to_string());
 
     let contents = format!(
         "```gleam
 {type_}
 ```
-{documentation}{link_section}"
+{documentation}"
     );
 
     Hover {
@@ -576,13 +574,14 @@ fn hover_for_expression(
     expression: &TypedExpr,
     line_numbers: LineNumbers,
     module: Option<&Module>,
+    external_deps: std::collections::HashSet<&String>,
 ) -> Hover {
     let documentation = expression.get_documentation().unwrap_or_default();
 
     let link_section = module
-        .and_then(|m| {
+        .and_then(|m: &Module| {
             let (module_name, name) = get_expr_qualified_name(expression)?;
-            get_hexdocs_link_section(module_name, name, m)
+            get_hexdocs_link_section(module_name, name, &m.ast, &external_deps)
         })
         .unwrap_or("".to_string());
 
@@ -685,17 +684,17 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
 fn get_hexdocs_link_section(
     module_name: &str,
     name: &str,
-    current_module: &Module,
+    ast: &TypedModule,
+    external_deps: &std::collections::HashSet<&String>,
 ) -> Option<String> {
-    let package_name = current_module
-        .ast
-        .definitions
-        .iter()
-        .find_map(|def| match def {
-            Definition::Import(p) if p.module == module_name => Some(&p.package),
-            _ => None,
-        })
-        .unwrap_or(&current_module.ast.type_info.package);
+    let package_name = ast.definitions.iter().find_map(|def| match def {
+        Definition::Import(p)
+            if p.module == module_name && external_deps.contains(&p.package.to_string()) =>
+        {
+            Some(&p.package)
+        }
+        _ => None,
+    })?;
 
     let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
     Some(format!("\nView on [hexdocs]({link})"))
