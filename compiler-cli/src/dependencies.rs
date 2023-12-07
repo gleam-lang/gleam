@@ -508,7 +508,11 @@ fn get_manifest<Telem: Telemetry>(
 
     // If the config has unchanged since the manifest was written then it is up
     // to date so we can return it unmodified.
-    if manifest.requirements == config.all_dependencies()? {
+    if is_same_requirements(
+        manifest.clone().requirements,
+        config.clone().all_dependencies()?,
+        paths.root(),
+    )? {
         tracing::debug!("manifest_up_to_date");
         Ok((false, manifest))
     } else {
@@ -516,6 +520,49 @@ fn get_manifest<Telem: Telemetry>(
         let manifest = resolve_versions(runtime, mode, paths, config, Some(&manifest), telemetry)?;
         Ok((true, manifest))
     }
+}
+
+fn is_same_requirements(
+    requirements1: HashMap<EcoString, Requirement>,
+    requirements2: HashMap<EcoString, Requirement>,
+    root_path: &Utf8Path,
+) -> Result<bool, gleam_core::Error> {
+    let canonicalised_requirements2: HashMap<EcoString, Requirement> = requirements2
+        .into_iter()
+        .map(|(string, requirement)| {
+            Ok((
+                string,
+                match requirement {
+                    Requirement::Hex { .. } => requirement,
+                    Requirement::Path { path } => Requirement::Path {
+                        path: fs::canonicalise(&root_path.join(path))?,
+                    },
+                    Requirement::Git { .. } => requirement,
+                },
+            ))
+        })
+        .collect::<Result<Vec<_>, gleam_core::Error>>()?
+        .into_iter()
+        .collect();
+
+    let canonicalised_requirements1: HashMap<EcoString, Requirement> = requirements1
+        .into_iter()
+        .map(|(string, requirement)| {
+            Ok((
+                string,
+                match requirement {
+                    Requirement::Hex { .. } => requirement,
+                    Requirement::Path { path } => Requirement::Path {
+                        path: fs::canonicalise(&root_path.join(path))?,
+                    },
+                    Requirement::Git { .. } => requirement,
+                },
+            ))
+        })
+        .collect::<Result<Vec<_>, gleam_core::Error>>()?
+        .into_iter()
+        .collect();
+    Ok(canonicalised_requirements1 == canonicalised_requirements2)
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
