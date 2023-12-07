@@ -471,24 +471,26 @@ fn unicode_escape_sequence_pattern() -> &'static Regex {
     })
 }
 
-fn string(value: &str) -> Document<'_> {
-    Document::String(
-        unicode_escape_sequence_pattern()
-            // `\\u`-s should not be affected, so that "\\u..." is not converted to
-            // "\\x...". That's why capturing groups is used to exclude cases that
-            // shouldn't be replaced.
-            .replace_all(value, |caps: &Captures<'_>| {
-                let slashes = caps.get(1).map_or("", |m| m.as_str());
+fn string_inner(value: &str) -> Document<'_> {
+    let content = unicode_escape_sequence_pattern()
+        // `\\u`-s should not be affected, so that "\\u..." is not converted to
+        // "\\x...". That's why capturing groups is used to exclude cases that
+        // shouldn't be replaced.
+        .replace_all(value, |caps: &Captures<'_>| {
+            let slashes = caps.get(1).map_or("", |m| m.as_str());
 
-                if slashes.len() % 2 == 0 {
-                    format!("{slashes}u")
-                } else {
-                    format!("{slashes}x")
-                }
-            })
-            .to_string(),
-    )
-    .surround("<<\"", "\"/utf8>>")
+            if slashes.len() % 2 == 0 {
+                format!("{slashes}u")
+            } else {
+                format!("{slashes}x")
+            }
+        })
+        .to_string();
+    Document::String(content)
+}
+
+fn string(value: &str) -> Document<'_> {
+    string_inner(value).surround("<<\"", "\"/utf8>>")
 }
 
 fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
@@ -522,7 +524,7 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
                 },
             ..
         }
-        | TypedExpr::String { value, .. } => docvec!['"', value, "\"/utf8"],
+        | TypedExpr::String { value, .. } => docvec!['"', string_inner(value), "\"/utf8"],
 
         TypedExpr::Var {
             name,

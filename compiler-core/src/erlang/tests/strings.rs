@@ -23,6 +23,39 @@ pub fn y_with_dieresis() -> String {
 }
 
 #[test]
+fn unicode_concat1() {
+    assert_erl!(
+        r#"
+pub fn main(x) -> String {
+  x <> "\u{0308}"
+}
+"#,
+    );
+}
+
+#[test]
+fn unicode_concat2() {
+    assert_erl!(
+        r#"
+pub fn main(x) -> String {
+  x <> "\\u{0308}"
+}
+"#,
+    );
+}
+
+#[test]
+fn unicode_concat3() {
+    assert_erl!(
+        r#"
+pub fn main(x) -> String {
+  x <> "\\\u{0308}"
+}
+"#,
+    );
+}
+
+#[test]
 fn not_unicode_escape_sequence() {
     // '\u'-s must be converted to '\x' in the Erlang codegen.
     // but '\\u'-s mustn't.
