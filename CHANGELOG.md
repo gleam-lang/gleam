@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.33.0-rc2 - Unreleased
+## v0.33.0-rc2 - 2023-12-07
 
 ### Language changes
 
@@ -10,6 +10,7 @@
 
 - Fixed a bug where the `\u` string escape sequence would not work with
   on Erlang on the right hand side of a string concatenation.
+
 
 ## v0.33.0-rc1 - 2023-12-06
 
