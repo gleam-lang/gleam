@@ -1,4 +1,4 @@
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{
     erlang,
     error::{Error, FileIoAction, FileKind, InvalidProjectNameReason},
@@ -236,8 +236,8 @@ impl Creator {
         match self.options.template {
             Template::Lib => {
                 for file in FileToCreate::iter() {
-                    let path = file.location(&self);
-                    if let Some(contents) = file.contents(&self) {
+                    let path = file.location(self);
+                    if let Some(contents) = file.contents(self) {
                         write(path, &contents)?;
                     }
                 }
@@ -357,9 +357,8 @@ fn get_foldername(path: &str) -> Result<String, Error> {
             .ok_or(Error::UnableToFindProjectRoot {
                 path: path.to_string(),
             }),
-        _ => Path::new(path)
+        _ => Utf8Path::new(path)
             .file_name()
-            .and_then(|x| x.to_str())
             .map(ToString::to_string)
             .ok_or(Error::UnableToFindProjectRoot {
                 path: path.to_string(),
