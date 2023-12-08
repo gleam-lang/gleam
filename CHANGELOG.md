@@ -5,6 +5,8 @@
 ### Language changes
 
 - The `\e` string escape sequence has been removed. Use `\u{001b}` instead.
+- Generated Erlang now disabled redundant case clause warnings as these are now
+  redundant due to exhaustiveness checking.
 
 ### Bug fixes
 
