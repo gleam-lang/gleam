@@ -4,7 +4,7 @@ assertion_line: 58
 expression: "pub fn go() {\n  let _r = 1\n  let _r = 2\n  Nil\n}"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([go/0]).
 

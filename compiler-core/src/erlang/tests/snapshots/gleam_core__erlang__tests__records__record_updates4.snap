@@ -4,7 +4,7 @@ assertion_line: 297
 expression: "\npub type Car { Car(make: String, model: String, driver: Person) }\npub type Person { Person(name: String, age: Int) }\n\nfn main() {\n    let car = Car(make: \"Amphicar\", model: \"Model 770\", driver: Person(name: \"John Doe\", age: 27))\n    let new_p = Person(..car.driver, age: 28)\n    new_p\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export_type([car/0, person/0]).
 

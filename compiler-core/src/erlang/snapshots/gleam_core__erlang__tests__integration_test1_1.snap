@@ -4,7 +4,7 @@ assertion_line: 146
 expression: "pub type Money { Pound(Int) }\n                    fn pound(x) { Pound(x) }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export_type([money/0]).
 

@@ -4,7 +4,7 @@ assertion_line: 446
 expression: "\n        pub type Person {\n          Person(username: String, name: String, age: Int)\n        }\n        \n        pub fn main() {\n          let given_name = \"jack\"\n          let raiden = Person(\"raiden\", \"jack\", 31)\n        \n          case given_name {\n            name if name == raiden.name -> \"It's jack\"\n            _ -> \"It's not jack\"\n          }\n        }\n        "
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/0]).
 -export_type([person/0]).

@@ -4,7 +4,7 @@ assertion_line: 46
 expression: "pub fn main() {\n  let a = 1\n  let <<b, 1>> = <<1, a>>\n  b\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/0]).
 
