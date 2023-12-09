@@ -248,6 +248,12 @@ jobs:
         working-directory: ./compiler-wasm
         run: wasm-pack build --target web
 
+      - name: Install Gleam
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: "--path compiler-cli"
+
       - name: Test "Try Gleam"
         run: |
           gleam run --target javascript
