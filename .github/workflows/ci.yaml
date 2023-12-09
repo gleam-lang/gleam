@@ -157,13 +157,22 @@ jobs:
         working-directory: ./test/project_path_deps/project_a
         if: ${{ matrix.run-integration-tests }}
 
-      - name: test/try-gleam
+      - name: Test "Try Gleam"
         run: |
           gleam run
           gleam check
           gleam test
           gleam docs build
         working-directory: ./try-gleam
+        if: ${{ matrix.run-integration-tests }}
+
+      - name: Test "Try Gleam Lessons"
+        run: |
+          gleam run
+          gleam check
+          gleam test
+          gleam docs build
+        working-directory: ./try-gleam/lessons
         if: ${{ matrix.run-integration-tests }}
 
       - name: Test project generation
