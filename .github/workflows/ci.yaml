@@ -157,20 +157,6 @@ jobs:
         working-directory: ./test/project_path_deps/project_a
         if: ${{ matrix.run-integration-tests }}
 
-      - name: Test "Try Gleam"
-        run: |
-          gleam run --target javascript
-          gleam check
-          gleam test
-        working-directory: ./try-gleam
-        if: ${{ matrix.run-integration-tests }}
-
-      - name: Check "Try Gleam" Lessons
-        run: |
-          gleam check
-        working-directory: ./try-gleam/lessons
-        if: ${{ matrix.run-integration-tests }}
-
       - name: Test project generation
         run: |
           gleam new lib_project
@@ -235,6 +221,21 @@ jobs:
       - name: Run wasm tests
         working-directory: ./compiler-wasm
         run: wasm-pack test --node
+      - name: Compile "compiler-wasm".
+        working-directory: ./compiler-wasm
+        run: wasm-pack build --target web
+      - name: Test "Try Gleam"
+        run: |
+          gleam run --target javascript
+          gleam check
+          gleam test
+        working-directory: ./try-gleam
+        if: ${{ matrix.run-integration-tests }}
+      - name: Check "Try Gleam" lessons
+        run: |
+          gleam check
+        working-directory: ./try-gleam/lessons
+        if: ${{ matrix.run-integration-tests }}
 
   rustfmt:
     name: rustfmt
@@ -384,7 +385,7 @@ jobs:
 
       - name: Test export of hex tarball
         run: make test
-        working-directory: ./test/hextarball
+        working-directory: ./test/he/xtarball
 
       - name: Test running modules
         run: make test
