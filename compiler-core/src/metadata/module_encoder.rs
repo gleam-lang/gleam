@@ -230,7 +230,12 @@ impl<'a> ModuleEncoder<'a> {
                 documentation: doc,
             } => {
                 let mut builder = builder.init_module_constant();
-                builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default().into());
+                builder.set_documentation(
+                    doc.as_ref()
+                        .map(EcoString::as_str)
+                        .unwrap_or_default()
+                        .into(),
+                );
                 self.build_src_span(builder.reborrow().init_location(), *location);
                 self.build_constant(builder.reborrow().init_literal(), literal);
                 builder.reborrow().set_module(module.as_ref().into());
@@ -250,7 +255,12 @@ impl<'a> ModuleEncoder<'a> {
                 builder.set_name(name.as_ref().into());
                 builder.set_module(module.as_ref().into());
                 builder.set_arity(*arity);
-                builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default().into());
+                builder.set_documentation(
+                    doc.as_ref()
+                        .map(EcoString::as_str)
+                        .unwrap_or_default()
+                        .into(),
+                );
                 builder.set_constructors_count(*constructors_count);
                 builder.set_constructor_index(*constructor_index);
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
@@ -270,7 +280,11 @@ impl<'a> ModuleEncoder<'a> {
                 builder.set_module(module.as_ref().into());
                 builder.set_arity(*arity as u16);
                 builder.set_documentation(
-                    doc.as_ref().map(EcoString::as_str).unwrap_or_default().into());
+                    doc.as_ref()
+                        .map(EcoString::as_str)
+                        .unwrap_or_default()
+                        .into(),
+                );
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 self.build_src_span(builder.init_location(), *location);
             }

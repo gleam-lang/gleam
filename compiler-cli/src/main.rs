@@ -72,11 +72,11 @@ mod remove;
 mod run;
 mod shell;
 
-use std::str::FromStr;
 use config::root_config;
 use dependencies::UseManifest;
 use fs::get_current_directory;
 pub use gleam_core::error::{Error, Result};
+use std::str::FromStr;
 
 use gleam_core::{
     build::{Codegen, Mode, Options, Runtime, Target},
