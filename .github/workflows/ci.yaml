@@ -258,7 +258,7 @@ jobs:
         run: |
           gleam run --target javascript
           gleam check
-          gleam test
+          gleam test --target javascript
         working-directory: ./try-gleam
 
       - name: Check "Try Gleam" lessons
