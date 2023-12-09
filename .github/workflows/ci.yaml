@@ -264,7 +264,7 @@ jobs:
       - name: Add Gleam to PATH
         run: |
           echo $PWD/bin >> $GITHUB_PATH
-          chmod +x ./gleam
+          chmod +x ./bin/gleam
 
       - name: Test "Try Gleam"
         run: |
