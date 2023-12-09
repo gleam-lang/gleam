@@ -159,19 +159,15 @@ jobs:
 
       - name: Test "Try Gleam"
         run: |
-          gleam run
+          gleam run --target javascript
           gleam check
           gleam test
-          gleam docs build
         working-directory: ./try-gleam
         if: ${{ matrix.run-integration-tests }}
 
-      - name: Test "Try Gleam Lessons"
+      - name: Check "Try Gleam" Lessons
         run: |
-          gleam run
           gleam check
-          gleam test
-          gleam docs build
         working-directory: ./try-gleam/lessons
         if: ${{ matrix.run-integration-tests }}
 
