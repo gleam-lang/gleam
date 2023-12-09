@@ -1,0 +1,25 @@
+<p>
+  It's common to want to call a series of functions, passing the result of one
+  to the next. With the regular function call syntax this can be a little
+  difficult to read as you have to read the code from the inside out.
+</p>
+<p>
+  Gleam's pipe operator <code>|></code> helps with this problem by allowing you
+  to write code top-to-bottom.
+</p>
+<p>
+  The pipe operator takes the result of the expression on its left and passes it
+  as an argument to the function on its right.
+</p>
+<p>
+  It will first check to see if the left-hand value could be used as the first
+  argument to the call. For example, <code>a |> b(1, 2)</code> would become
+  <code>b(a, 1, 2)</code>. If not, it falls back to calling the result of the
+  right-hand side as a function, e.g., <code>b(1, 2)(a)</code>
+</p>
+<p>
+  Gleam code is typically written with the "subject" of the function as the
+  first argument, to make it easier to pipe. If you wish to pipe to a different
+  position then a function capture can be used to insert the argument to the
+  desired position.
+</p>
