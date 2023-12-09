@@ -157,6 +157,15 @@ jobs:
         working-directory: ./test/project_path_deps/project_a
         if: ${{ matrix.run-integration-tests }}
 
+      - name: test/try-gleam
+        run: |
+          gleam run
+          gleam check
+          gleam test
+          gleam docs build
+        working-directory: ./try-gleam
+        if: ${{ matrix.run-integration-tests }}
+
       - name: Test project generation
         run: |
           gleam new lib_project
