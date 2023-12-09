@@ -259,8 +259,12 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: gleam
-          path: ./test
+          path: ./bin
 
+      - name: Add Gleam to PATH
+        run: |
+          echo $PWD/bin >> $GITHUB_PATH
+          chmod +x ./gleam
 
       - name: Test "Try Gleam"
         run: |
