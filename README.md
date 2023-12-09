@@ -128,6 +128,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [max-tern](https://github.com/max-tern)
  - [Michael Duffy](https://github.com/stunthamster)
  - [Michael Jones](https://github.com/michaeljones)
+ - [Michał Łępicki](https://github.com/michallepicki)
  - [Mike Roach](https://github.com/mroach)
  - [Natanael Sirqueira](https://github.com/natanaelsirqueira)
  - [Nathaniel Knight](https://github.com/nathanielknight)
