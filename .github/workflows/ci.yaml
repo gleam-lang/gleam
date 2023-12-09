@@ -248,11 +248,19 @@ jobs:
         working-directory: ./compiler-wasm
         run: wasm-pack build --target web
 
-      - name: Install Gleam
-        uses: actions-rs/cargo@v1
+      - name: Install Erlang
+        uses: erlef/setup-beam@v1.15.4
         with:
-          command: install
-          args: "--path compiler-cli"
+          otp-version: "25.1"
+          elixir-version: "1.14.1"
+          rebar3-version: "3"
+
+      - name: Download Gleam binary from previous job
+        uses: actions/download-artifact@v3
+        with:
+          name: gleam
+          path: ./test
+
 
       - name: Test "Try Gleam"
         run: |
