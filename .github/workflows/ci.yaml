@@ -221,7 +221,7 @@ jobs:
       - name: Run wasm tests
         working-directory: ./compiler-wasm
         run: wasm-pack test --node
-      - name: Compile "compiler-wasm".
+      - name: Build compiler-wasm
         working-directory: ./compiler-wasm
         run: wasm-pack build --target web
       - name: Test "Try Gleam"
