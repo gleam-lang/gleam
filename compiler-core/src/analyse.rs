@@ -1161,7 +1161,7 @@ fn get_compatible_record_fields<A>(
 ) -> Vec<(usize, &EcoString, &TypeAst)> {
     let mut compatible = vec![];
 
-    let first = match constructors.get(0) {
+    let first = match constructors.first() {
         Some(first) => first,
         None => return compatible,
     };

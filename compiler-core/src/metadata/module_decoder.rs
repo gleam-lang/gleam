@@ -20,6 +20,8 @@ use crate::{
 };
 use std::{collections::HashMap, io::BufRead, sync::Arc};
 
+use super::ReaderExt;
+
 macro_rules! read_vec {
     ($reader:expr, $self:expr, $method:ident) => {{
         let reader = $reader;
@@ -37,8 +39,8 @@ macro_rules! read_hashmap {
         let reader = $reader;
         let mut map = HashMap::with_capacity(reader.len() as usize);
         for prop in reader.into_iter() {
-            let name = prop.get_key()?.into();
-            let values = $self.$method(&prop.get_value()?.into())?;
+            let name = prop.get_key()?.as_ecostring();
+            let values = $self.$method(&prop.get_value()?)?;
             let _ = map.insert(name, values);
         }
         map
@@ -65,8 +67,8 @@ impl ModuleDecoder {
         let reader = message_reader.get_root::<module::Reader<'_>>()?;
 
         Ok(ModuleInterface {
-            name: reader.get_name()?.into(),
-            package: reader.get_package()?.into(),
+            name: reader.get_name()?.as_ecostring(),
+            package: reader.get_package()?.as_ecostring(),
             origin: Origin::Src,
             types: read_hashmap!(reader.get_types()?, self, type_constructor),
             types_value_constructors: read_hashmap!(
@@ -86,7 +88,7 @@ impl ModuleDecoder {
         reader: &type_constructor::Reader<'_>,
     ) -> Result<TypeConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
-        let deprecation = match reader.get_deprecated()? {
+        let deprecation = match reader.get_deprecated()?.as_str() {
             "" => Deprecation::NotDeprecated,
             message => Deprecation::Deprecated {
                 message: message.into(),
@@ -95,7 +97,7 @@ impl ModuleDecoder {
         Ok(TypeConstructor {
             public: reader.get_public(),
             origin: Default::default(),
-            module: reader.get_module()?.into(),
+            module: reader.get_module()?.as_ecostring(),
             parameters: read_vec!(reader.get_parameters()?, self, type_),
             typ: type_,
             deprecation,
@@ -113,8 +115,8 @@ impl ModuleDecoder {
     }
 
     fn type_app(&mut self, reader: &schema::type_::app::Reader<'_>) -> Result<Arc<Type>> {
-        let module = reader.get_module()?.into();
-        let name = reader.get_name()?.into();
+        let module = reader.get_module()?.as_ecostring();
+        let name = reader.get_name()?.as_ecostring();
         let args = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(Arc::new(Type::Named {
             public: true,
@@ -163,7 +165,7 @@ impl ModuleDecoder {
         reader: &type_value_constructor::Reader<'_>,
     ) -> Result<TypeValueConstructor> {
         Ok(TypeValueConstructor {
-            name: reader.get_name()?.into(),
+            name: reader.get_name()?.as_ecostring(),
             parameters: read_vec!(
                 reader.get_parameters()?,
                 self,
@@ -193,7 +195,7 @@ impl ModuleDecoder {
         let type_ = self.type_(&reader.get_type()?)?;
         let variant = self.value_constructor_variant(&reader.get_variant()?)?;
         let public = reader.get_public();
-        let deprecation = match reader.get_deprecated()? {
+        let deprecation = match reader.get_deprecated()?.as_str() {
             "" => Deprecation::NotDeprecated,
             message => Deprecation::Deprecated {
                 message: message.into(),
@@ -210,9 +212,9 @@ impl ModuleDecoder {
     fn constant(&mut self, reader: &constant::Reader<'_>) -> Result<TypedConstant> {
         use constant::Which;
         match reader.which()? {
-            Which::Int(reader) => Ok(self.constant_int(reader?)),
-            Which::Float(reader) => Ok(self.constant_float(reader?)),
-            Which::String(reader) => Ok(self.constant_string(reader?)),
+            Which::Int(reader) => Ok(self.constant_int(reader?.as_str())),
+            Which::Float(reader) => Ok(self.constant_float(reader?.as_str())),
+            Which::String(reader) => Ok(self.constant_string(reader?.as_str())),
             Which::Tuple(reader) => self.constant_tuple(&reader?),
             Which::List(reader) => self.constant_list(&reader),
             Which::Record(reader) => self.constant_record(&reader),
@@ -263,7 +265,7 @@ impl ModuleDecoder {
 
     fn constant_record(&mut self, reader: &constant::record::Reader<'_>) -> Result<TypedConstant> {
         let type_ = self.type_(&reader.get_typ()?)?;
-        let tag = reader.get_tag()?.into();
+        let tag = reader.get_tag()?.as_ecostring();
         let args = read_vec!(reader.get_args()?, self, constant_call_arg);
         Ok(Constant::Record {
             location: Default::default(),
@@ -300,16 +302,17 @@ impl ModuleDecoder {
 
     fn constant_var(&mut self, reader: &constant::var::Reader<'_>) -> Result<TypedConstant> {
         let type_ = self.type_(&reader.get_typ()?)?;
-        let module = match reader.get_module()? {
+        let module = reader.get_module()?;
+        let module = match module.as_str() {
             "" => None,
             module_str => Some(module_str),
         };
-        let name = reader.get_name()?;
+        let name = reader.get_name()?.as_ecostring();
         let constructor = self.value_constructor(&reader.get_constructor()?)?;
         Ok(Constant::Var {
             location: Default::default(),
             module: module.map(EcoString::from),
-            name: name.into(),
+            name,
             constructor: Some(Box::from(constructor)),
             typ: type_,
         })
@@ -407,10 +410,10 @@ impl ModuleDecoder {
         reader: &value_constructor_variant::module_constant::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
         Ok(ValueConstructorVariant::ModuleConstant {
-            documentation: self.optional_string(reader.get_documentation()?),
+            documentation: self.optional_string(reader.get_documentation()?.as_str()),
             location: self.src_span(&reader.get_location()?)?,
             literal: self.constant(&reader.get_literal()?)?,
-            module: reader.get_module()?.into(),
+            module: reader.get_module()?.as_ecostring(),
         })
     }
 
@@ -434,12 +437,12 @@ impl ModuleDecoder {
         reader: &value_constructor_variant::module_fn::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
         Ok(ValueConstructorVariant::ModuleFn {
-            name: reader.get_name()?.into(),
-            module: reader.get_module()?.into(),
+            name: reader.get_name()?.as_ecostring(),
+            module: reader.get_module()?.as_ecostring(),
             arity: reader.get_arity() as usize,
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
-            documentation: self.optional_string(reader.get_documentation()?),
+            documentation: self.optional_string(reader.get_documentation()?.as_str()),
         })
     }
 
@@ -448,13 +451,13 @@ impl ModuleDecoder {
         reader: &value_constructor_variant::record::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
         Ok(ValueConstructorVariant::Record {
-            name: reader.get_name()?.into(),
-            module: reader.get_module()?.into(),
+            name: reader.get_name()?.as_ecostring(),
+            module: reader.get_module()?.as_ecostring(),
             arity: reader.get_arity(),
             constructors_count: reader.get_constructors_count(),
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
-            documentation: self.optional_string(reader.get_documentation()?),
+            documentation: self.optional_string(reader.get_documentation()?.as_str()),
             constructor_index: reader.get_constructor_index(),
         })
     }
@@ -488,7 +491,7 @@ impl ModuleDecoder {
     fn record_accessor(&mut self, reader: &record_accessor::Reader<'_>) -> Result<RecordAccessor> {
         Ok(RecordAccessor {
             index: reader.get_index() as u64,
-            label: reader.get_label()?.into(),
+            label: reader.get_label()?.as_ecostring(),
             type_: self.type_(&reader.get_type()?)?,
         })
     }

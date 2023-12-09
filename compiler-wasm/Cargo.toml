@@ -13,9 +13,9 @@ crate-type = ["cdylib", "rlib"]
 console_error_panic_hook = "0.1.7"
 gleam-core = { path = "../compiler-core" }
 hexpm = "2.1.0"
-itertools = "0.10.1"
+itertools = "0.12.0"
 serde = { version = "1.0", features = ["derive"] }
-serde-wasm-bindgen = "0.4"
+serde-wasm-bindgen = "0.6.1"
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 tracing-wasm = "*"
 tracing = "*"

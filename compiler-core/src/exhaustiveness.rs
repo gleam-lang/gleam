@@ -731,7 +731,7 @@ impl<'a> Compiler<'a> {
                 module, name, args, ..
             } if is_prelude_module(module) && name == "List" => BranchMode::List {
                 variable,
-                element_type: args.get(0).expect("Lists have 1 argument").clone(),
+                element_type: args.first().expect("Lists have 1 argument").clone(),
             },
 
             Type::Named { module, name, .. } => {

@@ -168,6 +168,7 @@ impl FileSystemWriter for ProjectIO {
 }
 
 impl CommandExecutor for ProjectIO {
+    #[allow(clippy::map_identity)]
     fn exec(
         &self,
         program: &str,

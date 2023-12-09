@@ -839,7 +839,7 @@ impl TypedClause {
         SrcSpan {
             start: self
                 .pattern
-                .get(0)
+                .first()
                 .map(|p| p.location().start)
                 .unwrap_or_default(),
             end: self.then.location().end,

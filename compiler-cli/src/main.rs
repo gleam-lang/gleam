@@ -72,6 +72,7 @@ mod remove;
 mod run;
 mod shell;
 
+use std::str::FromStr;
 use config::root_config;
 use dependencies::UseManifest;
 use fs::get_current_directory;
@@ -88,7 +89,6 @@ use hex::ApiKeyCommand as _;
 use camino::Utf8PathBuf;
 
 use clap::{Args, Parser, Subcommand};
-use strum::VariantNames;
 
 #[derive(Parser, Debug)]
 #[clap(version)]
@@ -253,7 +253,7 @@ pub struct NewOptions {
 
     #[clap(
         long,
-        possible_values = new::Template::VARIANTS,
+        value_parser = new::Template::from_str,
         ignore_case = true,
         default_value = "lib"
     )]
@@ -328,7 +328,7 @@ enum Hex {
 
         version: String,
 
-        #[clap(possible_values = RetirementReason::VARIANTS)]
+        #[clap(value_parser = RetirementReason::from_str)]
         reason: RetirementReason,
 
         message: Option<String>,

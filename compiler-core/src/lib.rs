@@ -24,7 +24,6 @@
     clippy::verbose_file_reads,
     clippy::unnested_or_patterns,
     rust_2018_idioms,
-    missing_debug_implementations,
     missing_copy_implementations,
     trivial_casts,
     trivial_numeric_casts,
@@ -50,6 +49,7 @@
     clippy::inconsistent_struct_constructor,
     // TODO: fix
     clippy::arc_with_non_send_sync,
+    clippy::extra_unused_type_parameters
 )]
 
 #[cfg(test)]

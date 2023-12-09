@@ -7,4 +7,22 @@ mod module_encoder;
 #[cfg(test)]
 mod tests;
 
+use capnp::text::Reader;
+use ecow::EcoString;
+
 pub use self::{module_decoder::ModuleDecoder, module_encoder::ModuleEncoder};
+
+trait ReaderExt {
+    fn as_ecostring(&self) -> EcoString;
+    fn as_str(&self) -> &str;
+}
+
+impl ReaderExt for Reader<'_> {
+    fn as_ecostring(&self) -> EcoString {
+        self.as_str().into()
+    }
+
+    fn as_str(&self) -> &str {
+        self.to_str().expect("Invalid UTF-8 string")
+    }
+}
