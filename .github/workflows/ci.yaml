@@ -385,7 +385,7 @@ jobs:
 
       - name: Test export of hex tarball
         run: make test
-        working-directory: ./test/he/xtarball
+        working-directory: ./test/hextarball
 
       - name: Test running modules
         run: make test
