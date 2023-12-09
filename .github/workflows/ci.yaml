@@ -222,6 +222,62 @@ jobs:
         working-directory: ./compiler-wasm
         run: wasm-pack test --node
 
+  try-gleam:
+    name: try-gleam
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          default: true
+          profile: minimal
+
+      - name: Install wasm-pack
+        run: |
+          curl -L --output wasm-pack-init https://rustwasm.github.io/wasm-pack/installer/init.sh \
+          && chmod +x wasm-pack-init \
+          && ./wasm-pack-init \
+          && rm wasm-pack-init
+
+      - name: Build compiler-wasm
+        working-directory: ./compiler-wasm
+        run: wasm-pack build --target web
+
+      - name: Install Erlang
+        uses: erlef/setup-beam@v1.15.4
+        with:
+          otp-version: "25.1"
+          elixir-version: "1.14.1"
+          rebar3-version: "3"
+
+      - name: Download Gleam binary from previous job
+        uses: actions/download-artifact@v3
+        with:
+          name: gleam
+          path: ./bin
+
+      - name: Add Gleam to PATH
+        run: |
+          echo $PWD/bin >> $GITHUB_PATH
+          chmod +x ./bin/gleam
+
+      - name: Test "Try Gleam"
+        run: |
+          gleam run --target javascript
+          gleam check
+          gleam test --target javascript
+        working-directory: ./try-gleam
+
+      - name: Check "Try Gleam" lessons
+        run: |
+          gleam check
+        working-directory: ./try-gleam/lessons
+
   rustfmt:
     name: rustfmt
     runs-on: ubuntu-latest
