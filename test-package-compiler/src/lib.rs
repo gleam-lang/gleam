@@ -59,7 +59,6 @@ pub fn prepare(path: &str) -> String {
         &target,
         ids,
         filesystem.clone(),
-        true,
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;

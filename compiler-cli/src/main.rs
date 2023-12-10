@@ -398,7 +398,7 @@ fn main() {
             target,
             warnings_as_errors,
             no_print_progress,
-        } => command_build(target, warnings_as_errors, !no_print_progress),
+        } => command_build(target, warnings_as_errors, no_print_progress),
 
         Command::Check { target } => command_check(target),
 
@@ -432,13 +432,13 @@ fn main() {
             runtime,
             module,
             no_print_progress,
-        } => run::command(arguments, target, runtime, module, run::Which::Src, !no_print_progress),
+        } => run::command(arguments, target, runtime, module, run::Which::Src, no_print_progress),
 
         Command::Test {
             target,
             arguments,
             runtime,
-        } => run::command(arguments, target, runtime, None, run::Which::Test, true),
+        } => run::command(arguments, target, runtime, None, run::Which::Test, false),
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 
@@ -494,23 +494,23 @@ fn command_check(target: Option<Target>) -> Result<(), Error> {
             codegen: Codegen::DepsOnly,
             mode: Mode::Dev,
             target,
-            print_progress: true,
+            no_print_progress: false,
         },
-        build::download_dependencies(true)?,
+        build::download_dependencies(false)?,
     )?;
     Ok(())
 }
 
-fn command_build(target: Option<Target>, warnings_as_errors: bool, print_progress: bool) -> Result<(), Error> {
+fn command_build(target: Option<Target>, warnings_as_errors: bool, no_print_progress: bool) -> Result<(), Error> {
     let _ = build::main(
         Options {
             warnings_as_errors,
             codegen: Codegen::All,
             mode: Mode::Dev,
             target,
-            print_progress,
+            no_print_progress,
         },
-        build::download_dependencies(print_progress)?,
+        build::download_dependencies(no_print_progress)?,
     )?;
     Ok(())
 }
@@ -544,6 +544,6 @@ fn project_paths_at_current_directory() -> ProjectPaths {
 
 fn download_dependencies() -> Result<(), Error> {
     let paths = project_paths_at_current_directory();
-    _ = dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes, true)?;
+    _ = dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
     Ok(())
 }

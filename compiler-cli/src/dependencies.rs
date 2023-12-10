@@ -114,7 +114,7 @@ pub enum UseManifest {
 
 pub fn update() -> Result<()> {
     let paths = crate::project_paths_at_current_directory();
-    _ = download(&paths, cli::Reporter::new(), None, UseManifest::No, true)?;
+    _ = download(&paths, cli::Reporter::new(), None, UseManifest::No)?;
     Ok(())
 }
 
@@ -126,7 +126,6 @@ pub fn download<Telem: Telemetry>(
     // manifest which will result in the latest versions of the dependency
     // packages being resolved (not the locked ones).
     use_manifest: UseManifest,
-    print_progress: bool,
 ) -> Result<Manifest> {
     let span = tracing::info_span!("download_deps");
     let _enter = span.enter();
@@ -183,7 +182,6 @@ pub fn download<Telem: Telemetry>(
         &local,
         project_name,
         &telemetry,
-        print_progress,
     ))?;
 
     if manifest_updated {
@@ -204,7 +202,6 @@ async fn add_missing_packages<Telem: Telemetry>(
     local: &LocalPackages,
     project_name: EcoString,
     telemetry: &Telem,
-    print_progress: bool,
 ) -> Result<(), Error> {
     let missing_packages = local.missing_local_packages(manifest, &project_name);
 
@@ -223,11 +220,11 @@ async fn add_missing_packages<Telem: Telemetry>(
         let http = HttpClient::boxed();
         let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed(), paths.clone());
         let start = Instant::now();
-        telemetry.downloading_package("packages", print_progress);
+        telemetry.downloading_package("packages");
         downloader
             .download_hex_packages(missing_hex_packages, &project_name)
             .await?;
-        telemetry.packages_downloaded(start, num_to_download, print_progress);
+        telemetry.packages_downloaded(start, num_to_download);
     }
 
     Ok(())

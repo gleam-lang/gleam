@@ -49,7 +49,7 @@ pub struct Options {
     pub target: Option<Target>,
     pub codegen: Codegen,
     pub warnings_as_errors: bool,
-    pub print_progress: bool,
+    pub no_print_progress: bool,
 }
 
 #[derive(Debug)]
@@ -88,7 +88,6 @@ pub struct ProjectCompiler<IO> {
     /// We may want to silence subprocess stdout if we are running in LSP mode.
     /// The language server talks over stdio so printing would break that.
     pub subprocess_stdio: Stdio,
-    print_progress: bool,
 }
 
 // TODO: test that tests cannot be imported into src
@@ -106,7 +105,6 @@ where
         warning_emitter: Arc<dyn WarningEmitterIO>,
         paths: ProjectPaths,
         io: IO,
-        print_progress: bool,
     ) -> Self {
         let packages = packages
             .into_iter()
@@ -126,7 +124,6 @@ where
             config,
             paths,
             io,
-            print_progress,
         }
     }
 
@@ -323,7 +320,7 @@ where
         }
 
         // Print that work is being done
-        self.telemetry.compiling_package(package_name, self.print_progress);
+        self.telemetry.compiling_package(package_name);
 
         let package = self.paths.build_packages_package(package_name);
         let build_packages = self.paths.build_directory_for_target(mode, target);
@@ -394,7 +391,7 @@ where
         }
 
         // Print that work is being done
-        self.telemetry.compiling_package(package_name, self.print_progress);
+        self.telemetry.compiling_package(package_name);
 
         let build_dir = self.paths.build_directory_for_target(mode, target);
         let project_dir = self.paths.build_packages_package(package_name);
@@ -553,7 +550,6 @@ where
             &target,
             self.ids.clone(),
             self.io.clone(),
-            self.print_progress,
         );
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;

@@ -29,7 +29,7 @@ impl BuildLock {
     }
 
     /// Lock the specified directory
-    pub fn lock<Telem: Telemetry>(&self, telemetry: &Telem) -> Guard {
+    pub fn lock(&self, telemetry: &dyn Telemetry) -> Guard {
         tracing::debug!(path=?self.directory, "locking_build_directory");
 
         // TODO: return error rather than panicking

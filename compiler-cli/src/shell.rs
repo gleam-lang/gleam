@@ -14,9 +14,9 @@ pub fn command() -> Result<(), Error> {
             codegen: Codegen::All,
             mode: Mode::Dev,
             target: Some(Target::Erlang),
-            print_progress: true,
+            no_print_progress: false,
         },
-        crate::build::download_dependencies(true)?,
+        crate::build::download_dependencies(false)?,
     )?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

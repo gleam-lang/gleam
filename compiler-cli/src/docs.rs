@@ -71,9 +71,9 @@ pub fn build(options: BuildOptions) -> Result<()> {
             target: None,
             codegen: Codegen::All,
             warnings_as_errors: false,
-            print_progress: true,
+            no_print_progress: false,
         },
-        crate::build::download_dependencies(true)?,
+        crate::build::download_dependencies(false)?,
     )?;
     let outputs = build_documentation(&config, &mut built.root_package)?;
 
@@ -156,9 +156,9 @@ impl PublishCommand {
                 codegen: Codegen::All,
                 mode: Mode::Prod,
                 target: None,
-                print_progress: true,
+                no_print_progress: false,
             },
-            crate::build::download_dependencies(true)?,
+            crate::build::download_dependencies(false)?,
         )?;
         let outputs = build_documentation(&config, &mut built.root_package)?;
         let archive = crate::fs::create_tar_archive(outputs)?;

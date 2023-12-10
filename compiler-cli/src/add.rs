@@ -17,7 +17,6 @@ pub fn command(packages: Vec<String>, dev: bool) -> Result<()> {
         cli::Reporter::new(),
         Some((packages.to_vec(), dev)),
         UseManifest::Yes,
-        true,
     )?;
 
     // Read gleam.toml so we can insert new deps into it

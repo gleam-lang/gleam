@@ -19,20 +19,20 @@ impl Reporter {
 }
 
 impl Telemetry for Reporter {
-    fn compiling_package(&self, name: &str, print_progress: bool) {
-        if print_progress { print_compiling(name); }
+    fn compiling_package(&self, name: &str) {
+        print_compiling(name);
     }
 
     fn checking_package(&self, name: &str) {
         print_checking(name);
     }
 
-    fn downloading_package(&self, name: &str, print_progress: bool) {
-        if print_progress { print_downloading(name) }
+    fn downloading_package(&self, name: &str) {
+        print_downloading(name)
     }
 
-    fn packages_downloaded(&self, start: Instant, count: usize, print_progress: bool) {
-        if print_progress { print_packages_downloaded(start, count) }
+    fn packages_downloaded(&self, start: Instant, count: usize) {
+        print_packages_downloaded(start, count)
     }
 
     fn resolving_package_versions(&self) {

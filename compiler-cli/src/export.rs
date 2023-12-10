@@ -44,9 +44,9 @@ pub(crate) fn erlang_shipment() -> Result<()> {
             codegen: Codegen::All,
             mode,
             target: Some(target),
-            print_progress: true,
+            no_print_progress: false,
         },
-        crate::build::download_dependencies(true)?,
+        crate::build::download_dependencies(false)?,
     )?;
 
     for entry in crate::fs::read_dir(&build)?.filter_map(Result::ok) {
