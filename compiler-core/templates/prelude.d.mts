@@ -28,7 +28,7 @@ export interface BitArray {
   sliceAfter(index: number): BitArray;
 }
 
-export interface Utf8Codepoint {
+export interface UtfCodepoint {
   inspect(): string;
 }
 
@@ -38,7 +38,7 @@ export function sizedInt(number: number, size: number): BitArray;
 
 export function stringBits(string: string): Uint8Array;
 
-export function codepointBits(codepoint: Utf8Codepoint): Uint8Array;
+export function codepointBits(codepoint: UtfCodepoint): Uint8Array;
 
 export function float64Bits(float: number): Uint8Array;
 
