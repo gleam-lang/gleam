@@ -55,6 +55,8 @@ pub struct LanguageServerEngine<IO, Reporter> {
     // Used to publish progress notifications to the client without waiting for
     // the usual request-response loop.
     progress_reporter: Reporter,
+
+    hex_deps: std::collections::HashSet<String>,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -95,6 +97,7 @@ where
             progress_reporter,
             compiler,
             paths,
+            hex_deps: std::collections::HashSet::new(),
         })
     }
 
@@ -112,6 +115,19 @@ where
 
         let modules = result?;
         self.modules_compiled_since_last_feedback.extend(modules);
+
+        let hex_deps = self
+            .compiler
+            .project_compiler
+            .packages
+            .iter()
+            .flat_map(|(k, v)| match &v.source {
+                crate::manifest::ManifestPackageSource::Hex { .. } => Some(k.clone()),
+                _ => None,
+            })
+            .collect();
+
+        self.hex_deps = hex_deps;
 
         Ok(())
     }
@@ -278,18 +294,12 @@ where
                 Located::Expression(expression) => {
                     let module = this.module_for_uri(&params.text_document.uri);
 
-                    let hex_deps = this
-                        .compiler
-                        .project_compiler
-                        .packages
-                        .iter()
-                        .flat_map(|(k, v)| match &v.source {
-                            crate::manifest::ManifestPackageSource::Hex { .. } => Some(k),
-                            _ => None,
-                        })
-                        .collect();
-
-                    Some(hover_for_expression(expression, lines, module, hex_deps))
+                    Some(hover_for_expression(
+                        expression,
+                        lines,
+                        module,
+                        &this.hex_deps,
+                    ))
                 }
                 Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
                 Located::FunctionBody(_) => None,
@@ -569,14 +579,14 @@ fn hover_for_expression(
     expression: &TypedExpr,
     line_numbers: LineNumbers,
     module: Option<&Module>,
-    hex_deps: std::collections::HashSet<&String>,
+    hex_deps: &std::collections::HashSet<String>,
 ) -> Hover {
     let documentation = expression.get_documentation().unwrap_or_default();
 
     let link_section = module
         .and_then(|m: &Module| {
             let (module_name, name) = get_expr_qualified_name(expression)?;
-            get_hexdocs_link_section(module_name, name, &m.ast, &hex_deps)
+            get_hexdocs_link_section(module_name, name, &m.ast, hex_deps)
         })
         .unwrap_or("".to_string());
 
@@ -680,7 +690,7 @@ fn get_hexdocs_link_section(
     module_name: &str,
     name: &str,
     ast: &crate::ast::TypedModule,
-    hex_deps: &std::collections::HashSet<&String>,
+    hex_deps: &std::collections::HashSet<String>,
 ) -> Option<String> {
     let package_name = ast.definitions.iter().find_map(|def| match def {
         Definition::Import(p)
