@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `Utf8Codepoint` has been renamed to `UtfCodepoint` in `prelude.d.mts`.
+
 ## v0.33.0-rc2 - 2023-12-07
 
 ### Language changes
