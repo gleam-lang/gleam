@@ -702,5 +702,5 @@ fn get_hexdocs_link_section(
     })?;
 
     let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
-    Some(format!("\nView on [hexdocs]({link})"))
+    Some(format!("\nView on [HexDocs]({link})"))
 }
