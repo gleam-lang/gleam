@@ -8,7 +8,7 @@ use super::*;
 fn positioned_with_hex_deps(
     src: &str,
     position: Position,
-    io: LanguageServerTestIO,
+    io: &LanguageServerTestIO,
     deps: &[&str],
 ) -> Option<Hover> {
     let mut engine = setup_engine(&io);
@@ -41,7 +41,7 @@ fn positioned_with_hex_deps(
 }
 
 fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
-    positioned_with_hex_deps(src, position, LanguageServerTestIO::new(), &[])
+    positioned_with_hex_deps(src, position, &LanguageServerTestIO::new(), &[])
 }
 
 #[test]
@@ -124,29 +124,9 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        // hovering over "my_fn"
-        positioned_with_hex_deps(code, Position::new(3, 19), io, &[]),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn() -> Nil
-```
-"
-                .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 3,
-                    character: 16,
-                },
-                end: Position {
-                    line: 3,
-                    character: 22,
-                },
-            },),
-        })
-    );
+    // hovering over "my_fn"
+    let hover = positioned_with_hex_deps(code, Position::new(3, 19), &io, &[]).unwrap();
+    insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
@@ -161,30 +141,9 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        // hovering over "my_fn"
-        positioned_with_hex_deps(code, Position::new(3, 19), io, &["my_dep"]),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn() -> Nil
-```
-
-View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_fn)"
-                    .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 3,
-                    character: 16,
-                },
-                end: Position {
-                    line: 3,
-                    character: 22,
-                },
-            },),
-        })
-    );
+    // hovering over "my_fn"
+    let hover = positioned_with_hex_deps(code, Position::new(3, 19), &io, &["my_dep"]).unwrap();
+    insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
@@ -199,30 +158,9 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        // hovering over "my_fn"
-        positioned_with_hex_deps(code, Position::new(3, 5), io, &["my_dep"]),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn() -> Nil
-```
-
-View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_fn)"
-                    .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 3,
-                    character: 2,
-                },
-                end: Position {
-                    line: 3,
-                    character: 7,
-                },
-            },),
-        })
-    );
+    // hovering over "my_fn"
+    let hover = positioned_with_hex_deps(code, Position::new(3, 5), &io, &["my_dep"]).unwrap();
+    insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
@@ -237,30 +175,9 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        // hovering over "my_fn"
-        positioned_with_hex_deps(code, Position::new(3, 5), io, &["my_dep"]),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn() -> Nil
-```
-
-View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_fn)"
-                    .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 3,
-                    character: 2,
-                },
-                end: Position {
-                    line: 3,
-                    character: 7,
-                },
-            },),
-        })
-    );
+    // hovering over "my_fn"
+    let hover = positioned_with_hex_deps(code, Position::new(3, 5), &io, &["my_dep"]).unwrap();
+    insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
@@ -275,30 +192,9 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        // hovering over "my_const"
-        positioned_with_hex_deps(code, Position::new(3, 19), io, &["my_dep"]),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-Int
-```
-
-View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_const)"
-                    .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 3,
-                    character: 16,
-                },
-                end: Position {
-                    line: 3,
-                    character: 25,
-                },
-            },),
-        })
-    );
+    // hovering over "my_const"
+    let hover = positioned_with_hex_deps(code, Position::new(3, 19), &io, &["my_dep"]).unwrap();
+    insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
@@ -313,30 +209,9 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        // hovering over "my_const"
-        positioned_with_hex_deps(code, Position::new(3, 5), io, &["my_dep"]),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-Int
-```
-
-View on [hexdocs](https://hexdocs.pm/my_dep/example_module.html#my_const)"
-                    .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 3,
-                    character: 2,
-                },
-                end: Position {
-                    line: 3,
-                    character: 10,
-                },
-            },),
-        })
-    );
+    // hovering over "my_const"
+    let hover = positioned_with_hex_deps(code, Position::new(3, 5), &io, &["my_dep"]).unwrap();
+    insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
