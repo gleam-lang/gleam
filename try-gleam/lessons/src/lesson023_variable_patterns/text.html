@@ -1,0 +1,17 @@
+<p>
+  The case expression is the most common kind of flow control in Gleam code. It
+  is similar to `switch` in some other languages, but more powerful than most.
+</p> 
+<p>
+  It allows the programmer to say "if the data has this shape then run this
+  code", a process called called <em>pattern matching</em>.
+</p>
+<p>
+  Gleam performs <em>exhaustiveness checking</em> to ensure that the patterns in
+  a case expression cover all possible values. With this you can have confidence
+  that your logic is up-to-date for the design of the data you are working with.
+</p>
+<p>
+  Try commenting out patterns or adding new redundant ones, and see what
+  problems the compiler reports.
+</p>

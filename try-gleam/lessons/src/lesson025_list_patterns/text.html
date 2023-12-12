@@ -1,0 +1,15 @@
+<p>
+  Lists and the values they contain can be pattern matched on in case
+  expressions.
+</p> 
+<p>
+  List patterns match on specific lengths of lists. The pattern <code>[]</code>
+  matches an empty list, and the pattern <code>[_]</code> matches a list with
+  one element. They will not match on lists with other lengths.
+</p>
+<p>
+  The spread pattern <code>..</code> can be used to match the rest of the list.
+  The pattern <code>[1, ..]</code> matches any list that starts with
+  <code>1</code>. The pattern <code>[_, _, ..]</code> matches any list that has
+  at least two elements.
+</p>
