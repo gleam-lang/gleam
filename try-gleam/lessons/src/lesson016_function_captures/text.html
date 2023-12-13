@@ -1,0 +1,11 @@
+<p>
+  Gleam has a shorthand syntax for creating anonymous functions that take one
+  argument and immediately call another function with that argument: the
+  function capture syntax.
+</p>
+<p>
+  The anonymous function <code>fn(a) { some_function(..., a, ...) }</code> can
+  be written as <code>some_function(..., _, ...)</code>, with any number of
+  other arguments passed to the inner function. The underscore <code>_</code> is
+  a placeholder for the final argument.
+</p>

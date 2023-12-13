@@ -1,0 +1,22 @@
+<p>
+  Most commonly functions in the 
+  <a href="https://hexdocs.pm/gleam_stdlib/gleam/list.html"><code>gleam/list</code></a>
+  module are used to iterate across a list, but at times you may prefer
+  to work with the list directly.
+</p>
+<p>
+  Gleam doesn't have a looping syntax, instead iteration is done through
+  recursion and pattern matching.
+</p> 
+<p>
+  The <code>[first, ..rest]</code> pattern matches on a list with at least one
+  element, assigning the first element to the variable <code>first</code> and
+  the rest of the list to the variable <code>rest</code>.
+  By using this pattern and a pattern for the empty list <code>[]</code> a
+  function can run code on each element of a list until the end is reached.
+</p>
+<p>
+  This code sums a list by recursing over the list and adding each int to a
+  <code>total</code> argument, returning it when the end is reached.
+</p>
+

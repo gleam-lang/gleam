@@ -1,0 +1,25 @@
+<p>
+  Up until now each function has accepted precisely one type for each of its
+  arguments.
+</p>
+<p>
+  The <code>twice</code> function for example only worked with functions that
+  would take and return ints. This is overly restrictive, it should be possible
+  to use this function with any type, so long as the function and the initial
+  value are compatible.
+</p>
+<p>
+  To enable this Gleam support <em>generics</em>, also known as <em>parametric
+  polymorphism</em>.
+</p>
+<p>
+  This works by instead of specifying a concrete type, a type variable is used
+  which stands in for whatever specific type is being used when the function is
+  called. These type variable are written with a lowercase name.
+</p>
+<p>
+  Type variables are not like an <code>any</code> type, they get replaced with a
+  specific type each time the function is called. Try uncommenting
+  <code>twice(10, exclaim)</code> to see the compiler error from trying to use a
+  type variable as an int and a string at the same time.
+</p>

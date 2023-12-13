@@ -1,0 +1,23 @@
+<p>
+  When functions take several arguments it can be difficult to remember what the
+  arguments are, and what order they are expected in.
+</p>
+<p>
+  To help with this Gleam supports labelled arguments, where function arguments
+  are given an external label in addition to their internal name. These labels
+  are written before the argument name in the function definition.
+</p>
+<p>
+  When labelled arguments are used the order of the arguments does not matter,
+  but all unlabelled arguments must come before labelled arguments.
+</p>
+<p>
+  There is no performance cost to using labelled arguments, it does not allocate
+  a dictionary or perform any other runtime work.
+</p>
+<p>
+  Labels are optional when calling a function, it is up to the programmer to
+  decide what is clearest in their code.
+</p>
+
+
