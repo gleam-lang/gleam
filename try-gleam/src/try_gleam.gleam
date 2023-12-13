@@ -81,41 +81,41 @@ fn load_pages() -> snag.Result(List(Page)) {
     |> list.sort(by: string.compare)
     |> list.index_map(pair.new)
 
-  use pages <- result.try(list.try_map(lessons, fn(pair) {
-    let #(index, lesson) = pair
-    let path = lessons_src <> "/" <> lesson
-    let name =
-      lesson
-      |> string.split("_")
-      |> list.drop(1)
-      |> string.join("-")
+  use pages <- result.try(
+    list.try_map(lessons, fn(pair) {
+      let #(index, lesson) = pair
+      let path = lessons_src <> "/" <> lesson
+      let name =
+        lesson
+        |> string.split("_")
+        |> list.drop(1)
+        |> string.join("-")
 
-    use code <- result.try(
-      simplifile.read(path <> "/code.gleam")
-      |> file_error("Failed to read code.gleam"),
-    )
+      use code <- result.try(
+        simplifile.read(path <> "/code.gleam")
+        |> file_error("Failed to read code.gleam"),
+      )
 
-    use text <- result.try(
-      simplifile.read(path <> "/text.html")
-      |> file_error("Failed to read text.html"),
-    )
+      use text <- result.try(
+        simplifile.read(path <> "/text.html")
+        |> file_error("Failed to read text.html"),
+      )
 
-    let path = case index {
-      0 -> "/"
-      _ -> "/" <> name
-    }
+      let path = case index {
+        0 -> "/"
+        _ -> "/" <> name
+      }
 
-    Ok(
-      Page(
+      Ok(Page(
         name: name,
         text: text,
         code: code,
         path: path,
         previous: None,
         next: None,
-      ),
-    )
-  }))
+      ))
+    }),
+  )
 
   Ok(add_previous_next(pages, [], None))
 }
@@ -127,16 +127,20 @@ fn write_pages(pages: List(Page)) -> snag.Result(Nil) {
   let html =
     string.concat([
       render(h("h2", [], [text("Table of contents")])),
-      render(h("ul", [], list.map(pages, fn(page) {
-        h("li", [], [
-          h("a", [#("href", page.path)], [
-            page.name
-            |> string.replace("-", " ")
-            |> string.capitalise
-            |> text,
-          ]),
-        ])
-      }))),
+      render(h(
+        "ul",
+        [],
+        list.map(pages, fn(page) {
+          h("li", [], [
+            h("a", [#("href", page.path)], [
+              page.name
+              |> string.replace("-", " ")
+              |> string.capitalise
+              |> text,
+            ]),
+          ])
+        }),
+      )),
     ])
 
   let page =
@@ -258,36 +262,42 @@ fn copy_compiled_stdlib(modules: List(String)) -> snag.Result(Nil) {
     |> file_error("Failed to make " <> dest),
   )
 
-  use _ <- result.try(list.try_each(modules, fn(name) {
-    let from = stdlib_compiled <> "/" <> name <> ".mjs"
-    let to = dest <> "/" <> name <> ".mjs"
-    simplifile.copy_file(from, to)
-    |> file_error("Failed to copy stdlib module " <> from)
-  }))
+  use _ <- result.try(
+    list.try_each(modules, fn(name) {
+      let from = stdlib_compiled <> "/" <> name <> ".mjs"
+      let to = dest <> "/" <> name <> ".mjs"
+      simplifile.copy_file(from, to)
+      |> file_error("Failed to copy stdlib module " <> from)
+    }),
+  )
 
   Ok(Nil)
 }
 
 fn generate_stdlib_bundle(modules: List(String)) -> snag.Result(Nil) {
-  use entries <- result.try(list.try_map(modules, fn(name) {
-    let path = stdlib_sources <> "/" <> name <> ".gleam"
-    use code <- result.try(
-      simplifile.read(path)
-      |> file_error("Failed to read stdlib module " <> path),
-    )
-    let name = string.replace(name, ".gleam", "")
-    let code =
-      code
-      |> string.replace("\\", "\\\\")
-      |> string.replace("`", "\\`")
-      |> string.split("\n")
-      |> list.filter(fn(line) { !string.starts_with(string.trim(line), "//") })
-      |> list.filter(fn(line) { !string.starts_with(line, "@external(erlang") })
-      |> list.filter(fn(line) { line != "" })
-      |> string.join("\n")
+  use entries <- result.try(
+    list.try_map(modules, fn(name) {
+      let path = stdlib_sources <> "/" <> name <> ".gleam"
+      use code <- result.try(
+        simplifile.read(path)
+        |> file_error("Failed to read stdlib module " <> path),
+      )
+      let name = string.replace(name, ".gleam", "")
+      let code =
+        code
+        |> string.replace("\\", "\\\\")
+        |> string.replace("`", "\\`")
+        |> string.split("\n")
+        |> list.filter(fn(line) { !string.starts_with(string.trim(line), "//") })
+        |> list.filter(fn(line) {
+          !string.starts_with(line, "@external(erlang")
+        })
+        |> list.filter(fn(line) { line != "" })
+        |> string.join("\n")
 
-    Ok("  \"gleam/" <> name <> "\": `" <> code <> "`")
-  }))
+      Ok("  \"gleam/" <> name <> "\": `" <> code <> "`")
+    }),
+  )
 
   entries
   |> string.join(",\n")
@@ -370,9 +380,8 @@ fn page_html(page: Page) -> String {
       ]),
       h("article", [#("class", "playground")], [
         h("section", [#("id", "text")], [
-          htmb.dangerous_unescaped_fragment(
-            string_builder.from_string(page.text),
-          ),
+          htmb.dangerous_unescaped_fragment(string_builder.from_string(page.text,
+          )),
           h("nav", [#("class", "prev-next")], [
             navlink("Back", page.previous),
             text(" — "),
