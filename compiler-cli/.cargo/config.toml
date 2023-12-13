@@ -1,0 +1,3 @@
+# Statically link the CRT on Windows with MSVC toolchain
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]
