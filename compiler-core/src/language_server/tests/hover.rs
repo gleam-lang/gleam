@@ -181,6 +181,45 @@ fn main() {
 }
 
 #[test]
+fn hover_external_imported_function_renamed_module() {
+    let io = LanguageServerTestIO::new();
+    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+
+    let code = "
+import example_module as renamed_module
+fn main() {
+    renamed_module.my_fn
+}
+";
+
+    // hovering over "my_fn"
+    let hover = positioned_with_hex_deps(code, Position::new(3, 22), &io, &["my_dep"]).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_external_imported_function_nested_module() {
+    let io = LanguageServerTestIO::new();
+    _ = io.hex_dep_module(
+        "my_dep",
+        "my/nested/example_module",
+        "pub fn my_fn() { Nil }",
+    );
+
+    // Example of HexDocs link with nested modules: https://hexdocs.pm/lustre/lustre/element/svg.html
+    let code = "
+import my/nested/example_module
+fn main() {
+    example_module.my_fn
+}
+";
+
+    // hovering over "my_fn"
+    let hover = positioned_with_hex_deps(code, Position::new(3, 22), &io, &["my_dep"]).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
 fn hover_external_imported_constants() {
     let io = LanguageServerTestIO::new();
     _ = io.hex_dep_module("my_dep", "example_module", "pub const my_const = 42");
