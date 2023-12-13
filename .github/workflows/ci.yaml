@@ -248,13 +248,6 @@ jobs:
         working-directory: ./compiler-wasm
         run: wasm-pack build --target web
 
-      - name: Install Erlang
-        uses: erlef/setup-beam@v1.15.4
-        with:
-          otp-version: "25.1"
-          elixir-version: "1.14.1"
-          rebar3-version: "3"
-
       - name: Download Gleam binary from previous job
         uses: actions/download-artifact@v3
         with:
@@ -266,10 +259,17 @@ jobs:
           echo $PWD/bin >> $GITHUB_PATH
           chmod +x ./bin/gleam
 
+      - name: Run "Try Gleam"
+        run: gleam run --target javascript
+        working-directory: ./try-gleam
+
+      - name: Check formatting of "Try Gleam"
+        run: |
+          gleam format --check
+        working-directory: ./try-gleam
+
       - name: Test "Try Gleam"
         run: |
-          gleam run --target javascript
-          gleam check
           gleam test --target javascript
         working-directory: ./try-gleam
 
