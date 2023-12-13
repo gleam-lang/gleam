@@ -673,17 +673,8 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
         },
 
         TypedExpr::ModuleSelect {
-            module_name,
-            constructor: crate::type_::ModuleValueConstructor::Fn { name, .. },
-            ..
-        } => Some((module_name, name)),
-
-        TypedExpr::ModuleSelect {
-            label: name,
-            module_name,
-            constructor: crate::type_::ModuleValueConstructor::Constant { .. },
-            ..
-        } => Some((module_name, name)),
+            label, module_name, ..
+        } => Some((module_name, label)),
 
         _ => None,
     }
