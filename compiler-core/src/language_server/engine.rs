@@ -56,7 +56,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
     // the usual request-response loop.
     progress_reporter: Reporter,
 
-    hex_deps: std::collections::HashSet<String>,
+    hex_deps: std::collections::HashSet<EcoString>,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -122,7 +122,10 @@ where
             .packages
             .iter()
             .flat_map(|(k, v)| match &v.source {
-                crate::manifest::ManifestPackageSource::Hex { .. } => Some(k.clone()),
+                crate::manifest::ManifestPackageSource::Hex { .. } => {
+                    Some(EcoString::from(k.as_str()))
+                }
+
                 _ => None,
             })
             .collect();
@@ -579,7 +582,7 @@ fn hover_for_expression(
     expression: &TypedExpr,
     line_numbers: LineNumbers,
     module: Option<&Module>,
-    hex_deps: &std::collections::HashSet<String>,
+    hex_deps: &std::collections::HashSet<EcoString>,
 ) -> Hover {
     let documentation = expression.get_documentation().unwrap_or_default();
 
@@ -690,12 +693,10 @@ fn get_hexdocs_link_section(
     module_name: &str,
     name: &str,
     ast: &crate::ast::TypedModule,
-    hex_deps: &std::collections::HashSet<String>,
+    hex_deps: &std::collections::HashSet<EcoString>,
 ) -> Option<String> {
     let package_name = ast.definitions.iter().find_map(|def| match def {
-        Definition::Import(p)
-            if p.module == module_name && hex_deps.contains(&p.package.to_string()) =>
-        {
+        Definition::Import(p) if p.module == module_name && hex_deps.contains(&p.package) => {
             Some(&p.package)
         }
         _ => None,
