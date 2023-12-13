@@ -83,16 +83,8 @@ impl LanguageServerTestIO {
     }
 
     pub fn hex_dep_module(&self, dep: &str, name: &str, code: &str) -> Utf8PathBuf {
-        let path = self
-            .paths
-            .root()
-            .join("build")
-            .join("packages")
-            .join(dep)
-            .join("src")
-            .join(name)
-            .with_extension("gleam");
-
+        let dep_dir = self.paths.build_packages_package(dep).join("src");
+        let path = dep_dir.join(name).with_extension("gleam");
         self.module(&path, code);
         path
     }
@@ -291,13 +283,7 @@ fn add_hex_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B
         },
     );
 
-    let toml_path = engine
-        .paths
-        .root()
-        .join("build")
-        .join("packages")
-        .join(name)
-        .join("gleam.toml");
+    let toml_path = engine.paths.build_packages_package_config(name);
 
     let toml = format!(
         r#"name = "{name}"
