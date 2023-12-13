@@ -75,7 +75,7 @@ impl LanguageServerTestIO {
         path
     }
 
-    pub fn dep_module(&self, dep: &str, name: &str, code: &str) -> Utf8PathBuf {
+    pub fn path_dep_module(&self, dep: &str, name: &str, code: &str) -> Utf8PathBuf {
         let dep_dir = self.paths.root().join(dep).join("src");
         let path = dep_dir.join(name).with_extension("gleam");
         self.module(&path, code);
