@@ -220,6 +220,30 @@ fn main() {
 }
 
 #[test]
+fn hover_external_imported_ffi_renamed_function() {
+    let io = LanguageServerTestIO::new();
+    _ = io.hex_dep_module(
+        "my_dep",
+        "example_module",
+        r#"
+@external(erlang, "my_mod_ffi", "renamed_fn")
+pub fn my_fn() -> Nil
+"#,
+    );
+
+    let code = r#"
+import example_module
+fn main() {
+    example_module.my_fn
+}
+"#;
+
+    // hovering over "my_fn"
+    let hover = positioned_with_hex_deps(code, Position::new(3, 22), &io, &["my_dep"]).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
 fn hover_external_imported_constants() {
     let io = LanguageServerTestIO::new();
     _ = io.hex_dep_module("my_dep", "example_module", "pub const my_const = 42");
