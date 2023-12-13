@@ -181,6 +181,23 @@ fn main() {
 }
 
 #[test]
+fn hover_external_unqualified_imported_function_renamed_module() {
+    let io = LanguageServerTestIO::new();
+    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+
+    let code = "
+import example_module.{my_fn} as renamed_module
+fn main() {
+    my_fn
+}
+";
+
+    // hovering over "my_fn"
+    let hover = positioned_with_hex_deps(code, Position::new(3, 6), &io, &["my_dep"]).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
 fn hover_external_imported_function_nested_module() {
     let io = LanguageServerTestIO::new();
     _ = io.hex_dep_module(
