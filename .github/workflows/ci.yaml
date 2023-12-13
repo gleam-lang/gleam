@@ -260,7 +260,7 @@ jobs:
           chmod +x ./bin/gleam
 
       - name: Run "Try Gleam"
-        run: gleam run --target javascript
+        run: gleam run
         working-directory: ./try-gleam
 
       - name: Check formatting of "Try Gleam"
@@ -270,7 +270,7 @@ jobs:
 
       - name: Test "Try Gleam"
         run: |
-          gleam test --target javascript
+          gleam test
         working-directory: ./try-gleam
 
       - name: Check "Try Gleam" lessons
