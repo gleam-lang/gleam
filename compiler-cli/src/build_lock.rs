@@ -29,11 +29,10 @@ impl BuildLock {
     }
 
     /// Lock the specified directory
-    pub fn lock<Telem: Telemetry>(&self, telemetry: &Telem) -> Guard {
+    pub fn lock<Telem: Telemetry>(&self, telemetry: &Telem) -> Result<Guard> {
         tracing::debug!(path=?self.directory, "locking_build_directory");
 
-        // TODO: return error rather than panicking
-        crate::fs::mkdir(&self.directory).expect("Could not create lock directory");
+        crate::fs::mkdir(&self.directory)?;
 
         let lock_path = self.directory.join("gleam.lock");
         let mut file = fslock::LockFile::open(lock_path.as_str()).expect("LockFile creation");
@@ -42,7 +41,8 @@ impl BuildLock {
             telemetry.waiting_for_build_directory_lock();
             file.lock_with_pid().expect("Build locking")
         }
-        Guard(file)
+
+        Ok(Guard(file))
     }
 
     /// Lock all build directories. Does not lock the packages directory.
@@ -53,9 +53,10 @@ impl BuildLock {
         let mut locks = vec![];
         for mode in Mode::iter() {
             for target in Target::iter() {
-                locks.push(Self::new_target(paths, mode, target)?.lock(telemetry));
+                locks.push(Self::new_target(paths, mode, target)?.lock(telemetry)?);
             }
         }
+
         Ok(locks)
     }
 }
