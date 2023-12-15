@@ -85,13 +85,23 @@ fn print<'a>(
         Pattern::StringPrefix {
             left_side_string: left,
             right_side_assignment: right,
+            left_side_assignment,
             ..
         } => {
             let right = match right {
                 AssignName::Variable(right) if define_variables => env.next_local_var_name(right),
                 AssignName::Variable(_) | AssignName::Discard(_) => "_".to_doc(),
             };
-            docvec!["<<\"", left, "\"/utf8, ", right, "/binary>>"]
+
+            let left = docvec!["\"", left, "\"/utf8"];
+            let left = if let Some((left_name, _)) = left_side_assignment {
+                left.append(" = ")
+                    .append(env.next_local_var_name(left_name))
+            } else {
+                left
+            };
+
+            docvec!["<<", left, ", ", right, "/binary>>"]
         }
     }
 }
