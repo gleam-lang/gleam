@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-assertion_line: 135
 expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" as x <> name -> x\n    _ -> \"Unknown\"\n  }\n}\n"
 ---
 export function go(x) {
   if (x.startsWith("Hello, ")) {
     let name = x.slice(7);
-    return "Hello, ";
+    let x$1 = "Hello, ";
+    return x$1;
   } else {
     return "Unknown";
   }
