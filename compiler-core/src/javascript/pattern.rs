@@ -399,12 +399,17 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             Pattern::StringPrefix {
                 left_side_string,
                 right_side_assignment,
+                left_side_assignment,
                 ..
             } => {
                 self.push_string_prefix_check(subject.clone(), left_side_string);
-                self.push_string_prefix_slice(utf16_no_escape_len(left_side_string));
                 if let AssignName::Variable(right) = right_side_assignment {
+                    self.push_string_prefix_slice(utf16_no_escape_len(left_side_string));
                     self.push_assignment(subject.clone(), right);
+                }
+                if let Some((left, _)) = left_side_assignment {
+                    self.pop();
+                    self.push_assignment(super::expression::string(left_side_string), left);
                 }
                 self.pop();
                 Ok(())
