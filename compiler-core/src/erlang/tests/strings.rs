@@ -162,6 +162,21 @@ pub fn go(x) {
     )
 }
 
+// https://github.com/gleam-lang/gleam/issues/2471
+#[test]
+fn string_prefix_assignment_with_multiple_subjects() {
+    assert_erl!(
+        r#"
+pub fn go(x) {
+  case x {
+    "1" as digit <> _ | "2" as digit <> _ -> digit
+    _ -> "Unknown"
+  }
+}
+"#,
+    )
+}
+
 #[test]
 fn string_prefix_shadowing() {
     assert_erl!(
