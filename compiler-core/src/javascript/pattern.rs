@@ -406,9 +406,18 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 if let AssignName::Variable(right) = right_side_assignment {
                     self.push_string_prefix_slice(utf16_no_escape_len(left_side_string));
                     self.push_assignment(subject.clone(), right);
+                    // We remove the string slicing that was needed to push the correct assignment
+                    // this way the following assignments will only be sliced if necessary.
+                    self.pop();
                 }
                 if let Some((left, _)) = left_side_assignment {
-                    self.pop();
+                    // "foo" as prefix <> rest
+                    //       ^^^^^^^^^ In case the left prefix of the pattern matching is given an
+                    //                 alias we bind it to a local variable so that it can be
+                    //                 correctly referenced inside the case branch.
+                    // let prefix = "foo";
+                    // ^^^^^^^^^^^^^^^^^^^ we're adding this assignment inside the if clause
+                    //                     the case branch gets translated into.
                     self.push_assignment(super::expression::string(left_side_string), left);
                 }
                 self.pop();
