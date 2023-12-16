@@ -278,6 +278,44 @@ fn main() {
 }
 
 #[test]
+fn hover_external_value_with_two_modules_same_name() {
+    let io = LanguageServerTestIO::new();
+    _ = io.hex_dep_module("my_dep", "a/example_module", "pub const my_const = 42");
+    _ = io.hex_dep_module("my_dep", "b/example_module", "pub const my_const = 42");
+
+    let code = "
+import a/example_module as _
+import b/example_module
+fn main() {
+    example_module.my_const
+}
+";
+
+    // hovering over "my_const"
+    let hover = positioned_with_hex_deps(code, Position::new(4, 22), &io, &["my_dep"]).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_external_function_with_another_value_same_name() {
+    let io = LanguageServerTestIO::new();
+    _ = io.hex_dep_module("my_dep", "a/example_module", "pub const my_const = 42");
+    _ = io.hex_dep_module("my_dep", "b/example_module", "pub const my_const = 42");
+
+    let code = "
+import a/example_module.{my_const as discarded}
+import b/example_module.{my_const} as _
+fn main() {
+    my_const
+}
+";
+
+    // hovering over "my_const"
+    let hover = positioned_with_hex_deps(code, Position::new(4, 8), &io, &["my_dep"]).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
 fn hover_function_definition_with_docs() {
     let code = "
 /// Exciting documentation
