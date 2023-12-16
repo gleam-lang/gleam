@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Formatter
+
+- The formatter now tries to split long chains of binary operations around the
+  operator itself, rather than around other elements like lists or function
+  calls.
+
+
 ## v0.33.0-rc2 - 2023-12-07
 
 ### Language changes
