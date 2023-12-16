@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: hover
+---
+Hover {
+    contents: Scalar(
+        String(
+            "```gleam\nInt\n```\n\nView on [HexDocs](https://hexdocs.pm/my_dep/b/example_module.html#my_const)",
+        ),
+    ),
+    range: Some(
+        Range {
+            start: Position {
+                line: 4,
+                character: 4,
+            },
+            end: Position {
+                line: 4,
+                character: 12,
+            },
+        },
+    ),
+}
