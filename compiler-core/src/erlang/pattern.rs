@@ -95,6 +95,12 @@ fn print<'a>(
 
             let left = docvec!["\"", left, "\"/utf8"];
             let left = if let Some((left_name, _)) = left_side_assignment {
+                // "foo" as prefix <> rest
+                //       ^^^^^^^^^ In case the left prefix of the pattern matching is given an alias
+                //                 we bind it to a local variable so that it can be correctly
+                //                 referenced inside the case branch.
+                // <<"foo"/utf8 = Prefix, rest/binary>>
+                //              ^^^^^^^^ this is the piece we're adding here
                 left.append(" = ")
                     .append(env.next_local_var_name(left_name))
             } else {

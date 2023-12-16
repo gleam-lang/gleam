@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where string prefix aliases defined in alternative case branches
+  would all be bound to the same constant.
+
 ## v0.33.0-rc2 - 2023-12-07
 
 ### Language changes
