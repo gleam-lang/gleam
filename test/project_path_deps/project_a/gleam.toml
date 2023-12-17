@@ -6,4 +6,4 @@ project_b = { path = "../project_b" }
 project_c = { path = "../project_c" }
 
 [dev-dependencies]
-gleeunit = "~> 0.10"
+gleeunit = "~> 1.0"
