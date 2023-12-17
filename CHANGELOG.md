@@ -4,6 +4,7 @@
 
 - The deprecated bit array options `binary` and `bit_string` have been removed.
 - The deprecated ambiguous type import syntax has been removed.
+- The deprecated `BitString` type has been removed.
 
 ## v0.33.0-rc3 - 2023-12-17
 
