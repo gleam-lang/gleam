@@ -483,7 +483,6 @@ pub struct ModuleInterface {
     pub values: HashMap<EcoString, ValueConstructor>,
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
-    pub type_only_unqualified_imports: Vec<EcoString>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -514,7 +513,6 @@ impl ModuleInterface {
             values: Default::default(),
             accessors: Default::default(),
             unused_imports: Default::default(),
-            type_only_unqualified_imports: Default::default(),
         }
     }
 

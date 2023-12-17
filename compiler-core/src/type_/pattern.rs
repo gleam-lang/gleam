@@ -233,7 +233,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         name: name.clone(),
                         variables: self.environment.local_value_names(),
                     })?;
-                self.environment.increment_usage(&name, Layer::Value);
+                self.environment.increment_usage(&name);
                 let typ =
                     self.environment
                         .instantiate(vc.type_.clone(), &mut hashmap![], self.hydrator);
@@ -411,7 +411,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 ..
             } => {
                 // Register the value as seen for detection of unused values
-                self.environment.increment_usage(&name, Layer::Value);
+                self.environment.increment_usage(&name);
 
                 let cons = self
                     .environment

@@ -186,7 +186,6 @@ pub fn infer_module<A>(
 
     // Generate warnings for unused items
     let unused_imports = env.convert_unused_to_warnings();
-    env.emit_warnings_for_deprecated_type_imports();
 
     // Remove imported types and values to create the public interface
     // Private types and values are retained so they can be used in the language
@@ -213,15 +212,8 @@ pub fn infer_module<A>(
         module_types_constructors: types_constructors,
         module_values: values,
         accessors,
-        ambiguous_imported_items,
         ..
     } = env;
-
-    let type_only_unqualified_imports = ambiguous_imported_items
-        .into_iter()
-        .filter(|(_, item)| item.type_ && !item.value)
-        .map(|(name, _)| name)
-        .collect();
 
     Ok(ast::Module {
         documentation,
@@ -236,7 +228,6 @@ pub fn infer_module<A>(
             origin,
             unused_imports,
             package: package.clone(),
-            type_only_unqualified_imports,
         },
     })
 }

@@ -404,11 +404,6 @@ pub enum Warning {
         location: SrcSpan,
     },
 
-    DeprecatedTypeImport {
-        location: SrcSpan,
-        name: EcoString,
-    },
-
     InexhaustiveCaseExpression {
         location: SrcSpan,
         missing: Vec<EcoString>,

@@ -1074,50 +1074,6 @@ fn const_bytes_option() {
 }
 
 #[test]
-fn deprecate_type_import_extenal() {
-    assert_warning!(
-        ("package", "module", "pub type X"),
-        "
-import module.{X}
-pub type Y = X
-"
-    );
-}
-
-#[test]
-fn deprecate_type_import_type_alias() {
-    assert_warning!(
-        ("package", "module", "pub type X = Int"),
-        "
-import module.{X}
-pub type Y = X
-"
-    );
-}
-
-#[test]
-fn deprecate_type_import_type_custom_type() {
-    assert_warning!(
-        ("package", "module", "pub type X { X }"),
-        "
-import module.{X}
-pub type Y = X
-"
-    );
-}
-
-#[test]
-fn deprecate_type_import_type_custom_type_not_using_type() {
-    assert_no_warnings!(
-        ("package", "module", "pub type X { X }"),
-        "
-import module.{X}
-pub const x = X
-"
-    );
-}
-
-#[test]
 fn unused_module_wuth_alias_warning_test() {
     assert_warning!(
         ("gleam/foo", "pub const one = 1"),

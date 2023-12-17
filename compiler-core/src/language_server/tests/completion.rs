@@ -665,7 +665,7 @@ fn unqualified_imported_type() {
 pub type Zoo = List(String)
 type Private = List(String)
 ";
-    let code = "import dep.{Zoo}
+    let code = "import dep.{type Zoo}
 
 pub fn wibble(
   _: String,
