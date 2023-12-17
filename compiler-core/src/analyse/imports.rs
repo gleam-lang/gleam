@@ -3,37 +3,29 @@ use ecow::EcoString;
 use crate::{
     ast::{Import, SrcSpan, UnqualifiedImport},
     build::Origin,
-    type_::{self, EntityKind, Environment, Error, ModuleInterface, ValueConstructorVariant},
-    warning::TypeWarningEmitter,
+    type_::{EntityKind, Environment, Error, ModuleInterface, ValueConstructorVariant},
 };
 
 #[derive(Debug)]
 pub struct Importer<'a> {
     origin: Origin,
-    warnings: &'a TypeWarningEmitter,
     environment: Environment<'a>,
 }
 
 impl<'a> Importer<'a> {
-    pub fn new(
-        origin: Origin,
-        warnings: &'a TypeWarningEmitter,
-        environment: Environment<'a>,
-    ) -> Self {
+    pub fn new(origin: Origin, environment: Environment<'a>) -> Self {
         Self {
             origin,
-            warnings,
             environment,
         }
     }
 
     pub fn run<'b>(
         origin: Origin,
-        warnings: &'a TypeWarningEmitter,
         env: Environment<'a>,
         imports: &'b [Import<()>],
     ) -> Result<Environment<'a>, Error> {
-        let mut importer = Self::new(origin, warnings, env);
+        let mut importer = Self::new(origin, env);
         for import in imports {
             importer.register_import(import)?;
         }
@@ -73,8 +65,6 @@ impl<'a> Importer<'a> {
         import: &UnqualifiedImport,
         module: &ModuleInterface,
     ) -> Result<(), Error> {
-        self.check_if_deprecated_bit_string(import, module, import.location);
-
         let imported_name = import.as_name.as_ref().unwrap_or(&import.name);
 
         // Register the unqualified import if it is a type constructor
@@ -107,8 +97,6 @@ impl<'a> Importer<'a> {
         import: &UnqualifiedImport,
         module: &ModuleInterface,
     ) -> Result<(), Error> {
-        self.check_if_deprecated_bit_string(import, module, import.location);
-
         let import_name = &import.name;
         let location = import.location;
         let used_name = import.as_name.as_ref().unwrap_or(&import.name);
@@ -237,17 +225,5 @@ impl<'a> Importer<'a> {
             });
         }
         Ok(())
-    }
-
-    fn check_if_deprecated_bit_string(
-        &self,
-        import: &UnqualifiedImport,
-        module: &ModuleInterface,
-        location: SrcSpan,
-    ) {
-        if import.name == "BitString" && module.name == "gleam" {
-            self.warnings
-                .emit(type_::Warning::DeprecatedBitString { location });
-        }
     }
 }

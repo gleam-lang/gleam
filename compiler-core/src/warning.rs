@@ -594,25 +594,6 @@ Run this command to add it to your dependencies:
                     }
                 }
 
-                type_::Warning::DeprecatedBitString { location } => {
-                    let text = "The type BitString has been renamed to BitArray.\n".into();
-                    Diagnostic {
-                        title: "Deprecated BitString name used".into(),
-                        text,
-                        hint: Some("Run `gleam fix` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            src: src.clone(),
-                            path: path.to_path_buf(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-
                 type_::Warning::InexhaustiveLetAssignment { location, missing } => {
                     let mut text: String =
                         "This assignment uses a pattern that does not match all possible

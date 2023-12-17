@@ -400,10 +400,6 @@ pub enum Warning {
         layer: Layer,
     },
 
-    DeprecatedBitString {
-        location: SrcSpan,
-    },
-
     InexhaustiveCaseExpression {
         location: SrcSpan,
         missing: Vec<EcoString>,

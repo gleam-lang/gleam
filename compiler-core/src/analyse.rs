@@ -106,7 +106,7 @@ pub fn infer_module<A>(
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
-    let mut env = imports::Importer::run(origin, warnings, env, &statements.imports)?;
+    let mut env = imports::Importer::run(origin, env, &statements.imports)?;
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
@@ -729,7 +729,7 @@ fn insert_type_alias(
         ..
     } = t;
     let typ = environment
-        .get_type_constructor(&None, &alias, location)
+        .get_type_constructor(&None, &alias)
         .expect("Could not find existing type for type alias")
         .typ
         .clone();
@@ -812,7 +812,7 @@ fn infer_custom_type(
         )
         .collect();
     let typed_parameters = environment
-        .get_type_constructor(&None, &name, location)
+        .get_type_constructor(&None, &name)
         .expect("Could not find preregistered type constructor ")
         .parameters
         .clone();

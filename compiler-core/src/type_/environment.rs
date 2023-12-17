@@ -284,8 +284,6 @@ impl<'a> Environment<'a> {
         &mut self,
         module_alias: &Option<EcoString>,
         name: &EcoString,
-        // TODO: remove this once we have removed the deprecated BitString type
-        location: SrcSpan,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         let t = match module_alias {
             None => self
@@ -315,14 +313,6 @@ impl<'a> Environment<'a> {
                     })
             }
         }?;
-
-        if name == "BitString"
-            && t.typ.is_bit_array()
-            && (module_alias.is_none() || module_alias.as_deref() == Some("gleam"))
-        {
-            self.warnings
-                .emit(Warning::DeprecatedBitString { location })
-        }
 
         Ok(t)
     }
