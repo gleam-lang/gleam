@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 153
 expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" as greeting <> name -> greeting\n    _ -> \"Unknown\"\n  }\n}\n"
 ---
 -module(my@mod).
@@ -11,8 +10,8 @@ expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" as greeting <> name -
 -spec go(binary()) -> binary().
 go(X) ->
     case X of
-        <<"Hello, "/utf8, Name/binary>> ->
-            <<"Hello, "/utf8>>;
+        <<"Hello, "/utf8 = Greeting, Name/binary>> ->
+            Greeting;
 
         _ ->
             <<"Unknown"/utf8>>
