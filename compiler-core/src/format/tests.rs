@@ -3696,7 +3696,8 @@ pub fn main(
 fn commented_binop() {
     assert_format!(
         "fn main() {
-  1 + // hello
+  1
+  + // hello
   2
 }
 "
@@ -3705,8 +3706,10 @@ fn commented_binop() {
     assert_format!(
         "fn main() {
   // one
-  1 + // two
-  2 + // three
+  1
+  + // two
+  2
+  + // three
   3
 }
 "
@@ -3971,7 +3974,8 @@ fn binary_operator_precedence() {
 
     assert_format!(
         "fn main() {
-  3 * {
+  3
+  * {
     1
     |> inc
   }
@@ -3984,7 +3988,8 @@ fn binary_operator_precedence() {
   {
     1
     |> inc
-  } * 3
+  }
+  * 3
 }
 "
     );
@@ -4999,13 +5004,35 @@ fn wrap_long_line_with_int_negation() {
         r#"pub fn main() {
   let a = 3
   let b =
-    a * a * a * a * a * a * a * a * a * a * a * a * a * {
-      a * a * a * a * a * a * a * a * a * a
-    }
+    a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * { a * a * a * a * a * a * a * a * a * a }
   let c =
-    c * c * c * c * c * c * c * c * c * c * c * c * c * -{
-      c * c * c * c * c * c * c * c * c * c
-    }
+    c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * -{ c * c * c * c * c * c * c * c * c * c }
 }
 "#
     );
@@ -5023,13 +5050,35 @@ fn wrap_long_line_with_bool_negation() {
         r#"pub fn main() {
   let a = True
   let b =
-    a || a || a || a || a || a || a || a || a || a || a || a || a || {
-      a || a || a || a || a || a || a || a || a || a
-    }
+    a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || { a || a || a || a || a || a || a || a || a || a }
   let c =
-    c || c || c || c || c || c || c || c || c || c || c || c || c || !{
-      c || c || c || c || c || c || c || c || c || c
-    }
+    c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || !{ c || c || c || c || c || c || c || c || c || c }
 }
 "#
     );
@@ -5287,6 +5336,41 @@ fn single_argument_call_nested_nested() {
       )),
     ),
   )
+}
+"#
+    );
+}
+
+#[test]
+pub fn long_binary_operation_sequence() {
+    assert_format!(
+        r#"pub fn main() {
+  int.to_string(color.red)
+  <> ", "
+  <> int.to_string(color.green)
+  <> ", "
+  <> int.to_string(color.blue)
+  <> ", "
+  <> float.to_string(color.alpha)
+}
+"#
+    );
+}
+
+#[test]
+pub fn long_comparison_chain() {
+    assert_format!(
+        r#"pub fn main() {
+  trying_a_comparison(this, is, a, function) > with_ints
+  && trying_other_comparisons < with_ints
+  || trying_other_comparisons <= with_ints
+  && trying_other_comparisons >= with_ints
+  || and_now_an_equality_check == with_a_function(foo, bar)
+  && trying_other_comparisons >. with_floats
+  || trying_other_comparisons <. with_floats(baz)
+  && trying_other_comparisons <=. with_floats
+  || trying_other_comparisons(foo, bar) >=. with_floats
+  && foo <> bar
 }
 "#
     );

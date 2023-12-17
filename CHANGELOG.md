@@ -2,10 +2,17 @@
 
 ## Unreleased
 
+### Formatter
+
+- The formatter now tries to split long chains of binary operations around the
+  operator itself, rather than around other elements like lists or function
+  calls.
+
 ### Bug fixes
 
 - Fixed a bug where string prefix aliases defined in alternative case branches
   would all be bound to the same constant.
+
 
 ## v0.33.0-rc2 - 2023-12-07
 
