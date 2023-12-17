@@ -56,6 +56,8 @@ pub struct LanguageServerEngine<IO, Reporter> {
     // the usual request-response loop.
     progress_reporter: Reporter,
 
+    /// Used to know if to show the "View on HexDocs" link
+    /// when hovering on an imported value
     hex_deps: std::collections::HashSet<EcoString>,
 }
 
