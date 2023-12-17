@@ -96,10 +96,6 @@ struct Attributes {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Warning {
-    // TODO: remove after next release
-    DeprecatedOptionBitString { location: SrcSpan },
-    // TODO: remove after next release
-    DeprecatedOptionBinary { location: SrcSpan },
     ReservedWord { location: SrcSpan, word: EcoString },
 }
 

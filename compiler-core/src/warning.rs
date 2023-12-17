@@ -158,43 +158,6 @@ impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
             Self::Parse { path, warning, src } => match warning {
-                crate::parse::Warning::DeprecatedOptionBitString { location } => {
-                    let text = "This option has been replaced by the `bits` option.\n".into();
-                    Diagnostic {
-                        title: "Deprecated bit literal option".into(),
-                        text,
-                        hint: Some("Run `gleam format` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            path: path.to_path_buf(),
-                            src: src.clone(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-
-                crate::parse::Warning::DeprecatedOptionBinary { location } => {
-                    let text = "This option has been replaced by the `bytes` option.\n".into();
-                    Diagnostic {
-                        title: "Deprecated bit literal option".into(),
-                        text,
-                        hint: Some("Run `gleam format` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            path: path.to_path_buf(),
-                            src: src.clone(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
                 crate::parse::Warning::ReservedWord { location, word } => {
                     let text = format!(
                         "The word `{word}` has been reserved for future use.
