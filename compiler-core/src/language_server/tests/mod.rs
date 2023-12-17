@@ -23,7 +23,7 @@ use crate::{
         engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
         DownloadDependencies, LockGuard, Locker, MakeLocker,
     },
-    manifest::{Manifest, ManifestPackage, ManifestPackageSource},
+    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
     requirement::Requirement,
     Result,
@@ -45,6 +45,7 @@ struct LanguageServerTestIO {
     io: InMemoryFileSystem,
     paths: ProjectPaths,
     actions: Arc<Mutex<Vec<Action>>>,
+    manifest: Manifest,
 }
 
 impl LanguageServerTestIO {
@@ -53,6 +54,10 @@ impl LanguageServerTestIO {
             io: Default::default(),
             actions: Default::default(),
             paths: ProjectPaths::at_filesystem_root(),
+            manifest: Manifest {
+                requirements: HashMap::new(),
+                packages: vec![],
+            },
         }
     }
 
@@ -87,6 +92,17 @@ impl LanguageServerTestIO {
         let path = dep_dir.join(name).with_extension("gleam");
         self.module(&path, code);
         path
+    }
+
+    pub fn add_hex_package(&mut self, name: &str) {
+        self.manifest.packages.push(ManifestPackage {
+            name: name.into(),
+            source: ManifestPackageSource::Hex {
+                outer_checksum: Base16Checksum(vec![]),
+            },
+            build_tools: vec!["gleam".into()],
+            ..Default::default()
+        });
     }
 
     fn module(&self, path: &Utf8Path, code: &str) {
@@ -182,10 +198,7 @@ impl FileSystemWriter for LanguageServerTestIO {
 impl DownloadDependencies for LanguageServerTestIO {
     fn download_dependencies(&self, _paths: &ProjectPaths) -> Result<Manifest> {
         self.record(Action::DownloadDependencies);
-        Ok(Manifest {
-            requirements: HashMap::new(),
-            packages: vec![],
-        })
+        Ok(self.manifest.clone())
     }
 }
 
@@ -261,35 +274,19 @@ impl ProgressReporter for LanguageServerTestIO {
     }
 }
 
-fn add_hex_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, name: &str) {
+fn add_package_from_manifest<B>(
+    engine: &mut LanguageServerEngine<LanguageServerTestIO, B>,
+    package: ManifestPackage,
+) {
     let compiler = &mut engine.compiler.project_compiler;
-    _ = compiler.config.dependencies.insert(
-        name.into(),
-        Requirement::Hex {
-            version: hexpm::version::Range::new("1.0".to_string()),
-        },
-    );
-    _ = compiler.packages.insert(
-        name.into(),
-        ManifestPackage {
-            name: name.into(),
-            version: Version::new(1, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: crate::manifest::Base16Checksum(vec![]),
-            },
-        },
-    );
-
-    let toml_path = engine.paths.build_packages_package_config(name);
-
+    let toml_path = engine.paths.build_packages_package_config(&package.name);
     let toml = format!(
-        r#"name = "{name}"
-    version = "1.0.0""#
+        r#"name = "{}"
+    version = "{}""#,
+        &package.name, &package.version
     );
 
+    _ = compiler.packages.insert(package.name.to_string(), package);
     _ = compiler.io.write(toml_path.as_path(), &toml).unwrap();
 }
 

@@ -91,13 +91,26 @@ where
         let compiler =
             LspProjectCompiler::new(manifest, config, paths.clone(), io.clone(), locker)?;
 
+        let hex_deps = compiler
+            .project_compiler
+            .packages
+            .iter()
+            .flat_map(|(k, v)| match &v.source {
+                crate::manifest::ManifestPackageSource::Hex { .. } => {
+                    Some(EcoString::from(k.as_str()))
+                }
+
+                _ => None,
+            })
+            .collect();
+
         Ok(Self {
             modules_compiled_since_last_feedback: vec![],
             compiled_since_last_feedback: false,
             progress_reporter,
             compiler,
             paths,
-            hex_deps: std::collections::HashSet::new(),
+            hex_deps,
         })
     }
 
@@ -115,22 +128,6 @@ where
 
         let modules = result?;
         self.modules_compiled_since_last_feedback.extend(modules);
-
-        let hex_deps = self
-            .compiler
-            .project_compiler
-            .packages
-            .iter()
-            .flat_map(|(k, v)| match &v.source {
-                crate::manifest::ManifestPackageSource::Hex { .. } => {
-                    Some(EcoString::from(k.as_str()))
-                }
-
-                _ => None,
-            })
-            .collect();
-
-        self.hex_deps = hex_deps;
 
         Ok(())
     }

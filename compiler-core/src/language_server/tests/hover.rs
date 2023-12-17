@@ -5,17 +5,12 @@ use lsp_types::{
 
 use super::*;
 
-fn positioned_with_hex_deps(
-    src: &str,
-    position: Position,
-    io: &LanguageServerTestIO,
-    deps: &[&str],
-) -> Option<Hover> {
+fn positioned_with_io(src: &str, position: Position, io: &LanguageServerTestIO) -> Option<Hover> {
     let mut engine = setup_engine(&io);
 
     _ = io.src_module("app", src);
-    for dep in deps {
-        add_hex_path_dep(&mut engine, dep);
+    for package in &io.manifest.packages {
+        add_package_from_manifest(&mut engine, package.clone());
     }
     let response = engine.compile_please();
     assert!(response.result.is_ok());
@@ -41,7 +36,7 @@ fn positioned_with_hex_deps(
 }
 
 fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
-    positioned_with_hex_deps(src, position, &LanguageServerTestIO::new(), &[])
+    positioned_with_io(src, position, &LanguageServerTestIO::new())
 }
 
 #[test]
@@ -125,13 +120,14 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_hex_deps(code, Position::new(3, 19), &io, &[]).unwrap();
+    let hover = positioned_with_io(code, Position::new(3, 19), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_function() {
-    let io = LanguageServerTestIO::new();
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
     _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
 
     let code = "
@@ -142,13 +138,14 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_hex_deps(code, Position::new(3, 19), &io, &["my_dep"]).unwrap();
+    let hover = positioned_with_io(code, Position::new(3, 19), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_unqualified_function() {
-    let io = LanguageServerTestIO::new();
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
     _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
 
     let code = "
@@ -159,13 +156,14 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_hex_deps(code, Position::new(3, 5), &io, &["my_dep"]).unwrap();
+    let hover = positioned_with_io(code, Position::new(3, 5), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_function_renamed_module() {
-    let io = LanguageServerTestIO::new();
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
     _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
 
     let code = "
@@ -176,13 +174,14 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_hex_deps(code, Position::new(3, 22), &io, &["my_dep"]).unwrap();
+    let hover = positioned_with_io(code, Position::new(3, 22), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_unqualified_imported_function_renamed_module() {
-    let io = LanguageServerTestIO::new();
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
     _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
 
     let code = "
@@ -193,13 +192,14 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_hex_deps(code, Position::new(3, 6), &io, &["my_dep"]).unwrap();
+    let hover = positioned_with_io(code, Position::new(3, 6), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_function_nested_module() {
-    let io = LanguageServerTestIO::new();
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
     _ = io.hex_dep_module(
         "my_dep",
         "my/nested/example_module",
@@ -215,13 +215,14 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_hex_deps(code, Position::new(3, 22), &io, &["my_dep"]).unwrap();
+    let hover = positioned_with_io(code, Position::new(3, 22), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_ffi_renamed_function() {
-    let io = LanguageServerTestIO::new();
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
     _ = io.hex_dep_module(
         "my_dep",
         "example_module",
@@ -239,13 +240,14 @@ fn main() {
 "#;
 
     // hovering over "my_fn"
-    let hover = positioned_with_hex_deps(code, Position::new(3, 22), &io, &["my_dep"]).unwrap();
+    let hover = positioned_with_io(code, Position::new(3, 22), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_constants() {
-    let io = LanguageServerTestIO::new();
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
     _ = io.hex_dep_module("my_dep", "example_module", "pub const my_const = 42");
 
     let code = "
@@ -256,13 +258,14 @@ fn main() {
 ";
 
     // hovering over "my_const"
-    let hover = positioned_with_hex_deps(code, Position::new(3, 19), &io, &["my_dep"]).unwrap();
+    let hover = positioned_with_io(code, Position::new(3, 19), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_unqualified_constants() {
-    let io = LanguageServerTestIO::new();
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
     _ = io.hex_dep_module("my_dep", "example_module", "pub const my_const = 42");
 
     let code = "
@@ -273,13 +276,14 @@ fn main() {
 ";
 
     // hovering over "my_const"
-    let hover = positioned_with_hex_deps(code, Position::new(3, 5), &io, &["my_dep"]).unwrap();
+    let hover = positioned_with_io(code, Position::new(3, 5), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_value_with_two_modules_same_name() {
-    let io = LanguageServerTestIO::new();
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
     _ = io.hex_dep_module("my_dep", "a/example_module", "pub const my_const = 42");
     _ = io.hex_dep_module("my_dep", "b/example_module", "pub const my_const = 42");
 
@@ -292,13 +296,14 @@ fn main() {
 ";
 
     // hovering over "my_const"
-    let hover = positioned_with_hex_deps(code, Position::new(4, 22), &io, &["my_dep"]).unwrap();
+    let hover = positioned_with_io(code, Position::new(4, 22), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_function_with_another_value_same_name() {
-    let io = LanguageServerTestIO::new();
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
     _ = io.hex_dep_module("my_dep", "a/example_module", "pub const my_const = 42");
     _ = io.hex_dep_module("my_dep", "b/example_module", "pub const my_const = 42");
 
@@ -311,7 +316,7 @@ fn main() {
 ";
 
     // hovering over "my_const"
-    let hover = positioned_with_hex_deps(code, Position::new(4, 8), &io, &["my_dep"]).unwrap();
+    let hover = positioned_with_io(code, Position::new(4, 8), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
