@@ -1904,8 +1904,8 @@ where
     ToDoc: FnMut(&Value) -> Document<'_>,
 {
     match option {
-        BitArrayOption::Binary { .. } | BitArrayOption::Bytes { .. } => "bytes".to_doc(),
-        BitArrayOption::BitString { .. } | BitArrayOption::Bits { .. } => "bits".to_doc(),
+        BitArrayOption::Bytes { .. } => "bytes".to_doc(),
+        BitArrayOption::Bits { .. } => "bits".to_doc(),
         BitArrayOption::Int { .. } => "int".to_doc(),
         BitArrayOption::Float { .. } => "float".to_doc(),
         BitArrayOption::Utf8 { .. } => "utf8".to_doc(),

@@ -782,7 +782,7 @@ fn bit_array3() {
 
 #[test]
 fn bit_array4() {
-    assert_infer!("let <<x:binary>> = <<1>> x", "BitArray");
+    assert_infer!("let <<x:bytes>> = <<1>> x", "BitArray");
 }
 
 #[test]
@@ -824,7 +824,7 @@ fn bit_array10() {
 #[test]
 fn bit_array11() {
     assert_infer!(
-        "let a = <<1>> let <<x:bytes>> = <<1, a:2-bits>> x",
+        "let a = <<1>> let <<x:bits>> = <<1, a:2-bits>> x",
         "BitArray"
     );
 }

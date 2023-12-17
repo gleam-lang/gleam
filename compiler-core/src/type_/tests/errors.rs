@@ -66,12 +66,12 @@ fn bit_array_segment_nosize3() {
 
 #[test]
 fn bit_array_segment_conflicting_options_int() {
-    assert_error!("let x = <<1:int-binary>> x");
+    assert_error!("let x = <<1:int-bytes>> x");
 }
 
 #[test]
 fn bit_array_segment_conflicting_options_bit_array() {
-    assert_error!("case <<1>> { <<1:bits-binary>> -> 1 }");
+    assert_error!("case <<1>> { <<1:bits-bytes>> -> 1 }");
 }
 
 #[test]
@@ -191,8 +191,7 @@ fn bit_array_float_size() {
 }
 
 #[test]
-fn bit_array_binary_option_in_value() {
-    // using binary in value
+fn bit_array_bits_option_in_value() {
     assert_error!("let x = <<<<1:1>>:bytes>> x");
 }
 

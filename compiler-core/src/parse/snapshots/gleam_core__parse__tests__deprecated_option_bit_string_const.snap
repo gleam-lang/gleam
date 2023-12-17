@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/parse/tests.rs
 assertion_line: 503
-expression: "pub const x = <<<<>>:bit_string>>"
+expression: "pub const x = <<<<>>:bits>>"
 ---
 
 warning: Deprecated bit literal option
   ┌─ :1:22
   │
-1 │ pub const x = <<<<>>:bit_string>>
+1 │ pub const x = <<<<>>:bits>>
   │                      ^^^^^^^^^^
 
 This option has been replaced by the `bits` option.

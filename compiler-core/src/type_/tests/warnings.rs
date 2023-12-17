@@ -526,7 +526,7 @@ fn bit_pattern_var_use() {
     assert_no_warnings!(
         "
 pub fn main(x) {
-  let assert <<name_size:8, name:binary-size(name_size)>> = x
+  let assert <<name_size:8, name:bytes-size(name_size)>> = x
   name
 }",
     );
@@ -1069,7 +1069,7 @@ pub type B = BitString
 }
 
 #[test]
-fn const_bits_option() {
+fn const_bytes_option() {
     assert_no_warnings!("pub const x = <<<<>>:bits>>");
 }
 

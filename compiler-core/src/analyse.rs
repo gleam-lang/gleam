@@ -968,8 +968,6 @@ where
 
         BitArrayOption::Unit { location, value } => Ok(BitArrayOption::Unit { location, value }),
 
-        BitArrayOption::Binary { location } => Ok(BitArrayOption::Binary { location }),
-        BitArrayOption::BitString { location } => Ok(BitArrayOption::BitString { location }),
         BitArrayOption::Bytes { location } => Ok(BitArrayOption::Bytes { location }),
         BitArrayOption::Int { location } => Ok(BitArrayOption::Int { location }),
         BitArrayOption::Float { location } => Ok(BitArrayOption::Float { location }),
