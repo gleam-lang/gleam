@@ -1,8 +1,3 @@
-mod bit_string_rename;
-mod import_type;
-#[cfg(test)]
-mod tests;
-
 use crate::{
     format::{Formatter, Intermediate},
     Error, Result,
@@ -21,8 +16,7 @@ pub fn parse_fix_and_format(src: &EcoString, path: &Utf8Path) -> Result<String> 
     let module = parsed.module;
 
     // Fix
-    let module = bit_string_rename::Fixer::fix(module);
-    let module = import_type::Fixer::fix(module);
+    // let module = some_fixer_module::Fixer::fix(module);
 
     // Format
     let mut buffer = String::new();
