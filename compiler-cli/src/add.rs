@@ -39,12 +39,14 @@ pub fn command(packages: Vec<String>, dev: bool) -> Result<()> {
         // i.e. if 1.2.3 is selected we want ~> 1.2
         let range = format!("~> {}.{}", version.major, version.minor);
 
+        // False positive. This package doesn't use the indexing API correctly.
         #[allow(clippy::indexing_slicing)]
         if dev {
             gleam_toml["dev-dependencies"][&package_to_add] = toml_edit::value(range.clone());
         } else {
             gleam_toml["dependencies"][&package_to_add] = toml_edit::value(range.clone());
         };
+        // False positive. This package doesn't use the indexing API correctly.
         manifest_toml["requirements"][&package_to_add]
             .as_inline_table_mut()
             .expect("Invalid manifest format")["version"] = range.into();
