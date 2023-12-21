@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/erlang/tests/consts.rs
+expression: "\nfn identity(a: a) -> a {\na\n}\n\nconst id  = identity\n\npub fn main(){\n  let num  = id(1)\n  let word = id(\"Word\")\n}"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-spec identity(I) -> I.
+identity(A) ->
+    A.
+
+-spec main() -> binary().
+main() ->
+    Num = identity(1),
+    Word = identity(<<"Word"/utf8>>).
+

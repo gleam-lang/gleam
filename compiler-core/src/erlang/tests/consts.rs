@@ -47,3 +47,20 @@ const id: fn(a) -> a = identity
 "#
     );
 }
+
+#[test]
+fn const_generalise() {
+    assert_erl!(
+        r#"
+fn identity(a: a) -> a {
+a
+}
+
+const id  = identity
+
+pub fn main(){
+  let num  = id(1)
+  let word = id("Word")
+}"#
+    );
+}

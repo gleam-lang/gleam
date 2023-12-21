@@ -35,12 +35,15 @@ fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<EcoString>>, Error> {
             external_javascript: None,
         })
         .collect_vec();
-    Ok(into_dependency_order(functions)?
+    Ok(into_dependency_order(functions, vec![])?
         .into_iter()
         .map(|level| {
             level
                 .into_iter()
-                .map(|function| function.name.clone())
+                .map(|function| match function {
+                    Definition::Function(f) => f.name,
+                    _ => unreachable!("Only passing in functions to test for now"),
+                })
                 .collect_vec()
         })
         .collect())
