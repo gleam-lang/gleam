@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where `gleam add` would not update `manifest.toml` correctly.
+
+
 ## v0.33.0 - 2023-12-18
 
 ## v0.33.0-rc4 - 2023-12-17
