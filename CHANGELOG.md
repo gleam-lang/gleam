@@ -8,6 +8,9 @@
 - `Utf8Codepoint` has been renamed to `UtfCodepoint` in `prelude.d.mts`.
 - Fixed a bug where `gleam deps list` would look in filesystem root instead of
   the current directory.
+- Fixed a bug with the `isEqual` function in `prelude.js` where RegExps were
+  being incorrectly structurally compared and being falsely reported as being
+  equal.
 
 ### Formatter
 

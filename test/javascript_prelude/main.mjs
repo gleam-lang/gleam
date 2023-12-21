@@ -113,21 +113,21 @@ assertNotEqual(new Error(new Error(2)), new Error(new Error(3)));
 
 assertEqual(
   new ExampleRecordImpl(undefined, 1, new Ok(2.1)),
-  new ExampleRecordImpl(undefined, 1, new Ok(2.1))
+  new ExampleRecordImpl(undefined, 1, new Ok(2.1)),
 );
 assertNotEqual(
   new ExampleRecordImpl(undefined, 1, new Ok("2.1")),
-  new ExampleRecordImpl(undefined, 1, new Ok(2.1))
+  new ExampleRecordImpl(undefined, 1, new Ok(2.1)),
 );
 
 assertEqual(List.fromArray([]), List.fromArray([]));
 assertEqual(
   List.fromArray([1, 2, new Ok(1)]),
-  List.fromArray([1, 2, new Ok(1)])
+  List.fromArray([1, 2, new Ok(1)]),
 );
 assertNotEqual(
   List.fromArray([1, 2, new Ok(1)]),
-  List.fromArray([1, 2, new Ok(2)])
+  List.fromArray([1, 2, new Ok(2)]),
 );
 assertNotEqual(List.fromArray([1, 2]), List.fromArray([1, 2, new Ok(2)]));
 assertNotEqual(List.fromArray([1]), List.fromArray([]));
@@ -136,11 +136,11 @@ assertNotEqual(List.fromArray([]), List.fromArray([1]));
 assertEqual(new BitArray(new Uint8Array([])), new BitArray(new Uint8Array([])));
 assertEqual(
   new BitArray(new Uint8Array([1, 2, 3])),
-  new BitArray(new Uint8Array([1, 2, 3]))
+  new BitArray(new Uint8Array([1, 2, 3])),
 );
 assertNotEqual(
   new BitArray(new Uint8Array([1, 2])),
-  new BitArray(new Uint8Array([1, 2, 3]))
+  new BitArray(new Uint8Array([1, 2, 3])),
 );
 
 assertEqual(new UtfCodepoint(128013), new UtfCodepoint(128013));
@@ -152,17 +152,17 @@ assertEqual(new BitArray(new Uint8Array([])), toBitArray([]));
 
 assertEqual(
   new BitArray(new Uint8Array([97, 98, 99])),
-  toBitArray([stringBits("abc")])
+  toBitArray([stringBits("abc")]),
 );
 
 assertEqual(
   new BitArray(new Uint8Array([97])),
-  toBitArray([codepointBits(new UtfCodepoint(97))])
+  toBitArray([codepointBits(new UtfCodepoint(97))]),
 );
 
 assertEqual(
   new BitArray(new Uint8Array([240, 159, 144, 141])),
-  toBitArray([codepointBits(new UtfCodepoint(128013))])
+  toBitArray([codepointBits(new UtfCodepoint(128013))]),
 );
 
 // toList
@@ -207,7 +207,7 @@ let fun = () => 1;
 assertEqual(fun, fun);
 assertNotEqual(
   () => 1,
-  () => 1
+  () => 1,
 );
 
 // Maps are compared structurally
@@ -219,19 +219,19 @@ assertNotEqual(
     ["a", 1],
     ["b", 2],
   ]),
-  new Map([["a", 1]])
+  new Map([["a", 1]]),
 );
 assertNotEqual(
   new Map([["a", 1]]),
   new Map([
     ["a", 1],
     ["b", 2],
-  ])
+  ]),
 );
 assertNotEqual(new Map([["a", 1]]), new Map([["b", 1]]));
 assertEqual(
   new Map([["a", new Map([["a", []]])]]),
-  new Map([["a", new Map([["a", []]])]])
+  new Map([["a", new Map([["a", []]])]]),
 );
 
 // Sets are compared structurally
@@ -243,7 +243,7 @@ assertNotEqual(new Set(["a", 1, "b"]), new Set(["a", 1]));
 assertNotEqual(new Set(["a", 1]), new Set(["a", 1, "b"]));
 assertNotEqual(
   new Set(["a", new Map([["a", []]])]),
-  new Set(["a", new Map([["a", []]])])
+  new Set(["a", new Map([["a", []]])]),
 );
 
 // WeakMaps are not equal unless they have reference equality
@@ -255,6 +255,19 @@ assertNotEqual(new WeakMap([[map, 1]]), new WeakMap([[map, 1]]));
 let weak_set = new WeakSet([map, set]);
 assertEqual(weak_set, weak_set);
 assertNotEqual(new WeakSet([map, set]), new WeakSet([map, set]));
+
+// RegExp are compared structurally
+let re = new RegExp("test", "g");
+let re_literal = /test/g;
+assertEqual(re, re);
+assertEqual(re_literal, re_literal);
+assertEqual(re, re_literal);
+assertNotEqual(re, new RegExp("test", "i"));
+assertNotEqual(re, new RegExp("test"));
+assertNotEqual(re_literal, new RegExp("test", "i"));
+assertNotEqual(re_literal, /test/);
+assertNotEqual(re_literal, new RegExp("test", "i"));
+assertNotEqual(re, /test/i);
 
 class ExampleA {
   constructor(x) {
@@ -317,11 +330,11 @@ assertNotEqual(new NoCustomEquals(1, 1), new NoCustomEquals(1, 2));
 // custom equals throws, fallback to structural equality
 assertEqual(
   new HasCustomEqualsThatThrows(1, 1),
-  new HasCustomEqualsThatThrows(1, 1)
+  new HasCustomEqualsThatThrows(1, 1),
 );
 assertNotEqual(
   new HasCustomEqualsThatThrows(1, 1),
-  new HasCustomEqualsThatThrows(1, 2)
+  new HasCustomEqualsThatThrows(1, 2),
 );
 // custom equals works, use it
 assertEqual(new HasCustomEquals(1, 1), new HasCustomEquals(1, 1));
@@ -335,13 +348,13 @@ assertEqual(new BitArray(new Uint8Array([1, 2, 3])).byteAt(0), 1);
 assertEqual(new BitArray(new Uint8Array([1, 2, 3])).byteAt(2), 3);
 assertEqual(
   new BitArray(new Uint8Array([63, 240, 0, 0, 0, 0, 0, 0])).floatAt(0),
-  1.0
+  1.0,
 );
 assertEqual(new BitArray(new Uint8Array([1, 2, 3])).intFromSlice(0, 1), 1);
 assertEqual(new BitArray(new Uint8Array([1, 2, 3])).intFromSlice(0, 2), 258);
 assertEqual(
   new BitArray(new Uint8Array([1, 2, 3])).sliceAfter(1),
-  new BitArray(new Uint8Array([2, 3]))
+  new BitArray(new Uint8Array([2, 3])),
 );
 
 // Result.isOk
@@ -425,15 +438,15 @@ assertEqual(new Error(1).withFields({ 0: 2 }), new Error(2));
 
 assertEqual(
   new ExampleRecordImpl(1, 2, 3).withFields({}),
-  new ExampleRecordImpl(1, 2, 3)
+  new ExampleRecordImpl(1, 2, 3),
 );
 assertEqual(
   new ExampleRecordImpl(1, 2, 3).withFields({ boop: 6, 0: 40 }),
-  new ExampleRecordImpl(40, 2, 6)
+  new ExampleRecordImpl(40, 2, 6),
 );
 assertEqual(
   new ExampleRecordImpl(1, 2, 3).withFields({ boop: 4, detail: 5, 0: 6 }),
-  new ExampleRecordImpl(6, 5, 4)
+  new ExampleRecordImpl(6, 5, 4),
 );
 
 // Test BitArray can only be constructed from Uint8Array, not ArrayBuffer

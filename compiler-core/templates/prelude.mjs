@@ -1,7 +1,7 @@
 export class CustomType {
   withFields(fields) {
     let properties = Object.keys(this).map((label) =>
-      label in fields ? fields[label] : this[label]
+      label in fields ? fields[label] : this[label],
     );
     return new this.constructor(...properties);
   }
@@ -223,7 +223,8 @@ export function isEqual(x, y) {
       unequalBuffers(a, b) ||
       unequalArrays(a, b) ||
       unequalMaps(a, b) ||
-      unequalSets(a, b);
+      unequalSets(a, b) ||
+      unequalRegExps(a, b);
     if (unequal) return false;
 
     const proto = Object.getPrototypeOf(a);
@@ -276,6 +277,10 @@ function unequalSets(a, b) {
   return (
     a instanceof Set && (a.size != b.size || [...a].some((e) => !b.has(e)))
   );
+}
+
+function unequalRegExps(a, b) {
+  return a instanceof RegExp && (a.source !== b.source || a.flags !== b.flags);
 }
 
 function isObject(a) {
