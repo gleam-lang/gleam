@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### LSP
+
+- Added a `View on HexDocs` link on function hover
+
 ### Bug fixes
 
 - Fixed a bug where `gleam add` would not update `manifest.toml` correctly.
