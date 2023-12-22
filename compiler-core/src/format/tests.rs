@@ -1,6 +1,7 @@
 use pretty_assertions::assert_eq;
 
 mod asignments;
+mod binary_operators;
 mod bit_array;
 mod blocks;
 mod conditional_compilation;
@@ -5342,35 +5343,12 @@ fn single_argument_call_nested_nested() {
 }
 
 #[test]
-pub fn long_binary_operation_sequence() {
+fn arithmetic_binops_kept_on_a_single_line_in_pipes() {
     assert_format!(
         r#"pub fn main() {
-  int.to_string(color.red)
-  <> ", "
-  <> int.to_string(color.green)
-  <> ", "
-  <> int.to_string(color.blue)
-  <> ", "
-  <> float.to_string(color.alpha)
-}
-"#
-    );
-}
-
-#[test]
-pub fn long_comparison_chain() {
-    assert_format!(
-        r#"pub fn main() {
-  trying_a_comparison(this, is, a, function) > with_ints
-  && trying_other_comparisons < with_ints
-  || trying_other_comparisons <= with_ints
-  && trying_other_comparisons >= with_ints
-  || and_now_an_equality_check == with_a_function(foo, bar)
-  && trying_other_comparisons >. with_floats
-  || trying_other_comparisons <. with_floats(baz)
-  && trying_other_comparisons <=. with_floats
-  || trying_other_comparisons(foo, bar) >=. with_floats
-  && foo <> bar
+  1 + 2
+  |> foo
+  |> bar
 }
 "#
     );

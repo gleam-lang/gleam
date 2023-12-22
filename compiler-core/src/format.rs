@@ -568,12 +568,7 @@ impl<'comments> Formatter<'comments> {
             Some(t) => header.append(" -> ").append(self.type_ast(t)),
         };
 
-        header
-            .append(" ")
-            .append(wrap_block(
-                body.next_break_fits(NextBreakFitsMode::Disabled),
-            ))
-            .group()
+        header.append(" ").append(wrap_block(body)).group()
     }
 
     fn statements<'a>(&mut self, statements: &'a Vec1<UntypedStatement>) -> Document<'a> {
@@ -1013,7 +1008,7 @@ impl<'comments> Formatter<'comments> {
         let mut docs = Vec::with_capacity(expressions.len() * 3);
         let first = expressions.first();
         let first_precedence = first.binop_precedence();
-        let first = self.expr(first);
+        let first = self.expr(first).group();
         docs.push(self.operator_side(first, 5, first_precedence));
 
         for expr in expressions.iter().skip(1) {
@@ -1283,7 +1278,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => " ".to_doc().append(self.block(location, statements, true)),
 
-            _ => break_("", " ").append(self.expr(expr)).nest(INDENT),
+            _ => break_("", " ").append(self.expr(expr).group()).nest(INDENT),
         }
         .next_break_fits(NextBreakFitsMode::Disabled)
         .group()
