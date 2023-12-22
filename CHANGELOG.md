@@ -5,6 +5,7 @@
 ### Bug fixes
 
 - Fixed a bug where `gleam add` would not update `manifest.toml` correctly.
+- `Utf8Codepoint` has been renamed to `UtfCodepoint` in `prelude.d.mts`.
 
 
 ## v0.33.0 - 2023-12-18
@@ -16,6 +17,7 @@
 - The deprecated `BitString` type has been removed.
 - The deprecated `inspect` functions and `BitString` type has been removed from
   the JavaScript prelude.
+
 
 ## v0.33.0-rc3 - 2023-12-17
 
