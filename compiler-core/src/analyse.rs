@@ -106,7 +106,7 @@ pub fn infer_module<A>(
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
-    let mut env = imports::Importer::run(origin, warnings, env, &statements.imports)?;
+    let mut env = imports::Importer::run(origin, env, &statements.imports)?;
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
@@ -186,7 +186,6 @@ pub fn infer_module<A>(
 
     // Generate warnings for unused items
     let unused_imports = env.convert_unused_to_warnings();
-    env.emit_warnings_for_deprecated_type_imports();
 
     // Remove imported types and values to create the public interface
     // Private types and values are retained so they can be used in the language
@@ -213,15 +212,8 @@ pub fn infer_module<A>(
         module_types_constructors: types_constructors,
         module_values: values,
         accessors,
-        ambiguous_imported_items,
         ..
     } = env;
-
-    let type_only_unqualified_imports = ambiguous_imported_items
-        .into_iter()
-        .filter(|(_, item)| item.type_ && !item.value)
-        .map(|(name, _)| name)
-        .collect();
 
     Ok(ast::Module {
         documentation,
@@ -236,7 +228,6 @@ pub fn infer_module<A>(
             origin,
             unused_imports,
             package: package.clone(),
-            type_only_unqualified_imports,
         },
     })
 }
@@ -738,7 +729,7 @@ fn insert_type_alias(
         ..
     } = t;
     let typ = environment
-        .get_type_constructor(&None, &alias, location)
+        .get_type_constructor(&None, &alias)
         .expect("Could not find existing type for type alias")
         .typ
         .clone();
@@ -821,7 +812,7 @@ fn infer_custom_type(
         )
         .collect();
     let typed_parameters = environment
-        .get_type_constructor(&None, &name, location)
+        .get_type_constructor(&None, &name)
         .expect("Could not find preregistered type constructor ")
         .parameters
         .clone();
@@ -968,8 +959,6 @@ where
 
         BitArrayOption::Unit { location, value } => Ok(BitArrayOption::Unit { location, value }),
 
-        BitArrayOption::Binary { location } => Ok(BitArrayOption::Binary { location }),
-        BitArrayOption::BitString { location } => Ok(BitArrayOption::BitString { location }),
         BitArrayOption::Bytes { location } => Ok(BitArrayOption::Bytes { location }),
         BitArrayOption::Int { location } => Ok(BitArrayOption::Int { location }),
         BitArrayOption::Float { location } => Ok(BitArrayOption::Float { location }),

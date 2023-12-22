@@ -6,6 +6,7 @@ use crate::{
     io::{memory::InMemoryFileSystem, FileSystemWriter},
     paths::ProjectPaths,
     uid::UniqueIdGenerator,
+    version::COMPILER_VERSION,
     warning::WarningEmitter,
 };
 use camino::Utf8PathBuf;
@@ -115,7 +116,9 @@ fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
             Some(format!(
                 "//// {}\n\n{}\n\n",
                 file.path.as_str(),
-                file.content.text()?
+                file.content
+                    .text()?
+                    .replace(COMPILER_VERSION, "GLEAM_VERSION_HERE")
             ))
         })
         .collect::<String>()

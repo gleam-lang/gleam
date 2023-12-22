@@ -1,8 +1,5 @@
 use crate::{
-    ast::{Layer, PIPE_VARIABLE},
-    build::Target,
-    uid::UniqueIdGenerator,
-    warning::TypeWarningEmitter,
+    ast::PIPE_VARIABLE, build::Target, uid::UniqueIdGenerator, warning::TypeWarningEmitter,
 };
 
 use super::*;
@@ -52,24 +49,6 @@ pub struct Environment<'a> {
     /// stack for an entity with that name and mark it as used.
     /// NOTE: The bool in the tuple here tracks if the entity has been used
     pub entity_usages: Vec<HashMap<EcoString, (EntityKind, SrcSpan, bool)>>,
-
-    pub ambiguous_imported_items: HashMap<EcoString, LayerUsage>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct LayerUsage {
-    pub import_location: SrcSpan,
-    pub type_: bool,
-    pub value: bool,
-}
-
-impl LayerUsage {
-    fn used(&mut self, layer: Layer) {
-        match layer {
-            Layer::Value => self.value = true,
-            Layer::Type => self.type_ = true,
-        }
-    }
 }
 
 impl<'a> Environment<'a> {
@@ -102,7 +81,6 @@ impl<'a> Environment<'a> {
             current_module,
             warnings,
             entity_usages: vec![HashMap::new()],
-            ambiguous_imported_items: HashMap::new(),
         }
     }
 }
@@ -116,7 +94,6 @@ pub enum EntityKind {
     PrivateFunction,
     ImportedConstructor,
     ImportedType,
-    ImportedTypeAndValue(SrcSpan),
     ImportedValue,
     PrivateType,
     Variable,
@@ -259,7 +236,7 @@ impl<'a> Environment<'a> {
     /// Lookup a module constant in the current scope.
     ///
     pub fn get_module_const(&mut self, name: &EcoString) -> Option<&ValueConstructor> {
-        self.increment_usage(name, Layer::Value);
+        self.increment_usage(name);
         self.module_values
             .get(name)
             .filter(|ValueConstructor { variant, .. }| {
@@ -307,8 +284,6 @@ impl<'a> Environment<'a> {
         &mut self,
         module_alias: &Option<EcoString>,
         name: &EcoString,
-        // TODO: remove this once we have removed the deprecated BitString type
-        location: SrcSpan,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         let t = match module_alias {
             None => self
@@ -338,14 +313,6 @@ impl<'a> Environment<'a> {
                     })
             }
         }?;
-
-        if name == "BitString"
-            && t.typ.is_bit_array()
-            && (module_alias.is_none() || module_alias.as_deref() == Some("gleam"))
-        {
-            self.warnings
-                .emit(Warning::DeprecatedBitString { location })
-        }
 
         Ok(t)
     }
@@ -508,7 +475,7 @@ impl<'a> Environment<'a> {
             // TODO: Improve this so that we can tell if an imported overriden
             // type is actually used or not by tracking whether usages apply to
             // the value or type scope
-            Some((ImportedType | ImportedTypeAndValue(_) | PrivateType, _, _)) => {}
+            Some((ImportedType | PrivateType, _, _)) => {}
 
             Some((kind, location, false)) => {
                 // an entity was overwritten in the top most scope without being used
@@ -522,7 +489,7 @@ impl<'a> Environment<'a> {
     }
 
     /// Increments an entity's usage in the current or nearest enclosing scope
-    pub fn increment_usage(&mut self, name: &EcoString, layer: Layer) {
+    pub fn increment_usage(&mut self, name: &EcoString) {
         let mut name = name.clone();
 
         while let Some((kind, _, used)) = self
@@ -538,29 +505,7 @@ impl<'a> Environment<'a> {
                 EntityKind::PrivateTypeConstructor(type_name) if *type_name != name => {
                     name = type_name.clone();
                 }
-                EntityKind::ImportedTypeAndValue(location) => {
-                    self.ambiguous_imported_items
-                        .entry(name.clone())
-                        .or_insert_with(|| LayerUsage {
-                            import_location: *location,
-                            type_: false,
-                            value: false,
-                        })
-                        .used(layer);
-                    break;
-                }
                 _ => break,
-            }
-        }
-    }
-
-    pub fn emit_warnings_for_deprecated_type_imports(&mut self) {
-        for (name, usage) in &self.ambiguous_imported_items {
-            if usage.type_ {
-                self.warnings.emit(Warning::DeprecatedTypeImport {
-                    name: name.clone(),
-                    location: usage.import_location,
-                })
             }
         }
     }
@@ -598,13 +543,11 @@ impl<'a> Environment<'a> {
     fn handle_unused(&mut self, unused: HashMap<EcoString, (EntityKind, SrcSpan, bool)>) {
         for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
             let warning = match kind {
-                EntityKind::ImportedType | EntityKind::ImportedTypeAndValue(_) => {
-                    Warning::UnusedType {
-                        name,
-                        imported: true,
-                        location,
-                    }
-                }
+                EntityKind::ImportedType => Warning::UnusedType {
+                    name,
+                    imported: true,
+                    location,
+                },
                 EntityKind::ImportedConstructor => Warning::UnusedConstructor {
                     name,
                     imported: true,

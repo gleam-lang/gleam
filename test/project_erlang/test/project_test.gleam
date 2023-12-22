@@ -1,5 +1,5 @@
 import gleam/io
-import gleam/dynamic.{Dynamic}
+import gleam/dynamic.{type Dynamic}
 import project
 import gleeunit
 import gleam/erlang/atom.{from_string as atom_from_string}

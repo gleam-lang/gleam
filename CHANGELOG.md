@@ -2,7 +2,36 @@
 
 ## Unreleased
 
+### Bug fixes
+
+- Fixed a bug where `gleam add` would not update `manifest.toml` correctly.
 - `Utf8Codepoint` has been renamed to `UtfCodepoint` in `prelude.d.mts`.
+
+
+## v0.33.0 - 2023-12-18
+
+## v0.33.0-rc4 - 2023-12-17
+
+- The deprecated bit array options `binary` and `bit_string` have been removed.
+- The deprecated ambiguous type import syntax has been removed.
+- The deprecated `BitString` type has been removed.
+- The deprecated `inspect` functions and `BitString` type has been removed from
+  the JavaScript prelude.
+
+
+## v0.33.0-rc3 - 2023-12-17
+
+### Formatter
+
+- The formatter now tries to split long chains of binary operations around the
+  operator itself, rather than around other elements like lists or function
+  calls.
+
+### Bug fixes
+
+- Fixed a bug where string prefix aliases defined in alternative case branches
+  would all be bound to the same constant.
+
 
 ## v0.33.0-rc2 - 2023-12-07
 

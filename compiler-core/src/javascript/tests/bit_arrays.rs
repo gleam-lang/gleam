@@ -137,7 +137,7 @@ fn bit_string() {
     assert_js!(
         r#"
 fn go(x) {
-  <<x:bit_string>>
+  <<x:bits>>
 }
 "#,
     );
@@ -159,7 +159,7 @@ fn bit_string_typescript() {
     assert_ts_def!(
         r#"
 pub fn go(x) {
-  <<x:bit_string>>
+  <<x:bits>>
 }
 "#,
     );
@@ -258,7 +258,7 @@ fn match_rest_deprecated() {
     assert_js!(
         r#"
 fn go(x) {
-  let <<_, b:binary>> = <<1,2,3>>
+  let <<_, b:bytes>> = <<1,2,3>>
 }
 "#,
     );
@@ -269,8 +269,8 @@ fn match_binary_size() {
     assert_js!(
         r#"
 fn go(x) {
-  let <<_, a:2-binary>> = x
-  let <<_, b:binary-size(2)>> = x
+  let <<_, a:2-bytes>> = x
+  let <<_, b:bytes-size(2)>> = x
 }
 "#,
     );
@@ -288,10 +288,10 @@ fn as_module_const() {
             "Gleam":utf8,
             4.2:float,
             <<
-              <<1, 2, 3>>:bit_string,
+              <<1, 2, 3>>:bits,
               "Gleam":utf8,
               1024
-            >>:bit_string
+            >>:bits
           >>
         "#
     )

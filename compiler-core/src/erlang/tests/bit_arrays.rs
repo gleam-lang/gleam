@@ -7,8 +7,8 @@ fn bit_array() {
   let a = 1
   let simple = <<1, a>>
   let complex = <<4:int-big, 5.0:little-float, 6:native-int>>
-  let <<7:2, 8:size(3), b:binary-size(4)>> = <<1>>
-  let <<c:8-unit(1), d:binary-size(2)-unit(2)>> = <<1>>
+  let <<7:2, 8:size(3), b:bytes-size(4)>> = <<1>>
+  let <<c:8-unit(1), d:bytes-size(2)-unit(2)>> = <<1>>
 
   simple
 }
@@ -85,7 +85,7 @@ fn bit_array_discard() {
         r#"
 pub fn bit_array_discard(x) -> Bool {
  case x {
-  <<_:utf8, rest:binary>> -> True
+  <<_:utf8, rest:bytes>> -> True
    _ -> False
  }
 }
@@ -99,11 +99,11 @@ fn bit_array_discard1() {
         r#"
 pub fn bit_array_discard(x) -> Bool {
  case x {
-  <<_discardme:utf8, rest:binary>> -> True
+  <<_discardme:utf8, rest:bytes>> -> True
    _ -> False
  }
 }
-                    "#
+"#
     );
 }
 
@@ -111,7 +111,7 @@ pub fn bit_array_discard(x) -> Bool {
 fn bit_array_declare_and_use_var() {
     assert_erl!(
         r#"pub fn go(x) {
-  let <<name_size:8, name:binary-size(name_size)>> = x
+  let <<name_size:8, name:bytes-size(name_size)>> = x
   name
 }"#
     );

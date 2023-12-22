@@ -50,7 +50,6 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
             },
         )]
         .into(),
-        type_only_unqualified_imports: Vec::new(),
     }
 }
 
@@ -72,7 +71,6 @@ fn bit_array_segment_option_module(option: TypedConstantBitArraySegmentOption) -
 #[test]
 fn empty_module() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "one/two".into(),
@@ -88,7 +86,6 @@ fn empty_module() {
 #[test]
 fn module_with_private_type() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -115,7 +112,6 @@ fn module_with_private_type() {
 #[test]
 fn module_with_unused_import() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -134,7 +130,6 @@ fn module_with_unused_import() {
 #[test]
 fn module_with_app_type() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -161,7 +156,6 @@ fn module_with_app_type() {
 #[test]
 fn module_with_fn_type() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -188,7 +182,6 @@ fn module_with_fn_type() {
 #[test]
 fn module_with_tuple_type() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -221,7 +214,6 @@ fn module_with_generic_type() {
 
     fn make(t1: Arc<Type>, t2: Arc<Type>) -> ModuleInterface {
         ModuleInterface {
-            type_only_unqualified_imports: Vec::new(),
             package: "some_package".into(),
             origin: Origin::Src,
             name: "a/b".into(),
@@ -254,7 +246,6 @@ fn module_with_type_links() {
 
     fn make(type_: Arc<Type>) -> ModuleInterface {
         ModuleInterface {
-            type_only_unqualified_imports: Vec::new(),
             package: "some_package".into(),
             origin: Origin::Src,
             name: "a".into(),
@@ -283,7 +274,6 @@ fn module_with_type_links() {
 #[test]
 fn module_type_to_constructors_mapping() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -307,7 +297,6 @@ fn module_type_to_constructors_mapping() {
 #[test]
 fn module_fn_value() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -342,7 +331,6 @@ fn module_fn_value() {
 #[test]
 fn deprecated_module_fn_value() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -379,7 +367,6 @@ fn deprecated_module_fn_value() {
 #[test]
 fn private_module_fn_value() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -416,7 +403,6 @@ fn private_module_fn_value() {
 #[test]
 fn module_fn_value_regression() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b/c".into(),
@@ -452,7 +438,6 @@ fn module_fn_value_regression() {
 #[test]
 fn module_fn_value_with_field_map() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -490,7 +475,6 @@ fn record_value() {
     let mut random = rand::thread_rng();
 
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -530,7 +514,6 @@ fn record_value_with_field_map() {
     let mut random = rand::thread_rng();
 
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -571,7 +554,6 @@ fn record_value_with_field_map() {
 #[test]
 fn accessors() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -775,7 +757,6 @@ fn constant_var() {
     };
 
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -978,7 +959,6 @@ fn constant_bit_array_native() {
 #[test]
 fn deprecated_type() {
     let module = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),

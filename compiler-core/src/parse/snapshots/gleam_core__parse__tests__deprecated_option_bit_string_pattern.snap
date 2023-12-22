@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/parse/tests.rs
 assertion_line: 517
-expression: "pub fn main(x) {\n  let assert <<y:bit_string>> = x\n  y\n}"
+expression: "pub fn main(x) {\n  let assert <<y:bits>> = x\n  y\n}"
 ---
 
 warning: Deprecated bit literal option
   ┌─ :2:18
   │
-2 │   let assert <<y:bit_string>> = x
+2 │   let assert <<y:bits>> = x
   │                  ^^^^^^^^^^
 
 This option has been replaced by the `bits` option.

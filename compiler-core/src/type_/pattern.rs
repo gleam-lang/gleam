@@ -75,47 +75,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
     }
 
-    fn insert_constant(
-        &mut self,
-        name: &str,
-        literal: Constant<Arc<Type>, EcoString>,
-        location: SrcSpan,
-    ) -> Result<(), UnifyError> {
-        match &mut self.mode {
-            PatternMode::Initial => {
-                // Register usage for the unused variable detection
-                self.environment
-                    .init_usage(name.into(), EntityKind::PrivateConstant, location);
-                // Ensure there are no duplicate constant names in the pattern
-                if self.initial_pattern_vars.contains(name) {
-                    return Err(UnifyError::DuplicateVarInPattern { name: name.into() });
-                }
-                // Record that this variable originated in this pattern so any
-                // following alternative patterns can be checked to ensure they
-                // have the same variables.
-                let _ = self.initial_pattern_vars.insert(name.into());
-                // And now insert the variable for use in the code that comes
-                // after the pattern.
-                self.environment.insert_local_constant(name.into(), literal);
-                Ok(())
-            }
-
-            PatternMode::Alternative(assigned) => {
-                match self.environment.scope.get(name) {
-                    // This variable was defined in the Initial multi-pattern
-                    Some(initial) if self.initial_pattern_vars.contains(name) => {
-                        assigned.push(name.into());
-                        let initial_typ = initial.type_.clone();
-                        unify(initial_typ, literal.type_())
-                    }
-
-                    // This variable was not defined in the Initial multi-pattern
-                    _ => Err(UnifyError::ExtraVarInAlternativePattern { name: name.into() }),
-                }
-            }
-        }
-    }
-
     pub fn infer_alternative_multi_pattern(
         &mut self,
         multi_pattern: UntypedMultiPattern,
@@ -274,7 +233,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         name: name.clone(),
                         variables: self.environment.local_value_names(),
                     })?;
-                self.environment.increment_usage(&name, Layer::Value);
+                self.environment.increment_usage(&name);
                 let typ =
                     self.environment
                         .instantiate(vc.type_.clone(), &mut hashmap![], self.hydrator);
@@ -300,16 +259,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 unify(type_, string()).map_err(|e| convert_unify_error(e, location))?;
 
                 // The left hand side may assign a variable, which is the prefix of the string
-                if let Some((name, name_location)) = &left_side_assignment {
-                    self.insert_constant(
-                        name.as_ref(),
-                        Constant::String {
-                            location: left_location,
-                            value: left_side_string.clone(),
-                        },
-                        *name_location,
-                    )
-                    .map_err(|e| convert_unify_error(e, location))?;
+                if let Some((left, left_location)) = &left_side_assignment {
+                    self.insert_variable(left.as_ref(), string(), *left_location)
+                        .map_err(|e| convert_unify_error(e, location))?;
                 }
 
                 // The right hand side may assign a variable, which is the suffix of the string
@@ -459,7 +411,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 ..
             } => {
                 // Register the value as seen for detection of unused values
-                self.environment.increment_usage(&name, Layer::Value);
+                self.environment.increment_usage(&name);
 
                 let cons = self
                     .environment

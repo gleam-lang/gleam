@@ -1,4 +1,4 @@
-use crate::{assert_format, assert_format_rewrite};
+use crate::assert_format;
 
 #[test]
 fn construction() {
@@ -135,81 +135,5 @@ fn block_value() {
   >>
 }
 "#
-    );
-}
-
-#[test]
-fn deprecated_bit_string_expression() {
-    assert_format_rewrite!(
-        r#"pub fn main() {
-  <<x:bit_string>>
-}
-"#,
-        r#"pub fn main() {
-  <<x:bits>>
-}
-"#,
-    );
-}
-
-#[test]
-fn deprecated_bit_string_pattern() {
-    assert_format_rewrite!(
-        r#"pub fn main() {
-  let <<x:bit_string>> = y
-}
-"#,
-        r#"pub fn main() {
-  let <<x:bits>> = y
-}
-"#,
-    );
-}
-
-#[test]
-fn deprecated_bit_string_const() {
-    assert_format_rewrite!(
-        r#"const x = <<x:bit_string>>
-"#,
-        r#"const x = <<x:bits>>
-"#,
-    );
-}
-
-#[test]
-fn deprecated_binary_expression() {
-    assert_format_rewrite!(
-        r#"pub fn main() {
-  <<x:binary>>
-}
-"#,
-        r#"pub fn main() {
-  <<x:bytes>>
-}
-"#,
-    );
-}
-
-#[test]
-fn deprecated_binary_pattern() {
-    assert_format_rewrite!(
-        r#"pub fn main() {
-  let <<x:binary>> = y
-}
-"#,
-        r#"pub fn main() {
-  let <<x:bytes>> = y
-}
-"#,
-    );
-}
-
-#[test]
-fn deprecated_binary_const() {
-    assert_format_rewrite!(
-        r#"const x = <<x:binary>>
-"#,
-        r#"const x = <<x:bytes>>
-"#,
     );
 }

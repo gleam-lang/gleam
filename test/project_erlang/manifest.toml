@@ -8,8 +8,8 @@ packages = [
   { name = "cowboy", version = "2.10.0", build_tools = ["make", "rebar3"], requirements = ["ranch", "cowlib"], otp_app = "cowboy", source = "hex", outer_checksum = "3AFDCCB7183CC6F143CB14D3CF51FA00E53DB9EC80CDCD525482F5E99BC41D6B" },
   { name = "cowlib", version = "2.12.1", build_tools = ["make", "rebar3"], requirements = [], otp_app = "cowlib", source = "hex", outer_checksum = "163B73F6367A7341B33C794C4E88E7DBFE6498AC42DCD69EF44C5BC5507C8DB0" },
   { name = "gleam_erlang", version = "0.23.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_erlang", source = "hex", outer_checksum = "C21CFB816C114784E669FFF4BBF433535EEA9960FA2F216209B8691E87156B96" },
-  { name = "gleam_stdlib", version = "0.32.1", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "ABF00CDCCB66FABBCE351A50060964C4ACE798F95A0D78622C8A7DC838792577" },
-  { name = "gleeunit", version = "0.11.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "1397E5C4AC4108769EE979939AC39BF7870659C5AFB714630DEEEE16B8272AD5" },
+  { name = "gleam_stdlib", version = "0.34.0", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "1FB8454D2991E9B4C0C804544D8A9AD0F6184725E20D63C3155F0AEB4230B016" },
+  { name = "gleeunit", version = "1.0.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "D3682ED8C5F9CAE1C928F2506DE91625588CC752495988CBE0F5653A42A6F334" },
   { name = "hpack_erl", version = "0.3.0", build_tools = ["rebar3"], requirements = [], otp_app = "hpack", source = "hex", outer_checksum = "D6137D7079169D8C485C6962DFE261AF5B9EF60FBC557344511C1E65E3D95FB0" },
   { name = "poolboy", version = "1.5.2", build_tools = ["rebar3"], requirements = [], otp_app = "poolboy", source = "hex", outer_checksum = "DAD79704CE5440F3D5A3681C8590B9DC25D1A561E8F5A9C995281012860901E3" },
   { name = "ranch", version = "1.8.0", build_tools = ["make", "rebar3"], requirements = [], otp_app = "ranch", source = "hex", outer_checksum = "49FBCFD3682FAB1F5D109351B61257676DA1A2FDBE295904176D5E521A2DDFE5" },
@@ -24,6 +24,6 @@ countries = { version = "~> 1.6" }
 cowboy = { version = "~> 2.9" }
 gleam_erlang = { version = "~> 0.5" }
 gleam_stdlib = { version = "~> 0.18" }
-gleeunit = { version = "~> 0.1" }
+gleeunit = { version = "~> 1.0" }
 hpack_erl = { version = "~> 0.1" }
 ssl_verify_fun = { version = "~> 1.1" }

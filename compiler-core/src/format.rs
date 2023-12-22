@@ -958,14 +958,50 @@ impl<'comments> Formatter<'comments> {
         let precedence = name.precedence();
         let left_precedence = left.binop_precedence();
         let right_precedence = right.binop_precedence();
-        let left = self.expr(left);
-        let right = self.expr(right);
-        self.operator_side(left, precedence, left_precedence)
-            .append(name)
-            .append(self.operator_side(right, precedence, right_precedence - 1))
+        let left_doc = self.expr(left);
+        let right_doc = self.expr(right);
+
+        let mut doc = docvec!();
+        doc = match Self::binop_name(left) {
+            // In case the left side is a binary operation as well and it can
+            // be grouped together with the current binary operation, the two
+            // docs are simply concatenated, so that they will end up in the
+            // same group and the formatter will try to keep those on a single
+            // line.
+            Some(left_name) if Self::should_be_grouped_together(left_name, name) => {
+                doc.append(left_doc)
+            }
+            // In case the binary operations cannot be grouped together the left
+            // side is treated as a group on its own so that this operation can
+            // be broken independently.
+            _ => doc.append(self.operator_side(left_doc.group(), precedence, left_precedence)),
+        };
+        doc = doc.append(break_("", " ")).append(name).append(" ");
+        doc = match Self::binop_name(right) {
+            // This works the same as the left side
+            Some(right_name) if Self::should_be_grouped_together(right_name, name) => {
+                doc.append(right_doc)
+            }
+            _ => doc.append(self.operator_side(right_doc.group(), precedence, right_precedence)),
+        };
+        doc
     }
 
-    pub fn operator_side<'a>(&mut self, doc: Document<'a>, op: u8, side: u8) -> Document<'a> {
+    fn binop_name(expr: &UntypedExpr) -> Option<&BinOp> {
+        match expr {
+            UntypedExpr::BinOp { name, .. } => Some(name),
+            _ => None,
+        }
+    }
+
+    fn should_be_grouped_together(one: &BinOp, other: &BinOp) -> bool {
+        // Try to keep on a single line groups of binary operations with the
+        // same name, or binary operations on booleans.
+        let is_boolean_binop = |binop| matches!(binop, BinOp::And | BinOp::Or);
+        one == other || (is_boolean_binop(*one) && is_boolean_binop(*other))
+    }
+
+    pub fn operator_side<'a>(&self, doc: Document<'a>, op: u8, side: u8) -> Document<'a> {
         if op > side {
             wrap_block(doc).group()
         } else {
@@ -1676,28 +1712,28 @@ impl<'a> Documentable<'a> for &'a UnqualifiedImport {
 impl<'a> Documentable<'a> for &'a BinOp {
     fn to_doc(self) -> Document<'a> {
         match self {
-            BinOp::And => " && ",
-            BinOp::Or => " || ",
-            BinOp::LtInt => " < ",
-            BinOp::LtEqInt => " <= ",
-            BinOp::LtFloat => " <. ",
-            BinOp::LtEqFloat => " <=. ",
-            BinOp::Eq => " == ",
-            BinOp::NotEq => " != ",
-            BinOp::GtEqInt => " >= ",
-            BinOp::GtInt => " > ",
-            BinOp::GtEqFloat => " >=. ",
-            BinOp::GtFloat => " >. ",
-            BinOp::AddInt => " + ",
-            BinOp::AddFloat => " +. ",
-            BinOp::SubInt => " - ",
-            BinOp::SubFloat => " -. ",
-            BinOp::MultInt => " * ",
-            BinOp::MultFloat => " *. ",
-            BinOp::DivInt => " / ",
-            BinOp::DivFloat => " /. ",
-            BinOp::RemainderInt => " % ",
-            BinOp::Concatenate => " <> ",
+            BinOp::And => "&&",
+            BinOp::Or => "||",
+            BinOp::LtInt => "<",
+            BinOp::LtEqInt => "<=",
+            BinOp::LtFloat => "<.",
+            BinOp::LtEqFloat => "<=.",
+            BinOp::Eq => "==",
+            BinOp::NotEq => "!=",
+            BinOp::GtEqInt => ">=",
+            BinOp::GtInt => ">",
+            BinOp::GtEqFloat => ">=.",
+            BinOp::GtFloat => ">.",
+            BinOp::AddInt => "+",
+            BinOp::AddFloat => "+.",
+            BinOp::SubInt => "-",
+            BinOp::SubFloat => "-.",
+            BinOp::MultInt => "*",
+            BinOp::MultFloat => "*.",
+            BinOp::DivInt => "/",
+            BinOp::DivFloat => "/.",
+            BinOp::RemainderInt => "%",
+            BinOp::Concatenate => "<>",
         }
         .to_doc()
     }
@@ -1868,8 +1904,8 @@ where
     ToDoc: FnMut(&Value) -> Document<'_>,
 {
     match option {
-        BitArrayOption::Binary { .. } | BitArrayOption::Bytes { .. } => "bytes".to_doc(),
-        BitArrayOption::BitString { .. } | BitArrayOption::Bits { .. } => "bits".to_doc(),
+        BitArrayOption::Bytes { .. } => "bytes".to_doc(),
+        BitArrayOption::Bits { .. } => "bits".to_doc(),
         BitArrayOption::Int { .. } => "int".to_doc(),
         BitArrayOption::Float { .. } => "float".to_doc(),
         BitArrayOption::Utf8 { .. } => "utf8".to_doc(),
