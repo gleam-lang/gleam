@@ -5,8 +5,8 @@ use gleam_core::{
     parse, Result,
 };
 use serde::{Deserialize, Serialize};
-use std::{env, io::Write};
 use std::fs::File;
+use std::{env, io::Write};
 use strum::{Display, EnumIter, EnumString, EnumVariantNames, IntoEnumIterator};
 
 #[cfg(test)]
