@@ -156,9 +156,7 @@ pub enum Error {
 
     #[error("File(s) already exist in {}",
 file_names.iter().map(|x| x.as_str()).join(", "))]
-    OutputFilesAlreadyExist {
-        file_names: Vec<Utf8PathBuf>,
-    },
+    OutputFilesAlreadyExist { file_names: Vec<Utf8PathBuf> },
 
     #[error("unable to find project root")]
     UnableToFindProjectRoot { path: String },
