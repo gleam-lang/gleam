@@ -62,12 +62,12 @@ pub fn command(packages: Vec<String>, dev: bool) -> Result<()> {
 }
 
 fn read_toml_edit(name: &str) -> Result<toml_edit::Document, Error> {
-    Ok(fs::read(name)?
+    fs::read(name)?
         .parse::<toml_edit::Document>()
         .map_err(|e| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Parse,
             path: Utf8PathBuf::from("gleam.toml"),
             err: Some(e.to_string()),
-        })?)
+        })
 }
