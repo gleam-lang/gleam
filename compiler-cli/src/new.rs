@@ -6,7 +6,7 @@ use gleam_core::{
 };
 use serde::{Deserialize, Serialize};
 use std::{env, io::Write};
-use std::{fs::File, path::PathBuf};
+use std::fs::File;
 use strum::{Display, EnumIter, EnumString, EnumVariantNames, IntoEnumIterator};
 
 #[cfg(test)]
@@ -214,7 +214,7 @@ impl Creator {
             project_name,
         };
 
-        validate_root_folder(root.into(), &me)?;
+        validate_root_folder(&me)?;
 
         Ok(me)
     }
@@ -288,11 +288,11 @@ fn write(path: Utf8PathBuf, contents: &str) -> Result<()> {
     Ok(())
 }
 
-fn validate_root_folder(directory_path: PathBuf, creator: &Creator) -> Result<(), Error> {
-    let mut duplicate_files: Vec<PathBuf> = Vec::new();
+fn validate_root_folder(creator: &Creator) -> Result<(), Error> {
+    let mut duplicate_files: Vec<Utf8PathBuf> = Vec::new();
 
     for t in FileToCreate::iter() {
-        let full_path = directory_path.join(t.location(creator));
+        let full_path = t.location(creator);
         if full_path.exists() {
             duplicate_files.push(full_path);
         }
@@ -300,7 +300,6 @@ fn validate_root_folder(directory_path: PathBuf, creator: &Creator) -> Result<()
 
     if !duplicate_files.is_empty() {
         return Err(Error::OutputFilesAlreadyExist {
-            path: directory_path,
             file_names: duplicate_files,
         });
     }
