@@ -36,6 +36,27 @@ pub fn long_comparison_chain() {
     );
 }
 
+#[test]
+pub fn long_chain_mixing_operators() {
+    assert_format!(
+        r#"pub fn main() {
+  variable + variable - variable * variable / variable
+  == variable * variable / variable - variable + variable
+  || foo * bar > 11
+}
+"#
+    );
+
+    assert_format!(
+        r#"pub fn main() {
+  variable +. variable -. variable *. variable /. variable
+  == variable *. variable /. variable -. variable +. variable
+  || foo *. bar >=. 11
+}
+"#
+    );
+}
+
 // Thanks Hayleigh for pointing this out!
 #[test]
 fn case_branch_is_not_broken_if_can_fit_on_line() {
@@ -124,6 +145,27 @@ fn labelled_field_with_binary_operators_are_not_broken_if_they_can_fit() {
     previous: None,
     next: None,
   ))
+}
+"#
+    );
+}
+
+#[test]
+fn math_binops_kept_on_a_single_line_in_pipes() {
+    assert_format!(
+        r#"pub fn main() {
+  1 + 2 * 3 / 4 - 5
+  |> foo
+  |> bar
+}
+"#
+    );
+
+    assert_format!(
+        r#"pub fn main() {
+  1 +. 2 *. 3 /. 4 -. 5
+  |> foo
+  |> bar
 }
 "#
     );

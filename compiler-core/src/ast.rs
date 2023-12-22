@@ -747,6 +747,40 @@ impl BinOp {
             Self::Concatenate => "<>",
         }
     }
+
+    pub fn can_be_grouped_with(self, other: BinOp) -> bool {
+        let is_boolean_binop = |binop| matches!(binop, BinOp::And | BinOp::Or);
+        let is_int_comparison = |binop| {
+            matches!(
+                binop,
+                BinOp::GtInt | BinOp::LtInt | BinOp::GtEqInt | BinOp::LtEqInt
+            )
+        };
+        let is_float_comparison = |binop| {
+            matches!(
+                binop,
+                BinOp::GtFloat | BinOp::LtFloat | BinOp::GtEqFloat | BinOp::LtEqFloat
+            )
+        };
+        let is_int_math = |binop| {
+            matches!(
+                binop,
+                BinOp::AddInt | BinOp::SubInt | BinOp::DivInt | BinOp::MultInt
+            )
+        };
+        let is_float_math = |binop| {
+            matches!(
+                binop,
+                BinOp::AddFloat | BinOp::SubFloat | BinOp::DivFloat | BinOp::MultFloat
+            )
+        };
+        self == other
+            || (is_boolean_binop(self) && is_boolean_binop(other))
+            || (is_float_comparison(self) && is_float_comparison(other))
+            || (is_int_comparison(self) && is_int_comparison(other))
+            || (is_float_math(self) && is_float_math(other))
+            || (is_int_math(self) && is_int_math(other))
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

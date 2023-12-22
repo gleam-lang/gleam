@@ -5341,15 +5341,3 @@ fn single_argument_call_nested_nested() {
 "#
     );
 }
-
-#[test]
-fn arithmetic_binops_kept_on_a_single_line_in_pipes() {
-    assert_format!(
-        r#"pub fn main() {
-  1 + 2
-  |> foo
-  |> bar
-}
-"#
-    );
-}

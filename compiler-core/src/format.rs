@@ -950,50 +950,32 @@ impl<'comments> Formatter<'comments> {
         left: &'a UntypedExpr,
         right: &'a UntypedExpr,
     ) -> Document<'a> {
-        let precedence = name.precedence();
-        let left_precedence = left.binop_precedence();
-        let right_precedence = right.binop_precedence();
-        let left_doc = self.expr(left);
-        let right_doc = self.expr(right);
+        self.binop_side(name, left)
+            .append(break_("", " "))
+            .append(name)
+            .append(" ")
+            .append(self.binop_side(name, right))
+    }
 
-        let mut doc = docvec!();
-        doc = match Self::binop_name(left) {
-            // In case the left side is a binary operation as well and it can
+    fn binop_side<'a>(&mut self, operator: &'a BinOp, side: &'a UntypedExpr) -> Document<'a> {
+        let side_doc = self.expr(side);
+        match side.binop_name() {
+            // In case the other side is a binary operation as well and it can
             // be grouped together with the current binary operation, the two
             // docs are simply concatenated, so that they will end up in the
             // same group and the formatter will try to keep those on a single
             // line.
-            Some(left_name) if Self::should_be_grouped_together(left_name, name) => {
-                doc.append(left_doc)
-            }
-            // In case the binary operations cannot be grouped together the left
-            // side is treated as a group on its own so that this operation can
-            // be broken independently.
-            _ => doc.append(self.operator_side(left_doc.group(), precedence, left_precedence)),
-        };
-        doc = doc.append(break_("", " ")).append(name).append(" ");
-        doc = match Self::binop_name(right) {
-            // This works the same as the left side
-            Some(right_name) if Self::should_be_grouped_together(right_name, name) => {
-                doc.append(right_doc)
-            }
-            _ => doc.append(self.operator_side(right_doc.group(), precedence, right_precedence)),
-        };
-        doc
-    }
-
-    fn binop_name(expr: &UntypedExpr) -> Option<&BinOp> {
-        match expr {
-            UntypedExpr::BinOp { name, .. } => Some(name),
-            _ => None,
+            Some(side_name) if side_name.can_be_grouped_with(*operator) => side_doc,
+            // In case the binary operations cannot be grouped together the
+            // other side is treated as a group on its own so that it can be
+            // broken independently of other pieces of the binary operations
+            // chain.
+            _ => self.operator_side(
+                side_doc.group(),
+                operator.precedence(),
+                side.binop_precedence(),
+            ),
         }
-    }
-
-    fn should_be_grouped_together(one: &BinOp, other: &BinOp) -> bool {
-        // Try to keep on a single line groups of binary operations with the
-        // same name, or binary operations on booleans.
-        let is_boolean_binop = |binop| matches!(binop, BinOp::And | BinOp::Or);
-        one == other || (is_boolean_binop(*one) && is_boolean_binop(*other))
     }
 
     pub fn operator_side<'a>(&self, doc: Document<'a>, op: u8, side: u8) -> Document<'a> {

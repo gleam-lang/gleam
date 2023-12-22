@@ -179,6 +179,13 @@ impl UntypedExpr {
         }
     }
 
+    pub fn binop_name(&self) -> Option<&BinOp> {
+        match self {
+            UntypedExpr::BinOp { name, .. } => Some(name),
+            _ => None,
+        }
+    }
+
     pub fn is_simple_constant(&self) -> bool {
         matches!(
             self,
