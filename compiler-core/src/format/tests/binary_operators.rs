@@ -50,3 +50,81 @@ fn case_branch_is_not_broken_if_can_fit_on_line() {
 "#
     );
 }
+
+// https://discord.com/channels/768594524158427167/1187508793945378847/1187508793945378847
+#[test]
+fn binary_operation_in_assignment_that_is_almost_80_chars() {
+    assert_format!(
+        r#"pub fn main() {
+  let is_vr_implicit =
+    dicom_read_context.transfer_syntax == transfer_syntax.ImplicitVrLittleEndian
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2480
+#[test]
+fn labelled_field_with_binary_operators_are_not_broken_if_they_can_fit() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(Lesson(
+    name: names.name,
+    text: text,
+    code: code,
+    path: chapter_path <> "/",
+    previous: None,
+    next: None,
+  ))
+}
+"#
+    );
+
+    assert_format!(
+        r#"pub fn main() {
+  Ok(Lesson(
+    name: names.name,
+    text: text,
+    code: code,
+    path: chapter_path
+      <> "/"
+      <> this_one_doesnt_fit
+      <> "and ends up on multiple lines",
+    previous: None,
+    next: None,
+  ))
+}
+"#
+    );
+
+    assert_format!(
+        r#"pub fn main() {
+  Ok(foo(
+    name: names.name,
+    text: text,
+    code: code,
+    path: chapter_path <> "/",
+    previous: None,
+    next: None,
+  ))
+}
+"#
+    );
+
+    assert_format!(
+        r#"pub fn main() {
+  Ok(foo(
+    name: names.name,
+    text: text,
+    code: code,
+    path: chapter_path
+      <> "/"
+      <> this_one_doesnt_fit
+      <> "and ends up on multiple lines",
+    previous: None,
+    next: None,
+  ))
+}
+"#
+    );
+}

@@ -1240,7 +1240,10 @@ impl<'comments> Formatter<'comments> {
             ),
             None => nil(),
         }
-        .append(self.expr(&arg.value))
+        .append(match &arg.value {
+            UntypedExpr::BinOp { .. } => self.expr(&arg.value).group().nest(INDENT),
+            _ => self.expr(&arg.value).group(),
+        })
     }
 
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
