@@ -7,6 +7,10 @@
 - Fixed a bug where `gleam add` would not update `manifest.toml` correctly.
 - `Utf8Codepoint` has been renamed to `UtfCodepoint` in `prelude.d.mts`.
 
+### Formatter
+
+- Fixed some quirk with the formatting of binary operators.
+
 
 ## v0.33.0 - 2023-12-18
 
