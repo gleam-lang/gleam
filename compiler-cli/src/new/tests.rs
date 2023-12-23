@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use camino::Utf8PathBuf;
+use gleam_core::Error;
 
 #[test]
 fn new() {
@@ -212,4 +213,29 @@ fn existing_directory_with_non_generated_file() {
     assert!(path
         .join("some_fake_thing_that_is_not_generated.md")
         .exists());
+}
+
+#[test]
+fn conflict_with_existing_files() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+    crate::fs::mkdir(&path).unwrap();
+
+    let _ = std::fs::File::create(PathBuf::from(&path).join("README.md"));
+
+    assert_eq!(super::Creator::new(
+        super::NewOptions {
+            project_root: path.to_string(),
+            template: super::Template::Lib,
+            name: None,
+            skip_git: true,
+            skip_github: true,
+        },
+        "1.0.0-gleam",
+    ).err(), Some(
+        Error::OutputFilesAlreadyExist {
+            file_names: vec![path.join("README.md")]
+        }
+    ));
 }
