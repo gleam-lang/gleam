@@ -718,10 +718,35 @@ pub struct DenoConfig {
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Repository {
-    GitHub { user: String, repo: String },
-    GitLab { user: String, repo: String },
-    BitBucket { user: String, repo: String },
-    Custom { url: String },
+    GitHub {
+        user: String,
+        repo: String,
+    },
+    GitLab {
+        user: String,
+        repo: String,
+    },
+    BitBucket {
+        user: String,
+        repo: String,
+    },
+    CodeBerg {
+        user: String,
+        repo: String,
+    },
+    Forgejo {
+        user: String,
+        repo: String,
+        host: String,
+    },
+    Gitea {
+        user: String,
+        repo: String,
+        host: String,
+    },
+    Custom {
+        url: String,
+    },
     None,
 }
 
@@ -732,6 +757,12 @@ impl Repository {
             Repository::GitLab { repo, user } => Some(format!("https://gitlab.com/{user}/{repo}")),
             Repository::BitBucket { repo, user } => {
                 Some(format!("https://bitbucket.com/{user}/{repo}"))
+            }
+            Repository::CodeBerg { repo, user } => {
+                Some(format!("https://codeberg.org/{user}/{repo}"))
+            }
+            Repository::Forgejo { repo, user, host } | Repository::Gitea { repo, user, host } => {
+                Some(format!("https://{host}/{user}/{repo}"))
             }
             Repository::Custom { url } => Some(url.clone()),
             Repository::None => None,
