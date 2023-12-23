@@ -17,6 +17,9 @@
 ### Build tool
 
 - The `gleam` binary is now statically linked on Windows.
+- The `repository` section now supports additional VCS types in the form of
+  codeberg, forgejo and gitea allowing a `user`, `repo` and additionally a
+  `host` url.
 
 ### Bug fixes
 
