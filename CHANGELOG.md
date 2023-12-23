@@ -6,6 +6,8 @@
 
 - Fixed a bug where `gleam add` would not update `manifest.toml` correctly.
 - `Utf8Codepoint` has been renamed to `UtfCodepoint` in `prelude.d.mts`.
+- Fixed a bug where `gleam deps list` would look in filesystem root instead of
+  the current directory.
 
 
 ## v0.33.0 - 2023-12-18
