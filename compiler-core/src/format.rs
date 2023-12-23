@@ -965,7 +965,7 @@ impl<'comments> Formatter<'comments> {
             // docs are simply concatenated, so that they will end up in the
             // same group and the formatter will try to keep those on a single
             // line.
-            Some(side_name) if side_name.can_be_grouped_with(*operator) => side_doc,
+            Some(side_name) if side_name.can_be_grouped_with(operator) => side_doc,
             // In case the binary operations cannot be grouped together the
             // other side is treated as a group on its own so that it can be
             // broken independently of other pieces of the binary operations

@@ -689,6 +689,17 @@ pub enum BinOp {
     Concatenate,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum OperatorKind {
+    BooleanLogic,
+    Equality,
+    IntComparison,
+    FLoatComparison,
+    IntMath,
+    FloatMath,
+    StringConcatenation,
+}
+
 impl BinOp {
     pub fn precedence(&self) -> u8 {
         // Ensure that this matches the other precedence function for guards
@@ -748,38 +759,28 @@ impl BinOp {
         }
     }
 
-    pub fn can_be_grouped_with(self, other: BinOp) -> bool {
-        let is_boolean_binop = |binop| matches!(binop, BinOp::And | BinOp::Or);
-        let is_int_comparison = |binop| {
-            matches!(
-                binop,
-                BinOp::GtInt | BinOp::LtInt | BinOp::GtEqInt | BinOp::LtEqInt
-            )
-        };
-        let is_float_comparison = |binop| {
-            matches!(
-                binop,
-                BinOp::GtFloat | BinOp::LtFloat | BinOp::GtEqFloat | BinOp::LtEqFloat
-            )
-        };
-        let is_int_math = |binop| {
-            matches!(
-                binop,
-                BinOp::AddInt | BinOp::SubInt | BinOp::DivInt | BinOp::MultInt
-            )
-        };
-        let is_float_math = |binop| {
-            matches!(
-                binop,
-                BinOp::AddFloat | BinOp::SubFloat | BinOp::DivFloat | BinOp::MultFloat
-            )
-        };
-        self == other
-            || (is_boolean_binop(self) && is_boolean_binop(other))
-            || (is_float_comparison(self) && is_float_comparison(other))
-            || (is_int_comparison(self) && is_int_comparison(other))
-            || (is_float_math(self) && is_float_math(other))
-            || (is_int_math(self) && is_int_math(other))
+    pub fn operator_kind(&self) -> OperatorKind {
+        match self {
+            Self::Concatenate => OperatorKind::StringConcatenation,
+            Self::Eq | Self::NotEq => OperatorKind::Equality,
+            Self::And | Self::Or => OperatorKind::BooleanLogic,
+            Self::LtInt | Self::LtEqInt | Self::GtEqInt | Self::GtInt => {
+                OperatorKind::IntComparison
+            }
+            Self::LtFloat | Self::LtEqFloat | Self::GtEqFloat | Self::GtFloat => {
+                OperatorKind::FLoatComparison
+            }
+            Self::AddInt | Self::SubInt | Self::MultInt | Self::RemainderInt | Self::DivInt => {
+                OperatorKind::IntMath
+            }
+            Self::AddFloat | Self::SubFloat | Self::MultFloat | Self::DivFloat => {
+                OperatorKind::FloatMath
+            }
+        }
+    }
+
+    pub fn can_be_grouped_with(&self, other: &BinOp) -> bool {
+        self.operator_kind() == other.operator_kind()
     }
 }
 
