@@ -224,18 +224,20 @@ fn conflict_with_existing_files() {
 
     let _ = std::fs::File::create(PathBuf::from(&path).join("README.md"));
 
-    assert_eq!(super::Creator::new(
-        super::NewOptions {
-            project_root: path.to_string(),
-            template: super::Template::Lib,
-            name: None,
-            skip_git: true,
-            skip_github: true,
-        },
-        "1.0.0-gleam",
-    ).err(), Some(
-        Error::OutputFilesAlreadyExist {
+    assert_eq!(
+        super::Creator::new(
+            super::NewOptions {
+                project_root: path.to_string(),
+                template: super::Template::Lib,
+                name: None,
+                skip_git: true,
+                skip_github: true,
+            },
+            "1.0.0-gleam",
+        )
+        .err(),
+        Some(Error::OutputFilesAlreadyExist {
             file_names: vec![path.join("README.md")]
-        }
-    ));
+        })
+    );
 }
