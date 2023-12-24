@@ -181,7 +181,7 @@ jobs:
       - run: gleam format --check src test
 "#,
             )),
-            _ => None,
+            Self::GithubCi | Self::Gitignore => None,
         }
     }
 }
