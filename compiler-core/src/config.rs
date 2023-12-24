@@ -734,15 +734,12 @@ pub enum Repository {
         user: String,
         repo: String,
     },
-    Forgejo {
-        user: String,
-        repo: String,
-        host: String,
-    },
+    #[serde(alias = "forgejo")]
     Gitea {
         user: String,
         repo: String,
-        host: String,
+        #[serde(with = "uri_serde")]
+        host: Uri,
     },
     Custom {
         url: String,
@@ -761,8 +758,8 @@ impl Repository {
             Repository::CodeBerg { repo, user } => {
                 Some(format!("https://codeberg.org/{user}/{repo}"))
             }
-            Repository::Forgejo { repo, user, host } | Repository::Gitea { repo, user, host } => {
-                Some(format!("https://{host}/{user}/{repo}"))
+            Repository::Gitea { repo, user, host } => {
+                Some(format!("{host}/{user}/{repo}"))
             }
             Repository::Custom { url } => Some(url.clone()),
             Repository::None => None,
