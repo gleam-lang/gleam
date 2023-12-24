@@ -562,12 +562,13 @@ to `src/{module}.gleam`"
 
             Error::OutputFilesAlreadyExist { file_names } => Diagnostic {
                 title: format!(
-                    "{} already exist in target directory",
+                    "{} already exist{} in target directory",
                     if file_names.len() == 1 {
                         "File"
                     } else {
                         "Files"
-                    }
+                    },
+                    if file_names.len() == 1 { "" } else { "s" }
                 ),
                 text: format!(
                     "{}
