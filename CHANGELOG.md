@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-### LSP
+### Language Server Changes
 
 - Added a `View on HexDocs` link on function hover
 
