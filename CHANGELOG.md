@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Build tool changes
+
+- The `gleam new` command now accepts any existing path, as long as there are no conflicts with already existing files. Examples: `gleam new .`, `gleam new ..`, `gleam new ~/projects/test`.
+
 ### Language Server Changes
 
 - Added a `View on HexDocs` link on function hover
@@ -53,10 +57,6 @@
 - The `\e` string escape sequence has been removed. Use `\u{001b}` instead.
 - Generated Erlang now disabled redundant case clause warnings as these are now
   redundant due to exhaustiveness checking.
-
-### Build tool changes
-
-- The `gleam new` command now accepts any existing path, as long as there are no conflicts with already existing files. Examples: `gleam new .`, `gleam new ..`, `gleam new ~/projects/test`.
 
 ### Bug fixes
 
