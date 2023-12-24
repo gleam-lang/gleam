@@ -58,10 +58,6 @@
 - Generated Erlang now disabled redundant case clause warnings as these are now
   redundant due to exhaustiveness checking.
 
-### Build tool changes
-
-- The `gleam new` command now accepts any existing path, as long as there are no conflicts with already existing files. Examples: `gleam new .`, `gleam new ..`, `gleam new ~/projects/test`.
-
 ### Bug fixes
 
 - Fixed a bug where the `\u` string escape sequence would not work with
