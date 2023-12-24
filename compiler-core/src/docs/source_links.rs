@@ -56,10 +56,10 @@ impl SourceLinker {
                 ),
                 "-".into(),
             )),
-            Repository::Forgejo { user, repo, host } | Repository::Gitea { user, repo, host } => {
+            Repository::Gitea { user, repo, host } => {
                 Some((
                     format!(
-                        "https://{host}/{user}/{repo}/src/tag/{}/{}#L",
+                        "{host}/{user}/{repo}/src/tag/{}/{}#L",
                         project_config.version, path_in_repo
                     ),
                     "-".into(),

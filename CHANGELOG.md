@@ -4,7 +4,8 @@
 
 ### Language changes
 
-- Warn about function body not being used, because it already has external implementations for all targets.
+- Warn about function body not being used, because it already has external
+  implementations for all targets.
 
 ### Language Server Changes
 
