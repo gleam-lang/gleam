@@ -561,7 +561,14 @@ to `src/{module}.gleam`"
             },
 
             Error::OutputFilesAlreadyExist { file_names } => Diagnostic {
-                title: "File(s) already exist in target directory".into(),
+                title: format!(
+                    "{} already exist in target directory",
+                    if file_names.len() == 1 {
+                        "File"
+                    } else {
+                        "Files"
+                    }
+                ),
                 text: format!(
                     "{}
 
@@ -570,7 +577,7 @@ and run the command again.
 ",
                     file_names
                         .iter()
-                        .map(|name| format!("- {}", name.as_str()))
+                        .map(|name| format!("  - {}", name.as_str()))
                         .join("\n")
                 ),
                 level: Level::Error,
