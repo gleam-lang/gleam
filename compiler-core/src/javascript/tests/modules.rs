@@ -1,5 +1,5 @@
 use crate::javascript::tests::CURRENT_PACKAGE;
-use crate::{assert_js, assert_js_with_multiple_imports, assert_ts_def};
+use crate::{assert_js, assert_js_with_multiple_imports};
 
 #[test]
 fn empty_module() {
@@ -147,60 +147,6 @@ fn nested_same_package() {
         (CURRENT_PACKAGE, "one/two/three", r#"pub fn go() { 1 }"#),
         r#"import one/two/three
 pub fn go() { three.go() }
-"#,
-    );
-}
-
-#[test]
-fn imported_external_types_dont_get_rendered() {
-    assert_js!(
-        (CURRENT_PACKAGE, "one/two/three", r#"pub type External"#),
-        r#"import one/two/three.{External}
-
-pub fn go() { 1 }
-"#,
-    );
-}
-
-#[test]
-fn imported_custom_types_dont_get_rendered() {
-    assert_js!(
-        (
-            CURRENT_PACKAGE,
-            "one/two/three",
-            r#"pub type Custom { One Two }"#
-        ),
-        r#"import one/two/three.{Custom, One, Two}
-
-pub fn go() -> List(Custom) { [One, Two] }
-"#,
-    );
-}
-
-#[test]
-fn imported_custom_types_do_get_rendered_in_typescript() {
-    assert_ts_def!(
-        (
-            CURRENT_PACKAGE,
-            "one/two/three",
-            r#"pub type Custom { One Two }"#
-        ),
-        r#"import one/two/three.{Custom, One, Two}
-
-pub fn go() -> List(Custom) { [One, Two] }
-"#,
-    );
-}
-
-#[test]
-fn imported_external_types_dont_get_rendered_with_value_of_same_name() {
-    assert_js!(
-        (CURRENT_PACKAGE, "one/two/three", r#"pub type Thingy"#),
-        r#"import one/two/three.{Thingy}
-
-type Dup { Thingy }
-
-pub fn go(x: Thingy) -> List(Thingy) { [x, x] }
 "#,
     );
 }

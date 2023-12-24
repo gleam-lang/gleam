@@ -568,12 +568,7 @@ impl<'comments> Formatter<'comments> {
             Some(t) => header.append(" -> ").append(self.type_ast(t)),
         };
 
-        header
-            .append(" ")
-            .append(wrap_block(
-                body.next_break_fits(NextBreakFitsMode::Disabled),
-            ))
-            .group()
+        header.append(" ").append(wrap_block(body)).group()
     }
 
     fn statements<'a>(&mut self, statements: &'a Vec1<UntypedStatement>) -> Document<'a> {
@@ -955,17 +950,35 @@ impl<'comments> Formatter<'comments> {
         left: &'a UntypedExpr,
         right: &'a UntypedExpr,
     ) -> Document<'a> {
-        let precedence = name.precedence();
-        let left_precedence = left.binop_precedence();
-        let right_precedence = right.binop_precedence();
-        let left = self.expr(left);
-        let right = self.expr(right);
-        self.operator_side(left, precedence, left_precedence)
+        self.binop_side(name, left)
+            .append(break_("", " "))
             .append(name)
-            .append(self.operator_side(right, precedence, right_precedence - 1))
+            .append(" ")
+            .append(self.binop_side(name, right))
     }
 
-    pub fn operator_side<'a>(&mut self, doc: Document<'a>, op: u8, side: u8) -> Document<'a> {
+    fn binop_side<'a>(&mut self, operator: &'a BinOp, side: &'a UntypedExpr) -> Document<'a> {
+        let side_doc = self.expr(side);
+        match side.binop_name() {
+            // In case the other side is a binary operation as well and it can
+            // be grouped together with the current binary operation, the two
+            // docs are simply concatenated, so that they will end up in the
+            // same group and the formatter will try to keep those on a single
+            // line.
+            Some(side_name) if side_name.can_be_grouped_with(operator) => side_doc,
+            // In case the binary operations cannot be grouped together the
+            // other side is treated as a group on its own so that it can be
+            // broken independently of other pieces of the binary operations
+            // chain.
+            _ => self.operator_side(
+                side_doc.group(),
+                operator.precedence(),
+                side.binop_precedence(),
+            ),
+        }
+    }
+
+    pub fn operator_side<'a>(&self, doc: Document<'a>, op: u8, side: u8) -> Document<'a> {
         if op > side {
             wrap_block(doc).group()
         } else {
@@ -977,7 +990,7 @@ impl<'comments> Formatter<'comments> {
         let mut docs = Vec::with_capacity(expressions.len() * 3);
         let first = expressions.first();
         let first_precedence = first.binop_precedence();
-        let first = self.expr(first);
+        let first = self.expr(first).group();
         docs.push(self.operator_side(first, 5, first_precedence));
 
         for expr in expressions.iter().skip(1) {
@@ -1209,7 +1222,10 @@ impl<'comments> Formatter<'comments> {
             ),
             None => nil(),
         }
-        .append(self.expr(&arg.value))
+        .append(match &arg.value {
+            UntypedExpr::BinOp { .. } => self.expr(&arg.value).group().nest(INDENT),
+            _ => self.expr(&arg.value).group(),
+        })
     }
 
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
@@ -1247,7 +1263,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => " ".to_doc().append(self.block(location, statements, true)),
 
-            _ => break_("", " ").append(self.expr(expr)).nest(INDENT),
+            _ => break_("", " ").append(self.expr(expr).group()).nest(INDENT),
         }
         .next_break_fits(NextBreakFitsMode::Disabled)
         .group()
@@ -1676,28 +1692,28 @@ impl<'a> Documentable<'a> for &'a UnqualifiedImport {
 impl<'a> Documentable<'a> for &'a BinOp {
     fn to_doc(self) -> Document<'a> {
         match self {
-            BinOp::And => " && ",
-            BinOp::Or => " || ",
-            BinOp::LtInt => " < ",
-            BinOp::LtEqInt => " <= ",
-            BinOp::LtFloat => " <. ",
-            BinOp::LtEqFloat => " <=. ",
-            BinOp::Eq => " == ",
-            BinOp::NotEq => " != ",
-            BinOp::GtEqInt => " >= ",
-            BinOp::GtInt => " > ",
-            BinOp::GtEqFloat => " >=. ",
-            BinOp::GtFloat => " >. ",
-            BinOp::AddInt => " + ",
-            BinOp::AddFloat => " +. ",
-            BinOp::SubInt => " - ",
-            BinOp::SubFloat => " -. ",
-            BinOp::MultInt => " * ",
-            BinOp::MultFloat => " *. ",
-            BinOp::DivInt => " / ",
-            BinOp::DivFloat => " /. ",
-            BinOp::RemainderInt => " % ",
-            BinOp::Concatenate => " <> ",
+            BinOp::And => "&&",
+            BinOp::Or => "||",
+            BinOp::LtInt => "<",
+            BinOp::LtEqInt => "<=",
+            BinOp::LtFloat => "<.",
+            BinOp::LtEqFloat => "<=.",
+            BinOp::Eq => "==",
+            BinOp::NotEq => "!=",
+            BinOp::GtEqInt => ">=",
+            BinOp::GtInt => ">",
+            BinOp::GtEqFloat => ">=.",
+            BinOp::GtFloat => ">.",
+            BinOp::AddInt => "+",
+            BinOp::AddFloat => "+.",
+            BinOp::SubInt => "-",
+            BinOp::SubFloat => "-.",
+            BinOp::MultInt => "*",
+            BinOp::MultFloat => "*.",
+            BinOp::DivInt => "/",
+            BinOp::DivFloat => "/.",
+            BinOp::RemainderInt => "%",
+            BinOp::Concatenate => "<>",
         }
         .to_doc()
     }
@@ -1868,8 +1884,8 @@ where
     ToDoc: FnMut(&Value) -> Document<'_>,
 {
     match option {
-        BitArrayOption::Binary { .. } | BitArrayOption::Bytes { .. } => "bytes".to_doc(),
-        BitArrayOption::BitString { .. } | BitArrayOption::Bits { .. } => "bits".to_doc(),
+        BitArrayOption::Bytes { .. } => "bytes".to_doc(),
+        BitArrayOption::Bits { .. } => "bits".to_doc(),
         BitArrayOption::Int { .. } => "int".to_doc(),
         BitArrayOption::Float { .. } => "float".to_doc(),
         BitArrayOption::Utf8 { .. } => "utf8".to_doc(),

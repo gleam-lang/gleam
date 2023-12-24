@@ -5,11 +5,13 @@ use lsp_types::{
 
 use super::*;
 
-fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
-    let io = LanguageServerTestIO::new();
+fn positioned_with_io(src: &str, position: Position, io: &LanguageServerTestIO) -> Option<Hover> {
     let mut engine = setup_engine(&io);
 
     _ = io.src_module("app", src);
+    for package in &io.manifest.packages {
+        add_package_from_manifest(&mut engine, package.clone());
+    }
     let response = engine.compile_please();
     assert!(response.result.is_ok());
 
@@ -31,6 +33,10 @@ fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
     let response = engine.hover(params);
 
     response.result.unwrap()
+}
+
+fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
+    positioned_with_io(src, position, &LanguageServerTestIO::new())
 }
 
 #[test]
@@ -63,6 +69,255 @@ fn(Int) -> Int
             },),
         })
     );
+}
+
+#[test]
+fn hover_local_function() {
+    let code = "
+fn my_fn() {
+  Nil
+}
+
+fn main() {
+  my_fn
+}
+";
+
+    assert_eq!(
+        positioned_hover(code, Position::new(6, 3)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn() -> Nil
+```
+"
+                .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 6,
+                    character: 2,
+                },
+                end: Position {
+                    line: 6,
+                    character: 7,
+                },
+            },),
+        })
+    );
+}
+
+#[test]
+fn hover_imported_function() {
+    let io = LanguageServerTestIO::new();
+    _ = io.src_module("example_module", "pub fn my_fn() { Nil }");
+
+    let code = "
+import example_module
+fn main() {
+  example_module.my_fn
+}
+";
+
+    // hovering over "my_fn"
+    let hover = positioned_with_io(code, Position::new(3, 19), &io).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_external_imported_function() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+
+    let code = "
+import example_module
+fn main() {
+  example_module.my_fn
+}
+";
+
+    // hovering over "my_fn"
+    let hover = positioned_with_io(code, Position::new(3, 19), &io).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_external_imported_unqualified_function() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+
+    let code = "
+import example_module.{my_fn}
+fn main() {
+  my_fn
+}
+";
+
+    // hovering over "my_fn"
+    let hover = positioned_with_io(code, Position::new(3, 5), &io).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_external_imported_function_renamed_module() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+
+    let code = "
+import example_module as renamed_module
+fn main() {
+    renamed_module.my_fn
+}
+";
+
+    // hovering over "my_fn"
+    let hover = positioned_with_io(code, Position::new(3, 22), &io).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_external_unqualified_imported_function_renamed_module() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+
+    let code = "
+import example_module.{my_fn} as renamed_module
+fn main() {
+    my_fn
+}
+";
+
+    // hovering over "my_fn"
+    let hover = positioned_with_io(code, Position::new(3, 6), &io).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_external_imported_function_nested_module() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module(
+        "my_dep",
+        "my/nested/example_module",
+        "pub fn my_fn() { Nil }",
+    );
+
+    // Example of HexDocs link with nested modules: https://hexdocs.pm/lustre/lustre/element/svg.html
+    let code = "
+import my/nested/example_module
+fn main() {
+    example_module.my_fn
+}
+";
+
+    // hovering over "my_fn"
+    let hover = positioned_with_io(code, Position::new(3, 22), &io).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_external_imported_ffi_renamed_function() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module(
+        "my_dep",
+        "example_module",
+        r#"
+@external(erlang, "my_mod_ffi", "renamed_fn")
+pub fn my_fn() -> Nil
+"#,
+    );
+
+    let code = r#"
+import example_module
+fn main() {
+    example_module.my_fn
+}
+"#;
+
+    // hovering over "my_fn"
+    let hover = positioned_with_io(code, Position::new(3, 22), &io).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_external_imported_constants() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub const my_const = 42");
+
+    let code = "
+import example_module
+fn main() {
+  example_module.my_const
+}
+";
+
+    // hovering over "my_const"
+    let hover = positioned_with_io(code, Position::new(3, 19), &io).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_external_imported_unqualified_constants() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub const my_const = 42");
+
+    let code = "
+import example_module.{my_const}
+fn main() {
+  my_const
+}
+";
+
+    // hovering over "my_const"
+    let hover = positioned_with_io(code, Position::new(3, 5), &io).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_external_value_with_two_modules_same_name() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module("my_dep", "a/example_module", "pub const my_const = 42");
+    _ = io.hex_dep_module("my_dep", "b/example_module", "pub const my_const = 42");
+
+    let code = "
+import a/example_module as _
+import b/example_module
+fn main() {
+    example_module.my_const
+}
+";
+
+    // hovering over "my_const"
+    let hover = positioned_with_io(code, Position::new(4, 22), &io).unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_external_function_with_another_value_same_name() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module("my_dep", "a/example_module", "pub const my_const = 42");
+    _ = io.hex_dep_module("my_dep", "b/example_module", "pub const my_const = 42");
+
+    let code = "
+import a/example_module.{my_const as discarded}
+import b/example_module.{my_const} as _
+fn main() {
+    my_const
+}
+";
+
+    // hovering over "my_const"
+    let hover = positioned_with_io(code, Position::new(4, 8), &io).unwrap();
+    insta::assert_debug_snapshot!(hover);
 }
 
 #[test]

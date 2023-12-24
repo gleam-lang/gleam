@@ -34,7 +34,7 @@ use crate::{
 pub fn list() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
-    let paths = ProjectPaths::at_filesystem_root();
+    let paths = ProjectPaths::new(fs::get_current_directory()?);
     let config = crate::config::root_config()?;
     let (_, manifest) = get_manifest(
         &paths,

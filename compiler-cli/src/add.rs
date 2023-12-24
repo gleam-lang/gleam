@@ -19,15 +19,9 @@ pub fn command(packages: Vec<String>, dev: bool) -> Result<()> {
         UseManifest::Yes,
     )?;
 
-    // Read gleam.toml so we can insert new deps into it
-    let mut toml = fs::read("gleam.toml")?
-        .parse::<toml_edit::Document>()
-        .map_err(|e| Error::FileIo {
-            kind: FileKind::File,
-            action: FileIoAction::Parse,
-            path: Utf8PathBuf::from("gleam.toml"),
-            err: Some(e.to_string()),
-        })?;
+    // Read gleam.toml and manifest.toml so we can insert new deps into it
+    let mut gleam_toml = read_toml_edit("gleam.toml")?;
+    let mut manifest_toml = read_toml_edit("manifest.toml")?;
 
     // Insert the new deps
     for package_to_add in packages {
@@ -45,18 +39,36 @@ pub fn command(packages: Vec<String>, dev: bool) -> Result<()> {
         // i.e. if 1.2.3 is selected we want ~> 1.2
         let range = format!("~> {}.{}", version.major, version.minor);
 
+        // False positive. This package doesn't use the indexing API correctly.
         #[allow(clippy::indexing_slicing)]
-        if dev {
-            toml["dev-dependencies"][&package_to_add] = toml_edit::value(range);
-        } else {
-            toml["dependencies"][&package_to_add] = toml_edit::value(range);
-        };
+        {
+            if dev {
+                gleam_toml["dev-dependencies"][&package_to_add] = toml_edit::value(range.clone());
+            } else {
+                gleam_toml["dependencies"][&package_to_add] = toml_edit::value(range.clone());
+            };
+            manifest_toml["requirements"][&package_to_add]
+                .as_inline_table_mut()
+                .expect("Invalid manifest format")["version"] = range.into();
+        }
 
         cli::print_added(&format!("{package_to_add} v{version}"));
     }
 
     // Write the updated config
-    fs::write(Utf8Path::new("gleam.toml"), &toml.to_string())?;
+    fs::write(Utf8Path::new("gleam.toml"), &gleam_toml.to_string())?;
+    fs::write(Utf8Path::new("manifest.toml"), &manifest_toml.to_string())?;
 
     Ok(())
+}
+
+fn read_toml_edit(name: &str) -> Result<toml_edit::Document, Error> {
+    fs::read(name)?
+        .parse::<toml_edit::Document>()
+        .map_err(|e| Error::FileIo {
+            kind: FileKind::File,
+            action: FileIoAction::Parse,
+            path: Utf8PathBuf::from("gleam.toml"),
+            err: Some(e.to_string()),
+        })
 }

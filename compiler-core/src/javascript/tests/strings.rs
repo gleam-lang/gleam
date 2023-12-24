@@ -192,3 +192,18 @@ pub fn go(x) {
 "#,
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/2471
+#[test]
+fn string_prefix_assignment_with_multiple_subjects() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    "1" as prefix <> _ | "11" as prefix <> _ -> prefix
+    _ -> "Unknown"
+  }
+}
+"#,
+    )
+}

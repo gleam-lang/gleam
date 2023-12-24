@@ -312,8 +312,6 @@ impl<'a> CallGraphBuilder<'a> {
         match option {
             BitArrayOption::Big { .. }
             | BitArrayOption::Bytes { .. }
-            | BitArrayOption::BitString { .. }
-            | BitArrayOption::Binary { .. }
             | BitArrayOption::Bits { .. }
             | BitArrayOption::Float { .. }
             | BitArrayOption::Int { .. }

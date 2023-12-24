@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
-assertion_line: 48
+assertion_line: 49
 expression: "compile(config, modules)"
 ---
 //// app.html
@@ -14,11 +14,11 @@ expression: "compile(config, modules)"
     <meta name="description" content=""/>
     <meta name="theme-color" content="#ffaff3" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#33384d" media="(prefers-color-scheme: dark)"/>
-    <link rel="stylesheet" href="./css/index.css?v=0.33.0-rc2" type="text/css"/>
+    <link rel="stylesheet" href="./css/index.css?v=GLEAM_VERSION_HERE" type="text/css"/>
     <!-- The docs_config.js file is provided by HexDocs and shared
          between multiple versions of the same package. -->
     <script src="./docs_config.js"></script>
-    <link id="syntax-theme" rel="stylesheet" href="./css/atom-one-light.min.css?v=0.33.0-rc2"/>
+    <link id="syntax-theme" rel="stylesheet" href="./css/atom-one-light.min.css?v=GLEAM_VERSION_HERE"/>
   </head>
   <body class="prewrap-off theme-light drawer-closed">
     <script>
@@ -332,12 +332,12 @@ expression: "compile(config, modules)"
       </defs>
     </svg>
 
-    <script src="./js/highlight.min.js?v=0.33.0-rc2"></script>
-    <script src="./js/highlightjs-gleam.js?v=0.33.0-rc2"></script>
-    <script src="./js/highlightjs-erlang.min.js?v=0.33.0-rc2"></script>
-    <script src="./js/highlightjs-elixir.min.js?v=0.33.0-rc2"></script>
-    <script src="./js/highlightjs-javascript.min.js?v=0.33.0-rc2"></script>
-    <script src="./js/highlightjs-typescript.min.js?v=0.33.0-rc2"></script>
+    <script src="./js/highlight.min.js?v=GLEAM_VERSION_HERE"></script>
+    <script src="./js/highlightjs-gleam.js?v=GLEAM_VERSION_HERE"></script>
+    <script src="./js/highlightjs-erlang.min.js?v=GLEAM_VERSION_HERE"></script>
+    <script src="./js/highlightjs-elixir.min.js?v=GLEAM_VERSION_HERE"></script>
+    <script src="./js/highlightjs-javascript.min.js?v=GLEAM_VERSION_HERE"></script>
+    <script src="./js/highlightjs-typescript.min.js?v=GLEAM_VERSION_HERE"></script>
     <script>
       document.querySelectorAll("pre code").forEach((elem) => {
         if (elem.className === "") {
@@ -346,7 +346,7 @@ expression: "compile(config, modules)"
       });
       hljs.highlightAll();
     </script>
-    <script src="./js/lunr.min.js?v=0.33.0-rc2"></script>    
+    <script src="./js/lunr.min.js?v=GLEAM_VERSION_HERE"></script>    
     <script src="./js/index.js?v=0"></script>
 
     <!-- Load the search index using JSONP to avoid CORS issues -->

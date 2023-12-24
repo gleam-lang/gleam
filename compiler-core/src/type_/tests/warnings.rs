@@ -526,7 +526,7 @@ fn bit_pattern_var_use() {
     assert_no_warnings!(
         "
 pub fn main(x) {
-  let assert <<name_size:8, name:binary-size(name_size)>> = x
+  let assert <<name_size:8, name:bytes-size(name_size)>> = x
   name
 }",
     );
@@ -1034,87 +1034,8 @@ pub fn main(){
 }
 
 #[test]
-fn deprecated_bit_array_type() {
-    assert_warning!(r#"pub type B = BitString"#);
-}
-
-#[test]
-fn deprecated_bit_array_type_imported() {
-    assert_warning!(
-        r#"
-import gleam
-pub type B = gleam.BitString
-"#
-    );
-}
-
-#[test]
-fn deprecated_bit_array_type_aliased() {
-    assert_warning!(
-        r#"
-import gleam.{type BitString as BibbleWib}
-pub type B = BibbleWib
-"#
-    );
-}
-
-#[test]
-fn deprecated_bit_array_type_shadowed() {
-    assert_no_warnings!(
-        r#"
-pub type BitString = Nil
-pub type B = BitString
-"#
-    );
-}
-
-#[test]
-fn const_bits_option() {
+fn const_bytes_option() {
     assert_no_warnings!("pub const x = <<<<>>:bits>>");
-}
-
-#[test]
-fn deprecate_type_import_extenal() {
-    assert_warning!(
-        ("package", "module", "pub type X"),
-        "
-import module.{X}
-pub type Y = X
-"
-    );
-}
-
-#[test]
-fn deprecate_type_import_type_alias() {
-    assert_warning!(
-        ("package", "module", "pub type X = Int"),
-        "
-import module.{X}
-pub type Y = X
-"
-    );
-}
-
-#[test]
-fn deprecate_type_import_type_custom_type() {
-    assert_warning!(
-        ("package", "module", "pub type X { X }"),
-        "
-import module.{X}
-pub type Y = X
-"
-    );
-}
-
-#[test]
-fn deprecate_type_import_type_custom_type_not_using_type() {
-    assert_no_warnings!(
-        ("package", "module", "pub type X { X }"),
-        "
-import module.{X}
-pub const x = X
-"
-    );
 }
 
 #[test]

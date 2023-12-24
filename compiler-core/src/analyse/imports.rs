@@ -1,43 +1,31 @@
-use std::collections::HashSet;
-
 use ecow::EcoString;
 
 use crate::{
     ast::{Import, SrcSpan, UnqualifiedImport},
     build::Origin,
-    type_::{
-        self, EntityKind, Environment, Error, LayerUsage, ModuleInterface, ValueConstructorVariant,
-    },
-    warning::TypeWarningEmitter,
+    type_::{EntityKind, Environment, Error, ModuleInterface, ValueConstructorVariant},
 };
 
 #[derive(Debug)]
 pub struct Importer<'a> {
     origin: Origin,
-    warnings: &'a TypeWarningEmitter,
     environment: Environment<'a>,
 }
 
 impl<'a> Importer<'a> {
-    pub fn new(
-        origin: Origin,
-        warnings: &'a TypeWarningEmitter,
-        environment: Environment<'a>,
-    ) -> Self {
+    pub fn new(origin: Origin, environment: Environment<'a>) -> Self {
         Self {
             origin,
-            warnings,
             environment,
         }
     }
 
     pub fn run<'b>(
         origin: Origin,
-        warnings: &'a TypeWarningEmitter,
         env: Environment<'a>,
         imports: &'b [Import<()>],
     ) -> Result<Environment<'a>, Error> {
-        let mut importer = Self::new(origin, warnings, env);
+        let mut importer = Self::new(origin, env);
         for import in imports {
             importer.register_import(import)?;
         }
@@ -62,14 +50,12 @@ impl<'a> Importer<'a> {
         self.check_src_does_not_import_test(module_info, location, imported_module_name.clone())?;
         self.register_module(import, module_info)?;
 
-        // TODO: remove this when we remove the old syntax
-        let mut types = HashSet::with_capacity(import.unqualified_types.len());
         // Insert unqualified imports into scope
         for type_ in &import.unqualified_types {
-            self.register_unqualified_type(type_, module_info, &mut types)?;
+            self.register_unqualified_type(type_, module_info)?;
         }
         for value in &import.unqualified_values {
-            self.register_unqualified_value(value, module_info, &mut types)?;
+            self.register_unqualified_value(value, module_info)?;
         }
         Ok(())
     }
@@ -78,10 +64,7 @@ impl<'a> Importer<'a> {
         &mut self,
         import: &UnqualifiedImport,
         module: &ModuleInterface,
-        imported_types: &mut HashSet<EcoString>,
     ) -> Result<(), Error> {
-        self.check_if_deprecated_bit_string(import, module, import.location);
-
         let imported_name = import.as_name.as_ref().unwrap_or(&import.name);
 
         // Register the unqualified import if it is a type constructor
@@ -106,8 +89,6 @@ impl<'a> Importer<'a> {
             import.location,
         );
 
-        let _ = imported_types.insert(imported_name.clone());
-
         Ok(())
     }
 
@@ -115,80 +96,44 @@ impl<'a> Importer<'a> {
         &mut self,
         import: &UnqualifiedImport,
         module: &ModuleInterface,
-        imported_types: &mut HashSet<EcoString>,
     ) -> Result<(), Error> {
-        self.check_if_deprecated_bit_string(import, module, import.location);
-
         let import_name = &import.name;
         let location = import.location;
         let used_name = import.as_name.as_ref().unwrap_or(&import.name);
-        let mut type_imported = false;
-        let mut value_imported = false;
-        let mut variant = None;
 
         // Register the unqualified import if it is a value
-        if let Some(value) = module.get_public_value(import_name) {
-            self.environment.insert_variable(
-                used_name.clone(),
-                value.variant.clone(),
-                value.type_.clone(),
-                true,
-                value.deprecation.clone(),
-            );
-            variant = Some(&value.variant);
-            value_imported = true;
-        }
-
-        // Register the unqualified import if it is a type constructor
-        if !imported_types.contains(used_name) {
-            if let Some(typ) = module.get_public_type(import_name) {
-                self.environment.insert_type_constructor(
+        let variant = match module.get_public_value(import_name) {
+            Some(value) => {
+                self.environment.insert_variable(
                     used_name.clone(),
-                    typ.clone().with_location(location),
-                )?;
-                type_imported = true;
+                    value.variant.clone(),
+                    value.type_.clone(),
+                    true,
+                    value.deprecation.clone(),
+                );
+                &value.variant
             }
-        }
+            None => {
+                return Err(Error::UnknownModuleValue {
+                    location,
+                    name: import_name.clone(),
+                    module_name: module.name.clone(),
+                    value_constructors: module.public_value_names(),
+                });
+            }
+        };
 
-        if value_imported && type_imported {
-            self.environment.init_usage(
+        match variant {
+            &ValueConstructorVariant::Record { .. } => self.environment.init_usage(
                 used_name.clone(),
-                EntityKind::ImportedTypeAndValue(location),
+                EntityKind::ImportedConstructor,
                 location,
-            );
-        } else if type_imported {
-            self.environment
-                .init_usage(used_name.clone(), EntityKind::ImportedType, location);
-            let _ = self.environment.ambiguous_imported_items.insert(
-                import_name.clone(),
-                LayerUsage {
-                    import_location: location,
-                    type_: true,
-                    value: false,
-                },
-            );
-        } else if value_imported {
-            match variant {
-                Some(&ValueConstructorVariant::Record { .. }) => self.environment.init_usage(
-                    used_name.clone(),
-                    EntityKind::ImportedConstructor,
-                    location,
-                ),
-                _ => self.environment.init_usage(
-                    used_name.clone(),
-                    EntityKind::ImportedValue,
-                    location,
-                ),
-            };
-        } else if !value_imported {
-            // Error if no type or value was found with that name
-            return Err(Error::UnknownModuleValue {
-                location,
-                name: import_name.clone(),
-                module_name: module.name.clone(),
-                value_constructors: module.public_value_names(),
-            });
-        }
+            ),
+            _ => {
+                self.environment
+                    .init_usage(used_name.clone(), EntityKind::ImportedValue, location)
+            }
+        };
 
         // Check if value already was imported
         if let Some(previous) = self.environment.unqualified_imported_names.get(used_name) {
@@ -280,17 +225,5 @@ impl<'a> Importer<'a> {
             });
         }
         Ok(())
-    }
-
-    fn check_if_deprecated_bit_string(
-        &self,
-        import: &UnqualifiedImport,
-        module: &ModuleInterface,
-        location: SrcSpan,
-    ) {
-        if import.name == "BitString" && module.name == "gleam" {
-            self.warnings
-                .emit(type_::Warning::DeprecatedBitString { location });
-        }
     }
 }

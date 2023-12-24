@@ -1,9 +1,0 @@
-name = "lessons"
-version = "1.0.0"
-target = "javascript"
-
-[dependencies]
-gleam_stdlib = "~> 0.32"
-
-[dev-dependencies]
-gleeunit = "~> 1.0"

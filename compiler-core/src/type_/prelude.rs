@@ -10,7 +10,6 @@ use crate::type_::Deprecation::NotDeprecated;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 const BIT_ARRAY: &str = "BitArray";
-const BIT_STRING: &str = "BitString";
 const BOOL: &str = "Bool";
 const FLOAT: &str = "Float";
 const INT: &str = "Int";
@@ -181,7 +180,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
     };
 
     let mut prelude = ModuleInterface {
-        type_only_unqualified_imports: Vec::new(),
         name: PRELUDE_MODULE_NAME.into(),
         package: "".into(),
         origin: Origin::Src,
@@ -204,7 +202,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     deprecation: NotDeprecated,
                 };
                 let _ = prelude.types.insert(BIT_ARRAY.into(), v.clone());
-                let _ = prelude.types.insert(BIT_STRING.into(), v);
             }
 
             PreludeType::Bool => {

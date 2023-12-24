@@ -689,6 +689,17 @@ pub enum BinOp {
     Concatenate,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum OperatorKind {
+    BooleanLogic,
+    Equality,
+    IntComparison,
+    FLoatComparison,
+    IntMath,
+    FloatMath,
+    StringConcatenation,
+}
+
 impl BinOp {
     pub fn precedence(&self) -> u8 {
         // Ensure that this matches the other precedence function for guards
@@ -746,6 +757,30 @@ impl BinOp {
             Self::RemainderInt => "%",
             Self::Concatenate => "<>",
         }
+    }
+
+    pub fn operator_kind(&self) -> OperatorKind {
+        match self {
+            Self::Concatenate => OperatorKind::StringConcatenation,
+            Self::Eq | Self::NotEq => OperatorKind::Equality,
+            Self::And | Self::Or => OperatorKind::BooleanLogic,
+            Self::LtInt | Self::LtEqInt | Self::GtEqInt | Self::GtInt => {
+                OperatorKind::IntComparison
+            }
+            Self::LtFloat | Self::LtEqFloat | Self::GtEqFloat | Self::GtFloat => {
+                OperatorKind::FLoatComparison
+            }
+            Self::AddInt | Self::SubInt | Self::MultInt | Self::RemainderInt | Self::DivInt => {
+                OperatorKind::IntMath
+            }
+            Self::AddFloat | Self::SubFloat | Self::MultFloat | Self::DivFloat => {
+                OperatorKind::FloatMath
+            }
+        }
+    }
+
+    pub fn can_be_grouped_with(&self, other: &BinOp) -> bool {
+        self.operator_kind() == other.operator_kind()
     }
 }
 
@@ -1365,11 +1400,6 @@ pub enum BitArrayOption<Value> {
         location: SrcSpan,
     },
 
-    // TODO: remove deprecated syntax
-    Binary {
-        location: SrcSpan,
-    },
-
     Int {
         location: SrcSpan,
     },
@@ -1379,11 +1409,6 @@ pub enum BitArrayOption<Value> {
     },
 
     Bits {
-        location: SrcSpan,
-    },
-
-    // TODO: remove deprecated syntax
-    BitString {
         location: SrcSpan,
     },
 
@@ -1454,8 +1479,6 @@ impl<A> BitArrayOption<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
             BitArrayOption::Bytes { location }
-            | BitArrayOption::Binary { location }
-            | BitArrayOption::BitString { location }
             | BitArrayOption::Int { location }
             | BitArrayOption::Float { location }
             | BitArrayOption::Bits { location }
@@ -1477,12 +1500,10 @@ impl<A> BitArrayOption<A> {
 
     pub fn label(&self) -> EcoString {
         match self {
-            BitArrayOption::Binary { .. } => "bytes".into(),
             BitArrayOption::Bytes { .. } => "bytes".into(),
             BitArrayOption::Int { .. } => "int".into(),
             BitArrayOption::Float { .. } => "float".into(),
             BitArrayOption::Bits { .. } => "bits".into(),
-            BitArrayOption::BitString { .. } => "bits".into(),
             BitArrayOption::Utf8 { .. } => "utf8".into(),
             BitArrayOption::Utf16 { .. } => "utf16".into(),
             BitArrayOption::Utf32 { .. } => "utf32".into(),
@@ -1497,24 +1518,6 @@ impl<A> BitArrayOption<A> {
             BitArrayOption::Size { .. } => "size".into(),
             BitArrayOption::Unit { .. } => "unit".into(),
         }
-    }
-
-    /// Returns `true` if the bit array option is [`Binary`].
-    ///
-    /// [`Binary`]: BitArrayOption::Binary
-    #[must_use]
-    pub fn is_binary(&self) -> bool {
-        matches!(self, Self::Binary { .. })
-    }
-
-    /// Returns `true` if the bit array option is [`BitString`].
-    ///
-    /// The deprecated `bit_string` variable specifically!
-    ///
-    /// [`BitString`]: BitArrayOption::BitString
-    #[must_use]
-    pub fn is_bit_string(&self) -> bool {
-        matches!(self, Self::BitString { .. })
     }
 }
 

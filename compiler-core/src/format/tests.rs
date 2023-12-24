@@ -1,6 +1,7 @@
 use pretty_assertions::assert_eq;
 
 mod asignments;
+mod binary_operators;
 mod bit_array;
 mod blocks;
 mod conditional_compilation;
@@ -3696,7 +3697,8 @@ pub fn main(
 fn commented_binop() {
     assert_format!(
         "fn main() {
-  1 + // hello
+  1
+  + // hello
   2
 }
 "
@@ -3705,8 +3707,10 @@ fn commented_binop() {
     assert_format!(
         "fn main() {
   // one
-  1 + // two
-  2 + // three
+  1
+  + // two
+  2
+  + // three
   3
 }
 "
@@ -3971,7 +3975,8 @@ fn binary_operator_precedence() {
 
     assert_format!(
         "fn main() {
-  3 * {
+  3
+  * {
     1
     |> inc
   }
@@ -3984,7 +3989,8 @@ fn binary_operator_precedence() {
   {
     1
     |> inc
-  } * 3
+  }
+  * 3
 }
 "
     );
@@ -4999,13 +5005,35 @@ fn wrap_long_line_with_int_negation() {
         r#"pub fn main() {
   let a = 3
   let b =
-    a * a * a * a * a * a * a * a * a * a * a * a * a * {
-      a * a * a * a * a * a * a * a * a * a
-    }
+    a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * { a * a * a * a * a * a * a * a * a * a }
   let c =
-    c * c * c * c * c * c * c * c * c * c * c * c * c * -{
-      c * c * c * c * c * c * c * c * c * c
-    }
+    c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * -{ c * c * c * c * c * c * c * c * c * c }
 }
 "#
     );
@@ -5023,13 +5051,35 @@ fn wrap_long_line_with_bool_negation() {
         r#"pub fn main() {
   let a = True
   let b =
-    a || a || a || a || a || a || a || a || a || a || a || a || a || {
-      a || a || a || a || a || a || a || a || a || a
-    }
+    a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || { a || a || a || a || a || a || a || a || a || a }
   let c =
-    c || c || c || c || c || c || c || c || c || c || c || c || c || !{
-      c || c || c || c || c || c || c || c || c || c
-    }
+    c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || !{ c || c || c || c || c || c || c || c || c || c }
 }
 "#
     );

@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+expression: "\npub fn go(x) {\n  case x {\n    \"1\" as digit <> _ | \"2\" as digit <> _ -> digit\n    _ -> \"Unknown\"\n  }\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([go/1]).
+
+-spec go(binary()) -> binary().
+go(X) ->
+    case X of
+        <<"1"/utf8 = Digit, _/binary>> ->
+            Digit;
+
+        <<"2"/utf8 = Digit, _/binary>> ->
+            Digit;
+
+        _ ->
+            <<"Unknown"/utf8>>
+    end.
+

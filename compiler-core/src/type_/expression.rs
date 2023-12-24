@@ -1696,7 +1696,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         })?;
 
                 // Register the value as seen for detection of unused values
-                self.environment.increment_usage(name, Layer::Value);
+                self.environment.increment_usage(name);
 
                 constructor
             }

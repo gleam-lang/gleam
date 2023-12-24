@@ -393,10 +393,10 @@ impl<'a> ModuleEncoder<'a> {
     ) {
         use crate::ast::TypedConstantBitArraySegmentOption as Opt;
         match option {
-            Opt::Binary { .. } | Opt::Bytes { .. } => builder.set_bytes(()),
+            Opt::Bytes { .. } => builder.set_bytes(()),
             Opt::Int { .. } => builder.set_integer(()),
             Opt::Float { .. } => builder.set_float(()),
-            Opt::BitString { .. } | Opt::Bits { .. } => builder.set_bits(()),
+            Opt::Bits { .. } => builder.set_bits(()),
             Opt::Utf8 { .. } => builder.set_utf8(()),
             Opt::Utf16 { .. } => builder.set_utf16(()),
             Opt::Utf32 { .. } => builder.set_utf32(()),

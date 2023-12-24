@@ -158,43 +158,6 @@ impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
             Self::Parse { path, warning, src } => match warning {
-                crate::parse::Warning::DeprecatedOptionBitString { location } => {
-                    let text = "This option has been replaced by the `bits` option.\n".into();
-                    Diagnostic {
-                        title: "Deprecated bit literal option".into(),
-                        text,
-                        hint: Some("Run `gleam format` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            path: path.to_path_buf(),
-                            src: src.clone(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-
-                crate::parse::Warning::DeprecatedOptionBinary { location } => {
-                    let text = "This option has been replaced by the `bytes` option.\n".into();
-                    Diagnostic {
-                        title: "Deprecated bit literal option".into(),
-                        text,
-                        hint: Some("Run `gleam format` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            path: path.to_path_buf(),
-                            src: src.clone(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
                 crate::parse::Warning::ReservedWord { location, word } => {
                     let text = format!(
                         "The word `{word}` has been reserved for future use.
@@ -624,49 +587,6 @@ Run this command to add it to your dependencies:
                             path: path.to_path_buf(),
                             label: diagnostic::Label {
                                 text: diagnostic_label_text,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-
-                type_::Warning::DeprecatedBitString { location } => {
-                    let text = "The type BitString has been renamed to BitArray.\n".into();
-                    Diagnostic {
-                        title: "Deprecated BitString name used".into(),
-                        text,
-                        hint: Some("Run `gleam fix` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            src: src.clone(),
-                            path: path.to_path_buf(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-
-                type_::Warning::DeprecatedTypeImport { name, location } => {
-                    let text = wrap(&format!(
-                        "The syntax for importing a type has changed. The new syntax is:
-
-    import module.{{type {name}}}
-"
-                    ));
-                    Diagnostic {
-                        title: "Deprecated type import".into(),
-                        text,
-                        hint: Some("Run `gleam fix` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            src: src.clone(),
-                            path: path.to_path_buf(),
-                            label: diagnostic::Label {
-                                text: None,
                                 span: *location,
                             },
                             extra_labels: Vec::new(),

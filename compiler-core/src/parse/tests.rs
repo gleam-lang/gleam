@@ -319,7 +319,7 @@ fn bit_array1() {
 fn bit_array2() {
     // patterns cannot be nested
     assert_error!(
-        "case <<>> { <<<<1>>:bit_string>> -> 1 }",
+        "case <<>> { <<<<1>>:bits>> -> 1 }",
         ParseError {
             error: ParseErrorType::NestedBitArrayPattern,
             location: SrcSpan { start: 14, end: 19 }
@@ -628,54 +628,6 @@ pub fn main() -> Nil {
   Nil
 }
 "#
-    );
-}
-
-#[test]
-fn deprecated_option_bit_string_const() {
-    assert_warning!(r#"pub const x = <<<<>>:bit_string>>"#);
-}
-
-#[test]
-fn deprecated_option_bit_string_expression() {
-    assert_warning!(
-        r#"pub fn main(x) {
-  <<x:bit_string>>
-}"#
-    );
-}
-
-#[test]
-fn deprecated_option_bit_string_pattern() {
-    assert_warning!(
-        r#"pub fn main(x) {
-  let assert <<y:bit_string>> = x
-  y
-}"#
-    );
-}
-
-#[test]
-fn deprecated_option_binary_const() {
-    assert_warning!(r#"pub const x = <<<<>>:binary>>"#);
-}
-
-#[test]
-fn deprecated_option_binary_expression() {
-    assert_warning!(
-        r#"pub fn main(x) {
-  <<x:binary>>
-}"#
-    );
-}
-
-#[test]
-fn deprecated_option_binary_pattern() {
-    assert_warning!(
-        r#"pub fn main(x) {
-  let assert <<y:binary>> = x
-  y
-}"#
     );
 }
 

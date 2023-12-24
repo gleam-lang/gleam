@@ -29,4 +29,4 @@ bcrypt = "~> 1.1"
 hpack_erl = "~> 0.1"
 
 [dev-dependencies]
-gleeunit = "~> 0.1"
+gleeunit = "~> 1.0"

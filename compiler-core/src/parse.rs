@@ -96,10 +96,6 @@ struct Attributes {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Warning {
-    // TODO: remove after next release
-    DeprecatedOptionBitString { location: SrcSpan },
-    // TODO: remove after next release
-    DeprecatedOptionBinary { location: SrcSpan },
     ReservedWord { location: SrcSpan, word: EcoString },
 }
 
@@ -2463,18 +2459,6 @@ where
                     }
                 } else {
                     str_to_bit_array_option(&name, SrcSpan { start, end })
-                        .map(|option| {
-                            if option.is_binary() {
-                                self.warnings.push(Warning::DeprecatedOptionBinary {
-                                    location: option.location(),
-                                })
-                            } else if option.is_bit_string() {
-                                self.warnings.push(Warning::DeprecatedOptionBitString {
-                                    location: option.location(),
-                                })
-                            }
-                            option
-                        })
                         .ok_or(ParseError {
                             error: ParseErrorType::InvalidBitArraySegment,
                             location: SrcSpan { start, end },
@@ -3151,11 +3135,9 @@ fn bit_array_const_int(value: EcoString, start: u32, end: u32) -> UntypedConstan
 
 fn str_to_bit_array_option<A>(lit: &str, location: SrcSpan) -> Option<BitArrayOption<A>> {
     match lit {
-        "binary" => Some(BitArrayOption::Binary { location }),
         "bytes" => Some(BitArrayOption::Bytes { location }),
         "int" => Some(BitArrayOption::Int { location }),
         "float" => Some(BitArrayOption::Float { location }),
-        "bit_string" => Some(BitArrayOption::BitString { location }),
         "bits" => Some(BitArrayOption::Bits { location }),
         "utf8" => Some(BitArrayOption::Utf8 { location }),
         "utf16" => Some(BitArrayOption::Utf16 { location }),

@@ -55,6 +55,10 @@ pub struct LanguageServerEngine<IO, Reporter> {
     // Used to publish progress notifications to the client without waiting for
     // the usual request-response loop.
     progress_reporter: Reporter,
+
+    /// Used to know if to show the "View on HexDocs" link
+    /// when hovering on an imported value
+    hex_deps: std::collections::HashSet<EcoString>,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -89,12 +93,26 @@ where
         let compiler =
             LspProjectCompiler::new(manifest, config, paths.clone(), io.clone(), locker)?;
 
+        let hex_deps = compiler
+            .project_compiler
+            .packages
+            .iter()
+            .flat_map(|(k, v)| match &v.source {
+                crate::manifest::ManifestPackageSource::Hex { .. } => {
+                    Some(EcoString::from(k.as_str()))
+                }
+
+                _ => None,
+            })
+            .collect();
+
         Ok(Self {
             modules_compiled_since_last_feedback: vec![],
             compiled_since_last_feedback: false,
             progress_reporter,
             compiler,
             paths,
+            hex_deps,
         })
     }
 
@@ -275,7 +293,16 @@ where
                 }
                 Located::ModuleStatement(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
-                Located::Expression(expression) => Some(hover_for_expression(expression, lines)),
+                Located::Expression(expression) => {
+                    let module = this.module_for_uri(&params.text_document.uri);
+
+                    Some(hover_for_expression(
+                        expression,
+                        lines,
+                        module,
+                        &this.hex_deps,
+                    ))
+                }
                 Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
                 Located::FunctionBody(_) => None,
             })
@@ -366,7 +393,7 @@ where
             }
 
             // Unqualified types
-            for unqualified in &import.unqualified_values {
+            for unqualified in &import.unqualified_types {
                 let Some(type_) = module.get_public_type(&unqualified.name) else {
                     continue;
                 };
@@ -550,8 +577,20 @@ fn hover_for_module_constant(
     }
 }
 
-fn hover_for_expression(expression: &TypedExpr, line_numbers: LineNumbers) -> Hover {
+fn hover_for_expression(
+    expression: &TypedExpr,
+    line_numbers: LineNumbers,
+    module: Option<&Module>,
+    hex_deps: &std::collections::HashSet<EcoString>,
+) -> Hover {
     let documentation = expression.get_documentation().unwrap_or_default();
+
+    let link_section = module
+        .and_then(|m: &Module| {
+            let (module_name, name) = get_expr_qualified_name(expression)?;
+            get_hexdocs_link_section(module_name, name, &m.ast, hex_deps)
+        })
+        .unwrap_or("".to_string());
 
     // Show the type of the hovered node to the user
     let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
@@ -559,7 +598,7 @@ fn hover_for_expression(expression: &TypedExpr, line_numbers: LineNumbers) -> Ho
         "```gleam
 {type_}
 ```
-{documentation}"
+{documentation}{link_section}"
     );
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
@@ -612,4 +651,47 @@ fn code_action_unused_imports(
         .changes(uri.clone(), edits)
         .preferred(true)
         .push_to(actions);
+}
+
+fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoString)> {
+    match expression {
+        TypedExpr::Var {
+            name, constructor, ..
+        } if constructor.public => match &constructor.variant {
+            ValueConstructorVariant::ModuleFn {
+                module: module_name,
+                ..
+            } => Some((module_name, name)),
+
+            ValueConstructorVariant::ModuleConstant {
+                module: module_name,
+                ..
+            } => Some((module_name, name)),
+
+            _ => None,
+        },
+
+        TypedExpr::ModuleSelect {
+            label, module_name, ..
+        } => Some((module_name, label)),
+
+        _ => None,
+    }
+}
+
+fn get_hexdocs_link_section(
+    module_name: &str,
+    name: &str,
+    ast: &crate::ast::TypedModule,
+    hex_deps: &std::collections::HashSet<EcoString>,
+) -> Option<String> {
+    let package_name = ast.definitions.iter().find_map(|def| match def {
+        Definition::Import(p) if p.module == module_name && hex_deps.contains(&p.package) => {
+            Some(&p.package)
+        }
+        _ => None,
+    })?;
+
+    let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
+    Some(format!("\nView on [HexDocs]({link})"))
 }

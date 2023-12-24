@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 assertion_line: 281
-expression: "\n          pub const data = <<\n            0x1,\n            2,\n            2:size(16),\n            0x4:size(32),\n            \"Gleam\":utf8,\n            4.2:float,\n            <<\n              <<1, 2, 3>>:bit_string,\n              \"Gleam\":utf8,\n              1024\n            >>:bit_string\n          >>\n        "
+expression: "\n          pub const data = <<\n            0x1,\n            2,\n            2:size(16),\n            0x4:size(32),\n            \"Gleam\":utf8,\n            4.2:float,\n            <<\n              <<1, 2, 3>>:bits,\n              \"Gleam\":utf8,\n              1024\n            >>:bits\n          >>\n        "
 ---
 import { toBitArray, sizedInt, stringBits, float64Bits } from "../gleam.mjs";
 
