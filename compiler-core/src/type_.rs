@@ -24,6 +24,7 @@ use crate::{
         UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
     },
     bit_array,
+    build::BuildTargets,
     build::Origin,
 };
 use error::*;
@@ -309,6 +310,7 @@ pub enum ValueConstructorVariant {
         arity: usize,
         location: SrcSpan,
         documentation: Option<EcoString>,
+        targets: BuildTargets,
     },
 
     /// A constructor for a custom type
@@ -325,6 +327,13 @@ pub enum ValueConstructorVariant {
 }
 
 impl ValueConstructorVariant {
+    pub fn targets(&self) -> Option<&BuildTargets> {
+        match self {
+            Self::ModuleFn { targets, .. } => Some(targets),
+            _ => None,
+        }
+    }
+
     fn to_module_value_constructor(
         &self,
         type_: Arc<Type>,

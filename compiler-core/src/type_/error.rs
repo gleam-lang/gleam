@@ -71,6 +71,12 @@ pub enum Error {
         type_constructors: Vec<EcoString>,
     },
 
+    UnimplementedPublicFunction {
+        module: EcoString,
+        function: EcoString,
+        location: SrcSpan,
+    },
+
     NotFn {
         location: SrcSpan,
         typ: Arc<Type>,

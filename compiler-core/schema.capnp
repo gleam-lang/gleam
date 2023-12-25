@@ -107,6 +107,7 @@ struct ValueConstructorVariant {
       arity @6 :UInt16;
       location @7 :SrcSpan;
       documentation @15 :Text;
+      targets @18 :List(UInt16);
     }
 
     record :group {

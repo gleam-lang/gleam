@@ -10,6 +10,7 @@ use crate::{
         UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, Use, UseAssignment,
         USE_ASSIGNMENT_VARIABLE,
     },
+    build::BuildTargets,
     exhaustiveness,
 };
 use id_arena::Arena;
@@ -23,15 +24,17 @@ pub(crate) struct ExprTyper<'a, 'b> {
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
+    pub(crate) targets: BuildTargets,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>) -> Self {
+    pub fn new(environment: &'a mut Environment<'b>, initial_targets: BuildTargets) -> Self {
         let mut hydrator = Hydrator::new();
         hydrator.permit_holes(true);
         Self {
             hydrator,
             environment,
+            targets: initial_targets,
         }
     }
 
@@ -560,6 +563,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_var(&mut self, name: EcoString, location: SrcSpan) -> Result<TypedExpr, Error> {
         let constructor = self.infer_value_constructor(&None, &name, &location)?;
+        let _ = constructor
+            .variant
+            .targets()
+            .map(|t| self.targets.and_mut(*t));
+
         Ok(TypedExpr::Var {
             constructor,
             location,
@@ -1420,6 +1428,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         module_name: module.name.clone(),
                         value_constructors: module.public_value_names(),
                     })?;
+
+            if let Some(t) = constructor.variant.targets() {
+                if *t != self.targets {
+                    self.targets.and_mut(*t);
+                }
+            }
 
             // Emit a warning if the value being used is deprecated.
             if let Deprecation::Deprecated { message } = &constructor.deprecation {

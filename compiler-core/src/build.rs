@@ -74,6 +74,71 @@ impl Target {
     }
 }
 
+// the point of this is to support more than 2 targets on the apis
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub struct BuildTargets {
+    pub erlang: bool,
+    pub javascript: bool,
+}
+
+impl BuildTargets {
+    pub fn all() -> Self {
+        BuildTargets {
+            erlang: true,
+            javascript: true,
+        }
+    }
+
+    pub fn to_int_list(&self) -> Vec<u16> {
+        let mut n = Vec::new();
+        if self.erlang {
+            n.push(1)
+        }
+        if self.javascript {
+            n.push(2)
+        }
+        n
+    }
+
+    pub fn from_int_list(vals: Vec<u16>) -> Self {
+        let n = Self {
+            erlang: vals.contains(&1),
+            javascript: vals.contains(&2),
+        };
+        n
+    }
+
+    pub fn and(&self, other: Self) -> Self {
+        BuildTargets {
+            erlang: self.erlang & other.erlang,
+            javascript: self.javascript & other.javascript,
+        }
+    }
+    pub fn and_mut(&mut self, other: Self) {
+        self.erlang = self.erlang & other.erlang;
+        self.javascript = self.javascript & other.javascript;
+    }
+
+    pub fn or_mut(&mut self, other: Self) {
+        self.erlang = self.erlang | other.erlang;
+        self.javascript = self.javascript | other.javascript;
+    }
+
+    pub fn add_target(&mut self, target: Target) {
+        match target {
+            Target::Erlang => self.erlang = true,
+            Target::JavaScript => self.javascript = true,
+        }
+    }
+
+    pub fn implements(&self, target: &Target) -> bool {
+        match target {
+            Target::Erlang => self.erlang,
+            Target::JavaScript => self.javascript,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Codegen {
     All,

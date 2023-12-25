@@ -549,12 +549,14 @@ where
             &target,
             self.ids.clone(),
             self.io.clone(),
+            is_root,
         );
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
         compiler.perform_codegen = self.options.codegen.should_codegen(is_root);
         compiler.compile_beam_bytecode = self.options.codegen.should_codegen(is_root);
         compiler.subprocess_stdio = self.subprocess_stdio;
+        compiler.is_root = is_root;
 
         // Compile project to Erlang or JavaScript source code
         let compiled = compiler.compile(

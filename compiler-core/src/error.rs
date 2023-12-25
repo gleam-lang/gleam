@@ -1118,6 +1118,32 @@ Hint: Add some type annotations and try again."
                         }),
                     }
                 }
+                TypeError::UnimplementedPublicFunction {
+                    function,
+                    module,
+                    location,
+                } => {
+                    let text = format!(
+                        "The public function `{}` on module `{}` isn't implemented for this target",
+                        function, module
+                    );
+
+                    Diagnostic {
+                        title: "Unimplemented Public Function".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
 
                 TypeError::NotFn { location, typ } => {
                     let mut printer = Printer::new();

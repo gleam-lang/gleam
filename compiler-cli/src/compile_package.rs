@@ -38,6 +38,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
 
     tracing::info!("Compiling package");
 
+    let is_root = false;
     let mut compiler = PackageCompiler::new(
         &config,
         Mode::Dev,
@@ -47,7 +48,9 @@ pub fn command(options: CompilePackage) -> Result<()> {
         &target,
         ids,
         ProjectIO::new(),
+        is_root,
     );
+
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;
     compiler.compile_beam_bytecode = !options.skip_beam_compilation;

@@ -1,6 +1,7 @@
 use super::*;
 use crate::{
     ast::{Arg, Function},
+    build::BuildTargets,
     type_::Deprecation,
 };
 use ecow::EcoString;
@@ -37,6 +38,7 @@ fn parse_and_order(
             documentation: None,
             external_erlang: None,
             external_javascript: None,
+            targets: BuildTargets::all(),
         })
         .collect_vec();
     let constants = constants

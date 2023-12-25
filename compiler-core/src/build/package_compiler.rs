@@ -44,6 +44,7 @@ pub struct PackageCompiler<'a, IO> {
     pub copy_native_files: bool,
     pub compile_beam_bytecode: bool,
     pub subprocess_stdio: Stdio,
+    pub is_root: bool,
 }
 
 impl<'a, IO> PackageCompiler<'a, IO>
@@ -59,6 +60,7 @@ where
         target: &'a TargetCodegenConfiguration,
         ids: UniqueIdGenerator,
         io: IO,
+        is_root: bool,
     ) -> Self {
         Self {
             io,
@@ -69,6 +71,7 @@ where
             mode,
             config,
             target,
+            is_root,
             write_metadata: true,
             perform_codegen: true,
             write_entrypoint: false,
@@ -136,6 +139,7 @@ where
         let modules = analyse(
             &self.config,
             self.target.target(),
+            self.is_root,
             self.mode,
             &self.ids,
             loaded.to_compile,
@@ -385,6 +389,7 @@ where
 fn analyse(
     package_config: &PackageConfig,
     target: Target,
+    is_root: bool,
     mode: Mode,
     ids: &UniqueIdGenerator,
     mut parsed_modules: Vec<UncompiledModule>,
@@ -417,6 +422,7 @@ fn analyse(
 
         let ast = crate::analyse::infer_module(
             target,
+            is_root,
             ids,
             ast,
             origin,

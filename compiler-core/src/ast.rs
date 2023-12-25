@@ -11,10 +11,11 @@ pub use self::untyped::{UntypedExpr, Use};
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
-use crate::build::{Located, Target};
+use crate::build::{BuildTargets, Located, Target};
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
+use im::HashMap;
 use std::sync::Arc;
 
 use ecow::EcoString;
@@ -95,10 +96,33 @@ impl UntypedModule {
     }
 
     pub fn into_iter_statements(self, target: Target) -> impl Iterator<Item = UntypedDefinition> {
+        let mut function_implementation_sum: HashMap<EcoString, BuildTargets> = HashMap::new();
+
+        for def in &self.definitions {
+            if let Definition::Function(f) = &def.definition {
+                let _ = match function_implementation_sum.remove(&f.name) {
+                    None => function_implementation_sum.insert(f.name.clone(), f.targets),
+                    Some(mut x) => {
+                        x.or_mut(f.targets);
+                        function_implementation_sum.insert(f.name.clone(), x)
+                    }
+                };
+            }
+        }
+
         self.definitions
             .into_iter()
-            .filter(move |def| def.is_for(target))
-            .map(|def| def.definition)
+            .filter(move |def| {
+                if let Definition::Function(f) = &def.definition {
+                    let targets = function_implementation_sum
+                        .get(&f.name)
+                        .expect("inserted all funcs");
+                    f.targets.implements(&target) || !targets.implements(&target)
+                } else {
+                    def.is_for(target)
+                }
+            })
+            .map(move |def| def.definition)
     }
 }
 
@@ -121,6 +145,7 @@ fn module_dependencies_test() {
         vec![
             ("one".into(), SrcSpan::new(0, 10)),
             ("two".into(), SrcSpan::new(45, 55)),
+            ("three".into(), SrcSpan::new(95, 107)),
             ("four".into(), SrcSpan::new(118, 129)),
         ],
         module.dependencies(Target::Erlang)
@@ -372,6 +397,7 @@ pub struct Function<T, Expr> {
     pub documentation: Option<EcoString>,
     pub external_erlang: Option<(EcoString, EcoString)>,
     pub external_javascript: Option<(EcoString, EcoString)>,
+    pub targets: BuildTargets,
 }
 
 pub type TypedFunction = Function<Arc<Type>, TypedExpr>;
@@ -404,6 +430,7 @@ pub struct Import<PackageName> {
     pub unqualified_values: Vec<UnqualifiedImport>,
     pub unqualified_types: Vec<UnqualifiedImport>,
     pub package: PackageName,
+    pub targets: BuildTargets,
 }
 
 impl<T> Import<T> {
@@ -1546,6 +1573,47 @@ impl GroupedStatements {
         }
 
         this
+    }
+
+    pub fn placeholder_functions<'a>(&mut self, env: &'a crate::type_::Environment<'a>) {
+        //we keep the functions as placeholders, but replace them with generic types, and empty
+        //bodys, to keep the call graph of pure gleam to external functions correct
+
+        self.functions = self
+            .functions
+            .clone()
+            .into_iter()
+            .map(move |f| {
+                if !f.targets.implements(&env.target) {
+                    let body = vec1::vec1![UntypedStatement::Expression(UntypedExpr::Todo {
+                        kind: TodoKind::EmptyFunction,
+                        location: f.location,
+                        message: None,
+                    })];
+
+                    let args = f
+                        .arguments
+                        .iter()
+                        .map(|a| Arg {
+                            names: a.names.clone(),
+                            location: a.location,
+                            type_: (),
+                            annotation: None,
+                        })
+                        .collect();
+
+                    Function {
+                        body,
+                        arguments: args,
+                        return_type: (),
+                        return_annotation: None,
+                        ..f
+                    }
+                } else {
+                    f
+                }
+            })
+            .collect();
     }
 
     pub fn is_empty(&self) -> bool {

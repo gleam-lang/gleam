@@ -2,9 +2,10 @@ use crate::assert_erl;
 
 #[test]
 fn excluded_attribute_syntax() {
+    //can't have a pub fn on the top pkg without an implementation
     assert_erl!(
         "@target(javascript)
-  pub fn main() { 1 }
+  fn main() { 1 }
 "
     );
 }

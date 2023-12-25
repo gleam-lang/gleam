@@ -230,13 +230,16 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    crate::type_::ExprTyper::new(&mut crate::type_::Environment::new(
-        ids,
-        "themodule".into(),
-        Target::Erlang,
-        &modules,
-        &TypeWarningEmitter::null(),
-    ))
+    crate::type_::ExprTyper::new(
+        &mut crate::type_::Environment::new(
+            ids,
+            "themodule".into(),
+            Target::Erlang,
+            &modules,
+            &TypeWarningEmitter::null(),
+        ),
+        BuildTargets::all(),
+    )
     .infer_statements(ast)
 }
 
@@ -303,6 +306,7 @@ pub fn compile_module(
         ast.name = name.into();
         let module = crate::analyse::infer_module::<()>(
             Target::Erlang,
+            false,
             &ids,
             ast,
             Origin::Src,
@@ -323,6 +327,7 @@ pub fn compile_module(
     let ast = parsed.module;
     crate::analyse::infer_module(
         Target::Erlang,
+        true,
         &ids,
         ast,
         Origin::Src,
@@ -503,6 +508,7 @@ fn infer_module_type_retention_test() {
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let module = crate::analyse::infer_module::<()>(
         Target::Erlang,
+        true,
         &ids,
         module,
         Origin::Src,

@@ -4,6 +4,7 @@ use crate::build::Target;
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{SrcSpan, TypedExpr},
+    build::BuildTargets,
     build::Located,
     type_::{
         self, AccessorsMap, Environment, ExprTyper, FieldMap, ModuleValueConstructor,
@@ -28,6 +29,7 @@ fn compile_module(src: &str) -> TypedModule {
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     crate::analyse::infer_module::<()>(
         Target::Erlang,
+        true,
         &ids,
         ast,
         crate::build::Origin::Src,
@@ -115,7 +117,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             .into(),
         },
     );
-    ExprTyper::new(&mut environment)
+    ExprTyper::new(&mut environment, BuildTargets::all())
         .infer_statements(ast)
         .expect("should successfully infer")
         .first()

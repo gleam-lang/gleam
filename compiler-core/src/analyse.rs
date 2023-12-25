@@ -9,7 +9,7 @@ use crate::{
         SrcSpan, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple,
         TypeAstVar, TypedDefinition, TypedModule, UntypedArg, UntypedModule, UntypedStatement,
     },
-    build::{Origin, Target},
+    build::{BuildTargets, Origin, Target},
     call_graph::{into_dependency_order, CallGraphNode},
     dep_tree,
     type_::{
@@ -59,7 +59,7 @@ impl<T> Inferred<T> {
         .expect(message)
     }
 }
-
+//
 impl Inferred<PatternConstructor> {
     pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
         match self {
@@ -83,6 +83,7 @@ impl Inferred<PatternConstructor> {
 ///
 pub fn infer_module<A>(
     target: Target,
+    is_root: bool,
     ids: &UniqueIdGenerator,
     mut module: UntypedModule,
     origin: Origin,
@@ -100,13 +101,22 @@ pub fn infer_module<A>(
     let mut value_names = HashMap::with_capacity(module.definitions.len());
     let mut hydrators = HashMap::with_capacity(module.definitions.len());
 
-    let statements = GroupedStatements::new(module.into_iter_statements(target));
+    let mut statements = GroupedStatements::new(module.into_iter_statements(target));
     let statements_count = statements.len();
 
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
     let mut env = imports::Importer::run(origin, env, &statements.imports)?;
+
+    for function in &statements.functions {
+        let is_external =
+            function.external_erlang.is_none() && function.external_javascript.is_none();
+
+        ensure_body_given(is_external, &function.body, function.location)?;
+    }
+
+    statements.placeholder_functions(&env);
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
@@ -139,15 +149,18 @@ pub fn infer_module<A>(
 
     // Infer the types of each statement in the module
     let mut typed_statements = Vec::with_capacity(statements_count);
-    for i in statements.imports {
+    for imp in statements.imports {
+        let emit = imp.targets.implements(&target);
         let statement = record_imported_items_for_use_detection(
-            i,
+            imp,
             package,
             direct_dependencies,
             warnings,
             &env,
         )?;
-        typed_statements.push(statement);
+        if emit {
+            typed_statements.push(statement);
+        }
     }
     for t in statements.custom_types {
         let statement = infer_custom_type(t, &mut env)?;
@@ -181,12 +194,55 @@ pub fn infer_module<A>(
             }
         }
 
+        let mut err = None;
+
+        working_group = working_group
+            .into_iter()
+            .map(|def| {
+                if let Definition::Function(function) = def {
+                    if !function.targets.implements(&env.target) {
+                        if function.public & is_root {
+                            err = Some(Err(crate::type_::Error::UnimplementedPublicFunction {
+                                location: function.location,
+                                module: name.clone(),
+                                function: function.name.clone(),
+                            }));
+                        }
+                        let body = vec1::vec1![crate::ast::TypedStatement::Expression(
+                            crate::ast::TypedExpr::Todo {
+                                type_: env.new_generic_var(),
+                                location: function.location,
+                                message: None,
+                            }
+                        )];
+                        Definition::Function(Function { body, ..function })
+                    } else {
+                        Definition::Function(function)
+                    }
+                } else {
+                    def
+                }
+            })
+            .collect();
+
+        if let Some(err) = err {
+            return err;
+        }
+
         // Now that the entire group has been inferred, generalise their types.
         for inferred in working_group.drain(..) {
             let statement = generalise_statement(inferred, &name, &mut env);
             typed_statements.push(statement);
         }
     }
+
+    typed_statements.retain(|def| {
+        if let Definition::Function(function) = def {
+            function.targets.implements(&env.target)
+        } else {
+            true
+        }
+    });
 
     // Generate warnings for unused items
     let unused_imports = env.convert_unused_to_warnings();
@@ -483,6 +539,7 @@ fn register_value_from_function(
         end_position: _,
         body: _,
         return_type: _,
+        targets,
     } = f;
     assert_unique_name(names, name, *location)?;
     assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
@@ -516,6 +573,7 @@ fn register_value_from_function(
         module: impl_module,
         arity: args.len(),
         location: *location,
+        targets: *targets,
     };
     environment.insert_variable(name.clone(), variant, typ, *public, deprecation.clone());
     if !public {
@@ -580,6 +638,7 @@ fn infer_function(
         external_erlang,
         external_javascript,
         return_type: (),
+        mut targets,
     } = f;
     let preregistered_fn = environment
         .get_variable(&name)
@@ -601,11 +660,7 @@ fn infer_function(
         // think you should always specify types for external functions for
         // clarity + to avoid accidental mistakes.
         ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
-    } else {
-        // There was no external implementation, so a Gleam one must be given.
-        ensure_body_given(&body, location)?;
     }
-
     // Infer the type using the preregistered args + return types as a starting point
     let (type_, args, body) = environment.in_new_scope(|environment| {
         let args_types = arguments
@@ -613,13 +668,15 @@ fn infer_function(
             .zip(&args_types)
             .map(|(a, t)| a.set_type(t.clone()))
             .collect();
-        let mut expr_typer = ExprTyper::new(environment);
+        let mut expr_typer = ExprTyper::new(environment, targets);
         expr_typer.hydrator = hydrators
             .remove(&name)
             .expect("Could not find hydrator for fn");
 
         let (args, body) =
             expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type))?;
+
+        targets = expr_typer.targets;
         let args_types = args.iter().map(|a| a.type_.clone()).collect();
         let typ = fn_(args_types, body.last().type_());
         Ok((typ, args, body))
@@ -635,6 +692,7 @@ fn infer_function(
         module: impl_module,
         arity: args.len(),
         location,
+        targets,
     };
     environment.insert_variable(
         name.clone(),
@@ -659,6 +717,7 @@ fn infer_function(
         body,
         external_erlang,
         external_javascript,
+        targets,
     }))
 }
 
@@ -688,8 +747,12 @@ fn target_function_implementation<'a>(
     }
 }
 
-fn ensure_body_given(body: &Vec1<UntypedStatement>, location: SrcSpan) -> Result<(), Error> {
-    if body.first().is_placeholder() {
+fn ensure_body_given(
+    is_external: bool,
+    body: &Vec1<UntypedStatement>,
+    location: SrcSpan,
+) -> Result<(), Error> {
+    if is_external & body.first().is_placeholder() {
         Err(Error::NoImplementation { location })
     } else {
         Ok(())
@@ -849,6 +912,7 @@ fn record_imported_items_for_use_detection<A>(
         as_name,
         unqualified_values,
         unqualified_types,
+        targets,
         ..
     } = i;
     // Find imported module
@@ -884,6 +948,7 @@ fn record_imported_items_for_use_detection<A>(
         unqualified_values,
         unqualified_types,
         package: module_info.package.clone(),
+        targets,
     }))
 }
 
@@ -901,7 +966,8 @@ fn infer_module_constant(
         value,
         ..
     } = c;
-    let typed_expr = ExprTyper::new(environment).infer_const(&annotation, *value)?;
+    let typed_expr =
+        ExprTyper::new(environment, BuildTargets::all()).infer_const(&annotation, *value)?;
     let type_ = typed_expr.type_();
     let variant = ValueConstructor {
         public,
@@ -1072,6 +1138,7 @@ fn generalise_function(
         return_type,
         external_erlang,
         external_javascript,
+        targets,
     } = function;
 
     // Lookup the inferred function information
@@ -1095,6 +1162,7 @@ fn generalise_function(
         module: impl_module,
         arity: args.len(),
         location,
+        targets,
     };
     environment.insert_variable(
         name.clone(),
@@ -1126,6 +1194,7 @@ fn generalise_function(
         body,
         external_erlang,
         external_javascript,
+        targets,
     })
 }
 

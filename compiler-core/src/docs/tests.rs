@@ -93,8 +93,18 @@ fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
     let build = root.join("build");
     let lib = root.join("lib");
     let paths = ProjectPaths::new(root.clone());
-    let mut compiler =
-        PackageCompiler::new(&config, Mode::Dev, &root, &build, &lib, &target, ids, fs);
+    let is_root = true;
+    let mut compiler = PackageCompiler::new(
+        &config,
+        Mode::Dev,
+        &root,
+        &build,
+        &lib,
+        &target,
+        ids,
+        fs,
+        is_root,
+    );
     compiler.write_entrypoint = false;
     compiler.write_metadata = false;
     compiler.compile_beam_bytecode = true;

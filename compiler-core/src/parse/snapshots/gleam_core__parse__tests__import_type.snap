@@ -48,6 +48,10 @@ Parsed {
                             },
                         ],
                         package: (),
+                        targets: BuildTargets {
+                            erlang: true,
+                            javascript: true,
+                        },
                     },
                 ),
                 target: None,

@@ -50,6 +50,7 @@ pub fn prepare(path: &str) -> String {
     let root = Utf8PathBuf::from("");
     let out = Utf8PathBuf::from("/out/lib/the_package");
     let lib = Utf8PathBuf::from("/out/lib");
+    let is_root = true;
     let mut compiler = gleam_core::build::PackageCompiler::new(
         &config,
         Mode::Dev,
@@ -59,6 +60,7 @@ pub fn prepare(path: &str) -> String {
         &target,
         ids,
         filesystem.clone(),
+        is_root,
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;

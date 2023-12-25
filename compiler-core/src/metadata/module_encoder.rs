@@ -264,6 +264,7 @@ impl<'a> ModuleEncoder<'a> {
                 name,
                 location,
                 documentation: doc,
+                targets,
             } => {
                 let mut builder = builder.init_module_fn();
                 builder.set_name(name);
@@ -271,7 +272,14 @@ impl<'a> ModuleEncoder<'a> {
                 builder.set_arity(*arity as u16);
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
-                self.build_src_span(builder.init_location(), *location);
+                self.build_src_span(builder.reborrow().init_location(), *location);
+                let targets = targets.to_int_list();
+                let tar = builder.init_targets(targets.len() as u32);
+                {
+                    for (i, item) in targets.iter().enumerate() {
+                        tar.reborrow().set(i as u32, *item);
+                    }
+                }
             }
         }
     }

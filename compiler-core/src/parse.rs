@@ -64,6 +64,7 @@ use crate::ast::{
     UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule,
     UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
 };
+use crate::build::BuildTargets;
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
 use crate::type_::Deprecation;
@@ -245,7 +246,16 @@ where
             // Imports
             (Some((start, Token::Import, _)), _) => {
                 let _ = self.next_tok();
-                self.parse_import(start)
+
+                let mut targets = BuildTargets::default();
+                if let Some(t) = attributes.target {
+                    targets.add_target(t);
+                } else {
+                    targets = BuildTargets::all();
+                };
+
+                attributes.target = None;
+                self.parse_import(start, targets)
             }
             // Module Constants
             (Some((_, Token::Const, _)), _) => {
@@ -261,12 +271,16 @@ where
             // Function
             (Some((start, Token::Fn, _)), _) => {
                 let _ = self.next_tok();
-                self.parse_function(start, false, false, &mut attributes)
+                let f = self.parse_function(start, false, false, &mut attributes);
+                attributes.target = None;
+                f
             }
             (Some((start, Token::Pub, _)), Some((_, Token::Fn, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
-                self.parse_function(start, true, false, &mut attributes)
+                let f = self.parse_function(start, true, false, &mut attributes);
+                attributes.target = None;
+                f
             }
 
             // Custom Types, and Type Aliases
@@ -1487,6 +1501,7 @@ where
         let (_, rpar_e) = self.expect_one(&Token::RightParen)?;
         let return_annotation = self.parse_type_annotation(&Token::RArrow)?;
 
+        let mut has_body = true;
         let (body, end, end_position) = match self.maybe_one(&Token::LeftBrace) {
             Some(_) => {
                 let some_body = self.parse_statement_seq()?;
@@ -1517,8 +1532,23 @@ where
                 let body = vec1![Statement::Expression(UntypedExpr::Placeholder {
                     location: SrcSpan::new(start, rpar_e)
                 })];
+                has_body = false;
                 (body, rpar_e, rpar_e)
             }
+        };
+
+        let mut targets = BuildTargets::default();
+        if let Some(target) = attributes.target {
+            targets.add_target(target)
+            //TODO: check here conflicting attributes @target and @external
+        } else {
+            if has_body {
+                targets = BuildTargets::all();
+            }
+            targets.or_mut(BuildTargets {
+                erlang: attributes.external_erlang.is_some(),
+                javascript: attributes.external_javascript.is_some(),
+            })
         };
 
         Ok(Some(Definition::Function(Function {
@@ -1534,6 +1564,7 @@ where
             deprecation: std::mem::take(&mut attributes.deprecated),
             external_erlang: attributes.external_erlang.take(),
             external_javascript: attributes.external_javascript.take(),
+            targets,
         })))
     }
 
@@ -1966,7 +1997,11 @@ where
     //   import a/b
     //   import a/b.{c}
     //   import a/b.{c as d} as e
-    fn parse_import(&mut self, import_start: u32) -> Result<Option<UntypedDefinition>, ParseError> {
+    fn parse_import(
+        &mut self,
+        import_start: u32,
+        targets: BuildTargets,
+    ) -> Result<Option<UntypedDefinition>, ParseError> {
         let mut start = 0;
         let mut end;
         let mut module = String::new();
@@ -2039,6 +2074,7 @@ where
             module: module.into(),
             as_name,
             package: (),
+            targets,
         })))
     }
 

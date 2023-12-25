@@ -99,6 +99,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         ast.name = (*dep_name).into();
         let dep = crate::analyse::infer_module::<()>(
             Target::JavaScript,
+            false,
             &ids,
             ast,
             Origin::Src,
@@ -117,6 +118,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
     ast.name = "my/mod".into();
     crate::analyse::infer_module::<()>(
         Target::JavaScript,
+        true,
         &ids,
         ast,
         Origin::Src,

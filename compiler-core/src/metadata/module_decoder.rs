@@ -8,7 +8,7 @@ use crate::{
         BitArrayOption, BitArraySegment, CallArg, Constant, SrcSpan, TypedConstant,
         TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
     },
-    build::Origin,
+    build::{BuildTargets, Origin},
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, RecordAccessor, Type,
@@ -439,6 +439,7 @@ impl ModuleDecoder {
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
             documentation: self.optional_string(reader.get_documentation()?),
+            targets: BuildTargets::from_int_list(reader.get_targets()?.iter().collect()),
         })
     }
 

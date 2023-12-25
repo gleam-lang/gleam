@@ -190,6 +190,7 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
     let lib = Utf8PathBuf::from("/lib");
     let out = Utf8PathBuf::from("/build");
     let package = Utf8PathBuf::from("/");
+    let is_root = true;
     let mut compiler = PackageCompiler::new(
         &config,
         Mode::Dev,
@@ -199,6 +200,7 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
         &target,
         ids,
         project.fs,
+        is_root,
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = false;

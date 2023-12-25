@@ -52,14 +52,15 @@ pub fn x() { id(1) }
 }
 
 #[test]
-fn excluded_generalising() {
+fn exposed_after_generalising() {
+    // the values are exposed but marked as javascript only
     assert_module_infer!(
         "
 @target(javascript)
-pub fn id(x) { x }
+fn id(x) { x }
 
 @target(javascript)
-pub fn x() { id(1) }
+fn x() { id(1) }
 
 pub const y = 1
 ",

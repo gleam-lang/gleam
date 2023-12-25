@@ -45,6 +45,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         ast.name = dep_name.into();
         let dep = crate::analyse::infer_module::<()>(
             Target::Erlang,
+            false,
             &ids,
             ast,
             Origin::Src,
@@ -62,6 +63,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
     ast.name = "my/mod".into();
     let ast = crate::analyse::infer_module::<()>(
         Target::Erlang,
+        true,
         &ids,
         ast,
         Origin::Src,

@@ -7,6 +7,7 @@ use crate::{
         BitArrayOption, BitArraySegment, CallArg, Constant, SrcSpan, TypedConstant,
         TypedConstantBitArraySegmentOption,
     },
+    build::BuildTargets,
     build::Origin,
     type_::{
         self, Deprecation, ModuleInterface, Type, TypeConstructor, TypeValueConstructor,
@@ -320,6 +321,8 @@ fn module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+
+                    targets: BuildTargets::all(),
                 },
             },
         )]
@@ -356,6 +359,8 @@ fn deprecated_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+
+                    targets: BuildTargets::all(),
                 },
             },
         )]
@@ -390,6 +395,7 @@ fn private_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    targets: BuildTargets::all(),
                 },
             },
         )]
@@ -426,6 +432,7 @@ fn module_fn_value_regression() {
                         start: 52,
                         end: 1100,
                     },
+                    targets: BuildTargets::all(),
                 },
             },
         )]
@@ -461,6 +468,7 @@ fn module_fn_value_with_field_map() {
                     module: "a".into(),
                     arity: 5,
                     location: SrcSpan { start: 2, end: 11 },
+                    targets: BuildTargets::all(),
                 },
             },
         )]

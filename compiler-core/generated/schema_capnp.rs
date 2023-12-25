@@ -2686,6 +2686,7 @@ pub mod value_constructor_variant {
       self.builder.set_data_field::<u16>(1, 0u16);
       self.builder.get_pointer_field(3).clear();
       self.builder.get_pointer_field(4).clear();
+      self.builder.get_pointer_field(5).clear();
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
@@ -2734,7 +2735,7 @@ pub mod value_constructor_variant {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 5 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 6 };
     pub const TYPE_ID: u64 = 0xe14c_79e9_2bd0_a81a;
   }
   pub enum Which<A0,A1,A2> {
@@ -2955,7 +2956,7 @@ pub mod value_constructor_variant {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 5 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 6 };
       pub const TYPE_ID: u64 = 0x9579_9d69_8196_fbd0;
     }
   }
@@ -3049,6 +3050,14 @@ pub mod value_constructor_variant {
       #[inline]
       pub fn has_documentation(&self) -> bool {
         !self.reader.get_pointer_field(4).is_null()
+      }
+      #[inline]
+      pub fn get_targets(self) -> ::capnp::Result<::capnp::primitive_list::Reader<'a,u16>> {
+        ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(5), ::core::option::Option::None)
+      }
+      #[inline]
+      pub fn has_targets(&self) -> bool {
+        !self.reader.get_pointer_field(5).is_null()
       }
     }
 
@@ -3188,6 +3197,22 @@ pub mod value_constructor_variant {
       pub fn has_documentation(&self) -> bool {
         !self.builder.get_pointer_field(4).is_null()
       }
+      #[inline]
+      pub fn get_targets(self) -> ::capnp::Result<::capnp::primitive_list::Builder<'a,u16>> {
+        ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(5), ::core::option::Option::None)
+      }
+      #[inline]
+      pub fn set_targets(&mut self, value: ::capnp::primitive_list::Reader<'a,u16>) -> ::capnp::Result<()> {
+        ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(5), value, false)
+      }
+      #[inline]
+      pub fn init_targets(self, size: u32) -> ::capnp::primitive_list::Builder<'a,u16> {
+        ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(5), size)
+      }
+      #[inline]
+      pub fn has_targets(&self) -> bool {
+        !self.builder.get_pointer_field(5).is_null()
+      }
     }
 
     pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -3206,7 +3231,7 @@ pub mod value_constructor_variant {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 5 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 6 };
       pub const TYPE_ID: u64 = 0xaea6_15c5_9871_3779;
     }
   }
@@ -3481,7 +3506,7 @@ pub mod value_constructor_variant {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 5 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 6 };
       pub const TYPE_ID: u64 = 0xf00b_1526_e923_3dd5;
     }
   }
