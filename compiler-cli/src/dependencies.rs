@@ -509,10 +509,10 @@ fn get_manifest<Telem: Telemetry>(
     // If the config has unchanged since the manifest was written then it is up
     // to date so we can return it unmodified.
     if is_same_requirements(
-        manifest.clone().requirements,
-        config.clone().all_dependencies()?,
+        &manifest.requirements,
+        &config.all_dependencies()?,
         paths.root(),
-    )? {
+    ) {
         tracing::debug!("manifest_up_to_date");
         Ok((false, manifest))
     } else {
@@ -523,46 +523,22 @@ fn get_manifest<Telem: Telemetry>(
 }
 
 fn is_same_requirements(
-    requirements1: HashMap<EcoString, Requirement>,
-    requirements2: HashMap<EcoString, Requirement>,
+    requirements1: &HashMap<EcoString, Requirement>,
+    requirements2: &HashMap<EcoString, Requirement>,
     root_path: &Utf8Path,
-) -> Result<bool, gleam_core::Error> {
-    let canonicalised_requirements2: HashMap<EcoString, Requirement> = requirements2
-        .into_iter()
-        .map(|(string, requirement)| {
-            Ok((
-                string,
-                match requirement {
-                    Requirement::Hex { .. } => requirement,
-                    Requirement::Path { path } => Requirement::Path {
-                        path: fs::canonicalise(&root_path.join(path))?,
-                    },
-                    Requirement::Git { .. } => requirement,
-                },
-            ))
+) -> bool {
+    requirements1.len() == requirements2.len()
+        && requirements1.into_iter().all(|(key, requirement1)| {
+            let requirement2 = requirements2.get(key);
+            match (requirement1, requirement2) {
+                (Requirement::Path { path: path1 }, Some(Requirement::Path { path: path2 })) => {
+                    fs::canonicalise(&root_path.join(path1))
+                        == fs::canonicalise(&root_path.join(path2))
+                }
+                (_, Some(requirement2)) => requirement1 == requirement2,
+                (_, None) => false,
+            }
         })
-        .collect::<Result<Vec<_>, gleam_core::Error>>()?
-        .into_iter()
-        .collect();
-
-    let canonicalised_requirements1: HashMap<EcoString, Requirement> = requirements1
-        .into_iter()
-        .map(|(string, requirement)| {
-            Ok((
-                string,
-                match requirement {
-                    Requirement::Hex { .. } => requirement,
-                    Requirement::Path { path } => Requirement::Path {
-                        path: fs::canonicalise(&root_path.join(path))?,
-                    },
-                    Requirement::Git { .. } => requirement,
-                },
-            ))
-        })
-        .collect::<Result<Vec<_>, gleam_core::Error>>()?
-        .into_iter()
-        .collect();
-    Ok(canonicalised_requirements1 == canonicalised_requirements2)
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
