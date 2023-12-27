@@ -74,7 +74,7 @@ mod shell;
 
 use config::root_config;
 use dependencies::UseManifest;
-use fs::get_current_directory;
+use fs::{get_current_directory, get_project_root};
 pub use gleam_core::error::{Error, Result};
 
 use gleam_core::{
@@ -526,6 +526,13 @@ fn initialise_logger() {
 }
 
 fn project_paths_at_current_directory() -> ProjectPaths {
+    let current_dir = get_current_directory().expect("Failed to get current directory");
+    let dir = get_project_root(current_dir).expect("Failed to get any gleam.toml file");
+    ProjectPaths::new(dir)
+}
+
+#[allow(dead_code)]
+fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
     let current_dir = get_current_directory().expect("Failed to get current directory");
     ProjectPaths::new(current_dir)
 }

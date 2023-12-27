@@ -38,6 +38,22 @@ pub fn get_current_directory() -> Result<Utf8PathBuf, Error> {
     Utf8PathBuf::from_path_buf(curr_dir.clone()).map_err(|_| Error::NonUtf8Path { path: curr_dir })
 }
 
+// Return the first directory with a gleam.toml as a UTF-8 Path
+pub fn get_project_root(path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
+    fn walk(dir: Utf8PathBuf) -> Option<Utf8PathBuf> {
+        match dir.join("gleam.toml").is_file() {
+            true => Some(dir),
+            false => match dir.parent() {
+                Some(p) => walk(p.into()),
+                None => None,
+            },
+        }
+    }
+    walk(path.clone()).ok_or(Error::UnableToFindProjectRoot {
+        path: path.to_string(),
+    })
+}
+
 /// A `FileWriter` implementation that writes to the file system.
 #[derive(Debug, Clone, Copy)]
 pub struct ProjectIO;
