@@ -33,8 +33,8 @@ use crate::{
 
 pub fn list() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-
-    let paths = ProjectPaths::new(fs::get_current_directory()?);
+    let project = fs::get_project_root(fs::get_current_directory()?)?;
+    let paths = ProjectPaths::new(project);
     let config = crate::config::root_config()?;
     let (_, manifest) = get_manifest(
         &paths,
@@ -869,7 +869,7 @@ fn provide_package(
 #[test]
 fn provide_wrong_package() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
     let result = provide_local_package(
         "wrong_name".into(),
         Utf8Path::new("./test/hello_world"),
@@ -892,7 +892,7 @@ fn provide_wrong_package() {
 #[test]
 fn provide_existing_package() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
 
     let result = provide_local_package(
         "hello_world".into(),
@@ -918,7 +918,7 @@ fn provide_existing_package() {
 #[test]
 fn provide_conflicting_package() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
     let result = provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
@@ -949,7 +949,7 @@ fn provide_conflicting_package() {
 #[test]
 fn provided_is_absolute() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
     let result = provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
@@ -970,7 +970,7 @@ fn provided_is_absolute() {
 #[test]
 fn provided_recursive() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
     let result = provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
