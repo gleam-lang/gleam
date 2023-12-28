@@ -154,6 +154,10 @@ pub enum Error {
     #[error("project root already exists")]
     ProjectRootAlreadyExist { path: String },
 
+    #[error("File(s) already exist in {}",
+file_names.iter().map(|x| x.as_str()).join(", "))]
+    OutputFilesAlreadyExist { file_names: Vec<Utf8PathBuf> },
+
     #[error("unable to find project root")]
     UnableToFindProjectRoot { path: String },
 
@@ -548,6 +552,31 @@ to `src/{module}.gleam`."
             Error::ProjectRootAlreadyExist { path } => Diagnostic {
                 title: "Project folder already exists".into(),
                 text: format!("Project folder root:\n\n  {path}"),
+                level: Level::Error,
+                hint: None,
+                location: None,
+            },
+
+            Error::OutputFilesAlreadyExist { file_names } => Diagnostic {
+                title: format!(
+                    "{} already exist{} in target directory",
+                    if file_names.len() == 1 {
+                        "File"
+                    } else {
+                        "Files"
+                    },
+                    if file_names.len() == 1 { "" } else { "s" }
+                ),
+                text: format!(
+                    "{}
+If you want to overwrite these files, delete them
+and run the command again.
+",
+                    file_names
+                        .iter()
+                        .map(|name| format!("  - {}", name.as_str()))
+                        .join("\n")
+                ),
                 level: Level::Error,
                 hint: None,
                 location: None,
