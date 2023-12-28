@@ -5,10 +5,12 @@ use crate::{
         Constant, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
         TypedConstantBitArraySegmentOption,
     },
+    build::Target,
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, Deprecation, FieldMap, RecordAccessor, Type, TypeConstructor,
-        TypeValueConstructor, TypeVar, ValueConstructor, ValueConstructorVariant,
+        self, expression::SupportedTargets, AccessorsMap, Deprecation, FieldMap, RecordAccessor,
+        Type, TypeConstructor, TypeValueConstructor, TypeVar, ValueConstructor,
+        ValueConstructorVariant,
     },
 };
 use std::{collections::HashMap, ops::Deref, sync::Arc};
@@ -228,12 +230,14 @@ impl<'a> ModuleEncoder<'a> {
                 location,
                 module,
                 documentation: doc,
+                supported_targets,
             } => {
                 let mut builder = builder.init_module_constant();
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 self.build_src_span(builder.reborrow().init_location(), *location);
                 self.build_constant(builder.reborrow().init_literal(), literal);
                 builder.reborrow().set_module(module);
+                self.build_supported_target(builder.init_supported_targets(), *supported_targets)
             }
 
             ValueConstructorVariant::Record {
@@ -264,6 +268,7 @@ impl<'a> ModuleEncoder<'a> {
                 name,
                 location,
                 documentation: doc,
+                supported_targets,
             } => {
                 let mut builder = builder.init_module_fn();
                 builder.set_name(name);
@@ -271,7 +276,8 @@ impl<'a> ModuleEncoder<'a> {
                 builder.set_arity(*arity as u16);
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
-                self.build_src_span(builder.init_location(), *location);
+                self.build_src_span(builder.reborrow().init_location(), *location);
+                self.build_supported_target(builder.init_supported_targets(), *supported_targets);
             }
         }
     }
@@ -476,5 +482,14 @@ impl<'a> ModuleEncoder<'a> {
             }
         };
         builder.set_id(serialised_id);
+    }
+
+    fn build_supported_target(
+        &self,
+        mut builder: supported_targets::Builder<'_>,
+        supported_targets: SupportedTargets,
+    ) {
+        builder.set_erlang(supported_targets.supports(&Target::Erlang));
+        builder.set_javascript(supported_targets.supports(&Target::JavaScript));
     }
 }

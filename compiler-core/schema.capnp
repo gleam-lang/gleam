@@ -91,6 +91,11 @@ struct ValueConstructor {
   deprecated @3 :Text;
 }
 
+struct SupportedTargets {
+  erlang @0 :Bool;
+  javascript @1 :Bool;
+}
+
 struct ValueConstructorVariant {
   union {
     moduleConstant :group {
@@ -98,6 +103,7 @@ struct ValueConstructorVariant {
       location @1 :SrcSpan;
       module @2 :Text;
       documentation @14 :Text;
+      supportedTargets @19 :SupportedTargets;
     }
 
     moduleFn :group {
@@ -107,6 +113,7 @@ struct ValueConstructorVariant {
       arity @6 :UInt16;
       location @7 :SrcSpan;
       documentation @15 :Text;
+      supportedTargets @18 :SupportedTargets;
     }
 
     record :group {

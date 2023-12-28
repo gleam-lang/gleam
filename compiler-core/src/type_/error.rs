@@ -1,5 +1,6 @@
 use crate::{
     ast::{BinOp, SrcSpan, TodoKind},
+    build::Target,
     type_::Type,
 };
 
@@ -25,6 +26,7 @@ pub enum Error {
         error: crate::bit_array::ErrorType,
         location: SrcSpan,
     },
+
     UnknownLabels {
         unknown: Vec<(EcoString, SrcSpan)>,
         valid: Vec<EcoString>,
@@ -272,6 +274,14 @@ pub enum Error {
     // external one.
     NoImplementation {
         location: SrcSpan,
+    },
+
+    // A function/constant that is used doesn't have an implementation for the
+    // current compilation target.
+    UnsupportedTarget {
+        location: SrcSpan,
+        target: Target,
+        kind: EcoString,
     },
 
     // A function's JavaScript implementation has been given but it does not

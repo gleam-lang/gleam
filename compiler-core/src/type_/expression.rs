@@ -10,6 +10,7 @@ use crate::{
         UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, Use, UseAssignment,
         USE_ASSIGNMENT_VARIABLE,
     },
+    build::Target,
     exhaustiveness,
 };
 use id_arena::Arena;
@@ -17,9 +18,78 @@ use im::hashmap;
 use itertools::Itertools;
 use vec1::Vec1;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SupportedTargets {
+    erlang: bool,
+    javascript: bool,
+}
+
+impl SupportedTargets {
+    pub fn none() -> SupportedTargets {
+        SupportedTargets {
+            erlang: false,
+            javascript: false,
+        }
+    }
+
+    pub fn all() -> SupportedTargets {
+        SupportedTargets {
+            erlang: true,
+            javascript: true,
+        }
+    }
+
+    pub fn javascript() -> SupportedTargets {
+        SupportedTargets {
+            erlang: false,
+            javascript: true,
+        }
+    }
+
+    pub fn erlang() -> SupportedTargets {
+        SupportedTargets {
+            erlang: true,
+            javascript: false,
+        }
+    }
+
+    pub fn from_target(target: &Target) -> SupportedTargets {
+        match target {
+            Target::Erlang => SupportedTargets::erlang(),
+            Target::JavaScript => SupportedTargets::javascript(),
+        }
+    }
+
+    pub fn intersect(&mut self, targets: &SupportedTargets) {
+        self.erlang = self.erlang && targets.erlang;
+        self.javascript = self.javascript && targets.javascript;
+    }
+
+    pub fn merge(&mut self, targets: &SupportedTargets) {
+        self.erlang = self.erlang || targets.erlang;
+        self.javascript = self.javascript || targets.javascript;
+    }
+
+    pub fn add(&mut self, target: &Target) {
+        match target {
+            Target::Erlang => self.erlang = true,
+            Target::JavaScript => self.javascript = true,
+        }
+    }
+
+    pub fn supports(&self, target: &Target) -> bool {
+        match target {
+            Target::Erlang => self.erlang,
+            Target::JavaScript => self.javascript,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) environment: &'a mut Environment<'b>,
+
+    pub(crate) supported_targets: SupportedTargets,
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
@@ -32,6 +102,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Self {
             hydrator,
             environment,
+            // This will be narrowed down as the expression type is inferred
+            supported_targets: SupportedTargets::all(),
         }
     }
 
@@ -560,11 +632,48 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_var(&mut self, name: EcoString, location: SrcSpan) -> Result<TypedExpr, Error> {
         let constructor = self.infer_value_constructor(&None, &name, &location)?;
+
+        match constructor.variant {
+            ValueConstructorVariant::ModuleConstant {
+                supported_targets, ..
+            } => self.narrow_supported_targets(supported_targets, location, "constant".into())?,
+
+            ValueConstructorVariant::ModuleFn {
+                supported_targets, ..
+            } => self.narrow_supported_targets(supported_targets, location, "function".into())?,
+
+            // These variants are not narrowing the currently supported targets
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::LocalConstant { .. }
+            | ValueConstructorVariant::Record { .. } => {}
+        }
+
         Ok(TypedExpr::Var {
             constructor,
             location,
             name,
         })
+    }
+
+    fn narrow_supported_targets(
+        &mut self,
+        supported_targets: SupportedTargets,
+        location: SrcSpan,
+        kind: EcoString,
+    ) -> Result<(), Error> {
+        if !supported_targets.supports(&self.environment.target) {
+            // If a function/constant used are is not supported by the current target
+            // we fail compilation with an error.
+            Err(Error::UnsupportedTarget {
+                location,
+                target: self.environment.target,
+                kind,
+            })
+        } else {
+            // Otherwise we just narrow down the currently supported targets.
+            self.supported_targets.intersect(&supported_targets);
+            Ok(())
+        }
     }
 
     fn infer_field_access(

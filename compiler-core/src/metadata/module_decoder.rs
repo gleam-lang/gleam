@@ -8,12 +8,12 @@ use crate::{
         BitArrayOption, BitArraySegment, CallArg, Constant, SrcSpan, TypedConstant,
         TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
     },
-    build::Origin,
+    build::{Origin, Target},
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, RecordAccessor, Type,
-        TypeConstructor, TypeValueConstructor, TypeValueConstructorParameter, ValueConstructor,
-        ValueConstructorVariant,
+        self, expression::SupportedTargets, AccessorsMap, Deprecation, FieldMap, ModuleInterface,
+        RecordAccessor, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorParameter,
+        ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     Result,
@@ -410,6 +410,7 @@ impl ModuleDecoder {
             location: self.src_span(&reader.get_location()?)?,
             literal: self.constant(&reader.get_literal()?)?,
             module: reader.get_module()?.into(),
+            supported_targets: self.supported_targets(reader.get_supported_targets()?),
         })
     }
 
@@ -439,7 +440,19 @@ impl ModuleDecoder {
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
             documentation: self.optional_string(reader.get_documentation()?),
+            supported_targets: self.supported_targets(reader.get_supported_targets()?),
         })
+    }
+
+    fn supported_targets(&self, reader: supported_targets::Reader<'_>) -> SupportedTargets {
+        let mut supported_targets = SupportedTargets::none();
+        if reader.get_erlang() {
+            supported_targets.add(&Target::Erlang);
+        }
+        if reader.get_javascript() {
+            supported_targets.add(&Target::JavaScript);
+        }
+        supported_targets
     }
 
     fn record(

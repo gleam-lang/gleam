@@ -12,6 +12,7 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
 use crate::build::{Located, Target};
+use crate::type_::expression::SupportedTargets;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
@@ -372,6 +373,7 @@ pub struct Function<T, Expr> {
     pub documentation: Option<EcoString>,
     pub external_erlang: Option<(EcoString, EcoString)>,
     pub external_javascript: Option<(EcoString, EcoString)>,
+    pub supported_targets: SupportedTargets,
 }
 
 pub type TypedFunction = Function<Arc<Type>, TypedExpr>;
