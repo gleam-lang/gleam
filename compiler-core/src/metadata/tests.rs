@@ -9,8 +9,8 @@ use crate::{
     },
     build::Origin,
     type_::{
-        self, Deprecation, ModuleInterface, Type, TypeConstructor, TypeValueConstructor,
-        ValueConstructor, ValueConstructorVariant,
+        self, expression::SupportedTargets, Deprecation, ModuleInterface, Type, TypeConstructor,
+        TypeValueConstructor, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
 };
@@ -46,6 +46,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
                     literal: constant,
                     location: SrcSpan::default(),
                     module: "one/two".into(),
+                    supported_targets: SupportedTargets::all(),
                 },
             },
         )]
@@ -320,6 +321,7 @@ fn module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    supported_targets: SupportedTargets::all(),
                 },
             },
         )]
@@ -356,6 +358,7 @@ fn deprecated_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    supported_targets: SupportedTargets::all(),
                 },
             },
         )]
@@ -390,6 +393,7 @@ fn private_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    supported_targets: SupportedTargets::all(),
                 },
             },
         )]
@@ -426,6 +430,7 @@ fn module_fn_value_regression() {
                         start: 52,
                         end: 1100,
                     },
+                    supported_targets: SupportedTargets::all(),
                 },
             },
         )]
@@ -461,6 +466,7 @@ fn module_fn_value_with_field_map() {
                     module: "a".into(),
                     arity: 5,
                     location: SrcSpan { start: 2, end: 11 },
+                    supported_targets: SupportedTargets::all(),
                 },
             },
         )]
@@ -752,6 +758,7 @@ fn constant_var() {
                 literal: one_original.clone(),
                 location: SrcSpan::default(),
                 module: "one/two".into(),
+                supported_targets: SupportedTargets::all(),
             },
         })),
     };
@@ -776,6 +783,7 @@ fn constant_var() {
                         literal: one,
                         location: SrcSpan::default(),
                         module: "one/two".into(),
+                        supported_targets: SupportedTargets::all(),
                     },
                 },
             ),
@@ -790,6 +798,7 @@ fn constant_var() {
                         literal: one_original,
                         location: SrcSpan::default(),
                         module: "one/two".into(),
+                        supported_targets: SupportedTargets::all(),
                     },
                 },
             ),

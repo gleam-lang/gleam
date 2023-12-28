@@ -2221,6 +2221,36 @@ implementation but the function name `{function}` is not valid."
                         }),
                     }
                 }
+
+                TypeError::UnsupportedTarget {
+                    location,
+                    target: current_target,
+                    kind,
+                } => {
+                    let text = wrap_format!(
+                        "This {} doesn't have an implementation for the {} target.",
+                        kind,
+                        match current_target {
+                            Target::Erlang => "Erlang",
+                            Target::JavaScript => "JavaScript",
+                        }
+                    );
+                    Diagnostic {
+                        title: "Unsupported target".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            path: path.clone(),
+                            src: src.clone(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
             },
 
             Error::Parse { path, src, error } => {

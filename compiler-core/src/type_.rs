@@ -36,6 +36,8 @@ use std::{
     sync::Arc,
 };
 
+use self::expression::SupportedTargets;
+
 pub trait HasType {
     fn type_(&self) -> Arc<Type>;
 }
@@ -294,6 +296,7 @@ pub enum ValueConstructorVariant {
         location: SrcSpan,
         module: EcoString,
         literal: Constant<Arc<Type>, EcoString>,
+        supported_targets: SupportedTargets,
     },
 
     /// A constant defined locally, for example when pattern matching on string literals
@@ -309,6 +312,7 @@ pub enum ValueConstructorVariant {
         arity: usize,
         location: SrcSpan,
         documentation: Option<EcoString>,
+        supported_targets: SupportedTargets,
     },
 
     /// A constructor for a custom type

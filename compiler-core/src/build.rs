@@ -72,6 +72,14 @@ impl Target {
     pub fn is_javascript(&self) -> bool {
         matches!(self, Self::JavaScript)
     }
+
+    /// Returns `true` if the target is [`Erlang`].
+    ///
+    /// [`Erlang`]: Target::Erlang
+    #[must_use]
+    pub fn is_erlang(&self) -> bool {
+        matches!(self, Self::Erlang)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

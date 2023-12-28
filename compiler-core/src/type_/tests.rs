@@ -74,9 +74,28 @@ macro_rules! assert_module_infer {
 }
 
 #[macro_export]
+macro_rules! assert_js_module_infer {
+    ($src:expr, $module:expr $(,)?) => {{
+        let constructors =
+            $crate::type_::tests::infer_module_with_target($src, vec![], Target::JavaScript);
+        let expected = $crate::type_::tests::stringify_tuple_strs($module);
+        assert_eq!(($src, constructors), ($src, expected));
+    }};
+}
+
+#[macro_export]
 macro_rules! assert_module_error {
     ($src:expr) => {
         let output = $crate::type_::tests::module_error($src, vec![]);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
+macro_rules! assert_js_module_error {
+    ($src:expr) => {
+        let output =
+            $crate::type_::tests::module_error_with_target($src, vec![], Target::JavaScript);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -262,7 +281,16 @@ pub fn stringify_tuple_strs(module: Vec<(&str, &str)>) -> Vec<(EcoString, String
 type DependencyModule<'a> = (&'a str, &'a str, &'a str);
 
 pub fn infer_module(src: &str, dep: Vec<DependencyModule<'_>>) -> Vec<(EcoString, String)> {
-    let ast = compile_module(src, None, dep).expect("should successfully infer");
+    infer_module_with_target(src, dep, Target::Erlang)
+}
+
+pub fn infer_module_with_target(
+    src: &str,
+    dep: Vec<DependencyModule<'_>>,
+    target: Target,
+) -> Vec<(EcoString, String)> {
+    let ast =
+        compile_module_with_target(src, None, dep, target).expect("should successfully infer");
     ast.type_info
         .values
         .iter()
@@ -279,6 +307,15 @@ pub fn compile_module(
     src: &str,
     warnings: Option<Arc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
+) -> Result<TypedModule, crate::type_::Error> {
+    compile_module_with_target(src, warnings, dep, Target::Erlang)
+}
+
+pub fn compile_module_with_target(
+    src: &str,
+    warnings: Option<Arc<dyn WarningEmitterIO>>,
+    dep: Vec<DependencyModule<'_>>,
+    target: Target,
 ) -> Result<TypedModule, crate::type_::Error> {
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
@@ -302,7 +339,7 @@ pub fn compile_module(
         let mut ast = parsed.module;
         ast.name = name.into();
         let module = crate::analyse::infer_module::<()>(
-            Target::Erlang,
+            target,
             &ids,
             ast,
             Origin::Src,
@@ -322,7 +359,7 @@ pub fn compile_module(
     let parsed = crate::parse::parse_module(src).expect("syntax error");
     let ast = parsed.module;
     crate::analyse::infer_module(
-        Target::Erlang,
+        target,
         &ids,
         ast,
         Origin::Src,
@@ -334,7 +371,16 @@ pub fn compile_module(
 }
 
 pub fn module_error(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
-    let error = compile_module(src, None, deps).expect_err("should infer an error");
+    module_error_with_target(src, deps, Target::Erlang)
+}
+
+pub fn module_error_with_target(
+    src: &str,
+    deps: Vec<DependencyModule<'_>>,
+    target: Target,
+) -> String {
+    let error =
+        compile_module_with_target(src, None, deps, target).expect_err("should infer an error");
     let error = Error::Type {
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
@@ -1891,5 +1937,66 @@ fn block_maths() {
   { max -. min } /. { max +. min }
 }",
         vec![("do", "fn(Float, Float) -> Float")],
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2324
+#[test]
+fn javascript_only_function_used_by_erlang_module() {
+    let module = r#"@external(javascript, "foo", "bar")
+pub fn js_only() -> Int
+
+pub fn main() {
+  js_only()
+}
+"#;
+    assert_module_error!(module);
+    assert_js_module_infer!(
+        module,
+        vec![("js_only", "fn() -> Int"), ("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn erlang_only_function_used_by_javascript_module() {
+    let module = r#"@external(erlang, "foo", "bar")
+pub fn erlang_only() -> Int
+
+pub fn main() {
+  erlang_only()
+}
+"#;
+    assert_js_module_error!(module);
+    assert_module_infer!(
+        module,
+        vec![("erlang_only", "fn() -> Int"), ("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn unused_javascript_only_function_is_not_rejected_on_erlang_target() {
+    assert_module_infer!(
+        r#"@external(javascript, "foo", "bar")
+pub fn js_only() -> Int
+
+pub fn main() {
+  10
+}
+"#,
+        vec![("js_only", "fn() -> Int"), ("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn unused_erlang_only_function_is_not_rejected_on_javascript_target() {
+    assert_js_module_infer!(
+        r#"@external(erlang, "foo", "bar")
+pub fn erlang_only() -> Int
+
+pub fn main() {
+  10
+}
+"#,
+        vec![("erlang_only", "fn() -> Int"), ("main", "fn() -> Int")]
     );
 }
