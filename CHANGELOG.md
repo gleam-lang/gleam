@@ -17,6 +17,7 @@
 ### Bug fixes
 
 - Fixed a bug where `gleam add` would not update `manifest.toml` correctly.
+- Fixed where the types of generic constants could be incorrecly inferred.
 - `Utf8Codepoint` has been renamed to `UtfCodepoint` in `prelude.d.mts`.
 - Fixed a bug where `gleam deps list` would look in filesystem root instead of
   the current directory.
