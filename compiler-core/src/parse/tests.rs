@@ -632,6 +632,16 @@ pub fn main() -> Nil {
 }
 
 #[test]
+fn attributes_with_no_definition() {
+    assert_module_error!(
+        r#"
+@deprecated("1")
+@target(erlang)
+"#
+    );
+}
+
+#[test]
 fn import_type() {
     assert_parse_module!(r#"import wibble.{type Wobble, Wobble, type Wabble}"#);
 }

@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n@deprecated(\"1\")\n@target(erlang)\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:1
+  │  
+2 │ ╭ @deprecated("1")
+3 │ │ @target(erlang)
+  │ ╰───────────────^ I was expecting a definition after this
+
+
