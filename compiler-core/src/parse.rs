@@ -2817,19 +2817,19 @@ where
         attributes: &mut Attributes,
     ) -> Result<Option<SrcSpan>, ParseError> {
         let mut start_of_attributes = None;
-        let mut end_of_attributes = 0;
+        let mut end_of_attributes = None;
 
         while let Some((start, _)) = self.maybe_one(&Token::At) {
             if start_of_attributes.is_none() {
                 start_of_attributes = Some(start);
             }
 
-            end_of_attributes = self.parse_attribute(start, attributes)?;
+            end_of_attributes = Some(self.parse_attribute(start, attributes)?);
         }
 
         Ok(start_of_attributes.map(|start| SrcSpan {
             start,
-            end: end_of_attributes,
+            end: end_of_attributes.expect(""),
         }))
     }
 
