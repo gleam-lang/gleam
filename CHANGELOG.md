@@ -6,6 +6,14 @@
 
 - Added a `View on HexDocs` link on function hover
 
+### Formatter
+
+- Fixed some quirk with the formatting of binary operators.
+
+### Build tool
+
+- The `gleam` binary is now statically linked on Windows.
+
 ### Bug fixes
 
 - Fixed a bug where `gleam add` would not update `manifest.toml` correctly.
@@ -15,10 +23,6 @@
 - Fixed a bug with the `isEqual` function in `prelude.js` where RegExps were
   being incorrectly structurally compared and being falsely reported as being
   equal.
-
-### Formatter
-
-- Fixed some quirk with the formatting of binary operators.
 
 
 ## v0.33.0 - 2023-12-18
