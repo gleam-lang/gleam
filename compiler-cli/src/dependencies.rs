@@ -512,7 +512,7 @@ fn get_manifest<Telem: Telemetry>(
         &manifest.requirements,
         &config.all_dependencies()?,
         paths.root(),
-    ) {
+    )? {
         tracing::debug!("manifest_up_to_date");
         Ok((false, manifest))
     } else {
@@ -526,19 +526,46 @@ fn is_same_requirements(
     requirements1: &HashMap<EcoString, Requirement>,
     requirements2: &HashMap<EcoString, Requirement>,
     root_path: &Utf8Path,
-) -> bool {
-    requirements1.len() == requirements2.len()
-        && requirements1.into_iter().all(|(key, requirement1)| {
-            let requirement2 = requirements2.get(key);
-            match (requirement1, requirement2) {
-                (Requirement::Path { path: path1 }, Some(Requirement::Path { path: path2 })) => {
-                    fs::canonicalise(&root_path.join(path1))
-                        == fs::canonicalise(&root_path.join(path2))
-                }
-                (_, Some(requirement2)) => requirement1 == requirement2,
-                (_, None) => false,
-            }
-        })
+) -> Result<bool> {
+    if requirements1.len() != requirements2.len() {
+        return Ok(false);
+    }
+
+    for (key, requirement1) in requirements1 {
+        if !same_requirements(requirement1, requirements2.get(key), root_path)? {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
+}
+
+fn same_requirements(
+    requirement1: &Requirement,
+    requirement2: Option<&Requirement>,
+    root_path: &Utf8Path,
+) -> Result<bool> {
+    let (left, right) = match (requirement1, requirement2) {
+        (Requirement::Path { path: path1 }, Some(Requirement::Path { path: path2 })) => {
+            (path1, path2)
+        }
+        (_, Some(requirement2)) => return Ok(requirement1 == requirement2),
+        (_, None) => return Ok(false),
+    };
+
+    let left = if left.is_absolute() {
+        left.to_owned()
+    } else {
+        fs::canonicalise(&root_path.join(left))?
+    };
+
+    let right = if right.is_absolute() {
+        right.to_owned()
+    } else {
+        fs::canonicalise(&root_path.join(right))?
+    };
+
+    Ok(left == right)
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
