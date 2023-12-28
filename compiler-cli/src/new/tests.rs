@@ -1,4 +1,7 @@
+use std::path::PathBuf;
+
 use camino::Utf8PathBuf;
+use gleam_core::Error;
 
 #[test]
 fn new() {
@@ -133,4 +136,108 @@ fn invalid_name() {
         "1.0.0-gleam",
     )
     .is_err());
+}
+
+#[test]
+fn existing_directory_no_files() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+    crate::fs::mkdir(&path).unwrap();
+
+    let creator = super::Creator::new(
+        super::NewOptions {
+            project_root: path.to_string(),
+            template: super::Template::Lib,
+            name: None,
+            skip_git: true,
+            skip_github: true,
+        },
+        "1.0.0-gleam",
+    )
+    .unwrap();
+
+    creator.run().unwrap();
+
+    assert!(path.join("README.md").exists());
+}
+
+#[test]
+fn existing_directory_with_one_existing_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+    crate::fs::mkdir(&path).unwrap();
+
+    let _ = std::fs::File::create(PathBuf::from(&path).join("README.md"));
+    let _ = std::fs::File::create(PathBuf::from(&path).join("my_project.gleam"));
+
+    assert!(super::Creator::new(
+        super::NewOptions {
+            project_root: path.to_string(),
+            template: super::Template::Lib,
+            name: None,
+            skip_git: true,
+            skip_github: true,
+        },
+        "1.0.0-gleam",
+    )
+    .is_err());
+}
+
+#[test]
+fn existing_directory_with_non_generated_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+    crate::fs::mkdir(&path).unwrap();
+    let file_path = PathBuf::from(&path).join("some_fake_thing_that_is_not_generated.md");
+
+    let _ = std::fs::File::create(&file_path);
+
+    let creator = super::Creator::new(
+        super::NewOptions {
+            project_root: path.to_string(),
+            template: super::Template::Lib,
+            name: None,
+            skip_git: true,
+            skip_github: true,
+        },
+        "1.0.0-gleam",
+    )
+    .unwrap();
+
+    creator.run().unwrap();
+
+    assert!(path.join("README.md").exists());
+    assert!(path
+        .join("some_fake_thing_that_is_not_generated.md")
+        .exists());
+}
+
+#[test]
+fn conflict_with_existing_files() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+    crate::fs::mkdir(&path).unwrap();
+
+    let _ = std::fs::File::create(PathBuf::from(&path).join("README.md"));
+
+    assert_eq!(
+        super::Creator::new(
+            super::NewOptions {
+                project_root: path.to_string(),
+                template: super::Template::Lib,
+                name: None,
+                skip_git: true,
+                skip_github: true,
+            },
+            "1.0.0-gleam",
+        )
+        .err(),
+        Some(Error::OutputFilesAlreadyExist {
+            file_names: vec![path.join("README.md")]
+        })
+    );
 }

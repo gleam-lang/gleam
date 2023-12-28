@@ -9,6 +9,10 @@
 - It's now possible to compile a project with external functions that are not
   supported by the compilation target as long as those are not actually used.
 
+### Build tool changes
+
+- The `gleam new` command now accepts any existing path, as long as there are no conflicts with already existing files. Examples: `gleam new .`, `gleam new ..`, `gleam new ~/projects/test`.
+
 ### Language Server Changes
 
 - Added a `View on HexDocs` link on function hover
