@@ -128,6 +128,22 @@ pub fn parse_statement_sequence(src: &str) -> Result<Vec1<UntypedStatement>, Par
 }
 
 //
+// Test Interface
+//
+#[cfg(test)]
+pub fn parse_const_value(src: &str) -> Result<Constant<(), ()>, ParseError> {
+    let lex = lexer::make_tokenizer(src);
+    let mut parser = Parser::new(lex);
+    let expr = parser.parse_const_value();
+    let expr = parser.ensure_no_errors_or_remaining_input(expr)?;
+    if let Some(e) = expr {
+        Ok(e)
+    } else {
+        parse_error(ParseErrorType::ExpectedExpr, SrcSpan { start: 0, end: 0 })
+    }
+}
+
+//
 // Parser
 //
 #[derive(Debug)]

@@ -10,7 +10,7 @@ use crate::{
         TypeAstVar, TypedDefinition, TypedModule, UntypedArg, UntypedModule, UntypedStatement,
     },
     build::{Origin, Target},
-    call_graph::into_dependency_order,
+    call_graph::{into_dependency_order, CallGraphNode},
     dep_tree,
     type_::{
         self,
@@ -170,15 +170,14 @@ pub fn infer_module<A>(
 
         for definition in group {
             match definition {
-                Definition::Function(f) => {
+                CallGraphNode::Function(f) => {
                     let statement = infer_function(f, &mut env, &mut hydrators, &name)?;
                     working_group.push(statement);
                 }
-                Definition::ModuleConstant(c) => {
+                CallGraphNode::ModuleConstant(c) => {
                     let statement = infer_module_constant(c, &mut env, &name)?;
                     working_group.push(statement);
                 }
-                _ => unreachable!("Only funtions and constants should be in a definition group"),
             }
         }
 
@@ -1017,7 +1016,6 @@ fn generalise_module_constant(
         public,
         value,
         type_,
-        ..
     } = constant;
     let typ = type_.clone();
     let type_ = type_::generalise(typ);
@@ -1051,7 +1049,7 @@ fn generalise_module_constant(
         name,
         annotation,
         public,
-        value: value,
+        value,
         type_,
     })
 }

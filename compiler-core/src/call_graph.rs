@@ -4,11 +4,11 @@
 #[cfg(test)]
 mod into_dependency_order_tests;
 
-use crate::ast::UntypedModuleConstant;
+use crate::ast::{UntypedModuleConstant, Function, ModuleConstant};
 use crate::{
     ast::{
-        AssignName, BitArrayOption, ClauseGuard, Constant, Definition, Pattern, SrcSpan, Statement,
-        UntypedDefinition, UntypedExpr, UntypedFunction, UntypedPattern, UntypedStatement,
+        AssignName, BitArrayOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
+        UntypedExpr, UntypedFunction, UntypedPattern, UntypedStatement,
     },
     type_::Error,
     Result,
@@ -22,6 +22,13 @@ struct CallGraphBuilder<'a> {
     names: im::HashMap<&'a str, Option<(NodeIndex, SrcSpan)>>,
     graph: StableGraph<(), (), Directed>,
     current_function: NodeIndex,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CallGraphNode{
+    Function(Function<(), UntypedExpr>),
+
+    ModuleConstant(ModuleConstant<(), ()>)
 }
 
 impl<'a> CallGraphBuilder<'a> {
@@ -441,7 +448,7 @@ impl<'a> CallGraphBuilder<'a> {
 pub fn into_dependency_order(
     functions: Vec<UntypedFunction>,
     constants: Vec<UntypedModuleConstant>,
-) -> Result<Vec<Vec<UntypedDefinition>>, Error> {
+) -> Result<Vec<Vec<CallGraphNode>>, Error> {
     let mut grapher = CallGraphBuilder::default();
 
     for function in &functions {
@@ -473,8 +480,8 @@ pub fn into_dependency_order(
     // We wrap them each with `Some` so we can use `.take()`.
     let mut definitions = functions
         .into_iter()
-        .map(|f| Definition::Function(f))
-        .chain(constants.into_iter().map(|c| Definition::ModuleConstant(c)))
+        .map(CallGraphNode::Function)
+        .chain(constants.into_iter().map(CallGraphNode::ModuleConstant))
         .map(Some)
         .collect_vec();
 
