@@ -56,6 +56,7 @@
   "Type 'Result' is not generic".
 - Not providing a definition after some attributes is now a parse error.
 
+
 ## v0.33.0 - 2023-12-18
 
 ## v0.33.0-rc4 - 2023-12-17
@@ -65,6 +66,7 @@
 - The deprecated `BitString` type has been removed.
 - The deprecated `inspect` functions and `BitString` type has been removed from
   the JavaScript prelude.
+
 
 ## v0.33.0-rc3 - 2023-12-17
 
@@ -79,6 +81,7 @@
 - Fixed a bug where string prefix aliases defined in alternative case branches
   would all be bound to the same constant.
 
+
 ## v0.33.0-rc2 - 2023-12-07
 
 ### Language changes
@@ -91,6 +94,7 @@
 
 - Fixed a bug where the `\u` string escape sequence would not work with
   on Erlang on the right hand side of a string concatenation.
+
 
 ## v0.33.0-rc1 - 2023-12-06
 
@@ -161,6 +165,7 @@
 - Fixed a bug where using a string prefix pattern in `let assert` would generate
   incorrect JavaScript.
 
+
 ## v0.32.4 - 2023-11-09
 
 ### Build tool changes
@@ -175,6 +180,7 @@
   argument has the same name as the module function.
 - Fixed the `target` property of `gleam.toml` being ignored for local path
   dependencies by `gleam run -m module/name`
+
 
 ## v0.32.3 - 2023-11-07
 
@@ -193,6 +199,7 @@
 
 - Fixed a bug where some nested pipelines could fail to type check.
 
+
 ## v0.32.2 - 2023-11-03
 
 ### Build tool changes
@@ -208,6 +215,7 @@
 - Fixed a bug where aliased unqualified types and values of the same name could
   produce an incorrect error.
 
+
 ## v0.32.1 - 2023-11-02
 
 ### Bug fixes
@@ -217,12 +225,14 @@
 - Fixed a bug where incorrect JavaScript could be generated due to backwards
   compatibility with the deprecated import syntax.
 
+
 ## v0.32.0 - 2023-11-01
 
 ### Bug fixes
 
 - Fixed a bug where running `gleam fix` multiple times could produce incorrect
   results.
+
 
 ## v0.32.0-rc3 - 2023-10-26
 
@@ -231,12 +241,14 @@
 - Fixed a bug where `gleam fix` would fail to update the deprecated type import
   syntax for aliased unqualified types.
 
+
 ## v0.32.0-rc2 - 2023-10-26
 
 ### Bug fixes
 
 - Fixed a bug where the backward compatibility for the deprecated import syntax
   could result in an import error with some valid imports.
+
 
 ## v0.32.0-rc1 - 2023-10-25
 
@@ -292,7 +304,7 @@
 - The content has been made wider in rendered HTML documentation.
 - Dependencies that can be built with both `mix` and `rebar3` are now built
   with `mix` if it exists on the system, and with `rebar3` if it doesn't.
-
+  
 ### Bug fixes
 
 - "Compiling $package" is now only printed when a package has new changes to
