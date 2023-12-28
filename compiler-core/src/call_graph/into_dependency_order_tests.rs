@@ -8,7 +8,10 @@ use ecow::EcoString;
 type FuncInput = (&'static str, &'static [&'static str], &'static str);
 type ConstInput = (&'static str, &'static str);
 
-fn parse_and_order(functions: &[FuncInput], constants: &[ConstInput]) -> Result<Vec<Vec<EcoString>>, Error> {
+fn parse_and_order(
+    functions: &[FuncInput],
+    constants: &[ConstInput],
+) -> Result<Vec<Vec<EcoString>>, Error> {
     let functions = functions
         .iter()
         .map(|(name, arguments, src)| Function {
@@ -38,7 +41,7 @@ fn parse_and_order(functions: &[FuncInput], constants: &[ConstInput]) -> Result<
         .collect_vec();
     let constants = constants
         .iter()
-        .map(|(name, value)|{
+        .map(|(name, value)| {
             let const_value = crate::parse::parse_const_value(value).expect("syntax error");
             ModuleConstant {
                 documentation: None,
@@ -643,15 +646,12 @@ fn function_argument_shadowing() {
 }
 
 #[test]
-fn constants_and_functions(){
+fn constants_and_functions() {
     let functions = [
         ("a", ["b"].as_slice(), r#"b"#),
-        ("b", [].as_slice(), r#"c"# )
+        ("b", [].as_slice(), r#"c"#),
     ];
-    let constants = [
-        ("d", r#"c"#),
-        ("c", r#"a"#)
-    ];
+    let constants = [("d", r#"c"#), ("c", r#"a"#)];
     assert_eq!(
         parse_and_order(functions.as_slice(), constants.as_slice()).unwrap(),
         vec![vec!["a"], vec!["c"], vec!["b"], vec!["d"]]

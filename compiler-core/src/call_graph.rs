@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod into_dependency_order_tests;
 
-use crate::ast::{UntypedModuleConstant, Function, ModuleConstant};
+use crate::ast::{Function, ModuleConstant, UntypedModuleConstant};
 use crate::{
     ast::{
         AssignName, BitArrayOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
@@ -25,10 +25,10 @@ struct CallGraphBuilder<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CallGraphNode{
+pub enum CallGraphNode {
     Function(Function<(), UntypedExpr>),
 
-    ModuleConstant(ModuleConstant<(), ()>)
+    ModuleConstant(ModuleConstant<(), ()>),
 }
 
 impl<'a> CallGraphBuilder<'a> {
