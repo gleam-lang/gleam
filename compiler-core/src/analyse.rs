@@ -603,9 +603,9 @@ fn infer_function(
         ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
 
         if external_javascript.is_some() && external_erlang.is_some() {
-            environment.warnings.emit(Warning::UnusedFunctionBody {
-                location,
-            })
+            environment
+                .warnings
+                .emit(Warning::UnusedFunctionBody { location })
         }
     } else {
         // There was no external implementation, so a Gleam one must be given.
