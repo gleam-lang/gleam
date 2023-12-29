@@ -598,7 +598,10 @@ fn infer_function(
         // clarity + to avoid accidental mistakes.
         ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
 
-        if external_javascript.is_some() && external_erlang.is_some() {
+        if external_javascript.is_some()
+            && external_erlang.is_some()
+            && !body.first().is_placeholder()
+        {
             environment
                 .warnings
                 .emit(Warning::UnusedFunctionBody { location })
