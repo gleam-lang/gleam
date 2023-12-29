@@ -621,6 +621,8 @@ fn infer_function(
         ensure_body_given(&body, location)?;
     }
 
+    let external_targets = external_supported_targets(&external_erlang, &external_javascript);
+
     // Infer the type using the preregistered args + return types as a starting point
     let (type_, args, body, mut supported_targets) = environment.in_new_scope(|environment| {
         let args_types = arguments
@@ -628,7 +630,7 @@ fn infer_function(
             .zip(&args_types)
             .map(|(a, t)| a.set_type(t.clone()))
             .collect();
-        let mut expr_typer = ExprTyper::new(environment);
+        let mut expr_typer = ExprTyper::new(environment, external_targets);
         expr_typer.hydrator = hydrators
             .remove(&name)
             .expect("Could not find hydrator for fn");
@@ -641,14 +643,11 @@ fn infer_function(
     })?;
 
     if has_empty_body {
-        // If the function has an empty body we are only going to considered as
+        // If the function has an empty body we are only going to consider as
         // supported targets the ones that have an external implementation.
-        supported_targets = external_supported_targets(&external_erlang, &external_javascript);
+        supported_targets = external_targets;
     } else {
-        supported_targets.merge(&external_supported_targets(
-            &external_erlang,
-            &external_javascript,
-        ));
+        supported_targets.merge(&external_targets);
     }
 
     // Assert that the inferred type matches the type of any recursive call
@@ -950,7 +949,7 @@ fn infer_module_constant(
         value,
         ..
     } = c;
-    let mut expr_typer = ExprTyper::new(environment);
+    let mut expr_typer = ExprTyper::new(environment, SupportedTargets::none());
     let typed_expr = expr_typer.infer_const(&annotation, *value)?;
     let type_ = typed_expr.type_();
     let variant = ValueConstructor {

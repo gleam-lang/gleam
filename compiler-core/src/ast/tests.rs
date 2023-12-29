@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::build::Target;
+use crate::type_::expression::SupportedTargets;
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{SrcSpan, TypedExpr},
@@ -115,7 +116,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             .into(),
         },
     );
-    ExprTyper::new(&mut environment)
+    ExprTyper::new(&mut environment, SupportedTargets::none())
         .infer_statements(ast)
         .expect("should successfully infer")
         .first()
