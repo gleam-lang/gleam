@@ -170,7 +170,7 @@ where
 
     let mut ast = parsed.module;
     let extra = parsed.extra;
-    let dependencies = ast.dependencies(target);
+    let dependencies = ast.dependencies();
 
     ast.name = name.clone();
     let module = UncompiledModule {

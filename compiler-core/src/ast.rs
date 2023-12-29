@@ -77,12 +77,17 @@ impl TargetedDefinition {
 }
 
 impl UntypedModule {
-    pub fn dependencies(&self, target: Target) -> Vec<(EcoString, SrcSpan)> {
-        self.iter_statements(target)
+    pub fn dependencies(&self) -> Vec<(EcoString, SrcSpan)> {
+        self.definitions
+            .iter()
             .flat_map(|s| match s {
-                Definition::Import(Import {
-                    module, location, ..
-                }) => Some((module.clone(), *location)),
+                TargetedDefinition {
+                    definition:
+                        Definition::Import(Import {
+                            module, location, ..
+                        }),
+                    ..
+                } => Some((module.clone(), *location)),
                 _ => None,
             })
             .collect()
@@ -145,10 +150,10 @@ fn module_dependencies_test() {
         vec![
             ("one".into(), SrcSpan::new(0, 10)),
             ("two".into(), SrcSpan::new(45, 55)),
-            //("three".into(), SrcSpan::new(95, 107)),
+            ("three".into(), SrcSpan::new(95, 107)),
             ("four".into(), SrcSpan::new(118, 129)),
         ],
-        module.dependencies(Target::Erlang)
+        module.dependencies()
     );
 }
 
