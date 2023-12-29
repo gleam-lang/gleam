@@ -318,7 +318,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             } => match type_.get_app_args(true, PRELUDE_MODULE_NAME, "List", 1, self.environment) {
                 Some(args) => {
                     let type_ = args
-                        .get(0)
+                        .first()
                         .expect("Failed to get type argument of List")
                         .clone();
                     let elements = elements
