@@ -249,13 +249,16 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    crate::type_::ExprTyper::new(&mut crate::type_::Environment::new(
-        ids,
-        "themodule".into(),
-        Target::Erlang,
-        &modules,
-        &TypeWarningEmitter::null(),
-    ))
+    crate::type_::ExprTyper::new(
+        &mut crate::type_::Environment::new(
+            ids,
+            "themodule".into(),
+            Target::Erlang,
+            &modules,
+            &TypeWarningEmitter::null(),
+        ),
+        SupportedTargets::none(),
+    )
     .infer_statements(ast)
 }
 
@@ -1999,4 +2002,56 @@ pub fn main() {
 "#,
         vec![("erlang_only", "fn() -> Int"), ("main", "fn() -> Int")]
     );
+}
+
+#[test]
+fn erlang_only_function_with_javascript_external() {
+    let module = r#"
+@external(erlang, "foo", "bar")
+pub fn erlang_only() -> Int
+
+@external(javascript, "foo", "bar")
+pub fn all_targets() -> Int {
+  erlang_only()
+}
+
+pub fn main() {
+  all_targets()
+}
+    "#;
+
+    let expected = vec![
+        ("all_targets", "fn() -> Int"),
+        ("erlang_only", "fn() -> Int"),
+        ("main", "fn() -> Int"),
+    ];
+
+    assert_module_infer!(module, expected.clone());
+    assert_js_module_infer!(module, expected);
+}
+
+#[test]
+fn javascript_only_function_with_erlang_external() {
+    let module = r#"
+@external(javascript, "foo", "bar")
+pub fn javascript_only() -> Int
+
+@external(erlang, "foo", "bar")
+pub fn all_targets() -> Int {
+  javascript_only()
+}
+
+pub fn main() {
+  all_targets()
+}
+    "#;
+
+    let expected = vec![
+        ("all_targets", "fn() -> Int"),
+        ("javascript_only", "fn() -> Int"),
+        ("main", "fn() -> Int"),
+    ];
+
+    assert_module_infer!(module, expected.clone());
+    assert_js_module_infer!(module, expected);
 }

@@ -83,6 +83,10 @@ impl SupportedTargets {
             Target::JavaScript => self.javascript,
         }
     }
+
+    pub fn supports_no_target(&self) -> bool {
+        !self.erlang && !self.javascript
+    }
 }
 
 #[derive(Debug)]
@@ -91,12 +95,14 @@ pub(crate) struct ExprTyper<'a, 'b> {
 
     pub(crate) supported_targets: SupportedTargets,
 
+    external_targets: SupportedTargets,
+
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>) -> Self {
+    pub fn new(environment: &'a mut Environment<'b>, external_targets: SupportedTargets) -> Self {
         let mut hydrator = Hydrator::new();
         hydrator.permit_holes(true);
         Self {
@@ -104,6 +110,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             environment,
             // This will be narrowed down as the expression type is inferred
             supported_targets: SupportedTargets::all(),
+            external_targets,
         }
     }
 
@@ -657,11 +664,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn narrow_supported_targets(
         &mut self,
-        supported_targets: SupportedTargets,
+        new_targets: SupportedTargets,
         location: SrcSpan,
         kind: EcoString,
     ) -> Result<(), Error> {
-        if !supported_targets.supports(&self.environment.target) {
+        let has_external_implementation = self.external_targets.supports(&self.environment.target);
+        if !has_external_implementation && !new_targets.supports(&self.environment.target) {
             // If a function/constant used are is not supported by the current target
             // we fail compilation with an error.
             Err(Error::UnsupportedTarget {
@@ -671,7 +679,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
         } else {
             // Otherwise we just narrow down the currently supported targets.
-            self.supported_targets.intersect(&supported_targets);
+            self.supported_targets.intersect(&new_targets);
             Ok(())
         }
     }
