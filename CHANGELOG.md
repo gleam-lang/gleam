@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Language changes
+
+- Warn about function body not being used, because it already has external implementations for all targets.
+
 ### Language Server Changes
 
 - Added a `View on HexDocs` link on function hover
@@ -275,7 +279,7 @@
 - The content has been made wider in rendered HTML documentation.
 - Dependencies that can be built with both `mix` and `rebar3` are now built
   with `mix` if it exists on the system, and with `rebar3` if it doesn't.
-  
+
 ### Bug fixes
 
 - "Compiling $package" is now only printed when a package has new changes to
