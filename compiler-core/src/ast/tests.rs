@@ -116,7 +116,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             .into(),
         },
     );
-    ExprTyper::new(&mut environment, SupportedTargets::none())
+    ExprTyper::new(&mut environment, SupportedTargets::all())
         .infer_statements(ast)
         .expect("should successfully infer")
         .first()

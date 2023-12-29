@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "@target(erlang)\npub fn erlang_only() -> Int {\n  javascript_only()\n}\n\n@external(javascript, \"foo\", \"bar\")\npub fn javascript_only() -> Int\n    "
+---
+error: Unsupported target
+  ┌─ /src/one/two.gleam:3:3
+  │
+3 │   javascript_only()
+  │   ^^^^^^^^^^^^^^^
+
+This function doesn't have an implementation for the Erlang target.
+

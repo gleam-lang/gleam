@@ -257,7 +257,7 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
             &modules,
             &TypeWarningEmitter::null(),
         ),
-        SupportedTargets::none(),
+        SupportedTargets::all(),
     )
     .infer_statements(ast)
 }
@@ -2054,4 +2054,66 @@ pub fn main() {
 
     assert_module_infer!(module, expected.clone());
     assert_js_module_infer!(module, expected);
+}
+
+#[test]
+fn javascript_only_function_with_javascript_external() {
+    let module = r#"@external(javascript, "foo", "bar")
+pub fn javascript_only() -> Int
+
+@external(javascript, "foo", "bar")
+pub fn uh_oh() -> Int {
+  javascript_only()
+}
+"#;
+    assert_js_module_infer!(
+        module,
+        vec![("javascript_only", "fn() -> Int"), ("uh_oh", "fn() -> Int")]
+    );
+    assert_module_error!(module);
+}
+
+#[test]
+fn erlang_only_function_with_erlang_external() {
+    let module = r#"@external(erlang, "foo", "bar")
+pub fn erlang_only() -> Int
+
+@external(erlang, "foo", "bar")
+pub fn uh_oh() -> Int {
+  erlang_only()
+}
+"#;
+    assert_js_module_error!(module);
+    assert_module_infer!(
+        module,
+        vec![("erlang_only", "fn() -> Int"), ("uh_oh", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn erlang_targeted_function_cant_contain_javascript_only_function() {
+    let module = r#"@target(erlang)
+pub fn erlang_only() -> Int {
+  javascript_only()
+}
+
+@external(javascript, "foo", "bar")
+pub fn javascript_only() -> Int
+    "#;
+    assert_js_module_infer!(module, vec![("javascript_only", "fn() -> Int")]);
+    assert_module_error!(module);
+}
+
+#[test]
+fn javascript_targeted_function_cant_contain_erlang_only_function() {
+    let module = r#"@target(javascript)
+pub fn javascript_only() -> Int {
+  erlang_only()
+}
+
+@external(erlang, "foo", "bar")
+pub fn erlang_only() -> Int
+    "#;
+    assert_module_infer!(module, vec![("erlang_only", "fn() -> Int")]);
+    assert_js_module_error!(module);
 }

@@ -484,6 +484,7 @@ fn register_value_from_function(
         body: _,
         return_type: _,
         supported_targets,
+        target: _,
     } = f;
     assert_unique_name(names, name, *location)?;
     assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
@@ -582,6 +583,7 @@ fn infer_function(
         external_erlang,
         external_javascript,
         return_type: (),
+        target,
         supported_targets: _,
     } = f;
     let preregistered_fn = environment
@@ -623,6 +625,14 @@ fn infer_function(
 
     let external_targets = external_supported_targets(&external_erlang, &external_javascript);
 
+    // If the function has a target annotation, the only required target for its
+    // body is the annotated target. Otherwise the required targets are all the
+    // targets that do not have an external implementation.
+    let required_targets = match target {
+        Some(target) => SupportedTargets::from_target(target),
+        None => SupportedTargets::all().difference(external_targets),
+    };
+
     // Infer the type using the preregistered args + return types as a starting point
     let (type_, args, body, mut supported_targets) = environment.in_new_scope(|environment| {
         let args_types = arguments
@@ -630,7 +640,7 @@ fn infer_function(
             .zip(&args_types)
             .map(|(a, t)| a.set_type(t.clone()))
             .collect();
-        let mut expr_typer = ExprTyper::new(environment, external_targets);
+        let mut expr_typer = ExprTyper::new(environment, required_targets);
         expr_typer.hydrator = hydrators
             .remove(&name)
             .expect("Could not find hydrator for fn");
@@ -647,7 +657,7 @@ fn infer_function(
         // supported targets the ones that have an external implementation.
         supported_targets = external_targets;
     } else {
-        supported_targets.merge(&external_targets);
+        supported_targets = supported_targets.merge(external_targets);
     }
 
     // Assert that the inferred type matches the type of any recursive call
@@ -686,6 +696,7 @@ fn infer_function(
         body,
         external_erlang,
         external_javascript,
+        target,
         supported_targets,
     }))
 }
@@ -947,9 +958,15 @@ fn infer_module_constant(
         annotation,
         public,
         value,
+        target,
         ..
     } = c;
-    let mut expr_typer = ExprTyper::new(environment, SupportedTargets::none());
+
+    let required_targets = match target {
+        Some(target) => SupportedTargets::from_target(target),
+        None => SupportedTargets::all(),
+    };
+    let mut expr_typer = ExprTyper::new(environment, required_targets);
     let typed_expr = expr_typer.infer_const(&annotation, *value)?;
     let type_ = typed_expr.type_();
     let variant = ValueConstructor {
@@ -985,6 +1002,7 @@ fn infer_module_constant(
         annotation,
         public,
         value: Box::new(typed_expr),
+        target,
         type_,
     }))
 }
@@ -1123,6 +1141,7 @@ fn generalise_function(
         external_erlang,
         external_javascript,
         supported_targets,
+        target,
     } = function;
 
     // Lookup the inferred function information
@@ -1179,6 +1198,7 @@ fn generalise_function(
         external_erlang,
         external_javascript,
         supported_targets,
+        target,
     })
 }
 
