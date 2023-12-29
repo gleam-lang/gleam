@@ -97,7 +97,6 @@ struct Attributes {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Warning {
     ReservedWord { location: SrcSpan, word: EcoString },
-    UnusedFunctionBody { location: SrcSpan },
 }
 
 //
@@ -1473,7 +1472,7 @@ where
         let return_annotation = self.parse_type_annotation(&Token::RArrow)?;
 
         let (body, end, end_position) = match self.maybe_one(&Token::LeftBrace) {
-            Some((lbr_e, _)) => {
+            Some(_) => {
                 let some_body = self.parse_statement_seq()?;
                 let (_, rbr_e) = self.expect_one(&Token::RightBrace)?;
                 let end = return_annotation
@@ -1488,16 +1487,6 @@ where
                     })],
                     Some((body, _)) => body,
                 };
-
-                if attributes.external_erlang.is_some() && attributes.external_javascript.is_some()
-                {
-                    self.warnings.push(Warning::UnusedFunctionBody {
-                        location: SrcSpan {
-                            start: lbr_e,
-                            end: rbr_e,
-                        },
-                    });
-                }
 
                 (body, end, rbr_e)
             }
