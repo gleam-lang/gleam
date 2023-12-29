@@ -443,6 +443,7 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
     pub value: Box<Constant<T, ConstantRecordTag>>,
     pub target: Option<Target>,
     pub type_: T,
+    pub supported_targets: SupportedTargets,
 }
 
 pub type UntypedCustomType = CustomType<()>;

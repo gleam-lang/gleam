@@ -2143,6 +2143,7 @@ where
                 value: Box::new(value),
                 target: attributes.target,
                 type_: (),
+                supported_targets: SupportedTargets::all(),
             })))
         } else {
             parse_error(
