@@ -254,7 +254,6 @@ where
                     targets = BuildTargets::all();
                 };
 
-                attributes.target = None;
                 self.parse_import(start, targets)
             }
             // Module Constants
@@ -271,16 +270,12 @@ where
             // Function
             (Some((start, Token::Fn, _)), _) => {
                 let _ = self.next_tok();
-                let f = self.parse_function(start, false, false, &mut attributes);
-                attributes.target = None;
-                f
+                self.parse_function(start, false, false, &mut attributes)
             }
             (Some((start, Token::Pub, _)), Some((_, Token::Fn, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
-                let f = self.parse_function(start, true, false, &mut attributes);
-                attributes.target = None;
-                f
+                self.parse_function(start, true, false, &mut attributes)
             }
 
             // Custom Types, and Type Aliases

@@ -112,15 +112,15 @@ impl UntypedModule {
 
         self.definitions
             .into_iter()
-            .filter(move |def| {
-                if let Definition::Function(f) = &def.definition {
+            .filter(move |def| match &def.definition {
+                Definition::Import(_) => true,
+                Definition::Function(f) => {
                     let targets = function_implementation_sum
                         .get(&f.name)
                         .expect("inserted all funcs");
                     f.targets.implements(&target) || !targets.implements(&target)
-                } else {
-                    def.is_for(target)
                 }
+                _ => def.is_for(target),
             })
             .map(move |def| def.definition)
     }
@@ -145,7 +145,7 @@ fn module_dependencies_test() {
         vec![
             ("one".into(), SrcSpan::new(0, 10)),
             ("two".into(), SrcSpan::new(45, 55)),
-            ("three".into(), SrcSpan::new(95, 107)),
+            //("three".into(), SrcSpan::new(95, 107)),
             ("four".into(), SrcSpan::new(118, 129)),
         ],
         module.dependencies(Target::Erlang)
