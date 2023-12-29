@@ -181,8 +181,6 @@ a future version of Gleam."
                         }),
                     }
                 }
-
-
             },
 
             Warning::InvalidSource { path } => Diagnostic {
