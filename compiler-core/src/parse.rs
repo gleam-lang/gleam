@@ -251,12 +251,12 @@ where
             // Module Constants
             (Some((_, Token::Const, _)), _) => {
                 let _ = self.next_tok();
-                self.parse_module_const(false)
+                self.parse_module_const(false, &attributes)
             }
             (Some((_, Token::Pub, _)), Some((_, Token::Const, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
-                self.parse_module_const(true)
+                self.parse_module_const(true, &attributes)
             }
 
             // Function
@@ -1536,6 +1536,7 @@ where
             deprecation: std::mem::take(&mut attributes.deprecated),
             external_erlang: attributes.external_erlang.take(),
             external_javascript: attributes.external_javascript.take(),
+            target: attributes.target,
             supported_targets: SupportedTargets::all(),
         })))
     }
@@ -2124,6 +2125,7 @@ where
     fn parse_module_const(
         &mut self,
         public: bool,
+        attributes: &Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let (start, name, end) = self.expect_name()?;
         let documentation = self.take_documentation(start);
@@ -2139,6 +2141,7 @@ where
                 name,
                 annotation,
                 value: Box::new(value),
+                target: attributes.target,
                 type_: (),
             })))
         } else {

@@ -53,39 +53,62 @@ impl SupportedTargets {
         }
     }
 
-    pub fn from_target(target: &Target) -> SupportedTargets {
+    pub fn from_target(target: Target) -> SupportedTargets {
         match target {
             Target::Erlang => SupportedTargets::erlang(),
             Target::JavaScript => SupportedTargets::javascript(),
         }
     }
 
-    pub fn intersect(&mut self, targets: &SupportedTargets) {
-        self.erlang = self.erlang && targets.erlang;
-        self.javascript = self.javascript && targets.javascript;
-    }
-
-    pub fn merge(&mut self, targets: &SupportedTargets) {
-        self.erlang = self.erlang || targets.erlang;
-        self.javascript = self.javascript || targets.javascript;
-    }
-
-    pub fn add(&mut self, target: &Target) {
-        match target {
-            Target::Erlang => self.erlang = true,
-            Target::JavaScript => self.javascript = true,
+    pub fn intersect(&self, targets: SupportedTargets) -> SupportedTargets {
+        SupportedTargets {
+            erlang: self.erlang && targets.erlang,
+            javascript: self.javascript && targets.javascript,
         }
     }
 
-    pub fn supports(&self, target: &Target) -> bool {
+    pub fn merge(&self, targets: SupportedTargets) -> SupportedTargets {
+        SupportedTargets {
+            erlang: self.erlang || targets.erlang,
+            javascript: self.javascript || targets.javascript,
+        }
+    }
+
+    pub fn add(&self, target: Target) -> SupportedTargets {
+        match target {
+            Target::Erlang => SupportedTargets {
+                erlang: true,
+                javascript: self.javascript,
+            },
+            Target::JavaScript => SupportedTargets {
+                erlang: self.erlang,
+                javascript: true,
+            },
+        }
+    }
+
+    pub fn difference(&self, targets: SupportedTargets) -> SupportedTargets {
+        SupportedTargets {
+            javascript: self.javascript && !targets.javascript,
+            erlang: self.erlang && !targets.erlang,
+        }
+    }
+
+    pub fn supports(&self, target: Target) -> bool {
         match target {
             Target::Erlang => self.erlang,
             Target::JavaScript => self.javascript,
         }
     }
 
-    pub fn supports_no_target(&self) -> bool {
-        !self.erlang && !self.javascript
+    pub fn to_vec(self) -> Vec<Target> {
+        let SupportedTargets { erlang, javascript } = self;
+        match (erlang, javascript) {
+            (true, true) => vec![Target::Erlang, Target::JavaScript],
+            (true, _) => vec![Target::Erlang],
+            (_, true) => vec![Target::JavaScript],
+            (_, _) => vec![],
+        }
     }
 }
 
@@ -95,22 +118,23 @@ pub(crate) struct ExprTyper<'a, 'b> {
 
     pub(crate) supported_targets: SupportedTargets,
 
-    external_targets: SupportedTargets,
+    required_targets: SupportedTargets,
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>, external_targets: SupportedTargets) -> Self {
+    pub fn new(environment: &'a mut Environment<'b>, required_targets: SupportedTargets) -> Self {
         let mut hydrator = Hydrator::new();
+
         hydrator.permit_holes(true);
         Self {
             hydrator,
             environment,
+            required_targets,
             // This will be narrowed down as the expression type is inferred
             supported_targets: SupportedTargets::all(),
-            external_targets,
         }
     }
 
@@ -668,19 +692,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         kind: EcoString,
     ) -> Result<(), Error> {
-        let has_external_implementation = self.external_targets.supports(&self.environment.target);
-        if !has_external_implementation && !new_targets.supports(&self.environment.target) {
-            // If a function/constant used are is not supported by the current target
-            // we fail compilation with an error.
-            Err(Error::UnsupportedTarget {
+        let missing_targets = self
+            .required_targets
+            .difference(new_targets)
+            .intersect(SupportedTargets::from_target(self.environment.target));
+
+        match missing_targets.to_vec().as_slice() {
+            [target, ..] => Err(Error::UnsupportedTarget {
                 location,
-                target: self.environment.target,
+                target: *target,
                 kind,
-            })
-        } else {
-            // Otherwise we just narrow down the currently supported targets.
-            self.supported_targets.intersect(&new_targets);
-            Ok(())
+            }),
+            [] => {
+                self.supported_targets = self.supported_targets.intersect(new_targets);
+                Ok(())
+            }
         }
     }
 

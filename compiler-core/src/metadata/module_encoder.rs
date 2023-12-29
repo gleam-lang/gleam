@@ -489,7 +489,7 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: supported_targets::Builder<'_>,
         supported_targets: SupportedTargets,
     ) {
-        builder.set_erlang(supported_targets.supports(&Target::Erlang));
-        builder.set_javascript(supported_targets.supports(&Target::JavaScript));
+        builder.set_erlang(supported_targets.supports(Target::Erlang));
+        builder.set_javascript(supported_targets.supports(Target::JavaScript));
     }
 }

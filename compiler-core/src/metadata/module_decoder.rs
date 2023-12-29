@@ -447,10 +447,10 @@ impl ModuleDecoder {
     fn supported_targets(&self, reader: supported_targets::Reader<'_>) -> SupportedTargets {
         let mut supported_targets = SupportedTargets::none();
         if reader.get_erlang() {
-            supported_targets.add(&Target::Erlang);
+            supported_targets = supported_targets.add(Target::Erlang);
         }
         if reader.get_javascript() {
-            supported_targets.add(&Target::JavaScript);
+            supported_targets = supported_targets.add(Target::JavaScript);
         }
         supported_targets
     }
