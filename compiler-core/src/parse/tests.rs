@@ -670,3 +670,16 @@ fn reserved_macro() {
 fn reserved_test() {
     assert_warning!(r#"const test = 1"#);
 }
+
+#[test]
+fn unused_function_body() {
+    // https://github.com/gleam-lang/gleam/issues/2499
+    assert_warning!(r#"
+@external(javascript, "foo", "bar")
+@external(erlang, "foo", "bar")
+pub fn foo() -> Int {
+  // This is dead code since there already is an
+  // external implementation for all targets.
+  11
+}"#);
+}
