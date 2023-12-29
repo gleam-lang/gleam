@@ -22,7 +22,7 @@ use crate::{
         prelude::*,
         AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
         TypeConstructor, TypeValueConstructor, TypeValueConstructorParameter, ValueConstructor,
-        ValueConstructorVariant,
+        ValueConstructorVariant, Warning,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
@@ -601,6 +601,12 @@ fn infer_function(
         // think you should always specify types for external functions for
         // clarity + to avoid accidental mistakes.
         ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
+
+        if external_javascript.is_some() && external_erlang.is_some() {
+            environment.warnings.emit(Warning::UnusedFunctionBody {
+                location,
+            })
+        }
     } else {
         // There was no external implementation, so a Gleam one must be given.
         ensure_body_given(&body, location)?;
