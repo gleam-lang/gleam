@@ -1072,7 +1072,7 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
                 env.erl_function_scope_vars = initial_erlang_vars.clone();
 
                 let patterns_doc = if patterns.len() == 1 {
-                    let p = patterns.get(0).expect("Single pattern clause printing");
+                    let p = patterns.first().expect("Single pattern clause printing");
                     pattern(p, env)
                 } else {
                     tuple(patterns.iter().map(|p| pattern(p, env)))
@@ -1238,7 +1238,7 @@ fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
 fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
     let subjects_doc = if subjects.len() == 1 {
         let subject = subjects
-            .get(0)
+            .first()
             .expect("erl case printing of single subject");
         maybe_block_expr(subject, env).group()
     } else {
@@ -1969,11 +1969,11 @@ impl<'a> TypePrinter<'a> {
             "Float" => "float()".to_doc(),
             "BitArray" => "bitstring()".to_doc(),
             "List" => {
-                let arg0 = self.print(args.get(0).expect("print_prelude_type list"));
+                let arg0 = self.print(args.first().expect("print_prelude_type list"));
                 "list(".to_doc().append(arg0).append(")")
             }
             "Result" => {
-                let arg_ok = self.print(args.get(0).expect("print_prelude_type result ok"));
+                let arg_ok = self.print(args.first().expect("print_prelude_type result ok"));
                 let arg_err = self.print(args.get(1).expect("print_prelude_type result err"));
                 let ok = tuple(["ok".to_doc(), arg_ok]);
                 let error = tuple(["error".to_doc(), arg_err]);
