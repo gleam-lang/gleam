@@ -969,6 +969,8 @@ fn infer_module_constant(
     let mut expr_typer = ExprTyper::new(environment, required_targets);
     let typed_expr = expr_typer.infer_const(&annotation, *value)?;
     let type_ = typed_expr.type_();
+    let supported_targets = expr_typer.supported_targets;
+
     let variant = ValueConstructor {
         public,
         deprecation: Deprecation::NotDeprecated,
@@ -977,7 +979,7 @@ fn infer_module_constant(
             location,
             literal: typed_expr.clone(),
             module: module_name.clone(),
-            supported_targets: expr_typer.supported_targets,
+            supported_targets,
         },
         type_: type_.clone(),
     };
@@ -1004,6 +1006,7 @@ fn infer_module_constant(
         value: Box::new(typed_expr),
         target,
         type_,
+        supported_targets,
     }))
 }
 
@@ -1084,6 +1087,8 @@ fn generalise_module_constant(
         public,
         value,
         type_,
+        target,
+        supported_targets,
     } = constant;
     let typ = type_.clone();
     let type_ = type_::generalise(typ);
@@ -1092,6 +1097,7 @@ fn generalise_module_constant(
         location,
         literal: *value.clone(),
         module: module_name.clone(),
+        supported_targets,
     };
     environment.insert_variable(
         name.clone(),
@@ -1119,6 +1125,8 @@ fn generalise_module_constant(
         public,
         value,
         type_,
+        target,
+        supported_targets,
     })
 }
 

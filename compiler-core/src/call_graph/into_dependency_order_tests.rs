@@ -52,6 +52,8 @@ fn parse_and_order(
                 name: EcoString::from(*name),
                 annotation: None,
                 value: Box::from(const_value),
+                supported_targets: SupportedTargets::all(),
+                target: None,
                 type_: (),
             }
         })
