@@ -37,7 +37,6 @@ fn parse_and_order(
             documentation: None,
             external_erlang: None,
             external_javascript: None,
-            target: None,
             supported_targets: SupportedTargets::all(),
         })
         .collect_vec();
@@ -53,7 +52,6 @@ fn parse_and_order(
                 annotation: None,
                 value: Box::from(const_value),
                 supported_targets: SupportedTargets::all(),
-                target: None,
                 type_: (),
             }
         })

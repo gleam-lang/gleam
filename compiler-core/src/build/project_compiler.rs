@@ -1,4 +1,5 @@
 use crate::{
+    analyse::TargetSupport,
     build::{
         package_compiler, package_compiler::PackageCompiler, package_loader::StaleTracker,
         project_compiler, telemetry::Telemetry, Mode, Module, Origin, Package, Target,
@@ -555,6 +556,9 @@ where
         compiler.perform_codegen = self.options.codegen.should_codegen(is_root);
         compiler.compile_beam_bytecode = self.options.codegen.should_codegen(is_root);
         compiler.subprocess_stdio = self.subprocess_stdio;
+        if is_root {
+            compiler.target_support = TargetSupport::Enforced;
+        }
 
         // Compile project to Erlang or JavaScript source code
         let compiled = compiler.compile(

@@ -1,6 +1,6 @@
 use super::{pipe::PipeTyper, *};
 use crate::{
-    analyse::infer_bit_array_option,
+    analyse::{infer_bit_array_option, TargetSupport},
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan, Statement,
@@ -87,13 +87,6 @@ impl SupportedTargets {
         }
     }
 
-    pub fn difference(&self, targets: SupportedTargets) -> SupportedTargets {
-        SupportedTargets {
-            javascript: self.javascript && !targets.javascript,
-            erlang: self.erlang && !targets.erlang,
-        }
-    }
-
     pub fn supports(&self, target: Target) -> bool {
         match target {
             Target::Erlang => self.erlang,
@@ -122,23 +115,26 @@ pub(crate) struct ExprTyper<'a, 'b> {
 
     pub(crate) supported_targets: SupportedTargets,
 
-    required_targets: SupportedTargets,
-
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
+
+    external_supported_targets: SupportedTargets,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>, required_targets: SupportedTargets) -> Self {
+    pub fn new(
+        environment: &'a mut Environment<'b>,
+        external_supported_targets: SupportedTargets,
+    ) -> Self {
         let mut hydrator = Hydrator::new();
 
         hydrator.permit_holes(true);
         Self {
             hydrator,
             environment,
-            required_targets,
             // This will be narrowed down as the expression type is inferred
             supported_targets: SupportedTargets::all(),
+            external_supported_targets,
         }
     }
 
@@ -696,21 +692,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         kind: EcoString,
     ) -> Result<(), Error> {
-        let missing_targets = self
-            .required_targets
-            .difference(new_targets)
-            .intersect(SupportedTargets::from_target(self.environment.target));
-
-        match missing_targets.to_vec().as_slice() {
-            [target, ..] => Err(Error::UnsupportedTarget {
+        self.supported_targets = self.supported_targets.intersect(new_targets);
+        if self.environment.target_support == TargetSupport::Enforced
+            && !new_targets
+                .merge(self.external_supported_targets)
+                .supports(self.environment.target)
+        {
+            Err(Error::UnsupportedTarget {
+                target: self.environment.target,
                 location,
-                target: *target,
                 kind,
-            }),
-            [] => {
-                self.supported_targets = self.supported_targets.intersect(new_targets);
-                Ok(())
-            }
+            })
+        } else {
+            Ok(())
         }
     }
 

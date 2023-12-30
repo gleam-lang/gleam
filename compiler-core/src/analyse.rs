@@ -76,6 +76,12 @@ impl Inferred<PatternConstructor> {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TargetSupport {
+    Enforced,
+    NotEnforced,
+}
+
 // TODO: This takes too many arguments.
 #[allow(clippy::too_many_arguments)]
 /// Crawl the AST, annotating each node with the inferred type or
@@ -90,10 +96,18 @@ pub fn infer_module<A>(
     modules: &im::HashMap<EcoString, ModuleInterface>,
     warnings: &TypeWarningEmitter,
     direct_dependencies: &HashMap<EcoString, A>,
+    target_support: TargetSupport,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
-    let env = Environment::new(ids.clone(), name.clone(), target, modules, warnings);
+    let env = Environment::new(
+        ids.clone(),
+        name.clone(),
+        target,
+        modules,
+        warnings,
+        target_support,
+    );
     validate_module_name(&name)?;
 
     let mut type_names = HashMap::with_capacity(module.definitions.len());
@@ -484,7 +498,6 @@ fn register_value_from_function(
         body: _,
         return_type: _,
         supported_targets,
-        target: _,
     } = f;
     assert_unique_name(names, name, *location)?;
     assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
@@ -583,7 +596,6 @@ fn infer_function(
         external_erlang,
         external_javascript,
         return_type: (),
-        target,
         supported_targets: _,
     } = f;
     let preregistered_fn = environment
@@ -594,7 +606,8 @@ fn infer_function(
     let (args_types, return_type) = preregistered_type
         .fn_types()
         .expect("Preregistered type for fn was not a fn");
-    let has_empty_body = is_empty_body(&body);
+
+    let is_placeholder = is_placeholder(&body);
     // Find the external implementation for the current target, if one has been given.
     let external =
         target_function_implementation(environment.target, &external_erlang, &external_javascript);
@@ -612,19 +625,11 @@ fn infer_function(
     }
 
     let external_targets = external_supported_targets(&external_erlang, &external_javascript);
-    if external_targets.supports_all_targets() && !has_empty_body {
+    if external_targets.supports_all_targets() && !is_placeholder {
         environment
             .warnings
             .emit(Warning::UnusedFunctionBody { location })
     }
-
-    // If the function has a target annotation, the only required target for its
-    // body is the annotated target. Otherwise the required targets are all the
-    // targets that do not have an external implementation.
-    let required_targets = match target {
-        Some(target) => SupportedTargets::from_target(target),
-        None => SupportedTargets::all().difference(external_targets),
-    };
 
     // Infer the type using the preregistered args + return types as a starting point
     let (type_, args, body, mut supported_targets) = environment.in_new_scope(|environment| {
@@ -633,7 +638,7 @@ fn infer_function(
             .zip(&args_types)
             .map(|(a, t)| a.set_type(t.clone()))
             .collect();
-        let mut expr_typer = ExprTyper::new(environment, required_targets);
+        let mut expr_typer = ExprTyper::new(environment, external_targets);
         expr_typer.hydrator = hydrators
             .remove(&name)
             .expect("Could not find hydrator for fn");
@@ -645,7 +650,7 @@ fn infer_function(
         Ok((typ, args, body, expr_typer.supported_targets))
     })?;
 
-    if has_empty_body {
+    if is_placeholder {
         // If the function has an empty body we are only going to consider as
         // supported targets the ones that have an external implementation.
         supported_targets = external_targets;
@@ -689,7 +694,6 @@ fn infer_function(
         body,
         external_erlang,
         external_javascript,
-        target,
         supported_targets,
     }))
 }
@@ -732,7 +736,7 @@ fn target_function_implementation<'a>(
     }
 }
 
-fn is_empty_body(body: &Vec1<UntypedStatement>) -> bool {
+fn is_placeholder(body: &Vec1<UntypedStatement>) -> bool {
     body.first().is_placeholder()
 }
 
@@ -743,7 +747,7 @@ fn ensure_function_has_an_implementation(
     location: SrcSpan,
 ) -> Result<(), Error> {
     match (external_erlang, external_javascript) {
-        (None, None) if is_empty_body(body) => Err(Error::NoImplementation { location }),
+        (None, None) if is_placeholder(body) => Err(Error::NoImplementation { location }),
         _ => Ok(()),
     }
 }
@@ -951,15 +955,10 @@ fn infer_module_constant(
         annotation,
         public,
         value,
-        target,
         ..
     } = c;
 
-    let required_targets = match target {
-        Some(target) => SupportedTargets::from_target(target),
-        None => SupportedTargets::all(),
-    };
-    let mut expr_typer = ExprTyper::new(environment, required_targets);
+    let mut expr_typer = ExprTyper::new(environment, SupportedTargets::none());
     let typed_expr = expr_typer.infer_const(&annotation, *value)?;
     let type_ = typed_expr.type_();
     let supported_targets = expr_typer.supported_targets;
@@ -997,7 +996,6 @@ fn infer_module_constant(
         annotation,
         public,
         value: Box::new(typed_expr),
-        target,
         type_,
         supported_targets,
     }))
@@ -1080,7 +1078,6 @@ fn generalise_module_constant(
         public,
         value,
         type_,
-        target,
         supported_targets,
     } = constant;
     let typ = type_.clone();
@@ -1118,7 +1115,6 @@ fn generalise_module_constant(
         public,
         value,
         type_,
-        target,
         supported_targets,
     })
 }
@@ -1142,7 +1138,6 @@ fn generalise_function(
         external_erlang,
         external_javascript,
         supported_targets,
-        target,
     } = function;
 
     // Lookup the inferred function information
@@ -1199,7 +1194,6 @@ fn generalise_function(
         external_erlang,
         external_javascript,
         supported_targets,
-        target,
     })
 }
 

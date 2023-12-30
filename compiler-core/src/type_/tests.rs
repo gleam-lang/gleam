@@ -1,5 +1,6 @@
 use super::*;
 use crate::{
+    analyse::TargetSupport,
     ast::{TypedModule, TypedStatement, UntypedExpr, UntypedModule},
     build::{Origin, Target},
     error::Error,
@@ -256,8 +257,9 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
             Target::Erlang,
             &modules,
             &TypeWarningEmitter::null(),
+            TargetSupport::Enforced,
         ),
-        SupportedTargets::all(),
+        SupportedTargets::none(),
     )
     .infer_statements(ast)
 }
@@ -350,6 +352,7 @@ pub fn compile_module_with_target(
             &modules,
             &warnings,
             &std::collections::HashMap::from_iter(vec![]),
+            TargetSupport::NotEnforced,
         )
         .expect("should successfully infer");
         let _ = modules.insert(name.into(), module.type_info);
@@ -370,6 +373,7 @@ pub fn compile_module_with_target(
         &modules,
         &warnings,
         &direct_dependencies,
+        TargetSupport::Enforced,
     )
 }
 
@@ -559,6 +563,7 @@ fn infer_module_type_retention_test() {
         &modules,
         &TypeWarningEmitter::null(),
         &direct_dependencies,
+        TargetSupport::Enforced,
     )
     .expect("Should infer OK");
 

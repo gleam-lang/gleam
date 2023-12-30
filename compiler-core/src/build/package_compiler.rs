@@ -1,3 +1,4 @@
+use crate::analyse::TargetSupport;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
@@ -44,6 +45,7 @@ pub struct PackageCompiler<'a, IO> {
     pub copy_native_files: bool,
     pub compile_beam_bytecode: bool,
     pub subprocess_stdio: Stdio,
+    pub target_support: TargetSupport,
 }
 
 impl<'a, IO> PackageCompiler<'a, IO>
@@ -75,6 +77,7 @@ where
             copy_native_files: true,
             compile_beam_bytecode: true,
             subprocess_stdio: Stdio::Inherit,
+            target_support: TargetSupport::NotEnforced,
         }
     }
 
@@ -141,6 +144,7 @@ where
             loaded.to_compile,
             existing_modules,
             warnings,
+            self.target_support,
         )?;
 
         tracing::debug!("performing_code_generation");
@@ -390,6 +394,7 @@ fn analyse(
     mut parsed_modules: Vec<UncompiledModule>,
     module_types: &mut im::HashMap<EcoString, type_::ModuleInterface>,
     warnings: &WarningEmitter,
+    target_support: TargetSupport,
 ) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
     let direct_dependencies = package_config.dependencies_for(mode).expect("Package deps");
@@ -424,6 +429,7 @@ fn analyse(
             module_types,
             &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
             &direct_dependencies,
+            target_support,
         )
         .map_err(|error| Error::Type {
             path: path.clone(),
