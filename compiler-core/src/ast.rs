@@ -373,7 +373,6 @@ pub struct Function<T, Expr> {
     pub documentation: Option<EcoString>,
     pub external_erlang: Option<(EcoString, EcoString)>,
     pub external_javascript: Option<(EcoString, EcoString)>,
-    pub target: Option<Target>,
     pub supported_targets: SupportedTargets,
 }
 
@@ -441,7 +440,6 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
     pub name: EcoString,
     pub annotation: Option<TypeAst>,
     pub value: Box<Constant<T, ConstantRecordTag>>,
-    pub target: Option<Target>,
     pub type_: T,
     pub supported_targets: SupportedTargets,
 }

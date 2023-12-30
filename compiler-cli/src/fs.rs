@@ -182,7 +182,7 @@ impl CommandExecutor for ProjectIO {
             .args(args)
             .stdin(stdio.get_process_stdio())
             .stdout(stdio.get_process_stdio())
-            .envs(env.iter().map(|(a, b): &(&str, String)| (a, b)))
+            .envs(env.iter().map(|(a, b)| (a, b)))
             .current_dir(cwd.unwrap_or_else(|| Utf8Path::new("./")))
             .status();
 

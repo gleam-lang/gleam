@@ -1,3 +1,4 @@
+use crate::analyse::TargetSupport;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     build::{Origin, Target},
@@ -52,6 +53,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
             &modules,
             &TypeWarningEmitter::null(),
             &std::collections::HashMap::new(),
+            TargetSupport::Enforced,
         )
         .expect("should successfully infer");
         let _ = modules.insert(dep_name.into(), dep.type_info);
@@ -69,6 +71,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         &modules,
         &TypeWarningEmitter::null(),
         &direct_dependencies,
+        TargetSupport::Enforced,
     )
     .expect("should successfully infer");
     let line_numbers = LineNumbers::new(src);

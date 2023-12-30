@@ -1,5 +1,6 @@
 use crate::{
-    ast::PIPE_VARIABLE, build::Target, uid::UniqueIdGenerator, warning::TypeWarningEmitter,
+    analyse::TargetSupport, ast::PIPE_VARIABLE, build::Target, uid::UniqueIdGenerator,
+    warning::TypeWarningEmitter,
 };
 
 use super::*;
@@ -49,6 +50,10 @@ pub struct Environment<'a> {
     /// stack for an entity with that name and mark it as used.
     /// NOTE: The bool in the tuple here tracks if the entity has been used
     pub entity_usages: Vec<HashMap<EcoString, (EntityKind, SrcSpan, bool)>>,
+
+    /// Used to determine if all functions/constants need to support the current
+    /// compilation target.
+    pub target_support: TargetSupport,
 }
 
 impl<'a> Environment<'a> {
@@ -58,6 +63,7 @@ impl<'a> Environment<'a> {
         target: Target,
         importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
         warnings: &'a TypeWarningEmitter,
+        target_support: TargetSupport,
     ) -> Self {
         let prelude = importable_modules
             .get(PRELUDE_MODULE_NAME)
@@ -81,6 +87,7 @@ impl<'a> Environment<'a> {
             current_module,
             warnings,
             entity_usages: vec![HashMap::new()],
+            target_support,
         }
     }
 }

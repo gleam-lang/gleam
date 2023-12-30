@@ -1,4 +1,5 @@
 use crate::{
+    analyse::TargetSupport,
     build::{Origin, Target},
     javascript::*,
     uid::UniqueIdGenerator,
@@ -106,6 +107,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
             &modules,
             &TypeWarningEmitter::null(),
             &std::collections::HashMap::new(),
+            TargetSupport::Enforced,
         )
         .expect("should successfully infer");
         let _ = modules.insert((*dep_name).into(), dep.type_info);
@@ -124,6 +126,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         &modules,
         &TypeWarningEmitter::null(),
         &direct_dependencies,
+        TargetSupport::Enforced,
     )
     .expect("should successfully infer")
 }
