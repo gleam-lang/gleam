@@ -1,10 +1,9 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 551
 expression: "pub fn main() { let _ = !!True }"
 ---
 
-warning: Unnecessary double negation (!!) on bool.
+warning: Unnecessary double negation (!!) on bool
   ┌─ /src/warning/wrn.gleam:1:25
   │
 1 │ pub fn main() { let _ = !!True }

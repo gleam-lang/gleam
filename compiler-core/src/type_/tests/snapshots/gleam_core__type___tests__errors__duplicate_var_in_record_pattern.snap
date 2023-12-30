@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 896
 expression: "type X { X(a: Int, b: Int, c: Int) }\nfn x() {\n  case X(1,2,3) { X(x, y, x) -> 1 }\n}"
 ---
 error: Duplicate variable in pattern
@@ -9,7 +8,7 @@ error: Duplicate variable in pattern
 3 │   case X(1,2,3) { X(x, y, x) -> 1 }
   │                           ^ This has already been used
 
-Variables can only be used once per pattern. This variable x appears
+Variables can only be used once per pattern. This variable `x` appears
 multiple times.
 If you used the same variable twice deliberately in order to check for
 equality please use a guard clause instead.

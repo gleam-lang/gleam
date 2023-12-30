@@ -1,10 +1,9 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 590
 expression: "\n        import gleam/list\n\n        pub fn main() {\n            let a_list = []\n            let _ = list.length(a_list) == -0\n        }\n        "
 ---
 
-warning: Inefficient use of list.length
+warning: Inefficient use of `list.length`
   ┌─ /src/warning/wrn.gleam:6:21
   │
 6 │             let _ = list.length(a_list) == -0

@@ -57,7 +57,7 @@ impl ParseError {
             ),
             ParseErrorType::ExprLparStart => (
                 "This parenthesis cannot be understood here",
-                vec!["Hint: To group expressions in gleam use \"{\" and \"}\"".into()],
+                vec!["Hint: To group expressions in gleam use \"{\" and \"}\".".into()],
             ),
             ParseErrorType::IncorrectName => (
                 "I'm expecting a lowercase name here",
@@ -79,7 +79,7 @@ contain a-z, A-Z, or 0-9.",
                     "Hint: Valid BitArray segment options are:".into(),
                     wrap(
                         "bits, bytes, int, float, utf8, utf16, utf32, utf8_codepoint, \
-utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, unit",
+utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, unit.",
                     ),
                     "See: https://gleam.run/book/tour/bit-strings".into(),
                 ],
@@ -87,7 +87,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ParseErrorType::InvalidBitArrayUnit => (
                 "This is not a valid BitArray unit value",
                 vec![
-                    "Hint: unit must be an integer literal >= 1 and <= 256".into(),
+                    "Hint: unit must be an integer literal >= 1 and <= 256.".into(),
                     "See: https://gleam.run/book/tour/bit-strings".into(),
                 ],
             ),
@@ -119,7 +119,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ParseErrorType::NoLetBinding => (
                 "There must be a 'let' to bind variable to value",
                 vec![
-                    "Hint: Use let for binding".into(),
+                    "Hint: Use let for binding.".into(),
                     "See: https://gleam.run/book/tour/let-bindings".into(),
                 ],
             ),
@@ -160,7 +160,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ParseErrorType::LowcaseBooleanPattern => (
                 "Did you want a Bool instead of a variable?",
                 vec![
-                    "Hint: In Gleam boolean literals are True and False".into(),
+                    "Hint: In Gleam boolean literals are `True` and `False`.".into(),
                     "See: https://gleam.run/book/tour/bools.html".into(),
                 ],
             ),
@@ -189,7 +189,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "how to handle this pattern.".into(),
                     "".into(),
                     "If you want to match one character consider using `pop_grapheme`".into(),
-                    "from the stdlib's `gleam/string` module".into(),
+                    "from the stdlib's `gleam/string` module.".into(),
                 ],
             ),
             ParseErrorType::UnexpectedFunction => (
