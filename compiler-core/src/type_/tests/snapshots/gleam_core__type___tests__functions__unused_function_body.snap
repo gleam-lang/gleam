@@ -3,7 +3,7 @@ source: compiler-core/src/type_/tests/functions.rs
 expression: "\n@external(javascript, \"foo\", \"bar\")\n@external(erlang, \"foo\", \"bar\")\npub fn foo() -> Int {\n  // This is dead code since there already is an\n  // external implementation for all targets.\n  11\n}"
 ---
 
-warning: Unused function body.
+warning: Unused function body
   ┌─ /src/warning/wrn.gleam:4:1
   │
 4 │ pub fn foo() -> Int {
