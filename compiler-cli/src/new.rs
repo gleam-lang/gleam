@@ -14,7 +14,7 @@ mod tests;
 
 use crate::NewOptions;
 
-const GLEAM_STDLIB_VERSION: &str = "0.32";
+const GLEAM_STDLIB_REQUIREMENT: &str = "~> 0.34 or ~> 1.0";
 const GLEEUNIT_VERSION: &str = "1.0";
 const ERLANG_OTP_VERSION: &str = "26.0.2";
 const REBAR3_VERSION: &str = "3";
@@ -208,13 +208,13 @@ version = "1.0.0"
 # links = [{{ title = "Website", href = "https://gleam.run" }}]
 
 [dependencies]
-gleam_stdlib = "~> {gleam_stdlib}"
+gleam_stdlib = "{gleam_stdlib}"
 
 [dev-dependencies]
 gleeunit = "~> {gleeunit}"
 "#,
                 name = self.project_name,
-                gleam_stdlib = GLEAM_STDLIB_VERSION,
+                gleam_stdlib = GLEAM_STDLIB_REQUIREMENT,
                 gleeunit = GLEEUNIT_VERSION,
             ),
         )
