@@ -718,10 +718,32 @@ pub struct DenoConfig {
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Repository {
-    GitHub { user: String, repo: String },
-    GitLab { user: String, repo: String },
-    BitBucket { user: String, repo: String },
-    Custom { url: String },
+    GitHub {
+        user: String,
+        repo: String,
+    },
+    GitLab {
+        user: String,
+        repo: String,
+    },
+    BitBucket {
+        user: String,
+        repo: String,
+    },
+    CodeBerg {
+        user: String,
+        repo: String,
+    },
+    #[serde(alias = "forgejo")]
+    Gitea {
+        user: String,
+        repo: String,
+        #[serde(with = "uri_serde_default_https")]
+        host: Uri,
+    },
+    Custom {
+        url: String,
+    },
     None,
 }
 
@@ -733,6 +755,10 @@ impl Repository {
             Repository::BitBucket { repo, user } => {
                 Some(format!("https://bitbucket.com/{user}/{repo}"))
             }
+            Repository::CodeBerg { repo, user } => {
+                Some(format!("https://codeberg.org/{user}/{repo}"))
+            }
+            Repository::Gitea { repo, user, host } => Some(format!("{host}/{user}/{repo}")),
             Repository::Custom { url } => Some(url.clone()),
             Repository::None => None,
         }
@@ -782,6 +808,31 @@ mod uri_serde {
             return Err(D::Error::custom("uri without scheme"));
         }
         Ok(uri)
+    }
+}
+
+// This prefixes https as a default in the event no scheme was provided
+mod uri_serde_default_https {
+    use http::uri::InvalidUri;
+    use serde::{de::Error as _, Deserialize, Deserializer};
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<http::Uri, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let string = String::deserialize(deserializer)?;
+        let uri: http::Uri = string
+            .parse()
+            .map_err(|err: InvalidUri| D::Error::custom(err.to_string()))?;
+        if uri.host().is_none() {
+            return Err(D::Error::custom("uri without host"));
+        }
+        match uri.scheme().is_none() {
+            true => format!("https://{}", string)
+                .parse()
+                .map_err(|err: InvalidUri| D::Error::custom(err.to_string())),
+            false => Ok(uri),
+        }
     }
 }
 

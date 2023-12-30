@@ -76,23 +76,23 @@ pub fn ask_password(question: &str) -> Result<String, Error> {
 }
 
 pub fn print_publishing(name: &str, version: &Version) {
-    print_colourful_prefix(" Publishing", &format!("{name} v{version}"))
+    print_colourful_prefix("Publishing", &format!("{name} v{version}"))
 }
 
 pub fn print_published(duration: Duration) {
-    print_colourful_prefix("  Published", &format!("in {}", seconds(duration)))
+    print_colourful_prefix("Published", &format!("in {}", seconds(duration)))
 }
 
 pub fn print_retired(package: &str, version: &str) {
-    print_colourful_prefix("    Retired", &format!("{package} {version}"))
+    print_colourful_prefix("Retired", &format!("{package} {version}"))
 }
 
 pub fn print_unretired(package: &str, version: &str) {
-    print_colourful_prefix("  Unretired", &format!("{package} {version}"))
+    print_colourful_prefix("Unretired", &format!("{package} {version}"))
 }
 
 pub fn print_publishing_documentation() {
-    print_colourful_prefix(" Publishing", "documentation");
+    print_colourful_prefix("Publishing", "documentation");
 }
 
 fn print_downloading(text: &str) {
@@ -100,47 +100,47 @@ fn print_downloading(text: &str) {
 }
 
 fn print_waiting_for_build_directory_lock() {
-    print_colourful_prefix("    Waiting", "for build directory lock")
+    print_colourful_prefix("Waiting", "for build directory lock")
 }
 
 fn print_resolving_versions() {
-    print_colourful_prefix("  Resolving", "versions")
+    print_colourful_prefix("Resolving", "versions")
 }
 
 fn print_compiling(text: &str) {
-    print_colourful_prefix("  Compiling", text)
+    print_colourful_prefix("Compiling", text)
 }
 
 pub(crate) fn print_exported(text: &str) {
-    print_colourful_prefix("   Exported", text)
+    print_colourful_prefix("Exported", text)
 }
 
 pub(crate) fn print_checking(text: &str) {
-    print_colourful_prefix("   Checking", text)
+    print_colourful_prefix("Checking", text)
 }
 
 pub(crate) fn print_compiled(duration: Duration) {
-    print_colourful_prefix("   Compiled", &format!("in {}", seconds(duration)))
+    print_colourful_prefix("Compiled", &format!("in {}", seconds(duration)))
 }
 
 pub(crate) fn print_checked(duration: Duration) {
-    print_colourful_prefix("    Checked", &format!("in {}", seconds(duration)))
+    print_colourful_prefix("Checked", &format!("in {}", seconds(duration)))
 }
 
 pub(crate) fn print_running(text: &str) {
-    print_colourful_prefix("    Running", text)
+    print_colourful_prefix("Running", text)
 }
 
 pub(crate) fn print_added(text: &str) {
-    print_colourful_prefix("      Added", text)
+    print_colourful_prefix("Added", text)
 }
 
 pub(crate) fn print_removed(text: &str) {
-    print_colourful_prefix("    Removed", text)
+    print_colourful_prefix("Removed", text)
 }
 
 pub(crate) fn print_generating_documentation() {
-    print_colourful_prefix(" Generating", "documentation")
+    print_colourful_prefix("Generating", "documentation")
 }
 
 fn print_packages_downloaded(start: Instant, count: usize) {
@@ -149,7 +149,7 @@ fn print_packages_downloaded(start: Instant, count: usize) {
         1 => format!("1 package in {elapsed}"),
         _ => format!("{count} packages in {elapsed}"),
     };
-    print_colourful_prefix(" Downloaded", &msg)
+    print_colourful_prefix("Downloaded", &msg)
 }
 
 pub fn seconds(duration: Duration) -> String {
@@ -166,7 +166,7 @@ pub fn print_colourful_prefix(prefix: &str, text: &str) {
                 .set_fg(Some(Color::Magenta)),
         )
         .expect("print_green_prefix");
-    write!(buffer, "{prefix}").expect("print_green_prefix");
+    write!(buffer, "{prefix: >11}").expect("print_green_prefix");
     buffer
         .set_color(&ColorSpec::new())
         .expect("print_green_prefix");

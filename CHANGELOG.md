@@ -2,23 +2,40 @@
 
 ## Unreleased
 
+### Language changes
+
+- Warn about function body not being used, because it already has external
+  implementations for all targets.
+
 ### Language Server Changes
 
 - Added a `View on HexDocs` link on function hover
 
+### Formatter
+
+- Fixed some quirk with the formatting of binary operators.
+
+### Build tool
+
+- The `gleam` binary is now statically linked on Windows.
+- New projects are created requiring between versions of v0.34.0 inclusive and
+  exclusive v2.0.0.
+- The `repository` section now supports additional VCS types in the form of
+  codeberg, forgejo and gitea allowing a `user`, `repo` and additionally a
+  `host` url.
+
 ### Bug fixes
 
 - Fixed a bug where `gleam add` would not update `manifest.toml` correctly.
+- Fixed a bug where the build tool would make unnecessary calls to the Hex API
+  when path dependencies are used.
+- Fixed where the types of generic constants could be incorrecly inferred.
 - `Utf8Codepoint` has been renamed to `UtfCodepoint` in `prelude.d.mts`.
 - Fixed a bug where `gleam deps list` would look in filesystem root instead of
   the current directory.
 - Fixed a bug with the `isEqual` function in `prelude.js` where RegExps were
   being incorrectly structurally compared and being falsely reported as being
   equal.
-
-### Formatter
-
-- Fixed some quirk with the formatting of binary operators.
 
 
 ## v0.33.0 - 2023-12-18
@@ -268,7 +285,7 @@
 - The content has been made wider in rendered HTML documentation.
 - Dependencies that can be built with both `mix` and `rebar3` are now built
   with `mix` if it exists on the system, and with `rebar3` if it doesn't.
-  
+
 ### Bug fixes
 
 - "Compiling $package" is now only printed when a package has new changes to

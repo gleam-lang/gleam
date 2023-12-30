@@ -4,6 +4,7 @@
 #[cfg(test)]
 mod into_dependency_order_tests;
 
+use crate::ast::{Function, ModuleConstant, UntypedModuleConstant};
 use crate::{
     ast::{
         AssignName, BitArrayOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
@@ -21,6 +22,13 @@ struct CallGraphBuilder<'a> {
     names: im::HashMap<&'a str, Option<(NodeIndex, SrcSpan)>>,
     graph: StableGraph<(), (), Directed>,
     current_function: NodeIndex,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CallGraphNode {
+    Function(Function<(), UntypedExpr>),
+
+    ModuleConstant(ModuleConstant<(), ()>),
 }
 
 impl<'a> CallGraphBuilder<'a> {
@@ -48,6 +56,38 @@ impl<'a> CallGraphBuilder<'a> {
             });
         }
         Ok(())
+    }
+
+    /// Add each constant to the graph, storing the index of the node under the
+    /// name of the constant.
+    fn register_module_const_existence(
+        &mut self,
+        constant: &'a UntypedModuleConstant,
+    ) -> Result<(), Error> {
+        let name = &constant.name;
+        let location = constant.location;
+
+        let index = self.graph.add_node(());
+        let previous = self.names.insert(name, Some((index, location)));
+
+        if let Some(Some((_, previous_location))) = previous {
+            return Err(Error::DuplicateName {
+                location_a: location,
+                location_b: previous_location,
+                name: name.clone(),
+            });
+        }
+        Ok(())
+    }
+
+    fn register_references_constant(&mut self, constant: &'a UntypedModuleConstant) {
+        self.current_function = self
+            .names
+            .get(constant.name.as_str())
+            .expect("Constant must already have been registered as existing")
+            .expect("Constant must not be shadowed at module level")
+            .0;
+        self.constant(&constant.value);
     }
 
     fn register_references(&mut self, function: &'a UntypedFunction) {
@@ -402,21 +442,30 @@ impl<'a> CallGraphBuilder<'a> {
     }
 }
 
-/// Determine the order in which functions should be compiled and if any
+/// Determine the order in which functions and constants should be compiled and if any
 /// mutually recursive functions need to be compiled together.
 ///
 pub fn into_dependency_order(
     functions: Vec<UntypedFunction>,
-) -> Result<Vec<Vec<UntypedFunction>>, Error> {
+    constants: Vec<UntypedModuleConstant>,
+) -> Result<Vec<Vec<CallGraphNode>>, Error> {
     let mut grapher = CallGraphBuilder::default();
 
     for function in &functions {
         grapher.register_module_function_existence(function)?;
     }
 
+    for constant in &constants {
+        grapher.register_module_const_existence(constant)?;
+    }
+
     // Build the call graph between the module functions.
     for function in &functions {
         grapher.register_references(function);
+    }
+
+    for constant in &constants {
+        grapher.register_references_constant(constant);
     }
 
     // Consume the grapher to get the graph
@@ -429,14 +478,20 @@ pub fn into_dependency_order(
     // We got node indices back, so we need to map them back to the functions
     // they represent.
     // We wrap them each with `Some` so we can use `.take()`.
-    let mut functions = functions.into_iter().map(Some).collect_vec();
+    let mut definitions = functions
+        .into_iter()
+        .map(CallGraphNode::Function)
+        .chain(constants.into_iter().map(CallGraphNode::ModuleConstant))
+        .map(Some)
+        .collect_vec();
+
     let ordered = indices
         .into_iter()
         .map(|level| {
             level
                 .into_iter()
                 .map(|index| {
-                    functions
+                    definitions
                         .get_mut(index.index())
                         .expect("Index out of bounds")
                         .take()
