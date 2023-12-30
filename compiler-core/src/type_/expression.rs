@@ -101,6 +101,10 @@ impl SupportedTargets {
         }
     }
 
+    pub fn supports_all_targets(&self) -> bool {
+        self.javascript && self.erlang
+    }
+
     pub fn to_vec(self) -> Vec<Target> {
         let SupportedTargets { erlang, javascript } = self;
         match (erlang, javascript) {
