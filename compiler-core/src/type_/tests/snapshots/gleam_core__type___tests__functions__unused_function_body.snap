@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/functions.rs
+assertion_line: 175
 expression: "\n@external(javascript, \"foo\", \"bar\")\n@external(erlang, \"foo\", \"bar\")\npub fn foo() -> Int {\n  // This is dead code since there already is an\n  // external implementation for all targets.\n  11\n}"
 ---
 
@@ -9,6 +10,8 @@ warning: Unused function body
 4 │ pub fn foo() -> Int {
   │ ^^^^^^^^^^^^^^^^^^^
 
-The function already has external implementations for all targets.
-Hint: Remove the body of this function or @external attributes.
+This function has external implementations for all targets so the body is
+never used.
+
+Hint: The body can be safely removed
 

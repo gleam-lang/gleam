@@ -198,9 +198,11 @@ a future version of Gleam."
             Self::Type { path, warning, src } => match warning {
                 type_::Warning::UnusedFunctionBody { location } => Diagnostic {
                     title: "Unused function body".into(),
-                    text: "The function already has external implementations for all targets."
-                        .into(),
-                    hint: Some("Remove the body of this function or @external attributes.".into()),
+                    text: wrap(
+                        "This function has external implementations \
+for all targets so the body is never used.\n",
+                    ),
+                    hint: Some("The body can be safely removed".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         path: path.to_path_buf(),
