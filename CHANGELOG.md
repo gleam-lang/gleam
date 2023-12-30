@@ -23,6 +23,7 @@
 - The `repository` section now supports additional VCS types in the form of
   codeberg, forgejo and gitea allowing a `user`, `repo` and additionally a
   `host` url.
+- TypeScript declaration for the prelude exports previously missing functions and classes. Additionally, swaps interfaces for classes and adds missing attributes to classes.
 
 ### Bug fixes
 
