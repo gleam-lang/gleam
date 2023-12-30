@@ -290,8 +290,7 @@ impl Error {
                 version,
                 source,
             } => format!(
-                "An error occured while trying to retrieve dependencies of {}@{}: {}",
-                package, version, source
+                "An error occured while trying to retrieve dependencies of {package}@{version}: {source}",
             ),
 
             ResolutionError::DependencyOnTheEmptySet {
@@ -299,25 +298,23 @@ impl Error {
                 version,
                 dependent,
             } => format!(
-                "{}@{} has an imposible dependency on {}",
-                package, version, dependent
+                "{package}@{version} has an impossible dependency on {dependent}",
             ),
 
             ResolutionError::SelfDependency { package, version } => {
-                format!("{}@{} somehow depends on itself", package, version)
+                format!("{package}@{version} somehow depends on itself.")
             }
 
             ResolutionError::ErrorChoosingPackageVersion(err) => {
-                format!("Unable to determine package versions: {}", err)
+                format!("Unable to determine package versions: {err}")
             }
 
             ResolutionError::ErrorInShouldCancel(err) => {
-                format!("Dependency resolution was cancelled. {}", err)
+                format!("Dependency resolution was cancelled. {err}")
             }
 
             ResolutionError::Failure(err) => format!(
-                "An unrecoverable error happened while solving dependencies: {}",
-                err
+                "An unrecoverable error happened while solving dependencies: {err}"
             ),
         })
     }
@@ -513,12 +510,12 @@ forward slash and must not end with a slash."
 
             Error::ModuleDoesNotExist { module, suggestion } => {
                 let hint = match suggestion {
-                    Some(suggestion) => format!("Did you mean `{}`?", suggestion),
-                    None => format!("Try creating the file `src/{}.gleam`.", module),
+                    Some(suggestion) => format!("Did you mean `{suggestion}`?"),
+                    None => format!("Try creating the file `src/{module}.gleam`."),
                 };
                 Diagnostic {
                     title: "Module does not exist".into(),
-                    text: format!("Module `{module}` was not found"),
+                    text: format!("Module `{module}` was not found."),
                     level: Level::Error,
                     location: None,
                     hint: Some(hint),
@@ -534,7 +531,7 @@ forward slash and must not end with a slash."
                 location: None,
                 hint: Some(format!(
                     "Add a function with the singature `pub fn main() {{}}` \
-to `src/{module}.gleam`"
+to `src/{module}.gleam`."
                 )),
             },
 
@@ -545,7 +542,7 @@ to `src/{module}.gleam`"
                 ),
                 level: Level::Error,
                 location: None,
-                hint: Some("Change the function signature of main to `pub fn main() {}`".into()),
+                hint: Some("Change the function signature of main to `pub fn main() {}`.".into()),
             },
 
             Error::ProjectRootAlreadyExist { path } => Diagnostic {
@@ -567,7 +564,7 @@ to `src/{module}.gleam`"
             Error::VersionDoesNotMatch { toml_ver, app_ver } => {
                 let text = format!(
                     "The version in gleam.toml \"{toml_ver}\" does not match the version in
-your app.src file \"{app_ver}\""
+your app.src file \"{app_ver}\"."
                 );
                 Diagnostic {
                     title: "Version does not match".into(),
@@ -672,13 +669,12 @@ This was error from the gzip library:
 
             Error::AddTar { path, err } => {
                 let text = format!(
-                    "There was a problem when attempting to add the file {}
+                    "There was a problem when attempting to add the file {path}
 to a tar archive.
 
 This was error from the tar library:
 
-    {}",
-                    path, err
+    {err}"
                 );
                 Diagnostic {
                     title: "Failure creating tar archive".into(),
@@ -746,11 +742,10 @@ This was error from the Hex client library:
                 second,
             } => {
                 let text = format!(
-                    "The module `{}` is defined multiple times.
+                    "The module `{module}` is defined multiple times.
 
-First:  {}
-Second: {}",
-                    module, first, second,
+First:  {first}
+Second: {second}"
                 );
 
                 Diagnostic {
@@ -803,7 +798,7 @@ Second: {}",
 
             Error::NonUtf8Path { path: _ } => {
                 let text =
-                    "Encountered a non UTF-8 path, but only UTF-8 paths are supported".to_owned();
+                    "Encountered a non UTF-8 path, but only UTF-8 paths are supported.".to_owned();
                 Diagnostic {
                     title: "Non UTF-8 Path Encountered".into(),
                     text,
@@ -835,13 +830,10 @@ Second: {}",
                     test_module,
                 } => {
                     let text = wrap_format!(
-                        "The application module `{}` is importing the test module `{}`.
+                        "The application module `{src_module}` is importing the test module `{test_module}`.
 
 Test modules are not included in production builds so test \
-modules cannot import them. Perhaps move the `{}` module to the src directory.",
-                        src_module,
-                        test_module,
-                        test_module,
+modules cannot import them. Perhaps move the `{test_module}` module to the src directory.",
                     );
 
                     Diagnostic {
@@ -968,7 +960,7 @@ also be labelled."
                     name,
                 } => {
                     let text = format!(
-                        "{name} has been imported multiple times.
+                        "`{name}` has been imported multiple times.
 Names in a Gleam module must be unique so one will need to be renamed."
                     );
                     Diagnostic {
@@ -1644,10 +1636,8 @@ Private types can only be used within the module that defines them.",
                     given,
                 } => {
                     let text = wrap_format!(
-                        "This case expression has {} subjects, but this pattern matches {}.
+                        "This case expression has {expected} subjects, but this pattern matches {given}.
 Each clause must have a pattern for every subject value.",
-                        expected,
-                        given
                     );
                     Diagnostic {
                         title: "Incorrect number of patterns".into(),
@@ -1669,8 +1659,7 @@ Each clause must have a pattern for every subject value.",
                 TypeError::NonLocalClauseGuardVariable { location, name } => {
                     let text = wrap_format!(
                         "Variables used in guards must be either defined in the \
-function, or be an argument to the function. The variable `{}` is not defined locally.",
-                        name
+function, or be an argument to the function. The variable `{name}` is not defined locally.",
                     );
                     Diagnostic {
                         title: "Invalid guard variable".into(),
@@ -1692,8 +1681,7 @@ function, or be an argument to the function. The variable `{}` is not defined lo
                 TypeError::ExtraVarInAlternativePattern { location, name } => {
                     let text = wrap_format!(
 "All alternative patterns must define the same variables as the initial pattern. \
-This variable `{}` has not been previously defined.",
-                        name
+This variable `{name}` has not been previously defined.",
                     );
                     Diagnostic {
                         title: "Extra alternative pattern variable".into(),
@@ -1715,8 +1703,7 @@ This variable `{}` has not been previously defined.",
                 TypeError::MissingVarInAlternativePattern { location, name } => {
                     let text = wrap_format!(
                         "All alternative patterns must define the same variables \
-as the initial pattern, but the `{}` variable is missing.",
-                        name
+as the initial pattern, but the `{name}` variable is missing.",
                     );
                     Diagnostic {
                         title: "Missing alternative pattern variable".into(),
@@ -1738,11 +1725,10 @@ as the initial pattern, but the `{}` variable is missing.",
                 TypeError::DuplicateVarInPattern { location, name } => {
                     let text = wrap_format!(
                         "Variables can only be used once per pattern. This \
-variable {} appears multiple times.
+variable `{name}` appears multiple times.
 If you used the same variable twice deliberately in order to check for equality \
 please use a guard clause instead.
 e.g. (x, y) if x == y -> ...",
-                        name
                     );
                     Diagnostic {
                         title: "Duplicate variable in pattern".into(),
@@ -1880,14 +1866,14 @@ function and try again."
                 TypeError::BitArraySegmentError { error, location } => {
                     let (label, mut extra) = match error {
                         bit_array::ErrorType::ConflictingTypeOptions { existing_type } => (
-                            "This is an extra type specifier.",
+                            "This is an extra type specifier",
                             vec![format!("Hint: This segment already has the type {existing_type}.")],
                         ),
 
                         bit_array::ErrorType::ConflictingSignednessOptions {
                             existing_signed
                         } => (
-                            "This is an extra signedness specifier.",
+                            "This is an extra signedness specifier",
                             vec![format!(
                                 "Hint: This segment already has a signedness of {existing_signed}."
                             )],
@@ -1896,40 +1882,40 @@ function and try again."
                         bit_array::ErrorType::ConflictingEndiannessOptions {
                             existing_endianness
                         } => (
-                            "This is an extra endianness specifier.",
+                            "This is an extra endianness specifier",
                             vec![format!(
                                 "Hint: This segment already has an endianness of {existing_endianness}."
                             )],
                         ),
 
                         bit_array::ErrorType::ConflictingSizeOptions => (
-                            "This is an extra size specifier.",
+                            "This is an extra size specifier",
                             vec!["Hint: This segment already has a size.".into()],
                         ),
 
                         bit_array::ErrorType::ConflictingUnitOptions => (
-                            "This is an extra unit specifier.",
+                            "This is an extra unit specifier",
                             vec!["Hint: A BitArray segment can have at most 1 unit.".into()],
                         ),
 
                         bit_array::ErrorType::FloatWithSize => (
-                            "Invalid float size.",
+                            "Invalid float size",
                             vec!["Hint: floats have an exact size of 16/32/64 bits.".into()],
                         ),
 
                         bit_array::ErrorType::InvalidEndianness => (
-                            "This option is invalid here.",
+                            "This option is invalid here",
                                 vec![wrap("Hint: signed and unsigned can only be used with \
 int, float, utf16 and utf32 types.")],
                         ),
 
                         bit_array::ErrorType::OptionNotAllowedInValue => (
-                            "This option is only allowed in BitArray patterns.",
+                            "This option is only allowed in BitArray patterns",
                             vec!["Hint: This option has no effect in BitArray values.".into()],
                         ),
 
                         bit_array::ErrorType::SignednessUsedOnNonInt { typ } => (
-                            "Signedness is only valid with int types.",
+                            "Signedness is only valid with int types",
                             vec![format!("Hint: This segment has a type of {typ}")],
                         ),
                         bit_array::ErrorType::TypeDoesNotAllowSize { typ } => (
@@ -2393,7 +2379,7 @@ Fix the warnings and try again."
             Error::JavaScript { src, path, error } => match error {
                 javascript::Error::Unsupported { feature, location } => Diagnostic {
                     title: "Unsupported feature for compilation target".into(),
-                    text: format!("{feature} is not supported for JavaScript compilation"),
+                    text: format!("{feature} is not supported for JavaScript compilation."),
                     hint: None,
                     level: Level::Error,
                     location: Some(Location {
@@ -2414,7 +2400,7 @@ Fix the warnings and try again."
                 error,
             } => {
                 let text = format!(
-                    "A problem was encountered when downloading {package_name} {package_version}.
+                    "A problem was encountered when downloading `{package_name}` {package_version}.
 The error from the package manager client was:
 
     {error}"
@@ -2446,7 +2432,7 @@ The error from the HTTP client was:
 
             Error::InvalidVersionFormat { input, error } => {
                 let text = format!(
-                    "I was unable to parse the version {input}.
+                    "I was unable to parse the version \"{input}\".
 The error from the parser was:
 
     {error}"
@@ -2461,7 +2447,7 @@ The error from the parser was:
             }
 
             Error::DependencyCanonicalizationFailed(package) => {
-                let text = format!("Local package {} has no canonical path", package);
+                let text = format!("Local package `{package}` has no canonical path");
 
                 Diagnostic {
                     title: "Failed to create canonical path".into(),
@@ -2504,8 +2490,7 @@ The error from the version resolver library was:
                 found,
             } => {
                 let text = format!(
-                    "Expected package {} at path {} but found {} instead",
-                    expected, path, found
+                    "Expected package `{expected}` at path `{path}` but found `{found}` instead.",
                 );
 
                 Diagnostic {
@@ -2523,8 +2508,7 @@ The error from the version resolver library was:
                 source_2,
             } => {
                 let text = format!(
-                    "The package {} is provided as both {} nad {}",
-                    package, source_1, source_2
+                    "The package `{package}` is provided as both `{source_1}` and `{source_2}`.",
                 );
 
                 Diagnostic {
@@ -2538,7 +2522,7 @@ The error from the version resolver library was:
 
             Error::DuplicateDependency(name) => {
                 let text = format!(
-                    "The package {name} is specified in both the dependencies and
+                    "The package `{name}` is specified in both the dependencies and
 dev-dependencies sections of the gleam.toml file."
                 );
                 Diagnostic {
@@ -2585,8 +2569,7 @@ licences = ["Apache-2.0"]"#
                 title: "Unblished dependencies".into(),
                 text: wrap_format!(
                     "The package cannot be published to Hex \
-because dependency {} is not a Hex dependency",
-                    package
+because dependency `{package}` is not a Hex dependency.",
                 ),
                 hint: None,
                 location: None,
@@ -2598,7 +2581,7 @@ because dependency {} is not a Hex dependency",
                 build_tools,
             } => {
                 let text = wrap_format!(
-                    "The package {} cannot be built as it does not use \
+                    "The package `{}` cannot be built as it does not use \
 a build tool supported by Gleam. It uses {:?}.
 
 If you would like us to support this package please let us know by opening an \
@@ -2620,9 +2603,8 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                 let text = format!(
                     "An error occurred while trying to open the docs:
 
-    {}
-{}",
-                    path, error,
+    {path}
+{error}",
                 );
                 Diagnostic {
                     title: "Failed to open docs".into(),
@@ -2639,9 +2621,8 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                 gleam_version,
             } => {
                 let text = format!(
-                    "The package {} requires a Gleam version satisfying {} \
-but you are using v{}.",
-                    package, required_version, gleam_version
+                    "The package `{package}` requires a Gleam version satisfying {required_version} \
+but you are using v{gleam_version}.",
                 );
                 Diagnostic {
                     title: "Incompatible Gleam version".into(),
@@ -2660,7 +2641,7 @@ but you are using v{}.",
 
                 let hint = match target {
                     Target::JavaScript => {
-                        Some("available runtimes for JavaScript are: node, deno".into())
+                        Some("available runtimes for JavaScript are: node, deno.".into())
                     }
                     Target::Erlang => Some(
                         "You can not set a runtime for Erlang. Did you mean to target JavaScript?"
@@ -2765,7 +2746,7 @@ fn hint_numeric_message(alt: &str, type_: &str) -> String {
 fn hint_string_message() -> String {
     wrap(
         "Strings can be joined using the `append` or `concat` \
-functions from the `gleam/string` module",
+functions from the `gleam/string` module.",
     )
 }
 

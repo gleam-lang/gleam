@@ -184,15 +184,14 @@ a future version of Gleam."
             },
 
             Warning::InvalidSource { path } => Diagnostic {
-                title: "Invalid module name.".into(),
+                title: "Invalid module name".into(),
                 text: "Module names must begin with a lowercase letter and contain\
  only lowercase alphanumeric characters or underscores."
                     .into(),
                 level: diagnostic::Level::Warning,
                 location: None,
                 hint: Some(format!(
-                    "Rename `{}` to be valid, or remove this file from the project source.",
-                    path
+                    "Rename `{path}` to be valid, or remove this file from the project source."
                 )),
             },
             Self::Type { path, warning, src } => match warning {
@@ -266,7 +265,9 @@ expression.",
                 type_::Warning::ImplicitlyDiscardedResult { location } => Diagnostic {
                     title: "Unused result value".into(),
                     text: "".into(),
-                    hint: Some("If you are sure you don't need it you can assign it to `_`".into()),
+                    hint: Some(
+                        "If you are sure you don't need it you can assign it to `_`.".into(),
+                    ),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         path: path.to_path_buf(),
@@ -306,7 +307,7 @@ expression.",
                         path: path.to_path_buf(),
                         src: src.clone(),
                         label: diagnostic::Label {
-                            text: Some("This record update doesn't change any fields.".into()),
+                            text: Some("This record update doesn't change any fields".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -338,9 +339,9 @@ expression.",
                         "Unused private type".into()
                     };
                     let label = if *imported {
-                        "This imported type is never used.".into()
+                        "This imported type is never used".into()
                     } else {
-                        "This private type is never used.".into()
+                        "This private type is never used".into()
                     };
                     Diagnostic {
                         title,
@@ -368,9 +369,9 @@ expression.",
                         "Unused private constructor".into()
                     };
                     let label = if *imported {
-                        "This imported constructor is never used.".into()
+                        "This imported constructor is never used".into()
                     } else {
-                        "This private constructor is never used.".into()
+                        "This private constructor is never used".into()
                     };
                     Diagnostic {
                         title,
@@ -398,7 +399,7 @@ expression.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This imported module is never used.".into()),
+                            text: Some("This imported module is never used".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -414,7 +415,7 @@ expression.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This imported module alias is never used.".into()),
+                            text: Some("This imported module alias is never used".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -430,7 +431,7 @@ expression.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This imported value is never used.".into()),
+                            text: Some("This imported value is never used".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -446,7 +447,7 @@ expression.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This private constant is never used.".into()),
+                            text: Some("This private constant is never used".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -462,7 +463,7 @@ expression.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This private function is never used.".into()),
+                            text: Some("This private function is never used".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -478,16 +479,16 @@ expression.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This variable is never used.".into()),
+                            text: Some("This variable is never used".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
                     }),
                 },
                 type_::Warning::UnnecessaryDoubleIntNegation { location } => Diagnostic {
-                    title: "Unnecessary double negation (--) on integer.".into(),
+                    title: "Unnecessary double negation (--) on integer".into(),
                     text: "".into(),
-                    hint: Some("You can safely remove this".into()),
+                    hint: Some("You can safely remove this.".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
@@ -500,7 +501,7 @@ expression.",
                     }),
                 },
                 type_::Warning::UnnecessaryDoubleBoolNegation { location } => Diagnostic {
-                    title: "Unnecessary double negation (!!) on bool.".into(),
+                    title: "Unnecessary double negation (!!) on bool".into(),
                     text: "".into(),
                     hint: Some("You can safely remove this.".into()),
                     level: diagnostic::Level::Warning,
@@ -529,7 +530,7 @@ need to know if the list is empty or not.
                     });
 
                     Diagnostic {
-                        title: "Inefficient use of list.length".into(),
+                        title: "Inefficient use of `list.length`".into(),
                         text,
                         hint,
                         level: diagnostic::Level::Warning,
