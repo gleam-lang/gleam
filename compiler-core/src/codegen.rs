@@ -211,12 +211,13 @@ impl<'a> JavaScript<'a> {
 
     fn write_prelude(&self, writer: &impl FileSystemWriter) -> Result<()> {
         let rexport = format!("export * from \"{}\";\n", self.prelude_location);
-
         writer.write(&self.output_directory.join("gleam.mjs"), &rexport)?;
 
         if self.typescript == TypeScriptDeclarations::Emit {
+            let rexport = rexport.replace(".mjs", ".d.mts");
             writer.write(&self.output_directory.join("gleam.d.mts"), &rexport)?;
         }
+
         Ok(())
     }
 

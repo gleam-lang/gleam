@@ -36,6 +36,8 @@
 - Fixed a bug with the `isEqual` function in `prelude.js` where RegExps were
   being incorrectly structurally compared and being falsely reported as being
   equal.
+- JavaScript: export from `prelude.d.mts` in `gleam.d.mts` to fix the error:
+  "Type 'Result' is not generic".
 
 
 ## v0.33.0 - 2023-12-18

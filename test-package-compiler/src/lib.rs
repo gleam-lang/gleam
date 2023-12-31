@@ -113,13 +113,7 @@ impl TestCompileOutput {
             let extension = path.extension();
             match content {
                 _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
-
-                _ if path.ends_with("gleam.mjs") || path.ends_with("gleam.d.mts") => {
-                    buffer.push_str("<prelude>")
-                }
-
                 Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
-
                 Content::Text(text) => buffer.push_str(text),
             };
             buffer.push('\n');
