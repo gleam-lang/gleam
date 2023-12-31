@@ -5357,3 +5357,26 @@ fn list_with_pipe_format() {
 "#
     );
 }
+
+#[test]
+fn function_call_close_to_line_limit() {
+    assert_format!(
+        r#"pub fn main() {
+  function_call(
+    that,
+    is,
+    super,
+    close,
+    to,
+    the,
+    max,
+    line,
+    limit,
+    of,
+    80,
+    chars,
+  )
+}
+"#
+    );
+}
