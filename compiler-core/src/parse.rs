@@ -95,6 +95,12 @@ struct Attributes {
     external_javascript: Option<(EcoString, EcoString)>,
 }
 
+impl Attributes {
+    fn has_function_only(&self) -> bool {
+        self.external_erlang.is_some() || self.external_javascript.is_some()
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Warning {
     ReservedWord { location: SrcSpan, word: EcoString },
@@ -293,17 +299,29 @@ where
             }
         }?;
 
-        match def {
-            Some(definition) => Ok(Some(TargetedDefinition {
+        match (def, location) {
+            (Some(definition), _) if definition.is_function() => Ok(Some(TargetedDefinition {
                 definition,
                 target: attributes.target,
             })),
 
-            None if location.is_some() => {
-                parse_error(ParseErrorType::ExpectedDefinition, location.expect(""))
+            (Some(definition), None) => Ok(Some(TargetedDefinition {
+                definition,
+                target: attributes.target,
+            })),
+
+            (_, Some(location)) if attributes.has_function_only() => {
+                parse_error(ParseErrorType::ExpectedFunctionDefinition, location)
             }
 
-            None => Ok(None),
+            (Some(definition), _) => Ok(Some(TargetedDefinition {
+                definition,
+                target: attributes.target,
+            })),
+
+            (_, Some(location)) => parse_error(ParseErrorType::ExpectedDefinition, location),
+
+            (None, None) => Ok(None),
         }
     }
 
@@ -2816,21 +2834,21 @@ where
         &mut self,
         attributes: &mut Attributes,
     ) -> Result<Option<SrcSpan>, ParseError> {
-        let mut start_of_attributes = None;
-        let mut end_of_attributes = None;
+        let mut attributes_span = None;
 
-        while let Some((start, _)) = self.maybe_one(&Token::At) {
-            if start_of_attributes.is_none() {
-                start_of_attributes = Some(start);
+        while let Some((start, end)) = self.maybe_one(&Token::At) {
+            if attributes_span.is_none() {
+                attributes_span = Some(SrcSpan { start, end });
             }
 
-            end_of_attributes = Some(self.parse_attribute(start, attributes)?);
+            let end = self.parse_attribute(start, attributes)?;
+            attributes_span = attributes_span.map(|span| SrcSpan {
+                start: span.start,
+                end,
+            });
         }
 
-        Ok(start_of_attributes.map(|start| SrcSpan {
-            start,
-            end: end_of_attributes.expect(""),
-        }))
+        Ok(attributes_span)
     }
 
     fn parse_attribute(
