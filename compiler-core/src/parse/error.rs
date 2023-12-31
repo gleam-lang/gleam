@@ -54,6 +54,9 @@ impl ParseError {
             ParseErrorType::ExpectedDefinition => {
                 ("I was expecting a definition after this", vec![])
             }
+            ParseErrorType::ExpectedFunctionDefinition => {
+                ("I was expecting a function definition after this", vec![])
+            }
             ParseErrorType::ExtraSeparator => (
                 "This is an extra delimiter",
                 vec!["Hint: Try removing it?".into()],
@@ -219,23 +222,24 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseErrorType {
-    ExpectedEqual,          // expect "="
-    ExpectedExpr,           // after "->" in a case clause
-    ExpectedName,           // any token used when a Name was expected
-    ExpectedPattern,        // after ':' where a pattern is expected
-    ExpectedType,           // after ':' or '->' where a type annotation is expected
-    ExpectedUpName,         // any token used when a UpName was expected
-    ExpectedValue,          // no value after "="
-    ExpectedStatement,      // no statement after "@<name>"
-    ExpectedDefinition,     // after attributes
-    ExprLparStart,          // it seems "(" was used to start an expression
-    ExtraSeparator,         // #(1,,) <- the 2nd comma is an extra separator
-    IncorrectName,          // UpName or DiscardName used when Name was expected
-    IncorrectUpName,        // Name or DiscardName used when UpName was expected
-    InvalidBitArraySegment, // <<7:hello>> `hello` is an invalid BitArray segment
-    InvalidBitArrayUnit,    // in <<1:unit(x)>> x must be 1 <= x <= 256
-    InvalidTailPattern,     // only name and _name are allowed after ".." in list pattern
-    InvalidTupleAccess,     // only positive int literals for tuple access
+    ExpectedEqual,              // expect "="
+    ExpectedExpr,               // after "->" in a case clause
+    ExpectedName,               // any token used when a Name was expected
+    ExpectedPattern,            // after ':' where a pattern is expected
+    ExpectedType,               // after ':' or '->' where a type annotation is expected
+    ExpectedUpName,             // any token used when a UpName was expected
+    ExpectedValue,              // no value after "="
+    ExpectedStatement,          // no statement after "@<name>"
+    ExpectedDefinition,         // after attributes
+    ExpectedFunctionDefinition, // after function-only attributes
+    ExprLparStart,              // it seems "(" was used to start an expression
+    ExtraSeparator,             // #(1,,) <- the 2nd comma is an extra separator
+    IncorrectName,              // UpName or DiscardName used when Name was expected
+    IncorrectUpName,            // Name or DiscardName used when UpName was expected
+    InvalidBitArraySegment,     // <<7:hello>> `hello` is an invalid BitArray segment
+    InvalidBitArrayUnit,        // in <<1:unit(x)>> x must be 1 <= x <= 256
+    InvalidTailPattern,         // only name and _name are allowed after ".." in list pattern
+    InvalidTupleAccess,         // only positive int literals for tuple access
     LexError {
         error: LexicalError,
     },

@@ -642,6 +642,26 @@ fn attributes_with_no_definition() {
 }
 
 #[test]
+fn external_attribute_with_non_fn_definition() {
+    assert_module_error!(
+        r#"
+@external(erlang, "module", "fun")
+pub type Fun
+"#
+    );
+}
+
+#[test]
+fn attributes_with_improper_definition() {
+    assert_module_error!(
+        r#"
+@deprecated("1")
+@external(erlang, "module", "fun")
+"#
+    );
+}
+
+#[test]
 fn import_type() {
     assert_parse_module!(r#"import wibble.{type Wobble, Wobble, type Wabble}"#);
 }

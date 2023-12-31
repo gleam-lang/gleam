@@ -55,6 +55,7 @@
 - JavaScript: export from `prelude.d.mts` in `gleam.d.mts` to fix the error:
   "Type 'Result' is not generic".
 - Not providing a definition after some attributes is now a parse error.
+- Not providing a definition after some attributes is now a parse error.
 
 
 ## v0.33.0 - 2023-12-18
