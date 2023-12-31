@@ -183,6 +183,7 @@ fn nested_breakable_tuples_in_function_calls() {
   html(#(attribute("lang", "en")), #(
     head(#(attribute("foo", "bar")), #(
       title(#(), #(text("Hello this is some HTML"))),
+      body(#(), #(text("Hello this is some HTML"))),
     )),
     body(#(), #(h1(#(), #(text("Hello, lisp!"))))),
   ))

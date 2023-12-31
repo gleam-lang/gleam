@@ -643,13 +643,10 @@ fn compact_single_argument_call() {
 fn expr_tuple() {
     assert_format!(
         r#"fn main(one, two, three) {
-  #(
-    1,
-    {
-      1
-      2
-    },
-  )
+  #(1, {
+    1
+    2
+  })
 }
 "#
     );

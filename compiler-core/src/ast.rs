@@ -821,6 +821,12 @@ impl CallArg<UntypedExpr> {
     }
 }
 
+impl<T> HasLocation for CallArg<T> {
+    fn location(&self) -> SrcSpan {
+        self.location
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordUpdateSpread {
     pub base: Box<UntypedExpr>,
