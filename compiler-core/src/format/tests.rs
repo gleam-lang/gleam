@@ -5341,3 +5341,19 @@ fn single_argument_call_nested_nested() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2512
+#[test]
+fn list_with_pipe_format() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    "Success!"
+    |> ansi(apply: [1, 31]),
+    "",
+    "Wrote `" <> bin <> "`, `" <> pwsh_bin <> "`",
+  ]
+}
+"#
+    );
+}
