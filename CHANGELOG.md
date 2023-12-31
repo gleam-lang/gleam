@@ -16,6 +16,8 @@
 - Fixed some quirk with the formatting of binary operators.
 - Fixed a bug where the formatter would move a function call's closed
   parentheses on a new line instead of splitting the function's arguments.
+- Now the formatter will format tuples as if they were functions, trying to
+  first split just the last element before splitting the whole tuple.
 
 ### Build tool
 

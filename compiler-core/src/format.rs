@@ -704,10 +704,7 @@ impl<'comments> Formatter<'comments> {
             .append(".")
             .append(label.as_str()),
 
-            UntypedExpr::Tuple { elems, .. } => "#"
-                .to_doc()
-                .append(wrap_args(elems.iter().map(|e| self.expr(e))))
-                .group(),
+            UntypedExpr::Tuple { elems, .. } => self.tuple(elems),
 
             UntypedExpr::BitArray { segments, .. } => bit_array(
                 segments
@@ -845,7 +842,11 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn call<'a>(&mut self, fun: &'a UntypedExpr, args: &'a [CallArg<UntypedExpr>]) -> Document<'a> {
+    fn call<'a>(
+        &mut self,
+        fun: &'a UntypedExpr,
+        args: &'a Vec<CallArg<UntypedExpr>>,
+    ) -> Document<'a> {
         let expr = match fun {
             UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
 
@@ -872,29 +873,57 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::NegateInt { .. } => self.expr(fun),
         };
 
-        match init_and_last(args) {
-            Some((initial_args, last_arg))
-                if is_breakable_argument(&last_arg.value, args.len())
-                    && !self.any_comments(last_arg.location.start) =>
+        self.append_inlinable_wrapped_args(
+            expr,
+            args,
+            |arg| &arg.value,
+            |self_, arg| self_.call_arg(arg),
+        )
+    }
+
+    fn tuple<'a>(&mut self, elements: &'a Vec<UntypedExpr>) -> Document<'a> {
+        self.append_inlinable_wrapped_args("#".to_doc(), elements, |e| e, |self_, e| self_.expr(e))
+    }
+
+    // Appends to the given docs a comma-separated list of documents wrapped by
+    // parentheses. If the last item of the argument list is splittable the
+    // resulting document will try to first split that before splitting all the
+    // other arguments.
+    // This is used for function calls and tuples.
+    fn append_inlinable_wrapped_args<'a, T, ToExpr, ToDoc>(
+        &mut self,
+        doc: Document<'a>,
+        values: &'a Vec<T>,
+        to_expr: ToExpr,
+        to_doc: ToDoc,
+    ) -> Document<'a>
+    where
+        T: HasLocation,
+        ToExpr: Fn(&T) -> &UntypedExpr,
+        ToDoc: Fn(&mut Self, &'a T) -> Document<'a>,
+    {
+        match init_and_last(values) {
+            Some((initial_values, last_value))
+                if is_breakable_argument(to_expr(last_value), values.len())
+                    && !self.any_comments(last_value.location().start) =>
             {
-                let last_arg_doc = self
-                    .call_arg(last_arg)
+                let last_value_doc = to_doc(self, last_value)
                     .group()
                     .next_break_fits(NextBreakFitsMode::Enabled);
 
-                expr.append(wrap_function_call_args(
-                    initial_args
+                doc.append(wrap_function_call_args(
+                    initial_values
                         .iter()
-                        .map(|a| self.call_arg(a))
-                        .chain(std::iter::once(last_arg_doc)),
+                        .map(|value| to_doc(self, value))
+                        .chain(std::iter::once(last_value_doc)),
                 ))
                 .next_break_fits(NextBreakFitsMode::Disabled)
                 .group()
             }
 
-            Some(_) | None => expr
+            Some(_) | None => doc
                 .append(wrap_function_call_args(
-                    args.iter().map(|a| self.call_arg(a)),
+                    values.iter().map(|value| to_doc(self, value)),
                 ))
                 .group(),
         }
