@@ -1780,8 +1780,7 @@ where
 
     let args_doc = break_("", "")
         .append(join(args, break_(",", ", ")))
-        .nest_if_broken(INDENT)
-        .group();
+        .nest_if_broken(INDENT);
 
     "(".to_doc()
         .append(args_doc)

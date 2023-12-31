@@ -18,11 +18,13 @@
 
 ### Language Server Changes
 
-- Added a `View on HexDocs` link on function hover
+- Added a `View on HexDocs` link on function hover.
 
 ### Formatter
 
 - Fixed some quirk with the formatting of binary operators.
+- Fixed a bug where the formatter would move a function call's closed
+  parentheses on a new line instead of splitting the function's arguments.
 
 ### Build tool
 
