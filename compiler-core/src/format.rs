@@ -1322,7 +1322,7 @@ impl<'comments> Formatter<'comments> {
         } else {
             break_(",", ", ")
         };
-        let elements = join(elements.iter().map(|e| self.expr(e)), comma)
+        let elements = join(elements.iter().map(|e| self.expr(e).group()), comma)
             .next_break_fits(NextBreakFitsMode::Disabled);
 
         let doc = break_("[", "[").append(elements);
