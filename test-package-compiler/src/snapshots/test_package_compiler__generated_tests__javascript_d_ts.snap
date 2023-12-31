@@ -10,10 +10,12 @@ expression: "./cases/javascript_d_ts"
 <29 byte binary>
 
 //// /out/lib/the_package/gleam.d.mts
-<prelude>
+export * from "../prelude.d.mts";
+
 
 //// /out/lib/the_package/gleam.mjs
-<prelude>
+export * from "../prelude.mjs";
+
 
 //// /out/lib/the_package/hello.d.mts
 import type * as _ from "./gleam.d.mts";
