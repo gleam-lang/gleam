@@ -670,3 +670,15 @@ fn reserved_macro() {
 fn reserved_test() {
     assert_warning!(r#"const test = 1"#);
 }
+
+#[test]
+fn call_in_case_if_guard() {
+    // https://github.com/gleam-lang/gleam/issues/2509
+    assert_error!(
+        r#"
+let my_string = "hello"
+case my_string {
+  _ if string.length(my_string) > 2 -> io.debug("doesn't work!'")
+}"#
+    );
+}

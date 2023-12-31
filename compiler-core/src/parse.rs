@@ -1170,6 +1170,7 @@ where
             let mut estack = vec![];
             let mut last_op_start = 0;
             let mut last_op_end = 0;
+
             loop {
                 if let Some(unit) = self.parse_case_clause_guard_unit()? {
                     estack.push(unit)
@@ -1196,6 +1197,15 @@ where
                             &mut opstack,
                             &mut estack,
                             &do_reduce_clause_guard,
+                        );
+                    } else if t == Token::LeftParen {
+                        let _ = self.next_tok();
+                        return parse_error(
+                            ParseErrorType::CallInCaseGuard,
+                            SrcSpan {
+                                start: op_s,
+                                end: op_e,
+                            },
                         );
                     } else {
                         // Is not Op
@@ -1303,9 +1313,9 @@ where
             Some((_, Token::LeftBrace, _)) => {
                 // Nested guard expression
                 let _ = self.next_tok();
-                let guard = self.parse_case_clause_guard(true);
+                let guard = self.parse_case_clause_guard(true)?;
                 let _ = self.expect_one(&Token::RightBrace)?;
-                guard
+                Ok(guard)
             }
             t0 => {
                 self.tok0 = t0;

@@ -210,6 +210,11 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ),
             ParseErrorType::UnknownTarget => ("I don't know what this attribute is", vec![]),
             ParseErrorType::ExpectedFunctionBody => ("This function does not have a body", vec![]),
+            ParseErrorType::CallInCaseGuard => (
+                "Call expression used in case `if` guard clause",
+                vec!["Equality and comparison of numbers is all that can be used in an `if` guard clause.
+See: https://gleam.run/book/tour/case-expressions.html#checking-equality-and-ordering-in-patterns.".into()]
+            )
         }
     }
 }
@@ -262,6 +267,7 @@ pub enum ParseErrorType {
     ConcatPatternVariableLeftHandSide,
     ListSpreadWithoutTail, // let x = [1, ..]
     ExpectedFunctionBody,  // let x = fn()
+    CallInCaseGuard,       // call expression used in case guard
 }
 
 impl LexicalError {
