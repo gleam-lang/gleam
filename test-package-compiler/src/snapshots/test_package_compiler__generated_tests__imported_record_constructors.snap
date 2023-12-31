@@ -1,6 +1,5 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 189
 expression: "./cases/imported_record_constructors"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@one.cache
@@ -34,39 +33,7 @@ expression: "./cases/imported_record_constructors"
 -module(two).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
--export([qualified_fn_a/0, qualified_fn_b/0, qualified_aliased_fn_a/0, qualified_aliased_fn_b/0, unqualified_fn_a/0, unqualified_fn_b/0, aliased_fn_a/0, aliased_fn_b/0, accessors/1, destructure_qualified/1, destructure_qualified_aliased/1, destructure_unqualified/1, destructure_aliased/1, update_qualified/1, update_qualified_aliased/1, update_unqualified/1, update_aliased/1]).
-
--spec qualified_fn_a() -> one@one:a().
-qualified_fn_a() ->
-    a.
-
--spec qualified_fn_b() -> one@one:b().
-qualified_fn_b() ->
-    {b, a, a}.
-
--spec qualified_aliased_fn_a() -> one@one:a().
-qualified_aliased_fn_a() ->
-    a.
-
--spec qualified_aliased_fn_b() -> one@one:b().
-qualified_aliased_fn_b() ->
-    {b, a, a}.
-
--spec unqualified_fn_a() -> one@one:a().
-unqualified_fn_a() ->
-    a.
-
--spec unqualified_fn_b() -> one@one:b().
-unqualified_fn_b() ->
-    {b, a, a}.
-
--spec aliased_fn_a() -> one@one:a().
-aliased_fn_a() ->
-    a.
-
--spec aliased_fn_b() -> one@one:b().
-aliased_fn_b() ->
-    {b, a, a}.
+-export([accessors/1, destructure_qualified/1, destructure_qualified_aliased/1, destructure_unqualified/1, destructure_aliased/1, update_qualified/1, update_qualified_aliased/1, update_unqualified/1, update_aliased/1, qualified_fn_a/0, qualified_fn_b/0, qualified_aliased_fn_a/0, qualified_aliased_fn_b/0, unqualified_fn_a/0, unqualified_fn_b/0, aliased_fn_a/0, aliased_fn_b/0]).
 
 -spec accessors(one@one:user()) -> {binary(), integer()}.
 accessors(User) ->
@@ -109,6 +76,38 @@ update_unqualified(User) ->
 -spec update_aliased(one@one:user()) -> one@one:user().
 update_aliased(User) ->
     erlang:setelement(2, User, <<"wibble"/utf8>>).
+
+-spec qualified_fn_a() -> one@one:a().
+qualified_fn_a() ->
+    a.
+
+-spec qualified_fn_b() -> one@one:b().
+qualified_fn_b() ->
+    {b, a, a}.
+
+-spec qualified_aliased_fn_a() -> one@one:a().
+qualified_aliased_fn_a() ->
+    a.
+
+-spec qualified_aliased_fn_b() -> one@one:b().
+qualified_aliased_fn_b() ->
+    {b, a, a}.
+
+-spec unqualified_fn_a() -> one@one:a().
+unqualified_fn_a() ->
+    a.
+
+-spec unqualified_fn_b() -> one@one:b().
+unqualified_fn_b() ->
+    {b, a, a}.
+
+-spec aliased_fn_a() -> one@one:a().
+aliased_fn_a() ->
+    a.
+
+-spec aliased_fn_b() -> one@one:b().
+aliased_fn_b() ->
+    {b, a, a}.
 
 
 //// /out/lib/the_package/ebin/importy.app

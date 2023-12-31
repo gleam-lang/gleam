@@ -10,7 +10,7 @@ use crate::{
         TypeAstVar, TypedDefinition, TypedModule, UntypedArg, UntypedModule, UntypedStatement,
     },
     build::{Origin, Target},
-    call_graph::into_dependency_order,
+    call_graph::{into_dependency_order, CallGraphNode},
     dep_tree,
     type_::{
         self,
@@ -22,7 +22,7 @@ use crate::{
         prelude::*,
         AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
         TypeConstructor, TypeValueConstructor, TypeValueConstructorParameter, ValueConstructor,
-        ValueConstructorVariant,
+        ValueConstructorVariant, Warning,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
@@ -157,24 +157,28 @@ pub fn infer_module<A>(
         let statement = insert_type_alias(t, &mut env)?;
         typed_statements.push(statement);
     }
-    for c in statements.constants {
-        let statement = infer_module_constant(c, &mut env, &name)?;
-        typed_statements.push(statement);
-    }
 
-    // Sort the functions into dependency order for inference. Functions that do
-    // not depend on other functions are inferred first, then ones that depend
+    // Sort functions and constants into dependency order for inference. Definitions that do
+    // not depend on other definitions are inferred first, then ones that depend
     // on those, etc.
-    let function_groups = into_dependency_order(statements.functions)?;
+    let definition_groups = into_dependency_order(statements.functions, statements.constants)?;
     let mut working_group = vec![];
 
-    for group in function_groups {
+    for group in definition_groups {
         // A group may have multiple functions that depend on each other through
         // mutual recursion.
 
-        for function in group {
-            let inferred = infer_function(function, &mut env, &mut hydrators, &name)?;
-            working_group.push(inferred);
+        for definition in group {
+            match definition {
+                CallGraphNode::Function(f) => {
+                    let statement = infer_function(f, &mut env, &mut hydrators, &name)?;
+                    working_group.push(statement);
+                }
+                CallGraphNode::ModuleConstant(c) => {
+                    let statement = infer_module_constant(c, &mut env, &name)?;
+                    working_group.push(statement);
+                }
+            }
         }
 
         // Now that the entire group has been inferred, generalise their types.
@@ -597,6 +601,15 @@ fn infer_function(
         // think you should always specify types for external functions for
         // clarity + to avoid accidental mistakes.
         ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
+
+        if external_javascript.is_some()
+            && external_erlang.is_some()
+            && !body.first().is_placeholder()
+        {
+            environment
+                .warnings
+                .emit(Warning::UnusedFunctionBody { location })
+        }
     } else {
         // There was no external implementation, so a Gleam one must be given.
         ensure_body_given(&body, location)?;
@@ -990,12 +1003,64 @@ fn generalise_statement(
 ) -> TypedDefinition {
     match s {
         Definition::Function(function) => generalise_function(function, environment, module_name),
-
+        Definition::ModuleConstant(constant) => {
+            generalise_module_constant(constant, environment, module_name)
+        }
         statement @ (Definition::TypeAlias(TypeAlias { .. })
         | Definition::CustomType(CustomType { .. })
-        | Definition::Import(Import { .. })
-        | Definition::ModuleConstant(ModuleConstant { .. })) => statement,
+        | Definition::Import(Import { .. })) => statement,
     }
+}
+
+fn generalise_module_constant(
+    constant: ModuleConstant<Arc<Type>, EcoString>,
+    environment: &mut Environment<'_>,
+    module_name: &EcoString,
+) -> TypedDefinition {
+    let ModuleConstant {
+        documentation: doc,
+        location,
+        name,
+        annotation,
+        public,
+        value,
+        type_,
+    } = constant;
+    let typ = type_.clone();
+    let type_ = type_::generalise(typ);
+    let variant = ValueConstructorVariant::ModuleConstant {
+        documentation: doc.clone(),
+        location,
+        literal: *value.clone(),
+        module: module_name.clone(),
+    };
+    environment.insert_variable(
+        name.clone(),
+        variant.clone(),
+        type_.clone(),
+        public,
+        Deprecation::NotDeprecated,
+    );
+
+    environment.insert_module_value(
+        name.clone(),
+        ValueConstructor {
+            public,
+            variant,
+            deprecation: Deprecation::NotDeprecated,
+            type_: type_.clone(),
+        },
+    );
+
+    Definition::ModuleConstant(ModuleConstant {
+        documentation: doc,
+        location,
+        name,
+        annotation,
+        public,
+        value,
+        type_,
+    })
 }
 
 fn generalise_function(
@@ -1150,7 +1215,7 @@ fn get_compatible_record_fields<A>(
 ) -> Vec<(usize, &EcoString, &TypeAst)> {
     let mut compatible = vec![];
 
-    let first = match constructors.get(0) {
+    let first = match constructors.first() {
         Some(first) => first,
         None => return compatible,
     };

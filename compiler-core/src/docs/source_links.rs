@@ -49,6 +49,20 @@ impl SourceLinker {
                 ),
                 ":".into(),
             )),
+            Repository::CodeBerg { user, repo } => Some((
+                format!(
+                    "https://codeberg.org/{}/{}/src/tag/{}/{}#L",
+                    user, repo, project_config.version, path_in_repo
+                ),
+                "-".into(),
+            )),
+            Repository::Gitea { user, repo, host } => Some((
+                format!(
+                    "{host}/{user}/{repo}/src/tag/{}/{}#L",
+                    project_config.version, path_in_repo
+                ),
+                "-".into(),
+            )),
             Repository::Custom { .. } | Repository::None => None,
         };
 
