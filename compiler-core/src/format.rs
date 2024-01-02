@@ -877,7 +877,7 @@ impl<'comments> Formatter<'comments> {
         )
     }
 
-    fn tuple<'a>(&mut self, elements: &'a Vec<UntypedExpr>) -> Document<'a> {
+    fn tuple<'a>(&mut self, elements: &'a [UntypedExpr]) -> Document<'a> {
         self.append_inlinable_wrapped_args("#".to_doc(), elements, |e| e, |self_, e| self_.expr(e))
     }
 
