@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern, Statement, Pattern
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -229,6 +229,8 @@ where
             };
 
             code_action_unused_imports(module, &params, &mut actions);
+            code_action_unused_imports(module, &params, &mut actions);
+            code_action_inline_variable(module, &params, &mut actions);
 
             Ok(if actions.is_empty() {
                 None
@@ -487,6 +489,13 @@ fn get_import(statement: &TypedDefinition) -> Option<&Import<EcoString>> {
     }
 }
 
+fn get_function(statement: &TypedDefinition) -> Option<&Function<Arc<Type>, TypedExpr>>{
+    match statement {
+        Definition::Function(function) => Some(function),
+        _ => None,
+    }
+}
+
 fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover {
     let documentation = pattern.get_documentation().unwrap_or_default();
 
@@ -612,4 +621,70 @@ fn code_action_unused_imports(
         .changes(uri.clone(), edits)
         .preferred(true)
         .push_to(actions);
+}
+
+fn code_action_inline_variable(
+    module: &Module,
+    params: &lsp::CodeActionParams,
+    actions: &mut Vec<CodeAction>
+){
+    dbg!(module);
+    let uri = &params.text_document.uri;
+    let line_numbers = LineNumbers::new(&module.code);
+    let mut hovered = false;
+    let mut inline_refactors = Vec::new();
+
+    for function in module.ast.definitions.iter().filter_map(get_function) {
+        
+        detect_possible_variable_inlining(function, &mut inline_refactors);
+    }
+
+    let mut edits = Vec::new();
+
+    if !inline_refactors.is_empty(){
+        // build.edits()
+    }
+
+    CodeActionBuilder::new("Inline Variable Refactor")
+        .kind(lsp_types::CodeActionKind::QUICKFIX)
+        .changes(uri.clone(), edits)
+        .preferred(true)
+        .push_to(actions);
+}
+
+fn detect_possible_variable_inlining(function: &Function<Arc<Type>, TypedExpr>, inline_refactors: &mut Vec<&str>) {
+    //in function body check for unnecessary variable declarations
+    let statements: Vec<&Statement<Arc<Type>, TypedExpr>> = function.body.iter().filter(|statement| statement.is_assignment()).collect();
+    let mut var_assignments: Vec<&Pattern<Arc<Type>>> = Vec::new();
+
+    find_assignment(statements, &mut var_assignments);
+    
+    if var_assignments.is_empty(){
+        return;
+    }
+
+    let inlinings = assignments_to_be_inlined(var_assignments);
+
+    todo!()
+}
+
+fn assignments_to_be_inlined(var_assignments: Vec<&Pattern<Arc<Type>>>) -> Vec<&Pattern<Arc<Type>>> {
+    
+    //check if variable is only being used once
+    // 1) single usage
+    // 2) no modifications: var doesnt undergo changes between assignment and usage
+
+
+    todo!()
+}
+
+fn find_assignment<'a>(statements: Vec<&'a Statement<Arc<Type>, TypedExpr>>, assignments: &mut Vec<&'a Pattern<Arc<Type>>>)
+{
+    for statement in statements{
+        if let Statement::Assignment(assignment) = statement{
+            if let Pattern::Var { .. } = &assignment.pattern{
+                assignments.push(&assignment.pattern);
+            }
+        }
+    }
 }
