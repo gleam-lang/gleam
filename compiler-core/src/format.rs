@@ -842,11 +842,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn call<'a>(
-        &mut self,
-        fun: &'a UntypedExpr,
-        args: &'a Vec<CallArg<UntypedExpr>>,
-    ) -> Document<'a> {
+    fn call<'a>(&mut self, fun: &'a UntypedExpr, args: &'a [CallArg<UntypedExpr>]) -> Document<'a> {
         let expr = match fun {
             UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
 
@@ -893,7 +889,7 @@ impl<'comments> Formatter<'comments> {
     fn append_inlinable_wrapped_args<'a, T, ToExpr, ToDoc>(
         &mut self,
         doc: Document<'a>,
-        values: &'a Vec<T>,
+        values: &'a [T],
         to_expr: ToExpr,
         to_doc: ToDoc,
     ) -> Document<'a>
