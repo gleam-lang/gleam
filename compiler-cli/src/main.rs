@@ -510,7 +510,7 @@ fn print_config() -> Result<()> {
 }
 
 fn clean() -> Result<()> {
-    let paths = project_paths_at_current_directory();
+    let paths = project_paths_at_current_directory()?;
     fs::delete_directory(&paths.build_directory())
 }
 
@@ -525,10 +525,9 @@ fn initialise_logger() {
         .init();
 }
 
-fn project_paths_at_current_directory() -> ProjectPaths {
+fn project_paths_at_current_directory() -> Result<ProjectPaths> {
     let current_dir = get_current_directory().expect("Failed to get current directory");
-    let dir = get_project_root(current_dir).expect("Failed to get any gleam.toml file");
-    ProjectPaths::new(dir)
+    get_project_root(current_dir).map(ProjectPaths::new)
 }
 
 #[cfg(test)]
@@ -538,7 +537,7 @@ fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
 }
 
 fn download_dependencies() -> Result<(), Error> {
-    let paths = project_paths_at_current_directory();
+    let paths = project_paths_at_current_directory()?;
     _ = dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
     Ok(())
 }

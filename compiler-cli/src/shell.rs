@@ -5,7 +5,7 @@ use gleam_core::{
 use std::process::Command;
 
 pub fn command() -> Result<(), Error> {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory()?;
 
     // Build project
     let _ = crate::build::main(

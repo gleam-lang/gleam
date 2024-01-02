@@ -33,7 +33,7 @@ pub struct PublishCommand {
 
 impl PublishCommand {
     pub fn setup(replace: bool, i_am_sure: bool) -> Result<Option<Self>> {
-        let paths = crate::project_paths_at_current_directory();
+        let paths = crate::project_paths_at_current_directory()?;
         let config = crate::config::root_config()?;
 
         // Ask for confirmation if the package name if `gleam_*`

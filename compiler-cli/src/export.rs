@@ -25,7 +25,7 @@ static ENTRYPOINT_TEMPLATE: &str = include_str!("../templates/erlang-shipment-en
 /// - include
 /// - priv
 pub(crate) fn erlang_shipment() -> Result<()> {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory()?;
     let target = Target::Erlang;
     let mode = Mode::Prod;
     let build = paths.build_directory_for_target(mode, target);
@@ -99,7 +99,7 @@ the {file} script.
 }
 
 pub fn hex_tarball() -> Result<()> {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory()?;
     let config = crate::config::root_config()?;
     let data: Vec<u8> = crate::publish::build_hex_tarball(&paths, &config)?;
 
