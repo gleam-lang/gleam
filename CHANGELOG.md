@@ -4,7 +4,7 @@
 
 ### Language changes
 
-- Added a better error message for situation when user tries to use call expression in case `if` guard.
+- The error message presented when a function is called in a guard has been improved.
 - Warn about function body not being used, because it already has external
   implementations for all targets.
 
