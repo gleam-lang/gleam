@@ -58,7 +58,7 @@ pub struct BuildOptions {
 }
 
 pub fn build(options: BuildOptions) -> Result<()> {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory()?;
     let config = crate::config::root_config()?;
 
     // Reset the build directory so we know the state of the project
@@ -115,7 +115,7 @@ pub(crate) fn build_documentation(
 ) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
     compiled.attach_doc_and_module_comments();
     cli::print_generating_documentation();
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory()?;
     let mut pages = vec![DocsPage {
         title: "README".into(),
         path: "index.html".into(),
@@ -143,7 +143,7 @@ pub fn publish() -> Result<()> {
 
 impl PublishCommand {
     pub fn new() -> Result<Self> {
-        let paths = crate::project_paths_at_current_directory();
+        let paths = crate::project_paths_at_current_directory()?;
         let config = crate::config::root_config()?;
 
         // Reset the build directory so we know the state of the project

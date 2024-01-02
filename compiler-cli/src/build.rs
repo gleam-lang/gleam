@@ -15,12 +15,12 @@ use crate::{
 };
 
 pub fn download_dependencies() -> Result<Manifest> {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory()?;
     crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)
 }
 
 pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory()?;
     let perform_codegen = options.codegen;
     let root_config = crate::config::root_config()?;
     let telemetry = Box::new(cli::Reporter::new());
