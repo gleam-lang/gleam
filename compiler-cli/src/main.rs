@@ -531,7 +531,7 @@ fn project_paths_at_current_directory() -> ProjectPaths {
     ProjectPaths::new(dir)
 }
 
-#[allow(dead_code)]
+#[cfg(test)]
 fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
     let current_dir = get_current_directory().expect("Failed to get current directory");
     ProjectPaths::new(current_dir)
