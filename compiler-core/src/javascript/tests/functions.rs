@@ -426,3 +426,28 @@ pub fn main() {
 "#
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/2518
+#[test]
+fn function_literals_get_properly_wrapped() {
+    assert_js!(
+        r#"pub fn main() {
+  fn(n) { n + 1 }(10)
+}
+"#
+    );
+
+    assert_js!(
+        r#"pub fn main() {
+  { fn(n) { n + 1 } }(10)
+}
+"#
+    );
+
+    assert_js!(
+        r#"pub fn main() {
+  { let a = fn(n) { n + 1 } }(10)
+}
+"#
+    );
+}

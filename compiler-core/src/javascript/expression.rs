@@ -310,12 +310,14 @@ impl<'module> Generator<'module> {
 
     /// Wrap an expression in an immediately involked function expression if
     /// required due to being a JS statement, or in parens if required due to
-    /// being an operator
+    /// being an operator or a function literal.
     pub fn child_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
             TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {
                 Ok(docvec!("(", self.expression(expression)?, ")"))
             }
+
+            TypedExpr::Fn { .. } => Ok(docvec!("(", self.expression(expression)?, ")")),
 
             _ => self.wrap_expression(expression),
         }
