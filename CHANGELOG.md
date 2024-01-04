@@ -32,6 +32,8 @@
 - Fixed a bug where `gleam add` would not update `manifest.toml` correctly.
 - Fixed a bug where the build tool would make unnecessary calls to the Hex API
   when path dependencies are used.
+- Fixed a bug where `gleam new` would generate a gitignore with `build` rather
+  than `/build`.
 - Fixed where the types of generic constants could be incorrecly inferred.
 - `Utf8Codepoint` has been renamed to `UtfCodepoint` in `prelude.d.mts`.
 - Fixed a bug where `gleam deps list` would look in filesystem root instead of
