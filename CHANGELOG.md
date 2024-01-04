@@ -8,6 +8,8 @@
   implementations for all targets.
 - It's now possible to compile a project with external functions that are not
   supported by the compilation target as long as those are not actually used.
+- The error message for when one imports a constructor instead of an homonymous
+  type has been improved.
 
 ### Build tool changes
 

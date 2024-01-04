@@ -212,11 +212,20 @@ impl Hydrator {
                         Ok(var)
                     }
 
-                    None => Err(Error::UnknownType {
-                        name: name.clone(),
-                        location: *location,
-                        types: environment.module_types.keys().cloned().collect(),
-                    }),
+                    None => {
+                        let hint = match environment.scope.contains_key(name) {
+                            true => UnknownTypeHint::ValueInScopeWithSameName,
+                            false => UnknownTypeHint::AlternativeTypes(
+                                environment.module_types.keys().cloned().collect(),
+                            ),
+                        };
+
+                        Err(Error::UnknownType {
+                            name: name.clone(),
+                            location: *location,
+                            hint,
+                        })
+                    }
                 }
             }
 

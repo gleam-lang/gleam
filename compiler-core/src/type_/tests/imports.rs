@@ -252,3 +252,15 @@ fn deprecated_type_import_conflict_two_modules() {
         vec![]
     );
 }
+
+#[test]
+fn imported_constructor_instead_of_type() {
+    assert_with_module_error!(
+        ("module", "pub type Foo { Foo }"),
+        "import module.{Foo}
+
+pub fn main(x: Foo) {
+  todo
+}",
+    );
+}
