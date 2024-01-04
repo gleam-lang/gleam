@@ -33,6 +33,7 @@
 ### Bug fixes
 
 - Fixed a bug where `gleam add` would not update `manifest.toml` correctly.
+- Fixed a bug where `fn() { Nil }()` could generate invalid JavaScript code.
 - Fixed a bug where the build tool would make unnecessary calls to the Hex API
   when path dependencies are used.
 - Fixed a bug where `gleam new` would generate a gitignore with `build` rather
