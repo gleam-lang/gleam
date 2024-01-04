@@ -569,8 +569,7 @@ to `src/{module}.gleam`."
                 ),
                 text: format!(
                     "{}
-If you want to overwrite these files, delete them
-and run the command again.
+If you want to overwrite these files, delete them and run the command again.
 ",
                     file_names
                         .iter()

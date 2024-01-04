@@ -79,23 +79,26 @@ impl FileToCreate {
 [![Package Version](https://img.shields.io/hexpm/v/{project_name})](https://hex.pm/packages/{project_name})
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/{project_name}/)
 
-## Quick start
+```sh
+gleam add {project_name}
+```
+```gleam
+import {project_name}
+
+pub fn main() {{
+  // TODO: An example of the project in use
+}}
+```
+
+Further documentation can be found at <https://hexdocs.pm/{project_name}>.
+
+## Development
 
 ```sh
 gleam run   # Run the project
 gleam test  # Run the tests
 gleam shell # Run an Erlang shell
 ```
-
-## Installation
-
-If available on Hex this package can be added to your Gleam project:
-
-```sh
-gleam add {project_name}
-```
-
-and its documentation can be found at <https://hexdocs.pm/{project_name}>.
 "#,
             )),
 
