@@ -5,13 +5,13 @@ export class CustomType {
 export class List<T> implements Iterable<T> {
   head?: T;
   tail?: List<T>;
-  static fromArray<T>(array: Array<T>): List<T>
+  static fromArray<T>(array: Array<T>): List<T>;
   toArray(): Array<T>;
   atLeastLength(desired: number): boolean;
   hasLength(desired: number): boolean;
   countLength(): number;
 
-  [Symbol.iterator](): Iterator<T>
+  [Symbol.iterator](): Iterator<T>;
 }
 
 export function toList<T>(array: Array<T>): List<T>;
@@ -30,8 +30,8 @@ export class BitArray {
   sliceAfter(index: number): BitArray;
 }
 
-export class Utf8Codepoint {
-    value: string;
+export class UtfCodepoint {
+  value: string;
 }
 
 export function toBitArray(segments: Array<number | Uint8Array>): BitArray;
@@ -44,7 +44,7 @@ export function byteArrayToFloat(byteArray: Uint8Array): number;
 
 export function stringBits(string: string): Uint8Array;
 
-export function codepointBits(codepoint: Utf8Codepoint): Uint8Array;
+export function codepointBits(codepoint: UtfCodepoint): Uint8Array;
 
 export function float64Bits(float: number): Uint8Array;
 
