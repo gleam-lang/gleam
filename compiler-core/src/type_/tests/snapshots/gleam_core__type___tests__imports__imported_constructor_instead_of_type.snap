@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/imports.rs
+expression: "import module.{Foo}\n\npub fn main(x: Foo) {\n  todo\n}"
+---
+error: Unknown type
+  ┌─ /src/one/two.gleam:3:16
+  │
+3 │ pub fn main(x: Foo) {
+  │                ^^^
+
+The type `Foo` is not defined or imported in this module.
+There is a value in scope with the name `Foo`, but no type in scope with
+that name.
+

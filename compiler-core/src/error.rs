@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Runtime, Target};
 use crate::diagnostic::{Diagnostic, Label, Location};
-use crate::type_::error::MissingAnnotation;
+use crate::type_::error::{MissingAnnotation, UnknownTypeHint};
 use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{
@@ -1482,11 +1482,28 @@ constructing a new record with its values."
                 TypeError::UnknownType {
                     location,
                     name,
-                    types,
+                    hint,
                 } => {
-                    let text = wrap_format!(
+                    let label_text = match hint {
+                        UnknownTypeHint::AlternativeTypes(types) => did_you_mean(name, types),
+                        UnknownTypeHint::ValueInScopeWithSameName => None,
+                    };
+
+                    let mut text = wrap_format!(
                         "The type `{name}` is not defined or imported in this module."
                     );
+
+                    match hint {
+                        UnknownTypeHint::ValueInScopeWithSameName => {
+                            let hint = wrap_format!(
+                                "There is a value in scope with the name `{name}`, but no type in scope with that name."
+                            );
+                            text.push('\n');
+                            text.push_str(hint.as_str());
+                        }
+                        UnknownTypeHint::AlternativeTypes(_) => {}
+                    };
+
                     Diagnostic {
                         title: "Unknown type".into(),
                         text,
@@ -1494,7 +1511,7 @@ constructing a new record with its values."
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: did_you_mean(name, types),
+                                text: label_text,
                                 span: *location,
                             },
                             path: path.clone(),

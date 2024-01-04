@@ -298,7 +298,7 @@ impl<'a> Environment<'a> {
                 .get(name)
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
-                    type_constructors: self.module_types.keys().cloned().collect(),
+                    hint: self.unknown_type_hint(name),
                 }),
 
             Some(module_name) => {
@@ -324,6 +324,13 @@ impl<'a> Environment<'a> {
         Ok(t)
     }
 
+    fn unknown_type_hint(&self, type_name: &EcoString) -> UnknownTypeHint {
+        match self.scope.contains_key(type_name) {
+            true => UnknownTypeHint::ValueInScopeWithSameName,
+            false => UnknownTypeHint::AlternativeTypes(self.module_types.keys().cloned().collect()),
+        }
+    }
+
     /// Lookup constructors for type in the current scope.
     ///
     pub fn get_constructors_for_type(
@@ -340,7 +347,7 @@ impl<'a> Environment<'a> {
             None => self.module_types_constructors.get(name).ok_or_else(|| {
                 UnknownTypeConstructorError::Type {
                     name: name.clone(),
-                    type_constructors: self.module_types.keys().cloned().collect(),
+                    hint: self.unknown_type_hint(name),
                 }
             }),
 
