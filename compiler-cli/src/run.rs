@@ -27,7 +27,7 @@ pub fn command(
     module: Option<String>,
     which: Which,
 ) -> Result<(), Error> {
-    let paths = crate::project_paths_at_current_directory()?;
+    let paths = crate::find_project_paths()?;
 
     // Validate the module path
     if let Some(mod_path) = &module {

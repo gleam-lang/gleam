@@ -113,7 +113,7 @@ pub enum UseManifest {
 }
 
 pub fn update() -> Result<()> {
-    let paths = crate::project_paths_at_current_directory()?;
+    let paths = crate::find_project_paths()?;
     _ = download(&paths, cli::Reporter::new(), None, UseManifest::No)?;
     Ok(())
 }
