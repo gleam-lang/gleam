@@ -15,6 +15,8 @@
   no conflicts with already existing files. Examples: `gleam new .`, `gleam new
   ..`, `gleam new ~/projects/test`.
 - The format for the README created by `gleam new` has been altered.
+- The `gleam.toml` created by `gleam new` now has a link to the full reference
+  for its available options.
 
 ### Language Server Changes
 

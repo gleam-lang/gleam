@@ -148,6 +148,9 @@ version = "1.0.0"
 # licences = ["Apache-2.0"]
 # repository = {{ type = "github", user = "username", repo = "project" }}
 # links = [{{ title = "Website", href = "https://gleam.run" }}]
+#
+# For a full reference of all the available options, you can have a look at
+# https://gleam.run/writing-gleam/gleam-toml/. 
 
 [dependencies]
 gleam_stdlib = "{GLEAM_STDLIB_REQUIREMENT}"
