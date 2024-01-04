@@ -13,7 +13,7 @@
 
 - The `gleam new` command now accepts any existing path, as long as there are
   no conflicts with already existing files. Examples: `gleam new .`, `gleam new
-..`, `gleam new ~/projects/test`.
+  ..`, `gleam new ~/projects/test`.
 - The format for the README created by `gleam new` has been altered.
 - The `gleam.toml` created by `gleam new` now has a link to the full reference
   for its available options.
@@ -60,7 +60,6 @@
   equal.
 - JavaScript: export from `prelude.d.mts` in `gleam.d.mts` to fix the error:
   "Type 'Result' is not generic".
-- Not providing a definition after some attributes is now a parse error.
 - Not providing a definition after some attributes is now a parse error.
 
 
@@ -311,7 +310,7 @@
 - The content has been made wider in rendered HTML documentation.
 - Dependencies that can be built with both `mix` and `rebar3` are now built
   with `mix` if it exists on the system, and with `rebar3` if it doesn't.
-  
+
 ### Bug fixes
 
 - "Compiling $package" is now only printed when a package has new changes to
