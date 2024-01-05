@@ -10,6 +10,7 @@ expression: "crate::fs::read(Utf8PathBuf::from_path_buf(file_path.to_path_buf())
 ```sh
 gleam add my_project@1
 ```
+
 ```gleam
 import my_project
 

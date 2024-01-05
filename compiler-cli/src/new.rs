@@ -93,6 +93,7 @@ impl FileToCreate {
 ```sh
 gleam add {project_name}@1
 ```
+
 ```gleam
 import {project_name}
 
