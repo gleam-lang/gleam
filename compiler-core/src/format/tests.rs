@@ -5377,3 +5377,32 @@ fn function_call_close_to_line_limit() {
 "#
     );
 }
+
+#[test]
+fn multiline_string_are_not_broken_with_string_concatenation_if_they_fit() {
+    assert_format!(
+        r#"pub fn main() {
+  "pub fn foo(" <> arg <> ") ->" <> type_ <> "{
+    body
+}"
+}
+"#
+    );
+}
+
+#[test]
+fn multiline_string_get_broken_on_newlines_as_function_arguments() {
+    assert_format!(
+        r#"pub fn main() {
+  foo(
+    bar,
+    "bar
+  asd
+       baz",
+    foo,
+    bar,
+  )
+}
+"#
+    );
+}
