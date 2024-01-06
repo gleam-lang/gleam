@@ -31,6 +31,7 @@
   parentheses on a new line instead of splitting the function's arguments.
 - Now the formatter will format tuples as if they were functions, trying to
   first split just the last element before splitting the whole tuple.
+- Improved the formatting of multiline strings in string concatenation.
 
 ### Build tool
 

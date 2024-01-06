@@ -10,7 +10,7 @@ use crate::{
     docvec,
     io::Utf8Writer,
     parse::extra::{Comment, ModuleExtra},
-    pretty::*,
+    pretty::{self, *},
     type_::{self, Type},
     Error, Result,
 };
@@ -731,6 +731,20 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
+    fn bin_op_string<'a>(&self, string: &'a EcoString) -> Document<'a> {
+        let lines = string.split('\n').collect_vec();
+        match lines.as_slice() {
+            [] | [_] => string.to_doc().surround("\"", "\""),
+            [first_line, lines @ ..] => {
+                let mut doc = docvec!("\"", first_line);
+                for line in lines {
+                    doc = doc.append(pretty::line().set_nest(0)).append(line.to_doc())
+                }
+                doc.append("\"".to_doc()).group()
+            }
+        }
+    }
+
     fn float<'a>(&self, value: &'a str) -> Document<'a> {
         // Create parts
         let mut parts = value.split('.');
@@ -983,7 +997,10 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn binop_side<'a>(&mut self, operator: &'a BinOp, side: &'a UntypedExpr) -> Document<'a> {
-        let side_doc = self.expr(side);
+        let side_doc = match side {
+            UntypedExpr::String { value, .. } => self.bin_op_string(value),
+            _ => self.expr(side),
+        };
         match side.binop_name() {
             // In case the other side is a binary operation as well and it can
             // be grouped together with the current binary operation, the two
