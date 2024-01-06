@@ -563,7 +563,7 @@ Run this command to add it to your dependencies:
 "
                     ));
                     Diagnostic {
-                        title: "Transative dependency imported".into(),
+                        title: "Transitive dependency imported".into(),
                         text,
                         hint: None,
                         level: diagnostic::Level::Warning,

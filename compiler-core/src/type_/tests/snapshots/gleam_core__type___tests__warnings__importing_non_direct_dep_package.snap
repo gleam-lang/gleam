@@ -4,7 +4,7 @@ assertion_line: 877
 expression: "\nimport some_module\npub const x = some_module.x\n        "
 ---
 
-warning: Transative dependency imported
+warning: Transitive dependency imported
   ┌─ /src/warning/wrn.gleam:2:1
   │
 2 │ import some_module
