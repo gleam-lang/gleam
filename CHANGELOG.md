@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.34.0-rc1 - 2024-02-07
 
 ### Language changes
 
@@ -10,15 +10,6 @@
   supported by the compilation target as long as those are not actually used.
 - The error message for when one imports a constructor instead of an homonymous
   type has been improved.
-
-### Build tool changes
-
-- The `gleam new` command now accepts any existing path, as long as there are
-  no conflicts with already existing files. Examples: `gleam new .`, `gleam new
-  ..`, `gleam new ~/projects/test`.
-- The format for the README created by `gleam new` has been altered.
-- The `gleam.toml` created by `gleam new` now has a link to the full reference
-  for its available options.
 
 ### Language Server Changes
 
@@ -33,8 +24,14 @@
   first split just the last element before splitting the whole tuple.
 - Improved the formatting of multiline strings in string concatenation.
 
-### Build tool
+### Build tool changes
 
+- The `gleam new` command now accepts any existing path, as long as there are
+  no conflicts with already existing files. Examples: `gleam new .`, `gleam new
+  ..`, `gleam new ~/projects/test`.
+- The format for the README created by `gleam new` has been altered.
+- The `gleam.toml` created by `gleam new` now has a link to the full reference
+  for its available options.
 - The `gleam` binary is now statically linked on Windows.
 - New projects are created requiring between versions of v0.34.0 inclusive and
   exclusive v2.0.0.
