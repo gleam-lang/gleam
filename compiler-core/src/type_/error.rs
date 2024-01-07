@@ -18,7 +18,6 @@ use super::FieldAccessUsage;
 pub struct UnknownType {
     pub location: SrcSpan,
     pub name: EcoString,
-    pub hint: UnknownTypeHint,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
