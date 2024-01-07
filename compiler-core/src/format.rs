@@ -738,7 +738,9 @@ impl<'comments> Formatter<'comments> {
             [first_line, lines @ ..] => {
                 let mut doc = docvec!("\"", first_line);
                 for line in lines {
-                    doc = doc.append(pretty::line().set_nest(0)).append(line.to_doc())
+                    doc = doc
+                        .append(pretty::line().set_nesting(0))
+                        .append(line.to_doc())
                 }
                 doc.append("\"".to_doc()).group()
             }
