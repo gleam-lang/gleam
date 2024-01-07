@@ -309,3 +309,9 @@ fn empty_documents() {
     assert!(!"foo".to_doc().append("".to_doc()).is_empty());
     assert!(!"".to_doc().append("foo".to_doc()).is_empty());
 }
+
+#[test]
+fn set_nesting() {
+    let doc = Vec(vec!["foo".to_doc(), break_("", " "), "bar".to_doc()]).group();
+    assert_eq!("foo\nbar", doc.set_nesting(0).nest(2).to_pretty_string(1));
+}

@@ -584,7 +584,7 @@ impl<'a> Document<'a> {
         Self::Group(Box::new(self))
     }
 
-    pub fn set_nest(self, indent: isize) -> Self {
+    pub fn set_nesting(self, indent: isize) -> Self {
         Self::Nest(indent, NestMode::Set, NestCondition::Always, Box::new(self))
     }
 
