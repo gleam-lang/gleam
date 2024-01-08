@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "import module\npub fn main() {\n  module.javascript_only_constant()\n}"
+---
+error: Unsupported target
+  ┌─ /src/one/two.gleam:3:9
+  │
+3 │   module.javascript_only_constant()
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This constant doesn't have an implementation for the Erlang target.
+
