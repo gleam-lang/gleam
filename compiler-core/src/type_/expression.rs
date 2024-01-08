@@ -663,22 +663,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_var(&mut self, name: EcoString, location: SrcSpan) -> Result<TypedExpr, Error> {
         let constructor = self.infer_value_constructor(&None, &name, &location)?;
-
-        match constructor.variant {
-            ValueConstructorVariant::ModuleConstant {
-                supported_targets, ..
-            } => self.narrow_supported_targets(supported_targets, location, "constant".into())?,
-
-            ValueConstructorVariant::ModuleFn {
-                supported_targets, ..
-            } => self.narrow_supported_targets(supported_targets, location, "function".into())?,
-
-            // These variants are not narrowing the currently supported targets
-            ValueConstructorVariant::LocalVariable { .. }
-            | ValueConstructorVariant::LocalConstant { .. }
-            | ValueConstructorVariant::Record { .. } => {}
-        }
-
+        self.narrow_supported_targets(location, &constructor.variant)?;
         Ok(TypedExpr::Var {
             constructor,
             location,
@@ -688,11 +673,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn narrow_supported_targets(
         &mut self,
-        new_targets: SupportedTargets,
         location: SrcSpan,
-        kind: EcoString,
+        variant: &ValueConstructorVariant,
     ) -> Result<(), Error> {
-        self.supported_targets = self.supported_targets.intersect(new_targets);
+        let (new_targets, kind) = match variant {
+            ValueConstructorVariant::ModuleConstant {
+                supported_targets, ..
+            } => (supported_targets, "constant".into()),
+            ValueConstructorVariant::ModuleFn {
+                supported_targets, ..
+            } => (supported_targets, "function".into()),
+            ValueConstructorVariant::Record { .. }
+            | ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::LocalConstant { .. } => return Ok(()),
+        };
+
+        self.supported_targets = self.supported_targets.intersect(*new_targets);
         if self.environment.target_support == TargetSupport::Enforced
             && !new_targets
                 .merge(self.external_supported_targets)
@@ -1581,6 +1577,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let type_ = self.instantiate(constructor.type_, &mut hashmap![]);
 
+        self.narrow_supported_targets(select_location, &constructor.variant)?;
+
         let constructor = match &constructor.variant {
             variant @ ValueConstructorVariant::ModuleFn { name, module, .. } => {
                 variant.to_module_value_constructor(Arc::clone(&type_), module, name)
@@ -1887,6 +1885,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
         }
 
+        self.narrow_supported_targets(*location, &variant)?;
+
         // Instantiate generic variables into unbound variables for this usage
         let typ = self.instantiate(typ, &mut hashmap![]);
         Ok(ValueConstructor {
@@ -2100,6 +2100,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     field_map,
                 })
             }
+
             Constant::Var {
                 location,
                 module,

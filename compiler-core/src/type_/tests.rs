@@ -2122,3 +2122,36 @@ pub fn erlang_only() -> Int
     assert_module_infer!(module, vec![("erlang_only", "fn() -> Int")]);
     assert_js_module_error!(module);
 }
+
+#[test]
+fn imported_javascript_only_function() {
+    assert_with_module_error!(
+        (
+            "module",
+            r#"@external(javascript, "foo", "bar")
+pub fn javascript_only() -> Int"#
+        ),
+        "import module
+pub fn main() {
+  module.javascript_only()
+}",
+    );
+}
+
+#[test]
+fn javascript_only_constant() {
+    assert_with_module_error!(
+        (
+            "module",
+            r#"@external(javascript, "foo", "bar")
+fn javascript_only() -> Int
+const constant = javascript_only
+pub const javascript_only_constant = constant 
+"#
+        ),
+        "import module
+pub fn main() {
+  module.javascript_only_constant()
+}",
+    );
+}
