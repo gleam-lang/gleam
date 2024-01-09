@@ -315,7 +315,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 elements,
                 tail,
                 ..
-            } => match type_.get_app_args(true, PRELUDE_MODULE_NAME, "List", 1, self.environment) {
+            } => match type_.get_app_args(
+                true,
+                PRELUDE_PACKAGE_NAME,
+                PRELUDE_MODULE_NAME,
+                "List",
+                1,
+                self.environment,
+            ) {
                 Some(args) => {
                     let type_ = args
                         .first()

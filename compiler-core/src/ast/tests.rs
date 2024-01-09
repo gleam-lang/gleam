@@ -64,6 +64,7 @@ fn compile_expression(src: &str) -> TypedStatement {
     let emitter = TypeWarningEmitter::null();
     let mut environment = Environment::new(
         ids,
+        "mypackage".into(),
         "mymod".into(),
         Target::Erlang,
         &modules,
@@ -74,6 +75,7 @@ fn compile_expression(src: &str) -> TypedStatement {
     // Insert a cat record to use in the tests
     let cat_type = Arc::new(Type::Named {
         public: true,
+        package: "mypackage".into(),
         module: "mymod".into(),
         name: "Cat".into(),
         args: vec![],

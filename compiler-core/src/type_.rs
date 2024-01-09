@@ -54,6 +54,7 @@ pub enum Type {
     ///
     Named {
         public: bool,
+        package: EcoString,
         module: EcoString,
         name: EcoString,
         args: Vec<Arc<Type>>,
@@ -182,6 +183,7 @@ impl Type {
     pub fn get_app_args(
         &self,
         public: bool,
+        package: &str,
         module: &str,
         name: &str,
         arity: usize,
@@ -204,7 +206,7 @@ impl Type {
             Self::Var { type_: typ } => {
                 let args: Vec<_> = match typ.borrow().deref() {
                     TypeVar::Link { type_: typ } => {
-                        return typ.get_app_args(public, module, name, arity, environment);
+                        return typ.get_app_args(public, package, module, name, arity, environment);
                     }
 
                     TypeVar::Unbound { .. } => {
@@ -219,6 +221,7 @@ impl Type {
                 *typ.borrow_mut() = TypeVar::Link {
                     type_: Arc::new(Self::Named {
                         name: name.into(),
+                        package: package.into(),
                         module: module.into(),
                         args: args.clone(),
                         public,
@@ -930,6 +933,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
         Type::Named {
             public,
             module,
+            package,
             name,
             args,
         } => {
@@ -937,6 +941,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             Arc::new(Type::Named {
                 public: *public,
                 module: module.clone(),
+                package: package.clone(),
                 name: name.clone(),
                 args,
             })

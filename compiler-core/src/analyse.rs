@@ -102,6 +102,7 @@ pub fn infer_module<A>(
     let documentation = std::mem::take(&mut module.documentation);
     let env = Environment::new(
         ids.clone(),
+        package.clone(),
         name.clone(),
         target,
         modules,
@@ -327,6 +328,7 @@ fn register_types_from_custom_type<'a>(
 
     let typ = Arc::new(Type::Named {
         public: *public,
+        package: environment.current_package.clone(),
         module: module.to_owned(),
         name: name.clone(),
         args: parameters.clone(),

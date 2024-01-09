@@ -19,6 +19,7 @@ const RESULT: &str = "Result";
 const STRING: &str = "String";
 const UTF_CODEPOINT: &str = "UtfCodepoint";
 
+pub const PRELUDE_PACKAGE_NAME: &str = "";
 pub const PRELUDE_MODULE_NAME: &str = "gleam";
 
 pub fn is_prelude_module(module: &str) -> bool {
@@ -59,6 +60,7 @@ pub fn int() -> Arc<Type> {
         public: true,
         name: INT.into(),
         module: PRELUDE_MODULE_NAME.into(),
+        package: PRELUDE_PACKAGE_NAME.into(),
         args: vec![],
     })
 }
@@ -69,6 +71,7 @@ pub fn float() -> Arc<Type> {
         public: true,
         name: FLOAT.into(),
         module: PRELUDE_MODULE_NAME.into(),
+        package: PRELUDE_PACKAGE_NAME.into(),
     })
 }
 
@@ -78,6 +81,7 @@ pub fn bool() -> Arc<Type> {
         public: true,
         name: BOOL.into(),
         module: PRELUDE_MODULE_NAME.into(),
+        package: PRELUDE_PACKAGE_NAME.into(),
     })
 }
 
@@ -87,6 +91,7 @@ pub fn string() -> Arc<Type> {
         public: true,
         name: STRING.into(),
         module: PRELUDE_MODULE_NAME.into(),
+        package: PRELUDE_PACKAGE_NAME.into(),
     })
 }
 
@@ -96,6 +101,7 @@ pub fn nil() -> Arc<Type> {
         public: true,
         name: NIL.into(),
         module: PRELUDE_MODULE_NAME.into(),
+        package: PRELUDE_PACKAGE_NAME.into(),
     })
 }
 
@@ -104,6 +110,7 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
         public: true,
         name: LIST.into(),
         module: PRELUDE_MODULE_NAME.into(),
+        package: PRELUDE_PACKAGE_NAME.into(),
         args: vec![t],
     })
 }
@@ -113,6 +120,7 @@ pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
         public: true,
         name: RESULT.into(),
         module: PRELUDE_MODULE_NAME.into(),
+        package: PRELUDE_PACKAGE_NAME.into(),
         args: vec![a, e],
     })
 }
@@ -125,9 +133,16 @@ pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Fn { retrn, args })
 }
 
-pub fn named(module: &str, name: &str, public: bool, args: Vec<Arc<Type>>) -> Arc<Type> {
+pub fn named(
+    package: &str,
+    module: &str,
+    name: &str,
+    public: bool,
+    args: Vec<Arc<Type>>,
+) -> Arc<Type> {
     Arc::new(Type::Named {
         public,
+        package: package.into(),
         module: module.into(),
         name: name.into(),
         args,
@@ -140,6 +155,7 @@ pub fn bits() -> Arc<Type> {
         public: true,
         name: BIT_ARRAY.into(),
         module: PRELUDE_MODULE_NAME.into(),
+        package: PRELUDE_PACKAGE_NAME.into(),
     })
 }
 
@@ -149,6 +165,7 @@ pub fn utf_codepoint() -> Arc<Type> {
         public: true,
         name: UTF_CODEPOINT.into(),
         module: PRELUDE_MODULE_NAME.into(),
+        package: PRELUDE_PACKAGE_NAME.into(),
     })
 }
 
