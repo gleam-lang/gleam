@@ -257,6 +257,7 @@ fn pretty_print_test() {
     assert_string!(
         Type::Named {
             module: "whatever".into(),
+            package: "whatever".into(),
             name: "Int".into(),
             public: true,
             args: vec![],
@@ -266,17 +267,20 @@ fn pretty_print_test() {
     assert_string!(
         Type::Named {
             module: "themodule".into(),
+            package: "whatever".into(),
             name: "Pair".into(),
             public: true,
             args: vec![
                 Arc::new(Type::Named {
                     module: "whatever".into(),
+                    package: "whatever".into(),
                     name: "Int".into(),
                     public: true,
                     args: vec![],
                 }),
                 Arc::new(Type::Named {
                     module: "whatever".into(),
+                    package: "whatever".into(),
                     name: "Bool".into(),
                     public: true,
                     args: vec![],
@@ -291,12 +295,14 @@ fn pretty_print_test() {
                 Arc::new(Type::Named {
                     args: vec![],
                     module: "whatever".into(),
+                    package: "whatever".into(),
                     name: "Int".into(),
                     public: true,
                 }),
                 Arc::new(Type::Named {
                     args: vec![],
                     module: "whatever".into(),
+                    package: "whatever".into(),
                     name: "Bool".into(),
                     public: true,
                 }),
@@ -304,6 +310,7 @@ fn pretty_print_test() {
             retrn: Arc::new(Type::Named {
                 args: vec![],
                 module: "whatever".into(),
+                package: "whatever".into(),
                 name: "Bool".into(),
                 public: true,
             }),
@@ -316,6 +323,7 @@ fn pretty_print_test() {
                 type_: Arc::new(Type::Named {
                     args: vec![],
                     module: "whatever".into(),
+                    package: "whatever".into(),
                     name: "Int".into(),
                     public: true,
                 }),

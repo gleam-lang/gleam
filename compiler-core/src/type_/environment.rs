@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Environment<'a> {
+    pub current_package: EcoString,
     pub current_module: EcoString,
     pub target: Target,
     pub ids: UniqueIdGenerator,
@@ -63,6 +64,7 @@ pub struct Environment<'a> {
 impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
+        current_package: EcoString,
         current_module: EcoString,
         target: Target,
         importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
@@ -73,6 +75,7 @@ impl<'a> Environment<'a> {
             .get(PRELUDE_MODULE_NAME)
             .expect("Unable to find prelude in importable modules");
         Self {
+            current_package: current_package.clone(),
             previous_id: ids.next(),
             ids,
             target,
@@ -431,6 +434,7 @@ impl<'a> Environment<'a> {
             Type::Named {
                 public,
                 name,
+                package,
                 module,
                 args,
             } => {
@@ -441,6 +445,7 @@ impl<'a> Environment<'a> {
                 Arc::new(Type::Named {
                     public: *public,
                     name: name.clone(),
+                    package: package.clone(),
                     module: module.clone(),
                     args,
                 })

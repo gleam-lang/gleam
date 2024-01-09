@@ -68,6 +68,7 @@ struct Type {
       name @0 :Text;
       module @1 :Text;
       parameters @2 :List(Type);
+      package @7 :Text;
     }
 
     fn :group {
@@ -229,4 +230,3 @@ struct BitArraySegmentOption {
     }
   }
 }
-

@@ -253,6 +253,7 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
     crate::type_::ExprTyper::new(
         &mut crate::type_::Environment::new(
             ids,
+            "thepackage".into(),
             "themodule".into(),
             Target::Erlang,
             &modules,

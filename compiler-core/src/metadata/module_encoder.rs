@@ -439,11 +439,16 @@ impl<'a> ModuleEncoder<'a> {
             }
 
             Type::Named {
-                name, args, module, ..
+                name,
+                args,
+                module,
+                package,
+                ..
             } => {
                 let mut app = builder.init_app();
                 app.set_name(name);
                 app.set_module(module);
+                app.set_package(package);
                 self.build_types(app.reborrow().init_parameters(args.len() as u32), args);
             }
 

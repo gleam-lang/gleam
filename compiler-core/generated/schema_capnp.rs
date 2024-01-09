@@ -1675,6 +1675,7 @@ pub mod type_ {
       self.builder.get_pointer_field(0).clear();
       self.builder.get_pointer_field(1).clear();
       self.builder.get_pointer_field(2).clear();
+      self.builder.get_pointer_field(3).clear();
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
@@ -1734,7 +1735,7 @@ pub mod type_ {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 3 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 4 };
     pub const TYPE_ID: u64 = 0x82f6_802e_4097_0700;
   }
   pub enum Which<A0,A1,A2,A3> {
@@ -1815,6 +1816,14 @@ pub mod type_ {
       #[inline]
       pub fn has_parameters(&self) -> bool {
         !self.reader.get_pointer_field(2).is_null()
+      }
+      #[inline]
+      pub fn get_package(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
+        ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(3), ::core::option::Option::None)
+      }
+      #[inline]
+      pub fn has_package(&self) -> bool {
+        !self.reader.get_pointer_field(3).is_null()
       }
     }
 
@@ -1914,6 +1923,22 @@ pub mod type_ {
       pub fn has_parameters(&self) -> bool {
         !self.builder.get_pointer_field(2).is_null()
       }
+      #[inline]
+      pub fn get_package(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
+        ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(3), ::core::option::Option::None)
+      }
+      #[inline]
+      pub fn set_package(&mut self, value: ::capnp::text::Reader<'_>)  {
+        self.builder.get_pointer_field(3).set_text(value);
+      }
+      #[inline]
+      pub fn init_package(self, size: u32) -> ::capnp::text::Builder<'a> {
+        self.builder.get_pointer_field(3).init_text(size)
+      }
+      #[inline]
+      pub fn has_package(&self) -> bool {
+        !self.builder.get_pointer_field(3).is_null()
+      }
     }
 
     pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -1926,7 +1951,7 @@ pub mod type_ {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 3 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 4 };
       pub const TYPE_ID: u64 = 0xd41c_0e5a_6b35_9470;
     }
   }
@@ -2090,7 +2115,7 @@ pub mod type_ {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 3 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 4 };
       pub const TYPE_ID: u64 = 0x82f2_798c_7760_b76b;
     }
   }
@@ -2215,7 +2240,7 @@ pub mod type_ {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 3 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 4 };
       pub const TYPE_ID: u64 = 0xccda_0e73_1fe2_8436;
     }
   }
@@ -2352,7 +2377,7 @@ pub mod type_ {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 3 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 4 };
       pub const TYPE_ID: u64 = 0x8c17_e20c_8015_d83d;
     }
   }

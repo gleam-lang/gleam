@@ -113,11 +113,13 @@ impl ModuleDecoder {
     }
 
     fn type_app(&mut self, reader: &schema::type_::app::Reader<'_>) -> Result<Arc<Type>> {
+        let package = reader.get_package()?.into();
         let module = reader.get_module()?.into();
         let name = reader.get_name()?.into();
         let args = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(Arc::new(Type::Named {
             public: true,
+            package,
             module,
             name,
             args,
