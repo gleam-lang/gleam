@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.34.0-rc2 - Unreleased
+
+### Bug fixes
+
+- Fixed a bug where the compiler would in some cases fail to error when an
+  application uses functions that do not support the current compilation
+  target.
+
+
 ## v0.34.0-rc1 - 2024-02-07
 
 ### Language changes
