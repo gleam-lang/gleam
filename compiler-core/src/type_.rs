@@ -49,8 +49,8 @@ pub enum Type {
     /// arguments (aka "generics" or "parametric polymorphism").
     ///
     /// If the type is defined in the Gleam prelude the `module` field will be
-    /// empty, otherwise it will contain the name of the module that
-    /// defines the type.
+    /// the string "gleam", otherwise it will contain the name of the module
+    /// that defines the type.
     ///
     Named {
         public: bool,
