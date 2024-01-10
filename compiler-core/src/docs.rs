@@ -422,9 +422,9 @@ pub fn generate_html(
     files
 }
 
-pub fn generate_json_package_interface(package: &Package) -> OutputFile {
+pub fn generate_json_package_interface(path: Utf8PathBuf, package: &Package) -> OutputFile {
     OutputFile {
-        path: Utf8PathBuf::from("package-interface.json"),
+        path,
         content: Content::Text(
             serde_json::to_string(&PackageInterface::from_package(package))
                 .expect("JSON module interface serialisation"),
