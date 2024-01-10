@@ -193,7 +193,7 @@ fn statements_interfaces(
                                 .iter()
                                 .map(|arg| TypeInterface::from_type(arg.type_.as_ref()))
                                 .collect(),
-                            return_: Box::new(TypeInterface::from_type(&return_type)),
+                            return_: Box::new(TypeInterface::from_type(return_type)),
                         },
                     },
                 );
