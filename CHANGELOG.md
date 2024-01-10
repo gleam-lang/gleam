@@ -7,10 +7,6 @@
 - Using a reserved word is now a compile error, not a warning.
 - Inexhaustive matches are now compile errors, not warnings.
 
-### Build tool changes
-
-- The search bar in generated docs now has a darker background color.
-
 ### Formatter
 
 - Now the formatter will nest pipelines and binary operators that are used as
@@ -18,8 +14,17 @@
 
 ### Build tool
 
+- The search bar in generated docs now has a darker background color.
 - If a package contains a `todo` expression then the build tool will now refuse
   to publish it to Hex.
+- The search bar in generated docs now has a darker background color.
+- `gleam export` now takes a `package-interface` option to export a json file
+  containing metadata about the root package.
+- `gleam docs build` now creates a json file containing metadata about the root
+  package.
+
+### Bug fixes
+
 - Fixed a bug where `functionname(_name)` would incorrectly parse as a function
   capture instead of a syntax error.
 
@@ -39,6 +44,8 @@
 
 
 ## v0.34.0 - 2023-01-16
+
+## v0.34.0-rc3 - 2023-01-12
 
 ### Language changes
 
