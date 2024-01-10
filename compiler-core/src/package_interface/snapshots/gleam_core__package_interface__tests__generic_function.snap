@@ -1,0 +1,57 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+expression: "\npub type Bar(a) { Bar }\n@deprecated(\"deprecation message\")\npub fn main() { Bar }\n"
+---
+{
+  "name": "my_package",
+  "package_version": "11.11.11",
+  "gleam_version": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "types": {
+        "Bar": {
+          "documentation": null,
+          "deprecation": "NotDeprecated",
+          "parameters": 1,
+          "constructors": [
+            "Bar"
+          ]
+        }
+      },
+      "values": {
+        "main": {
+          "documentation": null,
+          "deprecation": {
+            "Deprecated": {
+              "message": "deprecation message"
+            }
+          },
+          "supported_targets": [
+            "erlang",
+            "javascript"
+          ],
+          "type": {
+            "Fn": {
+              "parameters": [],
+              "return": {
+                "Named": {
+                  "name": "Bar",
+                  "package": "my_package",
+                  "module": "my/module",
+                  "parameters": [
+                    {
+                      "Variable": {
+                        "id": 10
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
