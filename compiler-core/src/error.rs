@@ -1986,7 +1986,7 @@ allowed at the end of a bin pattern.")],
                             vec!["Hint: If you specify unit() you must also specify size().".into()],
                         ),
                     };
-                    extra.push("See: https://gleam.run/book/tour/bit-strings.html".into());
+                    extra.push("See: https://gleam.run/book/tour/bit-arrays.html".into());
                     let text = extra.join("\n");
                     Diagnostic {
                         title: "Invalid bit array segment".into(),

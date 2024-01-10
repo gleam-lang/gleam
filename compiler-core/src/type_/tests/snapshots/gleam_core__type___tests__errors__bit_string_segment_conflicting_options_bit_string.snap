@@ -10,5 +10,5 @@ error: Invalid bit string segment
   │                             ^^^^^^ This is an extra type specifier.
 
 Hint: This segment already has the type bits.
-See: https://gleam.run/book/tour/bit-strings.html
+See: https://gleam.run/book/tour/bit-arrays.html
 
