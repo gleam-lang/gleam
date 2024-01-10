@@ -16,6 +16,7 @@ pub use error::{Error, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
+use serde::Serialize;
 
 use crate::{
     ast::{
@@ -728,7 +729,7 @@ pub struct ValueConstructor {
     pub type_: Arc<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum Deprecation {
     NotDeprecated,
     Deprecated { message: EcoString },
