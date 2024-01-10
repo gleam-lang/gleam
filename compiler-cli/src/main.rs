@@ -233,18 +233,19 @@ enum Command {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum ExportTarget {
-    /// Precompiled Erlang, suitable for deployment.
+    /// Precompiled Erlang, suitable for deployment
     ErlangShipment,
-    /// The package bundled into a tarball, suitable for publishing to Hex.
+    /// The package bundled into a tarball, suitable for publishing to Hex
     HexTarball,
-    /// The JavaScript prelude module.
+    /// The JavaScript prelude module
     JavascriptPrelude,
-    /// The TypeScript prelude module.
+    /// The TypeScript prelude module
     TypescriptPrelude,
-    /// The package json interface.
+    /// The package json interface
     PackageInterface {
-        #[clap(required = true)]
-        file_path: String,
+        #[clap(long = "out", required = true)]
+        /// A file to write the json interface to, relative to the package root
+        output: String,
     },
 }
 
@@ -467,8 +468,8 @@ fn main() {
         Command::Export(ExportTarget::HexTarball) => export::hex_tarball(),
         Command::Export(ExportTarget::JavascriptPrelude) => export::javascript_prelude(),
         Command::Export(ExportTarget::TypescriptPrelude) => export::typescript_prelude(),
-        Command::Export(ExportTarget::PackageInterface { file_path }) => {
-            export::package_interface(file_path)
+        Command::Export(ExportTarget::PackageInterface { output }) => {
+            export::package_interface(output)
         }
     };
 
