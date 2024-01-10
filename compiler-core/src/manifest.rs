@@ -193,7 +193,7 @@ pub enum ManifestPackageSource {
     Local { path: Utf8PathBuf }, // should be the canonical path
 }
 
-fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
+pub fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
     K: serde::Serialize + Ord,
