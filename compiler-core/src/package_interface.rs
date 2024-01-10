@@ -1,19 +1,18 @@
-use std::{any::Any, borrow::Borrow, collections::HashMap, ops::Deref, sync::Arc};
+use std::{collections::HashMap, ops::Deref};
 
 use ecow::EcoString;
 use hexpm::version::Version;
 use serde::Serialize;
 
 use crate::{
-    ast::{CustomType, Definition, Function, ModuleConstant, Statement, TypedExpr},
+    ast::{CustomType, Definition, Function, ModuleConstant},
     manifest::ordered_map,
     type_::{Deprecation, Type, TypeVar},
-    Result,
 };
 
-use super::{Module, Package, Target};
+use crate::build::{Module, Package, Target};
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct PackageInterface {
     name: EcoString,
     package_version: Version,
@@ -23,7 +22,7 @@ pub struct PackageInterface {
 }
 
 /// Holds serialisable data about a `Module`.
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct ModuleInterface {
     documentation: Vec<EcoString>,
     #[serde(serialize_with = "ordered_map")]
@@ -33,7 +32,7 @@ pub struct ModuleInterface {
 }
 
 /// Holds serialisable data about a type definition that appears in a module.
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct TypeDefinitionInterface {
     documentation: Option<EcoString>,
     deprecation: Deprecation,
@@ -45,7 +44,7 @@ pub struct TypeDefinitionInterface {
 
 /// Holds serialisable data about a top-level public value defined in a module
 /// (either a constant or a function)
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct ValueInterface {
     documentation: Option<EcoString>,
     deprecation: Deprecation,
@@ -55,7 +54,7 @@ pub struct ValueInterface {
 }
 
 /// This is the serialisable version of a type of a top-level value of a module.
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub enum TypeInterface {
     Tuple {
         elements: Vec<TypeInterface>,
@@ -133,10 +132,14 @@ fn statements_interfaces(
                         documentation: documentation.clone(),
                         deprecation: deprecation.clone(),
                         parameters: parameters.len(),
-                        constructors: constructors
-                            .iter()
-                            .map(|constructor| constructor.name.clone())
-                            .collect(),
+                        constructors: if *opaque {
+                            vec![]
+                        } else {
+                            constructors
+                                .iter()
+                                .map(|constructor| constructor.name.clone())
+                                .collect()
+                        },
                     },
                 );
             }
