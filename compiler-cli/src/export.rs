@@ -142,7 +142,6 @@ pub fn package_interface(path: String) -> Result<()> {
         crate::build::download_dependencies()?,
     )?;
 
-    // TODO: maybe this path should be relative to something...
     let path = Utf8PathBuf::from(path);
     let out = gleam_core::docs::generate_json_package_interface(path, &built.root_package);
     crate::fs::write_outputs_under(&[out], paths.root())?;

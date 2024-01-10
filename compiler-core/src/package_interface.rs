@@ -4,6 +4,9 @@ use ecow::EcoString;
 use hexpm::version::Version;
 use serde::Serialize;
 
+#[cfg(test)]
+mod tests;
+
 use crate::{
     ast::{CustomType, Definition, Function, ModuleConstant},
     manifest::ordered_map,

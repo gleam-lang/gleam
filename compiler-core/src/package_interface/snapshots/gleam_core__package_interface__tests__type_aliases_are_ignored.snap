@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+expression: pub type Foo = Int
+---
+{
+  "name": "my_package",
+  "package_version": "11.11.11",
+  "gleam_version": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "types": {},
+      "values": {}
+    }
+  }
+}

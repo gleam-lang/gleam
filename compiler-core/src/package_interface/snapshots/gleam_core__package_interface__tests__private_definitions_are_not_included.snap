@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+expression: "\nconst float = 1.1\nfn main() {}\ntype Foo\n"
+---
+{
+  "name": "my_package",
+  "package_version": "11.11.11",
+  "gleam_version": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "types": {},
+      "values": {}
+    }
+  }
+}

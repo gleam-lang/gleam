@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+expression: "\n/// Foo's documentation\npub type Foo(a, b) {\n  Bar\n  Baz\n}\n"
+---
+{
+  "name": "my_package",
+  "package_version": "11.11.11",
+  "gleam_version": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "types": {
+        "Foo": {
+          "documentation": " Foo's documentation\n",
+          "deprecation": "NotDeprecated",
+          "parameters": 2,
+          "constructors": [
+            "Bar",
+            "Baz"
+          ]
+        }
+      },
+      "values": {}
+    }
+  }
+}

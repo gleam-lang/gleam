@@ -1,0 +1,47 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+expression: "\nimport other_module.{type Element}\npub fn main() -> Element(Int) {}\n"
+---
+{
+  "name": "my_package",
+  "package_version": "11.11.11",
+  "gleam_version": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "types": {},
+      "values": {
+        "main": {
+          "documentation": null,
+          "deprecation": "NotDeprecated",
+          "supported_targets": [
+            "erlang",
+            "javascript"
+          ],
+          "type": {
+            "Fn": {
+              "parameters": [],
+              "return": {
+                "Named": {
+                  "name": "Element",
+                  "package": "other_package",
+                  "module": "other_module",
+                  "parameters": [
+                    {
+                      "Named": {
+                        "name": "Int",
+                        "package": "",
+                        "module": "gleam",
+                        "parameters": []
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
