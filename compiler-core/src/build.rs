@@ -4,7 +4,6 @@ mod elixir_libraries;
 mod module_loader;
 mod native_file_copier;
 pub mod package_compiler;
-pub mod package_interface;
 mod package_loader;
 mod project_compiler;
 mod telemetry;

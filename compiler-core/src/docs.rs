@@ -8,12 +8,13 @@ use camino::Utf8PathBuf;
 
 use crate::{
     ast::{CustomType, Definition, Function, ModuleConstant, TypeAlias, TypedDefinition},
-    build::{package_interface::PackageInterface, Module, Package},
+    build::{Module, Package},
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
     format,
     io::Content,
     io::OutputFile,
+    package_interface::PackageInterface,
     paths::ProjectPaths,
     pretty,
     type_::Deprecation,
