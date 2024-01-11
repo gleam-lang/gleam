@@ -4,6 +4,8 @@
 
 ### Bug fixes
 
+- Fixed a bug where `gleam run` would fail when the current directory is not
+  the root of the project and using the JavaScript target.
 - Fixed a bug where the compiler would in some cases fail to error when an
   application uses functions that do not support the current compilation
   target.
