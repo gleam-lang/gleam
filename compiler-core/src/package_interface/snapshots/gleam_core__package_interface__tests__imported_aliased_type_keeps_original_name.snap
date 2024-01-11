@@ -9,11 +9,12 @@ expression: "\nimport other_module.{type Element as Alias} as module_alias\npub 
   "modules": {
     "my/module": {
       "documentation": [],
+      "type_aliases": {},
       "types": {},
       "values": {
         "main": {
           "documentation": null,
-          "deprecation": "NotDeprecated",
+          "deprecation": null,
           "supported_targets": [
             "erlang",
             "javascript"
@@ -35,7 +36,7 @@ expression: "\nimport other_module.{type Element as Alias} as module_alias\npub 
                         "parameters": [
                           {
                             "Variable": {
-                              "id": 10
+                              "id": 0
                             }
                           }
                         ]

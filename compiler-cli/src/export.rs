@@ -125,7 +125,7 @@ pub fn typescript_prelude() -> Result<()> {
     Ok(())
 }
 
-pub fn package_interface(path: String) -> Result<()> {
+pub fn package_interface(path: Utf8PathBuf) -> Result<()> {
     // Reset the build directory so we know the state of the project
     let paths = crate::find_project_paths()?;
     let config = crate::config::root_config()?;

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-expression: "pub opaque type Foo { Bar }"
+expression: pub type Foo(a) = Int
 ---
 {
   "name": "my_package",
@@ -9,15 +9,22 @@ expression: "pub opaque type Foo { Bar }"
   "modules": {
     "my/module": {
       "documentation": [],
-      "type_aliases": {},
-      "types": {
+      "type_aliases": {
         "Foo": {
           "documentation": null,
           "deprecation": null,
-          "parameters": 0,
-          "constructors": []
+          "parameters": 1,
+          "alias": {
+            "Named": {
+              "name": "Int",
+              "package": "",
+              "module": "gleam",
+              "parameters": []
+            }
+          }
         }
       },
+      "types": {},
       "values": {}
     }
   }

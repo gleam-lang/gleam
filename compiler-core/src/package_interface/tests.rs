@@ -128,6 +128,7 @@ pub fn private_definitions_are_not_included() {
 const float = 1.1
 fn main() {}
 type Foo
+type alias Bar = Int
 "
     );
 }
@@ -138,8 +139,8 @@ pub fn opaque_constructors_are_not_exposed() {
 }
 
 #[test]
-pub fn type_aliases_are_ignored() {
-    assert_package_interface!("pub type Foo = Int")
+pub fn type_aliases() {
+    assert_package_interface!("pub type Foo(a) = Int")
 }
 
 #[test]
@@ -197,5 +198,15 @@ pub fn imported_aliased_type_keeps_original_name() {
 import other_module.{type Element as Alias} as module_alias
 pub fn main() -> Alias(module_alias.Element(a)) {}
 "#
+    );
+}
+
+#[test]
+pub fn multiple_type_variables() {
+    assert_package_interface!(
+        r#"
+pub type Box(a, b)
+pub fn main(a: a, b: b, c: Box(c, d)) -> Box(a, d) {}
+    "#
     );
 }

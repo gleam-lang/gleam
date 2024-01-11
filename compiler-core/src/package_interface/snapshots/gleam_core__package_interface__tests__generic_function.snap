@@ -9,10 +9,11 @@ expression: "\npub type Bar(a) { Bar }\n@deprecated(\"deprecation message\")\npu
   "modules": {
     "my/module": {
       "documentation": [],
+      "type_aliases": {},
       "types": {
         "Bar": {
           "documentation": null,
-          "deprecation": "NotDeprecated",
+          "deprecation": null,
           "parameters": 1,
           "constructors": [
             "Bar"
@@ -23,9 +24,7 @@ expression: "\npub type Bar(a) { Bar }\n@deprecated(\"deprecation message\")\npu
         "main": {
           "documentation": null,
           "deprecation": {
-            "Deprecated": {
-              "message": "deprecation message"
-            }
+            "message": "deprecation message"
           },
           "supported_targets": [
             "erlang",
@@ -42,7 +41,7 @@ expression: "\npub type Bar(a) { Bar }\n@deprecated(\"deprecation message\")\npu
                   "parameters": [
                     {
                       "Variable": {
-                        "id": 10
+                        "id": 0
                       }
                     }
                   ]
