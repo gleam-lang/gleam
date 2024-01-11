@@ -700,3 +700,8 @@ fn reserved_macro() {
 fn reserved_test() {
     assert_warning!(r#"const test = 1"#);
 }
+
+#[test]
+fn reserved_peek() {
+    assert_warning!(r#"const peek = 1"#);
+}

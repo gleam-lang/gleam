@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.34.0-rc3 - 2023-01-12
+
+### Language changes
+
+- "peek" is now a reserved word.
+
+
 ## v0.34.0-rc2 - 2023-01-11
 
 ### Bug fixes
