@@ -241,11 +241,11 @@ pub enum ExportTarget {
     JavascriptPrelude,
     /// The TypeScript prelude module
     TypescriptPrelude,
-    /// The package json interface
+    /// Information on the modules, functions, and types in the project in JSON format
     PackageInterface {
         #[clap(long = "out", required = true)]
-        /// A file to write the json interface to, relative to the package root
-        output: String,
+        /// The path to write the JSON file to
+        output: Utf8PathBuf,
     },
 }
 

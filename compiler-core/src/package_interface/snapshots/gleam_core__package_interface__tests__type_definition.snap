@@ -9,10 +9,11 @@ expression: "\n/// Foo's documentation\npub type Foo(a, b) {\n  Bar\n  Baz\n}\n"
   "modules": {
     "my/module": {
       "documentation": [],
+      "type_aliases": {},
       "types": {
         "Foo": {
           "documentation": " Foo's documentation\n",
-          "deprecation": "NotDeprecated",
+          "deprecation": null,
           "parameters": 2,
           "constructors": [
             "Bar",

@@ -9,11 +9,12 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
   "modules": {
     "my/module": {
       "documentation": [],
+      "type_aliases": {},
       "types": {},
       "values": {
         "bool": {
           "documentation": null,
-          "deprecation": "NotDeprecated",
+          "deprecation": null,
           "supported_targets": [
             "erlang",
             "javascript"
@@ -29,7 +30,7 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
         },
         "float": {
           "documentation": null,
-          "deprecation": "NotDeprecated",
+          "deprecation": null,
           "supported_targets": [
             "erlang",
             "javascript"
@@ -45,7 +46,7 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
         },
         "int": {
           "documentation": null,
-          "deprecation": "NotDeprecated",
+          "deprecation": null,
           "supported_targets": [
             "erlang",
             "javascript"
@@ -61,7 +62,7 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
         },
         "string": {
           "documentation": null,
-          "deprecation": "NotDeprecated",
+          "deprecation": null,
           "supported_targets": [
             "erlang",
             "javascript"
