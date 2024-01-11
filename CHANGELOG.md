@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.34.0-rc2 - Unreleased
+## v0.34.0-rc2 - 2023-01-11
 
 ### Bug fixes
 
