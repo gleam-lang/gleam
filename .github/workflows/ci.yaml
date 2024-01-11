@@ -111,18 +111,18 @@ jobs:
 
       - name: test/project_erlang (non-windows)
         run: |
-          gleam run
+          gleam run && cd src && gleam run && cd ..
           gleam check
-          gleam test
+          gleam test && cd src && gleam test && cd ..
           gleam docs build
         working-directory: ./test/project_erlang
         if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }}
 
       - name: test/project_erlang (windows)
         run: |
-          gleam run
+          gleam run && cd src && gleam run && cd ..
           gleam check
-          gleam test
+          gleam test && cd src && gleam test && cd ..
           gleam docs build
         working-directory: ./test/project_erlang_windows
         if: ${{ matrix.os == 'windows-latest' && matrix.run-integration-tests }}
