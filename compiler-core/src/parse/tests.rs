@@ -702,6 +702,6 @@ fn reserved_test() {
 }
 
 #[test]
-fn reserved_peek() {
-    assert_warning!(r#"const peek = 1"#);
+fn reserved_echo() {
+    assert_warning!(r#"const echo = 1"#);
 }

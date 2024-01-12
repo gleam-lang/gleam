@@ -2790,7 +2790,7 @@ where
                 Some(Ok(tok)) => {
                     if let (start, Token::Name { name }, end) = &tok {
                         if let "auto" | "delegate" | "derive" | "else" | "implement" | "macro"
-                        | "peek" | "test" = name.as_str()
+                        | "echo" | "test" = name.as_str()
                         {
                             self.warnings.push(Warning::ReservedWord {
                                 location: SrcSpan::new(*start, *end),

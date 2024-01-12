@@ -4,7 +4,7 @@
 
 ### Language changes
 
-- "peek" is now a reserved word.
+- "echo" is now a reserved word.
 
 
 ## v0.34.0-rc2 - 2023-01-11
