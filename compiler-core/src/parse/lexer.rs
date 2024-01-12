@@ -167,10 +167,7 @@ where
     fn consume_character(&mut self, c: char) -> Result<(), LexicalError> {
         match c {
             '@' => {
-                let tok_start = self.get_pos();
-                let _ = self.next_char();
-                let tok_end = self.get_pos();
-                self.emit((tok_start, Token::At, tok_end));
+                self.eat_single_char(Token::At);
             }
             '"' => {
                 let string = self.lex_string()?;
@@ -239,10 +236,7 @@ where
                 }
             }
             '%' => {
-                let tok_start = self.get_pos();
-                let _ = self.next_char();
-                let tok_end = self.get_pos();
-                self.emit((tok_start, Token::Percent, tok_end));
+                self.eat_single_char(Token::Percent);
             }
             '|' => {
                 let tok_start = self.get_pos();

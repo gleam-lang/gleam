@@ -9,5 +9,6 @@
 
     // Images
     "images/**": true,
-  }
+  },
+  "commentTranslate.targetLanguage": "ru"
 }
