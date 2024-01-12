@@ -28,8 +28,9 @@
 
 - Warn about function body not being used, because it already has external
   implementations for all targets.
-- It's now possible to compile a project with external functions that are not
-  supported by the compilation target as long as those are not actually used.
+- It's now possible to compile a project with external functions in dependency
+  packages that are not supported by the compilation target so long as they are
+  not used on the current target.
 - The error message for when one imports a constructor instead of an homonymous
   type has been improved.
 
