@@ -652,7 +652,7 @@ fn infer_function(
         // supported targets the ones that have an external implementation.
         supported_targets = external_targets;
     } else {
-        supported_targets = supported_targets.merge(external_targets);
+        supported_targets.merge(external_targets);
     }
 
     // Assert that the inferred type matches the type of any recursive call

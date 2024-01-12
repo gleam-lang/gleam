@@ -60,30 +60,20 @@ impl SupportedTargets {
         }
     }
 
-    pub fn intersect(&self, targets: SupportedTargets) -> SupportedTargets {
-        SupportedTargets {
-            erlang: self.erlang && targets.erlang,
-            javascript: self.javascript && targets.javascript,
-        }
+    pub fn intersect(&mut self, targets: SupportedTargets) {
+        self.erlang = self.erlang && targets.erlang;
+        self.javascript = self.javascript && targets.javascript;
     }
 
-    pub fn merge(&self, targets: SupportedTargets) -> SupportedTargets {
-        SupportedTargets {
-            erlang: self.erlang || targets.erlang,
-            javascript: self.javascript || targets.javascript,
-        }
+    pub fn merge(&mut self, targets: SupportedTargets) {
+        self.erlang = self.erlang || targets.erlang;
+        self.javascript = self.javascript || targets.javascript;
     }
 
-    pub fn add(&self, target: Target) -> SupportedTargets {
+    pub fn add(&mut self, target: Target) {
         match target {
-            Target::Erlang => SupportedTargets {
-                erlang: true,
-                javascript: self.javascript,
-            },
-            Target::JavaScript => SupportedTargets {
-                erlang: self.erlang,
-                javascript: true,
-            },
+            Target::Erlang => self.erlang = true,
+            Target::JavaScript => self.javascript = true,
         }
     }
 
@@ -697,11 +687,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             | ValueConstructorVariant::LocalConstant { .. } => return Ok(()),
         };
 
-        self.supported_targets = self.supported_targets.intersect(*new_targets);
+        self.supported_targets.intersect(*new_targets);
         if self.environment.target_support == TargetSupport::Enforced
-            && !new_targets
-                .merge(self.external_supported_targets)
-                .supports(self.environment.target)
+            && !(new_targets.supports(self.environment.target)
+                || self
+                    .external_supported_targets
+                    .supports(self.environment.target))
         {
             Err(Error::UnsupportedTarget {
                 target: self.environment.target,
