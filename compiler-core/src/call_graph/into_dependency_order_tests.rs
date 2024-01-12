@@ -37,7 +37,7 @@ fn parse_and_order(
             documentation: None,
             external_erlang: None,
             external_javascript: None,
-            supported_targets: SupportedTargets::all(),
+            supported_targets: SupportedTargets::gleam(),
         })
         .collect_vec();
     let constants = constants
@@ -51,7 +51,7 @@ fn parse_and_order(
                 name: EcoString::from(*name),
                 annotation: None,
                 value: Box::from(const_value),
-                supported_targets: SupportedTargets::all(),
+                supported_targets: SupportedTargets::gleam(),
                 type_: (),
                 deprecation: Deprecation::NotDeprecated,
             }

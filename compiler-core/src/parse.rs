@@ -1562,7 +1562,7 @@ where
             deprecation: std::mem::take(&mut attributes.deprecated),
             external_erlang: attributes.external_erlang.take(),
             external_javascript: attributes.external_javascript.take(),
-            supported_targets: SupportedTargets::all(),
+            supported_targets: SupportedTargets::gleam(),
         })))
     }
 
@@ -2167,7 +2167,7 @@ where
                 annotation,
                 value: Box::new(value),
                 type_: (),
-                supported_targets: SupportedTargets::all(),
+                supported_targets: SupportedTargets::gleam(),
                 deprecation: attributes.deprecated.clone(),
             })))
         } else {
