@@ -444,7 +444,7 @@ fn module_fn_value_regression() {
                         start: 52,
                         end: 1100,
                     },
-                    supported_targets: SupportedTargets::all(),
+                    supported_targets: SupportedTargets::javascript(),
                 },
             },
         )]
@@ -481,7 +481,7 @@ fn module_fn_value_with_field_map() {
                     module: "a".into(),
                     arity: 5,
                     location: SrcSpan { start: 2, end: 11 },
-                    supported_targets: SupportedTargets::all(),
+                    supported_targets: SupportedTargets::erlang(),
                 },
             },
         )]

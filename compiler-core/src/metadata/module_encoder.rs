@@ -5,7 +5,6 @@ use crate::{
         Constant, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
         TypedConstantBitArraySegmentOption,
     },
-    build::Target,
     schema_capnp::{self as schema, *},
     type_::{
         self, expression::SupportedTargets, AccessorsMap, Deprecation, FieldMap, RecordAccessor,
@@ -490,7 +489,13 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: supported_targets::Builder<'_>,
         supported_targets: SupportedTargets,
     ) {
-        builder.set_erlang(supported_targets.supports(Target::Erlang));
-        builder.set_javascript(supported_targets.supports(Target::JavaScript));
+        match supported_targets {
+            SupportedTargets::Gleam => builder.set_gleam(()),
+            SupportedTargets::Externals { erlang, javascript } => {
+                let mut builder = builder.init_externals();
+                builder.set_erlang(erlang);
+                builder.set_javascript(javascript);
+            }
+        }
     }
 }
