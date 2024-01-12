@@ -19,35 +19,32 @@ use itertools::Itertools;
 use vec1::Vec1;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct SupportedTargets {
-    erlang: bool,
-    javascript: bool,
+pub enum SupportedTargets {
+    Gleam,
+    Externals { erlang: bool, javascript: bool },
 }
 
 impl SupportedTargets {
     pub fn none() -> SupportedTargets {
-        SupportedTargets {
+        SupportedTargets::Externals {
             erlang: false,
             javascript: false,
         }
     }
 
     pub fn all() -> SupportedTargets {
-        SupportedTargets {
-            erlang: true,
-            javascript: true,
-        }
+        SupportedTargets::Gleam
     }
 
     pub fn javascript() -> SupportedTargets {
-        SupportedTargets {
+        SupportedTargets::Externals {
             erlang: false,
             javascript: true,
         }
     }
 
     pub fn erlang() -> SupportedTargets {
-        SupportedTargets {
+        SupportedTargets::Externals {
             erlang: true,
             javascript: false,
         }
@@ -61,40 +58,73 @@ impl SupportedTargets {
     }
 
     pub fn intersect(&mut self, targets: SupportedTargets) {
-        self.erlang = self.erlang && targets.erlang;
-        self.javascript = self.javascript && targets.javascript;
+        match self {
+            SupportedTargets::Gleam => *self = targets,
+            SupportedTargets::Externals { erlang, javascript } => match targets {
+                SupportedTargets::Gleam => (),
+                SupportedTargets::Externals {
+                    erlang: erlang_1,
+                    javascript: javascript_1,
+                } => {
+                    *erlang = *erlang && erlang_1;
+                    *javascript = *javascript && javascript_1;
+                }
+            },
+        }
     }
 
     pub fn merge(&mut self, targets: SupportedTargets) {
-        self.erlang = self.erlang || targets.erlang;
-        self.javascript = self.javascript || targets.javascript;
+        match self {
+            SupportedTargets::Gleam => (),
+            SupportedTargets::Externals { erlang, javascript } => match targets {
+                SupportedTargets::Gleam => *self = SupportedTargets::Gleam,
+                SupportedTargets::Externals {
+                    erlang: erlang_1,
+                    javascript: javascript_1,
+                } => {
+                    *erlang = *erlang || erlang_1;
+                    *javascript = *javascript || javascript_1;
+                }
+            },
+        }
     }
 
     pub fn add(&mut self, target: Target) {
-        match target {
-            Target::Erlang => self.erlang = true,
-            Target::JavaScript => self.javascript = true,
+        match self {
+            SupportedTargets::Gleam => (),
+            SupportedTargets::Externals { erlang, javascript } => match target {
+                Target::Erlang => *erlang = true,
+                Target::JavaScript => *javascript = true,
+            },
         }
     }
 
     pub fn supports(&self, target: Target) -> bool {
-        match target {
-            Target::Erlang => self.erlang,
-            Target::JavaScript => self.javascript,
+        match self {
+            SupportedTargets::Gleam => true,
+            SupportedTargets::Externals { erlang, javascript } => match target {
+                Target::Erlang => *erlang,
+                Target::JavaScript => *javascript,
+            },
         }
     }
 
     pub fn supports_all_targets(&self) -> bool {
-        self.javascript && self.erlang
+        match self {
+            SupportedTargets::Gleam => true,
+            SupportedTargets::Externals { erlang, javascript } => *erlang && *javascript,
+        }
     }
 
     pub fn to_vec(self) -> Vec<Target> {
-        let SupportedTargets { erlang, javascript } = self;
-        match (erlang, javascript) {
-            (true, true) => vec![Target::Erlang, Target::JavaScript],
-            (true, _) => vec![Target::Erlang],
-            (_, true) => vec![Target::JavaScript],
-            (_, _) => vec![],
+        match self {
+            SupportedTargets::Gleam => vec![Target::Erlang, Target::JavaScript],
+            SupportedTargets::Externals { erlang, javascript } => match (erlang, javascript) {
+                (true, true) => vec![Target::Erlang, Target::JavaScript],
+                (true, _) => vec![Target::Erlang],
+                (_, true) => vec![Target::JavaScript],
+                (_, _) => vec![],
+            },
         }
     }
 }

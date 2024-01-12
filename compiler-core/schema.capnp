@@ -93,8 +93,14 @@ struct ValueConstructor {
 }
 
 struct SupportedTargets {
-  erlang @0 :Bool;
-  javascript @1 :Bool;
+  union {
+    gleam @0 :Void;
+
+    externals :group {
+      erlang @1 :Bool;
+      javascript @2 :Bool;
+    }
+  }
 }
 
 struct ValueConstructorVariant {

@@ -446,14 +446,19 @@ impl ModuleDecoder {
     }
 
     fn supported_targets(&self, reader: supported_targets::Reader<'_>) -> SupportedTargets {
-        let mut supported_targets = SupportedTargets::none();
-        if reader.get_erlang() {
-            supported_targets.add(Target::Erlang);
+        match reader.which().expect("supported targets reader") {
+            supported_targets::Which::Gleam(_) => SupportedTargets::all(),
+            supported_targets::Which::Externals(reader) => {
+                let mut supported_targets = SupportedTargets::none();
+                if reader.get_erlang() {
+                    supported_targets.add(Target::Erlang);
+                }
+                if reader.get_javascript() {
+                    supported_targets.add(Target::JavaScript);
+                }
+                supported_targets
+            }
         }
-        if reader.get_javascript() {
-            supported_targets.add(Target::JavaScript);
-        }
-        supported_targets
     }
 
     fn record(
