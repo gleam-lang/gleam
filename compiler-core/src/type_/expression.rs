@@ -20,7 +20,23 @@ use vec1::Vec1;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SupportedTargets {
+    /// Represents a definition that uses only pure Gleam code and thus can be
+    /// run on all targets (even future ones that are going to be added).
     Gleam,
+    /// For definitions that support only _some_ of the compiler targets,
+    /// specifically through the use of `@external` implementations.
+    /// It's important to notice that, even if all targets are supported, it
+    /// would not the same as a `Gleam` target; imagine this scenario:
+    ///
+    /// ```gleam
+    /// @external(javascript, "foo", "bar")
+    /// @external(erlang, "foo", "bar")
+    /// pub fn func() -> Int
+    /// ```
+    ///
+    /// `func` supports all _current_ Gleam targets; however, if a new target
+    /// is added - say a WASM target - `func` wouldn't support it! On the other
+    /// hand, a pure-Gleam function will support all future targets.
     Externals { erlang: bool, javascript: bool },
 }
 
