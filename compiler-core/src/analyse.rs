@@ -700,7 +700,7 @@ fn external_supported_targets(
     external_javascript: &Option<(EcoString, EcoString)>,
 ) -> SupportedTargets {
     match (external_erlang, external_javascript) {
-        (Some(_), Some(_)) => SupportedTargets::all(),
+        (Some(_), Some(_)) => SupportedTargets::gleam(),
         (Some(_), None) => SupportedTargets::erlang(),
         (None, Some(_)) => SupportedTargets::javascript(),
         (None, None) => SupportedTargets::none(),

@@ -32,7 +32,7 @@ impl SupportedTargets {
         }
     }
 
-    pub fn all() -> SupportedTargets {
+    pub fn gleam() -> SupportedTargets {
         SupportedTargets::Gleam
     }
 
@@ -47,6 +47,13 @@ impl SupportedTargets {
         SupportedTargets::Externals {
             erlang: true,
             javascript: false,
+        }
+    }
+
+    pub fn all_externals() -> SupportedTargets {
+        SupportedTargets::Externals {
+            erlang: true,
+            javascript: true,
         }
     }
 
@@ -153,7 +160,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             hydrator,
             environment,
             // This will be narrowed down as the expression type is inferred
-            supported_targets: SupportedTargets::all(),
+            // but we start assuming the function is pure gleam code.
+            supported_targets: SupportedTargets::gleam(),
             external_supported_targets,
         }
     }

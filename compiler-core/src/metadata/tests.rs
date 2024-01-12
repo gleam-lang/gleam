@@ -47,7 +47,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
                     literal: constant,
                     location: SrcSpan::default(),
                     module: "one/two".into(),
-                    supported_targets: SupportedTargets::all(),
+                    supported_targets: SupportedTargets::gleam(),
                 },
             },
         )]
@@ -332,7 +332,7 @@ fn module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
-                    supported_targets: SupportedTargets::all(),
+                    supported_targets: SupportedTargets::gleam(),
                 },
             },
         )]
@@ -370,7 +370,7 @@ fn deprecated_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
-                    supported_targets: SupportedTargets::all(),
+                    supported_targets: SupportedTargets::gleam(),
                 },
             },
         )]
@@ -406,7 +406,7 @@ fn private_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
-                    supported_targets: SupportedTargets::all(),
+                    supported_targets: SupportedTargets::gleam(),
                 },
             },
         )]
@@ -776,7 +776,7 @@ fn constant_var() {
                 literal: one_original.clone(),
                 location: SrcSpan::default(),
                 module: "one/two".into(),
-                supported_targets: SupportedTargets::all(),
+                supported_targets: SupportedTargets::gleam(),
             },
         })),
     };
@@ -802,7 +802,7 @@ fn constant_var() {
                         literal: one,
                         location: SrcSpan::default(),
                         module: "one/two".into(),
-                        supported_targets: SupportedTargets::all(),
+                        supported_targets: SupportedTargets::gleam(),
                     },
                 },
             ),
@@ -817,7 +817,7 @@ fn constant_var() {
                         literal: one_original,
                         location: SrcSpan::default(),
                         module: "one/two".into(),
-                        supported_targets: SupportedTargets::all(),
+                        supported_targets: SupportedTargets::gleam(),
                     },
                 },
             ),

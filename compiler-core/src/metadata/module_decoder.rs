@@ -447,7 +447,7 @@ impl ModuleDecoder {
 
     fn supported_targets(&self, reader: supported_targets::Reader<'_>) -> SupportedTargets {
         match reader.which().expect("supported targets reader") {
-            supported_targets::Which::Gleam(_) => SupportedTargets::all(),
+            supported_targets::Which::Gleam(_) => SupportedTargets::gleam(),
             supported_targets::Which::Externals(reader) => {
                 let mut supported_targets = SupportedTargets::none();
                 if reader.get_erlang() {
