@@ -22,7 +22,7 @@ use crate::{
         prelude::*,
         AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
         TypeConstructor, TypeValueConstructor, TypeValueConstructorParameter, ValueConstructor,
-        ValueConstructorVariant, Warning,
+        ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
@@ -625,11 +625,6 @@ fn infer_function(
     }
 
     let external_targets = external_supported_targets(&external_erlang, &external_javascript);
-    if external_targets.supports_all_targets() && !is_placeholder {
-        environment
-            .warnings
-            .emit(Warning::UnusedFunctionBody { location })
-    }
 
     // Infer the type using the preregistered args + return types as a starting point
     let (type_, args, body, mut supported_targets) = environment.in_new_scope(|environment| {

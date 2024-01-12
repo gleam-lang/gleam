@@ -5,6 +5,10 @@
 ### Language changes
 
 - "echo" is now a reserved word.
+- A warning is no longer emitted when a function has a Gleam implementation as
+  well as external implementations for both targets. This is because having a
+  default Gleam implementation means the code is future-proof and continues to
+  be cross platform even if a new target is added.
 
 
 ## v0.34.0-rc2 - 2023-01-11

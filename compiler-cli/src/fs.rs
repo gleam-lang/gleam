@@ -193,12 +193,11 @@ impl CommandExecutor for ProjectIO {
         stdio: Stdio,
     ) -> Result<i32, Error> {
         tracing::trace!(program=program, args=?args.join(" "), env=?env, cwd=?cwd, "command_exec");
-        #[allow(clippy::map_identity)]
         let result = std::process::Command::new(program)
             .args(args)
             .stdin(stdio.get_process_stdio())
             .stdout(stdio.get_process_stdio())
-            .envs(env.iter().map(|(a, b)| (a, b)))
+            .envs(env.iter().map(|pair| (pair.0, &pair.1)))
             .current_dir(cwd.unwrap_or_else(|| Utf8Path::new("./")))
             .status();
 

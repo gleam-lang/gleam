@@ -386,10 +386,6 @@ pub enum Warning {
         name: EcoString,
     },
 
-    UnusedFunctionBody {
-        location: SrcSpan,
-    },
-
     UnusedVariable {
         location: SrcSpan,
         name: EcoString,

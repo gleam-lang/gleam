@@ -195,25 +195,6 @@ a future version of Gleam."
                 )),
             },
             Self::Type { path, warning, src } => match warning {
-                type_::Warning::UnusedFunctionBody { location } => Diagnostic {
-                    title: "Unused function body".into(),
-                    text: wrap(
-                        "This function has external implementations \
-for all targets so the body is never used.\n",
-                    ),
-                    hint: Some("The body can be safely removed".into()),
-                    level: diagnostic::Level::Warning,
-                    location: Some(Location {
-                        path: path.to_path_buf(),
-                        src: src.clone(),
-                        label: diagnostic::Label {
-                            text: None,
-                            span: *location,
-                        },
-                        extra_labels: Vec::new(),
-                    }),
-                },
-
                 type_::Warning::Todo {
                     kind,
                     location,
