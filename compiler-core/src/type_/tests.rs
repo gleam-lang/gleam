@@ -21,6 +21,7 @@ mod conditional_compilation;
 mod custom_types;
 mod errors;
 mod exhaustiveness;
+mod expression;
 mod functions;
 mod guards;
 mod imports;

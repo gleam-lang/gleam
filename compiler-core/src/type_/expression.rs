@@ -18,7 +18,7 @@ use im::hashmap;
 use itertools::Itertools;
 use vec1::Vec1;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq)]
 pub enum SupportedTargets {
     /// Represents a definition that uses only pure Gleam code and thus can be
     /// run on all targets (even future ones that are going to be added).
