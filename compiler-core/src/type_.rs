@@ -414,6 +414,21 @@ impl ValueConstructorVariant {
     pub fn is_module_fn(&self) -> bool {
         matches!(self, Self::ModuleFn { .. })
     }
+
+    pub fn supported_targets(&self) -> SupportedTargets {
+        match self {
+            ValueConstructorVariant::Record { .. }
+            | ValueConstructorVariant::LocalConstant { .. }
+            | ValueConstructorVariant::LocalVariable { .. } => SupportedTargets::gleam(),
+
+            ValueConstructorVariant::ModuleFn {
+                supported_targets, ..
+            }
+            | ValueConstructorVariant::ModuleConstant {
+                supported_targets, ..
+            } => *supported_targets,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
