@@ -31,22 +31,19 @@ expression: "\npub type Bar(a) { Bar }\n@deprecated(\"deprecation message\")\npu
             "javascript"
           ],
           "type": {
-            "Fn": {
-              "parameters": [],
-              "return": {
-                "Named": {
-                  "name": "Bar",
-                  "package": "my_package",
-                  "module": "my/module",
-                  "parameters": [
-                    {
-                      "Variable": {
-                        "id": 0
-                      }
-                    }
-                  ]
+            "kind": "Fn",
+            "parameters": [],
+            "return": {
+              "kind": "Named",
+              "name": "Bar",
+              "package": "my_package",
+              "module": "my/module",
+              "parameters": [
+                {
+                  "kind": "Variable",
+                  "id": 0
                 }
-              }
+              ]
             }
           }
         }

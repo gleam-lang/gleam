@@ -20,12 +20,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
             "javascript"
           ],
           "type": {
-            "Named": {
-              "name": "Bool",
-              "package": "",
-              "module": "gleam",
-              "parameters": []
-            }
+            "kind": "Named",
+            "name": "Bool",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
           }
         },
         "float": {
@@ -36,12 +35,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
             "javascript"
           ],
           "type": {
-            "Named": {
-              "name": "Float",
-              "package": "",
-              "module": "gleam",
-              "parameters": []
-            }
+            "kind": "Named",
+            "name": "Float",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
           }
         },
         "int": {
@@ -52,12 +50,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
             "javascript"
           ],
           "type": {
-            "Named": {
-              "name": "Int",
-              "package": "",
-              "module": "gleam",
-              "parameters": []
-            }
+            "kind": "Named",
+            "name": "Int",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
           }
         },
         "string": {
@@ -68,12 +65,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
             "javascript"
           ],
           "type": {
-            "Named": {
-              "name": "String",
-              "package": "",
-              "module": "gleam",
-              "parameters": []
-            }
+            "kind": "Named",
+            "name": "String",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
           }
         }
       }

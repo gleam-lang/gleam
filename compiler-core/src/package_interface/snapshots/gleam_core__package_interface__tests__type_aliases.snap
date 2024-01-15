@@ -15,12 +15,11 @@ expression: pub type Foo(a) = Int
           "deprecation": null,
           "parameters": 1,
           "alias": {
-            "Named": {
-              "name": "Int",
-              "package": "",
-              "module": "gleam",
-              "parameters": []
-            }
+            "kind": "Named",
+            "name": "Int",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
           }
         }
       },
