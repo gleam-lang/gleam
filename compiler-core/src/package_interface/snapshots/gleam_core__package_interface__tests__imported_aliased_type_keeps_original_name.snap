@@ -20,31 +20,27 @@ expression: "\nimport other_module.{type Element as Alias} as module_alias\npub 
             "javascript"
           ],
           "type": {
-            "Fn": {
-              "parameters": [],
-              "return": {
-                "Named": {
+            "kind": "Fn",
+            "parameters": [],
+            "return": {
+              "kind": "Named",
+              "name": "Element",
+              "package": "other_package",
+              "module": "other_module",
+              "parameters": [
+                {
+                  "kind": "Named",
                   "name": "Element",
                   "package": "other_package",
                   "module": "other_module",
                   "parameters": [
                     {
-                      "Named": {
-                        "name": "Element",
-                        "package": "other_package",
-                        "module": "other_module",
-                        "parameters": [
-                          {
-                            "Variable": {
-                              "id": 0
-                            }
-                          }
-                        ]
-                      }
+                      "kind": "Variable",
+                      "id": 0
                     }
                   ]
                 }
-              }
+              ]
             }
           }
         }

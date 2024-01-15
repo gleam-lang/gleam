@@ -20,25 +20,22 @@ expression: "\nimport other_module.{type Element}\npub fn main() -> Element(Int)
             "javascript"
           ],
           "type": {
-            "Fn": {
-              "parameters": [],
-              "return": {
-                "Named": {
-                  "name": "Element",
-                  "package": "other_package",
-                  "module": "other_module",
-                  "parameters": [
-                    {
-                      "Named": {
-                        "name": "Int",
-                        "package": "",
-                        "module": "gleam",
-                        "parameters": []
-                      }
-                    }
-                  ]
+            "kind": "Fn",
+            "parameters": [],
+            "return": {
+              "kind": "Named",
+              "name": "Element",
+              "package": "other_package",
+              "module": "other_module",
+              "parameters": [
+                {
+                  "kind": "Named",
+                  "name": "Int",
+                  "package": "",
+                  "module": "gleam",
+                  "parameters": []
                 }
-              }
+              ]
             }
           }
         }
