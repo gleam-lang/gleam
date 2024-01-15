@@ -527,15 +527,14 @@ impl<'comments> Formatter<'comments> {
         let signature = match &function.return_annotation {
             Some(anno) => signature.append(" -> ").append(self.type_ast(anno)),
             None => signature,
-        }
-        .group();
-
-        let head = attributes.append(signature);
+        };
 
         let body = &function.body;
         if body.len() == 1 && body.first().is_placeholder() {
-            return head;
+            return attributes.append(signature.group());
         }
+
+        let head = attributes.append(signature);
 
         // Format body
         let body = self.statements(body);
@@ -548,6 +547,7 @@ impl<'comments> Formatter<'comments> {
 
         // Stick it all together
         head.append(" {")
+            .group()
             .append(line().append(body).nest(INDENT).group())
             .append(line())
             .append("}")

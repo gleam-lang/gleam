@@ -224,3 +224,15 @@ fn only_last_argument_can_be_broken() {
 "#
     );
 }
+
+#[test]
+fn function_that_is_a_little_over_the_limit() {
+    assert_format!(
+        r#"pub fn handle_request(
+  handler: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
+) -> Nil {
+  todo
+}
+"#
+    );
+}

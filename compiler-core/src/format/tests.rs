@@ -801,7 +801,10 @@ fn statement_fn() {
     );
 
     assert_format!(
-        "fn order(first: Set(member), second: Set(member)) -> #(Set(member), Set(member)) {
+        "fn order(
+  first: Set(member),
+  second: Set(member),
+) -> #(Set(member), Set(member)) {
   Nil
 }
 "
