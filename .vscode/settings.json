@@ -8,7 +8,6 @@
     "compiler-core/generated/**": true,
 
     // Images
-    "images/**": true,
-  },
-  "commentTranslate.targetLanguage": "ru"
+    "images/**": true
+  }
 }
