@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Formatter
+
+- Fixed a bug where function heads would go over the line limit.
+
+
 ## v0.34.0-rc3 - 2023-01-12
 
 ### Language changes
