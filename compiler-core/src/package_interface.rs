@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::Deref};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use ecow::EcoString;
 use hexpm::version::Version;
@@ -8,7 +8,7 @@ use serde::Serialize;
 mod tests;
 
 use crate::{
-    ast::{CustomType, Definition, Function, ModuleConstant, TypeAlias},
+    ast::{Arg, CustomType, Definition, Function, ModuleConstant, TypeAlias},
     manifest::ordered_map,
     type_::{Deprecation, Type, TypeVar},
 };
@@ -85,12 +85,13 @@ impl DeprecationInterface {
 
 /// This is the serialisable version of a type of a top-level value of a module.
 #[derive(Serialize, Debug)]
+#[serde(tag = "kind")]
 pub enum TypeInterface {
     Tuple {
         elements: Vec<TypeInterface>,
     },
     Fn {
-        parameters: Vec<TypeInterface>,
+        parameters: Vec<ArgumentInterface>,
         #[serde(rename = "return")]
         return_: Box<TypeInterface>,
     },
@@ -105,6 +106,13 @@ pub enum TypeInterface {
         module: EcoString,
         parameters: Vec<TypeInterface>,
     },
+}
+
+#[derive(Serialize, Debug)]
+pub struct ArgumentInterface {
+    label: Option<EcoString>,
+    #[serde(rename = "type")]
+    type_: TypeInterface,
 }
 
 impl PackageInterface {
@@ -249,8 +257,13 @@ fn statements_interfaces(
                         type_: TypeInterface::Fn {
                             parameters: arguments
                                 .iter()
-                                .map(|arg| {
-                                    from_type_helper(arg.type_.as_ref(), &mut next_id, &mut ids)
+                                .map(|arg| ArgumentInterface {
+                                    label: arg.names.get_label().cloned(),
+                                    type_: from_type_helper(
+                                        arg.type_.as_ref(),
+                                        &mut next_id,
+                                        &mut ids,
+                                    ),
                                 })
                                 .collect(),
                             return_: Box::new(from_type_helper(
@@ -289,7 +302,10 @@ fn from_type_helper(type_: &Type, next_id: &mut u64, ids: &mut HashMap<u64, u64>
         Type::Fn { args, retrn } => TypeInterface::Fn {
             parameters: args
                 .iter()
-                .map(|arg| from_type_helper(arg.as_ref(), next_id, ids))
+                .map(|arg| ArgumentInterface {
+                    label: None,
+                    type_: from_type_helper(arg.as_ref(), next_id, ids),
+                })
                 .collect(),
             return_: Box::new(from_type_helper(retrn, next_id, ids)),
         },

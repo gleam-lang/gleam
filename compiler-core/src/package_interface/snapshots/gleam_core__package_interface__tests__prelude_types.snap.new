@@ -1,0 +1,79 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+assertion_line: 161
+expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1\npub const bool = True\n"
+---
+{
+  "name": "my_package",
+  "package_version": "11.11.11",
+  "gleam_version": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "type_aliases": {},
+      "types": {},
+      "values": {
+        "bool": {
+          "documentation": null,
+          "deprecation": null,
+          "supported_targets": [
+            "erlang",
+            "javascript"
+          ],
+          "type": {
+            "kind": "Named",
+            "name": "Bool",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
+          }
+        },
+        "float": {
+          "documentation": null,
+          "deprecation": null,
+          "supported_targets": [
+            "erlang",
+            "javascript"
+          ],
+          "type": {
+            "kind": "Named",
+            "name": "Float",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
+          }
+        },
+        "int": {
+          "documentation": null,
+          "deprecation": null,
+          "supported_targets": [
+            "erlang",
+            "javascript"
+          ],
+          "type": {
+            "kind": "Named",
+            "name": "Int",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
+          }
+        },
+        "string": {
+          "documentation": null,
+          "deprecation": null,
+          "supported_targets": [
+            "erlang",
+            "javascript"
+          ],
+          "type": {
+            "kind": "Named",
+            "name": "String",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
+          }
+        }
+      }
+    }
+  }
+}
