@@ -1,13 +1,6 @@
 # Changelog
 
-## Unreleased
-
-### Formatter
-
-- Fixed a bug where function heads would go over the line limit.
-
-
-## v0.34.0-rc3 - 2023-01-12
+## v0.34.0 - 2023-01-16
 
 ### Language changes
 
@@ -16,6 +9,11 @@
   well as external implementations for both targets. This is because having a
   default Gleam implementation means the code is future-proof and continues to
   be cross platform even if a new target is added.
+
+### Bug fixes
+
+- Fixed a bug where function heads would go over the line limit in the
+  formatter.
 
 
 ## v0.34.0-rc2 - 2023-01-11
