@@ -16,8 +16,16 @@ expression: "\n/// Foo's documentation\npub type Foo(a, b) {\n  Bar\n  Baz\n}\n"
           "deprecation": null,
           "parameters": 2,
           "constructors": [
-            "Bar",
-            "Baz"
+            {
+              "documentation": null,
+              "name": "Bar",
+              "parameters": []
+            },
+            {
+              "documentation": null,
+              "name": "Baz",
+              "parameters": []
+            }
           ]
         }
       },
