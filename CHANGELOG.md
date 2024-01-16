@@ -6,6 +6,12 @@
 
 - Support has been added for using SourceHut as a repository.
 
+### Bug fixes
+
+- The `@deprecated` attribute can now be used to annotate module constants.
+  This will cause a warning to be emitted when the constant is used.
+
+
 ## v0.34.0 - 2023-01-16
 
 ### Language changes
