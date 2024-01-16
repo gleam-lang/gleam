@@ -909,6 +909,56 @@ pub fn main() {
 }
 
 #[test]
+fn deprecated_constant() {
+    assert_warning!(
+        r#"
+@deprecated("Don't use this!")
+pub const a = Nil
+
+pub fn b() {
+  a
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_imported_constant() {
+    assert_warning!(
+        (
+            "package",
+            "module",
+            r#"@deprecated("Don't use this!") pub const a = Nil"#
+        ),
+        r#"
+import module
+
+pub fn a() {
+  module.a
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_imported_unqualified_constant() {
+    assert_warning!(
+        (
+            "package",
+            "module",
+            r#"@deprecated("Don't use this!") pub const a = Nil"#
+        ),
+        r#"
+import module.{a}
+
+pub fn b() {
+  a
+}
+"#
+    );
+}
+
+#[test]
 fn deprecated_function() {
     assert_warning!(
         r#"

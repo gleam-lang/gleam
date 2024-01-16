@@ -950,6 +950,7 @@ fn infer_module_constant(
         annotation,
         public,
         value,
+        deprecation,
         ..
     } = c;
 
@@ -960,7 +961,7 @@ fn infer_module_constant(
 
     let variant = ValueConstructor {
         public,
-        deprecation: Deprecation::NotDeprecated,
+        deprecation: deprecation.clone(),
         variant: ValueConstructorVariant::ModuleConstant {
             documentation: doc.clone(),
             location,
@@ -993,6 +994,7 @@ fn infer_module_constant(
         value: Box::new(typed_expr),
         type_,
         supported_targets,
+        deprecation,
     }))
 }
 
@@ -1074,6 +1076,7 @@ fn generalise_module_constant(
         value,
         type_,
         supported_targets,
+        deprecation,
     } = constant;
     let typ = type_.clone();
     let type_ = type_::generalise(typ);
@@ -1089,7 +1092,7 @@ fn generalise_module_constant(
         variant.clone(),
         type_.clone(),
         public,
-        Deprecation::NotDeprecated,
+        deprecation.clone(),
     );
 
     environment.insert_module_value(
@@ -1097,7 +1100,7 @@ fn generalise_module_constant(
         ValueConstructor {
             public,
             variant,
-            deprecation: Deprecation::NotDeprecated,
+            deprecation: deprecation.clone(),
             type_: type_.clone(),
         },
     );
@@ -1111,6 +1114,7 @@ fn generalise_module_constant(
         value,
         type_,
         supported_targets,
+        deprecation,
     })
 }
 
