@@ -16,7 +16,11 @@ expression: "\npub type Bar(a) { Bar }\n@deprecated(\"deprecation message\")\npu
           "deprecation": null,
           "parameters": 1,
           "constructors": [
-            "Bar"
+            {
+              "documentation": null,
+              "name": "Bar",
+              "parameters": []
+            }
           ]
         }
       },

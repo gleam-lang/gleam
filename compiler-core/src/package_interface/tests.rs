@@ -128,7 +128,7 @@ pub fn private_definitions_are_not_included() {
 const float = 1.1
 fn main() {}
 type Foo
-type alias Bar = Int
+type Bar = Int
 "
     );
 }
@@ -207,6 +207,18 @@ pub fn multiple_type_variables() {
         r#"
 pub type Box(a, b)
 pub fn main(a: a, b: b, c: Box(c, d)) -> Box(a, d) {}
-    "#
+"#
+    );
+}
+
+#[test]
+pub fn type_constructors() {
+    assert_package_interface!(
+        r#"
+pub type Box(a, b) {
+  Box(b, Int)
+  OtherBox(message: String, a: a)
+}
+"#
     );
 }

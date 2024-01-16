@@ -1,19 +1,20 @@
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::{collections::HashMap, ops::Deref};
 
 use ecow::EcoString;
 use hexpm::version::Version;
+use itertools::Itertools;
 use serde::Serialize;
 
 #[cfg(test)]
 mod tests;
 
 use crate::{
-    ast::{Arg, CustomType, Definition, Function, ModuleConstant, TypeAlias},
+    ast::{CustomType, Definition, Function, ModuleConstant, TypeAlias},
     manifest::ordered_map,
-    type_::{Deprecation, Type, TypeVar},
+    type_::{expression::SupportedTargets, Deprecation, Type, TypeVar},
 };
 
-use crate::build::{Module, Package, Target};
+use crate::build::{Module, Package};
 
 #[derive(Serialize, Debug)]
 pub struct PackageInterface {
@@ -44,7 +45,14 @@ pub struct TypeDefinitionInterface {
     /// The number of the type's type variables
     parameters: usize,
     /// A list of the names of its constructors
-    constructors: Vec<EcoString>,
+    constructors: Vec<TypeConstructorInterface>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct TypeConstructorInterface {
+    documentation: Option<EcoString>,
+    name: EcoString,
+    parameters: Vec<ParameterInterface>,
 }
 
 /// Holds serialisable data about a type alias that appears in a module.
@@ -62,9 +70,24 @@ pub struct TypeAliasInterface {
 pub struct ValueInterface {
     documentation: Option<EcoString>,
     deprecation: Option<DeprecationInterface>,
-    supported_targets: Vec<Target>,
+    implementations: ImplementationsInterface,
     #[serde(rename = "type")]
     type_: TypeInterface,
+}
+
+#[derive(Serialize, Debug)]
+pub struct ImplementationsInterface {
+    gleam: bool,
+    erlang: bool,
+    javascript: bool,
+}
+
+impl ImplementationsInterface {
+    pub fn from_supported_targets(
+        supported_targets: &SupportedTargets,
+    ) -> ImplementationsInterface {
+        todo!("This will most likely require another tweak to the target tracking because right now if it is pure gleam it won't keep track of external implementations")
+    }
 }
 
 #[derive(Serialize, Debug)]
@@ -91,7 +114,7 @@ pub enum TypeInterface {
         elements: Vec<TypeInterface>,
     },
     Fn {
-        parameters: Vec<ArgumentInterface>,
+        parameters: Vec<ParameterInterface>,
         #[serde(rename = "return")]
         return_: Box<TypeInterface>,
     },
@@ -109,7 +132,7 @@ pub enum TypeInterface {
 }
 
 #[derive(Serialize, Debug)]
-pub struct ArgumentInterface {
+pub struct ParameterInterface {
     label: Option<EcoString>,
     #[serde(rename = "type")]
     type_: TypeInterface,
@@ -162,23 +185,45 @@ fn statements_interfaces(
                 documentation,
                 opaque,
                 deprecation,
-                parameters,
+                typed_parameters,
+                parameters: _,
                 location: _,
                 end_position: _,
-                typed_parameters: _,
             }) => {
+                let mut id_map = IdMap::new();
+
+                // Let's first add all the types that appear in the type parameters so those are
+                // taken into account when assigning incremental numbers to the constructor's
+                // type variables.
+                for typed_parameter in typed_parameters {
+                    id_map.add_type_variable_id(typed_parameter.as_ref());
+                }
+
                 let _ = types.insert(
                     name.clone(),
                     TypeDefinitionInterface {
                         documentation: documentation.clone(),
                         deprecation: DeprecationInterface::from_deprecation(deprecation),
-                        parameters: parameters.len(),
+                        parameters: typed_parameters.len(),
                         constructors: if *opaque {
                             vec![]
                         } else {
                             constructors
                                 .iter()
-                                .map(|constructor| constructor.name.clone())
+                                .map(|constructor| TypeConstructorInterface {
+                                    documentation: constructor.documentation.clone(),
+                                    name: constructor.name.clone(),
+                                    parameters: constructor
+                                        .arguments
+                                        .iter()
+                                        .map(|arg| ParameterInterface {
+                                            label: arg.label.clone(),
+                                            // We share the same id_map between each step so that the
+                                            // incremental ids assigned are consisten with each other
+                                            type_: from_type_helper(&arg.type_, &mut id_map),
+                                        })
+                                        .collect_vec(),
+                                })
                                 .collect()
                         },
                     },
@@ -221,7 +266,9 @@ fn statements_interfaces(
                 let _ = values.insert(
                     name.clone(),
                     ValueInterface {
-                        supported_targets: supported_targets.to_vec(),
+                        implementations: ImplementationsInterface::from_supported_targets(
+                            &supported_targets,
+                        ),
                         type_: TypeInterface::from_type(type_.as_ref()),
                         deprecation: None,
                         documentation: documentation.clone(),
@@ -245,32 +292,26 @@ fn statements_interfaces(
                 external_erlang: _,
                 external_javascript: _,
             }) => {
-                let mut ids = HashMap::new();
-                let mut next_id = 0;
-
+                let mut id_map = IdMap::new();
                 let _ = values.insert(
                     name.clone(),
                     ValueInterface {
-                        supported_targets: supported_targets.to_vec(),
+                        implementations: ImplementationsInterface::from_supported_targets(
+                            &supported_targets,
+                        ),
                         deprecation: DeprecationInterface::from_deprecation(deprecation),
                         documentation: documentation.clone(),
                         type_: TypeInterface::Fn {
+                            // We use the same id_map between parameters and return type so that
+                            // type variables have consistent ids between the two.
                             parameters: arguments
                                 .iter()
-                                .map(|arg| ArgumentInterface {
+                                .map(|arg| ParameterInterface {
                                     label: arg.names.get_label().cloned(),
-                                    type_: from_type_helper(
-                                        arg.type_.as_ref(),
-                                        &mut next_id,
-                                        &mut ids,
-                                    ),
+                                    type_: from_type_helper(arg.type_.as_ref(), &mut id_map),
                                 })
                                 .collect(),
-                            return_: Box::new(from_type_helper(
-                                return_type,
-                                &mut next_id,
-                                &mut ids,
-                            )),
+                            return_: Box::new(from_type_helper(return_type, &mut id_map)),
                         },
                     },
                 );
@@ -290,30 +331,32 @@ fn statements_interfaces(
 }
 
 impl TypeInterface {
-    /// ids is a map that turns a type variable's id into a progressive number
-    /// starting from 0, up to `next_id`
     fn from_type(type_: &Type) -> TypeInterface {
-        from_type_helper(type_, &mut 0, &mut HashMap::new())
+        from_type_helper(type_, &mut IdMap::new())
     }
 }
 
-fn from_type_helper(type_: &Type, next_id: &mut u64, ids: &mut HashMap<u64, u64>) -> TypeInterface {
+/// Turns a type into its interface, an `IdMap` is needed to make sure that all
+/// the type variables' ids that appear in the type are mapped to an incremental
+/// number and consistent with each other (that is, two types variables that
+/// have the same id will also have the same incremental number in the end).
+fn from_type_helper(type_: &Type, id_map: &mut IdMap) -> TypeInterface {
     match type_ {
         Type::Fn { args, retrn } => TypeInterface::Fn {
             parameters: args
                 .iter()
-                .map(|arg| ArgumentInterface {
+                .map(|arg| ParameterInterface {
                     label: None,
-                    type_: from_type_helper(arg.as_ref(), next_id, ids),
+                    type_: from_type_helper(arg.as_ref(), id_map),
                 })
                 .collect(),
-            return_: Box::new(from_type_helper(retrn, next_id, ids)),
+            return_: Box::new(from_type_helper(retrn, id_map)),
         },
 
         Type::Tuple { elems } => TypeInterface::Tuple {
             elements: elems
                 .iter()
-                .map(|elem| from_type_helper(elem.as_ref(), next_id, ids))
+                .map(|elem| from_type_helper(elem.as_ref(), id_map))
                 .collect(),
         },
 
@@ -323,6 +366,7 @@ fn from_type_helper(type_: &Type, next_id: &mut u64, ids: &mut HashMap<u64, u64>
             .expect("borrow type after inference")
             .deref()
         {
+            TypeVar::Link { type_ } => from_type_helper(type_, id_map),
             // Since package serialisation happens after inference there
             // should be no unbound type variables.
             // TODO: This branch should be `unreachable!()` but because of
@@ -335,17 +379,8 @@ fn from_type_helper(type_: &Type, next_id: &mut u64, ids: &mut HashMap<u64, u64>
             //       overlap.
             //       Once #2533 is closed this branch can be turned back to
             //       be unreachable!().
-            TypeVar::Link { type_ } => from_type_helper(type_, next_id, ids),
-            TypeVar::Unbound { id } | TypeVar::Generic { id } => match ids.get(id) {
-                Some(progressive_id) => TypeInterface::Variable {
-                    id: *progressive_id,
-                },
-                None => {
-                    let _ = ids.insert(*id, *next_id);
-                    let interface = TypeInterface::Variable { id: *next_id };
-                    *next_id = *next_id + 1;
-                    interface
-                }
+            TypeVar::Unbound { id } | TypeVar::Generic { id } => TypeInterface::Variable {
+                id: id_map.map_id(*id),
             },
         },
 
@@ -361,8 +396,69 @@ fn from_type_helper(type_: &Type, next_id: &mut u64, ids: &mut HashMap<u64, u64>
             module: module.clone(),
             parameters: args
                 .iter()
-                .map(|arg| from_type_helper(arg.as_ref(), next_id, ids))
+                .map(|arg| from_type_helper(arg.as_ref(), id_map))
                 .collect(),
         },
+    }
+}
+
+/// This is a map that is used to map type variable id's to progressive numbers
+/// starting from 0.
+/// After type inference the ids associated with type variables can be quite
+/// high and are not the best to produce a human/machine readable output.
+///
+/// Imagine a function like this one: `pub fn foo(item: a, rest: b) -> c`
+/// What we want here is for type variables to have increasing ids starting from
+/// 0: `a` with id `0`, `b` with id `1` and `c` with id `2`.
+///
+/// This map allows us to keep track of the ids we've run into and map those to
+/// their incremental counterpart starting from 0.
+struct IdMap {
+    next_id: u64,
+    ids: HashMap<u64, u64>,
+}
+
+impl IdMap {
+    /// Create a new map that will assign id numbers starting from 0.
+    fn new() -> IdMap {
+        IdMap {
+            next_id: 0,
+            ids: HashMap::new(),
+        }
+    }
+
+    /// Map an id to its mapped counterpart starting from 0. If an id has never
+    /// been seen before it will be assigned a new incremental number.
+    fn map_id(&mut self, id: u64) -> u64 {
+        match self.ids.get(&id) {
+            Some(mapped_id) => *mapped_id,
+            None => {
+                let mapped_id = self.next_id;
+                let _ = self.ids.insert(id, mapped_id);
+                self.next_id += 1;
+                mapped_id
+            }
+        }
+    }
+
+    /// If the type is a type variable, and has not been seen before, it will
+    /// be assigned to a new incremental number.
+    fn add_type_variable_id(&mut self, type_: &Type) {
+        match type_ {
+            // These types have no id to add to the map.
+            Type::Named { .. } | Type::Fn { .. } | Type::Tuple { .. } => (),
+            // If the type is actually a type variable whose id needs to be mapped.
+            Type::Var { type_ } => match type_
+                .as_ref()
+                .try_borrow()
+                .expect("borrow type after inference")
+                .deref()
+            {
+                TypeVar::Link { .. } => (),
+                TypeVar::Unbound { id } | TypeVar::Generic { id } => {
+                    let _ = self.map_id(*id);
+                }
+            },
+        }
     }
 }

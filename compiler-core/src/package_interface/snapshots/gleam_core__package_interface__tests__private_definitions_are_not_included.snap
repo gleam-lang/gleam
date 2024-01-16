@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-expression: "\nconst float = 1.1\nfn main() {}\ntype Foo\n"
+expression: "\nconst float = 1.1\nfn main() {}\ntype Foo\ntype Bar = Int\n"
 ---
 {
   "name": "my_package",
@@ -9,6 +9,7 @@ expression: "\nconst float = 1.1\nfn main() {}\ntype Foo\n"
   "modules": {
     "my/module": {
       "documentation": [],
+      "type_aliases": {},
       "types": {},
       "values": {}
     }

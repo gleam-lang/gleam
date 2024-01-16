@@ -1,0 +1,71 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+expression: "\npub type Box(a, b) {\n  Box(b, Int)\n  OtherBox(message: String, a: a)\n}\n"
+---
+{
+  "name": "my_package",
+  "package_version": "11.11.11",
+  "gleam_version": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "type_aliases": {},
+      "types": {
+        "Box": {
+          "documentation": null,
+          "deprecation": null,
+          "parameters": 2,
+          "constructors": [
+            {
+              "documentation": null,
+              "name": "Box",
+              "parameters": [
+                {
+                  "label": null,
+                  "type": {
+                    "kind": "Variable",
+                    "id": 1
+                  }
+                },
+                {
+                  "label": null,
+                  "type": {
+                    "kind": "Named",
+                    "name": "Int",
+                    "package": "",
+                    "module": "gleam",
+                    "parameters": []
+                  }
+                }
+              ]
+            },
+            {
+              "documentation": null,
+              "name": "OtherBox",
+              "parameters": [
+                {
+                  "label": "message",
+                  "type": {
+                    "kind": "Named",
+                    "name": "String",
+                    "package": "",
+                    "module": "gleam",
+                    "parameters": []
+                  }
+                },
+                {
+                  "label": "a",
+                  "type": {
+                    "kind": "Variable",
+                    "id": 0
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "values": {}
+    }
+  }
+}
