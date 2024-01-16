@@ -56,6 +56,13 @@ impl SourceLinker {
                 ),
                 "-".into(),
             )),
+            Repository::SourceHut { user, repo } => Some((
+                format!(
+                    "https://git.sr.ht/~{}/{}/tree/{}/item/{}#L",
+                    user, repo, project_config.version, path_in_repo
+                ),
+                "-".into(),
+            )),
             Repository::Gitea { user, repo, host } => Some((
                 format!(
                     "{host}/{user}/{repo}/src/tag/{}/{}#L",
