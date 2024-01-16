@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Build tool changes
+
+- Support has been added for using SourceHut as a repository.
+
 ## v0.34.0 - 2023-01-16
 
 ### Language changes
