@@ -64,7 +64,9 @@ fn inline_variable_refactor(src: &str, position_start: Position, position_end: P
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
 
-    _ = io.src_module("list", r#"
+    _ = io.src_module(
+        "list",
+        r#"
             pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) {
                 do_map(list, fun, [])
             }
@@ -110,7 +112,8 @@ fn inline_variable_refactor(src: &str, position_start: Position, position_end: P
                 }
             }
             pub fn is_ok() {}
-        "#);
+        "#,
+    );
 
     _ = io.src_module("app", src);
     engine.compile_please().result.expect("compiled");
@@ -241,8 +244,7 @@ pub fn main() {
 }
 
 #[test]
-fn test_inline_variable_refactor(){
-
+fn test_inline_variable_refactor() {
     let code = "
 import list
 
@@ -255,15 +257,82 @@ fn main() {
 import list
 
 fn main() {
-  let result = list.reverse([1,2,3])
+  
+  let result = list.reverse([1, 2, 3])
 }
 ";
 
-    let position_start = Position::new(4, 0);
-    let position_end = Position::new(4, 61);
+    let position_start = Position::new(5, 0);
+    let position_end = Position::new(5, 61);
 
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
+}
+#[test]
+fn test_inline_variable_refactor_with_multiple_candidates() {
+    let code = "
+import list
 
-    assert_eq!(inline_variable_refactor(code, position_start, position_end), expected);
+fn main() {
+  let x = [1,2,3]
+  let result1 = list.reverse(x)
+  let y = [4, 5, 6]
+  let result2 = list.reverse(y)
+}
+";
+    let expected = "
+import list
+
+fn main() {
+  let x = [1,2,3]
+  let result1 = list.reverse(x)
+  
+  let result2 = list.reverse([4, 5, 6])
+}
+";
+
+    let position_start = Position::new(7, 0);
+    let position_end = Position::new(7, 61);
+
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
+}
+#[test]
+fn test_inline_variable_refactor_pipeline() {
+    let code = "
+import list
+
+fn main() {
+  let x = [1,2,3]
+  let result =
+  x
+  |> list.reverse()
+  |> list.map(fn(x) { x * 2})
+}
+";
+    let expected = "
+import list
+
+fn main() {
+  
+  let result =
+  [1, 2, 3]
+  |> list.reverse()
+  |> list.map(fn(x) { x * 2})
+}
+";
+
+    let position_start = Position::new(7, 0);
+    let position_end = Position::new(7, 61);
+
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
 }
 
 /* TODO: implement qualified unused location

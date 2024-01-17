@@ -1,6 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern, Statement, Pattern
+        Arg, Definition, Function, Import, ModuleConstant, Pattern, Statement, TypedDefinition,
+        TypedExpr, TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -228,7 +229,6 @@ where
                 return Ok(None);
             };
 
-            code_action_unused_imports(module, &params, &mut actions);
             code_action_unused_imports(module, &params, &mut actions);
             code_action_inline_variable(module, &params, &mut actions);
 
@@ -489,7 +489,7 @@ fn get_import(statement: &TypedDefinition) -> Option<&Import<EcoString>> {
     }
 }
 
-fn get_function(statement: &TypedDefinition) -> Option<&Function<Arc<Type>, TypedExpr>>{
+fn get_function(statement: &TypedDefinition) -> Option<&Function<Arc<Type>, TypedExpr>> {
     match statement {
         Definition::Function(function) => Some(function),
         _ => None,
@@ -580,6 +580,7 @@ fn hover_for_expression(expression: &TypedExpr, line_numbers: LineNumbers) -> Ho
 fn range_includes(outer: &lsp_types::Range, inner: &lsp_types::Range) -> bool {
     (outer.start >= inner.start && outer.start <= inner.end)
         || (outer.end >= inner.start && outer.end <= inner.end)
+        || (inner.start >= outer.start && inner.end <= outer.end)
 }
 
 fn code_action_unused_imports(
@@ -626,65 +627,144 @@ fn code_action_unused_imports(
 fn code_action_inline_variable(
     module: &Module,
     params: &lsp::CodeActionParams,
-    actions: &mut Vec<CodeAction>
-){
-    dbg!(module);
+    actions: &mut Vec<CodeAction>,
+) {
+    //dbg!(module);
     let uri = &params.text_document.uri;
     let line_numbers = LineNumbers::new(&module.code);
-    let mut hovered = false;
     let mut inline_refactors = Vec::new();
 
     for function in module.ast.definitions.iter().filter_map(get_function) {
-        
         detect_possible_variable_inlining(function, &mut inline_refactors);
     }
 
     let mut edits = Vec::new();
 
-    if !inline_refactors.is_empty(){
-        // build.edits()
+    if !inline_refactors.is_empty() {
+        for refactor in inline_refactors {
+            let range_inline_destination = src_span_to_lsp_range(refactor.1, &line_numbers);
+            if range_includes(&params.range, &range_inline_destination) {
+                edits.push(lsp_types::TextEdit {
+                    range: src_span_to_lsp_range(refactor.0, &line_numbers),
+                    new_text: "".into(),
+                });
+
+                edits.push(lsp_types::TextEdit {
+                    range: range_inline_destination,
+                    new_text: format!(
+                        "{}",
+                        refactor
+                            .2
+                            .expect("Expected a source expression for the actual inlining")
+                            .to_string()
+                    ),
+                });
+            }
+        }
     }
 
     CodeActionBuilder::new("Inline Variable Refactor")
-        .kind(lsp_types::CodeActionKind::QUICKFIX)
+        .kind(lsp_types::CodeActionKind::REFACTOR_INLINE)
         .changes(uri.clone(), edits)
         .preferred(true)
         .push_to(actions);
 }
 
-fn detect_possible_variable_inlining(function: &Function<Arc<Type>, TypedExpr>, inline_refactors: &mut Vec<&str>) {
-    //in function body check for unnecessary variable declarations
-    let statements: Vec<&Statement<Arc<Type>, TypedExpr>> = function.body.iter().filter(|statement| statement.is_assignment()).collect();
-    let mut var_assignments: Vec<&Pattern<Arc<Type>>> = Vec::new();
+fn detect_possible_variable_inlining<'a>(
+    function: &'a Function<Arc<Type>, TypedExpr>,
+    inline_refactors: &mut Vec<(
+        crate::ast::SrcSpan,
+        crate::ast::SrcSpan,
+        Option<&'a TypedExpr>,
+    )>,
+) {
+    let assign_statements: Vec<&Statement<Arc<Type>, TypedExpr>> = function
+        .body
+        .iter()
+        .filter(|statement| statement.is_assignment())
+        .collect();
 
-    find_assignment(statements, &mut var_assignments);
-    
-    if var_assignments.is_empty(){
-        return;
+    for statement in function.body.iter() {
+        if let Statement::Assignment(assign) = statement {
+            determine_possible_inlining(&assign.value, &assign_statements, inline_refactors)
+        }
+
+        if let Statement::Expression(expr) = statement {
+            // inline_refactors.push(determine_possible_inlining(expr, &assign_statements));
+        }
     }
-
-    let inlinings = assignments_to_be_inlined(var_assignments);
-
-    todo!()
 }
 
-fn assignments_to_be_inlined(var_assignments: Vec<&Pattern<Arc<Type>>>) -> Vec<&Pattern<Arc<Type>>> {
-    
-    //check if variable is only being used once
-    // 1) single usage
-    // 2) no modifications: var doesnt undergo changes between assignment and usage
+fn determine_possible_inlining<'a>(
+    value: &TypedExpr,
+    assign_statements: &Vec<&'a Statement<Arc<Type>, TypedExpr>>,
+    expressions_to_inline: &mut Vec<(
+        crate::ast::SrcSpan,
+        crate::ast::SrcSpan,
+        Option<&'a TypedExpr>,
+    )>,
+) {
+    if let TypedExpr::Call { args, .. } = value {
+        for arg in args {
+            if let TypedExpr::Call { .. } = &arg.value {
+                determine_possible_inlining(&arg.value, assign_statements, expressions_to_inline)
+            }
+            if let TypedExpr::Var { constructor, .. } = &arg.value {
+                if let ValueConstructorVariant::LocalVariable { location } = constructor.variant {
+                    // hier checken in assign_statements of daar de assignment in voorkomt...
+                    let result = assign_statements.iter().find(|assignment| {
+                        if let Statement::Assignment(assign) = assignment {
+                            let loc_assign = assign.pattern.location();
 
+                            loc_assign.start == location.start && loc_assign.end == location.end
+                        } else {
+                            false
+                        }
+                    });
 
-    todo!()
-}
+                    if let Some(found) = result {
+                        if let TypedExpr::Call {
+                            location,
+                            typ,
+                            fun,
+                            mut args,
+                        } = value.clone()
+                        {
+                            let loc_inlinable_assign = match found {
+                                Statement::Expression(expr) => todo!(),
+                                Statement::Assignment(assign) => assign.pattern.location(),
+                                Statement::Use(_) => todo!(),
+                            };
 
-fn find_assignment<'a>(statements: Vec<&'a Statement<Arc<Type>, TypedExpr>>, assignments: &mut Vec<&'a Pattern<Arc<Type>>>)
-{
-    for statement in statements{
-        if let Statement::Assignment(assignment) = statement{
-            if let Pattern::Var { .. } = &assignment.pattern{
-                assignments.push(&assignment.pattern);
+                            if let Some(callarg) = args.iter_mut().find(|callarg| {
+                                if let TypedExpr::Var { .. } = callarg.value {
+                                    if let ValueConstructorVariant::LocalVariable { location } =
+                                        constructor.variant
+                                    {
+                                        location.start == loc_inlinable_assign.start
+                                            && location.end == loc_inlinable_assign.end
+                                    } else {
+                                        false
+                                    }
+                                } else {
+                                    false
+                                }
+                            }) {
+                                if let Some(typedexpr) = found.get_value() {
+                                    callarg.value = typedexpr.clone();
+                                    expressions_to_inline.push((
+                                        found.location(),
+                                        callarg.location,
+                                        found.get_value(),
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
+
+    //Ook hier een if let op de pipeline inbouwen...
 }

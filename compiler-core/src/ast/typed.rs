@@ -437,6 +437,195 @@ impl TypedExpr {
     pub fn is_pipeline(&self) -> bool {
         matches!(self, Self::Pipeline { .. })
     }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            TypedExpr::Int {
+                location,
+                typ,
+                value,
+            } => value.to_string(),
+            TypedExpr::Float {
+                location,
+                typ,
+                value,
+            } => value.to_string(),
+            TypedExpr::String {
+                location,
+                typ,
+                value,
+            } => value.to_string(),
+            TypedExpr::Block {
+                location,
+                statements,
+            } => todo!(),
+            TypedExpr::Pipeline {
+                location,
+                assignments,
+                finally,
+            } => todo!(),
+            TypedExpr::Var {
+                location,
+                constructor,
+                name,
+            } => name.to_string(),
+            TypedExpr::Fn {
+                location,
+                typ,
+                is_capture,
+                args,
+                body,
+                return_annotation,
+            } => {
+                let arg_str = args
+                    .iter()
+                    .map(|arg| match &arg.names {
+                        ArgNames::Discard { name } => name.to_string(),
+                        ArgNames::LabelledDiscard { label, name, .. } => name.to_string(),
+                        ArgNames::Named { name } => name.to_string(),
+                        ArgNames::NamedLabelled { name, label, .. } => name.to_string(),
+                    })
+                    .collect::<Vec<String>>()
+                    .join(", ");
+
+                let body_str = body
+                    .iter()
+                    .map(|statement| match statement {
+                        Statement::Expression(expr) => expr.to_string(),
+                        Statement::Assignment(assign) => todo!(),
+                        Statement::Use(_) => todo!(),
+                    })
+                    .collect::<String>();
+
+                format!("fn({}) {{ {} }}", arg_str, body_str)
+            }
+            TypedExpr::List {
+                location,
+                typ,
+                elements,
+                tail,
+            } => {
+                let mut result = "[".to_string();
+
+                for (i, element) in elements.iter().enumerate() {
+                    if i > 0 {
+                        result.push_str(", ");
+                    }
+                    result.push_str(&element.to_string());
+                }
+
+                if let Some(tail_expr) = tail {
+                    result.push_str(", ");
+                    result.push_str(&tail_expr.to_string());
+                }
+
+                result.push_str("]");
+                result
+            }
+            TypedExpr::Call {
+                location,
+                typ,
+                fun,
+                args,
+            } => {
+                let fun_str = fun.to_string();
+
+                let args_str = if !args.is_empty() {
+                    let args_str: String = args
+                        .iter()
+                        .map(|arg| format!("{}", arg.value.to_string()))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    format!("({})", args_str)
+                } else {
+                    //no arguments for function
+                    String::from("()")
+                };
+
+                format!("{}{}", fun_str, args_str)
+            }
+            TypedExpr::BinOp {
+                location,
+                typ,
+                name,
+                left,
+                right,
+            } => {
+                format!("{} {} {}", left.to_string(), name.name(), right.to_string())
+            }
+            TypedExpr::Case {
+                location,
+                typ,
+                subjects,
+                clauses,
+            } => todo!(),
+            TypedExpr::RecordAccess {
+                location,
+                typ,
+                label,
+                index,
+                record,
+            } => todo!(),
+            TypedExpr::ModuleSelect {
+                location,
+                typ,
+                label,
+                module_name,
+                module_alias,
+                constructor,
+            } => {
+                //list.reverse
+                dbg!(self);
+                format!("{}.{}", module_alias, label)
+            }
+            TypedExpr::Tuple {
+                location,
+                typ,
+                elems,
+            } => {
+                let mut res = "(".to_string();
+
+                for (i, elem) in elems.iter().enumerate() {
+                    if i > 0 {
+                        res.push_str(", ");
+                    }
+                    res.push_str(&format!("{}", elem.to_string()));
+                }
+
+                res.push(')');
+                res
+            }
+            TypedExpr::TupleIndex {
+                location,
+                typ,
+                index,
+                tuple,
+            } => todo!(),
+            TypedExpr::Todo {
+                location,
+                message,
+                type_,
+            } => todo!(),
+            TypedExpr::Panic {
+                location,
+                message,
+                type_,
+            } => todo!(),
+            TypedExpr::BitArray {
+                location,
+                typ,
+                segments,
+            } => todo!(),
+            TypedExpr::RecordUpdate {
+                location,
+                typ,
+                spread,
+                args,
+            } => todo!(),
+            TypedExpr::NegateBool { location, value } => value.to_string(),
+            TypedExpr::NegateInt { location, value } => value.to_string(),
+        }
+    }
 }
 
 impl<'a> From<&'a TypedExpr> for Located<'a> {
