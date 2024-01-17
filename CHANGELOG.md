@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Build tool
+
+- If a package contains a `todo` expression then the build tool will now refuse
+  to publish it to Hex.
+
+
 ## v0.34.1 - 2023-01-17
 
 ### Build tool changes
