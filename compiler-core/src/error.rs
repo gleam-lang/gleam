@@ -534,7 +534,7 @@ forward slash and must not end with a slash."
                 level: Level::Error,
                 location: None,
                 hint: Some(format!(
-                    "Add a function with the singature `pub fn main() {{}}` \
+                    "Add a public `main` function to \
 to `src/{module}.gleam`."
                 )),
             },
