@@ -711,21 +711,30 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn1() {
     assert_format!(
         r#"fn main(label_one one, label_two two, label_three three) {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn2() {
     assert_format!(
         r#"fn main(label_one one: One, label_two two: Two) {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn3() {
     assert_format!(
         r#"fn main(
   label_one one: One,
@@ -744,14 +753,20 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn4() {
     assert_format!(
         r#"fn main(label _discarded) {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn5() {
     // https://github.com/gleam-lang/gleam/issues/613
     assert_format!(
         r#"fn main() {
@@ -760,7 +775,10 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn6() {
     //
     // Module function return annotations
     //
@@ -771,7 +789,10 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn7() {
     assert_format!(
         r#"fn main() -> Loooooooooooooooooooong(
   Looooooooooooooong,
@@ -783,7 +804,10 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn8() {
     assert_format!(
         r#"fn main() -> Loooooooooooooooooooong(
   Loooooooooooooooooooooooooooooooooooooooooong,
@@ -792,24 +816,33 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn9() {
     assert_format!(
         r#"fn main() -> program.Exit {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn10() {
     assert_format!(
         "fn order(
   first: Set(member),
   second: Set(member),
-) -> #(Set(member), Set(member)) {
+) -> #(Set(member), Set(member), a) {
   Nil
 }
 "
     );
+}
 
+#[test]
+fn statement_fn11() {
     assert_format!(
         "///
 pub fn try_map(

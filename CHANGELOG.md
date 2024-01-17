@@ -8,6 +8,8 @@
 
 ### Bug fixes
 
+- Fixed a bug where long function headers with external implementations could
+  format incorrectly.
 - The `@deprecated` attribute can now be used to annotate module constants.
   This will cause a warning to be emitted when the constant is used.
 
