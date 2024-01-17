@@ -193,6 +193,21 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
         build::download_dependencies()?,
     )?;
 
+    // If any of the modules in the package contain a todo then refuse to
+    // publish as the package is not yet finished.
+    let unfinished = built
+        .root_package
+        .modules
+        .iter()
+        .filter(|module| module.ast.type_info.contains_todo)
+        .map(|module| module.name.clone())
+        .sorted()
+        .collect_vec();
+    if !unfinished.is_empty() {
+        return Err(Error::CannotPublishTodo { unfinished });
+    }
+
+    // Collect all the files we want to include in the tarball
     let generated_files = match target {
         Target::Erlang => generated_erlang_files(paths, &built.root_package)?,
         Target::JavaScript => vec![],
