@@ -260,7 +260,7 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
             &TypeWarningEmitter::null(),
             TargetSupport::Enforced,
         ),
-        SupportedTargets::none(),
+        Implementations::none(),
     )
     .infer_statements(ast)
 }

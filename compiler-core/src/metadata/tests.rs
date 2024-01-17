@@ -9,7 +9,7 @@ use crate::{
     },
     build::Origin,
     type_::{
-        self, expression::SupportedTargets, Deprecation, ModuleInterface, Type, TypeConstructor,
+        self, expression::Implementations, Deprecation, ModuleInterface, Type, TypeConstructor,
         TypeValueConstructor, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
@@ -47,7 +47,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
                     literal: constant,
                     location: SrcSpan::default(),
                     module: "one/two".into(),
-                    supported_targets: SupportedTargets::gleam(),
+                    implementations: Implementations::no_externals(),
                 },
             },
         )]
@@ -332,7 +332,7 @@ fn module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
-                    supported_targets: SupportedTargets::gleam(),
+                    implementations: Implementations::no_externals(),
                 },
             },
         )]
@@ -370,7 +370,7 @@ fn deprecated_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
-                    supported_targets: SupportedTargets::gleam(),
+                    implementations: Implementations::no_externals(),
                 },
             },
         )]
@@ -406,7 +406,7 @@ fn private_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
-                    supported_targets: SupportedTargets::gleam(),
+                    implementations: Implementations::no_externals(),
                 },
             },
         )]
@@ -444,7 +444,7 @@ fn module_fn_value_regression() {
                         start: 52,
                         end: 1100,
                     },
-                    supported_targets: SupportedTargets::javascript(),
+                    implementations: Implementations::javascript(),
                 },
             },
         )]
@@ -481,7 +481,7 @@ fn module_fn_value_with_field_map() {
                     module: "a".into(),
                     arity: 5,
                     location: SrcSpan { start: 2, end: 11 },
-                    supported_targets: SupportedTargets::erlang(),
+                    implementations: Implementations::erlang(),
                 },
             },
         )]
@@ -776,7 +776,7 @@ fn constant_var() {
                 literal: one_original.clone(),
                 location: SrcSpan::default(),
                 module: "one/two".into(),
-                supported_targets: SupportedTargets::gleam(),
+                implementations: Implementations::no_externals(),
             },
         })),
     };
@@ -802,7 +802,7 @@ fn constant_var() {
                         literal: one,
                         location: SrcSpan::default(),
                         module: "one/two".into(),
-                        supported_targets: SupportedTargets::gleam(),
+                        implementations: Implementations::no_externals(),
                     },
                 },
             ),
@@ -817,7 +817,7 @@ fn constant_var() {
                         literal: one_original,
                         location: SrcSpan::default(),
                         module: "one/two".into(),
-                        supported_targets: SupportedTargets::gleam(),
+                        implementations: Implementations::no_externals(),
                     },
                 },
             ),

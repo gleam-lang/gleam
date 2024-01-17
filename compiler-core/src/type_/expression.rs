@@ -19,14 +19,12 @@ use itertools::Itertools;
 use vec1::Vec1;
 
 #[derive(Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq)]
-pub enum SupportedTargets {
-    /// Represents a definition that uses only pure Gleam code and thus can be
-    /// run on all targets (even future ones that are going to be added).
-    Gleam,
-    /// For definitions that support only _some_ of the compiler targets,
-    /// specifically through the use of `@external` implementations.
-    /// It's important to notice that, even if all targets are supported, it
-    /// would not the same as a `Gleam` target; imagine this scenario:
+pub struct Implementations {
+    /// Wether the function has a pure-gleam implementation.
+    ///
+    /// It's important to notice that, even if all individual targets are
+    /// supported, it would not be the same as being pure Gleam.
+    /// Imagine this scenario:
     ///
     /// ```gleam
     /// @external(javascript, "foo", "bar")
@@ -36,119 +34,138 @@ pub enum SupportedTargets {
     ///
     /// `func` supports all _current_ Gleam targets; however, if a new target
     /// is added - say a WASM target - `func` wouldn't support it! On the other
-    /// hand, a pure-Gleam function will support all future targets.
-    Externals { erlang: bool, javascript: bool },
+    /// hand, a pure Gleam function will support all future targets.
+    pub gleam: bool,
+    /// Wether the function has an implementation that uses external erlang
+    /// code.
+    pub erlang: bool,
+    /// Wether the function has an implementation that uses external javascript
+    /// code.
+    pub javascript: bool,
 }
 
-impl SupportedTargets {
-    pub fn none() -> SupportedTargets {
-        SupportedTargets::Externals {
+impl Implementations {
+    pub fn none() -> Implementations {
+        Implementations {
+            gleam: false,
             erlang: false,
             javascript: false,
         }
     }
 
-    pub fn gleam() -> SupportedTargets {
-        SupportedTargets::Gleam
+    /// For values that don't use external implementations whatsoever.
+    ///
+    /// Some examples:
+    ///
+    /// ```gleam
+    /// pub const gleam_const = 1
+    /// pub fn gleam() -> Int { 1 + 1 }
+    /// pub fn main() { gleam() }
+    /// ```
+    pub fn no_externals() -> Implementations {
+        Implementations {
+            gleam: true,
+            erlang: false,
+            javascript: false,
+        }
     }
 
-    pub fn javascript() -> SupportedTargets {
-        SupportedTargets::Externals {
+    /// For values that only uses a javascript external implementation.
+    ///
+    /// Some examples:
+    ///
+    /// ```gleam
+    /// @external(javascript, "foo", "bar")
+    /// pub fn javascript_only() -> Int
+    /// ```
+    pub fn javascript() -> Implementations {
+        Implementations {
+            gleam: false,
             erlang: false,
             javascript: true,
         }
     }
 
-    pub fn erlang() -> SupportedTargets {
-        SupportedTargets::Externals {
+    /// For values that only uses an erlang external implementation.
+    ///
+    /// Some examples:
+    ///
+    /// ```gleam
+    /// @external(erlang, "foo", "bar")
+    /// pub fn erlang_only() -> Int
+    /// ```
+    pub fn erlang() -> Implementations {
+        Implementations {
+            gleam: false,
             erlang: true,
             javascript: false,
         }
     }
 
-    pub fn all_externals() -> SupportedTargets {
-        SupportedTargets::Externals {
+    /// For values that have anexternal implementation for _all_ gleam targets
+    /// but do not have a default Gleam implementation.
+    ///
+    /// Some examples:
+    ///
+    /// ```gleam
+    /// @external(erlang, "foo", "bar")
+    /// @external(javascript, "foo", "bar")
+    /// pub fn foo() -> Int
+    /// ```
+    pub fn all_externals() -> Implementations {
+        Implementations {
+            gleam: false,
             erlang: true,
             javascript: true,
         }
     }
 
-    pub fn from_target(target: Target) -> SupportedTargets {
-        match target {
-            Target::Erlang => SupportedTargets::erlang(),
-            Target::JavaScript => SupportedTargets::javascript(),
-        }
+    /// Given the implementations of a function update those with taking into
+    /// account the `implementations` of another function (or constant) used
+    /// inside its body.
+    pub fn update_from_use(&mut self, implementations: &Implementations) {
+        // With this pattern matching we won't forget to deal with new targets
+        // when those are added :)
+        let Implementations {
+            gleam,
+            erlang,
+            javascript,
+        } = implementations;
+
+        // If a pure-Gleam function uses a function that doesn't have a pure
+        // Gleam implementation, then it's no longer pure-Gleam.
+        self.gleam = self.gleam && *gleam;
+        // If a function uses a function that has an erlang specific (or
+        // javascript specific) implementation then it is considered as having
+        // a target specific implementation as well.
+        //
+        // For example:
+        // ```gleam
+        // @external(erlang, "foo", "bar")
+        // pub fn erlang_only_with_pure_gleam_default() -> Int {
+        //   1 + 1
+        // }
+        //
+        // pub fn main() { erlang_only_with_pure_gleam_default() }
+        // ```
+        // Both functions will end up having the following `Implementations`:
+        // `Implementations { gleam: true, erlang: true, javascript: false}`.
+        // They have a pure gleam implementation and an erlang specific external
+        // implementation.
+        self.erlang = self.erlang || *erlang;
+        self.javascript = self.javascript || *javascript;
     }
 
-    pub fn intersect(&mut self, targets: SupportedTargets) {
-        match self {
-            SupportedTargets::Gleam => *self = targets,
-            SupportedTargets::Externals { erlang, javascript } => match targets {
-                SupportedTargets::Gleam => (),
-                SupportedTargets::Externals {
-                    erlang: erlang_1,
-                    javascript: javascript_1,
-                } => {
-                    *erlang = *erlang && erlang_1;
-                    *javascript = *javascript && javascript_1;
-                }
-            },
-        }
-    }
-
-    pub fn merge(&mut self, targets: SupportedTargets) {
-        match self {
-            SupportedTargets::Gleam => (),
-            SupportedTargets::Externals { erlang, javascript } => match targets {
-                SupportedTargets::Gleam => *self = SupportedTargets::Gleam,
-                SupportedTargets::Externals {
-                    erlang: erlang_1,
-                    javascript: javascript_1,
-                } => {
-                    *erlang = *erlang || erlang_1;
-                    *javascript = *javascript || javascript_1;
-                }
-            },
-        }
-    }
-
-    pub fn add(&mut self, target: Target) {
-        match self {
-            SupportedTargets::Gleam => (),
-            SupportedTargets::Externals { erlang, javascript } => match target {
-                Target::Erlang => *erlang = true,
-                Target::JavaScript => *javascript = true,
-            },
-        }
-    }
-
+    /// Returns true if the current target is supported by the given
+    /// implementations.
+    /// If something has a pure gleam implementation then it supports all
+    /// targets automatically.
     pub fn supports(&self, target: Target) -> bool {
-        match self {
-            SupportedTargets::Gleam => true,
-            SupportedTargets::Externals { erlang, javascript } => match target {
-                Target::Erlang => *erlang,
-                Target::JavaScript => *javascript,
-            },
-        }
-    }
-
-    pub fn supports_all_targets(&self) -> bool {
-        match self {
-            SupportedTargets::Gleam => true,
-            SupportedTargets::Externals { erlang, javascript } => *erlang && *javascript,
-        }
-    }
-
-    pub fn to_vec(self) -> Vec<Target> {
-        match self {
-            SupportedTargets::Gleam => vec![Target::Erlang, Target::JavaScript],
-            SupportedTargets::Externals { erlang, javascript } => match (erlang, javascript) {
-                (true, true) => vec![Target::Erlang, Target::JavaScript],
-                (true, _) => vec![Target::Erlang],
-                (_, true) => vec![Target::JavaScript],
-                (_, _) => vec![],
-            },
-        }
+        self.gleam
+            || match target {
+                Target::Erlang => self.erlang,
+                Target::JavaScript => self.javascript,
+            }
     }
 }
 
@@ -156,29 +173,29 @@ impl SupportedTargets {
 pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) environment: &'a mut Environment<'b>,
 
-    pub(crate) supported_targets: SupportedTargets,
+    pub(crate) implementations: Implementations,
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
-
-    external_supported_targets: SupportedTargets,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
     pub fn new(
         environment: &'a mut Environment<'b>,
-        external_supported_targets: SupportedTargets,
+        mut external_implementations: Implementations,
     ) -> Self {
         let mut hydrator = Hydrator::new();
+
+        // We start assuming the function is pure Gleam and narrow it down
+        // if we run into functions/constants that have only external
+        // implementations for some of the targets.
+        external_implementations.gleam = true;
 
         hydrator.permit_holes(true);
         Self {
             hydrator,
             environment,
-            // This will be narrowed down as the expression type is inferred
-            // but we start assuming the function is pure gleam code.
-            supported_targets: SupportedTargets::gleam(),
-            external_supported_targets,
+            implementations: external_implementations,
         }
     }
 
@@ -716,7 +733,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_var(&mut self, name: EcoString, location: SrcSpan) -> Result<TypedExpr, Error> {
         let constructor = self.infer_value_constructor(&None, &name, &location)?;
-        self.narrow_supported_targets(location, &constructor.variant)?;
+        self.narrow_implementations(location, &constructor.variant)?;
         Ok(TypedExpr::Var {
             constructor,
             location,
@@ -724,34 +741,41 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn narrow_supported_targets(
+    fn narrow_implementations(
         &mut self,
         location: SrcSpan,
         variant: &ValueConstructorVariant,
     ) -> Result<(), Error> {
-        let (new_targets, kind) = match variant {
+        let variant_implementations = match variant {
             ValueConstructorVariant::ModuleConstant {
-                supported_targets, ..
-            } => (supported_targets, "constant".into()),
+                implementations, ..
+            } => implementations,
             ValueConstructorVariant::ModuleFn {
-                supported_targets, ..
-            } => (supported_targets, "function".into()),
+                implementations, ..
+            } => implementations,
             ValueConstructorVariant::Record { .. }
             | ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::LocalConstant { .. } => return Ok(()),
         };
 
-        self.supported_targets.intersect(*new_targets);
-        if self.environment.target_support == TargetSupport::Enforced
-            && !(new_targets.supports(self.environment.target)
-                || self
-                    .external_supported_targets
-                    .supports(self.environment.target))
+        self.implementations
+            .update_from_use(variant_implementations);
+
+        let fail_if_current_target_is_not_supported =
+            self.environment.target_support == TargetSupport::Enforced;
+
+        if fail_if_current_target_is_not_supported
+            // If the value used doesn't have an implementation that can be used
+            // for the current target...
+            && !variant_implementations.supports(self.environment.target)
+            // ... and there is not an external implementation for it
+            && !self
+                    .implementations
+                    .supports(self.environment.target)
         {
             Err(Error::UnsupportedTarget {
                 target: self.environment.target,
                 location,
-                kind,
             })
         } else {
             Ok(())
@@ -1631,7 +1655,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let type_ = self.instantiate(constructor.type_, &mut hashmap![]);
 
-        self.narrow_supported_targets(select_location, &constructor.variant)?;
+        self.narrow_implementations(select_location, &constructor.variant)?;
 
         let constructor = match &constructor.variant {
             variant @ ValueConstructorVariant::ModuleFn { name, module, .. } => {
@@ -1939,7 +1963,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
         }
 
-        self.narrow_supported_targets(*location, &variant)?;
+        self.narrow_implementations(*location, &variant)?;
 
         // Instantiate generic variables into unbound variables for this usage
         let typ = self.instantiate(typ, &mut hashmap![]);
@@ -2402,6 +2426,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         body: Vec1<UntypedStatement>,
         return_type: Option<Arc<Type>>,
     ) -> Result<(Vec<TypedArg>, Vec1<TypedStatement>), Error> {
+        // If a function has an empty body then it doesn't have a pure gleam
+        // implementation.
+        if body.first().is_placeholder() {
+            self.implementations.gleam = false;
+        }
         self.in_new_scope(|body_typer| {
             // Used to track if any argument names are used more than once
             let mut argument_names = HashSet::with_capacity(args.len());
