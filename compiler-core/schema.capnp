@@ -27,6 +27,7 @@ struct Module {
   package @4 :Text;
   typesConstructors @5 :List(Property(List(TypeValueConstructor)));
   unusedImports @6 :List(SrcSpan);
+  containsTodo @7 :Bool;
 }
 
 struct TypeValueConstructor {

@@ -477,6 +477,10 @@ pub mod module {
     pub fn has_unused_imports(&self) -> bool {
       !self.reader.get_pointer_field(6).is_null()
     }
+    #[inline]
+    pub fn get_contains_todo(self) -> bool {
+      self.reader.get_bool_field(0)
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -639,6 +643,14 @@ pub mod module {
     pub fn has_unused_imports(&self) -> bool {
       !self.builder.get_pointer_field(6).is_null()
     }
+    #[inline]
+    pub fn get_contains_todo(self) -> bool {
+      self.builder.get_bool_field(0)
+    }
+    #[inline]
+    pub fn set_contains_todo(&mut self, value: bool)  {
+      self.builder.set_bool_field(0, value);
+    }
   }
 
   pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -651,7 +663,7 @@ pub mod module {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 0, pointers: 7 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 7 };
     pub const TYPE_ID: u64 = 0x9a52_9544_50db_0581;
   }
 }
