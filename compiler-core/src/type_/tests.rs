@@ -2156,3 +2156,15 @@ pub fn main() {
 }",
     );
 }
+
+#[test]
+fn contains_todo_true() {
+    let module = compile_module("pub fn main() { 1 }", None, vec![]).unwrap();
+    assert!(!module.type_info.contains_todo);
+}
+
+#[test]
+fn contains_todo_false() {
+    let module = compile_module("pub fn main() { todo }", None, vec![]).unwrap();
+    assert!(module.type_info.contains_todo);
+}

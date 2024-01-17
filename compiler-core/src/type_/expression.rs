@@ -293,21 +293,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         kind: TodoKind,
         message: Option<Box<UntypedExpr>>,
     ) -> Result<TypedExpr, Error> {
+        // Type the todo as whatever it would need to be to type check.
         let type_ = self.new_unbound_var();
+
+        // Emit a warning that there is a todo in the code.
         self.environment.warnings.emit(Warning::Todo {
             kind,
             location,
             typ: type_.clone(),
         });
-        let message = match message {
-            Some(message) => {
+
+        // We've seen a todo, so register that fact. This can be used by higher
+        // level tooling such as the build tool when publishing a package.
+        self.environment.todo_encountered = true;
+
+        let message = message
+            .map(|message| {
+                // If there is a message expression then it must be a string.
                 let message = self.infer(*message)?;
                 unify(string(), message.type_())
                     .map_err(|e| convert_unify_error(e, message.location()))?;
-                Some(Box::new(message))
-            }
-            None => None,
-        };
+                Ok(Box::new(message))
+            })
+            .transpose()?;
+
         Ok(TypedExpr::Todo {
             location,
             type_,
