@@ -287,7 +287,6 @@ pub enum Error {
     UnsupportedTarget {
         location: SrcSpan,
         target: Target,
-        kind: EcoString,
     },
 
     // A function's JavaScript implementation has been given but it does not

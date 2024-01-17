@@ -16,7 +16,7 @@ use crate::{
         self,
         environment::*,
         error::{convert_unify_error, Error, MissingAnnotation},
-        expression::{ExprTyper, SupportedTargets},
+        expression::{ExprTyper, Implementations},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
@@ -499,7 +499,7 @@ fn register_value_from_function(
         end_position: _,
         body: _,
         return_type: _,
-        supported_targets,
+        implementations,
     } = f;
     assert_unique_name(names, name, *location)?;
     assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
@@ -533,7 +533,7 @@ fn register_value_from_function(
         module: impl_module,
         arity: args.len(),
         location: *location,
-        supported_targets: *supported_targets,
+        implementations: *implementations,
     };
     environment.insert_variable(name.clone(), variant, typ, *public, deprecation.clone());
     if !public {
@@ -598,7 +598,7 @@ fn infer_function(
         external_erlang,
         external_javascript,
         return_type: (),
-        supported_targets: _,
+        implementations: _,
     } = f;
     let preregistered_fn = environment
         .get_variable(&name)
@@ -609,7 +609,6 @@ fn infer_function(
         .fn_types()
         .expect("Preregistered type for fn was not a fn");
 
-    let is_placeholder = is_placeholder(&body);
     // Find the external implementation for the current target, if one has been given.
     let external =
         target_function_implementation(environment.target, &external_erlang, &external_javascript);
@@ -626,16 +625,20 @@ fn infer_function(
         ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
     }
 
-    let external_targets = external_supported_targets(&external_erlang, &external_javascript);
+    let external_implementations = Implementations {
+        gleam: false,
+        erlang: external_erlang.is_some(),
+        javascript: external_javascript.is_some(),
+    };
 
     // Infer the type using the preregistered args + return types as a starting point
-    let (type_, args, body, mut supported_targets) = environment.in_new_scope(|environment| {
+    let (type_, args, body, implementations) = environment.in_new_scope(|environment| {
         let args_types = arguments
             .into_iter()
             .zip(&args_types)
             .map(|(a, t)| a.set_type(t.clone()))
             .collect();
-        let mut expr_typer = ExprTyper::new(environment, external_targets);
+        let mut expr_typer = ExprTyper::new(environment, external_implementations);
         expr_typer.hydrator = hydrators
             .remove(&name)
             .expect("Could not find hydrator for fn");
@@ -644,16 +647,8 @@ fn infer_function(
             expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type))?;
         let args_types = args.iter().map(|a| a.type_.clone()).collect();
         let typ = fn_(args_types, body.last().type_());
-        Ok((typ, args, body, expr_typer.supported_targets))
+        Ok((typ, args, body, expr_typer.implementations))
     })?;
-
-    if is_placeholder {
-        // If the function has an empty body we are only going to consider as
-        // supported targets the ones that have an external implementation.
-        supported_targets = external_targets;
-    } else {
-        supported_targets.merge(external_targets);
-    }
 
     // Assert that the inferred type matches the type of any recursive call
     unify(preregistered_type, type_.clone()).map_err(|e| convert_unify_error(e, location))?;
@@ -665,7 +660,7 @@ fn infer_function(
         module: impl_module,
         arity: args.len(),
         location,
-        supported_targets,
+        implementations,
     };
 
     environment.insert_variable(
@@ -691,20 +686,8 @@ fn infer_function(
         body,
         external_erlang,
         external_javascript,
-        supported_targets,
+        implementations,
     }))
-}
-
-fn external_supported_targets(
-    external_erlang: &Option<(EcoString, EcoString)>,
-    external_javascript: &Option<(EcoString, EcoString)>,
-) -> SupportedTargets {
-    match (external_erlang, external_javascript) {
-        (Some(_), Some(_)) => SupportedTargets::all_externals(),
-        (Some(_), None) => SupportedTargets::erlang(),
-        (None, Some(_)) => SupportedTargets::javascript(),
-        (None, None) => SupportedTargets::none(),
-    }
 }
 
 /// Returns the the module name and function name of the implementation of a
@@ -733,10 +716,6 @@ fn target_function_implementation<'a>(
     }
 }
 
-fn is_placeholder(body: &Vec1<UntypedStatement>) -> bool {
-    body.first().is_placeholder()
-}
-
 fn ensure_function_has_an_implementation(
     body: &Vec1<UntypedStatement>,
     external_erlang: &Option<(EcoString, EcoString)>,
@@ -744,7 +723,7 @@ fn ensure_function_has_an_implementation(
     location: SrcSpan,
 ) -> Result<(), Error> {
     match (external_erlang, external_javascript) {
-        (None, None) if is_placeholder(body) => Err(Error::NoImplementation { location }),
+        (None, None) if body.first().is_placeholder() => Err(Error::NoImplementation { location }),
         _ => Ok(()),
     }
 }
@@ -956,10 +935,10 @@ fn infer_module_constant(
         ..
     } = c;
 
-    let mut expr_typer = ExprTyper::new(environment, SupportedTargets::none());
+    let mut expr_typer = ExprTyper::new(environment, Implementations::none());
     let typed_expr = expr_typer.infer_const(&annotation, *value)?;
     let type_ = typed_expr.type_();
-    let supported_targets = expr_typer.supported_targets;
+    let implementations = expr_typer.implementations;
 
     let variant = ValueConstructor {
         public,
@@ -969,7 +948,7 @@ fn infer_module_constant(
             location,
             literal: typed_expr.clone(),
             module: module_name.clone(),
-            supported_targets,
+            implementations,
         },
         type_: type_.clone(),
     };
@@ -995,8 +974,8 @@ fn infer_module_constant(
         public,
         value: Box::new(typed_expr),
         type_,
-        supported_targets,
         deprecation,
+        implementations,
     }))
 }
 
@@ -1077,8 +1056,8 @@ fn generalise_module_constant(
         public,
         value,
         type_,
-        supported_targets,
         deprecation,
+        implementations,
     } = constant;
     let typ = type_.clone();
     let type_ = type_::generalise(typ);
@@ -1087,7 +1066,7 @@ fn generalise_module_constant(
         location,
         literal: *value.clone(),
         module: module_name.clone(),
-        supported_targets,
+        implementations,
     };
     environment.insert_variable(
         name.clone(),
@@ -1115,8 +1094,8 @@ fn generalise_module_constant(
         public,
         value,
         type_,
-        supported_targets,
         deprecation,
+        implementations,
     })
 }
 
@@ -1138,7 +1117,7 @@ fn generalise_function(
         return_type,
         external_erlang,
         external_javascript,
-        supported_targets,
+        implementations,
     } = function;
 
     // Lookup the inferred function information
@@ -1162,7 +1141,7 @@ fn generalise_function(
         module: impl_module,
         arity: args.len(),
         location,
-        supported_targets,
+        implementations,
     };
     environment.insert_variable(
         name.clone(),
@@ -1194,7 +1173,7 @@ fn generalise_function(
         body,
         external_erlang,
         external_javascript,
-        supported_targets,
+        implementations,
     })
 }
 

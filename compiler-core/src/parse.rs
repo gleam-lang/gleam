@@ -66,7 +66,7 @@ use crate::ast::{
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
-use crate::type_::expression::SupportedTargets;
+use crate::type_::expression::Implementations;
 use crate::type_::Deprecation;
 use ecow::EcoString;
 use error::{LexicalError, ParseError, ParseErrorType};
@@ -1562,7 +1562,7 @@ where
             deprecation: std::mem::take(&mut attributes.deprecated),
             external_erlang: attributes.external_erlang.take(),
             external_javascript: attributes.external_javascript.take(),
-            supported_targets: SupportedTargets::gleam(),
+            implementations: Implementations::no_externals(),
         })))
     }
 
@@ -2167,8 +2167,8 @@ where
                 annotation,
                 value: Box::new(value),
                 type_: (),
-                supported_targets: SupportedTargets::gleam(),
                 deprecation: attributes.deprecated.clone(),
+                implementations: Implementations::no_externals(),
             })))
         } else {
             parse_error(

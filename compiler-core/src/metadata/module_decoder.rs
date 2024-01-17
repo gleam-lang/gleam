@@ -8,10 +8,10 @@ use crate::{
         BitArrayOption, BitArraySegment, CallArg, Constant, SrcSpan, TypedConstant,
         TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
     },
-    build::{Origin, Target},
+    build::Origin,
     schema_capnp::{self as schema, *},
     type_::{
-        self, expression::SupportedTargets, AccessorsMap, Deprecation, FieldMap, ModuleInterface,
+        self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, ModuleInterface,
         RecordAccessor, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorParameter,
         ValueConstructor, ValueConstructorVariant,
     },
@@ -411,7 +411,7 @@ impl ModuleDecoder {
             location: self.src_span(&reader.get_location()?)?,
             literal: self.constant(&reader.get_literal()?)?,
             module: reader.get_module()?.into(),
-            supported_targets: self.supported_targets(reader.get_supported_targets()?),
+            implementations: self.implementations(reader.get_implementations()?),
         })
     }
 
@@ -441,23 +441,15 @@ impl ModuleDecoder {
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
             documentation: self.optional_string(reader.get_documentation()?),
-            supported_targets: self.supported_targets(reader.get_supported_targets()?),
+            implementations: self.implementations(reader.get_implementations()?),
         })
     }
 
-    fn supported_targets(&self, reader: supported_targets::Reader<'_>) -> SupportedTargets {
-        match reader.which().expect("supported targets reader") {
-            supported_targets::Which::Gleam(_) => SupportedTargets::gleam(),
-            supported_targets::Which::Externals(reader) => {
-                let mut supported_targets = SupportedTargets::none();
-                if reader.get_erlang() {
-                    supported_targets.add(Target::Erlang);
-                }
-                if reader.get_javascript() {
-                    supported_targets.add(Target::JavaScript);
-                }
-                supported_targets
-            }
+    fn implementations(&self, reader: implementations::Reader<'_>) -> Implementations {
+        Implementations {
+            gleam: reader.get_gleam(),
+            erlang: reader.get_erlang(),
+            javascript: reader.get_javascript(),
         }
     }
 
