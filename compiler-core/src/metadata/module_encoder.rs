@@ -41,6 +41,7 @@ impl<'a> ModuleEncoder<'a> {
         let mut module = message.init_root::<module::Builder<'_>>();
         module.set_name(&self.data.name);
         module.set_package(&self.data.package);
+        module.set_contains_todo(self.data.contains_todo);
         self.set_module_types(&mut module);
         self.set_module_values(&mut module);
         self.set_module_accessors(&mut module);

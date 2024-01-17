@@ -229,6 +229,7 @@ pub fn infer_module<A>(
         module_types: types,
         module_types_constructors: types_constructors,
         module_values: values,
+        todo_encountered: contains_todo,
         accessors,
         ..
     } = env;
@@ -244,8 +245,9 @@ pub fn infer_module<A>(
             values,
             accessors,
             origin,
-            unused_imports,
             package: package.clone(),
+            unused_imports,
+            contains_todo,
         },
     })
 }

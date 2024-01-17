@@ -47,6 +47,7 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<EcoS
         values: Default::default(),
         accessors: Default::default(),
         unused_imports: Vec::new(),
+        contains_todo: false,
     };
     let path = Utf8Path::new("/artefact").join(format!("{name}.cache"));
     fs.write_bytes(
