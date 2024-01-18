@@ -2294,7 +2294,7 @@ implementation but the function name `{function}` is not valid."
                     target: current_target,
                 } => {
                     let text = wrap_format!(
-                        "This value doesn't have an implementation for the {} target.",
+                        "This value is not available as it is defined using externals, and there is no implementation for the {} target.",
                         match current_target {
                             Target::Erlang => "Erlang",
                             Target::JavaScript => "JavaScript",

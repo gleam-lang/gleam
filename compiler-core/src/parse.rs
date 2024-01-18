@@ -1562,7 +1562,11 @@ where
             deprecation: std::mem::take(&mut attributes.deprecated),
             external_erlang: attributes.external_erlang.take(),
             external_javascript: attributes.external_javascript.take(),
-            implementations: Implementations::no_externals(),
+            implementations: Implementations {
+                gleam: true,
+                erlang: false,
+                javascript: false,
+            },
         })))
     }
 
@@ -2168,7 +2172,11 @@ where
                 value: Box::new(value),
                 type_: (),
                 deprecation: attributes.deprecated.clone(),
-                implementations: Implementations::no_externals(),
+                implementations: Implementations {
+                    gleam: true,
+                    erlang: false,
+                    javascript: false,
+                },
             })))
         } else {
             parse_error(
