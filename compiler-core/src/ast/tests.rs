@@ -125,11 +125,18 @@ fn compile_expression(src: &str) -> TypedStatement {
             .into(),
         },
     );
-    ExprTyper::new(&mut environment, Implementations::none())
-        .infer_statements(ast)
-        .expect("should successfully infer")
-        .first()
-        .clone()
+    ExprTyper::new(
+        &mut environment,
+        Implementations {
+            gleam: false,
+            erlang: false,
+            javascript: false,
+        },
+    )
+    .infer_statements(ast)
+    .expect("should successfully infer")
+    .first()
+    .clone()
 }
 
 #[test]

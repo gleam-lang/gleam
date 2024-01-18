@@ -260,7 +260,11 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
             &TypeWarningEmitter::null(),
             TargetSupport::Enforced,
         ),
-        Implementations::none(),
+        Implementations {
+            gleam: false,
+            erlang: false,
+            javascript: false,
+        },
     )
     .infer_statements(ast)
 }
@@ -295,8 +299,8 @@ pub fn infer_module_with_target(
     dep: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> Vec<(EcoString, String)> {
-    let ast =
-        compile_module_with_target(src, None, dep, target).expect("should successfully infer");
+    let ast = compile_module_with_target(src, None, dep, target, TargetSupport::Enforced)
+        .expect("should successfully infer");
     ast.type_info
         .values
         .iter()
@@ -314,7 +318,7 @@ pub fn compile_module(
     warnings: Option<Arc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
 ) -> Result<TypedModule, crate::type_::Error> {
-    compile_module_with_target(src, warnings, dep, Target::Erlang)
+    compile_module_with_target(src, warnings, dep, Target::Erlang, TargetSupport::Enforced)
 }
 
 pub fn compile_module_with_target(
@@ -322,6 +326,7 @@ pub fn compile_module_with_target(
     warnings: Option<Arc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
     target: Target,
+    main_module_target_support: TargetSupport,
 ) -> Result<TypedModule, crate::type_::Error> {
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
@@ -374,7 +379,7 @@ pub fn compile_module_with_target(
         &modules,
         &warnings,
         &direct_dependencies,
-        TargetSupport::Enforced,
+        main_module_target_support,
     )
 }
 
@@ -387,8 +392,8 @@ pub fn module_error_with_target(
     deps: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> String {
-    let error =
-        compile_module_with_target(src, None, deps, target).expect_err("should infer an error");
+    let error = compile_module_with_target(src, None, deps, target, TargetSupport::Enforced)
+        .expect_err("should infer an error");
     let error = Error::Type {
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),

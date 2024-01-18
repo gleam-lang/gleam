@@ -37,7 +37,11 @@ fn parse_and_order(
             documentation: None,
             external_erlang: None,
             external_javascript: None,
-            implementations: Implementations::no_externals(),
+            implementations: Implementations {
+                gleam: true,
+                erlang: true,
+                javascript: false,
+            },
         })
         .collect_vec();
     let constants = constants
@@ -51,7 +55,11 @@ fn parse_and_order(
                 name: EcoString::from(*name),
                 annotation: None,
                 value: Box::from(const_value),
-                implementations: Implementations::no_externals(),
+                implementations: Implementations {
+                    gleam: true,
+                    erlang: true,
+                    javascript: false,
+                },
                 type_: (),
                 deprecation: Deprecation::NotDeprecated,
             }

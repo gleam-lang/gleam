@@ -935,7 +935,14 @@ fn infer_module_constant(
         ..
     } = c;
 
-    let mut expr_typer = ExprTyper::new(environment, Implementations::none());
+    let mut expr_typer = ExprTyper::new(
+        environment,
+        Implementations {
+            gleam: false,
+            erlang: false,
+            javascript: false,
+        },
+    );
     let typed_expr = expr_typer.infer_const(&annotation, *value)?;
     let type_ = typed_expr.type_();
     let implementations = expr_typer.implementations;

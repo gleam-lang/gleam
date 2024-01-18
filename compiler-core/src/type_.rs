@@ -419,7 +419,11 @@ impl ValueConstructorVariant {
         match self {
             ValueConstructorVariant::Record { .. }
             | ValueConstructorVariant::LocalConstant { .. }
-            | ValueConstructorVariant::LocalVariable { .. } => Implementations::no_externals(),
+            | ValueConstructorVariant::LocalVariable { .. } => Implementations {
+                gleam: true,
+                javascript: false,
+                erlang: false,
+            },
 
             ValueConstructorVariant::ModuleFn {
                 implementations, ..
