@@ -170,3 +170,47 @@ fn math_binops_kept_on_a_single_line_in_pipes() {
 "#
     );
 }
+
+#[test]
+fn binop_used_as_function_arguments_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  foo(
+    a_variable_with_a_long_name
+      <> another_variable_with_a_long_name
+      <> yet_another_variable_with_a_long_name,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn binop_inside_list_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    foo,
+    a_variable_with_a_long_name
+      <> another_variable_with_a_long_name
+      <> yet_another_variable_with_a_long_name,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn binop_inside_tuple_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    foo,
+    a_variable_with_a_long_name
+      <> another_variable_with_a_long_name
+      <> yet_another_variable_with_a_long_name,
+  )
+}
+"#
+    );
+}
