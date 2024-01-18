@@ -894,7 +894,19 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn tuple<'a>(&mut self, elements: &'a [UntypedExpr]) -> Document<'a> {
-        self.append_inlinable_wrapped_args("#".to_doc(), elements, |e| e, |self_, e| self_.expr(e))
+        self.append_inlinable_wrapped_args(
+            "#".to_doc(),
+            elements,
+            |e| e,
+            |self_, e| match e {
+                // We want to make sure that long chains of binary operators and
+                // pipelines get nested when used as tuple items.
+                UntypedExpr::BinOp { .. } | UntypedExpr::PipeLine { .. } => {
+                    self_.expr(e).nest(INDENT)
+                }
+                _ => self_.expr(e),
+            },
+        )
     }
 
     // Appends to the given docs a comma-separated list of documents wrapped by
@@ -1267,7 +1279,11 @@ impl<'comments> Formatter<'comments> {
             None => nil(),
         }
         .append(match &arg.value {
-            UntypedExpr::BinOp { .. } => self.expr(&arg.value).group().nest(INDENT),
+            // We want to make sure that long chains of binary operators and
+            // pipelines get nested when used as function arguments.
+            UntypedExpr::BinOp { .. } | UntypedExpr::PipeLine { .. } => {
+                self.expr(&arg.value).group().nest(INDENT)
+            }
             _ => self.expr(&arg.value).group(),
         })
     }
@@ -1366,8 +1382,18 @@ impl<'comments> Formatter<'comments> {
         } else {
             break_(",", ", ")
         };
-        let elements = join(elements.iter().map(|e| self.expr(e).group()), comma)
-            .next_break_fits(NextBreakFitsMode::Disabled);
+        let elements = join(
+            elements.iter().map(|e| match e {
+                // We want to make sure that long chains of binary operators and
+                // pipelines get nested when used as list items.
+                UntypedExpr::BinOp { .. } | UntypedExpr::PipeLine { .. } => {
+                    self.expr(e).group().nest(INDENT)
+                }
+                _ => self.expr(e).group(),
+            }),
+            comma,
+        )
+        .next_break_fits(NextBreakFitsMode::Disabled);
 
         let doc = break_("[", "[").append(elements);
 

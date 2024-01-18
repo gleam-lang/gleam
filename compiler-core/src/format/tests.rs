@@ -2277,8 +2277,8 @@ fn expr_pipe() {
         r#"fn main() {
   #(
     1
-    |> succ
-    |> succ,
+      |> succ
+      |> succ,
     2,
     3,
   )
@@ -2290,8 +2290,8 @@ fn expr_pipe() {
         r#"fn main() {
   some_call(
     1
-    |> succ
-    |> succ,
+      |> succ
+      |> succ,
     2,
     3,
   )
@@ -2303,8 +2303,8 @@ fn expr_pipe() {
         r#"fn main() {
   [
     1
-    |> succ
-    |> succ,
+      |> succ
+      |> succ,
     2,
     3,
   ]
@@ -5382,7 +5382,7 @@ fn list_with_pipe_format() {
         r#"pub fn main() {
   [
     "Success!"
-    |> ansi(apply: [1, 31]),
+      |> ansi(apply: [1, 31]),
     "",
     "Wrote `" <> bin <> "`, `" <> pwsh_bin <> "`",
   ]
@@ -5456,6 +5456,50 @@ fn multiline_string_get_broken_on_newlines_as_function_arguments() {
        baz",
     foo,
     bar,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_used_as_function_arguments_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  foo(
+    a_variable_with_a_long_name
+      |> another_variable_with_a_long_name
+      |> yet_another_variable_with_a_long_name,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_list_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    foo,
+    a_variable_with_a_long_name
+      |> another_variable_with_a_long_name
+      |> yet_another_variable_with_a_long_name,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_tuple_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    foo,
+    a_variable_with_a_long_name
+      |> another_variable_with_a_long_name
+      |> yet_another_variable_with_a_long_name,
   )
 }
 "#
