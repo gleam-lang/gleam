@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-### Build tool changes
+### Build tool
 
 - The search bar in generated docs now has a darker background color.
 
