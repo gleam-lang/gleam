@@ -1,7 +1,7 @@
 use ecow::EcoString;
 use itertools::Itertools;
 
-use crate::{analyse::TargetSupport, build::Target, type_::expression::Implementations};
+use crate::{assert_module_error, build::Target, type_::expression::Implementations};
 
 use super::compile_module_with_target;
 
@@ -17,20 +17,14 @@ macro_rules! assert_targets {
 }
 
 pub fn implementations(src: &str) -> Vec<(EcoString, Implementations)> {
-    compile_module_with_target(
-        src,
-        None,
-        vec![],
-        Target::Erlang,
-        TargetSupport::NotEnforced,
-    )
-    .expect("compile src")
-    .type_info
-    .values
-    .into_iter()
-    .map(|(name, value)| (name, value.variant.implementations()))
-    .sorted()
-    .collect_vec()
+    compile_module_with_target(src, None, vec![], Target::Erlang)
+        .expect("compile src")
+        .type_info
+        .values
+        .into_iter()
+        .map(|(name, value)| (name, value.variant.implementations()))
+        .sorted()
+        .collect_vec()
 }
 
 #[test]
@@ -45,16 +39,16 @@ pub fn pure_gleam_2() { pure_gleam_1() * 2 }
                 "pure_gleam_1",
                 Implementations {
                     gleam: true,
-                    erlang: false,
-                    javascript: false,
+                    uses_erlang_externals: false,
+                    uses_javascript_externals: false,
                 }
             ),
             (
                 "pure_gleam_2",
                 Implementations {
                     gleam: true,
-                    erlang: false,
-                    javascript: false,
+                    uses_erlang_externals: false,
+                    uses_javascript_externals: false,
                 }
             )
         ],
@@ -75,16 +69,16 @@ pub fn erlang_only_2() { erlang_only_1() * 2 }
                 "erlang_only_1",
                 Implementations {
                     gleam: false,
-                    erlang: true,
-                    javascript: false,
+                    uses_erlang_externals: true,
+                    uses_javascript_externals: false,
                 }
             ),
             (
                 "erlang_only_2",
                 Implementations {
                     gleam: false,
-                    erlang: true,
-                    javascript: false,
+                    uses_erlang_externals: true,
+                    uses_javascript_externals: false,
                 }
             ),
         ],
@@ -106,16 +100,16 @@ pub fn all_externals_2() { all_externals_1() * 2 }
                 "all_externals_1",
                 Implementations {
                     gleam: false,
-                    erlang: true,
-                    javascript: true,
+                    uses_erlang_externals: true,
+                    uses_javascript_externals: true,
                 }
             ),
             (
                 "all_externals_2",
                 Implementations {
                     gleam: false,
-                    erlang: true,
-                    javascript: true,
+                    uses_erlang_externals: true,
+                    uses_javascript_externals: true,
                 }
             )
         ],
@@ -141,24 +135,24 @@ pub fn pure_gleam() {
                 "erlang_external_and_pure_body",
                 Implementations {
                     gleam: true,
-                    erlang: true,
-                    javascript: false,
+                    uses_erlang_externals: true,
+                    uses_javascript_externals: false,
                 }
             ),
             (
                 "javascript_external_and_pure_body",
                 Implementations {
                     gleam: true,
-                    erlang: false,
-                    javascript: true,
+                    uses_erlang_externals: false,
+                    uses_javascript_externals: true,
                 }
             ),
             (
                 "pure_gleam",
                 Implementations {
                     gleam: true,
-                    erlang: true,
-                    javascript: true,
+                    uses_erlang_externals: true,
+                    uses_javascript_externals: true,
                 }
             )
         ],
@@ -182,24 +176,24 @@ pub fn all_externals() -> Int { erlang_external_and_javascript_body() }
                 "all_externals",
                 Implementations {
                     gleam: false,
-                    erlang: true,
-                    javascript: true,
+                    uses_erlang_externals: true,
+                    uses_javascript_externals: true,
                 }
             ),
             (
                 "erlang_external_and_javascript_body",
                 Implementations {
                     gleam: false,
-                    erlang: true,
-                    javascript: true,
+                    uses_erlang_externals: true,
+                    uses_javascript_externals: true,
                 }
             ),
             (
                 "javascript_only",
                 Implementations {
                     gleam: false,
-                    erlang: false,
-                    javascript: true,
+                    uses_erlang_externals: false,
+                    uses_javascript_externals: true,
                 }
             ),
         ],
@@ -223,24 +217,24 @@ pub fn all_externals() -> Int { javascript_external_and_erlang_body() }
                 "all_externals",
                 Implementations {
                     gleam: false,
-                    erlang: true,
-                    javascript: true,
+                    uses_erlang_externals: true,
+                    uses_javascript_externals: true,
                 }
             ),
             (
                 "erlang_only",
                 Implementations {
                     gleam: false,
-                    erlang: true,
-                    javascript: false,
+                    uses_erlang_externals: true,
+                    uses_javascript_externals: false,
                 }
             ),
             (
                 "javascript_external_and_erlang_body",
                 Implementations {
                     gleam: false,
-                    erlang: true,
-                    javascript: true,
+                    uses_erlang_externals: true,
+                    uses_javascript_externals: true,
                 }
             ),
         ],
@@ -249,7 +243,7 @@ pub fn all_externals() -> Int { javascript_external_and_erlang_body() }
 
 #[test]
 pub fn function_with_no_valid_implementations() {
-    assert_targets!(
+    assert_module_error!(
         r#"
 @external(javascript, "foo", "bar")
 pub fn javascript_only() -> Int
@@ -261,32 +255,6 @@ pub fn main() {
     javascript_only()
     erlang_only()
 }
-"#,
-        vec![
-            (
-                "erlang_only",
-                Implementations {
-                    gleam: false,
-                    erlang: true,
-                    javascript: false,
-                }
-            ),
-            (
-                "javascript_only",
-                Implementations {
-                    gleam: false,
-                    erlang: false,
-                    javascript: true,
-                }
-            ),
-            (
-                "no_implementations",
-                Implementations {
-                    gleam: false,
-                    erlang: false,
-                    javascript: false,
-                }
-            )
-        ],
+"#
     );
 }

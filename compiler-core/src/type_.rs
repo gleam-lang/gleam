@@ -421,8 +421,8 @@ impl ValueConstructorVariant {
             | ValueConstructorVariant::LocalConstant { .. }
             | ValueConstructorVariant::LocalVariable { .. } => Implementations {
                 gleam: true,
-                javascript: false,
-                erlang: false,
+                uses_javascript_externals: false,
+                uses_erlang_externals: false,
             },
 
             ValueConstructorVariant::ModuleFn {

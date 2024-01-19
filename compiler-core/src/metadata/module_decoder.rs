@@ -448,8 +448,8 @@ impl ModuleDecoder {
     fn implementations(&self, reader: implementations::Reader<'_>) -> Implementations {
         Implementations {
             gleam: reader.get_gleam(),
-            erlang: reader.get_erlang(),
-            javascript: reader.get_javascript(),
+            uses_erlang_externals: reader.get_erlang(),
+            uses_javascript_externals: reader.get_javascript(),
         }
     }
 

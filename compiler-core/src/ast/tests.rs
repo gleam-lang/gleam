@@ -129,8 +129,8 @@ fn compile_expression(src: &str) -> TypedStatement {
         &mut environment,
         Implementations {
             gleam: false,
-            erlang: false,
-            javascript: false,
+            uses_erlang_externals: false,
+            uses_javascript_externals: false,
         },
     )
     .infer_statements(ast)

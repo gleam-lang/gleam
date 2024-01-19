@@ -38,10 +38,10 @@ pub struct Implementations {
     pub gleam: bool,
     /// Wether the function has an implementation that uses external erlang
     /// code.
-    pub erlang: bool,
+    pub uses_erlang_externals: bool,
     /// Wether the function has an implementation that uses external javascript
     /// code.
-    pub javascript: bool,
+    pub uses_javascript_externals: bool,
 }
 
 impl Implementations {
@@ -53,16 +53,17 @@ impl Implementations {
         // when those are added :)
         let Implementations {
             gleam,
-            erlang,
-            javascript,
+            uses_erlang_externals,
+            uses_javascript_externals,
         } = implementations;
 
         // If a pure-Gleam function uses a function that doesn't have a pure
         // Gleam implementation, then it's no longer pure-Gleam.
         self.gleam = self.gleam && *gleam;
-        // If a function uses a function that has an erlang specific (or
-        // javascript specific) implementation then it is considered as having
-        // a target specific implementation as well.
+
+        // If a function uses a function that relies on external code (be it
+        // javascript or erlang) then it's considered as using external code as
+        // well.
         //
         // For example:
         // ```gleam
@@ -73,12 +74,14 @@ impl Implementations {
         //
         // pub fn main() { erlang_only_with_pure_gleam_default() }
         // ```
-        // Both functions will end up having the following `Implementations`:
-        // `Implementations { gleam: true, erlang: true, javascript: false}`.
+        // Both functions will end up using external erlang code and have the
+        // following implementations:
+        // `Implementations { gleam: true, uses_erlang_externals: true, uses_javascript_externals: false}`.
         // They have a pure gleam implementation and an erlang specific external
         // implementation.
-        self.erlang = self.erlang || *erlang;
-        self.javascript = self.javascript || *javascript;
+        self.uses_erlang_externals = self.uses_erlang_externals || *uses_erlang_externals;
+        self.uses_javascript_externals =
+            self.uses_javascript_externals || *uses_javascript_externals;
     }
 
     /// Returns true if the current target is supported by the given
@@ -88,8 +91,8 @@ impl Implementations {
     pub fn supports(&self, target: Target) -> bool {
         self.gleam
             || match target {
-                Target::Erlang => self.erlang,
-                Target::JavaScript => self.javascript,
+                Target::Erlang => self.uses_erlang_externals,
+                Target::JavaScript => self.uses_javascript_externals,
             }
     }
 }

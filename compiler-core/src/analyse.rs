@@ -627,8 +627,8 @@ fn infer_function(
 
     let external_implementations = Implementations {
         gleam: false,
-        erlang: external_erlang.is_some(),
-        javascript: external_javascript.is_some(),
+        uses_erlang_externals: external_erlang.is_some(),
+        uses_javascript_externals: external_javascript.is_some(),
     };
 
     // Infer the type using the preregistered args + return types as a starting point
@@ -939,8 +939,8 @@ fn infer_module_constant(
         environment,
         Implementations {
             gleam: false,
-            erlang: false,
-            javascript: false,
+            uses_erlang_externals: false,
+            uses_javascript_externals: false,
         },
     );
     let typed_expr = expr_typer.infer_const(&annotation, *value)?;
