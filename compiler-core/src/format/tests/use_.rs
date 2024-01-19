@@ -201,7 +201,7 @@ fn arity_1_var_call() {
         r#"pub fn main() {
   use x, y <- await(
     file.read()
-      |> promise.map(something),
+    |> promise.map(something),
   )
 }
 "#
@@ -214,7 +214,7 @@ fn arity_1_access_call() {
         r#"pub fn main() {
   use x, y <- promise.await(
     file.read()
-      |> promise.map(something),
+    |> promise.map(something),
   )
 }
 "#
