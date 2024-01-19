@@ -179,6 +179,21 @@ fn binop_used_as_function_arguments_gets_nested() {
     a_variable_with_a_long_name
       <> another_variable_with_a_long_name
       <> yet_another_variable_with_a_long_name,
+    bar,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn binop_is_not_nested_if_the_only_argument() {
+    assert_format!(
+        r#"pub fn main() {
+  foo(
+    a_variable_with_a_long_name
+    <> another_variable_with_a_long_name
+    <> yet_another_variable_with_a_long_name,
   )
 }
 "#
@@ -201,6 +216,20 @@ fn binop_inside_list_gets_nested() {
 }
 
 #[test]
+fn binop_inside_list_is_not_nested_if_only_item() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    a_variable_with_a_long_name
+    <> another_variable_with_a_long_name
+    <> yet_another_variable_with_a_long_name,
+  ]
+}
+"#
+    );
+}
+
+#[test]
 fn binop_inside_tuple_gets_nested() {
     assert_format!(
         r#"pub fn main() {
@@ -209,6 +238,20 @@ fn binop_inside_tuple_gets_nested() {
     a_variable_with_a_long_name
       <> another_variable_with_a_long_name
       <> yet_another_variable_with_a_long_name,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn binop_inside_tuple_is_not_nested_if_only_item() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    a_variable_with_a_long_name
+    <> another_variable_with_a_long_name
+    <> yet_another_variable_with_a_long_name,
   )
 }
 "#

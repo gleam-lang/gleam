@@ -885,11 +885,12 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::NegateInt { .. } => self.expr(fun),
         };
 
+        let arity = args.len();
         self.append_inlinable_wrapped_args(
             expr,
             args,
             |arg| &arg.value,
-            |self_, arg| self_.call_arg(arg),
+            |self_, arg| self_.call_arg(arg, arity),
         )
     }
 
@@ -898,13 +899,16 @@ impl<'comments> Formatter<'comments> {
             "#".to_doc(),
             elements,
             |e| e,
-            |self_, e| match e {
-                // We want to make sure that long chains of binary operators and
-                // pipelines get nested when used as tuple items.
-                UntypedExpr::BinOp { .. } | UntypedExpr::PipeLine { .. } => {
-                    self_.expr(e).nest(INDENT)
+            |self_, e| {
+                // If there's more than one item in the tuple and there's a
+                // pipeline or long binary chain, we want to indent those to
+                // make it easier to tell where one item ends and the other
+                // starts.
+                if elements.len() > 1 && (e.is_binop() || e.is_pipeline()) {
+                    self_.expr(e).group().nest(INDENT)
+                } else {
+                    self_.expr(e).group()
                 }
-                _ => self_.expr(e),
             },
         )
     }
@@ -1093,6 +1097,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             }) if name == CAPTURE_VARIABLE
         );
+        let arity = args.len();
 
         if hole_in_first_position && args.len() == 1 {
             // x |> fun(_)
@@ -1100,11 +1105,11 @@ impl<'comments> Formatter<'comments> {
         } else if hole_in_first_position {
             // x |> fun(_, 2, 3)
             self.expr(fun)
-                .append(wrap_args(args.iter().skip(1).map(|a| self.call_arg(a))).group())
+                .append(wrap_args(args.iter().skip(1).map(|a| self.call_arg(a, arity))).group())
         } else {
             // x |> fun(1, _, 3)
             self.expr(fun)
-                .append(wrap_args(args.iter().map(|a| self.call_arg(a))).group())
+                .append(wrap_args(args.iter().map(|a| self.call_arg(a, arity))).group())
         }
     }
 
@@ -1119,19 +1124,24 @@ impl<'comments> Formatter<'comments> {
                 fun,
                 arguments: args,
                 ..
-            })) => match args.as_slice() {
-                [first, second] if is_breakable_expr(&second.value) && first.is_capture_hole() => {
-                    self.expr(fun)
-                        .append("(_, ")
-                        .append(self.call_arg(second))
-                        .append(")")
-                        .group()
-                }
+            })) => {
+                let arity = args.len();
+                match args.as_slice() {
+                    [first, second]
+                        if is_breakable_expr(&second.value) && first.is_capture_hole() =>
+                    {
+                        self.expr(fun)
+                            .append("(_, ")
+                            .append(self.call_arg(second, arity))
+                            .append(")")
+                            .group()
+                    }
 
-                _ => self
-                    .expr(fun)
-                    .append(wrap_args(args.iter().map(|a| self.call_arg(a))).group()),
-            },
+                    _ => self
+                        .expr(fun)
+                        .append(wrap_args(args.iter().map(|a| self.call_arg(a, arity))).group()),
+                }
+            }
 
             // The body of a capture being not a fn shouldn't be possible...
             _ => panic!("Function capture body found not to be a call in the formatter"),
@@ -1270,7 +1280,7 @@ impl<'comments> Formatter<'comments> {
         }))
     }
 
-    fn call_arg<'a>(&mut self, arg: &'a CallArg<UntypedExpr>) -> Document<'a> {
+    fn call_arg<'a>(&mut self, arg: &'a CallArg<UntypedExpr>, arity: usize) -> Document<'a> {
         match &arg.label {
             Some(s) => commented(
                 s.to_doc().append(": "),
@@ -1278,14 +1288,17 @@ impl<'comments> Formatter<'comments> {
             ),
             None => nil(),
         }
-        .append(match &arg.value {
-            // We want to make sure that long chains of binary operators and
-            // pipelines get nested when used as function arguments.
-            UntypedExpr::BinOp { .. } | UntypedExpr::PipeLine { .. } => {
+        .append(
+            // If there's more than one item in the tuple and there's a
+            // pipeline or long binary chain, we want to indent those to
+            // make it easier to tell where one item ends and the other
+            // starts.
+            if arity > 1 && (arg.value.is_binop() || arg.value.is_pipeline()) {
                 self.expr(&arg.value).group().nest(INDENT)
-            }
-            _ => self.expr(&arg.value).group(),
-        })
+            } else {
+                self.expr(&arg.value).group()
+            },
+        )
     }
 
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
@@ -1382,15 +1395,25 @@ impl<'comments> Formatter<'comments> {
         } else {
             break_(",", ", ")
         };
+
+        let list_size = elements.len()
+            + match tail {
+                Some(_) => 1,
+                None => 0,
+            };
+
         let elements = join(
-            elements.iter().map(|e| match e {
-                // We want to make sure that long chains of binary operators and
-                // pipelines get nested when used as list items.
-                UntypedExpr::BinOp { .. } | UntypedExpr::PipeLine { .. } => {
+            elements.iter().map(|e|
+                // If there's more than one item in the tuple and there's a
+                // pipeline or long binary chain, we want to indent those to
+                // make it easier to tell where one item ends and the other
+                // starts.
+                if list_size > 1 && (e.is_binop() || e.is_pipeline()) {
                     self.expr(e).group().nest(INDENT)
+                } else {
+                    self.expr(e).group()
                 }
-                _ => self.expr(e).group(),
-            }),
+            ),
             comma,
         )
         .next_break_fits(NextBreakFitsMode::Disabled);
