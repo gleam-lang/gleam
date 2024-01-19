@@ -39,8 +39,8 @@ fn parse_and_order(
             external_javascript: None,
             implementations: Implementations {
                 gleam: true,
-                erlang: true,
-                javascript: false,
+                uses_erlang_externals: true,
+                uses_javascript_externals: false,
             },
         })
         .collect_vec();
@@ -57,8 +57,8 @@ fn parse_and_order(
                 value: Box::from(const_value),
                 implementations: Implementations {
                     gleam: true,
-                    erlang: true,
-                    javascript: false,
+                    uses_erlang_externals: true,
+                    uses_javascript_externals: false,
                 },
                 type_: (),
                 deprecation: Deprecation::NotDeprecated,
