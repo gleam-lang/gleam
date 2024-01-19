@@ -530,12 +530,12 @@ impl<'comments> Formatter<'comments> {
         }
         .group();
 
-        let head = attributes.append(signature);
-
         let body = &function.body;
         if body.len() == 1 && body.first().is_placeholder() {
-            return head;
+            return attributes.append(signature);
         }
+
+        let head = attributes.append(signature);
 
         // Format body
         let body = self.statements(body);

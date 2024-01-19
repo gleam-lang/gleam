@@ -570,6 +570,7 @@ fn infer_module_type_retention_test() {
     assert_eq!(
         module.type_info,
         ModuleInterface {
+            contains_todo: false,
             origin: Origin::Src,
             package: "thepackage".into(),
             name: "ok".into(),
@@ -2154,4 +2155,16 @@ pub fn main() {
   module.javascript_only_constant()
 }",
     );
+}
+
+#[test]
+fn contains_todo_true() {
+    let module = compile_module("pub fn main() { 1 }", None, vec![]).unwrap();
+    assert!(!module.type_info.contains_todo);
+}
+
+#[test]
+fn contains_todo_false() {
+    let module = compile_module("pub fn main() { todo }", None, vec![]).unwrap();
+    assert!(module.type_info.contains_todo);
 }

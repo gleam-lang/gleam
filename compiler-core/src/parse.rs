@@ -257,12 +257,12 @@ where
             // Module Constants
             (Some((_, Token::Const, _)), _) => {
                 self.advance();
-                self.parse_module_const(false)
+                self.parse_module_const(false, &attributes)
             }
             (Some((_, Token::Pub, _)), Some((_, Token::Const, _))) => {
                 self.advance();
                 self.advance();
-                self.parse_module_const(true)
+                self.parse_module_const(true, &attributes)
             }
 
             // Function
@@ -2150,6 +2150,7 @@ where
     fn parse_module_const(
         &mut self,
         public: bool,
+        attributes: &Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let (start, name, end) = self.expect_name()?;
         let documentation = self.take_documentation(start);
@@ -2167,6 +2168,7 @@ where
                 value: Box::new(value),
                 type_: (),
                 supported_targets: SupportedTargets::all(),
+                deprecation: attributes.deprecated.clone(),
             })))
         } else {
             parse_error(

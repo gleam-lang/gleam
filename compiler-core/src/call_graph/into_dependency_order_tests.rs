@@ -53,6 +53,7 @@ fn parse_and_order(
                 value: Box::from(const_value),
                 supported_targets: SupportedTargets::all(),
                 type_: (),
+                deprecation: Deprecation::NotDeprecated,
             }
         })
         .collect_vec();

@@ -246,6 +246,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("The --javascript-prelude flag must be given when compiling to JavaScript")]
     JavaScriptPreludeRequired,
+
+    #[error("The modules {unfinished:?} contain todo expressions and so cannot be published")]
+    CannotPublishTodo { unfinished: Vec<EcoString> },
 }
 
 impl Error {
@@ -534,7 +537,7 @@ forward slash and must not end with a slash."
                 level: Level::Error,
                 location: None,
                 hint: Some(format!(
-                    "Add a function with the singature `pub fn main() {{}}` \
+                    "Add a public `main` function to \
 to `src/{module}.gleam`."
                 )),
             },
@@ -572,6 +575,25 @@ to `src/{module}.gleam`."
 If you want to overwrite these files, delete them and run the command again.
 ",
                     file_names
+                        .iter()
+                        .map(|name| format!("  - {}", name.as_str()))
+                        .join("\n")
+                ),
+                level: Level::Error,
+                hint: None,
+                location: None,
+            },
+
+            Error::CannotPublishTodo { unfinished } => Diagnostic {
+                title: "Cannot publish unfinished code".into(),
+                text: format!(
+                    "These modules contain todo expressions and cannot be published:
+
+{}
+
+Please remove them and try again.
+",
+                    unfinished
                         .iter()
                         .map(|name| format!("  - {}", name.as_str()))
                         .join("\n")
