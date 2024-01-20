@@ -643,10 +643,11 @@ fn code_action_inline_variable(
 
     if !inline_refactors.is_empty() {
         for refactor in inline_refactors {
-            let range_inline_destination = src_span_to_lsp_range(refactor.1, &line_numbers);
+            let range_inline_destination =
+                src_span_to_lsp_range(refactor.destination, &line_numbers);
             if range_includes(&params.range, &range_inline_destination) {
                 edits.push(lsp_types::TextEdit {
-                    range: src_span_to_lsp_range(refactor.0, &line_numbers),
+                    range: src_span_to_lsp_range(refactor.source, &line_numbers),
                     new_text: "".into(),
                 });
 
@@ -655,7 +656,7 @@ fn code_action_inline_variable(
                     new_text: format!(
                         "{}",
                         refactor
-                            .2
+                            .typed_expr
                             .expect("Expected a source expression for the actual inlining")
                             .to_string()
                     ),
@@ -675,11 +676,7 @@ fn code_action_inline_variable(
 
 fn detect_possible_variable_inlining<'a>(
     function: &'a Function<Arc<Type>, TypedExpr>,
-    inline_refactors: &mut Vec<(
-        crate::ast::SrcSpan,
-        crate::ast::SrcSpan,
-        Option<&'a TypedExpr>,
-    )>,
+    inline_refactors: &mut Vec<InlineRefactor<'a>>,
 ) {
     let assign_statements: Vec<&Statement<Arc<Type>, TypedExpr>> = function
         .body
@@ -695,11 +692,7 @@ fn detect_possible_variable_inlining<'a>(
 fn inline_statement<'a>(
     statement: &Statement<Arc<Type>, TypedExpr>,
     assign_statements: &Vec<&'a Statement<Arc<Type>, TypedExpr>>,
-    expressions_to_inline: &mut Vec<(
-        crate::ast::SrcSpan,
-        crate::ast::SrcSpan,
-        Option<&'a TypedExpr>,
-    )>,
+    expressions_to_inline: &mut Vec<InlineRefactor<'a>>,
 ) {
     if let Statement::Assignment(assign) = statement {
         determine_possible_inlining_for_typedexpr(
@@ -717,11 +710,7 @@ fn inline_statement<'a>(
 fn determine_possible_inlining_for_typedexpr<'a>(
     expr: &TypedExpr,
     assign_statements: &Vec<&'a Statement<Arc<Type>, TypedExpr>>,
-    expressions_to_inline: &mut Vec<(
-        crate::ast::SrcSpan,
-        crate::ast::SrcSpan,
-        Option<&'a TypedExpr>,
-    )>,
+    expressions_to_inline: &mut Vec<InlineRefactor<'a>>,
 ) {
     if let TypedExpr::Var { constructor, .. } = expr {
         try_to_inline_expr(constructor, assign_statements, expr, expressions_to_inline);
@@ -773,11 +762,7 @@ fn try_to_inline_expr<'a>(
     constructor: &crate::type_::ValueConstructor,
     assign_statements: &Vec<&'a Statement<Arc<Type>, TypedExpr>>,
     value: &TypedExpr,
-    expressions_to_inline: &mut Vec<(
-        crate::ast::SrcSpan,
-        crate::ast::SrcSpan,
-        Option<&'a TypedExpr>,
-    )>,
+    expressions_to_inline: &mut Vec<InlineRefactor<'a>>,
 ) {
     if let ValueConstructorVariant::LocalVariable { location } = constructor.variant {
         // hier checken in assign_statements of daar de assignment in voorkomt...
@@ -815,18 +800,28 @@ fn try_to_inline_expr<'a>(
                 }) {
                     if let Some(typedexpr) = found.get_value() {
                         callarg.value = typedexpr.clone();
-                        expressions_to_inline.push((
-                            found.location(),
-                            callarg.location,
-                            found.get_value(),
-                        ));
+                        expressions_to_inline.push(InlineRefactor {
+                            source: found.location(),
+                            destination: callarg.location,
+                            typed_expr: found.get_value(),
+                        })
                     }
                 }
             }
 
             if let TypedExpr::Var { location, .. } = value.clone() {
-                expressions_to_inline.push((found.location(), location, found.get_value()));
+                expressions_to_inline.push(InlineRefactor {
+                    source: found.location(),
+                    destination: location,
+                    typed_expr: found.get_value(),
+                });
             }
         }
     }
+}
+
+struct InlineRefactor<'a> {
+    source: SrcSpan,
+    destination: SrcSpan,
+    typed_expr: Option<&'a TypedExpr>,
 }
