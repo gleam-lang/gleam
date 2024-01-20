@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, Pattern, Statement, TypedDefinition,
-        TypedExpr, TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, Pattern, SrcSpan, Statement,
+        TypedDefinition, TypedExpr, TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -18,6 +18,7 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use lsp::CodeAction;
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
+use spdx::expression;
 use std::sync::Arc;
 use strum::IntoEnumIterator;
 
@@ -663,11 +664,13 @@ fn code_action_inline_variable(
         }
     }
 
-    CodeActionBuilder::new("Inline Variable Refactor")
-        .kind(lsp_types::CodeActionKind::REFACTOR_INLINE)
-        .changes(uri.clone(), edits)
-        .preferred(true)
-        .push_to(actions);
+    if !edits.is_empty() {
+        CodeActionBuilder::new("Inline Variable Refactor")
+            .kind(lsp_types::CodeActionKind::REFACTOR_INLINE)
+            .changes(uri.clone(), edits)
+            .preferred(true)
+            .push_to(actions);
+    }
 }
 
 fn detect_possible_variable_inlining<'a>(
@@ -685,18 +688,12 @@ fn detect_possible_variable_inlining<'a>(
         .collect();
 
     for statement in function.body.iter() {
-        if let Statement::Assignment(assign) = statement {
-            determine_possible_inlining(&assign.value, &assign_statements, inline_refactors)
-        }
-
-        if let Statement::Expression(expr) = statement {
-            // inline_refactors.push(determine_possible_inlining(expr, &assign_statements));
-        }
+        inline_statement(statement, &assign_statements, inline_refactors)
     }
 }
 
-fn determine_possible_inlining<'a>(
-    value: &TypedExpr,
+fn inline_statement<'a>(
+    statement: &Statement<Arc<Type>, TypedExpr>,
     assign_statements: &Vec<&'a Statement<Arc<Type>, TypedExpr>>,
     expressions_to_inline: &mut Vec<(
         crate::ast::SrcSpan,
@@ -704,67 +701,132 @@ fn determine_possible_inlining<'a>(
         Option<&'a TypedExpr>,
     )>,
 ) {
-    if let TypedExpr::Call { args, .. } = value {
+    if let Statement::Assignment(assign) = statement {
+        determine_possible_inlining_for_typedexpr(
+            &assign.value,
+            assign_statements,
+            expressions_to_inline,
+        );
+    }
+
+    if let Statement::Expression(expr) = statement {
+        determine_possible_inlining_for_typedexpr(expr, assign_statements, expressions_to_inline)
+    }
+}
+
+fn determine_possible_inlining_for_typedexpr<'a>(
+    expr: &TypedExpr,
+    assign_statements: &Vec<&'a Statement<Arc<Type>, TypedExpr>>,
+    expressions_to_inline: &mut Vec<(
+        crate::ast::SrcSpan,
+        crate::ast::SrcSpan,
+        Option<&'a TypedExpr>,
+    )>,
+) {
+    if let TypedExpr::Var { constructor, .. } = expr {
+        try_to_inline_expr(constructor, assign_statements, expr, expressions_to_inline);
+    }
+
+    if let TypedExpr::Call { args, .. } = expr {
         for arg in args {
             if let TypedExpr::Call { .. } = &arg.value {
-                determine_possible_inlining(&arg.value, assign_statements, expressions_to_inline)
+                determine_possible_inlining_for_typedexpr(
+                    &arg.value,
+                    assign_statements,
+                    expressions_to_inline,
+                )
             }
             if let TypedExpr::Var { constructor, .. } = &arg.value {
-                if let ValueConstructorVariant::LocalVariable { location } = constructor.variant {
-                    // hier checken in assign_statements of daar de assignment in voorkomt...
-                    let result = assign_statements.iter().find(|assignment| {
-                        if let Statement::Assignment(assign) = assignment {
-                            let loc_assign = assign.pattern.location();
-
-                            loc_assign.start == location.start && loc_assign.end == location.end
-                        } else {
-                            false
-                        }
-                    });
-
-                    if let Some(found) = result {
-                        if let TypedExpr::Call {
-                            location,
-                            typ,
-                            fun,
-                            mut args,
-                        } = value.clone()
-                        {
-                            let loc_inlinable_assign = match found {
-                                Statement::Expression(expr) => todo!(),
-                                Statement::Assignment(assign) => assign.pattern.location(),
-                                Statement::Use(_) => todo!(),
-                            };
-
-                            if let Some(callarg) = args.iter_mut().find(|callarg| {
-                                if let TypedExpr::Var { .. } = callarg.value {
-                                    if let ValueConstructorVariant::LocalVariable { location } =
-                                        constructor.variant
-                                    {
-                                        location.start == loc_inlinable_assign.start
-                                            && location.end == loc_inlinable_assign.end
-                                    } else {
-                                        false
-                                    }
-                                } else {
-                                    false
-                                }
-                            }) {
-                                if let Some(typedexpr) = found.get_value() {
-                                    callarg.value = typedexpr.clone();
-                                    expressions_to_inline.push((
-                                        found.location(),
-                                        callarg.location,
-                                        found.get_value(),
-                                    ));
-                                }
-                            }
-                        }
-                    }
-                }
+                try_to_inline_expr(constructor, assign_statements, expr, expressions_to_inline);
             }
         }
     }
 
-    //Ook hier een if let op de pipeline inbouwen...
+    if let TypedExpr::Pipeline {
+        location: _,
+        assignments,
+        finally,
+    } = expr
+    {
+        assignments.iter().for_each(|assignment| {
+            determine_possible_inlining_for_typedexpr(
+                &assignment.value,
+                assign_statements,
+                expressions_to_inline,
+            )
+        });
+
+        determine_possible_inlining_for_typedexpr(
+            &finally,
+            assign_statements,
+            expressions_to_inline,
+        );
+    }
+
+    if let TypedExpr::BinOp { left, right, .. } = expr {
+        determine_possible_inlining_for_typedexpr(left, assign_statements, expressions_to_inline);
+        determine_possible_inlining_for_typedexpr(right, assign_statements, expressions_to_inline);
+    }
+}
+
+fn try_to_inline_expr<'a>(
+    constructor: &crate::type_::ValueConstructor,
+    assign_statements: &Vec<&'a Statement<Arc<Type>, TypedExpr>>,
+    value: &TypedExpr,
+    expressions_to_inline: &mut Vec<(
+        crate::ast::SrcSpan,
+        crate::ast::SrcSpan,
+        Option<&'a TypedExpr>,
+    )>,
+) {
+    if let ValueConstructorVariant::LocalVariable { location } = constructor.variant {
+        // hier checken in assign_statements of daar de assignment in voorkomt...
+        let result = assign_statements.iter().find(|assignment| {
+            if let Statement::Assignment(assign) = assignment {
+                let loc_assign = assign.pattern.location();
+
+                loc_assign.start == location.start && loc_assign.end == location.end
+            } else {
+                false
+            }
+        });
+
+        if let Some(found) = result {
+            if let TypedExpr::Call { mut args, .. } = value.clone() {
+                let loc_inlinable_assign = match found {
+                    Statement::Expression(expr) => todo!(),
+                    Statement::Assignment(assign) => assign.pattern.location(),
+                    Statement::Use(_) => todo!(),
+                };
+
+                if let Some(callarg) = args.iter_mut().find(|callarg| {
+                    if let TypedExpr::Var { .. } = callarg.value {
+                        if let ValueConstructorVariant::LocalVariable { location } =
+                            constructor.variant
+                        {
+                            location.start == loc_inlinable_assign.start
+                                && location.end == loc_inlinable_assign.end
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                }) {
+                    if let Some(typedexpr) = found.get_value() {
+                        callarg.value = typedexpr.clone();
+                        expressions_to_inline.push((
+                            found.location(),
+                            callarg.location,
+                            found.get_value(),
+                        ));
+                    }
+                }
+            }
+
+            if let TypedExpr::Var { location, .. } = value.clone() {
+                expressions_to_inline.push((found.location(), location, found.get_value()));
+            }
+        }
+    }
 }

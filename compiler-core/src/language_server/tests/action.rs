@@ -326,8 +326,36 @@ fn main() {
 }
 ";
 
-    let position_start = Position::new(7, 0);
-    let position_end = Position::new(7, 61);
+    let position_start = Position::new(6, 0);
+    let position_end = Position::new(6, 61);
+
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
+}
+
+#[test]
+fn test_inline_variable_refactor_var() {
+    let code = "
+import list
+
+fn main() {
+  let x = 1
+  let y = x + 1
+}
+";
+    let expected = "
+import list
+
+fn main() {
+  
+  let y = 1 + 1
+}
+";
+
+    let position_start = Position::new(5, 0);
+    let position_end = Position::new(5, 61);
 
     assert_eq!(
         inline_variable_refactor(code, position_start, position_end),
