@@ -252,7 +252,7 @@ fn statements_interfaces(
                 let _ = values.insert(
                     name.clone(),
                     ValueInterface {
-                        implementations: implementations.clone(),
+                        implementations: *implementations,
                         type_: TypeInterface::from_type(type_.as_ref()),
                         deprecation: DeprecationInterface::from_deprecation(deprecation),
                         documentation: documentation.clone(),
@@ -280,7 +280,7 @@ fn statements_interfaces(
                 let _ = values.insert(
                     name.clone(),
                     ValueInterface {
-                        implementations: implementations.clone(),
+                        implementations: *implementations,
                         deprecation: DeprecationInterface::from_deprecation(deprecation),
                         documentation: documentation.clone(),
                         type_: TypeInterface::Fn {
