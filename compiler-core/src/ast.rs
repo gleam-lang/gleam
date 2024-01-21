@@ -633,6 +633,16 @@ impl<A, B, C, E> Definition<A, B, C, E> {
             }
         }
     }
+
+    pub fn is_internal(&self) -> bool {
+        match self {
+            Definition::Function(Function { internal, .. })
+            | Definition::TypeAlias(TypeAlias { internal, .. })
+            | Definition::ModuleConstant(ModuleConstant { internal, .. })
+            | Definition::CustomType(CustomType { internal, .. }) => *internal,
+            Definition::Import(_) => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
