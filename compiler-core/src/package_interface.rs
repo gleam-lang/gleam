@@ -132,6 +132,7 @@ impl PackageInterface {
             modules: package
                 .modules
                 .iter()
+                .filter(|module| !package.config.is_internal_module(module.name.as_str()))
                 .map(|module| (module.name.clone(), ModuleInterface::from_module(module)))
                 .collect(),
         }
