@@ -796,6 +796,7 @@ impl TypeVar {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeConstructor {
     pub public: bool,
+    pub internal: bool,
     pub origin: SrcSpan,
     pub module: EcoString,
     pub parameters: Vec<Arc<Type>>,
@@ -812,6 +813,7 @@ impl TypeConstructor {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValueConstructor {
     pub public: bool,
+    pub internal: bool,
     pub deprecation: Deprecation,
     pub variant: ValueConstructorVariant,
     pub type_: Arc<Type>,

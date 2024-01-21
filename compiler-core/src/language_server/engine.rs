@@ -351,6 +351,9 @@ where
 
         // Module types
         for (name, type_) in &module.ast.type_info.types {
+            if type_.internal {
+                continue;
+            }
             completions.push(type_completion(None, name, type_));
         }
 
@@ -365,7 +368,7 @@ where
 
             // Qualified types
             for (name, type_) in &module.types {
-                if !type_.public {
+                if !type_.public || type_.internal {
                     continue;
                 }
 
@@ -377,10 +380,13 @@ where
 
             // Unqualified types
             for unqualified in &import.unqualified_types {
-                let Some(type_) = module.get_public_type(&unqualified.name) else {
-                    continue;
-                };
-                completions.push(type_completion(None, unqualified.used_name(), type_));
+                match module.get_public_type(&unqualified.name) {
+                    Some(type_) if type_.internal => continue,
+                    Some(type_) => {
+                        completions.push(type_completion(None, unqualified.used_name(), type_))
+                    }
+                    None => continue,
+                }
             }
         }
 
@@ -406,7 +412,7 @@ where
 
             // Qualified values
             for (name, value) in &module.values {
-                if !value.public {
+                if !value.public || value.internal {
                     continue;
                 }
 
@@ -418,10 +424,13 @@ where
 
             // Unqualified values
             for unqualified in &import.unqualified_values {
-                let Some(value) = module.get_public_value(&unqualified.name) else {
-                    continue;
-                };
-                completions.push(value_completion(None, unqualified.used_name(), value));
+                match module.get_public_value(&unqualified.name) {
+                    Some(value) if value.internal => continue,
+                    Some(value) => {
+                        completions.push(value_completion(None, unqualified.used_name(), value))
+                    }
+                    None => continue,
+                }
             }
         }
 

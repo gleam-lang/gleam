@@ -190,6 +190,7 @@ pub fn link(type_: Arc<Type>) -> Arc<Type> {
 
 pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
     let value = |variant, type_| ValueConstructor {
+        internal: false,
         public: true,
         deprecation: NotDeprecated,
         variant,
@@ -217,6 +218,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     typ: bits(),
                     module: PRELUDE_MODULE_NAME.into(),
                     public: true,
+                    internal: false,
                     deprecation: NotDeprecated,
                 };
                 let _ = prelude.types.insert(BIT_ARRAY.into(), v.clone());
@@ -279,6 +281,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: bool(),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        internal: false,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -293,6 +296,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: float(),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        internal: false,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -307,6 +311,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         origin: Default::default(),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        internal: false,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -322,6 +327,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: list(list_parameter),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        internal: false,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -352,6 +358,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: nil(),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        internal: false,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -380,6 +387,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: result(result_value.clone(), result_error.clone()),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        internal: false,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -450,6 +458,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: string(),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        internal: false,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -464,6 +473,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: utf_codepoint(),
                         module: PRELUDE_MODULE_NAME.into(),
                         public: true,
+                        internal: false,
                         deprecation: NotDeprecated,
                     },
                 );

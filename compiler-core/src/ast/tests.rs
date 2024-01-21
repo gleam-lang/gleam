@@ -98,6 +98,7 @@ fn compile_expression(src: &str) -> TypedStatement {
         variant,
         type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),
         true,
+        false,
         Deprecation::NotDeprecated,
     );
 
@@ -203,6 +204,7 @@ wibble}"#,
         constructor: ValueConstructor {
             deprecation: Deprecation::NotDeprecated,
             public: false,
+            internal: false,
             variant: ValueConstructorVariant::LocalVariable {
                 location: SrcSpan { start: 5, end: 11 },
             },
@@ -488,6 +490,7 @@ fn find_node_bool() {
         constructor: ValueConstructor {
             deprecation: Deprecation::NotDeprecated,
             public: true,
+            internal: false,
             variant: ValueConstructorVariant::Record {
                 documentation: None,
                 constructors_count: 2,

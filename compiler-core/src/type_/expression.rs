@@ -1934,6 +1934,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             variant,
             type_: typ,
             deprecation,
+            internal,
         } = constructor;
 
         // Emit a warning if the value being used is deprecated.
@@ -1954,6 +1955,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             deprecation,
             variant,
             type_: typ,
+            internal,
         })
     }
 

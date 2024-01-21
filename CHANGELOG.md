@@ -115,6 +115,9 @@
 
 ### Language changes
 
+- The `@internal` attribute can now be used to annotate definitions.
+  This will hide those definitions from the generated docuentation,
+  autocompletions and the exported module interface.
 - Using a reserved word is now a compile error, not a warning.
 - Inexhaustive matches are now compile errors, not warnings.
 - The warning for an unused module alias now shows how to not assign a name to
@@ -131,9 +134,9 @@
 
 ### Build tool
 
+- The search bar in generated docs now has a darker background color.
 - If a package contains a `todo` expression then the build tool will now refuse
   to publish it to Hex.
-- The search bar in generated docs now has a darker background color.
 - `gleam export` now takes a `package-interface` option to export a json file
   containing metadata about the root package.
 - `gleam docs build` now creates a json file containing metadata about the root

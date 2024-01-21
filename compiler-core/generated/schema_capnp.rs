@@ -1212,6 +1212,10 @@ pub mod type_constructor {
     pub fn has_deprecated(&self) -> bool {
       !self.reader.get_pointer_field(3).is_null()
     }
+    #[inline]
+    pub fn get_internal(self) -> bool {
+      self.reader.get_bool_field(1)
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -1333,6 +1337,14 @@ pub mod type_constructor {
     #[inline]
     pub fn has_deprecated(&self) -> bool {
       !self.builder.get_pointer_field(3).is_null()
+    }
+    #[inline]
+    pub fn get_internal(self) -> bool {
+      self.builder.get_bool_field(1)
+    }
+    #[inline]
+    pub fn set_internal(&mut self, value: bool)  {
+      self.builder.set_bool_field(1, value);
     }
   }
 
@@ -2606,6 +2618,10 @@ pub mod value_constructor {
     pub fn has_deprecated(&self) -> bool {
       !self.reader.get_pointer_field(2).is_null()
     }
+    #[inline]
+    pub fn get_internal(self) -> bool {
+      self.reader.get_bool_field(1)
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -2711,6 +2727,14 @@ pub mod value_constructor {
     #[inline]
     pub fn has_deprecated(&self) -> bool {
       !self.builder.get_pointer_field(2).is_null()
+    }
+    #[inline]
+    pub fn get_internal(self) -> bool {
+      self.builder.get_bool_field(1)
+    }
+    #[inline]
+    pub fn set_internal(&mut self, value: bool)  {
+      self.builder.set_bool_field(1, value);
     }
   }
 

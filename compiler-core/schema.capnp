@@ -52,6 +52,7 @@ struct TypeConstructor {
   parameters @1 :List(Type); 
   module @2 :Text;
   public @3 :Bool;
+  internal @5 :Bool;
   deprecated @4 :Text;
 }
 
@@ -94,6 +95,7 @@ struct ValueConstructor {
   type @0 :Type;
   variant @1 :ValueConstructorVariant;
   public @2 :Bool;
+  internal @4 :Bool;
   deprecated @3 :Text;
 }
 
