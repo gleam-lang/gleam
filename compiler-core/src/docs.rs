@@ -148,6 +148,7 @@ pub fn generate_html(
             .ast
             .definitions
             .iter()
+            .filter(|statement| !statement.is_internal())
             .flat_map(|statement| function(&source_links, statement))
             .sorted()
             .collect();
@@ -156,6 +157,7 @@ pub fn generate_html(
             .ast
             .definitions
             .iter()
+            .filter(|statement| !statement.is_internal())
             .flat_map(|statement| type_(&source_links, statement))
             .sorted()
             .collect();
@@ -164,6 +166,7 @@ pub fn generate_html(
             .ast
             .definitions
             .iter()
+            .filter(|statement| !statement.is_internal())
             .flat_map(|statement| constant(&source_links, statement))
             .sorted()
             .collect();

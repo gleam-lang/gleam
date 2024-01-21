@@ -76,6 +76,28 @@ pub fn lazy_or(first: Option(a), second: fn() -> Option(a)) -> Option(a) {
     insta::assert_snapshot!(compile(config, modules));
 }
 
+#[test]
+fn internal_definitions_are_not_included() {
+    let config = PackageConfig::default();
+    let modules = vec![(
+        "app.gleam",
+        r#"
+@internal
+pub const foo = 1
+
+@internal
+pub type Foo = Int
+
+@internal
+pub type Bar { Bar }
+
+@internal
+pub fn one() { 1 }
+"#,
+    )];
+    insta::assert_snapshot!(compile(config, modules));
+}
+
 fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
     let fs = InMemoryFileSystem::new();
     for (name, src) in modules {
