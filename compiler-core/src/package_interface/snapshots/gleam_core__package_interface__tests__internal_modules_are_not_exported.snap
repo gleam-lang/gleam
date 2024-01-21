@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+expression: "pub fn main() { 1 }"
+---
+{
+  "name": "my_package",
+  "package_version": "11.11.11",
+  "gleam_version": "1.0.0",
+  "modules": {}
+}

@@ -1,5 +1,8 @@
 use std::time::SystemTime;
 
+use ecow::EcoString;
+use globset::GlobBuilder;
+
 use crate::{
     analyse::TargetSupport,
     build::{Module, Origin, Package, Target},
@@ -13,9 +16,28 @@ use crate::{
 use super::PackageInterface;
 
 #[macro_export]
+macro_rules! assert_package_interface_with_name {
+    ($module_name:expr, $src:expr) => {
+        let output =
+            $crate::package_interface::tests::compile_package(Some($module_name), $src, None);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
 macro_rules! assert_package_interface {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
         let output = $crate::package_interface::tests::compile_package(
+            None,
+            $src,
+            Some(($dep_package, $dep_name, $dep_src)),
+        );
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    }};
+
+    (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
+        let output = $crate::package_interface::tests::compile_package(
+            None,
             $src,
             Some(($dep_package, $dep_name, $dep_src)),
         );
@@ -23,12 +45,16 @@ macro_rules! assert_package_interface {
     }};
 
     ($src:expr) => {{
-        let output = $crate::package_interface::tests::compile_package($src, None);
+        let output = $crate::package_interface::tests::compile_package(None, $src, None);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }
 
-pub fn compile_package(src: &str, dep: Option<(&str, &str, &str)>) -> String {
+pub fn compile_package(
+    module_name: Option<&str>,
+    src: &str,
+    dep: Option<(&str, &str, &str)>,
+) -> String {
     let mut modules = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
     // DUPE: preludeinsertion
@@ -61,7 +87,11 @@ pub fn compile_package(src: &str, dep: Option<(&str, &str, &str)>) -> String {
     }
     let parsed = crate::parse::parse_module(src).expect("syntax error");
     let mut ast = parsed.module;
-    ast.name = "my/module".into();
+    let module_name = module_name
+        .map(EcoString::from)
+        .unwrap_or("my/module".into());
+
+    ast.name = module_name.clone();
     let ast = crate::analyse::infer_module::<()>(
         Target::Erlang,
         &ids,
@@ -80,7 +110,7 @@ pub fn compile_package(src: &str, dep: Option<(&str, &str, &str)>) -> String {
     // where to put such function...
 
     let module = Module {
-        name: "my/module".into(),
+        name: module_name,
         code: src.into(),
         mtime: SystemTime::UNIX_EPOCH,
         input_path: "foo".into(),
@@ -115,7 +145,9 @@ fn package_from_module(module: Module) -> Package {
             erlang: ErlangConfig::default(),
             javascript: JavaScriptConfig::default(),
             target: Target::Erlang,
-            internal_modules: None,
+            internal_modules: Some(vec![GlobBuilder::new("internals/*")
+                .build()
+                .expect("internals glob")]),
         },
         modules: vec![module],
     }
@@ -221,4 +253,9 @@ pub type Box(a, b) {
 }
 "#
     );
+}
+
+#[test]
+pub fn internal_modules_are_not_exported() {
+    assert_package_interface_with_name!("internals/internal_module", "pub fn main() { 1 }");
 }
