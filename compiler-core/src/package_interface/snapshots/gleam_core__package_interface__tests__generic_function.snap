@@ -30,10 +30,11 @@ expression: "\npub type Bar(a) { Bar }\n@deprecated(\"deprecation message\")\npu
           "deprecation": {
             "message": "deprecation message"
           },
-          "supported_targets": [
-            "erlang",
-            "javascript"
-          ],
+          "implementations": {
+            "gleam": true,
+            "uses_erlang_externals": false,
+            "uses_javascript_externals": false
+          },
           "type": {
             "kind": "Fn",
             "parameters": [],

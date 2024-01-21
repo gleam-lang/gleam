@@ -15,10 +15,11 @@ expression: "\nimport other_module.{type Element}\npub fn main() -> Element(Int)
         "main": {
           "documentation": null,
           "deprecation": null,
-          "supported_targets": [
-            "erlang",
-            "javascript"
-          ],
+          "implementations": {
+            "gleam": true,
+            "uses_erlang_externals": false,
+            "uses_javascript_externals": false
+          },
           "type": {
             "kind": "Fn",
             "parameters": [],
