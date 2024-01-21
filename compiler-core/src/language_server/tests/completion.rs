@@ -726,3 +726,71 @@ pub fn wibble(
         .concat()
     );
 }
+
+#[test]
+fn public_internal_definitions_from_outer_modules_are_not_in_the_completions() {
+    let code = r#"
+@external(erlang, "rand", "uniform")
+@internal
+pub fn random_float() -> Float
+
+@internal pub fn main() { 0 }
+@internal pub type Alias = Int
+@internal pub type Foo { Bar }
+@internal pub const foo = 1
+"#;
+
+    assert_eq!(expression_completions("", code), vec![]);
+}
+
+#[test]
+fn public_internal_definitions_from_the_same_module_are_in_the_completions() {
+    let code = r#"
+@external(erlang, "rand", "uniform")
+@internal
+pub fn random_float() -> Float
+
+@internal pub fn main() { 0 }
+@internal pub type Alias = Int
+@internal pub type Foo { Bar }
+@internal pub const foo = 1
+"#;
+
+    assert_eq!(
+        expression_completions(code, ""),
+        vec![
+            CompletionItem {
+                label: "Bar".into(),
+                label_details: None,
+                kind: Some(CompletionItemKind::ENUM_MEMBER),
+                detail: Some("Foo".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "foo".into(),
+                label_details: None,
+                kind: Some(CompletionItemKind::CONSTANT),
+                detail: Some("Int".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "main".into(),
+                label_details: None,
+                kind: Some(CompletionItemKind::FUNCTION),
+                detail: Some("fn() -> Int".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "random_float".into(),
+                label_details: None,
+                kind: Some(CompletionItemKind::FUNCTION),
+                detail: Some("fn() -> Float".into()),
+                documentation: None,
+                ..Default::default()
+            },
+        ]
+    );
+}

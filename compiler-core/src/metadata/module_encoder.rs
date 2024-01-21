@@ -154,6 +154,7 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: type_constructor::Builder<'_>,
         constructor: &TypeConstructor,
     ) {
+        builder.set_internal(constructor.internal);
         builder.set_public(constructor.public);
         builder.set_module(&constructor.module);
         builder.set_deprecated(match &constructor.deprecation {
@@ -199,6 +200,7 @@ impl<'a> ModuleEncoder<'a> {
         constructor: &ValueConstructor,
     ) {
         builder.set_public(constructor.public);
+        builder.set_internal(constructor.internal);
         builder.set_deprecated(match &constructor.deprecation {
             Deprecation::NotDeprecated => "",
             Deprecation::Deprecated { message } => message,

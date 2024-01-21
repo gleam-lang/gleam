@@ -111,6 +111,7 @@ impl<'a> Importer<'a> {
                     value.variant.clone(),
                     value.type_.clone(),
                     true,
+                    value.internal,
                     value.deprecation.clone(),
                 );
                 &value.variant

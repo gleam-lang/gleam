@@ -305,7 +305,9 @@ fn register_type_alias(
         alias: name,
         type_ast: resolved_type,
         deprecation,
-        ..
+        internal,
+        type_: _,
+        documentation: _,
     } = t;
 
     // A type alias must not have the same name as any other type in the module.
@@ -328,6 +330,7 @@ fn register_type_alias(
             parameters,
             typ,
             deprecation: deprecation.clone(),
+            internal: *internal,
         },
     )?;
 
@@ -360,6 +363,7 @@ fn register_types_from_custom_type<'a>(
         deprecation,
         opaque,
         constructors,
+        internal,
         ..
     } = t;
     assert_unique_type_name(names, name, *location)?;
@@ -384,6 +388,7 @@ fn register_types_from_custom_type<'a>(
             public: *public,
             deprecation: deprecation.clone(),
             parameters,
+            internal: *internal,
             typ,
         },
     )?;
@@ -417,8 +422,10 @@ fn register_values_from_custom_type(
         name,
         constructors,
         deprecation,
+        internal,
         ..
     } = t;
+
     let mut hydrator = hydrators
         .remove(name)
         .expect("Could not find hydrator for register_values custom type");
@@ -489,6 +496,7 @@ fn register_values_from_custom_type(
         environment.insert_module_value(
             constructor.name.clone(),
             ValueConstructor {
+                internal: *internal,
                 deprecation: deprecation.clone(),
                 public: *public && !opaque,
                 type_: typ.clone(),
@@ -513,6 +521,7 @@ fn register_values_from_custom_type(
             constructor_info,
             typ,
             *public,
+            *internal,
             deprecation.clone(),
         );
     }
@@ -547,7 +556,7 @@ fn register_value_from_function(
         body: _,
         return_type: _,
         implementations,
-        internal: _,
+        internal,
     } = f;
     assert_unique_name(names, name, *location)?;
     assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
@@ -583,7 +592,14 @@ fn register_value_from_function(
         location: *location,
         implementations: *implementations,
     };
-    environment.insert_variable(name.clone(), variant, typ, *public, deprecation.clone());
+    environment.insert_variable(
+        name.clone(),
+        variant,
+        typ,
+        *public,
+        *internal,
+        deprecation.clone(),
+    );
     if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
     };
@@ -727,6 +743,7 @@ fn infer_function(
         variant,
         type_.clone(),
         public,
+        internal,
         deprecation.clone(),
     );
 
@@ -1013,6 +1030,7 @@ fn infer_module_constant(
 
     let variant = ValueConstructor {
         public,
+        internal,
         deprecation: deprecation.clone(),
         variant: ValueConstructorVariant::ModuleConstant {
             documentation: doc.clone(),
@@ -1029,6 +1047,7 @@ fn infer_module_constant(
         variant.variant.clone(),
         type_.clone(),
         public,
+        internal,
         Deprecation::NotDeprecated,
     );
     environment.insert_module_value(name.clone(), variant);
@@ -1146,6 +1165,7 @@ fn generalise_module_constant(
         variant.clone(),
         type_.clone(),
         public,
+        internal,
         deprecation.clone(),
     );
 
@@ -1153,6 +1173,7 @@ fn generalise_module_constant(
         name.clone(),
         ValueConstructor {
             public,
+            internal,
             variant,
             deprecation: deprecation.clone(),
             type_: type_.clone(),
@@ -1223,12 +1244,14 @@ fn generalise_function(
         variant.clone(),
         type_.clone(),
         public,
+        internal,
         deprecation.clone(),
     );
     environment.insert_module_value(
         name.clone(),
         ValueConstructor {
             public,
+            internal,
             deprecation: deprecation.clone(),
             type_,
             variant,
