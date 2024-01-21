@@ -11,7 +11,7 @@ mod tests;
 use crate::{
     ast::{CustomType, Definition, Function, ModuleConstant, TypeAlias},
     manifest::ordered_map,
-    type_::{expression::SupportedTargets, Deprecation, Type, TypeVar},
+    type_::{expression::Implementations, Deprecation, Type, TypeVar},
 };
 
 use crate::build::{Module, Package};
@@ -70,24 +70,9 @@ pub struct TypeAliasInterface {
 pub struct ValueInterface {
     documentation: Option<EcoString>,
     deprecation: Option<DeprecationInterface>,
-    implementations: ImplementationsInterface,
+    implementations: Implementations,
     #[serde(rename = "type")]
     type_: TypeInterface,
-}
-
-#[derive(Serialize, Debug)]
-pub struct ImplementationsInterface {
-    gleam: bool,
-    erlang: bool,
-    javascript: bool,
-}
-
-impl ImplementationsInterface {
-    pub fn from_supported_targets(
-        supported_targets: &SupportedTargets,
-    ) -> ImplementationsInterface {
-        todo!("This will most likely require another tweak to the target tracking because right now if it is pure gleam it won't keep track of external implementations")
-    }
 }
 
 #[derive(Serialize, Debug)]
@@ -258,7 +243,8 @@ fn statements_interfaces(
                 name,
                 type_,
                 documentation,
-                supported_targets,
+                implementations,
+                deprecation,
                 location: _,
                 annotation: _,
                 value: _,
@@ -266,11 +252,9 @@ fn statements_interfaces(
                 let _ = values.insert(
                     name.clone(),
                     ValueInterface {
-                        implementations: ImplementationsInterface::from_supported_targets(
-                            &supported_targets,
-                        ),
+                        implementations: implementations.clone(),
                         type_: TypeInterface::from_type(type_.as_ref()),
-                        deprecation: None,
+                        deprecation: DeprecationInterface::from_deprecation(deprecation),
                         documentation: documentation.clone(),
                     },
                 );
@@ -284,7 +268,7 @@ fn statements_interfaces(
                 deprecation,
                 return_type,
                 documentation,
-                supported_targets,
+                implementations,
                 location: _,
                 end_position: _,
                 body: _,
@@ -296,9 +280,7 @@ fn statements_interfaces(
                 let _ = values.insert(
                     name.clone(),
                     ValueInterface {
-                        implementations: ImplementationsInterface::from_supported_targets(
-                            &supported_targets,
-                        ),
+                        implementations: implementations.clone(),
                         deprecation: DeprecationInterface::from_deprecation(deprecation),
                         documentation: documentation.clone(),
                         type_: TypeInterface::Fn {

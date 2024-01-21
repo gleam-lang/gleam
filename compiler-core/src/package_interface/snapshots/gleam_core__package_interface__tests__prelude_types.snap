@@ -15,10 +15,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
         "bool": {
           "documentation": null,
           "deprecation": null,
-          "supported_targets": [
-            "erlang",
-            "javascript"
-          ],
+          "implementations": {
+            "gleam": true,
+            "uses_erlang_externals": false,
+            "uses_javascript_externals": false
+          },
           "type": {
             "kind": "Named",
             "name": "Bool",
@@ -30,10 +31,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
         "float": {
           "documentation": null,
           "deprecation": null,
-          "supported_targets": [
-            "erlang",
-            "javascript"
-          ],
+          "implementations": {
+            "gleam": true,
+            "uses_erlang_externals": false,
+            "uses_javascript_externals": false
+          },
           "type": {
             "kind": "Named",
             "name": "Float",
@@ -45,10 +47,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
         "int": {
           "documentation": null,
           "deprecation": null,
-          "supported_targets": [
-            "erlang",
-            "javascript"
-          ],
+          "implementations": {
+            "gleam": true,
+            "uses_erlang_externals": false,
+            "uses_javascript_externals": false
+          },
           "type": {
             "kind": "Named",
             "name": "Int",
@@ -60,10 +63,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
         "string": {
           "documentation": null,
           "deprecation": null,
-          "supported_targets": [
-            "erlang",
-            "javascript"
-          ],
+          "implementations": {
+            "gleam": true,
+            "uses_erlang_externals": false,
+            "uses_javascript_externals": false
+          },
           "type": {
             "kind": "Named",
             "name": "String",
