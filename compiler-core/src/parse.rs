@@ -92,6 +92,7 @@ struct Attributes {
     deprecated: Deprecation,
     external_erlang: Option<(EcoString, EcoString)>,
     external_javascript: Option<(EcoString, EcoString)>,
+    internal: bool,
 }
 
 impl Attributes {
@@ -168,8 +169,8 @@ where
             extra: ModuleExtra::new(),
             doc_comments: VecDeque::new(),
         };
-        let _ = parser.next_tok();
-        let _ = parser.next_tok();
+        parser.advance();
+        parser.advance();
         parser
     }
 
@@ -1564,6 +1565,7 @@ where
             location: SrcSpan { start, end },
             end_position,
             public,
+            internal: attributes.internal,
             name,
             arguments: args,
             body,
@@ -1774,6 +1776,7 @@ where
                 return Ok(Some(Definition::TypeAlias(TypeAlias {
                     documentation,
                     location: SrcSpan::new(start, type_end),
+                    internal: attributes.internal,
                     public,
                     alias: name,
                     parameters,
@@ -1790,6 +1793,7 @@ where
         Ok(Some(Definition::CustomType(CustomType {
             documentation,
             location: SrcSpan { start, end },
+            internal: attributes.internal,
             end_position,
             public,
             opaque,
@@ -2178,6 +2182,7 @@ where
         let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
         if let Some(value) = self.parse_const_value()? {
             Ok(Some(Definition::ModuleConstant(ModuleConstant {
+                internal: attributes.internal,
                 documentation,
                 location: SrcSpan { start, end },
                 public,
@@ -2872,12 +2877,21 @@ where
         // Parse the name of the attribute.
 
         let (_, name, end) = self.expect_name()?;
-        let _ = self.expect_one(&Token::LeftParen)?;
 
         let end = match name.as_str() {
-            "external" => self.parse_external_attribute(start, end, attributes),
-            "target" => self.parse_target_attribute(start, end, attributes),
-            "deprecated" => self.parse_deprecated_attribute(start, end, attributes),
+            "external" => {
+                let _ = self.expect_one(&Token::LeftParen)?;
+                self.parse_external_attribute(start, end, attributes)
+            }
+            "target" => {
+                let _ = self.expect_one(&Token::LeftParen)?;
+                self.parse_target_attribute(start, end, attributes)
+            }
+            "deprecated" => {
+                let _ = self.expect_one(&Token::LeftParen)?;
+                self.parse_deprecated_attribute(start, end, attributes)
+            }
+            "internal" => self.parse_internal_attribute(start, end, attributes),
             _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan { start, end }),
         }?;
 
@@ -2955,6 +2969,22 @@ where
         let (_, message, _) = self.expect_string()?;
         let (_, end) = self.expect_one(&Token::RightParen)?;
         attributes.deprecated = Deprecation::Deprecated { message };
+        Ok(end)
+    }
+
+    fn parse_internal_attribute(
+        &mut self,
+        start: u32,
+        end: u32,
+        attributes: &mut Attributes,
+    ) -> Result<u32, ParseError> {
+        // If `internal` is set to true that means that we have already run into
+        // another `@internal` annotation, so it results in a `DuplicateAttribute`
+        // error.
+        if attributes.internal {
+            return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end));
+        }
+        attributes.internal = true;
         Ok(end)
     }
 }

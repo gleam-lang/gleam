@@ -42,6 +42,7 @@ fn parse_and_order(
                 uses_erlang_externals: true,
                 uses_javascript_externals: false,
             },
+            internal: false,
         })
         .collect_vec();
     let constants = constants
@@ -62,6 +63,7 @@ fn parse_and_order(
                 },
                 type_: (),
                 deprecation: Deprecation::NotDeprecated,
+                internal: false,
             }
         })
         .collect_vec();
