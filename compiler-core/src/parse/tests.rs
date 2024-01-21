@@ -612,6 +612,19 @@ pub fn main() -> Nil {
 }
 
 #[test]
+fn multiple_internal_attributes() {
+    assert_module_error!(
+        r#"
+@internal
+@internal
+pub fn main() -> Nil {
+  Nil
+}
+"#
+    );
+}
+
+#[test]
 fn attributes_with_no_definition() {
     assert_module_error!(
         r#"

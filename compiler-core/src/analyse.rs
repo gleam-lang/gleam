@@ -547,6 +547,7 @@ fn register_value_from_function(
         body: _,
         return_type: _,
         implementations,
+        internal: _,
     } = f;
     assert_unique_name(names, name, *location)?;
     assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
@@ -645,6 +646,7 @@ fn infer_function(
         external_erlang,
         external_javascript,
         return_type: (),
+        internal,
         implementations: _,
     } = f;
     let target = environment.target;
@@ -744,6 +746,7 @@ fn infer_function(
         external_erlang,
         external_javascript,
         implementations,
+        internal,
     }))
 }
 
@@ -819,6 +822,7 @@ fn insert_type_alias(
         parameters: args,
         type_ast: resolved_type,
         deprecation,
+        internal,
         ..
     } = t;
     let typ = environment
@@ -835,6 +839,7 @@ fn insert_type_alias(
         type_ast: resolved_type,
         type_: typ,
         deprecation,
+        internal,
     }))
 }
 
@@ -852,6 +857,7 @@ fn infer_custom_type(
         parameters,
         constructors,
         deprecation,
+        internal,
         ..
     } = t;
     let constructors = constructors
@@ -921,6 +927,7 @@ fn infer_custom_type(
         constructors,
         typed_parameters,
         deprecation,
+        internal,
     }))
 }
 
@@ -989,6 +996,7 @@ fn infer_module_constant(
         public,
         value,
         deprecation,
+        internal,
         ..
     } = c;
 
@@ -1039,6 +1047,7 @@ fn infer_module_constant(
         type_,
         deprecation,
         implementations,
+        internal,
     }))
 }
 
@@ -1121,6 +1130,7 @@ fn generalise_module_constant(
         type_,
         deprecation,
         implementations,
+        internal,
     } = constant;
     let typ = type_.clone();
     let type_ = type_::generalise(typ);
@@ -1159,6 +1169,7 @@ fn generalise_module_constant(
         type_,
         deprecation,
         implementations,
+        internal,
     })
 }
 
@@ -1181,6 +1192,7 @@ fn generalise_function(
         external_erlang,
         external_javascript,
         implementations,
+        internal,
     } = function;
 
     // Lookup the inferred function information
@@ -1237,6 +1249,7 @@ fn generalise_function(
         external_erlang,
         external_javascript,
         implementations,
+        internal,
     })
 }
 
