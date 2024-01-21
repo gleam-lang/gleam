@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::io::make_relative;
+use crate::io::{make_relative, ordered_map};
 use crate::requirement::Requirement;
 use crate::Result;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -191,17 +191,6 @@ pub enum ManifestPackageSource {
     Git { repo: EcoString, commit: EcoString },
     #[serde(rename = "local")]
     Local { path: Utf8PathBuf }, // should be the canonical path
-}
-
-pub fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-    K: serde::Serialize + Ord,
-    V: serde::Serialize,
-{
-    use serde::Serialize;
-    let ordered: std::collections::BTreeMap<_, _> = value.iter().collect();
-    ordered.serialize(serializer)
 }
 
 fn sorted_vec<S, T>(value: &[T], serializer: S) -> Result<S::Ok, S::Error>

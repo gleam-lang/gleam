@@ -10,7 +10,7 @@ mod tests;
 
 use crate::{
     ast::{CustomType, Definition, Function, ModuleConstant, TypeAlias},
-    manifest::ordered_map,
+    io::ordered_map,
     type_::{expression::Implementations, Deprecation, Type, TypeVar},
 };
 
