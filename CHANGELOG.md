@@ -11,6 +11,12 @@
 - Type aliases with unused type parameters now emit an error.
 - Type definitions with duplicate type parameters now emit an error.
 
+### Build tool changes
+
+- The search bar in generated docs now has a darker background color.
+- The generated docs no longer shows wether an argument is discarded or
+  not in a function signature.
+
 ### Formatter
 
 - Now the formatter will nest pipelines and binary operators that are used as
