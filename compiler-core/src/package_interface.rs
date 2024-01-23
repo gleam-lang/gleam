@@ -121,21 +121,21 @@ pub struct ValueInterface {
     /// If the value has a deprecation annotation `@deprecated("...")`
     /// this field will hold the reason of the deprecation.
     deprecation: Option<DeprecationInterface>,
-    /// Informations about how the value is implemented:
-    ///   - the `gleam` field is set to `true` if the const/function has a pure
-    ///     Gleam implementation (that is, it never uses external code).
-    ///     Being pure Gleam means that the function will support all Gleam
-    ///     targets, even future ones that are not present to this day.
-    ///   - the `uses_erlang_externals` field is set to `true` if the
-    ///     const/function is defined using Erlang external code. That means
-    ///     that the function will use Erlang code through FFI when compiled for
-    ///     the Erlang target.
-    ///   - the `uses_javascript_externals` field is set to `true` if the
-    ///     const/function is defined using JavaScript external code. That means
-    ///     that the function will use JavaScript code through FFI when compiled
-    ///     for the JavaScript target.
+    implementations: ImplementationsInterface,
+    /// The value's type.
+    #[serde(rename = "type")]
+    type_: TypeInterface,
+}
+
+/// Informations about how a value is implemented.
+#[derive(Debug, Serialize, Copy, Clone)]
+pub struct ImplementationsInterface {
+    /// Set to `true` if the const/function has a pure Gleam implementation
+    /// (that is, it never uses external code).
+    /// Being pure Gleam means that the function will support all Gleam
+    /// targets, even future ones that are not present to this day.
     ///
-    /// Let's have a look at a couple of examples:
+    /// Consider the following function:
     ///
     /// ```gleam
     /// @external(erlang, "foo", "bar")
@@ -144,7 +144,9 @@ pub struct ValueInterface {
     ///   // This is a default implementation.
     /// }
     /// ```
+    ///
     /// The implementations for this function will look like this:
+    ///
     /// ```json
     /// {
     ///   gleam: true,
@@ -152,6 +154,7 @@ pub struct ValueInterface {
     ///   uses_javascript_externals: false,
     /// }
     /// ```
+    ///
     /// - `gleam: true` means that the function has a pure Gleam implementation
     ///   and thus it can be used on all Gleam targets with no problems.
     /// - `uses_erlang_externals: true` means that the function will use Erlang
@@ -160,14 +163,24 @@ pub struct ValueInterface {
     ///   JavaScript external code when compiled to JavaScript. The function can
     ///   still be used on the JavaScript target since it has a pure Gleam
     ///   implementation.
+    gleam: bool,
+    /// Set to `true` if the const/function is defined using Erlang external
+    /// code. That means that the function will use Erlang code through FFI when
+    /// compiled for the Erlang target.
+    uses_erlang_externals: bool,
+    /// Set to `true` if the const/function is defined using JavaScript external
+    /// code. That means that the function will use JavaScript code through FFI
+    /// when compiled for the JavaScript target.
     ///
-    /// Now have a look at this function:
+    /// Let's have a look at an example:
     ///
     /// ```gleam
     /// @external(javascript, "foo", "bar")
     /// pub fn javascript_only() -> Int
     /// ```
+    ///
     /// It's implementations field will look like this:
+    ///
     /// ```json
     /// {
     ///   gleam: false,
@@ -175,6 +188,7 @@ pub struct ValueInterface {
     ///   uses_javascript_externals: true,
     /// }
     /// ```
+    ///
     /// - `gleam: false` means that the function doesn't have a pure Gleam
     ///   implementations. This means that the function is only defined using
     ///   externals and can only be used on some targets.
@@ -184,10 +198,32 @@ pub struct ValueInterface {
     /// - `uses_javascript_externals: true` the function is using JavaScript
     ///   external code. This means that you will be able to use it on the
     ///   JavaScript target with no problems.
-    implementations: Implementations,
-    /// The value's type.
-    #[serde(rename = "type")]
-    type_: TypeInterface,
+    uses_javascript_externals: bool,
+}
+
+impl ImplementationsInterface {
+    fn from_implementations(implementations: &Implementations) -> ImplementationsInterface {
+        // It might look a bit silly to just recreate an identical structure with
+        // a different name. However, this way we won't inadvertently cause breaking
+        // changes if we were to change the names used by the `Implementations` struct
+        // that is used by the target tracking algorithm.
+        // By doing this we can change the target tracking and package interface
+        // separately!
+        //
+        // This pattern matching makes sure we will remember to handle any change
+        // in the `Implementations` struct.
+        let Implementations {
+            gleam,
+            uses_erlang_externals,
+            uses_javascript_externals,
+        } = implementations;
+
+        ImplementationsInterface {
+            gleam: *gleam,
+            uses_erlang_externals: *uses_erlang_externals,
+            uses_javascript_externals: *uses_javascript_externals,
+        }
+    }
 }
 
 #[derive(Serialize, Debug)]
@@ -401,7 +437,9 @@ fn statements_interfaces(
                 let _ = values.insert(
                     name.clone(),
                     ValueInterface {
-                        implementations: *implementations,
+                        implementations: ImplementationsInterface::from_implementations(
+                            implementations,
+                        ),
                         type_: TypeInterface::from_type(type_.as_ref()),
                         deprecation: DeprecationInterface::from_deprecation(deprecation),
                         documentation: documentation.clone(),
@@ -429,7 +467,9 @@ fn statements_interfaces(
                 let _ = values.insert(
                     name.clone(),
                     ValueInterface {
-                        implementations: *implementations,
+                        implementations: ImplementationsInterface::from_implementations(
+                            implementations,
+                        ),
                         deprecation: DeprecationInterface::from_deprecation(deprecation),
                         documentation: documentation.clone(),
                         type_: TypeInterface::Fn {
