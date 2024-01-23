@@ -765,47 +765,59 @@ fn try_to_inline_expr<'a>(
     expressions_to_inline: &mut Vec<InlineRefactor<'a>>,
 ) {
     if let ValueConstructorVariant::LocalVariable { location } = constructor.variant {
-        // hier checken in assign_statements of daar de assignment in voorkomt...
-        let result = assign_statements.iter().find(|assignment| {
-            if let Statement::Assignment(assign) = assignment {
-                let loc_assign = assign.pattern.location();
-
-                loc_assign.start == location.start && loc_assign.end == location.end
-            } else {
-                false
-            }
+        let result = assign_statements.iter().find(|&assignment| {
+            matches!(assignment, Statement::Assignment(assign) if assign.pattern.location() == location)
         });
 
         if let Some(found) = result {
             if let TypedExpr::Call { mut args, .. } = value.clone() {
-                let loc_inlinable_assign = match found {
-                    Statement::Expression(expr) => todo!(),
-                    Statement::Assignment(assign) => assign.pattern.location(),
-                    Statement::Use(_) => todo!(),
-                };
-
-                if let Some(callarg) = args.iter_mut().find(|callarg| {
-                    if let TypedExpr::Var { .. } = callarg.value {
-                        if let ValueConstructorVariant::LocalVariable { location } =
-                            constructor.variant
-                        {
-                            location.start == loc_inlinable_assign.start
-                                && location.end == loc_inlinable_assign.end
-                        } else {
-                            false
+                if let Statement::Assignment(assign) = found {
+                    let loc_inlinable_assign = assign.pattern.location();
+                    if let Some(callarg) = args.iter_mut().find(|callarg| {
+                        match (&callarg.value, &constructor.variant) {
+                            (
+                                TypedExpr::Var { .. },
+                                ValueConstructorVariant::LocalVariable { location },
+                            ) => {
+                                location.start == loc_inlinable_assign.start
+                                    && location.end == loc_inlinable_assign.end
+                            }
+                            _ => false,
                         }
-                    } else {
-                        false
+                    }) {
+                        if let Some(typedexpr) = found.get_value() {
+                            callarg.value = typedexpr.clone();
+                            expressions_to_inline.push(InlineRefactor {
+                                source: found.location(),
+                                destination: callarg.location,
+                                typed_expr: found.get_value(),
+                            });
+                        }
                     }
-                }) {
-                    if let Some(typedexpr) = found.get_value() {
-                        callarg.value = typedexpr.clone();
-                        expressions_to_inline.push(InlineRefactor {
-                            source: found.location(),
-                            destination: callarg.location,
-                            typed_expr: found.get_value(),
-                        })
-                    }
+
+                    // if let Some(callarg) = args.iter_mut().find(|callarg| {
+                    //     if let TypedExpr::Var { .. } = callarg.value {
+                    //         if let ValueConstructorVariant::LocalVariable { location } =
+                    //             constructor.variant
+                    //         {
+                    //             location.start == loc_inlinable_assign.start
+                    //                 && location.end == loc_inlinable_assign.end
+                    //         } else {
+                    //             false
+                    //         }
+                    //     } else {
+                    //         false
+                    //     }
+                    // }) {
+                    //     if let Some(typedexpr) = found.get_value() {
+                    //         callarg.value = typedexpr.clone();
+                    //         expressions_to_inline.push(InlineRefactor {
+                    //             source: found.location(),
+                    //             destination: callarg.location,
+                    //             typed_expr: found.get_value(),
+                    //         })
+                    //     }
+                    // }
                 }
             }
 
