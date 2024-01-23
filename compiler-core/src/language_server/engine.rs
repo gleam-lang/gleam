@@ -351,9 +351,9 @@ where
 
         // Module types
         for (name, type_) in &module.ast.type_info.types {
-            if type_.internal {
-                continue;
-            }
+            // Here we do not check for the internal attribute: we always want
+            // to show autocompletions for types defined in the same module,
+            // even if those are internal.
             completions.push(type_completion(None, name, type_));
         }
 
@@ -398,6 +398,9 @@ where
 
         // Module functions
         for (name, value) in &module.ast.type_info.values {
+            // Here we do not check for the internal attribute: we always want
+            // to show autocompletions for values defined in the same module,
+            // even if those are internal.
             completions.push(value_completion(None, name, value));
         }
 
