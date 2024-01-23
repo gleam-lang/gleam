@@ -120,7 +120,6 @@ where
     ) -> Result<UncompiledModule, Error> {
         read_source(
             self.io.clone(),
-            self.warnings,
             self.target,
             self.origin,
             path,
@@ -142,7 +141,6 @@ where
 
 pub(crate) fn read_source<IO>(
     io: IO,
-    warnings: &WarningEmitter,
     target: Target,
     origin: Origin,
     path: Utf8PathBuf,
@@ -160,14 +158,6 @@ where
         src: code.clone(),
         error,
     })?;
-    for warning in parsed.warnings {
-        warnings.emit(crate::warning::Warning::Parse {
-            path: path.clone(),
-            src: code.clone(),
-            warning,
-        });
-    }
-
     let mut ast = parsed.module;
     let extra = parsed.extra;
     let dependencies = ast.dependencies(target);

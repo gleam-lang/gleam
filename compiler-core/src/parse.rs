@@ -84,7 +84,6 @@ mod tests;
 pub struct Parsed {
     pub module: UntypedModule,
     pub extra: ModuleExtra,
-    pub warnings: Vec<Warning>,
 }
 
 #[derive(Debug, Default)]
@@ -101,11 +100,6 @@ impl Attributes {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub enum Warning {
-    ReservedWord { location: SrcSpan, word: EcoString },
-}
-
 //
 // Public Interface
 //
@@ -114,7 +108,6 @@ pub fn parse_module(src: &str) -> Result<Parsed, ParseError> {
     let mut parser = Parser::new(lex);
     let mut parsed = parser.parse_module()?;
     parsed.extra = parser.extra;
-    parsed.warnings = parser.warnings;
     Ok(parsed)
 }
 
@@ -161,7 +154,6 @@ pub struct Parser<T: Iterator<Item = LexResult>> {
     tok1: Option<Spanned>,
     extra: ModuleExtra,
     doc_comments: VecDeque<(u32, String)>,
-    warnings: Vec<Warning>,
 }
 impl<T> Parser<T>
 where
@@ -175,7 +167,6 @@ where
             tok1: None,
             extra: ModuleExtra::new(),
             doc_comments: VecDeque::new(),
-            warnings: vec![],
         };
         let _ = parser.next_tok();
         let _ = parser.next_tok();
@@ -194,7 +185,6 @@ where
         Ok(Parsed {
             module,
             extra: Default::default(),
-            warnings: Default::default(),
         })
     }
 
@@ -2794,17 +2784,6 @@ where
                 }
 
                 Some(Ok(tok)) => {
-                    if let (start, Token::Name { name }, end) = &tok {
-                        if let "auto" | "delegate" | "derive" | "else" | "implement" | "macro"
-                        | "echo" | "test" = name.as_str()
-                        {
-                            self.warnings.push(Warning::ReservedWord {
-                                location: SrcSpan::new(*start, *end),
-                                word: name.clone(),
-                            });
-                        }
-                    }
-
                     nxt = Some(tok);
                     break;
                 }

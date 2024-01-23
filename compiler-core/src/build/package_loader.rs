@@ -224,7 +224,6 @@ where
         let mtime = self.io.modification_time(&cached.source_path)?;
         read_source(
             self.io.clone(),
-            self.warnings,
             self.target,
             cached.origin,
             cached.source_path,

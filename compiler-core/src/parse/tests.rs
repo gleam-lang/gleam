@@ -38,26 +38,6 @@ macro_rules! assert_parse {
     };
 }
 
-fn get_warnings(src: &str) -> String {
-    let result = crate::parse::parse_module(src).expect("should parse");
-    let mut nocolor = termcolor::Buffer::no_color();
-    for warning in result.warnings {
-        crate::Warning::Parse {
-            path: Utf8PathBuf::new(),
-            src: src.into(),
-            warning,
-        }
-        .pretty(&mut nocolor);
-    }
-    String::from_utf8(nocolor.into_inner()).expect("Error printing produced invalid utf8")
-}
-
-macro_rules! assert_warning {
-    ($src:expr) => {
-        insta::assert_snapshot!(insta::internals::AutoName, get_warnings($src), $src);
-    };
-}
-
 pub fn expect_module_error(src: &str) -> String {
     let result = crate::parse::parse_module(src).expect_err("should not parse");
     let error = crate::error::Error::Parse {
@@ -668,42 +648,42 @@ fn import_type() {
 
 #[test]
 fn reserved_auto() {
-    assert_warning!(r#"const auto = 1"#);
+    assert_module_error!(r#"const auto = 1"#);
 }
 
 #[test]
 fn reserved_delegate() {
-    assert_warning!(r#"const delegate = 1"#);
+    assert_module_error!(r#"const delegate = 1"#);
 }
 
 #[test]
 fn reserved_derive() {
-    assert_warning!(r#"const derive = 1"#);
+    assert_module_error!(r#"const derive = 1"#);
 }
 
 #[test]
 fn reserved_else() {
-    assert_warning!(r#"const else = 1"#);
+    assert_module_error!(r#"const else = 1"#);
 }
 
 #[test]
 fn reserved_implement() {
-    assert_warning!(r#"const implement = 1"#);
+    assert_module_error!(r#"const implement = 1"#);
 }
 
 #[test]
 fn reserved_macro() {
-    assert_warning!(r#"const macro = 1"#);
+    assert_module_error!(r#"const macro = 1"#);
 }
 
 #[test]
 fn reserved_test() {
-    assert_warning!(r#"const test = 1"#);
+    assert_module_error!(r#"const test = 1"#);
 }
 
 #[test]
 fn reserved_echo() {
-    assert_warning!(r#"const echo = 1"#);
+    assert_module_error!(r#"const echo = 1"#);
 }
 
 #[test]

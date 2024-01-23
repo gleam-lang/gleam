@@ -144,11 +144,6 @@ pub enum Warning {
         src: EcoString,
         warning: crate::type_::Warning,
     },
-    Parse {
-        path: Utf8PathBuf,
-        src: EcoString,
-        warning: crate::parse::Warning,
-    },
     InvalidSource {
         path: Utf8PathBuf,
     },
@@ -157,32 +152,6 @@ pub enum Warning {
 impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
-            Self::Parse { path, warning, src } => match warning {
-                crate::parse::Warning::ReservedWord { location, word } => {
-                    let text = format!(
-                        "The word `{word}` has been reserved for future use.
-
-If you do not rename this then your code may stop working in
-a future version of Gleam."
-                    );
-                    Diagnostic {
-                        title: "Reserved word used".into(),
-                        text,
-                        hint: None,
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            path: path.to_path_buf(),
-                            src: src.clone(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-            },
-
             Warning::InvalidSource { path } => Diagnostic {
                 title: "Invalid module name".into(),
                 text: "Module names must begin with a lowercase letter and contain\
