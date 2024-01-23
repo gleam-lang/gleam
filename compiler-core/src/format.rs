@@ -1267,17 +1267,29 @@ impl<'comments> Formatter<'comments> {
     }
 
     // Will always print the types, even if they were implicit in the original source
-    pub fn docs_fn_args<'a>(
+    fn docs_fn_args<'a>(
         &mut self,
         args: &'a [TypedArg],
         printer: &mut type_::pretty::Printer,
     ) -> Document<'a> {
         wrap_args(args.iter().map(|arg| {
-            arg.names
-                .to_doc()
+            self.docs_fn_arg_name(arg)
                 .append(": ".to_doc().append(printer.print(&arg.type_)))
                 .group()
         }))
+    }
+
+    fn docs_fn_arg_name<'a>(&mut self, arg: &'a TypedArg) -> Document<'a> {
+        match &arg.names {
+            ArgNames::Named { name } => name.to_doc(),
+            ArgNames::NamedLabelled { label, name } => docvec![label, " ", name],
+            // We remove the underscore from discarded function arguments since we don't want to
+            // expose this kind of detail: https://github.com/gleam-lang/gleam/issues/2561
+            ArgNames::Discard { name } => name.chars().dropping(1).as_str().to_doc(),
+            ArgNames::LabelledDiscard { label, name } => {
+                docvec![label, " ", name.chars().dropping(1).as_str().to_doc()]
+            }
+        }
     }
 
     fn call_arg<'a>(&mut self, arg: &'a CallArg<UntypedExpr>, arity: usize) -> Document<'a> {
