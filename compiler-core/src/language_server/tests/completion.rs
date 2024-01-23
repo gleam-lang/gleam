@@ -728,30 +728,49 @@ pub fn wibble(
 }
 
 #[test]
-fn public_internal_definitions_from_outer_modules_are_not_in_the_completions() {
-    let code = r#"
+fn public_internal_values_from_outer_modules_are_not_in_the_completions() {
+    let dep = r#"
 @external(erlang, "rand", "uniform")
 @internal
 pub fn random_float() -> Float
 
 @internal pub fn main() { 0 }
-@internal pub type Alias = Int
 @internal pub type Foo { Bar }
 @internal pub const foo = 1
 "#;
 
-    assert_eq!(expression_completions("", code), vec![]);
+    assert_eq!(expression_completions("import dep", dep), vec![]);
 }
 
 #[test]
-fn public_internal_definitions_from_the_same_module_are_in_the_completions() {
+fn public_internal_types_from_outer_modules_are_not_in_the_completions() {
+    let src = "import dep
+
+pub fn wibble(
+    _: String,
+) -> Nil {
+    Nil
+}";
+
+    let dep = r#"
+@internal pub type Alias = Int
+@internal pub type AnotherType { Constructor }
+"#;
+
+    assert_eq!(
+        positioned_expression_completions(src, dep, Position::new(3, 0)),
+        prelude_type_completions(),
+    );
+}
+
+#[test]
+fn internal_values_from_the_same_module_are_in_the_completions() {
     let code = r#"
 @external(erlang, "rand", "uniform")
 @internal
 pub fn random_float() -> Float
 
 @internal pub fn main() { 0 }
-@internal pub type Alias = Int
 @internal pub type Foo { Bar }
 @internal pub const foo = 1
 "#;
@@ -792,5 +811,39 @@ pub fn random_float() -> Float
                 ..Default::default()
             },
         ]
+    );
+}
+
+#[test]
+fn internal_types_from_the_same_module_are_in_the_completions() {
+    let code = "
+@internal pub type Alias = Result(Int, String)
+@internal pub type AnotherType { 
+  Bar
+}
+";
+
+    assert_eq!(
+        positioned_expression_completions(code, "", Position::new(3, 0)),
+        [
+            vec![
+                CompletionItem {
+                    label: "Alias".into(),
+                    kind: Some(CompletionItemKind::CLASS),
+                    detail: Some("Type".into()),
+                    documentation: None,
+                    ..Default::default()
+                },
+                CompletionItem {
+                    label: "AnotherType".into(),
+                    kind: Some(CompletionItemKind::CLASS),
+                    detail: Some("Type".into()),
+                    documentation: None,
+                    ..Default::default()
+                },
+            ],
+            prelude_type_completions(),
+        ]
+        .concat()
     );
 }
