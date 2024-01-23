@@ -1,0 +1,352 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: "compile(config, modules)"
+---
+//// app.html
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>app ·  · v0.1.0</title>
+    <meta name="description" content=""/>
+    <meta name="theme-color" content="#ffaff3" media="(prefers-color-scheme: light)"/>
+    <meta name="theme-color" content="#33384d" media="(prefers-color-scheme: dark)"/>
+    <link rel="stylesheet" href="./css/index.css?v=GLEAM_VERSION_HERE" type="text/css"/>
+    <!-- The docs_config.js file is provided by HexDocs and shared
+         between multiple versions of the same package. -->
+    <script src="./docs_config.js"></script>
+    <link id="syntax-theme" rel="stylesheet" href="./css/atom-one-light.min.css?v=GLEAM_VERSION_HERE"/>
+  </head>
+  <body class="prewrap-off theme-light drawer-closed">
+    <script>
+      "use strict";
+
+      /* gleamConfig format:
+       * // object with one or more options
+       * {option: {
+       *   // array of values
+       *   values: [{
+       *     // this value
+       *     value: "off",
+       *     // optional button label
+       *     label: "default",
+       *     // optional array of icons
+       *     icons: ["star", "toggle-left", ...],
+       *   }, ...],
+       *
+       *   // value update function
+       *   update: () => {...},
+       *
+       *   // optional callback function
+       *   callback: (value) => {...},
+       * }, ...};
+       */
+      window.unnest = '.';
+      const gleamConfig = {
+        theme: {
+          values: (() => {
+            const dark = {
+              value: "dark",
+              label: "Switch to light mode",
+              icons: ["moon"],
+            };
+            const light = {
+              value: "light",
+              label: "Switch to dark mode",
+              icons: ["sun"],
+            };
+            return (
+              window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? [dark, light]
+              : [light, dark]
+            ).map((item, index) => {
+              item.icons.push(`toggle-${0 === index ? "left" : "right"}`);
+              return item;
+            });
+          })(),
+
+          update: () => "light" === Gleam.getProperty("theme") ? "dark" : "light",
+
+          callback: function(value) {
+            const syntaxThemes = {
+              dark: "atom-one-dark",
+              light: "atom-one-light",
+            };
+            const syntaxTheme = document.querySelector("#syntax-theme");
+            const hrefParts = syntaxTheme.href.match(
+              /^(.*?)([^/\\#?]+?)((?:\.min)?\.css.*)$/i
+            );
+            if (syntaxThemes[value] !== hrefParts[2]) {
+              hrefParts[2] = syntaxThemes[value];
+              hrefParts.shift();
+              syntaxTheme.href = hrefParts.join("");
+            }
+          },
+        },
+        prewrap: {
+          values: [
+            {
+              value: "off",
+              label: "Switch to line-wrapped snippets",
+              icons: ["more-horizontal", "toggle-left"],
+            },
+            {
+              value: "on",
+              label: "Switch to non-wrapped snippets",
+              icons: ["more-vertical", "toggle-right"],
+            },
+          ],
+
+          update: () => "off" === Gleam.getProperty("prewrap") ? "on" : "off",
+        },
+      };
+    </script>
+
+    <script>
+      "use strict";
+
+      /* Initialise options before any content loads */
+      void function() {
+        for (const property in gleamConfig) {
+          const name = `Gleam.${property}`;
+
+          let value;
+
+          try {
+            value = localStorage.getItem(name);
+            if (value.startsWith('"') && value.endsWith('"')) {
+              localStorage.setItem(name, value.slice(1, value.length - 1));
+            }
+          }
+          catch (_error) {}
+
+          const defaultValue = gleamConfig[property].values[0].value;
+          try {
+            value = localStorage.getItem(name);
+          }
+          catch(_error) {}
+          if (-1 < [null, undefined].indexOf(value)) {
+            value = defaultValue;
+          }
+          const bodyClasses = document.body.classList;
+          bodyClasses.remove(`${property}-${defaultValue}`);
+          bodyClasses.add(`${property}-${value}`);
+          try {
+            gleamConfig[property].callback(value);
+          }
+          catch(_error) {}
+        }
+      }();
+    </script>
+
+    <header class="page-header">
+      <button class="sidebar-toggle" tabindex="0">
+        <svg class="label label-closed icon icon-menu" alt="Open Menu" title="Open Menu"><use xlink:href="#icon-menu"></use></svg>
+        <svg class="label label-open icon icon-x-circle" alt="Close Menu" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
+      </button>
+
+      <h2>
+        <a href="./"></a>
+        <span id="project-version">
+          <span> - v0.1.0 </span>
+        </span>
+        <script>
+          "use strict";
+
+          if ("undefined" !== typeof versionNodes) {
+            const currentVersion = "v0.1.0";
+            if (! versionNodes.find(element => element.version === currentVersion)) {
+              versionNodes.unshift({ version: currentVersion, url: "#" });
+            }
+            document.querySelector("#project-version").innerHTML =
+              versionNodes.reduce(
+                (acc, element) => {
+                  const status =
+                    currentVersion === element.version ? "selected disabled" : "";
+                  return `
+                    ${acc}
+                      <option value="${element.url}" ${status}>
+                        ${element.version}
+                      </option>
+                  `;
+                },
+                `
+                <form autocomplete="off">
+                  <select onchange="window.location.href = this.value">
+                `
+              ) + `
+                  </select>
+                  <svg class="icon icon-chevrons-down"><use xlink:href="#icon-chevrons-down"></use></svg>
+                </form>
+              `;
+          }
+        </script>
+      </h2>
+      <div class="search">
+        <div class="search-input-wrap">
+          <input type="text" id="search-input" class="search-input" tabindex="0" aria-label="Search " autocomplete="off">
+          <label for="search-input" class="search-label"><svg viewBox="0 0 24 24" class="search-icon"><use xlink:href="#icon-svg-search"></use></svg></label>
+        </div>
+        <div id="search-results" class="search-results"></div>
+      </div>
+
+      <button class="search-nav-button" id="search-nav-button" tabindex="0">
+        <svg class="label icon icon-x-circle" alt="Open Search" title="Open Search"><use xlink:href="#icon-svg-search"></use></svg>
+      </button>
+
+    </header>
+
+    <div class="page">
+      <nav class="sidebar">
+        <button class="sidebar-toggle" tabindex="1">
+          <svg class="label icon icon-x-circle" alt="Close Menu" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
+        </button>
+
+        
+
+        
+
+        <h2>Modules</h2>
+        <ul>
+        
+          <li><a href="./app.html">app</a></li>
+        
+        </ul>
+
+        
+
+
+
+
+
+<h2>Functions</h2>
+<ul>
+  
+  <li><a href="#discard">discard</a></li>
+  
+</ul>
+
+
+      </nav>
+
+      <main class="content">
+        
+<h1 id="module-name" class="module-name">
+  <a href="#module-name">app</a>
+  <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
+</h1>
+
+
+
+
+
+
+
+<section class="module-members">
+  <h1 id="module-functions" class="module-member-kind">
+    <a href="#module-functions">Functions</a>
+    <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
+  </h1>
+  
+  <div class="member">
+    <div class="member-name">
+      <h2 id="discard">
+        <a href="#discard">
+          discard
+        </a>
+      </h2>
+      
+    </div>
+
+    <pre><code class="hljs gleam">pub fn discard(discarded: a) -&gt; Int</code></pre>
+    
+    <div class="rendered-markdown"></div>
+  </div>
+  
+</section>
+
+
+      </main>
+      <div class="search-overlay"></div>
+    </div>
+
+    <script>
+      "use strict";
+      const pride = () => document.body.classList.toggle("show-pride");
+    </script>
+    <a class="pride-button" onclick="pride()">✨</a>
+    <footer class="pride" onclick="pride()">
+      <div class="blue">Lucy</div>
+      <div class="pink">says</div>
+      <div class="white">trans</div>
+      <div class="pink">rights</div>
+      <div class="blue">now</div>
+    </footer>
+
+    <svg class="svg-lib" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <defs>
+        <symbol id="icon-chevrons-down" viewBox="0 0 24 24"><path d="M6.293 13.707l5 5c0.391 0.391 1.024 0.391 1.414 0l5-5c0.391-0.391 0.391-1.024 0-1.414s-1.024-0.391-1.414 0l-4.293 4.293-4.293-4.293c-0.391-0.391-1.024-0.391-1.414 0s-0.391 1.024 0 1.414zM6.293 6.707l5 5c0.391 0.391 1.024 0.391 1.414 0l5-5c0.391-0.391 0.391-1.024 0-1.414s-1.024-0.391-1.414 0l-4.293 4.293-4.293-4.293c-0.391-0.391-1.024-0.391-1.414 0s-0.391 1.024 0 1.414z"></path></symbol>
+
+        <symbol id="icon-gleam-chasse" viewBox="0 0 180 22"><path d="m0.00798 15.6c0.784-1.73 0.754-2.11 1.94-3.97 1.17-0.28 2.66-0.119 3.71-0.524 1.12 0.501 1.85 0.729 3.35-0.466 0.942-0.806 2.41 0.656 3.41-0.0865 2.53-1.48 0.972-1.03 5.14-0.585 1.79-0.493 3.46-0.852 6.64-1.06 3.8-0.331 0.0108-1.06 5.16-1.16 0.874-0.835 3.43-1.34 5.49-0.963 2.17-1.41 0.488-1.58 2.64-0.426 4.36-0.0592 0.83-1.08 5.39-1.22 3.27-0.264 0.843-0.471 2.82 0.187 2.13-0.254 1.36-0.525 3.67 0.709 1.77 1.66 0.962 0.181 1.9 2.32 0.26 0.593 0.304 1.71 0.814 1.74 3.67-0.833-0.0875 0.536 4.63-0.838 0.719-0.891 4.42 0.255 3.8-0.806 2.07 0.119 2.75-0.7 6.07-0.822 1.48-1.17 2.26 0.943 3.4-0.974 0.391 0.166-1.61-0.548 3.88-0.154 2.93-1.26-1.74 0.103 4.21-0.851 3.52 8e-3 0.233-0.263 3.33-0.811 1.06-1.46-0.459-1.02 5.55-0.963 2.61-2.11 0.281-1.59 4.88-0.572 0.699 0.597 3.05 1.65 3.99 3.26 0.863-0.152 2.77 0.0659 3.41-0.626 2.24-1.04-0.0635-1.05 3.37-1.34 2.1 0.115 2.2-1.21 2.77-0.679 5.91-0.778 1.96-1.63 4.89-1.49 5.47 0.212 0.204 1.22 3.99-0.265 2.14-0.0482 0.411-0.776 2.93-0.892 2.17-0.148 0.604-0.262 2.54-1.52 0.804 0.0911 1.11 0.562 1.23 1.57 0.468 1.54 0.966 3.31 1.86 4.62 2.67-0.472-0.76-0.582 4.72-0.393 3.14 0.131 3.72-0.565 6.16-0.724 4.54-0.853 1.37-0.939 5.89-0.58 10.1-1.7 2.9-0.523 10.2-1.15 4.86-0.211 4.69-0.969 7.4-1.04 3.46-0.0576 3.13 0.58 3.83 0 3.63 0.257 2.5-0.141 7.74-0.46 2.23 1.09-0.13 0.518 5.9 0.145 1.12-0.0184 2.85-6e-3 3.83-0.186 0.748 0.694 1.01 1.4 1.58 2.33-0.112 0.687-0.306 0.992-0.454 1.51 0.0805 0.459-0.0486 0.901 0.226 1.36 0.057 0.859-1.34 1.08-2.69 0.127-3.53-0.828-1.21-0.849-7.23 0.974-5.16-0.286-1.66-0.354-7.64 0.321-1.48 0.961-4.73 0.287-6.76 0.551-4.01 0.178-1.95-0.517-3.33 0.624-5.29 1.8-3.12 1.47-5.66 0.941-5.26 0.0339-2.08-0.772-4.75 0.424-6.08 2.5-3.35 1.33-7.54 2.02-6.37-0.269-3.02 1.17-6.76 0.468-0.975 0.1-2.43 0.343-3.46 0.786-1.5-0.748-1.92 0.689-3.38 0.363-0.83-0.0851-2.1-0.343-3.5-0.0239-1.28 0.81-3.87-0.666-5.67-2.17-0.131-0.478-0.106-0.902-0.403-1.69-1.63 0.392-0.668 0.395-4.29 1.14-2.71 0.289 0.131 0.495-3.22 0.964-0.638 0.331-0.998 1.17-3.15 1.04-3.09 0.469-4.48 2.1-3.66 0.577-2.95 0.347-2.9 1.82-5.86 1.85-3.3 0.815 0.192 0.978-5.2 1.66-2.81 2.66 0.0387 0.735-4.21 1.29-1.43-0.911-2.24-2.29-3.89-3.63-0.363-0.679 0.258-1.84-0.375-2.28-5.28 1.39 0.176-0.925-5.08 1.01-10.6 1.42-4.55 1.88-9.18 1.66-6.73 1.35-4.11 1.99-10.2 2.31-4.53 1.09-1.63-0.398-5.52 1.02-3.15 0.522-2.41-0.0562-4.51 1.04-0.76 0.379-0.865-0.416-2.75-0.0493-3.5-3.45-2.85-0.892-2.93-6.14-4.41 0.837 0.477 0.703-6.18 1.2-4.59 0.0171-1.93 1.02-7.41 1.04-0.815 0.505-2.55 0.453-4.13 0.791-5 0.71-5.97 2-8.46 1.61-1.39 1.09-2.58 1.53-4.22 2.62-0.919 0.756-3.45 0.596-4.48 0.492-0.525-0.406-0.751-1.2-1.82-3.28 0.149-0.902-0.325-1.44-0.248-2.8z"></path></symbol>
+
+        <symbol id="icon-gleam-chasse-2" viewBox="0 0 108 22"><path d="m0.585 18.5c-0.578-1.54-0.65-1.33-0.543-2.64 0.271-1.19 0.153-1.06 1.27-1.71 0.993 0.124 1.94-0.662 2.94-0.869 2.48 0.119 0.772 0.443 2.99-0.366 1.66-1.91 0.764 0.783 3.36-0.992 2.37 0.314 4.26-1.5 5.16-1.26 0.387 0.627 0.202 0.412 2.52-0.776 4.89-1.57 3.91-1.47 5-0.972 2.05-1.09-0.0615-0.49 2.79-1.2 4.47-0.514 3.62 0.127 4.18-1.19 4.3-0.613 2.56-1.49 4.09-0.847 1.8-1.51 1.01 0.157 2.64-0.722 4.91-1.28 1.39 0.553 4.43-0.843 1.28-0.387 2.72-0.427 4.05-0.748 0.332-0.942 1.93 0.121 2.75-0.817 3 0.294-0.74-0.514 3.35-0.219 2.34-1.12 0.474 0.505 3.01-1.33 0.779-0.552 0.958 0.919 2.76-0.331 1.26-0.027 0.231 0.642 1.71 0.0417 1.08-0.234-0.332-0.25 1.4-0.727 1.07 0.281 0.347 0.858 2.47 1.86 1.02 2.09-0.0407 0.967 0.473 3.88-0.19 1.31 0.095 0.629-1.34 1.44-0.351 0.381-0.494 0.132-0.0505 0.773 5.7-0.865 2.24-0.0704 4.31-0.722 1.39-0.602 3.12 0.189 3.85-0.396 5.52-1.74 1.2 0.802 5.56-0.972 5.77-0.78 5.5-0.0267 5.87-0.622 1.29-0.593 0.466-0.184 2.73-0.0872 0.586-0.907-0.0863-0.919 1.23-0.644 0.471-1.23 3.03 0.227 3.86-0.234 1.2 0.319 2.27 0.00513 2.55 0.264 0.378 0.998 1.18 1.79 1.78 2.57-0.109 0.798 0.472 1.14 0.254 2.4 2.25-0.43 1.69-0.298 4.1-0.338 2.35-1.11 0.595 0.263 3.12-0.813 1.5-0.153 2.17 0.044 3.29-0.328 1.39-0.699 0.859-0.135 1.88-0.671 1.35 0.779 0.389 0.64 1.39 1.7 0.132 1.37 0.34 1.03 0.117 2.21-0.619 0.327-0.757 0.0587-1.28 0.739-2.68 0.688-0.161 0.395-2.5 0.734-1.97-0.203-0.915-0.0737-3.21 0.454-1.76 1.41-0.982 1.12-2.36 1.43-1.65 0.974 0.119-0.784-2.27 0.501-0.883 0.361-1.2 0.471-1.88 0.827-2.84 1.1-1.72-0.0496-3.18 1.37-2.38 0.689-1.82 0.324-2.65 1.27-3.52 0.658-2.07-0.49-3.27-0.419-1.85-2.19 0.14-0.414-1.87-2.62-0.551-2.06-0.527-0.977 0.131-2.63 0.366-1.44 0.369-0.627 1.15-1.88-1.79 0.433-1.64 0.163-5.6 0.781-3.59 1.82-0.592-0.17-4.29 0.729-0.705 0.598-0.369 0.995-1.59-0.0892-0.655 0.638-0.104 0.42-2.9 0.621-3.6 1.1-2.83 1.29-4.17 0.742 0.0193-1.05-1.8 1.24-2.18 0.454-2.51 0.61-1.36 0.795-3.64 0.594-0.211 0.804-4.14-0.139-5.09 0.879-3.61 0.381 0.127-0.296-3.51-1.03-1.44-1.87-1.14-0.196-1.22-3.01 0.14-1.2-0.505-0.638-0.0251-2.39-2.64 0.466-1.25-0.372-3.55 0.344-4.12 0.781-0.26 1.32-4.36 1.02-1.78 0.235 0.327 0.568-3.16 0.555-1.36 0.861-0.709 0.778-2.01 0.649-4.07 1.1-0.948 0.904-4.54 1.17-1.27 0.686-4.67 0.341-4.6 1.04-2.47 0.466-0.707 1.46-3.49 0.582-2.93 1.39-0.739 1.31-4.38 1.56-3.21 1.23-0.735 1.93-3.87 1.14-2.82 1.91-0.676 1.23-4.04 1.82-1.97 1.47 0.312 0.745-2.95 0.812-3.51 1.54 0.0965-0.473-4.27 1.39-2.68 0.382-1.75 0.682-3.32-0.585-1.65-1.61 0.361-0.307-1.37-2.31z"></path></symbol>
+
+        <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M3 13h18c0.552 0 1-0.448 1-1s-0.448-1-1-1h-18c-0.552 0-1 0.448-1 1s0.448 1 1 1zM3 7h18c0.552 0 1-0.448 1-1s-0.448-1-1-1h-18c-0.552 0-1 0.448-1 1s0.448 1 1 1zM3 19h18c0.552 0 1-0.448 1-1s-0.448-1-1-1h-18c-0.552 0-1 0.448-1 1s0.448 1 1 1z"></path></symbol>
+
+        <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M21.996 12.882c0.022-0.233-0.038-0.476-0.188-0.681-0.325-0.446-0.951-0.544-1.397-0.219-0.95 0.693-2.060 1.086-3.188 1.162-1.368 0.092-2.765-0.283-3.95-1.158-1.333-0.985-2.139-2.415-2.367-3.935s0.124-3.124 1.109-4.456c0.142-0.191 0.216-0.435 0.191-0.691-0.053-0.55-0.542-0.952-1.092-0.898-2.258 0.22-4.314 1.18-5.895 2.651-1.736 1.615-2.902 3.847-3.137 6.386-0.254 2.749 0.631 5.343 2.266 7.311s4.022 3.313 6.772 3.567 5.343-0.631 7.311-2.266 3.313-4.022 3.567-6.772zM19.567 14.674c-0.49 1.363-1.335 2.543-2.416 3.441-1.576 1.309-3.648 2.016-5.848 1.813s-4.108-1.278-5.417-2.854-2.016-3.648-1.813-5.848c0.187-2.032 1.117-3.814 2.507-5.106 0.782-0.728 1.71-1.3 2.731-1.672-0.456 1.264-0.577 2.606-0.384 3.899 0.303 2.023 1.38 3.934 3.156 5.247 1.578 1.167 3.448 1.668 5.272 1.545 0.752-0.050 1.496-0.207 2.21-0.465z"></path></symbol>
+
+        <symbol id="icon-more-horizontal" viewBox="0 0 24 24"><path d="M14 12c0-0.552-0.225-1.053-0.586-1.414s-0.862-0.586-1.414-0.586-1.053 0.225-1.414 0.586-0.586 0.862-0.586 1.414 0.225 1.053 0.586 1.414 0.862 0.586 1.414 0.586 1.053-0.225 1.414-0.586 0.586-0.862 0.586-1.414zM21 12c0-0.552-0.225-1.053-0.586-1.414s-0.862-0.586-1.414-0.586-1.053 0.225-1.414 0.586-0.586 0.862-0.586 1.414 0.225 1.053 0.586 1.414 0.862 0.586 1.414 0.586 1.053-0.225 1.414-0.586 0.586-0.862 0.586-1.414zM7 12c0-0.552-0.225-1.053-0.586-1.414s-0.862-0.586-1.414-0.586-1.053 0.225-1.414 0.586-0.586 0.862-0.586 1.414 0.225 1.053 0.586 1.414 0.862 0.586 1.414 0.586 1.053-0.225 1.414-0.586 0.586-0.862 0.586-1.414z"></path></symbol>
+
+        <symbol id="icon-more-vertical" viewBox="0 0 24 24"><path d="M14 12c0-0.552-0.225-1.053-0.586-1.414s-0.862-0.586-1.414-0.586-1.053 0.225-1.414 0.586-0.586 0.862-0.586 1.414 0.225 1.053 0.586 1.414 0.862 0.586 1.414 0.586 1.053-0.225 1.414-0.586 0.586-0.862 0.586-1.414zM14 5c0-0.552-0.225-1.053-0.586-1.414s-0.862-0.586-1.414-0.586-1.053 0.225-1.414 0.586-0.586 0.862-0.586 1.414 0.225 1.053 0.586 1.414 0.862 0.586 1.414 0.586 1.053-0.225 1.414-0.586 0.586-0.862 0.586-1.414zM14 19c0-0.552-0.225-1.053-0.586-1.414s-0.862-0.586-1.414-0.586-1.053 0.225-1.414 0.586-0.586 0.862-0.586 1.414 0.225 1.053 0.586 1.414 0.862 0.586 1.414 0.586 1.053-0.225 1.414-0.586 0.586-0.862 0.586-1.414z"></path></symbol>
+
+        <symbol id="icon-star" viewBox="0 0 24 24"><path d="M12.897 1.557c-0.092-0.189-0.248-0.352-0.454-0.454-0.495-0.244-1.095-0.041-1.339 0.454l-2.858 5.789-6.391 0.935c-0.208 0.029-0.411 0.127-0.571 0.291-0.386 0.396-0.377 1.029 0.018 1.414l4.623 4.503-1.091 6.362c-0.036 0.207-0.006 0.431 0.101 0.634 0.257 0.489 0.862 0.677 1.351 0.42l5.714-3.005 5.715 3.005c0.186 0.099 0.408 0.139 0.634 0.101 0.544-0.093 0.91-0.61 0.817-1.155l-1.091-6.362 4.623-4.503c0.151-0.146 0.259-0.344 0.292-0.572 0.080-0.546-0.298-1.054-0.845-1.134l-6.39-0.934zM12 4.259l2.193 4.444c0.151 0.305 0.436 0.499 0.752 0.547l4.906 0.717-3.549 3.457c-0.244 0.238-0.341 0.569-0.288 0.885l0.837 4.883-4.386-2.307c-0.301-0.158-0.647-0.148-0.931 0l-4.386 2.307 0.837-4.883c0.058-0.336-0.059-0.661-0.288-0.885l-3.549-3.457 4.907-0.718c0.336-0.049 0.609-0.26 0.752-0.546z"></path></symbol>
+
+        <symbol id="icon-sun" viewBox="0 0 24 24"><path d="M18 12c0-1.657-0.673-3.158-1.757-4.243s-2.586-1.757-4.243-1.757-3.158 0.673-4.243 1.757-1.757 2.586-1.757 4.243 0.673 3.158 1.757 4.243 2.586 1.757 4.243 1.757 3.158-0.673 4.243-1.757 1.757-2.586 1.757-4.243zM16 12c0 1.105-0.447 2.103-1.172 2.828s-1.723 1.172-2.828 1.172-2.103-0.447-2.828-1.172-1.172-1.723-1.172-2.828 0.447-2.103 1.172-2.828 1.723-1.172 2.828-1.172 2.103 0.447 2.828 1.172 1.172 1.723 1.172 2.828zM11 1v2c0 0.552 0.448 1 1 1s1-0.448 1-1v-2c0-0.552-0.448-1-1-1s-1 0.448-1 1zM11 21v2c0 0.552 0.448 1 1 1s1-0.448 1-1v-2c0-0.552-0.448-1-1-1s-1 0.448-1 1zM3.513 4.927l1.42 1.42c0.391 0.391 1.024 0.391 1.414 0s0.391-1.024 0-1.414l-1.42-1.42c-0.391-0.391-1.024-0.391-1.414 0s-0.391 1.024 0 1.414zM17.653 19.067l1.42 1.42c0.391 0.391 1.024 0.391 1.414 0s0.391-1.024 0-1.414l-1.42-1.42c-0.391-0.391-1.024-0.391-1.414 0s-0.391 1.024 0 1.414zM1 13h2c0.552 0 1-0.448 1-1s-0.448-1-1-1h-2c-0.552 0-1 0.448-1 1s0.448 1 1 1zM21 13h2c0.552 0 1-0.448 1-1s-0.448-1-1-1h-2c-0.552 0-1 0.448-1 1s0.448 1 1 1zM4.927 20.487l1.42-1.42c0.391-0.391 0.391-1.024 0-1.414s-1.024-0.391-1.414 0l-1.42 1.42c-0.391 0.391-0.391 1.024 0 1.414s1.024 0.391 1.414 0zM19.067 6.347l1.42-1.42c0.391-0.391 0.391-1.024 0-1.414s-1.024-0.391-1.414 0l-1.42 1.42c-0.391 0.391-0.391 1.024 0 1.414s1.024 0.391 1.414 0z"></path></symbol>
+
+        <symbol id="icon-toggle-left" viewBox="0 0 24 24"><path d="M8 4c-2.209 0-4.21 0.897-5.657 2.343s-2.343 3.448-2.343 5.657 0.897 4.21 2.343 5.657 3.448 2.343 5.657 2.343h8c2.209 0 4.21-0.897 5.657-2.343s2.343-3.448 2.343-5.657-0.897-4.21-2.343-5.657-3.448-2.343-5.657-2.343zM8 6h8c1.657 0 3.156 0.67 4.243 1.757s1.757 2.586 1.757 4.243-0.67 3.156-1.757 4.243-2.586 1.757-4.243 1.757h-8c-1.657 0-3.156-0.67-4.243-1.757s-1.757-2.586-1.757-4.243 0.67-3.156 1.757-4.243 2.586-1.757 4.243-1.757zM12 12c0-1.104-0.449-2.106-1.172-2.828s-1.724-1.172-2.828-1.172-2.106 0.449-2.828 1.172-1.172 1.724-1.172 2.828 0.449 2.106 1.172 2.828 1.724 1.172 2.828 1.172 2.106-0.449 2.828-1.172 1.172-1.724 1.172-2.828zM10 12c0 0.553-0.223 1.051-0.586 1.414s-0.861 0.586-1.414 0.586-1.051-0.223-1.414-0.586-0.586-0.861-0.586-1.414 0.223-1.051 0.586-1.414 0.861-0.586 1.414-0.586 1.051 0.223 1.414 0.586 0.586 0.861 0.586 1.414z"></path></symbol>
+
+        <symbol id="icon-toggle-right" viewBox="0 0 24 24"><path d="M8 4c-2.209 0-4.21 0.897-5.657 2.343s-2.343 3.448-2.343 5.657 0.897 4.21 2.343 5.657 3.448 2.343 5.657 2.343h8c2.209 0 4.21-0.897 5.657-2.343s2.343-3.448 2.343-5.657-0.897-4.21-2.343-5.657-3.448-2.343-5.657-2.343zM8 6h8c1.657 0 3.156 0.67 4.243 1.757s1.757 2.586 1.757 4.243-0.67 3.156-1.757 4.243-2.586 1.757-4.243 1.757h-8c-1.657 0-3.156-0.67-4.243-1.757s-1.757-2.586-1.757-4.243 0.67-3.156 1.757-4.243 2.586-1.757 4.243-1.757zM20 12c0-1.104-0.449-2.106-1.172-2.828s-1.724-1.172-2.828-1.172-2.106 0.449-2.828 1.172-1.172 1.724-1.172 2.828 0.449 2.106 1.172 2.828 1.724 1.172 2.828 1.172 2.106-0.449 2.828-1.172 1.172-1.724 1.172-2.828zM18 12c0 0.553-0.223 1.051-0.586 1.414s-0.861 0.586-1.414 0.586-1.051-0.223-1.414-0.586-0.586-0.861-0.586-1.414 0.223-1.051 0.586-1.414 0.861-0.586 1.414-0.586 1.051 0.223 1.414 0.586 0.586 0.861 0.586 1.414z"></path></symbol>
+
+        <symbol id="icon-x-circle" viewBox="0 0 24 24"><path d="M23 12c0-3.037-1.232-5.789-3.222-7.778s-4.741-3.222-7.778-3.222-5.789 1.232-7.778 3.222-3.222 4.741-3.222 7.778 1.232 5.789 3.222 7.778 4.741 3.222 7.778 3.222 5.789-1.232 7.778-3.222 3.222-4.741 3.222-7.778zM21 12c0 2.486-1.006 4.734-2.636 6.364s-3.878 2.636-6.364 2.636-4.734-1.006-6.364-2.636-2.636-3.878-2.636-6.364 1.006-4.734 2.636-6.364 3.878-2.636 6.364-2.636 4.734 1.006 6.364 2.636 2.636 3.878 2.636 6.364zM8.293 9.707l2.293 2.293-2.293 2.293c-0.391 0.391-0.391 1.024 0 1.414s1.024 0.391 1.414 0l2.293-2.293 2.293 2.293c0.391 0.391 1.024 0.391 1.414 0s0.391-1.024 0-1.414l-2.293-2.293 2.293-2.293c0.391-0.391 0.391-1.024 0-1.414s-1.024-0.391-1.414 0l-2.293 2.293-2.293-2.293c-0.391-0.391-1.024-0.391-1.414 0s-0.391 1.024 0 1.414z"></path></symbol>
+
+        <symbol id="icon-svg-search" viewBox="0 0 24 24">
+            <title>Search</title>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+        </symbol>
+
+        <symbol id="icon-svg-doc" viewBox="0 0 24 24">
+            <title>Document</title>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
+            </svg>
+        </symbol>
+      </defs>
+    </svg>
+
+    <script src="./js/highlight.min.js?v=GLEAM_VERSION_HERE"></script>
+    <script src="./js/highlightjs-gleam.js?v=GLEAM_VERSION_HERE"></script>
+    <script src="./js/highlightjs-erlang.min.js?v=GLEAM_VERSION_HERE"></script>
+    <script src="./js/highlightjs-elixir.min.js?v=GLEAM_VERSION_HERE"></script>
+    <script src="./js/highlightjs-javascript.min.js?v=GLEAM_VERSION_HERE"></script>
+    <script src="./js/highlightjs-typescript.min.js?v=GLEAM_VERSION_HERE"></script>
+    <script>
+      document.querySelectorAll("pre code").forEach((elem) => {
+        if (elem.className === "") {
+          elem.classList.add("gleam");
+        }
+      });
+      hljs.highlightAll();
+    </script>
+    <script src="./js/lunr.min.js?v=GLEAM_VERSION_HERE"></script>    
+    <script src="./js/index.js?v=0"></script>
+
+    <!-- Load the search index using JSONP to avoid CORS issues -->
+    <script src="./search-data.js?v=0"></script>
+  </body>
+</html>
+
+
