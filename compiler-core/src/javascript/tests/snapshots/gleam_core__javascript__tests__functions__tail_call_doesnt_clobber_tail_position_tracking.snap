@@ -9,7 +9,7 @@ export function loop(loop$indentation) {
     let $ = indentation > 0;
     if ($) {
       loop$indentation = indentation - 1;
-    } else if (!$) {
+    } else {
       return undefined;
     }
   }

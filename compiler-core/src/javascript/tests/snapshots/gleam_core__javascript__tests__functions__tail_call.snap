@@ -9,7 +9,7 @@ export function count(loop$xs, loop$n) {
     let n = loop$n;
     if (xs.hasLength(0)) {
       return n;
-    } else if (xs.atLeastLength(1)) {
+    } else {
       let xs$1 = xs.tail;
       loop$xs = xs$1;
       loop$n = n + 1;
