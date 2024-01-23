@@ -9,6 +9,12 @@
 - The warning for an unused module alias now shows how to not assign a name to
   the module.
 
+### Build tool changes
+
+- The search bar in generated docs now has a darker background color.
+- The generated docs no longer shows wether an argument is discarded or
+  not in a function signature.
+
 ### Formatter
 
 - Now the formatter will nest pipelines and binary operators that are used as
