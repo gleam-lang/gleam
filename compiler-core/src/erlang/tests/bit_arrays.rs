@@ -111,7 +111,7 @@ pub fn bit_array_discard(x) -> Bool {
 fn bit_array_declare_and_use_var() {
     assert_erl!(
         r#"pub fn go(x) {
-  let <<name_size:8, name:bytes-size(name_size)>> = x
+  let assert <<name_size:8, name:bytes-size(name_size)>> = x
   name
 }"#
     );
