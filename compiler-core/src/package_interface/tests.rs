@@ -85,7 +85,7 @@ pub fn compile_package(
         let _ = direct_dependencies.insert(dep_package.into(), ());
     }
     let parsed = crate::parse::parse_module(src).expect("syntax error");
-    
+
     let mut ast = parsed.module;
     let module_name = module_name
         .map(EcoString::from)
