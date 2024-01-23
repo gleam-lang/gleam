@@ -5,13 +5,14 @@ expression: "\nconst float = 1.1\nfn main() {}\ntype Foo\ntype Bar = Int\n"
 {
   "name": "my_package",
   "package_version": "11.11.11",
-  "gleam_version": "1.0.0",
+  "gleam_version_constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
       "type_aliases": {},
       "types": {},
-      "values": {}
+      "constants": {},
+      "functions": {}
     }
   }
 }

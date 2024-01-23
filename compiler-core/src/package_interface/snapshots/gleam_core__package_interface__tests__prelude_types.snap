@@ -5,13 +5,13 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
 {
   "name": "my_package",
   "package_version": "11.11.11",
-  "gleam_version": "1.0.0",
+  "gleam_version_constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
       "type_aliases": {},
       "types": {},
-      "values": {
+      "constants": {
         "bool": {
           "documentation": null,
           "deprecation": null,
@@ -76,7 +76,8 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
             "parameters": []
           }
         }
-      }
+      },
+      "functions": {}
     }
   }
 }

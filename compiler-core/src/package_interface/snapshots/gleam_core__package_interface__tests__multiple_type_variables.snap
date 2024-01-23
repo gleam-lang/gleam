@@ -5,7 +5,7 @@ expression: "\npub type Box(a, b)\npub fn main(a: a, b: b, c: Box(c, d)) -> Box(
 {
   "name": "my_package",
   "package_version": "11.11.11",
-  "gleam_version": "1.0.0",
+  "gleam_version_constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
@@ -18,7 +18,8 @@ expression: "\npub type Box(a, b)\npub fn main(a: a, b: b, c: Box(c, d)) -> Box(
           "constructors": []
         }
       },
-      "values": {
+      "constants": {},
+      "functions": {
         "main": {
           "documentation": null,
           "deprecation": null,
@@ -27,59 +28,56 @@ expression: "\npub type Box(a, b)\npub fn main(a: a, b: b, c: Box(c, d)) -> Box(
             "uses_erlang_externals": false,
             "uses_javascript_externals": false
           },
-          "type": {
-            "kind": "Fn",
+          "parameters": [
+            {
+              "label": null,
+              "type": {
+                "kind": "Variable",
+                "id": 0
+              }
+            },
+            {
+              "label": null,
+              "type": {
+                "kind": "Variable",
+                "id": 1
+              }
+            },
+            {
+              "label": null,
+              "type": {
+                "kind": "Named",
+                "name": "Box",
+                "package": "my_package",
+                "module": "my/module",
+                "parameters": [
+                  {
+                    "kind": "Variable",
+                    "id": 2
+                  },
+                  {
+                    "kind": "Variable",
+                    "id": 3
+                  }
+                ]
+              }
+            }
+          ],
+          "return": {
+            "kind": "Named",
+            "name": "Box",
+            "package": "my_package",
+            "module": "my/module",
             "parameters": [
               {
-                "label": null,
-                "type": {
-                  "kind": "Variable",
-                  "id": 0
-                }
+                "kind": "Variable",
+                "id": 0
               },
               {
-                "label": null,
-                "type": {
-                  "kind": "Variable",
-                  "id": 1
-                }
-              },
-              {
-                "label": null,
-                "type": {
-                  "kind": "Named",
-                  "name": "Box",
-                  "package": "my_package",
-                  "module": "my/module",
-                  "parameters": [
-                    {
-                      "kind": "Variable",
-                      "id": 2
-                    },
-                    {
-                      "kind": "Variable",
-                      "id": 3
-                    }
-                  ]
-                }
+                "kind": "Variable",
+                "id": 3
               }
-            ],
-            "return": {
-              "kind": "Named",
-              "name": "Box",
-              "package": "my_package",
-              "module": "my/module",
-              "parameters": [
-                {
-                  "kind": "Variable",
-                  "id": 0
-                },
-                {
-                  "kind": "Variable",
-                  "id": 3
-                }
-              ]
-            }
+            ]
           }
         }
       }

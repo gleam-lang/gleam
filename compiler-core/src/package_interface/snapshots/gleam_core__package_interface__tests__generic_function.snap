@@ -5,7 +5,7 @@ expression: "\npub type Bar(a) { Bar }\n@deprecated(\"deprecation message\")\npu
 {
   "name": "my_package",
   "package_version": "11.11.11",
-  "gleam_version": "1.0.0",
+  "gleam_version_constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
@@ -24,7 +24,8 @@ expression: "\npub type Bar(a) { Bar }\n@deprecated(\"deprecation message\")\npu
           ]
         }
       },
-      "values": {
+      "constants": {},
+      "functions": {
         "main": {
           "documentation": null,
           "deprecation": {
@@ -35,21 +36,18 @@ expression: "\npub type Bar(a) { Bar }\n@deprecated(\"deprecation message\")\npu
             "uses_erlang_externals": false,
             "uses_javascript_externals": false
           },
-          "type": {
-            "kind": "Fn",
-            "parameters": [],
-            "return": {
-              "kind": "Named",
-              "name": "Bar",
-              "package": "my_package",
-              "module": "my/module",
-              "parameters": [
-                {
-                  "kind": "Variable",
-                  "id": 0
-                }
-              ]
-            }
+          "parameters": [],
+          "return": {
+            "kind": "Named",
+            "name": "Bar",
+            "package": "my_package",
+            "module": "my/module",
+            "parameters": [
+              {
+                "kind": "Variable",
+                "id": 0
+              }
+            ]
           }
         }
       }

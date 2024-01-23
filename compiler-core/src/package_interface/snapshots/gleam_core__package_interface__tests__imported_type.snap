@@ -5,13 +5,14 @@ expression: "\nimport other_module.{type Element}\npub fn main() -> Element(Int)
 {
   "name": "my_package",
   "package_version": "11.11.11",
-  "gleam_version": "1.0.0",
+  "gleam_version_constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
       "type_aliases": {},
       "types": {},
-      "values": {
+      "constants": {},
+      "functions": {
         "main": {
           "documentation": null,
           "deprecation": null,
@@ -20,24 +21,21 @@ expression: "\nimport other_module.{type Element}\npub fn main() -> Element(Int)
             "uses_erlang_externals": false,
             "uses_javascript_externals": false
           },
-          "type": {
-            "kind": "Fn",
-            "parameters": [],
-            "return": {
-              "kind": "Named",
-              "name": "Element",
-              "package": "other_package",
-              "module": "other_module",
-              "parameters": [
-                {
-                  "kind": "Named",
-                  "name": "Int",
-                  "package": "",
-                  "module": "gleam",
-                  "parameters": []
-                }
-              ]
-            }
+          "parameters": [],
+          "return": {
+            "kind": "Named",
+            "name": "Element",
+            "package": "other_package",
+            "module": "other_module",
+            "parameters": [
+              {
+                "kind": "Named",
+                "name": "Int",
+                "package": "",
+                "module": "gleam",
+                "parameters": []
+              }
+            ]
           }
         }
       }
