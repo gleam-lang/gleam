@@ -5,7 +5,7 @@ expression: "pub opaque type Foo { Bar }"
 {
   "name": "my_package",
   "package_version": "11.11.11",
-  "gleam_version": "1.0.0",
+  "gleam_version_constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
@@ -18,7 +18,8 @@ expression: "pub opaque type Foo { Bar }"
           "constructors": []
         }
       },
-      "values": {}
+      "constants": {},
+      "functions": {}
     }
   }
 }

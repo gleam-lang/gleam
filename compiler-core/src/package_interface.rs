@@ -38,9 +38,12 @@ pub struct ModuleInterface {
     /// A map from type name to its interface.
     #[serde(serialize_with = "ordered_map")]
     types: HashMap<EcoString, TypeDefinitionInterface>,
-    /// A map from value name to its interface.
+    /// A map from constant name to its interface.
     #[serde(serialize_with = "ordered_map")]
-    values: HashMap<EcoString, ValueInterface>,
+    constants: HashMap<EcoString, ConstantInterface>,
+    /// A map from function name to its interface.
+    #[serde(serialize_with = "ordered_map")]
+    functions: HashMap<EcoString, FunctionInterface>,
 }
 
 #[derive(Serialize, Debug)]
@@ -110,21 +113,34 @@ pub struct TypeAliasInterface {
     alias: TypeInterface,
 }
 
-/// The definition of a value that can appear in a module. Module's values can
-/// either be constants - defined with the `const` keyword - or functions -
-/// defined with the `fn` keyword.
 #[derive(Serialize, Debug)]
-pub struct ValueInterface {
-    /// The value's documentation comment (that is every line preceded by
+pub struct ConstantInterface {
+    /// The constant's documentation comment (that is every line preceded by
     /// `///`).
     documentation: Option<EcoString>,
-    /// If the value has a deprecation annotation `@deprecated("...")`
+    /// If the constant has a deprecation annotation `@deprecated("...")`
     /// this field will hold the reason of the deprecation.
     deprecation: Option<DeprecationInterface>,
     implementations: ImplementationsInterface,
-    /// The value's type.
+    /// The constant's type.
     #[serde(rename = "type")]
     type_: TypeInterface,
+}
+
+/// A module's function. This differs from a simple `Fn` type as its arguments
+/// can be labelled.
+#[derive(Serialize, Debug)]
+pub struct FunctionInterface {
+    /// The function's documentation comment (that is every line preceded by
+    /// `///`).
+    documentation: Option<EcoString>,
+    /// If the constant has a deprecation annotation `@deprecated("...")`
+    /// this field will hold the reason of the deprecation.
+    deprecation: Option<DeprecationInterface>,
+    implementations: ImplementationsInterface,
+    parameters: Vec<ParameterInterface>,
+    #[serde(rename = "return")]
+    return_: TypeInterface,
 }
 
 /// Informations about how a value is implemented.
@@ -253,7 +269,7 @@ pub enum TypeInterface {
     },
     /// A function type like `fn(Int, String) -> String`.
     Fn {
-        parameters: Vec<ParameterInterface>,
+        parameters: Vec<TypeInterface>,
         #[serde(rename = "return")]
         return_: Box<TypeInterface>,
     },
@@ -325,12 +341,13 @@ impl PackageInterface {
 
 impl ModuleInterface {
     fn from_module(module: &Module) -> ModuleInterface {
-        let (types, type_aliases, values) = statements_interfaces(module);
+        let (types, type_aliases, constants, functions) = statements_interfaces(module);
         ModuleInterface {
             documentation: module.ast.documentation.clone(),
             types,
             type_aliases,
-            values,
+            constants,
+            functions,
         }
     }
 }
@@ -340,11 +357,13 @@ fn statements_interfaces(
 ) -> (
     HashMap<EcoString, TypeDefinitionInterface>,
     HashMap<EcoString, TypeAliasInterface>,
-    HashMap<EcoString, ValueInterface>,
+    HashMap<EcoString, ConstantInterface>,
+    HashMap<EcoString, FunctionInterface>,
 ) {
     let mut types = HashMap::new();
     let mut type_aliases = HashMap::new();
-    let mut values = HashMap::new();
+    let mut constants = HashMap::new();
+    let mut functions = HashMap::new();
     for statement in &module.ast.definitions {
         match statement {
             // A public type definition.
@@ -434,9 +453,9 @@ fn statements_interfaces(
                 annotation: _,
                 value: _,
             }) => {
-                let _ = values.insert(
+                let _ = constants.insert(
                     name.clone(),
-                    ValueInterface {
+                    ConstantInterface {
                         implementations: ImplementationsInterface::from_implementations(
                             implementations,
                         ),
@@ -464,26 +483,22 @@ fn statements_interfaces(
                 external_javascript: _,
             }) => {
                 let mut id_map = IdMap::new();
-                let _ = values.insert(
+                let _ = functions.insert(
                     name.clone(),
-                    ValueInterface {
+                    FunctionInterface {
                         implementations: ImplementationsInterface::from_implementations(
                             implementations,
                         ),
                         deprecation: DeprecationInterface::from_deprecation(deprecation),
                         documentation: documentation.clone(),
-                        type_: TypeInterface::Fn {
-                            // We use the same id_map between parameters and return type so that
-                            // type variables have consistent ids between the two.
-                            parameters: arguments
-                                .iter()
-                                .map(|arg| ParameterInterface {
-                                    label: arg.names.get_label().cloned(),
-                                    type_: from_type_helper(arg.type_.as_ref(), &mut id_map),
-                                })
-                                .collect(),
-                            return_: Box::new(from_type_helper(return_type, &mut id_map)),
-                        },
+                        parameters: arguments
+                            .iter()
+                            .map(|arg| ParameterInterface {
+                                label: arg.names.get_label().cloned(),
+                                type_: from_type_helper(arg.type_.as_ref(), &mut id_map),
+                            })
+                            .collect(),
+                        return_: from_type_helper(return_type, &mut id_map),
                     },
                 );
             }
@@ -498,7 +513,7 @@ fn statements_interfaces(
             Definition::Import(_) => {}
         }
     }
-    (types, type_aliases, values)
+    (types, type_aliases, constants, functions)
 }
 
 impl TypeInterface {
@@ -516,10 +531,7 @@ fn from_type_helper(type_: &Type, id_map: &mut IdMap) -> TypeInterface {
         Type::Fn { args, retrn } => TypeInterface::Fn {
             parameters: args
                 .iter()
-                .map(|arg| ParameterInterface {
-                    label: None,
-                    type_: from_type_helper(arg.as_ref(), id_map),
-                })
+                .map(|arg| from_type_helper(arg.as_ref(), id_map))
                 .collect(),
             return_: Box::new(from_type_helper(retrn, id_map)),
         },
