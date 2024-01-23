@@ -7,7 +7,6 @@ use crate::{
     analyse::TargetSupport,
     build::{Module, Origin, Package, Target},
     config::{Docs, ErlangConfig, JavaScriptConfig, PackageConfig, Repository},
-    parse::extra::ModuleExtra,
     type_::PRELUDE_MODULE_NAME,
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
@@ -86,6 +85,7 @@ pub fn compile_package(
         let _ = direct_dependencies.insert(dep_package.into(), ());
     }
     let parsed = crate::parse::parse_module(src).expect("syntax error");
+    
     let mut ast = parsed.module;
     let module_name = module_name
         .map(EcoString::from)
@@ -106,19 +106,18 @@ pub fn compile_package(
     .expect("should successfully infer");
 
     // TODO: all the bits above are basically copy pasted from the javascript
-    // and erlang test helpers. A refactor might be due here, but I'm not sure
-    // where to put such function...
-
-    let module = Module {
+    // and erlang test helpers. A refactor might be due here.
+    let mut module = Module {
         name: module_name,
         code: src.into(),
         mtime: SystemTime::UNIX_EPOCH,
         input_path: "foo".into(),
         origin: Origin::Src,
         ast,
-        extra: ModuleExtra::default(),
+        extra: parsed.extra,
         dependencies: vec![],
     };
+    module.attach_doc_and_module_comments();
     let package: Package = package_from_module(module);
     serde_json::to_string_pretty(&PackageInterface::from_package(&package)).expect("to json")
 }
@@ -151,6 +150,18 @@ fn package_from_module(module: Module) -> Package {
         },
         modules: vec![module],
     }
+}
+
+#[test]
+pub fn package_documentation_is_included() {
+    assert_package_interface!(
+        "
+//// Some package
+//// documentation!
+
+pub fn main() { 1 }
+"
+    );
 }
 
 #[test]

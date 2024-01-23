@@ -12,7 +12,7 @@ expression: "\n/// Foo's documentation\npub type Foo(a, b) {\n  Bar\n  Baz\n}\n"
       "type_aliases": {},
       "types": {
         "Foo": {
-          "documentation": " Foo's documentation\n",
+          "documentation": " Foo's documentation",
           "deprecation": null,
           "parameters": 2,
           "constructors": [
