@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+expression: "\n//// Some package\n//// documentation!\n\npub fn main() { 1 }\n"
+---
+{
+  "name": "my_package",
+  "package_version": "11.11.11",
+  "gleam_version": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [
+        " Some package",
+        " documentation!"
+      ],
+      "type_aliases": {},
+      "types": {},
+      "values": {
+        "main": {
+          "documentation": null,
+          "deprecation": null,
+          "implementations": {
+            "gleam": true,
+            "uses_erlang_externals": false,
+            "uses_javascript_externals": false
+          },
+          "type": {
+            "kind": "Fn",
+            "parameters": [],
+            "return": {
+              "kind": "Named",
+              "name": "Int",
+              "package": "",
+              "module": "gleam",
+              "parameters": []
+            }
+          }
+        }
+      }
+    }
+  }
+}
