@@ -15,6 +15,8 @@
 
 - If a package contains a `todo` expression then the build tool will now refuse
   to publish it to Hex.
+- Fixed a bug where `functionname(_name)` would incorrectly parse as a function
+  capture instead of a syntax error.
 
 
 ## v0.34.1 - 2023-01-17

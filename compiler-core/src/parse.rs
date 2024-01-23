@@ -744,15 +744,7 @@ where
                     // Call
                     let args = self.parse_fn_args()?;
                     let (_, end) = self.expect_one(&Token::RightParen)?;
-                    match make_call(expr, args, start, end) {
-                        Ok(e) => expr = e,
-                        Err(_) => {
-                            return parse_error(
-                                ParseErrorType::TooManyArgHoles,
-                                SrcSpan { start, end },
-                            )
-                        }
-                    }
+                    expr = make_call(expr, args, start, end)?;
                 }
             } else {
                 // done
@@ -1696,12 +1688,16 @@ where
                 location,
                 value,
             }))))
-        } else if let Some((start, _, end)) = self.maybe_discard_name() {
+        } else if let Some((start, name, end)) = self.maybe_discard_name() {
             let mut location = SrcSpan { start, end };
             if label.is_some() {
                 location.start = start
             };
-            Ok(Some(ParserArg::Hole { location, label }))
+            Ok(Some(ParserArg::Hole {
+                location,
+                name,
+                label,
+            }))
         } else {
             Ok(None)
         }
@@ -3269,6 +3265,7 @@ fn is_reserved_word(tok: Token) -> bool {
 pub enum ParserArg {
     Arg(Box<CallArg<UntypedExpr>>),
     Hole {
+        name: EcoString,
         location: SrcSpan,
         label: Option<EcoString>,
     },
@@ -3284,10 +3281,25 @@ pub fn make_call(
     let args = args
         .into_iter()
         .map(|a| match a {
-            ParserArg::Arg(arg) => *arg,
-            ParserArg::Hole { location, label } => {
+            ParserArg::Arg(arg) => Ok(*arg),
+            ParserArg::Hole {
+                location,
+                name,
+                label,
+            } => {
                 num_holes += 1;
-                CallArg {
+
+                if name != "_" {
+                    return parse_error(
+                        ParseErrorType::UnexpectedToken {
+                            expected: vec!["An expression".into(), "An underscore".into()],
+                            hint: None,
+                        },
+                        location,
+                    );
+                }
+
+                Ok(CallArg {
                     implicit: false,
                     label,
                     location,
@@ -3295,10 +3307,10 @@ pub fn make_call(
                         location,
                         name: CAPTURE_VARIABLE.into(),
                     },
-                }
+                })
             }
         })
-        .collect();
+        .collect::<Result<_, _>>()?;
     let call = UntypedExpr::Call {
         location: SrcSpan { start, end },
         fun: Box::new(fun),
@@ -3324,7 +3336,7 @@ pub fn make_call(
             return_annotation: None,
         }),
 
-        _ => parse_error(ParseErrorType::TooManyArgHoles, call.location()),
+        _ => parse_error(ParseErrorType::TooManyArgHoles, SrcSpan { start, end }),
     }
 }
 

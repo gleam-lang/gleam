@@ -705,3 +705,18 @@ fn reserved_test() {
 fn reserved_echo() {
     assert_warning!(r#"const echo = 1"#);
 }
+
+#[test]
+fn capture_with_name() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  add(_name, 1)
+}
+
+fn add(x, y) {
+  x + y
+}
+"#
+    );
+}
