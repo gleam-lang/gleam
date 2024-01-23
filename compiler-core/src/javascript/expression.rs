@@ -158,11 +158,8 @@ impl<'module> Generator<'module> {
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
             TypedExpr::Case {
-                location,
-                subjects,
-                clauses,
-                ..
-            } => self.case(*location, subjects, clauses),
+                subjects, clauses, ..
+            } => self.case(subjects, clauses),
 
             TypedExpr::Call { fun, args, .. } => self.call(fun, args),
             TypedExpr::Fn { args, body, .. } => self.fn_(args, body),
@@ -545,10 +542,8 @@ impl<'module> Generator<'module> {
         Ok(doc.append(afterwards).force_break())
     }
 
-    fn case<'a>(
-        &mut self,
-        location: SrcSpan,
-        subject_values: &'a [TypedExpr],
+    fn case<'a>( 
+        &mut self,    subject_values: &'a [TypedExpr],
         clauses: &'a [TypedClause],
     ) -> Output<'a> {
         let (subjects, subject_assignments): (Vec<_>, Vec<_>) =
@@ -602,13 +597,12 @@ impl<'module> Generator<'module> {
                 let is_final_clause = clause_number == total_patterns;
                 let is_first_clause = clause_number == 1;
                 let is_only_clause = is_final_clause && is_first_clause;
-                let is_catch_all = !compiled.has_checks() && clause.guard.is_none();
 
-                doc = if is_only_clause && is_catch_all {
+                doc = if is_only_clause {
                     // If this is the only clause and there are no checks then we can
                     // render just the body as the case does nothing
                     doc.append(body)
-                } else if is_final_clause && is_catch_all {
+                } else if is_final_clause {
                     // If this is the final clause and there are no checks then we can
                     // render `else` instead of `else if (...)`
                     doc.append(" else {")
@@ -646,18 +640,6 @@ impl<'module> Generator<'module> {
             .try_collect()?;
 
         Ok(docvec![subject_assignments, doc].force_break())
-    }
-
-    fn case_no_match<'a, Subjects>(&mut self, location: SrcSpan, subjects: Subjects) -> Output<'a>
-    where
-        Subjects: IntoIterator<Item = Document<'a>>,
-    {
-        Ok(self.throw_error(
-            "case_no_match",
-            &string("No case clause matched"),
-            location,
-            [("values", array(subjects.into_iter().map(Ok))?)],
-        ))
     }
 
     fn assignment_no_match<'a>(&mut self, location: SrcSpan, subject: Document<'a>) -> Output<'a> {

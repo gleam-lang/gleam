@@ -648,10 +648,6 @@ impl<'a> CompiledPattern<'a> {
     pub fn has_assignments(&self) -> bool {
         !self.assignments.is_empty()
     }
-
-    pub fn has_checks(&self) -> bool {
-        !self.checks.is_empty()
-    }
 }
 
 #[derive(Debug)]
