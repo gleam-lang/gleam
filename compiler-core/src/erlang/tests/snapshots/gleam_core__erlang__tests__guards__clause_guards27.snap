@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
-assertion_line: 268
-expression: "\npub fn main() {\n  case \"test\" {\n    x if x == \"test\" -> 1\n  }\n}\n"
+assertion_line: 273
+expression: "\npub fn main() {\n  case \"test\" {\n    x if x == \"test\" -> 1\n    _ -> 0\n  }\n}\n"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
@@ -12,6 +12,9 @@ expression: "\npub fn main() {\n  case \"test\" {\n    x if x == \"test\" -> 1\n
 main() ->
     case <<"test"/utf8>> of
         X when X =:= <<"test"/utf8>> ->
-            1
+            1;
+
+        _ ->
+            0
     end.
 

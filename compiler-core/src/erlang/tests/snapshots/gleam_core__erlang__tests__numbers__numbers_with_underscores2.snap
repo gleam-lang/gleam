@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/numbers.rs
 assertion_line: 31
-expression: "\npub fn main() {\n  let 100_000 = 1\n  let 100_000.00101 = 1.\n  1\n}\n"
+expression: "\npub fn main() {\n  let assert 100_000 = 1\n  let assert 100_000.00101 = 1.\n  1\n}\n"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
@@ -10,7 +10,27 @@ expression: "\npub fn main() {\n  let 100_000 = 1\n  let 100_000.00101 = 1.\n  1
 
 -spec main() -> integer().
 main() ->
-    100000 = 1,
-    100000.00101 = 1.0,
+    _assert_subject = 1,
+    100000 = case _assert_subject of
+        100000 -> _assert_subject;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Assertion pattern match failed"/utf8>>,
+                        value => _assert_fail,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 3})
+    end,
+    _assert_subject@1 = 1.0,
+    100000.00101 = case _assert_subject@1 of
+        100000.00101 -> _assert_subject@1;
+        _assert_fail@1 ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Assertion pattern match failed"/utf8>>,
+                        value => _assert_fail@1,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 4})
+    end,
     1.
 

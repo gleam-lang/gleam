@@ -825,48 +825,51 @@ fn pipe() {
 
 #[test]
 fn bit_array() {
-    assert_infer!("let <<x>> = <<1>> x", "Int");
+    assert_infer!("let assert <<x>> = <<1>> x", "Int");
 }
 
 #[test]
 fn bit_array2() {
-    assert_infer!("let <<x>> = <<1>> x", "Int");
+    assert_infer!("let assert <<x>> = <<1>> x", "Int");
 }
 
 #[test]
 fn bit_array3() {
-    assert_infer!("let <<x:float>> = <<1>> x", "Float");
+    assert_infer!("let assert <<x:float>> = <<1>> x", "Float");
 }
 
 #[test]
 fn bit_array4() {
-    assert_infer!("let <<x:bytes>> = <<1>> x", "BitArray");
+    assert_infer!("let assert <<x:bytes>> = <<1>> x", "BitArray");
 }
 
 #[test]
 fn bit_array5() {
-    assert_infer!("let <<x:bytes>> = <<1>> x", "BitArray");
+    assert_infer!("let assert <<x:bytes>> = <<1>> x", "BitArray");
 }
 
 #[test]
 fn bit_array6() {
-    assert_infer!("let <<x:bits>> = <<1>> x", "BitArray");
+    assert_infer!("let assert <<x:bits>> = <<1>> x", "BitArray");
 }
 
 #[test]
 fn bit_array7() {
-    assert_infer!("let <<x:bits>> = <<1>> x", "BitArray");
+    assert_infer!("let assert <<x:bits>> = <<1>> x", "BitArray");
 }
 
 #[test]
 fn bit_array8() {
-    assert_infer!("let <<x:utf8_codepoint>> = <<128013:32>> x", "UtfCodepoint");
+    assert_infer!(
+        "let assert <<x:utf8_codepoint>> = <<128013:32>> x",
+        "UtfCodepoint"
+    );
 }
 
 #[test]
 fn bit_array9() {
     assert_infer!(
-        "let <<x:utf16_codepoint>> = <<128013:32>> x",
+        "let assert <<x:utf16_codepoint>> = <<128013:32>> x",
         "UtfCodepoint"
     );
 }
@@ -874,7 +877,7 @@ fn bit_array9() {
 #[test]
 fn bit_array10() {
     assert_infer!(
-        "let <<x:utf32_codepoint>> = <<128013:32>> x",
+        "let assert <<x:utf32_codepoint>> = <<128013:32>> x",
         "UtfCodepoint"
     );
 }
@@ -882,7 +885,7 @@ fn bit_array10() {
 #[test]
 fn bit_array11() {
     assert_infer!(
-        "let a = <<1>> let <<x:bits>> = <<1, a:2-bits>> x",
+        "let a = <<1>> let assert <<x:bits>> = <<1, a:2-bits>> x",
         "BitArray"
     );
 }

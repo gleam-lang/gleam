@@ -62,11 +62,11 @@ fn list_destructuring() {
     assert_js!(
         r#"
 fn go(x, y) {
-  let [] = x
-  let [a] = x
-  let [1, 2] = x
-  let [_, #(3, b)] = y
-  let [head, ..tail] = y
+  let assert [] = x
+  let assert [a] = x
+  let assert [1, 2] = x
+  let assert [_, #(3, b)] = y
+  let assert [head, ..tail] = y
 }
 "#,
     );

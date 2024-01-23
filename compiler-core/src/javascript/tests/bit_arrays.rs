@@ -203,7 +203,7 @@ fn match_sized() {
     assert_js!(
         r#"
 fn go(x) {
-  let <<a:16, b:8>> = x
+  let assert <<a:16, b:8>> = x
 }
 "#,
     );
@@ -214,7 +214,7 @@ fn discard_sized() {
     assert_js!(
         r#"
 fn go(x) {
-  let <<_:16, _:8>> = x
+  let assert <<_:16, _:8>> = x
 }
 "#,
     );
@@ -225,7 +225,7 @@ fn match_sized_value() {
     assert_js!(
         r#"
 fn go(x) {
-  let <<258:16>> = x
+  let assert <<258:16>> = x
 }
 "#,
     );
@@ -236,7 +236,7 @@ fn match_float() {
     assert_js!(
         r#"
 fn go(x) {
-  let <<a:float, b:int>> = x
+  let assert <<a:float, b:int>> = x
 }
 "#,
     );
@@ -247,7 +247,7 @@ fn match_rest() {
     assert_js!(
         r#"
 fn go(x) {
-  let <<_, b:bytes>> = <<1,2,3>>
+  let assert <<_, b:bytes>> = <<1,2,3>>
 }
 "#,
     );
@@ -258,7 +258,7 @@ fn match_rest_deprecated() {
     assert_js!(
         r#"
 fn go(x) {
-  let <<_, b:bytes>> = <<1,2,3>>
+  let assert <<_, b:bytes>> = <<1,2,3>>
 }
 "#,
     );
@@ -269,8 +269,8 @@ fn match_binary_size() {
     assert_js!(
         r#"
 fn go(x) {
-  let <<_, a:2-bytes>> = x
-  let <<_, b:bytes-size(2)>> = x
+  let assert <<_, a:2-bytes>> = x
+  let assert <<_, b:bytes-size(2)>> = x
 }
 "#,
     );

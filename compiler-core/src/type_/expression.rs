@@ -2451,14 +2451,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         compiler.set_pattern_arena(arena.into_inner());
         let output = compiler.compile(rows);
 
-        // Emit warnings for missing clauses that would cause a crash
+        // Error for missing clauses that would cause a crash
         if output.diagnostics.missing {
-            self.environment
-                .warnings
-                .emit(Warning::InexhaustiveLetAssignment {
-                    location,
-                    missing: output.missing_patterns(self.environment),
-                })
+            return Err(Error::InexhaustiveLetAssignment {
+                location,
+                missing: output.missing_patterns(self.environment),
+            });
         }
 
         Ok(())
@@ -2508,14 +2506,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         compiler.set_pattern_arena(arena.into_inner());
         let output = compiler.compile(rows);
 
-        // Emit warnings for missing clauses that would cause a crash
+        // Error for missing clauses that would cause a crash
         if output.diagnostics.missing {
-            self.environment
-                .warnings
-                .emit(Warning::InexhaustiveCaseExpression {
-                    location,
-                    missing: output.missing_patterns(self.environment),
-                })
+            return Err(Error::InexhaustiveCaseExpression {
+                location,
+                missing: output.missing_patterns(self.environment),
+            });
         }
 
         // Emit warnings for unreachable clauses

@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 547
-expression: "pub fn main() {\n  case 1.0 {\n    a if a <. 0.0 -> {\n      let a = a\n      a\n    }\n  }\n}\n"
+assertion_line: 550
+expression: "pub fn main() {\n  case 1.0 {\n    a if a <. 0.0 -> {\n      let a = a\n      a\n    }\n    _ -> 0.0\n  }\n}\n"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
@@ -13,6 +13,9 @@ main() ->
     case 1.0 of
         A when A < +0.0 ->
             A@1 = A,
-            A@1
+            A@1;
+
+        _ ->
+            +0.0
     end.
 

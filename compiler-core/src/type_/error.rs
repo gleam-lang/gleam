@@ -304,6 +304,19 @@ pub enum Error {
         function: EcoString,
         name: EcoString,
     },
+
+    // A case expression is missing one or more patterns to match all possible
+    // values of the type.
+    InexhaustiveCaseExpression {
+        location: SrcSpan,
+        missing: Vec<EcoString>,
+    },
+
+    // Let assignment's pattern does not match all possible values of the type.
+    InexhaustiveLetAssignment {
+        location: SrcSpan,
+        missing: Vec<EcoString>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -413,16 +426,6 @@ pub enum Warning {
         location: SrcSpan,
         message: EcoString,
         layer: Layer,
-    },
-
-    InexhaustiveCaseExpression {
-        location: SrcSpan,
-        missing: Vec<EcoString>,
-    },
-
-    InexhaustiveLetAssignment {
-        location: SrcSpan,
-        missing: Vec<EcoString>,
     },
 
     UnreachableCaseClause {

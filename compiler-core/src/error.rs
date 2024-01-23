@@ -2289,6 +2289,66 @@ implementation but the function name `{function}` is not valid."
                     }
                 }
 
+                TypeError::InexhaustiveLetAssignment { location, missing } => {
+                    let mut text: String =
+                        "This assignment uses a pattern that does not match all possible
+values. If one of the other values is used then the assignment
+will crash.
+
+The missing patterns are:\n"
+                            .into();
+                    for missing in missing {
+                        text.push_str("\n    ");
+                        text.push_str(missing);
+                    }
+
+                    Diagnostic {
+                        title: "Inexhaustive pattern".into(),
+                        text,
+                        hint: Some(
+                            "Use a more general pattern or use `let assert` instead.".into(),
+                        ),
+                        level: Level::Error,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
+                TypeError::InexhaustiveCaseExpression { location, missing } => {
+                    let mut text: String =
+                        "This case expression does not have a pattern for all possible values.
+If is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:\n"
+                            .into();
+                    for missing in missing {
+                        text.push_str("\n    ");
+                        text.push_str(missing);
+                    }
+                    Diagnostic {
+                        title: "Inexhaustive patterns".into(),
+                        text,
+                        hint: None,
+                        level: Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
                 TypeError::UnsupportedTarget {
                     location,
                     target: current_target,
