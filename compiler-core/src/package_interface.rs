@@ -16,67 +16,184 @@ use crate::{
 
 use crate::build::{Module, Package};
 
+/// The public interface of a package that gets serialised as a json object.
 #[derive(Serialize, Debug)]
 pub struct PackageInterface {
     name: EcoString,
     package_version: Version,
+    /// The minimum Gleam version required by the package.
     gleam_version: Option<EcoString>,
+    /// A map from module name to its interface.
     #[serde(serialize_with = "ordered_map")]
     modules: HashMap<EcoString, ModuleInterface>,
 }
 
-/// Holds serialisable data about a `Module`.
 #[derive(Serialize, Debug)]
 pub struct ModuleInterface {
+    /// A vector with the lines composing the module's documentation (that is
+    /// every line preceded by a `////`).
     documentation: Vec<EcoString>,
+    /// A map from type alias name to its interface.
     #[serde(serialize_with = "ordered_map")]
     type_aliases: HashMap<EcoString, TypeAliasInterface>,
+    /// A map from type name to its interface.
     #[serde(serialize_with = "ordered_map")]
     types: HashMap<EcoString, TypeDefinitionInterface>,
+    /// A map from value name to its interface.
     #[serde(serialize_with = "ordered_map")]
     values: HashMap<EcoString, ValueInterface>,
 }
 
-/// Holds serialisable data about a type definition that appears in a module.
 #[derive(Serialize, Debug)]
 pub struct TypeDefinitionInterface {
+    /// The definition's documentation comment (that is every line preceded by
+    /// `///`).
     documentation: Option<EcoString>,
+    /// If the definition has a deprecation annotation `@deprecated("...")`
+    /// this field will hold the reason of the deprecation.
     deprecation: Option<DeprecationInterface>,
-    /// The number of the type's type variables
+    /// The number of type variables in the type definition.
+    /// ```gleam
+    /// /// This type has 2 type variables.
+    /// type Result(a, b) {
+    ///   Ok(a)
+    ///   Error(b)
+    /// }
+    /// ```
     parameters: usize,
-    /// A list of the names of its constructors
+    /// A list of the type constructors. If the type is marked as opaque it
+    /// won't have any visible constructors.
     constructors: Vec<TypeConstructorInterface>,
 }
 
 #[derive(Serialize, Debug)]
 pub struct TypeConstructorInterface {
+    /// The constructor's documentation comment (that is every line preceded by
+    /// `///`).
     documentation: Option<EcoString>,
+    /// The name of the type constructor.
+    /// ```gleam
+    /// pub type Box(a) {
+    ///   MyBox(value: a)
+    /// //^^^^^ This is the constructor's name
+    /// }
+    /// ```
     name: EcoString,
+    /// A list of the parameters needed by the constructor.
+    /// ```gleam
+    /// pub type Box(a) {
+    ///   MyBox(value: a)
+    /// //      ^^^^^^^^ This is the constructor's parameter
+    /// }
+    /// ```
     parameters: Vec<ParameterInterface>,
 }
 
-/// Holds serialisable data about a type alias that appears in a module.
 #[derive(Serialize, Debug)]
 pub struct TypeAliasInterface {
+    /// The constructor's documentation comment (that is every line preceded by
+    /// `///`).
     documentation: Option<EcoString>,
+    /// If the alias has a deprecation annotation `@deprecated("...")`
+    /// this field will hold the reason of the deprecation.
     deprecation: Option<DeprecationInterface>,
+    /// The number of type variables in the type alias definition.
+    /// ```gleam
+    /// /// This type alias has 2 type variables.
+    /// type Results(a, b) = List(Restul(a, b))
+    /// ```
     parameters: usize,
+    /// The aliased type.
+    /// ```gleam
+    /// type Ints = List(Int)
+    /// //          ^^^^^^^^^ This is the aliased type in a type alias
+    /// ```
     alias: TypeInterface,
 }
 
-/// Holds serialisable data about a top-level public value defined in a module
-/// (either a constant or a function)
+/// The definition of a value that can appear in a module. Module's values can
+/// either be constants - defined with the `const` keyword - or functions -
+/// defined with the `fn` keyword.
 #[derive(Serialize, Debug)]
 pub struct ValueInterface {
+    /// The value's documentation comment (that is every line preceded by
+    /// `///`).
     documentation: Option<EcoString>,
+    /// If the value has a deprecation annotation `@deprecated("...")`
+    /// this field will hold the reason of the deprecation.
     deprecation: Option<DeprecationInterface>,
+    /// Informations about how the value is implemented:
+    ///   - the `gleam` field is set to `true` if the const/function has a pure
+    ///     Gleam implementation (that is, it never uses external code).
+    ///     Being pure Gleam means that the function will support all Gleam
+    ///     targets, even future ones that are not present to this day.
+    ///   - the `uses_erlang_externals` field is set to `true` if the
+    ///     const/function is defined using Erlang external code. That means
+    ///     that the function will use Erlang code through FFI when compiled for
+    ///     the Erlang target.
+    ///   - the `uses_javascript_externals` field is set to `true` if the
+    ///     const/function is defined using JavaScript external code. That means
+    ///     that the function will use JavaScript code through FFI when compiled
+    ///     for the JavaScript target.
+    /// 
+    /// Let's have a look at a couple of examples:
+    /// 
+    /// ```gleam
+    /// @external(erlang, "foo", "bar")
+    /// pub fn a_random_number() -> Int {
+    ///   4
+    ///   // This is a default implementation.
+    /// }
+    /// ```
+    /// The implementations for this function will look like this:
+    /// ```json
+    /// {
+    ///   gleam: true,
+    ///   uses_erlang_externals: true,
+    ///   uses_javascript_externals: false,
+    /// }
+    /// ```
+    /// - `gleam: true` means that the function has a pure Gleam implementation
+    ///   and thus it can be used on all Gleam targets with no problems.
+    /// - `uses_erlang_externals: true` means that the function will use Erlang
+    ///   external code when compiled to the Erlang target.
+    /// - `uses_javascript_externals: false` means that the function won't use
+    ///   JavaScript external code when compiled to JavaScript. The function can
+    ///   still be used on the JavaScript target since it has a pure Gleam
+    ///   implementation.
+    /// 
+    /// Now have a look at this function:
+    /// 
+    /// ```gleam
+    /// @external(javascript, "foo", "bar")
+    /// pub fn javascript_only() -> Int
+    /// ```
+    /// It's implementations field will look like this:
+    /// ```json
+    /// {
+    ///   gleam: false,
+    ///   uses_erlang_externals: false,
+    ///   uses_javascript_externals: true,
+    /// }
+    /// ```
+    /// - `gleam: false` means that the function doesn't have a pure Gleam
+    ///   implementations. This means that the function is only defined using
+    ///   externals and can only be used on some targets.
+    /// - `uses_erlang_externals: false` the function is not using external
+    ///   Erlang code. So, since the function doesn't have a fallback pure Gleam
+    ///   implementation, you won't be able to compile it on this target.
+    /// - `uses_javascript_externals: true` the function is using JavaScript
+    ///   external code. This means that you will be able to use it on the
+    ///   JavaScript target with no problems.
     implementations: Implementations,
+    /// The value's type.
     #[serde(rename = "type")]
     type_: TypeInterface,
 }
 
 #[derive(Serialize, Debug)]
 pub struct DeprecationInterface {
+    /// The reason for the deprecation.
     message: EcoString,
 }
 
@@ -91,34 +208,68 @@ impl DeprecationInterface {
     }
 }
 
-/// This is the serialisable version of a type of a top-level value of a module.
 #[derive(Serialize, Debug)]
 #[serde(tag = "kind")]
 pub enum TypeInterface {
+    /// A tuple type like `#(Int, Float)`.
     Tuple {
+        /// The types composing the tuple.
         elements: Vec<TypeInterface>,
     },
+    /// A function type like `fn(Int, String) -> String`.
     Fn {
         parameters: Vec<ParameterInterface>,
         #[serde(rename = "return")]
         return_: Box<TypeInterface>,
     },
     /// A type variable.
+    /// ```gleam
+    /// pub fn foo(value: a) -> a {}
+    /// //                ^ This is a type variable.
+    /// ```
     Variable {
         id: u64,
     },
     /// A custom named type.
+    /// ```gleam
+    /// let value: Bool = True
+    ///            ^^^^ This is a named type.
+    /// ```
+    /// 
+    /// All prelude types - like Bool, String, etc. - are named types as well.
+    /// In that case their package is an empty string `""` and their module
+    /// name is the string `"gleam"`.
+    ///
     Named {
         name: EcoString,
+        /// The package the type is defined in.
         package: EcoString,
+        /// The module the type is defined in.
         module: EcoString,
+        /// The type parameters that might be needed to define a named type.
+        /// ```gleam
+        /// let result: Result(Int, e) = Ok(1)
+        /// //                 ^^^^^^ The `Result` named type has 2 parameters.
+        /// //                        In this case it's the Int type and a type
+        /// //                        variable.
+        /// ```
         parameters: Vec<TypeInterface>,
     },
 }
 
 #[derive(Serialize, Debug)]
 pub struct ParameterInterface {
+    /// If the parameter is labelled this will hold the label's name.
+    /// ```gleam
+    /// pub fn repeat(times n: Int) -> List(Int)
+    /// //            ^^^^^ This is the parameter's label.
+    /// ```
     label: Option<EcoString>,
+    /// The parameter's type.
+    /// ```gleam
+    /// pub fn repeat(times n: Int) -> List(Int)
+    /// //                     ^^^ This is the parameter's type.
+    /// ```
     #[serde(rename = "type")]
     type_: TypeInterface,
 }
