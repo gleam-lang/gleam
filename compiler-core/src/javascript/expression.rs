@@ -551,8 +551,6 @@ impl<'module> Generator<'module> {
         subject_values: &'a [TypedExpr],
         clauses: &'a [TypedClause],
     ) -> Output<'a> {
-        let mut possibility_of_no_match = true;
-
         let (subjects, subject_assignments): (Vec<_>, Vec<_>) =
             pattern::assign_subjects(self, subject_values)
                 .into_iter()
@@ -606,10 +604,6 @@ impl<'module> Generator<'module> {
                 let is_only_clause = is_final_clause && is_first_clause;
                 let is_catch_all = !compiled.has_checks() && clause.guard.is_none();
 
-                if is_catch_all {
-                    possibility_of_no_match = false;
-                }
-
                 doc = if is_only_clause && is_catch_all {
                     // If this is the only clause and there are no checks then we can
                     // render just the body as the case does nothing
@@ -637,16 +631,6 @@ impl<'module> Generator<'module> {
                     .append("}")
                 };
             }
-        }
-
-        if possibility_of_no_match {
-            // Lastly append an error if no clause matches.
-            // We can remove this when we get exhaustiveness checking.
-            doc = doc
-                .append(" else {")
-                .append(docvec!(line(), self.case_no_match(location, subjects)?).nest(INDENT))
-                .append(line())
-                .append("}")
         }
 
         // If there is a subject name given create a variable to hold it for
