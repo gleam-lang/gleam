@@ -135,9 +135,9 @@ pub struct ValueInterface {
     ///     const/function is defined using JavaScript external code. That means
     ///     that the function will use JavaScript code through FFI when compiled
     ///     for the JavaScript target.
-    /// 
+    ///
     /// Let's have a look at a couple of examples:
-    /// 
+    ///
     /// ```gleam
     /// @external(erlang, "foo", "bar")
     /// pub fn a_random_number() -> Int {
@@ -161,9 +161,9 @@ pub struct ValueInterface {
     ///   JavaScript external code when compiled to JavaScript. The function can
     ///   still be used on the JavaScript target since it has a pure Gleam
     ///   implementation.
-    /// 
+    ///
     /// Now have a look at this function:
-    /// 
+    ///
     /// ```gleam
     /// @external(javascript, "foo", "bar")
     /// pub fn javascript_only() -> Int
@@ -227,15 +227,13 @@ pub enum TypeInterface {
     /// pub fn foo(value: a) -> a {}
     /// //                ^ This is a type variable.
     /// ```
-    Variable {
-        id: u64,
-    },
+    Variable { id: u64 },
     /// A custom named type.
     /// ```gleam
     /// let value: Bool = True
     ///            ^^^^ This is a named type.
     /// ```
-    /// 
+    ///
     /// All prelude types - like Bool, String, etc. - are named types as well.
     /// In that case their package is an empty string `""` and their module
     /// name is the string `"gleam"`.
