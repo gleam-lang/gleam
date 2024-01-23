@@ -1,7 +1,6 @@
 use std::{collections::HashMap, ops::Deref};
 
 use ecow::EcoString;
-use hexpm::version::Version;
 use itertools::Itertools;
 use serde::Serialize;
 
@@ -20,9 +19,9 @@ use crate::build::{Module, Package};
 #[derive(Serialize, Debug)]
 pub struct PackageInterface {
     name: EcoString,
-    package_version: Version,
-    /// The minimum Gleam version required by the package.
-    gleam_version: Option<EcoString>,
+    package_version: String,
+    /// The Gleam version constraint that the package specifies in its `gleam.toml`.
+    gleam_version_constraint: Option<EcoString>,
     /// A map from module name to its interface.
     #[serde(serialize_with = "ordered_map")]
     modules: HashMap<EcoString, ModuleInterface>,
@@ -276,8 +275,8 @@ impl PackageInterface {
     pub fn from_package(package: &Package) -> PackageInterface {
         PackageInterface {
             name: package.config.name.clone(),
-            package_version: package.config.version.clone(),
-            gleam_version: package.config.gleam_version.clone(),
+            package_version: package.config.version.to_string(),
+            gleam_version_constraint: package.config.gleam_version.clone(),
             modules: package
                 .modules
                 .iter()
