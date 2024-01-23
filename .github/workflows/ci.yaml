@@ -141,19 +141,12 @@ jobs:
         working-directory: ./test/project_erlang_windows
         if: ${{ matrix.os == 'windows-latest' && matrix.run-integration-tests }}
 
-      - name: test/project_erlang export package-interface (non-windows)
+      - name: test/project_erlang export package-interface
         run: |
           gleam export package-interface --out="interface.json"
-          cat ./interface.json
+          cat interface.json
         working-directory: ./test/project_erlang
-        if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }}
-
-      - name: test/project_erlang export package-interface (windows)
-        run: |
-          gleam export package-interface --out="interface.json"
-          cat .\interface.json
-        working-directory: ./test/project_erlang_windows
-        if: ${{ matrix.os == 'windows-latest' && matrix.run-integration-tests }}
+        if: ${{ matrix.run-integration-tests }}
 
       - name: test/project_javascript
         run: |
