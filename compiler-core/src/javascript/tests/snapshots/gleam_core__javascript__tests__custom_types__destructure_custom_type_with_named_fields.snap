@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
 assertion_line: 278
-expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(name: x, ..) = cat\n  let Cat(cuteness: 4, name: x) = cat\n  x\n}\n\n"
+expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(name: x, ..) = cat\n  let assert Cat(cuteness: 4, name: x) = cat\n  x\n}\n\n"
 ---
 import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
@@ -14,28 +14,8 @@ class Cat extends $CustomType {
 }
 
 function go(cat) {
-  if (!(cat instanceof Cat)) {
-    throw makeError(
-      "assignment_no_match",
-      "my/mod",
-      7,
-      "go",
-      "Assignment pattern did not match",
-      { value: cat }
-    )
-  }
   let x = cat.name;
   let y = cat.cuteness;
-  if (!(cat instanceof Cat)) {
-    throw makeError(
-      "assignment_no_match",
-      "my/mod",
-      8,
-      "go",
-      "Assignment pattern did not match",
-      { value: cat }
-    )
-  }
   let x$1 = cat.name;
   if (!(cat instanceof Cat) || cat.cuteness !== 4) {
     throw makeError(

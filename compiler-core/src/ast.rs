@@ -1375,6 +1375,14 @@ impl AssignmentKind {
             AssignmentKind::Assert => false,
         }
     }
+
+    /// Returns `true` if the assignment kind is [`Assert`].
+    ///
+    /// [`Assert`]: AssignmentKind::Assert
+    #[must_use]
+    pub fn is_assert(&self) -> bool {
+        matches!(self, Self::Assert)
+    }
 }
 
 // BitArrays
