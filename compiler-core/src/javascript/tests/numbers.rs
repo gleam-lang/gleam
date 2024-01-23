@@ -104,7 +104,7 @@ fn int_patterns() {
     assert_js!(
         r#"
 fn go(x) {
-  let 4 = x
+  let assert 4 = x
 }
 "#,
     );

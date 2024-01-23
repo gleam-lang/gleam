@@ -5,7 +5,7 @@ fn tuple_matching() {
     assert_js!(
         r#"
 fn go(x) {
-  let #(1, 2) = x
+  let assert #(1, 2) = x
 }
 "#,
     )
@@ -26,7 +26,7 @@ fn nested_binding() {
     assert_js!(
         r#"
 fn go(x) {
-  let #(a, #(b, c, 2) as t, _, 1) = x
+  let assert #(a, #(b, c, 2) as t, _, 1) = x
 }
 "#,
     )
@@ -42,7 +42,7 @@ fn go(x, foo) {
   foo(a)
   let a = 2
   foo(a)
-  let #(a, 3) = x
+  let assert #(a, 3) = x
   let b = a
   foo(b)
   let c = {

@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
 assertion_line: 5
-expression: "pub fn main() {\n  let a = 1\n  let simple = <<1, a>>\n  let complex = <<4:int-big, 5.0:little-float, 6:native-int>>\n  let <<7:2, 8:size(3), b:binary-size(4)>> = <<1>>\n  let <<c:8-unit(1), d:binary-size(2)-unit(2)>> = <<1>>\n\n  simple\n}\n"
+expression: "pub fn main() {\n  let a = 1\n  let simple = <<1, a>>\n  let complex = <<4:int-big, 5.0:little-float, 6:native-int>>\n  let assert <<7:2, 8:size(3), b:bytes-size(4)>> = <<1>>\n  let assert <<c:8-unit(1), d:bytes-size(2)-unit(2)>> = <<1>>\n\n  simple\n}\n"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
@@ -13,7 +13,27 @@ main() ->
     A = 1,
     Simple = <<1, A>>,
     Complex = <<4/integer-big, 5.0/little-float, 6/native-integer>>,
-    <<7:2, 8:3, B:4/binary>> = <<1>>,
-    <<C:8/unit:1, D:2/binary-unit:2>> = <<1>>,
+    _assert_subject = <<1>>,
+    <<7:2, 8:3, B:4/binary>> = case _assert_subject of
+        <<7:2, 8:3, _:4/binary>> -> _assert_subject;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Assertion pattern match failed"/utf8>>,
+                        value => _assert_fail,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 5})
+    end,
+    _assert_subject@1 = <<1>>,
+    <<C:8/unit:1, D:2/binary-unit:2>> = case _assert_subject@1 of
+        <<_:8/unit:1, _:2/binary-unit:2>> -> _assert_subject@1;
+        _assert_fail@1 ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Assertion pattern match failed"/utf8>>,
+                        value => _assert_fail@1,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 6})
+    end,
     Simple.
 

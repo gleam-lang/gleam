@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
 assertion_line: 46
-expression: "pub fn main() {\n  let a = 1\n  let <<b, 1>> = <<1, a>>\n  b\n}\n"
+expression: "pub fn main() {\n  let a = 1\n  let assert <<b, 1>> = <<1, a>>\n  b\n}\n"
 ---
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
@@ -11,6 +11,16 @@ expression: "pub fn main() {\n  let a = 1\n  let <<b, 1>> = <<1, a>>\n  b\n}\n"
 -spec main() -> integer().
 main() ->
     A = 1,
-    <<B, 1>> = <<1, A>>,
+    _assert_subject = <<1, A>>,
+    <<B, 1>> = case _assert_subject of
+        <<_, 1>> -> _assert_subject;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Assertion pattern match failed"/utf8>>,
+                        value => _assert_fail,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 3})
+    end,
     B.
 
