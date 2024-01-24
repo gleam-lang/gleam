@@ -14,7 +14,7 @@
 ### Build tool changes
 
 - The search bar in generated docs now has a darker background color.
-- The generated docs no longer shows wether an argument is discarded or
+- The generated docs no longer shows whether an argument is discarded or
   not in a function signature.
 
 ### Formatter
