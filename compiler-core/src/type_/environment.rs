@@ -25,7 +25,7 @@ pub struct Environment<'a> {
 
     /// Names of modules that have been imported with as name.
     pub imported_module_aliases: HashMap<EcoString, SrcSpan>,
-    pub unused_module_aliases: HashMap<EcoString, SrcSpan>,
+    pub unused_module_aliases: HashMap<EcoString, UnusedModuleAlias>,
 
     /// Values defined in the current function (or the prelude)
     pub scope: im::HashMap<EcoString, ValueConstructor>,
@@ -95,6 +95,12 @@ impl<'a> Environment<'a> {
             todo_encountered: false,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnusedModuleAlias {
+    pub location: SrcSpan,
+    pub module_name: EcoString,
 }
 
 /// For Keeping track of entity usages and knowing which error to display.
@@ -547,13 +553,14 @@ impl<'a> Environment<'a> {
             locations.push(location);
         }
 
-        for (name, location) in self.unused_module_aliases.iter() {
+        for (name, info) in self.unused_module_aliases.iter() {
             if self.unused_modules.get(name).is_none() {
                 self.warnings.emit(Warning::UnusedImportedModuleAlias {
-                    name: name.clone(),
-                    location: *location,
+                    alias: name.clone(),
+                    location: info.location,
+                    module_name: info.module_name.clone(),
                 });
-                locations.push(*location);
+                locations.push(info.location);
             }
         }
         locations

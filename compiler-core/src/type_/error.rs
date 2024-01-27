@@ -385,7 +385,8 @@ pub enum Warning {
 
     UnusedImportedModuleAlias {
         location: SrcSpan,
-        name: EcoString,
+        alias: EcoString,
+        module_name: EcoString,
     },
 
     UnusedPrivateModuleConstant {

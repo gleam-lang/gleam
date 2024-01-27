@@ -356,21 +356,34 @@ expression.",
                     }),
                 },
 
-                type_::Warning::UnusedImportedModuleAlias { location, .. } => Diagnostic {
-                    title: "Unused imported module alias".into(),
-                    text: "".into(),
-                    hint: Some("You can safely remove it.".into()),
-                    level: diagnostic::Level::Warning,
-                    location: Some(Location {
-                        src: src.clone(),
-                        path: path.to_path_buf(),
-                        label: diagnostic::Label {
-                            text: Some("This imported module alias is never used".into()),
-                            span: *location,
-                        },
-                        extra_labels: Vec::new(),
-                    }),
-                },
+                type_::Warning::UnusedImportedModuleAlias {
+                    location,
+                    module_name,
+                    ..
+                } => {
+                    let text = format!(
+                        "\
+Hint: You can safely remove it.
+
+    import {module_name} as _
+"
+                    );
+                    Diagnostic {
+                        title: "Unused imported module alias".into(),
+                        text,
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: Some("This alias is never used".into()),
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
 
                 type_::Warning::UnusedImportedValue { location, .. } => Diagnostic {
                     title: "Unused imported value".into(),

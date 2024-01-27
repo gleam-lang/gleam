@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 474
+expression: "import gleam/one.{two} as three\npub fn baz() { two() }"
+---
+
+warning: Unused imported module alias
+  ┌─ /src/warning/wrn.gleam:1:24
+  │
+1 │ import gleam/one.{two} as three
+  │                        ^^^^^^^^ This alias is never used
+
+Hint: You can safely remove it.
+
+    import gleam/one as _
+
+

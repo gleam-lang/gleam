@@ -6,6 +6,8 @@
 
 - Using a reserved word is now a compile error, not a warning.
 - Inexhaustive matches are now compile errors, not warnings.
+- The warning for an unused module alias now shows how to not assign a name to
+  the module.
 
 ### Build tool changes
 

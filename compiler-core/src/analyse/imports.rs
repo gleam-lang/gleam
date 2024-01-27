@@ -3,7 +3,9 @@ use ecow::EcoString;
 use crate::{
     ast::{Import, SrcSpan, UnqualifiedImport},
     build::Origin,
-    type_::{EntityKind, Environment, Error, ModuleInterface, ValueConstructorVariant},
+    type_::{
+        EntityKind, Environment, Error, ModuleInterface, UnusedModuleAlias, ValueConstructorVariant,
+    },
 };
 
 #[derive(Debug)]
@@ -195,10 +197,13 @@ impl<'a> Importer<'a> {
                     .imported_module_aliases
                     .insert(used_name.clone(), alias_location);
 
-                let _ = self
-                    .environment
-                    .unused_module_aliases
-                    .insert(used_name.clone(), alias_location);
+                let _ = self.environment.unused_module_aliases.insert(
+                    used_name.clone(),
+                    UnusedModuleAlias {
+                        location: alias_location,
+                        module_name: import.module.clone(),
+                    },
+                );
             }
 
             // Insert imported module into scope

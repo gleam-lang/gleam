@@ -448,21 +448,22 @@ fn unused_imported_module_with_alias_warnings_test() {
 #[test]
 fn unused_imported_module_with_alias_and_unqualified_name_warnings_test() {
     let warnings = get_warnings(
-        "import gleam/foo.{bar} as foo",
-        vec![("thepackage", "gleam/foo", "pub fn bar() { 1 }")],
+        "import gleam/one.{two} as three",
+        vec![("thepackage", "gleam/one", "pub fn two() { 1 }")],
     );
     assert!(!warnings.is_empty());
     assert_eq!(
         Warning::UnusedImportedValue {
-            name: "bar".into(),
+            name: "two".into(),
             location: SrcSpan { start: 18, end: 21 },
         },
         warnings[0]
     );
     assert_eq!(
         Warning::UnusedImportedModuleAlias {
-            name: "foo".into(),
-            location: SrcSpan { start: 23, end: 29 },
+            alias: "three".into(),
+            location: SrcSpan { start: 23, end: 31 },
+            module_name: "gleam/one".into()
         },
         warnings[1]
     );
@@ -471,12 +472,8 @@ fn unused_imported_module_with_alias_and_unqualified_name_warnings_test() {
 #[test]
 fn unused_imported_module_with_alias_and_unqualified_name_no_warnings_test() {
     assert_warning!(
-        ("gleam/foo", "pub fn bar() { 1 }"),
-        "import gleam/foo.{bar} as foo\npub fn baz() { bar() }",
-        Warning::UnusedImportedModuleAlias {
-            name: "foo".into(),
-            location: SrcSpan { start: 23, end: 29 },
-        }
+        ("package", "gleam/one", "pub fn two() { 1 }"),
+        "import gleam/one.{two} as three\npub fn baz() { two() }"
     );
 }
 
@@ -1113,8 +1110,9 @@ fn unused_alias_warning_test() {
             location: SrcSpan { start: 61, end: 64 },
         },
         Warning::UnusedImportedModuleAlias {
-            name:"bar".into(),
-            location: SrcSpan { start: 36, end: 42 }
+            alias:"bar".into(),
+            location: SrcSpan { start: 36, end: 42 },
+            module_name: "gleam/foo".into(),
         }
     );
 }
