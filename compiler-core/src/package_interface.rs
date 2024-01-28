@@ -129,7 +129,7 @@ pub struct TypeConstructorInterface {
     /// ```gleam
     /// pub type Box(a) {
     ///   MyBox(value: a)
-    /// //      ^^^^^^^^ This is the constructor's parameter
+    /// //      ^^^^^^^^ This is the constructor's parameter.
     /// }
     /// ```
     parameters: Vec<ParameterInterface>,
@@ -152,7 +152,7 @@ pub struct TypeAliasInterface {
     /// The aliased type.
     /// ```gleam
     /// type Ints = List(Int)
-    /// //          ^^^^^^^^^ This is the aliased type in a type alias
+    /// //          ^^^^^^^^^ This is the aliased type in a type alias.
     /// ```
     alias: TypeInterface,
 }
