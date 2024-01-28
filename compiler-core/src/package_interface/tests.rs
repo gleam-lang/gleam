@@ -2,6 +2,7 @@ use std::time::SystemTime;
 
 use ecow::EcoString;
 use globset::GlobBuilder;
+use hexpm::version::Identifier;
 
 use crate::{
     analyse::TargetSupport,
@@ -128,10 +129,13 @@ fn package_from_module(module: Module) -> Package {
             name: "my_package".into(),
             version: hexpm::version::Version {
                 major: 11,
-                minor: 11,
-                patch: 11,
-                pre: vec![],
-                build: None,
+                minor: 10,
+                patch: 9,
+                pre: vec![
+                    Identifier::Numeric(1),
+                    Identifier::AlphaNumeric("foo".into()),
+                ],
+                build: Some("build".into()),
             },
             gleam_version: Some("1.0.0".into()),
             licences: vec![],

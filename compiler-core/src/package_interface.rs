@@ -1,6 +1,7 @@
 use std::{collections::HashMap, ops::Deref};
 
 use ecow::EcoString;
+use hexpm::version::{Identifier, Version};
 use itertools::Itertools;
 use serde::Serialize;
 
@@ -19,12 +20,55 @@ use crate::build::{Module, Package};
 #[derive(Serialize, Debug)]
 pub struct PackageInterface {
     name: EcoString,
-    package_version: String,
+    package_version: VersionInterface,
     /// The Gleam version constraint that the package specifies in its `gleam.toml`.
     gleam_version_constraint: Option<EcoString>,
     /// A map from module name to its interface.
     #[serde(serialize_with = "ordered_map")]
     modules: HashMap<EcoString, ModuleInterface>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct VersionInterface {
+    major: u32,
+    minor: u32,
+    patch: u32,
+    pre: Vec<IdentifierInterface>,
+    build: Option<EcoString>,
+}
+
+impl VersionInterface {
+    pub fn from_version(version: &Version) -> Self {
+        VersionInterface {
+            major: version.major,
+            minor: version.minor,
+            patch: version.patch,
+            build: version.build.clone().map(EcoString::from),
+            pre: version
+                .pre
+                .iter()
+                .map(IdentifierInterface::from_identifier)
+                .collect_vec(),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+#[serde(tag = "kind")]
+pub enum IdentifierInterface {
+    Numeric { value: u32 },
+    Alphanumeric { value: EcoString },
+}
+
+impl IdentifierInterface {
+    pub fn from_identifier(identifier: &Identifier) -> Self {
+        match identifier {
+            Identifier::Numeric(number) => Self::Numeric { value: *number },
+            Identifier::AlphaNumeric(string) => Self::Alphanumeric {
+                value: string.clone().into(),
+            },
+        }
+    }
 }
 
 #[derive(Serialize, Debug)]
@@ -327,7 +371,7 @@ impl PackageInterface {
     pub fn from_package(package: &Package) -> PackageInterface {
         PackageInterface {
             name: package.config.name.clone(),
-            package_version: package.config.version.to_string(),
+            package_version: VersionInterface::from_version(&package.config.version),
             gleam_version_constraint: package.config.gleam_version.clone(),
             modules: package
                 .modules
