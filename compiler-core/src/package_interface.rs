@@ -17,6 +17,7 @@ use crate::build::{Module, Package};
 
 /// The public interface of a package that gets serialised as a json object.
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct PackageInterface {
     name: EcoString,
     version: EcoString,
@@ -28,6 +29,7 @@ pub struct PackageInterface {
 }
 
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct ModuleInterface {
     /// A vector with the lines composing the module's documentation (that is
     /// every line preceded by a `////`).
@@ -47,6 +49,7 @@ pub struct ModuleInterface {
 }
 
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct TypeDefinitionInterface {
     /// The definition's documentation comment (that is every line preceded by
     /// `///`).
@@ -69,6 +72,7 @@ pub struct TypeDefinitionInterface {
 }
 
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct TypeConstructorInterface {
     /// The constructor's documentation comment (that is every line preceded by
     /// `///`).
@@ -92,6 +96,7 @@ pub struct TypeConstructorInterface {
 }
 
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct TypeAliasInterface {
     /// The constructor's documentation comment (that is every line preceded by
     /// `///`).
@@ -114,6 +119,7 @@ pub struct TypeAliasInterface {
 }
 
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct ConstantInterface {
     /// The constant's documentation comment (that is every line preceded by
     /// `///`).
@@ -130,6 +136,7 @@ pub struct ConstantInterface {
 /// A module's function. This differs from a simple `Fn` type as its arguments
 /// can be labelled.
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct FunctionInterface {
     /// The function's documentation comment (that is every line preceded by
     /// `///`).
@@ -145,6 +152,7 @@ pub struct FunctionInterface {
 
 /// Informations about how a value is implemented.
 #[derive(Debug, Serialize, Copy, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct ImplementationsInterface {
     /// Set to `true` if the const/function has a pure Gleam implementation
     /// (that is, it never uses external code).
@@ -243,6 +251,7 @@ impl ImplementationsInterface {
 }
 
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct DeprecationInterface {
     /// The reason for the deprecation.
     message: EcoString,
@@ -261,6 +270,7 @@ impl DeprecationInterface {
 
 #[derive(Serialize, Debug)]
 #[serde(tag = "kind")]
+#[serde(rename_all = "kebab-case")]
 pub enum TypeInterface {
     /// A tuple type like `#(Int, Float)`.
     Tuple {
@@ -307,6 +317,7 @@ pub enum TypeInterface {
 }
 
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct ParameterInterface {
     /// If the parameter is labelled this will hold the label's name.
     /// ```gleam

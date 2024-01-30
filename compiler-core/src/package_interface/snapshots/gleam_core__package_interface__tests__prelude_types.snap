@@ -5,11 +5,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
 {
   "name": "my_package",
   "version": "11.10.9-1.foo+build",
-  "gleam_version_constraint": "1.0.0",
+  "gleam-version-constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
-      "type_aliases": {},
+      "type-aliases": {},
       "types": {},
       "constants": {
         "bool": {
@@ -17,11 +17,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
           "deprecation": null,
           "implementations": {
             "gleam": true,
-            "uses_erlang_externals": false,
-            "uses_javascript_externals": false
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
           },
           "type": {
-            "kind": "Named",
+            "kind": "named",
             "name": "Bool",
             "package": "",
             "module": "gleam",
@@ -33,11 +33,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
           "deprecation": null,
           "implementations": {
             "gleam": true,
-            "uses_erlang_externals": false,
-            "uses_javascript_externals": false
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
           },
           "type": {
-            "kind": "Named",
+            "kind": "named",
             "name": "Float",
             "package": "",
             "module": "gleam",
@@ -49,11 +49,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
           "deprecation": null,
           "implementations": {
             "gleam": true,
-            "uses_erlang_externals": false,
-            "uses_javascript_externals": false
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
           },
           "type": {
-            "kind": "Named",
+            "kind": "named",
             "name": "Int",
             "package": "",
             "module": "gleam",
@@ -65,11 +65,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
           "deprecation": null,
           "implementations": {
             "gleam": true,
-            "uses_erlang_externals": false,
-            "uses_javascript_externals": false
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
           },
           "type": {
-            "kind": "Named",
+            "kind": "named",
             "name": "String",
             "package": "",
             "module": "gleam",

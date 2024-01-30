@@ -5,11 +5,11 @@ expression: "\npub type Box(a, b) {\n  Box(b, Int)\n  OtherBox(message: String, 
 {
   "name": "my_package",
   "version": "11.10.9-1.foo+build",
-  "gleam_version_constraint": "1.0.0",
+  "gleam-version-constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
-      "type_aliases": {},
+      "type-aliases": {},
       "types": {
         "Box": {
           "documentation": null,
@@ -23,14 +23,14 @@ expression: "\npub type Box(a, b) {\n  Box(b, Int)\n  OtherBox(message: String, 
                 {
                   "label": null,
                   "type": {
-                    "kind": "Variable",
+                    "kind": "variable",
                     "id": 1
                   }
                 },
                 {
                   "label": null,
                   "type": {
-                    "kind": "Named",
+                    "kind": "named",
                     "name": "Int",
                     "package": "",
                     "module": "gleam",
@@ -46,7 +46,7 @@ expression: "\npub type Box(a, b) {\n  Box(b, Int)\n  OtherBox(message: String, 
                 {
                   "label": "message",
                   "type": {
-                    "kind": "Named",
+                    "kind": "named",
                     "name": "String",
                     "package": "",
                     "module": "gleam",
@@ -56,7 +56,7 @@ expression: "\npub type Box(a, b) {\n  Box(b, Int)\n  OtherBox(message: String, 
                 {
                   "label": "a",
                   "type": {
-                    "kind": "Variable",
+                    "kind": "variable",
                     "id": 0
                   }
                 }

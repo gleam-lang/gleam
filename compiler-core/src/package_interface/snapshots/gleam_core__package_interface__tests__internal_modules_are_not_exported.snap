@@ -5,6 +5,6 @@ expression: "pub fn main() { 1 }"
 {
   "name": "my_package",
   "version": "11.10.9-1.foo+build",
-  "gleam_version_constraint": "1.0.0",
+  "gleam-version-constraint": "1.0.0",
   "modules": {}
 }
