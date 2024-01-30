@@ -559,7 +559,24 @@ impl<'comments> Formatter<'comments> {
         return_annotation: Option<&'a TypeAst>,
         body: &'a Vec1<UntypedStatement>,
     ) -> Document<'a> {
-        let args = wrap_args(args.iter().map(|e| self.fn_arg(e))).group();
+        let args = wrap_args(args.iter().map(|e| self.fn_arg(e)))
+            .group()
+            .next_break_fits(NextBreakFitsMode::Disabled);
+        //   ^^^ We add this so that when an expression function is passed as
+        //       the last argument of a function and it goes over the line
+        //       limit with just its arguments we don't get some strange
+        //       splitting.
+        //       See https://github.com/gleam-lang/gleam/issues/2571
+        //
+        // There's many ways we could be smarter than this. For example:
+        //  - still split the arguments like it did in the example shown in the
+        //    issue if the expr_fn has more than one argument
+        //  - make sure that an anonymous function whose body is made up of a
+        //    single expression doesn't get split (I think that could boil down
+        //    to wrapping the body with a `next_break_fits(Disabled)`)
+        //
+        // These are some of the ways we could tweak the look of expression
+        // functions in the future if people are not satisfied with it.
         let body = self.statements(body);
         let header = "fn".to_doc().append(args);
 
