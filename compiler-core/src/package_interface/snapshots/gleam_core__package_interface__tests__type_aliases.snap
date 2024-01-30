@@ -5,17 +5,17 @@ expression: pub type Foo(a) = Int
 {
   "name": "my_package",
   "version": "11.10.9-1.foo+build",
-  "gleam_version_constraint": "1.0.0",
+  "gleam-version-constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
-      "type_aliases": {
+      "type-aliases": {
         "Foo": {
           "documentation": null,
           "deprecation": null,
           "parameters": 1,
           "alias": {
-            "kind": "Named",
+            "kind": "named",
             "name": "Int",
             "package": "",
             "module": "gleam",

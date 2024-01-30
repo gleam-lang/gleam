@@ -253,7 +253,7 @@ pub fn multiple_type_variables() {
     assert_package_interface!(
         r#"
 pub type Box(a, b)
-pub fn main(a: a, b: b, c: Box(c, d)) -> Box(a, d) {}
+pub fn some_type_variables(a: a, b: b, c: Box(c, d)) -> Box(a, d) {}
 "#
     );
 }

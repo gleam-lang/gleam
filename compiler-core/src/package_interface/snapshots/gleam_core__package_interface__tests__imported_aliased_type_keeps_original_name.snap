@@ -5,11 +5,11 @@ expression: "\nimport other_module.{type Element as Alias} as module_alias\npub 
 {
   "name": "my_package",
   "version": "11.10.9-1.foo+build",
-  "gleam_version_constraint": "1.0.0",
+  "gleam-version-constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
-      "type_aliases": {},
+      "type-aliases": {},
       "types": {},
       "constants": {},
       "functions": {
@@ -18,24 +18,24 @@ expression: "\nimport other_module.{type Element as Alias} as module_alias\npub 
           "deprecation": null,
           "implementations": {
             "gleam": true,
-            "uses_erlang_externals": false,
-            "uses_javascript_externals": false
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
           },
           "parameters": [],
           "return": {
-            "kind": "Named",
+            "kind": "named",
             "name": "Element",
             "package": "other_package",
             "module": "other_module",
             "parameters": [
               {
-                "kind": "Named",
+                "kind": "named",
                 "name": "Element",
                 "package": "other_package",
                 "module": "other_module",
                 "parameters": [
                   {
-                    "kind": "Variable",
+                    "kind": "variable",
                     "id": 0
                   }
                 ]

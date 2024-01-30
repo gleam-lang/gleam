@@ -1,15 +1,15 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-expression: "\npub type Box(a, b)\npub fn main(a: a, b: b, c: Box(c, d)) -> Box(a, d) {}\n"
+expression: "\npub type Box(a, b)\npub fn some_type_variables(a: a, b: b, c: Box(c, d)) -> Box(a, d) {}\n"
 ---
 {
   "name": "my_package",
   "version": "11.10.9-1.foo+build",
-  "gleam_version_constraint": "1.0.0",
+  "gleam-version-constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
-      "type_aliases": {},
+      "type-aliases": {},
       "types": {
         "Box": {
           "documentation": null,
@@ -20,43 +20,43 @@ expression: "\npub type Box(a, b)\npub fn main(a: a, b: b, c: Box(c, d)) -> Box(
       },
       "constants": {},
       "functions": {
-        "main": {
+        "some_type_variables": {
           "documentation": null,
           "deprecation": null,
           "implementations": {
             "gleam": true,
-            "uses_erlang_externals": false,
-            "uses_javascript_externals": false
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
           },
           "parameters": [
             {
               "label": null,
               "type": {
-                "kind": "Variable",
+                "kind": "variable",
                 "id": 0
               }
             },
             {
               "label": null,
               "type": {
-                "kind": "Variable",
+                "kind": "variable",
                 "id": 1
               }
             },
             {
               "label": null,
               "type": {
-                "kind": "Named",
+                "kind": "named",
                 "name": "Box",
                 "package": "my_package",
                 "module": "my/module",
                 "parameters": [
                   {
-                    "kind": "Variable",
+                    "kind": "variable",
                     "id": 2
                   },
                   {
-                    "kind": "Variable",
+                    "kind": "variable",
                     "id": 3
                   }
                 ]
@@ -64,17 +64,17 @@ expression: "\npub type Box(a, b)\npub fn main(a: a, b: b, c: Box(c, d)) -> Box(
             }
           ],
           "return": {
-            "kind": "Named",
+            "kind": "named",
             "name": "Box",
             "package": "my_package",
             "module": "my/module",
             "parameters": [
               {
-                "kind": "Variable",
+                "kind": "variable",
                 "id": 0
               },
               {
-                "kind": "Variable",
+                "kind": "variable",
                 "id": 3
               }
             ]
