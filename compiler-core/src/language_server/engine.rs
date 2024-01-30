@@ -15,6 +15,8 @@ use crate::{
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
+use im::HashMap;
+use itertools::Itertools;
 use lsp_types::{
     self as lsp, CodeAction, Hover, HoverContents, InlayHint, MarkedString, Position, Url,
 };
@@ -64,7 +66,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
     /// Used to know if to show the "View on HexDocs" link
     /// when hovering on an imported value
     hex_deps: std::collections::HashSet<EcoString>,
-    
+
     /// Configuration the user has set in their editor.
     pub(crate) user_config: SharedConfig,
 }
@@ -256,8 +258,22 @@ where
                 return Ok(None);
             };
 
+            let mut type_qualifiers = HashMap::new();
+            for def in &module.ast.definitions {
+                if let Definition::Import(import) = def {
+                    for unqualified_type in &import.unqualified_types {
+                        let _ = unqualified_type.as_name.as_ref().map(|elem| {
+                            type_qualifiers.insert(
+                                import.module.clone() + "." + unqualified_type.name.clone(),
+                                elem.clone(),
+                            )
+                        });
+                    }
+                }
+            }
+
             code_action_unused_imports(module, &params, &mut actions);
-            code_action_annotate_types(module, &params, &mut actions);
+            code_action_annotate_types(module, &params, &mut actions, &type_qualifiers);
 
             Ok(if actions.is_empty() {
                 None
@@ -329,8 +345,6 @@ where
     }
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
-        use itertools::Itertools;
-
         // The to_file_path method is available on these platforms
         #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
         let path = uri.to_file_path().expect("URL file");
@@ -450,9 +464,22 @@ where
                 return Ok(vec![]);
             };
             let line_numbers = LineNumbers::new(&module.code);
-
             let mut hints = vec![];
             let requested_range = line_numbers.src_span(params.range);
+
+            let mut type_qualifiers = HashMap::new();
+            for def in &module.ast.definitions {
+                if let Definition::Import(import) = def {
+                    for unqualified_type in &import.unqualified_types {
+                        let _ = unqualified_type.as_name.as_ref().map(|elem| {
+                            type_qualifiers.insert(
+                                import.module.clone() + "." + unqualified_type.name.clone(),
+                                elem.clone(),
+                            )
+                        });
+                    }
+                }
+            }
 
             let config = this.user_config.read().expect("lock is poisoned");
             add_hints_for_definitions(
@@ -463,6 +490,7 @@ where
                 }),
                 &line_numbers,
                 &mut hints,
+                &type_qualifiers,
             );
 
             Ok(hints)
@@ -735,6 +763,7 @@ fn code_action_annotate_types(
     module: &Module,
     params: &lsp::CodeActionParams,
     actions: &mut Vec<CodeAction>,
+    type_qualifiers: &HashMap<EcoString, EcoString>,
 ) {
     let uri = &params.text_document.uri;
     let Some((line_numbers, located)) = module_node_at_position(&params.range.start, module) else {
@@ -744,7 +773,7 @@ fn code_action_annotate_types(
     match located {
         Located::ModuleStatement(Definition::Function(function)) => {
             if let Some(annotation) =
-                TypeAnnotations::from_function_definition(function, &line_numbers)
+                TypeAnnotations::from_function_definition(function, &line_numbers, type_qualifiers)
                     .into_code_action(uri)
             {
                 annotation.push_to(actions)
@@ -767,11 +796,12 @@ fn add_hints_for_definitions<'a>(
     definitions: impl Iterator<Item = &'a TypedDefinition>,
     line_numbers: &LineNumbers,
     hints: &mut Vec<InlayHint>,
+    type_qualifiers: &HashMap<EcoString, EcoString>,
 ) {
     for def in definitions {
         match def {
             Definition::Function(function) if config.function_definitions => hints.extend(
-                TypeAnnotations::from_function_definition(function, line_numbers)
+                TypeAnnotations::from_function_definition(function, line_numbers, type_qualifiers)
                     .into_inlay_hints(),
             ),
             Definition::ModuleConstant(constant) if config.module_constants => hints.extend(

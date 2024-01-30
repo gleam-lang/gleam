@@ -10,8 +10,9 @@ fn expect_hints(
     config: InlayHintsConfig,
     range: Option<Range>,
     expected_hints: Vec<InlayHint>,
+    io: &LanguageServerTestIO,
 ) {
-    let hints = inlay_hints(src, config, range);
+    let hints = inlay_hints(src, config, range, io);
 
     // InlayHint doesn't implement PartialEq so we're serialising to compare them
     let hints = serde_json::to_value(hints).expect("serialisation shouldn't fail");
@@ -20,8 +21,12 @@ fn expect_hints(
     assert_eq!(hints, expected_hints);
 }
 
-fn inlay_hints(src: &str, config: InlayHintsConfig, range: Option<Range>) -> Vec<InlayHint> {
-    let io = LanguageServerTestIO::new();
+fn inlay_hints(
+    src: &str,
+    config: InlayHintsConfig,
+    range: Option<Range>,
+    io: &LanguageServerTestIO,
+) -> Vec<InlayHint> {
     let mut engine = setup_engine_with_config(
         &io,
         Configuration {
@@ -29,6 +34,9 @@ fn inlay_hints(src: &str, config: InlayHintsConfig, range: Option<Range>) -> Vec
             ..Default::default()
         },
     );
+    for package in &io.manifest.packages {
+        add_package_from_manifest(&mut engine, package.clone());
+    }
 
     _ = io.src_module("app", src);
     let response = engine.compile_please();
@@ -86,6 +94,7 @@ const b = 43
             padding_right: None,
             data: None,
         }],
+        &LanguageServerTestIO::new(),
     );
 }
 
@@ -114,6 +123,7 @@ const a = 42
             padding_right: None,
             data: None,
         }],
+        &LanguageServerTestIO::new(),
     );
 }
 
@@ -142,6 +152,7 @@ const a = 42
             padding_right: None,
             data: None,
         }],
+        &LanguageServerTestIO::new(),
     );
 }
 
@@ -170,6 +181,7 @@ const a = 42
             padding_right: None,
             data: None,
         }],
+        &LanguageServerTestIO::new(),
     );
 }
 
@@ -198,6 +210,7 @@ const n = 42
             padding_right: None,
             data: None,
         }],
+        &LanguageServerTestIO::new(),
     );
 }
 
@@ -214,6 +227,7 @@ const n: Int = 42
         },
         None,
         vec![],
+        &LanguageServerTestIO::new(),
     );
 }
 
@@ -230,6 +244,7 @@ const n = 42
         },
         None,
         vec![],
+        &LanguageServerTestIO::new(),
     );
 }
 
@@ -288,6 +303,7 @@ fn add(lhs, rhs) {
                 data: None,
             },
         ],
+        &LanguageServerTestIO::new(),
     );
 }
 
@@ -306,6 +322,7 @@ fn add(lhs: Int, rhs: Int) -> Int {
         },
         None,
         vec![],
+        &LanguageServerTestIO::new(),
     );
 }
 
@@ -351,6 +368,7 @@ fn add(lhs, rhs: Int) {
                 data: None,
             },
         ],
+        &LanguageServerTestIO::new(),
     );
 }
 
@@ -369,6 +387,7 @@ fn add(lhs, rhs) {
         },
         None,
         vec![],
+        &LanguageServerTestIO::new(),
     );
 }
 
@@ -399,6 +418,168 @@ fn identity(value: some_value) {
             padding_right: None,
             data: None,
         }],
+        &LanguageServerTestIO::new(),
+    );
+}
+
+#[test]
+fn function_definition_with_type_qualifiers() {
+    let code = "
+import mod1.{type Value as V1}
+import mod2.{type Value as V2}
+
+fn foo() {
+  let x: V1 = mod1.v()
+  let y: V2 = mod2.v()
+  #(x, y)
+}
+";
+
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("dep1");
+    io.add_hex_package("dep2");
+
+    _ = io.hex_dep_module(
+        "dep1",
+        "mod1",
+        "pub type Value {
+	C
+	D
+    }
+    pub fn v() -> Value {
+	C
+    }",
+    );
+
+    _ = io.hex_dep_module(
+        "dep2",
+        "mod2",
+        "pub type Value{
+	C
+	D
+    }
+
+    pub fn v() -> Value{
+	C
+    }",
+    );
+
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            function_definitions: true,
+            ..Default::default()
+        },
+        None,
+        vec![InlayHint {
+            position: Position::new(4, 8),
+            label: "-> #(V1, V2)".to_owned().into(),
+            kind: Some(InlayHintKind::TYPE),
+            text_edits: Some(vec![TextEdit {
+                range: Range::new(Position::new(4, 8), Position::new(4, 8)),
+                new_text: " -> #(V1, V2)".to_owned(),
+            }]),
+            tooltip: None,
+            padding_left: Some(true),
+            padding_right: None,
+            data: None,
+        }],
+        &io,
+    );
+}
+
+#[test]
+fn function_definition_with_qualified_types_and_type_paramaeters() {
+    let code = "
+import mod1.{type Value as V1}
+import mod2.{type Value as V2}
+
+fn foo(num, z: a) {
+  let a = num + 4
+  let x: V1 = mod1.v()
+  let y: V2 = mod2.v()
+  #(x, y, z, num)
+}
+";
+
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("dep1");
+    io.add_hex_package("dep2");
+
+    _ = io.hex_dep_module(
+        "dep1",
+        "mod1",
+        "pub type Value {
+	C
+	D
+    }
+    pub fn v() -> Value {
+	C
+    }",
+    );
+
+    _ = io.hex_dep_module(
+        "dep2",
+        "mod2",
+        "pub type Value{
+	C
+	D
+    }
+
+    pub fn v() -> Value{
+	C
+    }",
+    );
+
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            function_definitions: true,
+            ..Default::default()
+        },
+        None,
+        vec![
+            InlayHint {
+                position: Position::new(5, 7),
+                label: ": Int".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(5, 7), Position::new(5, 7)),
+                    new_text: ": Int".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(4, 17),
+                label: "-> #(V1, V2, a, Int)".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(4, 17), Position::new(4, 17)),
+                    new_text: " -> #(V1, V2, a, Int)".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: Some(true),
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(4, 10),
+                label: ": Int".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(4, 10), Position::new(4, 10)),
+                    new_text: ": Int".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+        ],
+        &io,
     );
 }
 
@@ -445,6 +626,7 @@ fn identity(x) {
                 data: None,
             },
         ],
+        &LanguageServerTestIO::new(),
     );
 }
 
@@ -490,5 +672,6 @@ fn equals(a: value, b) {
                 data: None,
             },
         ],
+        &LanguageServerTestIO::new(),
     );
 }

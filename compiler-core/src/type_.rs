@@ -3,6 +3,7 @@ pub(crate) mod error;
 pub(crate) mod expression;
 pub(crate) mod fields;
 pub(crate) mod hydrator;
+pub mod lsp_pretty;
 pub(crate) mod pattern;
 pub(crate) mod pipe;
 pub(crate) mod prelude;

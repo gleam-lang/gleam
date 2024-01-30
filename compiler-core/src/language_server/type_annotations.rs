@@ -1,13 +1,15 @@
-use std::sync::Arc;
 use super::code_action::CodeActionBuilder;
 use crate::{
-    ast::{TypedFunction, TypedModuleConstant, Statement, TypedExpr, TypeAst},
+    ast::{Statement, TypeAst, TypedExpr, TypedFunction, TypedModuleConstant},
     line_numbers::LineNumbers,
-    type_::{pretty::Printer, Type, TypeVar},
+    type_::{lsp_pretty::LspPrinter, pretty::Printer, Type, TypeVar},
 };
+use ecow::EcoString;
+use im::HashMap;
 use lsp_types::{
     CodeActionKind, InlayHint, InlayHintKind, InlayHintLabel, Position, Range, TextEdit, Url,
 };
+use std::sync::Arc;
 use vec1::Vec1;
 
 #[derive(Debug, Clone, Default)]
@@ -35,43 +37,61 @@ impl TypeAnnotations {
     }
 
     /**
-     * Returns a list of annotations and makes note of any type_parameter annotations given by the user in the function body.
+     * Returns a list of annotations and makes note of any `type_parameter` annotations given by the user in the function body.
      */
-    fn process_function_body<'a>(body: &'a Vec1<Statement<Arc<Type>, TypedExpr > >, type_parameters: &mut im::HashMap<u64, &'a TypeAst>, line_numbers: &LineNumbers) -> Vec<(Position, String)>{
+    fn process_function_body<'a>(
+        body: &'a Vec1<Statement<Arc<Type>, TypedExpr>>,
+        type_parameters: &mut HashMap<u64, &'a TypeAst>,
+        line_numbers: &LineNumbers,
+        type_qualifiers: &HashMap<EcoString, EcoString>,
+    ) -> Vec<(Position, String)> {
         let mut annotations = vec![];
         for statement in body {
-            if let Statement::Assignment(st) = statement{
-                match &st.annotation{
+            if let Statement::Assignment(st) = statement {
+                match &st.annotation {
                     None => {
-                        let linecol = line_numbers.line_and_column_number(st.pattern.location().end);
+                        let linecol =
+                            line_numbers.line_and_column_number(st.pattern.location().end);
                         let position = Position::new(linecol.line - 1, linecol.column - 1);
-                        let mut type_text = Printer::new().pretty_print(&st.value.type_(), 0);
+                        let mut type_text = Self::get_type_text(&st.value.type_(), type_qualifiers);
                         if let Type::Var { type_ } = &*st.value.type_() {
-                                // If type is generic type variable check if its id has a overwriting name given by the user via a type annotation elsewhere in the function
-                                if let TypeVar::Generic {id} = &*type_.borrow(){
-                                    if let Some(TypeAst::Var(type_var)) = type_parameters.get(id) {
-                                        type_text = type_var.name.to_string();
-                                    }
+                            // If type is generic type variable check if its id has a overwriting name given by the user via a type annotation elsewhere in the function
+                            if let TypeVar::Generic { id } = &*type_.borrow() {
+                                if let Some(TypeAst::Var(type_var)) = type_parameters.get(id) {
+                                    type_text = type_var.name.to_string();
                                 }
+                            }
                         }
-                        annotations.push((position, type_text));
+                        annotations.push((position, format!(": {type_text}")));
                     }
                     Some(annotation) => {
                         // If user has provided an annotation that is a type parameter, make a note of it
-                        if let Type::Var{type_} = &*st.value.type_(){
-                            if let TypeVar::Generic { id } = &*type_.borrow(){
+                        if let Type::Var { type_ } = &*st.value.type_() {
+                            if let TypeVar::Generic { id } = &*type_.borrow() {
                                 let _ = type_parameters.insert(*id, annotation);
                             }
-                        }   
-                    },
+                        }
+                    }
                 }
             }
         }
         annotations
     }
 
-    pub fn from_function_definition(function: &TypedFunction, line_numbers: &LineNumbers) -> Self {
-        let mut type_parameters = im::HashMap::new();
+    fn get_type_text(typ: &Type, type_qualifiers: &HashMap<EcoString, EcoString>) -> String {
+        let typ_text = EcoString::from(LspPrinter::new(type_qualifiers).pretty_print(typ, 0));
+        type_qualifiers
+            .get(&typ_text)
+            .unwrap_or(&typ_text)
+            .to_string()
+    }
+
+    pub fn from_function_definition(
+        function: &TypedFunction,
+        line_numbers: &LineNumbers,
+        type_qualifiers: &HashMap<EcoString, EcoString>,
+    ) -> Self {
+        let mut type_parameters = HashMap::new();
         if let Some(annotation) = &function.return_annotation {
             if let crate::type_::Type::Var { type_ } = &*function.return_type {
                 if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
@@ -89,12 +109,17 @@ impl TypeAnnotations {
             }
         }
 
-        let mut annotations  = Self::process_function_body(&function.body, &mut type_parameters, line_numbers);
+        let mut annotations = Self::process_function_body(
+            &function.body,
+            &mut type_parameters,
+            line_numbers,
+            type_qualifiers,
+        );
 
         if function.return_annotation.is_none() {
             let linecol = line_numbers.line_and_column_number(function.location.end);
             let position = Position::new(linecol.line - 1, linecol.column - 1);
-            let mut type_text = Printer::new().pretty_print(&function.return_type, 0);
+            let mut type_text = Self::get_type_text(&function.return_type, type_qualifiers);
 
             if let crate::type_::Type::Var { type_ } = &*function.return_type {
                 if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
@@ -111,7 +136,7 @@ impl TypeAnnotations {
             if argument.annotation.is_none() {
                 let linecol = line_numbers.line_and_column_number(argument.location.end);
                 let position = Position::new(linecol.line - 1, linecol.column - 1);
-                let mut type_text = Printer::new().pretty_print(&argument.type_, 0);
+                let mut type_text = Self::get_type_text(&argument.type_, type_qualifiers);
 
                 if let crate::type_::Type::Var { type_ } = &*argument.type_ {
                     if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
