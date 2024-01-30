@@ -236,3 +236,29 @@ fn function_that_is_a_little_over_the_limit() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2571
+#[test]
+fn expr_function_as_last_argument() {
+    assert_format!(
+        r#"pub fn main() {
+  Builder(
+    accumulator: "",
+    update: fn(accum, val) { accum <> val },
+    final: fn(accum) { accum },
+  )
+}
+"#
+    );
+
+    // We want to make sure that, if it goes over the limit NOT with its
+    // arguments' list the body is still the first thing that gets split.
+    assert_format!(
+        r#"pub fn main() {
+  Builder(accumulator: "", update: fn(accum, val) { accum }, final: fn(accum) {
+    accum
+  })
+}
+"#
+    );
+}
