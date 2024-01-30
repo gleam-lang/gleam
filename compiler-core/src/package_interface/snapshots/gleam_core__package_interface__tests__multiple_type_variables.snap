@@ -4,22 +4,7 @@ expression: "\npub type Box(a, b)\npub fn main(a: a, b: b, c: Box(c, d)) -> Box(
 ---
 {
   "name": "my_package",
-  "package_version": {
-    "major": 11,
-    "minor": 10,
-    "patch": 9,
-    "pre": [
-      {
-        "kind": "Numeric",
-        "value": 1
-      },
-      {
-        "kind": "Alphanumeric",
-        "value": "foo"
-      }
-    ],
-    "build": "build"
-  },
+  "version": "11.10.9-1.foo+build",
   "gleam_version_constraint": "1.0.0",
   "modules": {
     "my/module": {
