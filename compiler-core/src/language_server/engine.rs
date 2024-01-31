@@ -1,6 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern,
+        Arg, AssignName, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr,
+        TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -258,22 +259,17 @@ where
                 return Ok(None);
             };
 
-            let mut type_qualifiers = HashMap::new();
-            for def in &module.ast.definitions {
-                if let Definition::Import(import) = def {
-                    for unqualified_type in &import.unqualified_types {
-                        let _ = unqualified_type.as_name.as_ref().map(|elem| {
-                            type_qualifiers.insert(
-                                import.module.clone() + "." + unqualified_type.name.clone(),
-                                elem.clone(),
-                            )
-                        });
-                    }
-                }
-            }
+            let type_qualifiers = get_type_qualifiers(module);
+            let module_qualifiers = get_module_qualifiers(module);
 
             code_action_unused_imports(module, &params, &mut actions);
-            code_action_annotate_types(module, &params, &mut actions, &type_qualifiers);
+            code_action_annotate_types(
+                module,
+                &params,
+                &mut actions,
+                &type_qualifiers,
+                &module_qualifiers,
+            );
 
             Ok(if actions.is_empty() {
                 None
@@ -467,19 +463,8 @@ where
             let mut hints = vec![];
             let requested_range = line_numbers.src_span(params.range);
 
-            let mut type_qualifiers = HashMap::new();
-            for def in &module.ast.definitions {
-                if let Definition::Import(import) = def {
-                    for unqualified_type in &import.unqualified_types {
-                        let _ = unqualified_type.as_name.as_ref().map(|elem| {
-                            type_qualifiers.insert(
-                                import.module.clone() + "." + unqualified_type.name.clone(),
-                                elem.clone(),
-                            )
-                        });
-                    }
-                }
-            }
+            let type_qualifiers = get_type_qualifiers(module);
+            let module_qualifiers = get_module_qualifiers(module);
 
             let config = this.user_config.read().expect("lock is poisoned");
             add_hints_for_definitions(
@@ -491,11 +476,48 @@ where
                 &line_numbers,
                 &mut hints,
                 &type_qualifiers,
+                &module_qualifiers,
             );
 
             Ok(hints)
         })
     }
+}
+
+// Given a module, returns a hashMap mapping from module`.`type  to qualified_name
+// eg: import mod1.{type Value as V1} => key: mod1.Value, value: V1
+fn get_type_qualifiers(module: &Module) -> HashMap<EcoString, EcoString> {
+    let mut type_qualifiers = HashMap::new();
+    for def in &module.ast.definitions {
+        if let Definition::Import(import) = def {
+            for unqualified_type in &import.unqualified_types {
+                let _ = unqualified_type.as_name.as_ref().map(|elem| {
+                    let module_name = import
+                        .used_name()
+                        .map_or(import.module.clone(), |used_name| used_name.clone());
+                    type_qualifiers.insert(
+                        module_name + "." + unqualified_type.name.clone(),
+                        elem.clone(),
+                    )
+                });
+            }
+        }
+    }
+    type_qualifiers
+}
+
+// Given a module, returns a hashMap mapping between module names and qualified names
+// eg: import mod1 as m => key: mod1, value: m
+fn get_module_qualifiers(module: &Module) -> HashMap<EcoString, EcoString> {
+    let mut module_qualifiers = HashMap::new();
+    for def in &module.ast.definitions {
+        if let Definition::Import(import) = def {
+            if let Some((AssignName::Variable(v), _)) = &import.as_name {
+                let _ = module_qualifiers.insert(import.module.clone(), v.clone());
+            }
+        }
+    }
+    module_qualifiers
 }
 
 fn module_node_at_position<'a>(
@@ -764,6 +786,7 @@ fn code_action_annotate_types(
     params: &lsp::CodeActionParams,
     actions: &mut Vec<CodeAction>,
     type_qualifiers: &HashMap<EcoString, EcoString>,
+    module_qualifiers: &HashMap<EcoString, EcoString>,
 ) {
     let uri = &params.text_document.uri;
     let Some((line_numbers, located)) = module_node_at_position(&params.range.start, module) else {
@@ -772,9 +795,13 @@ fn code_action_annotate_types(
 
     match located {
         Located::ModuleStatement(Definition::Function(function)) => {
-            if let Some(annotation) =
-                TypeAnnotations::from_function_definition(function, &line_numbers, type_qualifiers)
-                    .into_code_action(uri)
+            if let Some(annotation) = TypeAnnotations::from_function_definition(
+                function,
+                &line_numbers,
+                type_qualifiers,
+                module_qualifiers,
+            )
+            .into_code_action(uri)
             {
                 annotation.push_to(actions)
             }
@@ -797,12 +824,18 @@ fn add_hints_for_definitions<'a>(
     line_numbers: &LineNumbers,
     hints: &mut Vec<InlayHint>,
     type_qualifiers: &HashMap<EcoString, EcoString>,
+    module_qualifiers: &HashMap<EcoString, EcoString>,
 ) {
     for def in definitions {
         match def {
             Definition::Function(function) if config.function_definitions => hints.extend(
-                TypeAnnotations::from_function_definition(function, line_numbers, type_qualifiers)
-                    .into_inlay_hints(),
+                TypeAnnotations::from_function_definition(
+                    function,
+                    line_numbers,
+                    type_qualifiers,
+                    module_qualifiers,
+                )
+                .into_inlay_hints(),
             ),
             Definition::ModuleConstant(constant) if config.module_constants => hints.extend(
                 TypeAnnotations::from_module_constant(constant, line_numbers).into_inlay_hints(),

@@ -44,6 +44,7 @@ impl TypeAnnotations {
         type_parameters: &mut HashMap<u64, &'a TypeAst>,
         line_numbers: &LineNumbers,
         type_qualifiers: &HashMap<EcoString, EcoString>,
+        module_qualifiers: &HashMap<EcoString, EcoString>,
     ) -> Vec<(Position, String)> {
         let mut annotations = vec![];
         for statement in body {
@@ -53,9 +54,13 @@ impl TypeAnnotations {
                         let linecol =
                             line_numbers.line_and_column_number(st.pattern.location().end);
                         let position = Position::new(linecol.line - 1, linecol.column - 1);
-                        let mut type_text = Self::get_type_text(&st.value.type_(), type_qualifiers);
+                        let mut type_text = Self::get_type_text(
+                            &st.value.type_(),
+                            type_qualifiers,
+                            module_qualifiers,
+                        );
                         if let Type::Var { type_ } = &*st.value.type_() {
-                            // If type is generic type variable check if its id has a overwriting name given by the user via a type annotation elsewhere in the function
+                            // If type is generic type variable check if its id has a overwriting type_text given by the user via a type annotation elsewhere in the function
                             if let TypeVar::Generic { id } = &*type_.borrow() {
                                 if let Some(TypeAst::Var(type_var)) = type_parameters.get(id) {
                                     type_text = type_var.name.to_string();
@@ -78,8 +83,15 @@ impl TypeAnnotations {
         annotations
     }
 
-    fn get_type_text(typ: &Type, type_qualifiers: &HashMap<EcoString, EcoString>) -> String {
-        let typ_text = EcoString::from(LspPrinter::new(type_qualifiers).pretty_print(typ, 0));
+    // Helper function that chooses between the LspPrinter's pretty_print of a type or a qualified name given to the type by the user.
+    fn get_type_text(
+        typ: &Type,
+        type_qualifiers: &HashMap<EcoString, EcoString>,
+        module_qualifiers: &HashMap<EcoString, EcoString>,
+    ) -> String {
+        let typ_text = EcoString::from(
+            LspPrinter::new(type_qualifiers, module_qualifiers).pretty_print(typ, 0),
+        );
         type_qualifiers
             .get(&typ_text)
             .unwrap_or(&typ_text)
@@ -90,6 +102,7 @@ impl TypeAnnotations {
         function: &TypedFunction,
         line_numbers: &LineNumbers,
         type_qualifiers: &HashMap<EcoString, EcoString>,
+        module_qualifiers: &HashMap<EcoString, EcoString>,
     ) -> Self {
         let mut type_parameters = HashMap::new();
         if let Some(annotation) = &function.return_annotation {
@@ -114,12 +127,14 @@ impl TypeAnnotations {
             &mut type_parameters,
             line_numbers,
             type_qualifiers,
+            module_qualifiers,
         );
 
         if function.return_annotation.is_none() {
             let linecol = line_numbers.line_and_column_number(function.location.end);
             let position = Position::new(linecol.line - 1, linecol.column - 1);
-            let mut type_text = Self::get_type_text(&function.return_type, type_qualifiers);
+            let mut type_text =
+                Self::get_type_text(&function.return_type, type_qualifiers, module_qualifiers);
 
             if let crate::type_::Type::Var { type_ } = &*function.return_type {
                 if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
@@ -136,7 +151,8 @@ impl TypeAnnotations {
             if argument.annotation.is_none() {
                 let linecol = line_numbers.line_and_column_number(argument.location.end);
                 let position = Position::new(linecol.line - 1, linecol.column - 1);
-                let mut type_text = Self::get_type_text(&argument.type_, type_qualifiers);
+                let mut type_text =
+                    Self::get_type_text(&argument.type_, type_qualifiers, module_qualifiers);
 
                 if let crate::type_::Type::Var { type_ } = &*argument.type_ {
                     if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {

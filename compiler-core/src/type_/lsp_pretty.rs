@@ -17,14 +17,18 @@ const INDENT: isize = 2;
 pub struct LspPrinter<'a> {
     pretty_printer: Printer,
     type_qualifiers: &'a HashMap<EcoString, EcoString>,
-    // type_parameters: &'a HashMap<u64, &'a TypeAst>,
+    module_qualifiers: &'a HashMap<EcoString, EcoString>,
 }
 
 impl<'a> LspPrinter<'a> {
-    pub fn new(type_qualifiers: &'a HashMap<EcoString, EcoString>) -> Self {
+    pub fn new(
+        type_qualifiers: &'a HashMap<EcoString, EcoString>,
+        module_qualifiers: &'a HashMap<EcoString, EcoString>,
+    ) -> Self {
         LspPrinter {
             pretty_printer: Printer::default(),
             type_qualifiers,
+            module_qualifiers,
         }
     }
 
@@ -53,8 +57,15 @@ impl<'a> LspPrinter<'a> {
                     if module == "gleam" {
                         // Ignoring module names for in-built gleam types like Int
                         name.to_doc()
-                    } else {
+                    } else if self.type_qualifiers.contains_key(&key) {
+                        // Imported type has been qualified. eg: import mod1.{type Cat as c}
                         doc
+                    } else {
+                        // Need to check if imported module has been qualified eg: import mod1 as m
+                        (self.module_qualifiers.get(module).unwrap_or(module).clone()
+                            + "."
+                            + name.clone())
+                        .to_doc()
                     }
                 } else {
                     doc.append("(")

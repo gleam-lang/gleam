@@ -584,6 +584,127 @@ fn foo(num, z: a) {
 }
 
 #[test]
+fn function_definition_with_qualified_modules_and_type_paramaeters() {
+    let code = "
+import mod1 as a
+import mod2 as b
+
+fn foo(num, z: a) {
+  let a = num + 4
+  let x = a.v()
+  let y = b.v()
+  #(x, y, z, num)
+}
+";
+
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("dep1");
+    io.add_hex_package("dep2");
+
+    _ = io.hex_dep_module(
+        "dep1",
+        "mod1",
+        "pub type Value {
+	C
+	D
+    }
+    pub fn v() -> Value {
+	C
+    }",
+    );
+
+    _ = io.hex_dep_module(
+        "dep2",
+        "mod2",
+        "pub type Value{
+	C
+	D
+    }
+
+    pub fn v() -> Value{
+	C
+    }",
+    );
+
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            function_definitions: true,
+            ..Default::default()
+        },
+        None,
+        vec![
+            InlayHint {
+                position: Position::new(5, 7),
+                label: ": Int".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(5, 7), Position::new(5, 7)),
+                    new_text: ": Int".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(6, 7),
+                label: ": a.Value".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(6, 7), Position::new(6, 7)),
+                    new_text: ": a.Value".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(7, 7),
+                label: ": b.Value".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(7, 7), Position::new(7, 7)),
+                    new_text: ": b.Value".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(4, 17),
+                label: "-> #(a.Value, b.Value, a, Int)".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(4, 17), Position::new(4, 17)),
+                    new_text: " -> #(a.Value, b.Value, a, Int)".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: Some(true),
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(4, 10),
+                label: ": Int".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(4, 10), Position::new(4, 10)),
+                    new_text: ": Int".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+        ],
+        &io,
+    );
+}
+
+#[test]
 fn function_definition_with_type_parameter_within_function_body() {
     let code = "
 fn identity(x) {
