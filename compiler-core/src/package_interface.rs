@@ -361,6 +361,7 @@ impl ModuleInterface {
                 // A public type definition.
                 Definition::CustomType(CustomType {
                     public: true,
+                    internal: false,
                     name,
                     constructors,
                     documentation,
@@ -414,6 +415,7 @@ impl ModuleInterface {
                 // A public type alias definition
                 Definition::TypeAlias(TypeAlias {
                     public: true,
+                    internal: false,
                     alias,
                     parameters,
                     type_,
@@ -436,6 +438,7 @@ impl ModuleInterface {
                 // A public module constant.
                 Definition::ModuleConstant(ModuleConstant {
                     public: true,
+                    internal: false,
                     name,
                     type_,
                     documentation,
@@ -461,6 +464,7 @@ impl ModuleInterface {
                 // A public top-level function.
                 Definition::Function(Function {
                     public: true,
+                    internal: false,
                     name,
                     arguments,
                     deprecation,
@@ -495,7 +499,7 @@ impl ModuleInterface {
                     );
                 }
 
-                // Private definitions are not included.
+                // Private or internal definitions are not included.
                 Definition::Function(_) => {}
                 Definition::CustomType(_) => {}
                 Definition::ModuleConstant(_) => {}
