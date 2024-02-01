@@ -264,19 +264,6 @@ fn add(lhs, rhs) {
         None,
         vec![
             InlayHint {
-                position: Position::new(1, 16),
-                label: "-> Int".to_owned().into(),
-                kind: Some(InlayHintKind::TYPE),
-                text_edits: Some(vec![TextEdit {
-                    range: Range::new(Position::new(1, 16), Position::new(1, 16)),
-                    new_text: " -> Int".to_owned(),
-                }]),
-                tooltip: None,
-                padding_left: Some(true),
-                padding_right: None,
-                data: None,
-            },
-            InlayHint {
                 position: Position::new(1, 10),
                 label: ": Int".to_owned().into(),
                 kind: Some(InlayHintKind::TYPE),
@@ -299,6 +286,19 @@ fn add(lhs, rhs) {
                 }]),
                 tooltip: None,
                 padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(1, 16),
+                label: "-> Int".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(1, 16), Position::new(1, 16)),
+                    new_text: " -> Int".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: Some(true),
                 padding_right: None,
                 data: None,
             },
@@ -342,19 +342,6 @@ fn add(lhs, rhs: Int) {
         None,
         vec![
             InlayHint {
-                position: Position::new(1, 21),
-                label: "-> Int".to_owned().into(),
-                kind: Some(InlayHintKind::TYPE),
-                text_edits: Some(vec![TextEdit {
-                    range: Range::new(Position::new(1, 21), Position::new(1, 21)),
-                    new_text: " -> Int".to_owned(),
-                }]),
-                tooltip: None,
-                padding_left: Some(true),
-                padding_right: None,
-                data: None,
-            },
-            InlayHint {
                 position: Position::new(1, 10),
                 label: ": Int".to_owned().into(),
                 kind: Some(InlayHintKind::TYPE),
@@ -364,6 +351,19 @@ fn add(lhs, rhs: Int) {
                 }]),
                 tooltip: None,
                 padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(1, 21),
+                label: "-> Int".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(1, 21), Position::new(1, 21)),
+                    new_text: " -> Int".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: Some(true),
                 padding_right: None,
                 data: None,
             },
@@ -540,11 +540,11 @@ fn foo(num, z: a) {
         None,
         vec![
             InlayHint {
-                position: Position::new(5, 7),
+                position: Position::new(4, 10),
                 label: ": Int".to_owned().into(),
                 kind: Some(InlayHintKind::TYPE),
                 text_edits: Some(vec![TextEdit {
-                    range: Range::new(Position::new(5, 7), Position::new(5, 7)),
+                    range: Range::new(Position::new(4, 10), Position::new(4, 10)),
                     new_text: ": Int".to_owned(),
                 }]),
                 tooltip: None,
@@ -566,11 +566,11 @@ fn foo(num, z: a) {
                 data: None,
             },
             InlayHint {
-                position: Position::new(4, 10),
+                position: Position::new(5, 7),
                 label: ": Int".to_owned().into(),
                 kind: Some(InlayHintKind::TYPE),
                 text_edits: Some(vec![TextEdit {
-                    range: Range::new(Position::new(4, 10), Position::new(4, 10)),
+                    range: Range::new(Position::new(5, 7), Position::new(5, 7)),
                     new_text: ": Int".to_owned(),
                 }]),
                 tooltip: None,
@@ -635,6 +635,32 @@ fn foo(num, z: a) {
         None,
         vec![
             InlayHint {
+                position: Position::new(4, 10),
+                label: ": Int".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(4, 10), Position::new(4, 10)),
+                    new_text: ": Int".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(4, 17),
+                label: "-> #(a.Value, b.Value, a, Int)".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(4, 17), Position::new(4, 17)),
+                    new_text: " -> #(a.Value, b.Value, a, Int)".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: Some(true),
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
                 position: Position::new(5, 7),
                 label: ": Int".to_owned().into(),
                 kind: Some(InlayHintKind::TYPE),
@@ -673,32 +699,6 @@ fn foo(num, z: a) {
                 padding_right: None,
                 data: None,
             },
-            InlayHint {
-                position: Position::new(4, 17),
-                label: "-> #(a.Value, b.Value, a, Int)".to_owned().into(),
-                kind: Some(InlayHintKind::TYPE),
-                text_edits: Some(vec![TextEdit {
-                    range: Range::new(Position::new(4, 17), Position::new(4, 17)),
-                    new_text: " -> #(a.Value, b.Value, a, Int)".to_owned(),
-                }]),
-                tooltip: None,
-                padding_left: Some(true),
-                padding_right: None,
-                data: None,
-            },
-            InlayHint {
-                position: Position::new(4, 10),
-                label: ": Int".to_owned().into(),
-                kind: Some(InlayHintKind::TYPE),
-                text_edits: Some(vec![TextEdit {
-                    range: Range::new(Position::new(4, 10), Position::new(4, 10)),
-                    new_text: ": Int".to_owned(),
-                }]),
-                tooltip: None,
-                padding_left: None,
-                padding_right: None,
-                data: None,
-            },
         ],
         &io,
     );
@@ -721,19 +721,6 @@ fn identity(x) {
         None,
         vec![
             InlayHint {
-                position: Position::new(1, 14),
-                label: "-> value".to_owned().into(),
-                kind: Some(InlayHintKind::TYPE),
-                text_edits: Some(vec![TextEdit {
-                    range: Range::new(Position::new(1, 14), Position::new(1, 14)),
-                    new_text: " -> value".to_owned(),
-                }]),
-                tooltip: None,
-                padding_left: Some(true),
-                padding_right: None,
-                data: None,
-            },
-            InlayHint {
                 position: Position::new(1, 13),
                 label: ": value".to_owned().into(),
                 kind: Some(InlayHintKind::TYPE),
@@ -743,6 +730,19 @@ fn identity(x) {
                 }]),
                 tooltip: None,
                 padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(1, 14),
+                label: "-> value".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(1, 14), Position::new(1, 14)),
+                    new_text: " -> value".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: Some(true),
                 padding_right: None,
                 data: None,
             },
@@ -767,6 +767,19 @@ fn equals(a: value, b) {
         None,
         vec![
             InlayHint {
+                position: Position::new(1, 21),
+                label: ": value".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(1, 21), Position::new(1, 21)),
+                    new_text: ": value".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
                 position: Position::new(1, 22),
                 label: "-> Bool".to_owned().into(),
                 kind: Some(InlayHintKind::TYPE),
@@ -779,12 +792,60 @@ fn equals(a: value, b) {
                 padding_right: None,
                 data: None,
             },
+        ],
+        &LanguageServerTestIO::new(),
+    );
+}
+
+#[test]
+fn function_definition_with_type_parameter_defined_later() {
+    let code = "
+fn identity(x) {
+    let z = x
+    let y: value = x
+    y
+}
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            function_definitions: true,
+            ..Default::default()
+        },
+        None,
+        vec![
             InlayHint {
-                position: Position::new(1, 21),
+                position: Position::new(1, 13),
                 label: ": value".to_owned().into(),
                 kind: Some(InlayHintKind::TYPE),
                 text_edits: Some(vec![TextEdit {
-                    range: Range::new(Position::new(1, 21), Position::new(1, 21)),
+                    range: Range::new(Position::new(1, 13), Position::new(1, 13)),
+                    new_text: ": value".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: None,
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(1, 14),
+                label: "-> value".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(1, 14), Position::new(1, 14)),
+                    new_text: " -> value".to_owned(),
+                }]),
+                tooltip: None,
+                padding_left: Some(true),
+                padding_right: None,
+                data: None,
+            },
+            InlayHint {
+                position: Position::new(2, 9),
+                label: ": value".to_owned().into(),
+                kind: Some(InlayHintKind::TYPE),
+                text_edits: Some(vec![TextEdit {
+                    range: Range::new(Position::new(2, 9), Position::new(2, 9)),
                     new_text: ": value".to_owned(),
                 }]),
                 tooltip: None,

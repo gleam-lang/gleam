@@ -1,6 +1,6 @@
 use super::code_action::CodeActionBuilder;
 use crate::{
-    ast::{Statement, TypeAst, TypedExpr, TypedFunction, TypedModuleConstant},
+    ast::{Statement, TypeAst, TypedFunction, TypedModuleConstant},
     line_numbers::LineNumbers,
     type_::{lsp_pretty::LspPrinter, pretty::Printer, Type, TypeVar},
 };
@@ -9,8 +9,6 @@ use im::HashMap;
 use lsp_types::{
     CodeActionKind, InlayHint, InlayHintKind, InlayHintLabel, Position, Range, TextEdit, Url,
 };
-use std::sync::Arc;
-use vec1::Vec1;
 
 #[derive(Debug, Clone, Default)]
 pub struct TypeAnnotations {
@@ -36,44 +34,41 @@ impl TypeAnnotations {
         }
     }
 
-    /**
-     * Returns a list of annotations and makes note of any `type_parameter` annotations given by the user in the function body.
-     */
-    fn process_function_body<'a>(
-        body: &'a Vec1<Statement<Arc<Type>, TypedExpr>>,
-        type_parameters: &mut HashMap<u64, &'a TypeAst>,
-        line_numbers: &LineNumbers,
-        type_qualifiers: &HashMap<EcoString, EcoString>,
-        module_qualifiers: &HashMap<EcoString, EcoString>,
-    ) -> Vec<(Position, String)> {
-        let mut annotations = vec![];
-        for statement in body {
-            if let Statement::Assignment(st) = statement {
-                match &st.annotation {
-                    None => {
-                        let linecol =
-                            line_numbers.line_and_column_number(st.pattern.location().end);
-                        let position = Position::new(linecol.line - 1, linecol.column - 1);
-                        let type_text = Self::generate_type_text(
-                            &st.value.type_(),
-                            type_qualifiers,
-                            module_qualifiers,
-                            type_parameters,
-                        );
-                        annotations.push((position, format!(": {type_text}")));
+    fn extract_type_parameters_from_fn(function: &TypedFunction) -> HashMap<u64, &TypeAst> {
+        let mut type_parameters = HashMap::new();
+
+        if let Some(annotation) = &function.return_annotation {
+            if let crate::type_::Type::Var { type_ } = &*function.return_type {
+                if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
+                    let _ = type_parameters.insert(*id, annotation);
+                }
+            }
+        }
+
+        for argument in &function.arguments {
+            if let Some(annotation) = &argument.annotation {
+                if let crate::type_::Type::Var { type_ } = &*argument.type_ {
+                    if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
+                        let _ = type_parameters.insert(*id, annotation);
                     }
-                    Some(annotation) => {
-                        // If user has provided an annotation that is a type parameter, make a note of it
-                        if let Type::Var { type_ } = &*st.value.type_() {
-                            if let TypeVar::Generic { id } = &*type_.borrow() {
-                                let _ = type_parameters.insert(*id, annotation);
-                            }
+                }
+            }
+        }
+
+        for statement in &function.body {
+            if let Statement::Assignment(st) = statement {
+                if let Some(annotation) = &st.annotation {
+                    // If user has provided an annotation that is a type parameter, make a note of it
+                    if let Type::Var { type_ } = &*st.value.type_() {
+                        if let TypeVar::Generic { id } = &*type_.borrow() {
+                            let _ = type_parameters.insert(*id, annotation);
                         }
                     }
                 }
             }
         }
-        annotations
+
+        type_parameters
     }
 
     // Generates the text for the annotation of a type taking into account qualifiers for modules and type
@@ -82,11 +77,11 @@ impl TypeAnnotations {
         type_: &Type,
         type_qualifiers: &HashMap<EcoString, EcoString>,
         module_qualifiers: &HashMap<EcoString, EcoString>,
-        type_parameters: &mut HashMap<u64, &TypeAst>,
+        type_parameters: &HashMap<u64, &TypeAst>,
     ) -> String {
-        if let crate::type_::Type::Var { type_ } = &*type_ {
-            if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
-                if let Some(crate::ast::TypeAst::Var(type_var)) = type_parameters.get(id) {
+        if let crate::type_::Type::Var { type_ } = type_ {
+            if let crate::type_::TypeVar::Generic { id } = *type_.borrow() {
+                if let Some(crate::ast::TypeAst::Var(type_var)) = type_parameters.get(&id) {
                     return type_var.name.to_string();
                 }
             }
@@ -108,47 +103,9 @@ impl TypeAnnotations {
         type_qualifiers: &HashMap<EcoString, EcoString>,
         module_qualifiers: &HashMap<EcoString, EcoString>,
     ) -> Self {
-        // Noting type_parameters from return type annotation
-        let mut type_parameters = HashMap::new();
-        if let Some(annotation) = &function.return_annotation {
-            if let crate::type_::Type::Var { type_ } = &*function.return_type {
-                if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
-                    let _ = type_parameters.insert(*id, annotation);
-                }
-            }
-        }
+        let type_parameters = Self::extract_type_parameters_from_fn(function);
+        let mut annotations = vec![];
 
-        // Noting type_parameters from function arguments
-        for argument in &function.arguments {
-            if let Some(annotation) = &argument.annotation {
-                if let crate::type_::Type::Var { type_ } = &*argument.type_ {
-                    if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
-                        let _ = type_parameters.insert(*id, annotation);
-                    }
-                }
-            }
-        }
-
-        let mut annotations = Self::process_function_body(
-            &function.body,
-            &mut type_parameters,
-            line_numbers,
-            type_qualifiers,
-            module_qualifiers,
-        );
-
-        if function.return_annotation.is_none() {
-            let linecol = line_numbers.line_and_column_number(function.location.end);
-            let position = Position::new(linecol.line - 1, linecol.column - 1);
-            let type_text = Self::generate_type_text(
-                &function.return_type,
-                type_qualifiers,
-                module_qualifiers,
-                &mut type_parameters,
-            );
-
-            annotations.push((position, format!(" -> {type_text}")));
-        }
         for argument in &function.arguments {
             if argument.annotation.is_none() {
                 let linecol = line_numbers.line_and_column_number(argument.location.end);
@@ -157,9 +114,38 @@ impl TypeAnnotations {
                     &argument.type_,
                     type_qualifiers,
                     module_qualifiers,
-                    &mut type_parameters,
+                    &type_parameters,
                 );
                 annotations.push((position, format!(": {type_text}")));
+            }
+        }
+
+        if function.return_annotation.is_none() {
+            let linecol = line_numbers.line_and_column_number(function.location.end);
+            let position = Position::new(linecol.line - 1, linecol.column - 1);
+            let type_text = Self::generate_type_text(
+                &function.return_type,
+                type_qualifiers,
+                module_qualifiers,
+                &type_parameters,
+            );
+
+            annotations.push((position, format!(" -> {type_text}")));
+        }
+
+        for statement in &function.body {
+            if let Statement::Assignment(st) = statement {
+                if st.annotation.is_none() {
+                    let linecol = line_numbers.line_and_column_number(st.pattern.location().end);
+                    let position = Position::new(linecol.line - 1, linecol.column - 1);
+                    let type_text = Self::generate_type_text(
+                        &st.value.type_(),
+                        type_qualifiers,
+                        module_qualifiers,
+                        &type_parameters,
+                    );
+                    annotations.push((position, format!(": {type_text}")));
+                }
             }
         }
 
