@@ -54,19 +54,12 @@ impl TypeAnnotations {
                         let linecol =
                             line_numbers.line_and_column_number(st.pattern.location().end);
                         let position = Position::new(linecol.line - 1, linecol.column - 1);
-                        let mut type_text = Self::get_type_text(
+                        let type_text = Self::generate_type_text(
                             &st.value.type_(),
                             type_qualifiers,
                             module_qualifiers,
+                            type_parameters,
                         );
-                        if let Type::Var { type_ } = &*st.value.type_() {
-                            // If type is generic type variable check if its id has a overwriting type_text given by the user via a type annotation elsewhere in the function
-                            if let TypeVar::Generic { id } = &*type_.borrow() {
-                                if let Some(TypeAst::Var(type_var)) = type_parameters.get(id) {
-                                    type_text = type_var.name.to_string();
-                                }
-                            }
-                        }
                         annotations.push((position, format!(": {type_text}")));
                     }
                     Some(annotation) => {
@@ -83,19 +76,30 @@ impl TypeAnnotations {
         annotations
     }
 
-    // Helper function that chooses between the LspPrinter's pretty_print of a type or a qualified name given to the type by the user.
-    fn get_type_text(
-        typ: &Type,
+    // Generates the text for the annotation of a type taking into account qualifiers for modules and type
+    // and any type parameters defined in the function.
+    fn generate_type_text(
+        type_: &Type,
         type_qualifiers: &HashMap<EcoString, EcoString>,
         module_qualifiers: &HashMap<EcoString, EcoString>,
+        type_parameters: &mut HashMap<u64, &TypeAst>,
     ) -> String {
-        let typ_text = EcoString::from(
-            LspPrinter::new(type_qualifiers, module_qualifiers).pretty_print(typ, 0),
+        if let crate::type_::Type::Var { type_ } = &*type_ {
+            if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
+                if let Some(crate::ast::TypeAst::Var(type_var)) = type_parameters.get(id) {
+                    return type_var.name.to_string();
+                }
+            }
+        }
+        let mut type_text = EcoString::from(
+            LspPrinter::new(type_qualifiers, module_qualifiers).pretty_print(type_, 0),
         );
-        type_qualifiers
-            .get(&typ_text)
-            .unwrap_or(&typ_text)
-            .to_string()
+        type_text = type_qualifiers
+            .get(&type_text)
+            .unwrap_or(&type_text)
+            .clone();
+
+        type_text.to_string()
     }
 
     pub fn from_function_definition(
@@ -104,6 +108,7 @@ impl TypeAnnotations {
         type_qualifiers: &HashMap<EcoString, EcoString>,
         module_qualifiers: &HashMap<EcoString, EcoString>,
     ) -> Self {
+        // Noting type_parameters from return type annotation
         let mut type_parameters = HashMap::new();
         if let Some(annotation) = &function.return_annotation {
             if let crate::type_::Type::Var { type_ } = &*function.return_type {
@@ -112,6 +117,8 @@ impl TypeAnnotations {
                 }
             }
         }
+
+        // Noting type_parameters from function arguments
         for argument in &function.arguments {
             if let Some(annotation) = &argument.annotation {
                 if let crate::type_::Type::Var { type_ } = &*argument.type_ {
@@ -133,37 +140,26 @@ impl TypeAnnotations {
         if function.return_annotation.is_none() {
             let linecol = line_numbers.line_and_column_number(function.location.end);
             let position = Position::new(linecol.line - 1, linecol.column - 1);
-            let mut type_text =
-                Self::get_type_text(&function.return_type, type_qualifiers, module_qualifiers);
+            let type_text = Self::generate_type_text(
+                &function.return_type,
+                type_qualifiers,
+                module_qualifiers,
+                &mut type_parameters,
+            );
 
-            if let crate::type_::Type::Var { type_ } = &*function.return_type {
-                if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
-                    if let Some(crate::ast::TypeAst::Var(type_var)) = type_parameters.get(id) {
-                        type_text = type_var.name.to_string();
-                    }
-                }
-            }
-
-            let text = format!(" -> {type_text}");
-            annotations.push((position, text))
+            annotations.push((position, format!(" -> {type_text}")));
         }
         for argument in &function.arguments {
             if argument.annotation.is_none() {
                 let linecol = line_numbers.line_and_column_number(argument.location.end);
                 let position = Position::new(linecol.line - 1, linecol.column - 1);
-                let mut type_text =
-                    Self::get_type_text(&argument.type_, type_qualifiers, module_qualifiers);
-
-                if let crate::type_::Type::Var { type_ } = &*argument.type_ {
-                    if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
-                        if let Some(crate::ast::TypeAst::Var(type_var)) = type_parameters.get(id) {
-                            type_text = type_var.name.to_string();
-                        }
-                    }
-                }
-
-                let text = format!(": {type_text}");
-                annotations.push((position, text));
+                let type_text = Self::generate_type_text(
+                    &argument.type_,
+                    type_qualifiers,
+                    module_qualifiers,
+                    &mut type_parameters,
+                );
+                annotations.push((position, format!(": {type_text}")));
             }
         }
 

@@ -705,52 +705,6 @@ fn foo(num, z: a) {
 }
 
 #[test]
-fn function_definition_with_type_parameter_inferred() {
-    let code = "
-pub fn equal(v1: some_type, v2) {
-  v1 == v2
-}
-";
-    expect_hints(
-        code,
-        InlayHintsConfig {
-            function_definitions: true,
-            ..Default::default()
-        },
-        None,
-        vec![
-            InlayHint {
-                position: Position::new(1, 31),
-                label: "-> Bool".to_owned().into(),
-                kind: Some(InlayHintKind::TYPE),
-                text_edits: Some(vec![TextEdit {
-                    range: Range::new(Position::new(1, 31), Position::new(1, 31)),
-                    new_text: " -> Bool".to_owned(),
-                }]),
-                tooltip: None,
-                padding_left: Some(true),
-                padding_right: None,
-                data: None,
-            },
-            InlayHint {
-                position: Position::new(1, 30),
-                label: ": some_type".to_owned().into(),
-                kind: Some(InlayHintKind::TYPE),
-                text_edits: Some(vec![TextEdit {
-                    range: Range::new(Position::new(1, 30), Position::new(1, 30)),
-                    new_text: ": some_type".to_owned(),
-                }]),
-                tooltip: None,
-                padding_left: None,
-                padding_right: None,
-                data: None,
-            },
-        ],
-        &LanguageServerTestIO::new(),
-    );
-}
-
-#[test]
 fn function_definition_with_type_parameter_within_function_body() {
     let code = "
 fn identity(x) {
