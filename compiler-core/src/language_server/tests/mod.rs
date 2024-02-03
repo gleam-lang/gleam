@@ -2,6 +2,7 @@ mod action;
 mod compilation;
 mod completion;
 mod hover;
+mod inline_var_action;
 
 use std::{
     collections::HashMap,

@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, Pattern, SrcSpan, Statement,
-        TypedDefinition, TypedExpr, TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, SrcSpan, Statement, TypedDefinition,
+        TypedExpr, TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -18,13 +18,14 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use lsp::CodeAction;
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
-use spdx::expression;
 use std::sync::Arc;
 use strum::IntoEnumIterator;
 
 use super::{
     code_action::CodeActionBuilder, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
+
+mod inline_var_handler;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Response<T> {
@@ -231,7 +232,7 @@ where
             };
 
             code_action_unused_imports(module, &params, &mut actions);
-            code_action_inline_variable(module, &params, &mut actions);
+            inline_var_handler::inline_variable(module, &params, &mut actions);
 
             Ok(if actions.is_empty() {
                 None
@@ -623,217 +624,4 @@ fn code_action_unused_imports(
         .changes(uri.clone(), edits)
         .preferred(true)
         .push_to(actions);
-}
-
-fn code_action_inline_variable(
-    module: &Module,
-    params: &lsp::CodeActionParams,
-    actions: &mut Vec<CodeAction>,
-) {
-    //dbg!(module);
-    let uri = &params.text_document.uri;
-    let line_numbers = LineNumbers::new(&module.code);
-    let mut inline_refactors = Vec::new();
-
-    for function in module.ast.definitions.iter().filter_map(get_function) {
-        detect_possible_variable_inlining(function, &mut inline_refactors);
-    }
-
-    let mut edits = Vec::new();
-
-    if !inline_refactors.is_empty() {
-        for refactor in inline_refactors {
-            let range_inline_destination =
-                src_span_to_lsp_range(refactor.destination, &line_numbers);
-            if range_includes(&params.range, &range_inline_destination) {
-                edits.push(lsp_types::TextEdit {
-                    range: src_span_to_lsp_range(refactor.source, &line_numbers),
-                    new_text: "".into(),
-                });
-
-                edits.push(lsp_types::TextEdit {
-                    range: range_inline_destination,
-                    new_text: format!(
-                        "{}",
-                        refactor
-                            .typed_expr
-                            .expect("Expected a source expression for the actual inlining")
-                            .to_string()
-                    ),
-                });
-            }
-        }
-    }
-
-    if !edits.is_empty() {
-        CodeActionBuilder::new("Inline Variable Refactor")
-            .kind(lsp_types::CodeActionKind::REFACTOR_INLINE)
-            .changes(uri.clone(), edits)
-            .preferred(true)
-            .push_to(actions);
-    }
-}
-
-fn detect_possible_variable_inlining<'a>(
-    function: &'a Function<Arc<Type>, TypedExpr>,
-    inline_refactors: &mut Vec<InlineRefactor<'a>>,
-) {
-    let assign_statements: Vec<&Statement<Arc<Type>, TypedExpr>> = function
-        .body
-        .iter()
-        .filter(|statement| statement.is_assignment())
-        .collect();
-
-    for statement in function.body.iter() {
-        inline_statement(statement, &assign_statements, inline_refactors)
-    }
-}
-
-fn inline_statement<'a>(
-    statement: &Statement<Arc<Type>, TypedExpr>,
-    assign_statements: &Vec<&'a Statement<Arc<Type>, TypedExpr>>,
-    expressions_to_inline: &mut Vec<InlineRefactor<'a>>,
-) {
-    if let Statement::Assignment(assign) = statement {
-        determine_possible_inlining_for_typedexpr(
-            &assign.value,
-            assign_statements,
-            expressions_to_inline,
-        );
-    }
-
-    if let Statement::Expression(expr) = statement {
-        determine_possible_inlining_for_typedexpr(expr, assign_statements, expressions_to_inline)
-    }
-}
-
-fn determine_possible_inlining_for_typedexpr<'a>(
-    expr: &TypedExpr,
-    assign_statements: &Vec<&'a Statement<Arc<Type>, TypedExpr>>,
-    expressions_to_inline: &mut Vec<InlineRefactor<'a>>,
-) {
-    if let TypedExpr::Var { constructor, .. } = expr {
-        try_to_inline_expr(constructor, assign_statements, expr, expressions_to_inline);
-    }
-
-    if let TypedExpr::Call { args, .. } = expr {
-        for arg in args {
-            if let TypedExpr::Call { .. } = &arg.value {
-                determine_possible_inlining_for_typedexpr(
-                    &arg.value,
-                    assign_statements,
-                    expressions_to_inline,
-                )
-            }
-            if let TypedExpr::Var { constructor, .. } = &arg.value {
-                try_to_inline_expr(constructor, assign_statements, expr, expressions_to_inline);
-            }
-        }
-    }
-
-    if let TypedExpr::Pipeline {
-        location: _,
-        assignments,
-        finally,
-    } = expr
-    {
-        assignments.iter().for_each(|assignment| {
-            determine_possible_inlining_for_typedexpr(
-                &assignment.value,
-                assign_statements,
-                expressions_to_inline,
-            )
-        });
-
-        determine_possible_inlining_for_typedexpr(
-            &finally,
-            assign_statements,
-            expressions_to_inline,
-        );
-    }
-
-    if let TypedExpr::BinOp { left, right, .. } = expr {
-        determine_possible_inlining_for_typedexpr(left, assign_statements, expressions_to_inline);
-        determine_possible_inlining_for_typedexpr(right, assign_statements, expressions_to_inline);
-    }
-}
-
-fn try_to_inline_expr<'a>(
-    constructor: &crate::type_::ValueConstructor,
-    assign_statements: &Vec<&'a Statement<Arc<Type>, TypedExpr>>,
-    value: &TypedExpr,
-    expressions_to_inline: &mut Vec<InlineRefactor<'a>>,
-) {
-    if let ValueConstructorVariant::LocalVariable { location } = constructor.variant {
-        let result = assign_statements.iter().find(|&assignment| {
-            matches!(assignment, Statement::Assignment(assign) if assign.pattern.location() == location)
-        });
-
-        if let Some(found) = result {
-            if let TypedExpr::Call { mut args, .. } = value.clone() {
-                if let Statement::Assignment(assign) = found {
-                    let loc_inlinable_assign = assign.pattern.location();
-                    if let Some(callarg) = args.iter_mut().find(|callarg| {
-                        match (&callarg.value, &constructor.variant) {
-                            (
-                                TypedExpr::Var { .. },
-                                ValueConstructorVariant::LocalVariable { location },
-                            ) => {
-                                location.start == loc_inlinable_assign.start
-                                    && location.end == loc_inlinable_assign.end
-                            }
-                            _ => false,
-                        }
-                    }) {
-                        if let Some(typedexpr) = found.get_value() {
-                            callarg.value = typedexpr.clone();
-                            expressions_to_inline.push(InlineRefactor {
-                                source: found.location(),
-                                destination: callarg.location,
-                                typed_expr: found.get_value(),
-                            });
-                        }
-                    }
-
-                    // if let Some(callarg) = args.iter_mut().find(|callarg| {
-                    //     if let TypedExpr::Var { .. } = callarg.value {
-                    //         if let ValueConstructorVariant::LocalVariable { location } =
-                    //             constructor.variant
-                    //         {
-                    //             location.start == loc_inlinable_assign.start
-                    //                 && location.end == loc_inlinable_assign.end
-                    //         } else {
-                    //             false
-                    //         }
-                    //     } else {
-                    //         false
-                    //     }
-                    // }) {
-                    //     if let Some(typedexpr) = found.get_value() {
-                    //         callarg.value = typedexpr.clone();
-                    //         expressions_to_inline.push(InlineRefactor {
-                    //             source: found.location(),
-                    //             destination: callarg.location,
-                    //             typed_expr: found.get_value(),
-                    //         })
-                    //     }
-                    // }
-                }
-            }
-
-            if let TypedExpr::Var { location, .. } = value.clone() {
-                expressions_to_inline.push(InlineRefactor {
-                    source: found.location(),
-                    destination: location,
-                    typed_expr: found.get_value(),
-                });
-            }
-        }
-    }
-}
-
-struct InlineRefactor<'a> {
-    source: SrcSpan,
-    destination: SrcSpan,
-    typed_expr: Option<&'a TypedExpr>,
 }
