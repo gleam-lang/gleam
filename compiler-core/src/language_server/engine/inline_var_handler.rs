@@ -7,11 +7,11 @@ pub fn inline_variable(
     params: &lsp::CodeActionParams,
     actions: &mut Vec<CodeAction>,
 ) {
+    dbg!(&module);
     let uri = &params.text_document.uri;
     let line_numbers = LineNumbers::new(&module.code);
     let mut inline_refactors = Vec::new();
 
-    //check all functions for possible inlining
     module
         .ast
         .definitions
@@ -119,6 +119,44 @@ fn detect_possible_inlining_for_expression<'a>(
     if let TypedExpr::BinOp { left, right, .. } = expr {
         detect_possible_inlining_for_expression(left, assign_statements, expressions_to_inline);
         detect_possible_inlining_for_expression(right, assign_statements, expressions_to_inline);
+    }
+
+    if let TypedExpr::Tuple { elems, .. } = expr {
+        elems.iter().for_each(|elem| {
+            detect_possible_inlining_for_expression(elem, assign_statements, expressions_to_inline)
+        })
+    }
+
+    if let TypedExpr::List { elements, .. } = expr {
+        elements.iter().for_each(|elem| {
+            detect_possible_inlining_for_expression(elem, assign_statements, expressions_to_inline)
+        })
+    }
+
+    if let TypedExpr::Fn { body, .. } = expr {
+        body.iter().for_each(|statement| {
+            detect_possible_inlinings_in_body(statement, assign_statements, expressions_to_inline)
+        })
+    }
+
+    //moet ie dan niet alleen de variable bekijken die in block gedefined zijn??
+    //NOG EEN CHECK OP VARIABLE BUITEN BLOCK?? --> MOGELIJK MAKEN OM VARIABELEN TE INLINEN
+    //DIE BUITEN BLOCK ZIJN GEDEFINIEERD..
+    if let TypedExpr::Block { statements, .. } = expr {
+        let assign_statements: Vec<&Assignment<Arc<Type>, TypedExpr>> = statements
+            .iter()
+            .filter_map(|statement| {
+                if let Statement::Assignment(assign) = statement {
+                    Some(assign)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        statements.iter().for_each(|statement| {
+            detect_possible_inlinings_in_body(statement, &assign_statements, expressions_to_inline)
+        })
     }
 }
 

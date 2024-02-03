@@ -256,3 +256,147 @@ fn main() {
         expected
     );
 }
+
+#[test]
+fn test_inlining_tuple() {
+    let code = "
+import list
+
+fn main() {
+  let x = [1, 2, 3]
+  #(1, x, 3)
+}
+";
+    let expected = "
+import list
+
+fn main() {
+  
+  #(1, [1, 2, 3], 3)
+}
+";
+
+    let position_start = Position::new(5, 0);
+    let position_end = Position::new(5, 61);
+
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
+}
+
+#[test]
+fn test_inlining_bare_expression() {
+    let code = "
+import list
+
+fn main() {
+  let x = [1, 2, 3]
+  list.reverse(x)
+}
+";
+    let expected = "
+import list
+
+fn main() {
+  
+  list.reverse([1, 2, 3])
+}
+";
+
+    let position_start = Position::new(5, 0);
+    let position_end = Position::new(5, 61);
+
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
+}
+#[test]
+fn test_inlining_block_expression() {
+    let code = "
+import list
+
+fn main() {
+  {
+    let x = [1, 2, 3]
+    list.reverse(x)
+  }
+}
+";
+    let expected = "
+import list
+
+fn main() {
+  {
+    
+    list.reverse([1, 2, 3])
+  }
+}
+";
+
+    let position_start = Position::new(6, 0);
+    let position_end = Position::new(6, 61);
+
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
+}
+
+#[test]
+fn test_inlining_list() {
+    let code = "
+import list
+
+fn main() {
+  let x = 2
+  let y = [1, x, 3]
+}
+";
+    let expected = "
+import list
+
+fn main() {
+  
+  let y = [1, 2, 3]
+}
+";
+
+    let position_start = Position::new(5, 0);
+    let position_end = Position::new(5, 61);
+
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
+}
+#[test]
+fn test_inlining_fn() {
+    let code = "
+import list
+
+fn main() {
+  let y = 2
+  let func = fn(x) { x + y } 
+  list.map([1, 2, 3], func)
+}
+";
+    let expected = "
+import list
+
+fn main() {
+  
+  let func = fn(x) { x + 2 } 
+  list.map([1, 2, 3], func)
+}
+";
+
+    let position_start = Position::new(5, 0);
+    let position_end = Position::new(5, 61);
+
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
+}
