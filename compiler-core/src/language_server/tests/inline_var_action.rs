@@ -400,7 +400,7 @@ fn main() {
     );
 }
 #[test]
-fn test_inlining_fn() {
+fn test_inlining_variable_in_fn_body() {
     let code = "
 import list
 
@@ -421,7 +421,7 @@ fn main() {
 ";
 
     let position_start = Position::new(5, 0);
-    let position_end = Position::new(5, 61);
+    let position_end = Position::new(5, 30);
 
     assert_eq!(
         inline_variable_refactor(code, position_start, position_end),

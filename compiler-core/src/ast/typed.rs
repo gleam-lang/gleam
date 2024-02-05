@@ -438,70 +438,15 @@ impl TypedExpr {
         matches!(self, Self::Pipeline { .. })
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn to_string(&self) -> Option<String> {
         match self {
-            TypedExpr::Int {
-                location,
-                typ,
-                value,
-            } => value.to_string(),
-            TypedExpr::Float {
-                location,
-                typ,
-                value,
-            } => value.to_string(),
-            TypedExpr::String {
-                location,
-                typ,
-                value,
-            } => value.to_string(),
-            TypedExpr::Block {
-                location,
-                statements,
-            } => todo!(),
-            TypedExpr::Pipeline {
-                location,
-                assignments,
-                finally,
-            } => todo!(),
-            TypedExpr::Var {
-                location,
-                constructor,
-                name,
-            } => name.to_string(),
-            TypedExpr::Fn {
-                location,
-                typ,
-                is_capture,
-                args,
-                body,
-                return_annotation,
-            } => {
-                let arg_str = args
-                    .iter()
-                    .map(|arg| match &arg.names {
-                        ArgNames::Discard { name } => name.to_string(),
-                        ArgNames::LabelledDiscard { label, name, .. } => name.to_string(),
-                        ArgNames::Named { name } => name.to_string(),
-                        ArgNames::NamedLabelled { name, label, .. } => name.to_string(),
-                    })
-                    .collect::<Vec<String>>()
-                    .join(", ");
-
-                let body_str = body
-                    .iter()
-                    .map(|statement| match statement {
-                        Statement::Expression(expr) => expr.to_string(),
-                        Statement::Assignment(assign) => todo!(),
-                        Statement::Use(_) => todo!(),
-                    })
-                    .collect::<String>();
-
-                format!("fn({}) {{ {} }}", arg_str, body_str)
-            }
+            TypedExpr::Int { value, .. } => Some(value.to_string()),
+            TypedExpr::Float { value, .. } => Some(value.to_string()),
+            TypedExpr::String { value, .. } => Some(value.to_string()),
+            TypedExpr::Var { name, .. } => Some(name.to_string()),
             TypedExpr::List {
-                location,
-                typ,
+                location: _,
+                typ: _,
                 elements,
                 tail,
             } => {
@@ -511,119 +456,82 @@ impl TypedExpr {
                     if i > 0 {
                         result.push_str(", ");
                     }
-                    result.push_str(&element.to_string());
+                    result.push_str(&element.to_string()?);
                 }
 
                 if let Some(tail_expr) = tail {
                     result.push_str(", ");
-                    result.push_str(&tail_expr.to_string());
+                    result.push_str(&tail_expr.to_string()?);
                 }
 
                 result.push_str("]");
-                result
+                Some(result)
             }
             TypedExpr::Call {
-                location,
-                typ,
+                location: _,
+                typ: _,
                 fun,
                 args,
             } => {
-                let fun_str = fun.to_string();
+                let fun_str = fun.to_string()?;
 
-                let args_str = if !args.is_empty() {
-                    let args_str: String = args
-                        .iter()
-                        .map(|arg| format!("{}", arg.value.to_string()))
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    format!("({})", args_str)
+                let mut args_str = String::new();
+
+                for (i, arg) in args.iter().enumerate() {
+                    if let Some(arg_string) = arg.value.to_string() {
+                        if i > 0 {
+                            args_str.push_str(", ");
+                        }
+                        args_str.push_str(&arg_string);
+                    } else {
+                        return None;
+                    }
+                }
+
+                if args.is_empty() {
+                    args_str = String::from("()");
                 } else {
-                    //no arguments for function
-                    String::from("()")
-                };
+                    args_str = format!("({})", args_str);
+                }
 
-                format!("{}{}", fun_str, args_str)
+                Some(format!("{}{}", fun_str, args_str))
             }
             TypedExpr::BinOp {
-                location,
-                typ,
+                location: _,
+                typ: _,
                 name,
                 left,
                 right,
-            } => {
-                format!("{} {} {}", left.to_string(), name.name(), right.to_string())
-            }
-            TypedExpr::Case {
-                location,
-                typ,
-                subjects,
-                clauses,
-            } => todo!(),
-            TypedExpr::RecordAccess {
-                location,
-                typ,
-                label,
-                index,
-                record,
-            } => todo!(),
+            } => match (left.to_string(), right.to_string()) {
+                (Some(left_str), Some(right_str)) => {
+                    Some(format!("{} {} {}", left_str, name.name(), right_str))
+                }
+                _ => None,
+            },
             TypedExpr::ModuleSelect {
-                location,
-                typ,
+                location: _,
+                typ: _,
                 label,
-                module_name,
+                module_name: _,
                 module_alias,
-                constructor,
-            } => {
-                //list.reverse
-                dbg!(self);
-                format!("{}.{}", module_alias, label)
-            }
-            TypedExpr::Tuple {
-                location,
-                typ,
-                elems,
-            } => {
+                constructor: _,
+            } => Some(format!("{}.{}", module_alias, label)),
+            TypedExpr::Tuple { elems, .. } => {
                 let mut res = "(".to_string();
 
                 for (i, elem) in elems.iter().enumerate() {
                     if i > 0 {
                         res.push_str(", ");
                     }
-                    res.push_str(&format!("{}", elem.to_string()));
+                    res.push_str(&format!("{}", elem.to_string().unwrap_or_default()));
                 }
 
                 res.push(')');
-                res
+                Some(res)
             }
-            TypedExpr::TupleIndex {
-                location,
-                typ,
-                index,
-                tuple,
-            } => todo!(),
-            TypedExpr::Todo {
-                location,
-                message,
-                type_,
-            } => todo!(),
-            TypedExpr::Panic {
-                location,
-                message,
-                type_,
-            } => todo!(),
-            TypedExpr::BitArray {
-                location,
-                typ,
-                segments,
-            } => todo!(),
-            TypedExpr::RecordUpdate {
-                location,
-                typ,
-                spread,
-                args,
-            } => todo!(),
-            TypedExpr::NegateBool { location, value } => value.to_string(),
-            TypedExpr::NegateInt { location, value } => value.to_string(),
+            TypedExpr::NegateBool { value, .. } => value.to_string(),
+            TypedExpr::NegateInt { value, .. } => value.to_string(),
+            _ => None,
         }
     }
 }

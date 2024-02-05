@@ -52,11 +52,11 @@ fn detect_possible_inlinings_for_function(
         .collect();
 
     function.body.iter().for_each(|statement| {
-        detect_possible_inlinings_in_body(statement, &assign_statements, inline_refactors)
+        detect_possible_inlinings_for_statement(statement, &assign_statements, inline_refactors)
     });
 }
 
-fn detect_possible_inlinings_in_body<'a>(
+fn detect_possible_inlinings_for_statement<'a>(
     statement: &Statement<Arc<Type>, TypedExpr>,
     assign_statements: &'a Vec<&Assignment<Arc<Type>, TypedExpr>>,
     expressions_to_inline: &mut Vec<InlineRefactor>,
@@ -134,7 +134,11 @@ fn detect_possible_inlining_for_expression<'a>(
 
     if let TypedExpr::Fn { body, .. } = expr {
         body.iter().for_each(|statement| {
-            detect_possible_inlinings_in_body(statement, assign_statements, expressions_to_inline)
+            detect_possible_inlinings_for_statement(
+                statement,
+                assign_statements,
+                expressions_to_inline,
+            )
         })
     }
 
@@ -153,7 +157,7 @@ fn detect_possible_inlining_for_expression<'a>(
         res.extend(assign_statements.iter());
 
         statements.iter().for_each(|statement| {
-            detect_possible_inlinings_in_body(statement, &res, expressions_to_inline)
+            detect_possible_inlinings_for_statement(statement, &res, expressions_to_inline)
         })
     }
 }
@@ -164,12 +168,17 @@ fn inline_refactor<'a>(
     expr: &TypedExpr,
     expressions_to_inline: &mut Vec<InlineRefactor>,
 ) {
+    //Only provide inlining for locally defined variables
     if let ValueConstructorVariant::LocalVariable { location } = constructor.variant {
         let result = assignments
             .iter()
             .find(|assign| assign.pattern.location() == location);
 
         if let Some(found) = result {
+            if !expr_can_be_inlined(&found.value) {
+                return;
+            }
+
             if let TypedExpr::Call { ref args, .. } = expr {
                 let loc_inlinable_assign = found.pattern.location();
                 if let Some(callarg) = args.iter().find(|callarg| match &callarg.value {
@@ -182,7 +191,7 @@ fn inline_refactor<'a>(
                     expressions_to_inline.push(InlineRefactor {
                         source: found.location,
                         destination: callarg.location,
-                        value_to_inline: *found.value.clone(),
+                        value_to_inline: (*found.value.to_string().unwrap()).to_string(),
                     });
                 }
             }
@@ -191,11 +200,15 @@ fn inline_refactor<'a>(
                 expressions_to_inline.push(InlineRefactor {
                     source: found.location,
                     destination: location.clone(),
-                    value_to_inline: *found.value.clone(),
+                    value_to_inline: (*found.value.to_string().unwrap()).to_string(),
                 });
             }
         }
     }
+}
+
+fn expr_can_be_inlined(value: &Box<TypedExpr>) -> bool {
+    matches!(value.to_string(), Some(_))
 }
 
 fn create_edits_for_inline_refactor(
@@ -207,7 +220,6 @@ fn create_edits_for_inline_refactor(
     inline_refactors.iter().for_each(|refactor| {
         let range_inline_destination = src_span_to_lsp_range(refactor.destination, &line_numbers);
         if range_includes(&params.range, &range_inline_destination) {
-            //Remove edit for inlined variable
             edits.push(lsp_types::TextEdit {
                 range: src_span_to_lsp_range(refactor.source, &line_numbers),
                 new_text: "".into(),
@@ -215,7 +227,7 @@ fn create_edits_for_inline_refactor(
 
             edits.push(lsp_types::TextEdit {
                 range: range_inline_destination,
-                new_text: format!("{}", refactor.value_to_inline.to_string()),
+                new_text: format!("{}", refactor.value_to_inline),
             });
         }
     });
@@ -224,5 +236,5 @@ fn create_edits_for_inline_refactor(
 struct InlineRefactor {
     source: SrcSpan,
     destination: SrcSpan,
-    value_to_inline: TypedExpr,
+    value_to_inline: String,
 }
