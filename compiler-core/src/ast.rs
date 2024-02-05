@@ -1587,18 +1587,6 @@ impl<T, E> Statement<T, E> {
     pub fn is_expression(&self) -> bool {
         matches!(self, Self::Expression(..))
     }
-
-    pub fn is_assignment(&self) -> bool {
-        matches!(self, Self::Assignment(..))
-    }
-
-    pub fn get_value(&self) -> Option<&E> {
-        match self {
-            Statement::Expression(expr) => Some(&expr),
-            Statement::Assignment(assign) => Some(&assign.value),
-            Statement::Use(_) => None,
-        }
-    }
 }
 
 impl UntypedStatement {

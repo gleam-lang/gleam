@@ -56,9 +56,9 @@ fn detect_possible_inlinings_for_function(
     });
 }
 
-fn detect_possible_inlinings_for_statement<'a>(
+fn detect_possible_inlinings_for_statement(
     statement: &Statement<Arc<Type>, TypedExpr>,
-    assign_statements: &'a Vec<&Assignment<Arc<Type>, TypedExpr>>,
+    assign_statements: &Vec<&Assignment<Arc<Type>, TypedExpr>>,
     expressions_to_inline: &mut Vec<InlineRefactor>,
 ) {
     if let Statement::Assignment(assign) = statement {
@@ -74,9 +74,9 @@ fn detect_possible_inlinings_for_statement<'a>(
     }
 }
 
-fn detect_possible_inlining_for_expression<'a>(
+fn detect_possible_inlining_for_expression(
     expr: &TypedExpr,
-    assign_statements: &'a Vec<&Assignment<Arc<Type>, TypedExpr>>,
+    assign_statements: &Vec<&Assignment<Arc<Type>, TypedExpr>>,
     expressions_to_inline: &mut Vec<InlineRefactor>,
 ) {
     if let TypedExpr::Var { constructor, .. } = expr {
@@ -143,7 +143,7 @@ fn detect_possible_inlining_for_expression<'a>(
     }
 
     if let TypedExpr::Block { statements, .. } = expr {
-        let mut res: Vec<&Assignment<Arc<Type>, TypedExpr>> = statements
+        let mut block_and_outer_assignments: Vec<&Assignment<Arc<Type>, TypedExpr>> = statements
             .iter()
             .filter_map(|statement| {
                 if let Statement::Assignment(assign) = statement {
@@ -154,17 +154,21 @@ fn detect_possible_inlining_for_expression<'a>(
             })
             .collect();
 
-        res.extend(assign_statements.iter());
+        block_and_outer_assignments.extend(assign_statements.iter());
 
         statements.iter().for_each(|statement| {
-            detect_possible_inlinings_for_statement(statement, &res, expressions_to_inline)
+            detect_possible_inlinings_for_statement(
+                statement,
+                &block_and_outer_assignments,
+                expressions_to_inline,
+            )
         })
     }
 }
 
-fn inline_refactor<'a>(
+fn inline_refactor(
     constructor: &crate::type_::ValueConstructor,
-    assignments: &'a Vec<&Assignment<Arc<Type>, TypedExpr>>,
+    assignments: &Vec<&Assignment<Arc<Type>, TypedExpr>>,
     expr: &TypedExpr,
     expressions_to_inline: &mut Vec<InlineRefactor>,
 ) {

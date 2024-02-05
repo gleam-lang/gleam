@@ -523,7 +523,12 @@ impl TypedExpr {
                     if i > 0 {
                         res.push_str(", ");
                     }
-                    res.push_str(&format!("{}", elem.to_string().unwrap_or_default()));
+
+                    if let Some(elem_str) = elem.to_string() {
+                        res.push_str(&format!("{}", elem_str));
+                    } else {
+                        return None;
+                    }
                 }
 
                 res.push(')');
