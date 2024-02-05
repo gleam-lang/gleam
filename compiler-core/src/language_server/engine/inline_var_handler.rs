@@ -62,19 +62,15 @@ fn detect_possible_inlinings_for_statement(
     expressions_to_inline: &mut Vec<InlineRefactor>,
 ) {
     if let Statement::Assignment(assign) = statement {
-        detect_possible_inlining_for_expression(
-            &assign.value,
-            assign_statements,
-            expressions_to_inline,
-        );
+        traverse_expression(&assign.value, assign_statements, expressions_to_inline);
     }
 
     if let Statement::Expression(expr) = statement {
-        detect_possible_inlining_for_expression(expr, assign_statements, expressions_to_inline)
+        traverse_expression(expr, assign_statements, expressions_to_inline)
     }
 }
 
-fn detect_possible_inlining_for_expression(
+fn traverse_expression(
     expr: &TypedExpr,
     assign_statements: &Vec<&Assignment<Arc<Type>, TypedExpr>>,
     expressions_to_inline: &mut Vec<InlineRefactor>,
@@ -86,11 +82,7 @@ fn detect_possible_inlining_for_expression(
     if let TypedExpr::Call { args, .. } = expr {
         args.iter().for_each(|arg| {
             if let TypedExpr::Call { .. } = &arg.value {
-                detect_possible_inlining_for_expression(
-                    &arg.value,
-                    assign_statements,
-                    expressions_to_inline,
-                )
+                traverse_expression(&arg.value, assign_statements, expressions_to_inline)
             }
             if let TypedExpr::Var { constructor, .. } = &arg.value {
                 inline_refactor(constructor, assign_statements, expr, expressions_to_inline);
@@ -105,31 +97,27 @@ fn detect_possible_inlining_for_expression(
     } = expr
     {
         assignments.iter().for_each(|assignment| {
-            detect_possible_inlining_for_expression(
-                &assignment.value,
-                assign_statements,
-                expressions_to_inline,
-            )
+            traverse_expression(&assignment.value, assign_statements, expressions_to_inline)
         });
 
-        detect_possible_inlining_for_expression(&finally, assign_statements, expressions_to_inline);
+        traverse_expression(&finally, assign_statements, expressions_to_inline);
     }
 
     if let TypedExpr::BinOp { left, right, .. } = expr {
-        detect_possible_inlining_for_expression(left, assign_statements, expressions_to_inline);
-        detect_possible_inlining_for_expression(right, assign_statements, expressions_to_inline);
+        traverse_expression(left, assign_statements, expressions_to_inline);
+        traverse_expression(right, assign_statements, expressions_to_inline);
     }
 
     if let TypedExpr::Tuple { elems, .. } = expr {
-        elems.iter().for_each(|elem| {
-            detect_possible_inlining_for_expression(elem, assign_statements, expressions_to_inline)
-        })
+        elems
+            .iter()
+            .for_each(|elem| traverse_expression(elem, assign_statements, expressions_to_inline))
     }
 
     if let TypedExpr::List { elements, .. } = expr {
-        elements.iter().for_each(|elem| {
-            detect_possible_inlining_for_expression(elem, assign_statements, expressions_to_inline)
-        })
+        elements
+            .iter()
+            .for_each(|elem| traverse_expression(elem, assign_statements, expressions_to_inline))
     }
 
     if let TypedExpr::Fn { body, .. } = expr {
