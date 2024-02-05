@@ -345,6 +345,34 @@ fn main() {
 }
 
 #[test]
+fn test_inlining_block_expression_with_var_outside_block() {
+    let code = "
+import list
+
+fn main() {
+  let x = [1, 2, 3]
+  { list.reverse(x) }
+}
+";
+    let expected = "
+import list
+
+fn main() {
+  
+  { list.reverse([1, 2, 3]) }
+}
+";
+
+    let position_start = Position::new(5, 0);
+    let position_end = Position::new(5, 61);
+
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
+}
+
+#[test]
 fn test_inlining_list() {
     let code = "
 import list

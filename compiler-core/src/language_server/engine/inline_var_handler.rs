@@ -7,7 +7,6 @@ pub fn inline_variable(
     params: &lsp::CodeActionParams,
     actions: &mut Vec<CodeAction>,
 ) {
-    dbg!(&module);
     let uri = &params.text_document.uri;
     let line_numbers = LineNumbers::new(&module.code);
     let mut inline_refactors = Vec::new();
@@ -139,11 +138,8 @@ fn detect_possible_inlining_for_expression<'a>(
         })
     }
 
-    //moet ie dan niet alleen de variable bekijken die in block gedefined zijn??
-    //NOG EEN CHECK OP VARIABLE BUITEN BLOCK?? --> MOGELIJK MAKEN OM VARIABELEN TE INLINEN
-    //DIE BUITEN BLOCK ZIJN GEDEFINIEERD..
     if let TypedExpr::Block { statements, .. } = expr {
-        let assign_statements: Vec<&Assignment<Arc<Type>, TypedExpr>> = statements
+        let mut res: Vec<&Assignment<Arc<Type>, TypedExpr>> = statements
             .iter()
             .filter_map(|statement| {
                 if let Statement::Assignment(assign) = statement {
@@ -154,8 +150,10 @@ fn detect_possible_inlining_for_expression<'a>(
             })
             .collect();
 
+        res.extend(assign_statements.iter());
+
         statements.iter().for_each(|statement| {
-            detect_possible_inlinings_in_body(statement, &assign_statements, expressions_to_inline)
+            detect_possible_inlinings_in_body(statement, &res, expressions_to_inline)
         })
     }
 }
@@ -209,6 +207,7 @@ fn create_edits_for_inline_refactor(
     inline_refactors.iter().for_each(|refactor| {
         let range_inline_destination = src_span_to_lsp_range(refactor.destination, &line_numbers);
         if range_includes(&params.range, &range_inline_destination) {
+            //Remove edit for inlined variable
             edits.push(lsp_types::TextEdit {
                 range: src_span_to_lsp_range(refactor.source, &line_numbers),
                 new_text: "".into(),
