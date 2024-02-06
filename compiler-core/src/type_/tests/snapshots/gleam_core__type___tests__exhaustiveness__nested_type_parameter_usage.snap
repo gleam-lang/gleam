@@ -17,5 +17,6 @@ The missing patterns are:
 
     Returned([])
     Returned([_, _, ..])
+
 Hint: Use a more general pattern or use `let assert` instead.
 

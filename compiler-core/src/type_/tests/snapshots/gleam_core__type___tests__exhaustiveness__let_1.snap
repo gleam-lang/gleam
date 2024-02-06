@@ -16,5 +16,6 @@ will crash.
 The missing patterns are:
 
     False
+
 Hint: Use a more general pattern or use `let assert` instead.
 
