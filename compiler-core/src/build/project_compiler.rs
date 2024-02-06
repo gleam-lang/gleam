@@ -577,6 +577,11 @@ fn order_packages(packages: &HashMap<String, ManifestPackage>) -> Result<Vec<Eco
     dep_tree::toposort_deps(
         packages
             .values()
+            // Making sure that the package order is deterministic, to prevent different
+            // compilations of the same project compiling in different orders. This could impact
+            // any bugged outcomes, though not any where the compiler is working correctly, so it's
+            // mostly to aid debugging.
+            .sorted_by(|a, b| a.name.cmp(&b.name))
             .map(|package| {
                 (
                     package.name.as_str().into(),
