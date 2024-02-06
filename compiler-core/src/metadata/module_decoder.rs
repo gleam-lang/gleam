@@ -12,13 +12,13 @@ use crate::{
     schema_capnp::{self as schema, *},
     type_::{
         self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, ModuleInterface,
-        RecordAccessor, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorParameter,
-        ValueConstructor, ValueConstructorVariant,
+        RecordAccessor, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
+        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     Result,
 };
-use std::{collections::HashMap, io::BufRead, sync::Arc};
+use std::{collections::HashMap, io::BufRead, sync::Arc, u64};
 
 macro_rules! read_vec {
     ($reader:expr, $self:expr, $method:ident) => {{
@@ -69,13 +69,13 @@ impl ModuleDecoder {
             package: reader.get_package()?.into(),
             contains_todo: reader.get_contains_todo(),
             origin: Origin::Src,
+            values: read_hashmap!(reader.get_values()?, self, value_constructor),
             types: read_hashmap!(reader.get_types()?, self, type_constructor),
             types_value_constructors: read_hashmap!(
                 reader.get_types_constructors()?,
                 self,
-                type_value_constructors
+                type_variants_constructors
             ),
-            values: read_hashmap!(reader.get_values()?, self, value_constructor),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
             unused_imports: read_vec!(reader.get_unused_imports()?, self, src_span),
         })
@@ -139,25 +139,43 @@ impl ModuleDecoder {
 
     fn type_var(&mut self, reader: &schema::type_::var::Reader<'_>) -> Result<Arc<Type>> {
         let serialized_id = reader.get_id();
-        let id = match self.type_var_id_map.get(&serialized_id) {
-            Some(&id) => id,
-            None => {
-                let new_id = self.ids.next();
-                let _ = self.type_var_id_map.insert(serialized_id, new_id);
-                new_id
-            }
-        };
+        let id = self.get_or_insert_type_var_id(serialized_id);
         Ok(type_::generic_var(id))
     }
 
-    fn type_value_constructors(
+    fn get_or_insert_type_var_id(&mut self, id: u64) -> u64 {
+        match self.type_var_id_map.get(&id) {
+            Some(&id) => id,
+            None => {
+                let new_id = self.ids.next();
+                let _ = self.type_var_id_map.insert(id, new_id);
+                new_id
+            }
+        }
+    }
+
+    fn type_variants_constructors(
         &mut self,
-        reader: &capnp::struct_list::Reader<'_, type_value_constructor::Owned>,
-    ) -> Result<Vec<TypeValueConstructor>> {
-        reader
+        reader: &types_variant_constructors::Reader<'_>,
+    ) -> Result<TypeVariantConstructors> {
+        let variants = reader
+            .get_variants()?
             .iter()
             .map(|r| self.type_value_constructor(&r))
-            .try_collect()
+            .try_collect()?;
+        let type_parameters_ids = read_vec!(
+            reader.get_type_parameters_ids()?,
+            self,
+            type_variant_constructor_type_parameter_id
+        );
+        Ok(TypeVariantConstructors {
+            variants,
+            type_parameters_ids,
+        })
+    }
+
+    fn type_variant_constructor_type_parameter_id(&mut self, i: &u16) -> Result<u64> {
+        Ok(self.get_or_insert_type_var_id(*i as u64))
     }
 
     fn type_value_constructor(
@@ -177,14 +195,9 @@ impl ModuleDecoder {
     fn type_value_constructor_parameter(
         &mut self,
         reader: &type_value_constructor_parameter::Reader<'_>,
-    ) -> Result<TypeValueConstructorParameter> {
-        let generic_type_parameter_index = match reader.get_generic_type_parameter_index() {
-            -1 => None,
-            index => Some(index as usize),
-        };
-        Ok(TypeValueConstructorParameter {
+    ) -> Result<TypeValueConstructorField> {
+        Ok(TypeValueConstructorField {
             type_: self.type_(&reader.get_type()?)?,
-            generic_type_parameter_index,
         })
     }
 

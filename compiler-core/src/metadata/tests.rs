@@ -10,7 +10,7 @@ use crate::{
     build::Origin,
     type_::{
         self, expression::Implementations, Deprecation, ModuleInterface, Type, TypeConstructor,
-        TypeValueConstructor, ValueConstructor, ValueConstructorVariant,
+        TypeValueConstructor, TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
 };
@@ -295,10 +295,13 @@ fn module_type_to_constructors_mapping() {
         types: HashMap::new(),
         types_value_constructors: [(
             "SomeType".into(),
-            vec![TypeValueConstructor {
-                name: "One".into(),
-                parameters: vec![],
-            }],
+            TypeVariantConstructors {
+                type_parameters_ids: vec![0, 1, 2],
+                variants: vec![TypeValueConstructor {
+                    name: "One".into(),
+                    parameters: vec![],
+                }],
+            },
         )]
         .into(),
         unused_imports: Default::default(),

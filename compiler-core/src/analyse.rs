@@ -21,7 +21,7 @@ use crate::{
         hydrator::Hydrator,
         prelude::*,
         AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
-        TypeConstructor, TypeValueConstructor, TypeValueConstructorParameter, ValueConstructor,
+        TypeConstructor, TypeValueConstructor, TypeVariantConstructors, ValueConstructor,
         ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
@@ -396,24 +396,25 @@ fn register_values_from_custom_type(
 
         let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
         let mut args_types = Vec::with_capacity(constructor.arguments.len());
-        let mut parameters = Vec::with_capacity(constructor.arguments.len());
+        let mut fields = Vec::with_capacity(constructor.arguments.len());
 
         for (i, RecordConstructorArg { label, ast, .. }) in constructor.arguments.iter().enumerate()
         {
             // Build a type from the annotation AST
             let t = hydrator.type_from_ast(ast, environment)?;
 
+            // TODO: this isn't good enough! The type variable may not be used at the top level.
             // Determine the parameter index if this is a generic type
-            let generic_type_parameter_index = match &ast {
-                TypeAst::Var(TypeAstVar { name, .. }) => {
-                    type_parameters.iter().position(|p| p == name)
-                }
-                _ => None,
-            };
-            parameters.push(TypeValueConstructorParameter {
-                type_: t.clone(),
-                generic_type_parameter_index,
-            });
+            // let generic_type_parameter_id = match &ast {
+            //     TypeAst::Var(TypeAstVar { name, .. }) => {
+            //         type_parameters.iter().position(|p| p == name)
+            //     }
+            //     _ => None,
+            // };
+            // fields.push(TypeValueConstructorField {
+            //     type_: t.clone(),
+            //     generic_type_parameter_id,
+            // });
 
             // Register the type for this parameter
             args_types.push(t);
@@ -465,7 +466,7 @@ fn register_values_from_custom_type(
 
         constructors_data.push(TypeValueConstructor {
             name: constructor.name.clone(),
-            parameters,
+            parameters: fields,
         });
         environment.insert_variable(
             constructor.name.clone(),
@@ -476,7 +477,11 @@ fn register_values_from_custom_type(
         );
     }
 
-    environment.insert_type_to_constructors(name.clone(), constructors_data);
+    // Now record the constructors for the type.
+    environment.insert_type_to_constructors(
+        name.clone(),
+        TypeVariantConstructors::new(constructors_data, type_parameters, hydrator),
+    );
 
     Ok(())
 }

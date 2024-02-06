@@ -38,7 +38,7 @@ use crate::{
     ast::AssignName,
     type_::{
         collapse_links, error::UnknownTypeConstructorError, is_prelude_module, Environment, Type,
-        TypeValueConstructor, TypeValueConstructorParameter, TypeVar,
+        TypeValueConstructor, TypeValueConstructorField, TypeVar,
     },
 };
 use ecow::EcoString;
@@ -333,9 +333,10 @@ impl<'a> Compiler<'a> {
 
             BranchMode::NamedType {
                 variable,
-                constructors: variants,
+                constructors,
             } => {
-                let cases = variants
+                dbg!(&variable);
+                let cases = constructors
                     .iter()
                     .enumerate()
                     .map(|(idx, constructor)| {
@@ -343,10 +344,10 @@ impl<'a> Compiler<'a> {
                             type_: variable.type_.clone(),
                             index: idx as u16,
                         };
-                        let new_variables = self.constructor_parameter_variables(
-                            &variable.type_,
-                            &constructor.parameters,
-                        );
+                        // Make new variables for each of the fields of the variant,
+                        // so they can be used in the sub tree.
+                        let new_variables = self
+                            .constructor_field_variables(&variable.type_, &constructor.parameters);
                         (variant, new_variables, Vec::new())
                     })
                     .collect();
@@ -734,9 +735,11 @@ impl<'a> Compiler<'a> {
                 element_type: args.first().expect("Lists have 1 argument").clone(),
             },
 
-            Type::Named { module, name, .. } => {
+            Type::Named {
+                module, name, args, ..
+            } => {
                 let constructors = self
-                    .custom_type_info(module, name)
+                    .instantiated_custom_type_info(module, name)
                     .expect("Custom type variants must exist")
                     .to_vec();
                 BranchMode::NamedType {
@@ -766,37 +769,48 @@ impl<'a> Compiler<'a> {
         var
     }
 
-    fn custom_type_info(
+    fn instantiated_custom_type_info(
         &self,
         module: &EcoString,
         name: &EcoString,
-    ) -> Result<&Vec<TypeValueConstructor>, UnknownTypeConstructorError> {
-        self.environment.get_constructors_for_type(module, name)
+    ) -> Result<&[TypeValueConstructor], UnknownTypeConstructorError> {
+        /// The generic type ids used for the parameters of this type.
+        ///
+        /// For example, if the custom type is
+        ///
+        ///     pub type Option(a) {
+        ///       Some(a)
+        ///       None
+        ///     }
+        ///
+        /// And `a` has the generic type id 6.
+        ///
+        /// And the variable type is
+        ///
+        ///     Option(Int)
+        ///
+        /// then this would be `vec![6]`.
+        ///
+        /// This is then used to replace all instances of `6` with `Int` in the type of each
+        /// constructor, instantiating the type parameters.
+        ///
+        // type_parameters: Vec<u64>,
+        // TODO: here we gotta instanciate the type parameters yooooooooooooooo
+        let constructors = self.environment.get_constructors_for_type(module, name)?;
+        Ok(constructors.variants.as_slice())
     }
 
-    fn constructor_parameter_variables(
+    // Construct a new variable for each of the variants of this type.
+    // See the `constructor_parameter_variable` function for further documentation.
+    fn constructor_field_variables(
         &mut self,
         type_: &Arc<Type>,
-        parameters: &[TypeValueConstructorParameter],
+        fields: &[TypeValueConstructorField],
     ) -> Vec<Variable> {
-        parameters
+        fields
             .iter()
-            .map(|p| self.constructor_parameter_variable(type_, p))
+            .map(|p| self.new_variable(p.type_.clone()))
             .collect_vec()
-    }
-
-    fn constructor_parameter_variable(
-        &mut self,
-        type_: &Arc<Type>,
-        parameter: &TypeValueConstructorParameter,
-    ) -> Variable {
-        let type_ = match parameter.generic_type_parameter_index {
-            None => parameter.type_.clone(),
-            Some(i) => {
-                generic_named_type_parameter(type_, i).expect("Generic type parameter index")
-            }
-        };
-        self.new_variable(type_)
     }
 
     fn new_variables(&mut self, type_ids: &[Arc<Type>]) -> Vec<Variable> {
@@ -835,6 +849,7 @@ enum BranchMode {
     },
     NamedType {
         variable: Variable,
+        /// The constructors for this type. For example, `Result` has `Ok` and `Error`.
         constructors: Vec<TypeValueConstructor>,
     },
 }

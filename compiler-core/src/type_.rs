@@ -506,28 +506,74 @@ pub struct ModuleInterface {
     pub origin: Origin,
     pub package: EcoString,
     pub types: HashMap<EcoString, TypeConstructor>,
-    pub types_value_constructors: HashMap<EcoString, Vec<TypeValueConstructor>>,
+    pub types_value_constructors: HashMap<EcoString, TypeVariantConstructors>,
     pub values: HashMap<EcoString, ValueConstructor>,
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
     pub contains_todo: bool,
 }
 
+/// Information on the constructors of a custom type.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TypeValueConstructor {
-    pub name: EcoString,
-    pub parameters: Vec<TypeValueConstructorParameter>,
+pub struct TypeVariantConstructors {
+    /// The id of the generic type variables of the generic version of the type that these
+    /// constructors belong to.
+    /// For example, if we have this type:
+    ///
+    /// ```gleam
+    /// pub type Option(a) {
+    ///   Some(a)
+    ///   None
+    /// }
+    /// ```
+    ///
+    /// and `a` is a Generic type variable with id 1, then this field will be `[1]`.
+    ///
+    pub type_parameters_ids: Vec<u64>,
+    pub variants: Vec<TypeValueConstructor>,
+}
+
+impl TypeVariantConstructors {
+    pub(crate) fn new(
+        variants: Vec<TypeValueConstructor>,
+        type_parameters: &[EcoString],
+        hydrator: Hydrator,
+    ) -> TypeVariantConstructors {
+        let error =
+            "The hydrator should not store any types other than generic type variables here";
+        let named_types = hydrator.named_type_variables();
+        let type_parameters = type_parameters
+            .iter()
+            .map(|p| {
+                let t = named_types
+                    .get(p)
+                    .expect("Type parameter not found in hydrator");
+                match t.as_ref() {
+                    Type::Var { type_: typ } => match typ.borrow().deref() {
+                        TypeVar::Generic { id } => *id,
+                        _ => panic!("{}", error),
+                    },
+                    _ => panic!("{}", error),
+                }
+            })
+            .collect_vec();
+        Self {
+            type_parameters_ids: type_parameters,
+            variants,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TypeValueConstructorParameter {
+pub struct TypeValueConstructor {
+    pub name: EcoString,
+    pub parameters: Vec<TypeValueConstructorField>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeValueConstructorField {
     /// This type of this parameter
     pub type_: Arc<Type>,
-    /// If this type is a generic type parameter then this is the index of the
-    /// parameter.
-    /// For example, in `type Type(a) { Value(a) }` the `a` in Value(a)` has an
-    /// index of 0.
-    pub generic_type_parameter_index: Option<usize>,
 }
 
 impl ModuleInterface {

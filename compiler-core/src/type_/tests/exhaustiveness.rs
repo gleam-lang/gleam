@@ -868,3 +868,20 @@ pub fn main(x, y) {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2577
+#[test]
+fn nested_type_parameter_usage() {
+    assert_module_error!(
+        r#"
+pub type Returned(a) {
+  Returned(List(a))
+}
+
+fn foo(user: Returned(#())) -> Int {
+  let Returned([#()]) = user
+  1
+}
+"#
+    );
+}

@@ -25,9 +25,14 @@ struct Module {
   values @2 :List(Property(ValueConstructor));
   accessors @3 :List(Property(AccessorsMap));
   package @4 :Text;
-  typesConstructors @5 :List(Property(List(TypeValueConstructor)));
+  typesConstructors @5 :List(Property(TypesVariantConstructors));
   unusedImports @6 :List(SrcSpan);
   containsTodo @7 :Bool;
+}
+
+struct TypesVariantConstructors {
+  variants @0 :List(TypeValueConstructor);
+  typeParametersIds @1 :List(UInt16);
 }
 
 struct TypeValueConstructor {
