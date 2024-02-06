@@ -2301,6 +2301,7 @@ The missing patterns are:\n"
                         text.push_str("\n    ");
                         text.push_str(missing);
                     }
+                    text.push('\n');
 
                     Diagnostic {
                         title: "Inexhaustive pattern".into(),

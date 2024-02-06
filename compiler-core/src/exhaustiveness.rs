@@ -891,7 +891,7 @@ impl ConstructorSpecialiser {
                 type_: self.specialise_type(type_.as_ref()),
             },
 
-            TypeVar::Generic { id } => match self.specialised_types.get(&id) {
+            TypeVar::Generic { id } => match self.specialised_types.get(id) {
                 Some(type_) => TypeVar::Link {
                     type_: type_.clone(),
                 },
