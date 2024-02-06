@@ -183,7 +183,7 @@ fn inline_refactor(
                     expressions_to_inline.push(InlineRefactor {
                         source: found.location,
                         destination: callarg.location,
-                        value_to_inline: (*found.value.to_string().unwrap()).to_string(),
+                        value_to_inline: found.value.to_string().unwrap(),
                     });
                 }
             }
@@ -192,7 +192,7 @@ fn inline_refactor(
                 expressions_to_inline.push(InlineRefactor {
                     source: found.location,
                     destination: location.clone(),
-                    value_to_inline: (*found.value.to_string().unwrap()).to_string(),
+                    value_to_inline: found.value.to_string().unwrap(),
                 });
             }
         }
@@ -228,5 +228,5 @@ fn create_edits_for_inline_refactor(
 struct InlineRefactor {
     source: SrcSpan,
     destination: SrcSpan,
-    value_to_inline: String,
+    value_to_inline: EcoString,
 }

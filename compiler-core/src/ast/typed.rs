@@ -438,19 +438,19 @@ impl TypedExpr {
         matches!(self, Self::Pipeline { .. })
     }
 
-    pub fn to_string(&self) -> Option<String> {
+    pub fn to_string(&self) -> Option<EcoString> {
         match self {
-            TypedExpr::Int { value, .. } => Some(value.to_string()),
-            TypedExpr::Float { value, .. } => Some(value.to_string()),
-            TypedExpr::String { value, .. } => Some(value.to_string()),
-            TypedExpr::Var { name, .. } => Some(name.to_string()),
+            TypedExpr::Int { value, .. } => Some(value.clone()),
+            TypedExpr::Float { value, .. } => Some(value.clone()),
+            TypedExpr::String { value, .. } => Some(value.clone()),
+            TypedExpr::Var { name, .. } => Some(name.clone()),
             TypedExpr::List {
                 location: _,
                 typ: _,
                 elements,
                 tail,
             } => {
-                let mut result = "[".to_string();
+                let mut result = EcoString::from("[");
 
                 for (i, element) in elements.iter().enumerate() {
                     if i > 0 {
@@ -473,9 +473,10 @@ impl TypedExpr {
                 fun,
                 args,
             } => {
-                let fun_str = fun.to_string()?;
+                let mut fun_str = fun.to_string()?;
 
-                let mut args_str = String::new();
+                //Init with opening parenthesis
+                let mut args_str = EcoString::from("(");
 
                 for (i, arg) in args.iter().enumerate() {
                     if let Some(arg_string) = arg.value.to_string() {
@@ -488,13 +489,11 @@ impl TypedExpr {
                     }
                 }
 
-                if args.is_empty() {
-                    args_str = String::from("()");
-                } else {
-                    args_str = format!("({})", args_str);
-                }
+                //Append closing parenthesis
+                args_str.push(')');
 
-                Some(format!("{}{}", fun_str, args_str))
+                fun_str.push_str(&args_str);
+                Some(fun_str)
             }
             TypedExpr::BinOp {
                 location: _,
@@ -503,9 +502,12 @@ impl TypedExpr {
                 left,
                 right,
             } => match (left.to_string(), right.to_string()) {
-                (Some(left_str), Some(right_str)) => {
-                    Some(format!("{} {} {}", left_str, name.name(), right_str))
-                }
+                (Some(left_str), Some(right_str)) => Some(EcoString::from(format!(
+                    "{} {} {}",
+                    left_str,
+                    name.name(),
+                    right_str
+                ))),
                 _ => None,
             },
             TypedExpr::ModuleSelect {
@@ -515,9 +517,10 @@ impl TypedExpr {
                 module_name: _,
                 module_alias,
                 constructor: _,
-            } => Some(format!("{}.{}", module_alias, label)),
+            } => Some(EcoString::from(format!("{}.{}", module_alias, label))),
             TypedExpr::Tuple { elems, .. } => {
-                let mut res = "(".to_string();
+                //Opening parenthesis tuple
+                let mut res = EcoString::from("#(");
 
                 for (i, elem) in elems.iter().enumerate() {
                     if i > 0 {
@@ -525,12 +528,13 @@ impl TypedExpr {
                     }
 
                     if let Some(elem_str) = elem.to_string() {
-                        res.push_str(&format!("{}", elem_str));
+                        res.push_str(&elem_str);
                     } else {
                         return None;
                     }
                 }
 
+                //Closing parenthesis tuple
                 res.push(')');
                 Some(res)
             }

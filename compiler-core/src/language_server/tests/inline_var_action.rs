@@ -428,3 +428,59 @@ fn main() {
         expected
     );
 }
+
+#[test]
+fn test_inlining_tuple_as_var() {
+    let code = "
+import list
+
+fn main() {
+  let y = #(1, 2, 3)
+  let z = #(y, #(3, 4, 5))
+}
+";
+    let expected = "
+import list
+
+fn main() {
+  
+  let z = #(#(1, 2, 3), #(3, 4, 5))
+}
+";
+
+    let position_start = Position::new(5, 0);
+    let position_end = Position::new(5, 30);
+
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
+}
+
+#[test]
+fn test_inlining_bin_op_as_var() {
+    let code = "
+import list
+
+fn main() {
+  let x = 1 + 2
+  let y = x + 3
+}
+";
+    let expected = "
+import list
+
+fn main() {
+  
+  let y = 1 + 2 + 3
+}
+";
+
+    let position_start = Position::new(5, 0);
+    let position_end = Position::new(5, 30);
+
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
+}
