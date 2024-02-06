@@ -2337,7 +2337,7 @@ The missing patterns are:\n"
                         title: "Inexhaustive patterns".into(),
                         text,
                         hint: None,
-                        level: Level::Warning,
+                        level: Level::Error,
                         location: Some(Location {
                             src: src.clone(),
                             path: path.to_path_buf(),

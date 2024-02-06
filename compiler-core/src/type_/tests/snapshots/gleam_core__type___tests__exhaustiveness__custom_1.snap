@@ -3,7 +3,7 @@ source: compiler-core/src/type_/tests/exhaustiveness.rs
 assertion_line: 781
 expression: "\npub type Type {\n  One\n  Two\n}\n\npub fn main(x) {\n  case x {\n    One -> 1\n  }\n}\n"
 ---
-warning: Inexhaustive patterns
+error: Inexhaustive patterns
    ┌─ /src/one/two.gleam:8:3
    │  
  8 │ ╭   case x {
