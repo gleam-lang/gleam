@@ -138,7 +138,6 @@ impl PatternArena {
             }
 
             TypedPattern::List { elements, tail, .. } => {
-                dbg!(pattern);
                 let mut list = match tail {
                     Some(tail) => self.register(tail),
                     None => self.insert(Pattern::EmptyList),
