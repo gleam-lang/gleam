@@ -35,7 +35,7 @@ pub struct Environment<'a> {
     pub module_types: HashMap<EcoString, TypeConstructor>,
 
     /// Mapping from types to constructor names in the current module (or the prelude)
-    pub module_types_constructors: HashMap<EcoString, Vec<TypeValueConstructor>>,
+    pub module_types_constructors: HashMap<EcoString, TypeVariantConstructors>,
 
     /// Values defined in the current module (or the prelude)
     pub module_values: HashMap<EcoString, ValueConstructor>,
@@ -292,7 +292,7 @@ impl<'a> Environment<'a> {
     pub fn insert_type_to_constructors(
         &mut self,
         type_name: EcoString,
-        constructors: Vec<TypeValueConstructor>,
+        constructors: TypeVariantConstructors,
     ) {
         let _ = self
             .module_types_constructors
@@ -351,7 +351,7 @@ impl<'a> Environment<'a> {
         &self,
         module: &EcoString,
         name: &EcoString,
-    ) -> Result<&Vec<TypeValueConstructor>, UnknownTypeConstructorError> {
+    ) -> Result<&TypeVariantConstructors, UnknownTypeConstructorError> {
         let module = if module.is_empty() || *module == self.current_module {
             None
         } else {

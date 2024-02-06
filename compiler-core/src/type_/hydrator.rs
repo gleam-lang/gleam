@@ -52,6 +52,10 @@ impl Hydrator {
         }
     }
 
+    pub fn named_type_variables(&self) -> im::HashMap<EcoString, Arc<Type>> {
+        self.created_type_variables.clone()
+    }
+
     pub fn open_new_scope(&mut self) -> ScopeResetData {
         let created_type_variables = self.created_type_variables.clone();
         let rigid_type_names = self.rigid_type_names.clone();

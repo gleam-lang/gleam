@@ -3,8 +3,8 @@ use strum::{EnumIter, IntoEnumIterator};
 use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 
 use super::{
-    ModuleInterface, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorParameter,
-    TypeVar, ValueConstructor, ValueConstructorVariant,
+    ModuleInterface, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
+    TypeVar, TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
 };
 use crate::type_::Deprecation::NotDeprecated;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
@@ -225,16 +225,19 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
             PreludeType::Bool => {
                 let _ = prelude.types_value_constructors.insert(
                     BOOL.into(),
-                    vec![
-                        TypeValueConstructor {
-                            name: "True".into(),
-                            parameters: vec![],
-                        },
-                        TypeValueConstructor {
-                            name: "False".into(),
-                            parameters: vec![],
-                        },
-                    ],
+                    TypeVariantConstructors {
+                        type_parameters_ids: vec![],
+                        variants: vec![
+                            TypeValueConstructor {
+                                name: "True".into(),
+                                parameters: vec![],
+                            },
+                            TypeValueConstructor {
+                                name: "False".into(),
+                                parameters: vec![],
+                            },
+                        ],
+                    },
                 );
                 let _ = prelude.values.insert(
                     "True".into(),
@@ -354,16 +357,21 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                 );
                 let _ = prelude.types_value_constructors.insert(
                     NIL.into(),
-                    vec![TypeValueConstructor {
-                        name: "Nil".into(),
-                        parameters: vec![],
-                    }],
+                    TypeVariantConstructors {
+                        type_parameters_ids: vec![],
+                        variants: vec![TypeValueConstructor {
+                            name: "Nil".into(),
+                            parameters: vec![],
+                        }],
+                    },
                 );
             }
 
             PreludeType::Result => {
-                let result_value = generic_var(ids.next());
-                let result_error = generic_var(ids.next());
+                let result_value_id = ids.next();
+                let result_error_id = ids.next();
+                let result_value = generic_var(result_value_id);
+                let result_error = generic_var(result_error_id);
                 let _ = prelude.types.insert(
                     RESULT.into(),
                     TypeConstructor {
@@ -377,22 +385,23 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                 );
                 let _ = prelude.types_value_constructors.insert(
                     RESULT.into(),
-                    vec![
-                        TypeValueConstructor {
-                            name: "Ok".into(),
-                            parameters: vec![TypeValueConstructorParameter {
-                                type_: result_value,
-                                generic_type_parameter_index: Some(0),
-                            }],
-                        },
-                        TypeValueConstructor {
-                            name: "Error".into(),
-                            parameters: vec![TypeValueConstructorParameter {
-                                type_: result_error,
-                                generic_type_parameter_index: Some(1),
-                            }],
-                        },
-                    ],
+                    TypeVariantConstructors {
+                        type_parameters_ids: vec![result_value_id, result_error_id],
+                        variants: vec![
+                            TypeValueConstructor {
+                                name: "Ok".into(),
+                                parameters: vec![TypeValueConstructorField {
+                                    type_: result_value,
+                                }],
+                            },
+                            TypeValueConstructor {
+                                name: "Error".into(),
+                                parameters: vec![TypeValueConstructorField {
+                                    type_: result_error,
+                                }],
+                            },
+                        ],
+                    },
                 );
                 let ok = generic_var(ids.next());
                 let error = generic_var(ids.next());
