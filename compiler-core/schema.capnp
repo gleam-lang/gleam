@@ -42,7 +42,6 @@ struct TypeValueConstructor {
 
 struct TypeValueConstructorParameter {
   type @0 :Type;
-  genericTypeParameterIndex @1 :Int16;
 }
 
 struct TypeConstructor {
