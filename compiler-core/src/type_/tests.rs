@@ -20,8 +20,7 @@ mod assignments;
 mod conditional_compilation;
 mod custom_types;
 mod errors;
-// TODO: uncomment
-// mod exhaustiveness;
+mod exhaustiveness;
 mod expression;
 mod functions;
 mod guards;
