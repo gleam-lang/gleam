@@ -26,6 +26,8 @@
 
 ### Bug fixes
 
+- Fixed a bug where the exhaustiveness checker could crash when checking nested
+  values inserted into the parent type using type parameters.
 - Fixed a bug where `functionname(_name)` would incorrectly parse as a function
   capture instead of a syntax error.
 
