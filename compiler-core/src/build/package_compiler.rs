@@ -29,6 +29,18 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
 
+#[derive(Copy, Clone, Debug)]
+/// A flag that can be used to tell the package compiler to drop all the modules
+/// before performing code generation.
+/// For example we can use this to compile and run the dependencies of a project
+/// while ignoring the root package.
+pub enum ModulesCompilation {
+    /// Do not ignore the package's modules.
+    CompileAll,
+    /// Drop all the modules of a project before performing code generation.
+    IgnoreModules,
+}
+
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
     pub io: IO,
@@ -36,6 +48,7 @@ pub struct PackageCompiler<'a, IO> {
     pub lib: &'a Utf8Path,
     pub root: &'a Utf8Path,
     pub mode: Mode,
+    pub modules_compilation: ModulesCompilation,
     pub target: &'a TargetCodegenConfiguration,
     pub config: &'a PackageConfig,
     pub ids: UniqueIdGenerator,
@@ -55,6 +68,7 @@ where
     pub fn new(
         config: &'a PackageConfig,
         mode: Mode,
+        modules_compilation: ModulesCompilation,
         root: &'a Utf8Path,
         out: &'a Utf8Path,
         lib: &'a Utf8Path,
@@ -71,6 +85,7 @@ where
             mode,
             config,
             target,
+            modules_compilation,
             write_metadata: true,
             perform_codegen: true,
             write_entrypoint: false,
@@ -120,32 +135,39 @@ where
         )
         .run()?;
 
-        // Load the cached modules that have previously been compiled
-        for module in loaded.cached.into_iter() {
-            _ = existing_modules.insert(module.name.clone(), module.clone());
-        }
+        let modules = match self.modules_compilation {
+            // If we're asked to ignore the project's modules we're going to
+            // perform the codegeneration step on an empty vector of modules.
+            ModulesCompilation::IgnoreModules => Ok(vec![]),
+            ModulesCompilation::CompileAll => {
+                // Load the cached modules that have previously been compiled
+                for module in loaded.cached.into_iter() {
+                    _ = existing_modules.insert(module.name.clone(), module.clone());
+                }
 
-        if !loaded.to_compile.is_empty() {
-            // Print that work is being done
-            if self.perform_codegen {
-                telemetry.compiling_package(&self.config.name);
-            } else {
-                telemetry.checking_package(&self.config.name)
+                if !loaded.to_compile.is_empty() {
+                    // Print that work is being done
+                    if self.perform_codegen {
+                        telemetry.compiling_package(&self.config.name);
+                    } else {
+                        telemetry.checking_package(&self.config.name)
+                    }
+                }
+
+                // Type check the modules that are new or have changed
+                tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
+                analyse(
+                    &self.config,
+                    self.target.target(),
+                    self.mode,
+                    &self.ids,
+                    loaded.to_compile,
+                    existing_modules,
+                    warnings,
+                    self.target_support,
+                )
             }
-        }
-
-        // Type check the modules that are new or have changed
-        tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
-        let modules = analyse(
-            &self.config,
-            self.target.target(),
-            self.mode,
-            &self.ids,
-            loaded.to_compile,
-            existing_modules,
-            warnings,
-            self.target_support,
-        )?;
+        }?;
 
         tracing::debug!("performing_code_generation");
         self.perform_codegen(&modules)?;

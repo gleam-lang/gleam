@@ -3,7 +3,7 @@ use ecow::EcoString;
 use itertools::Itertools;
 
 use crate::{
-    build::{self, Mode, Module, NullTelemetry, ProjectCompiler},
+    build::{self, Mode, Module, ModulesCompilation, NullTelemetry, ProjectCompiler},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     language_server::Locker,
@@ -73,6 +73,7 @@ where
         let mut project_compiler = ProjectCompiler::new(
             config,
             options,
+            ModulesCompilation::CompileAll,
             manifest.packages,
             Box::new(telemetry),
             warnings.clone(),

@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Instant};
 
 use gleam_core::{
-    build::{Built, Codegen, Options, ProjectCompiler},
+    build::{Built, Codegen, ModulesCompilation, Options, ProjectCompiler},
     manifest::Manifest,
     paths::ProjectPaths,
     Result,
@@ -20,6 +20,18 @@ pub fn download_dependencies() -> Result<Manifest> {
 }
 
 pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
+    compile(options, manifest, ModulesCompilation::CompileAll)
+}
+
+pub fn deps_only(options: Options, manifest: Manifest) -> Result<Built> {
+    compile(options, manifest, ModulesCompilation::IgnoreModules)
+}
+
+fn compile(
+    options: Options,
+    manifest: Manifest,
+    modules_compilation: ModulesCompilation,
+) -> Result<Built> {
     let paths = crate::find_project_paths()?;
     let perform_codegen = options.codegen;
     let root_config = crate::config::root_config()?;
@@ -34,11 +46,12 @@ pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
     let current_dir = get_project_root(get_current_directory()?)?;
 
     tracing::info!("Compiling packages");
-    let compiled = {
+    let result = {
         let _guard = lock.lock(telemetry.as_ref());
         let compiler = ProjectCompiler::new(
             root_config,
             options,
+            modules_compilation,
             manifest.packages,
             telemetry,
             Arc::new(ConsoleWarningEmitter),
@@ -52,5 +65,6 @@ pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
         Codegen::All | Codegen::DepsOnly => cli::print_compiled(start.elapsed()),
         Codegen::None => cli::print_checked(start.elapsed()),
     };
-    Ok(compiled)
+
+    Ok(result)
 }

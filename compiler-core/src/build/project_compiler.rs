@@ -28,7 +28,9 @@ use std::{
     time::Instant,
 };
 
-use super::{elixir_libraries::ElixirLibraries, Codegen, ErlangAppCodegenConfiguration};
+use super::{
+    elixir_libraries::ElixirLibraries, Codegen, ErlangAppCodegenConfiguration, ModulesCompilation,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -79,6 +81,7 @@ pub struct ProjectCompiler<IO> {
     importable_modules: im::HashMap<EcoString, type_::ModuleInterface>,
     defined_modules: im::HashMap<EcoString, Utf8PathBuf>,
     stale_modules: StaleTracker,
+    modules_compilation: ModulesCompilation,
     warnings: WarningEmitter,
     telemetry: Box<dyn Telemetry>,
     options: Options,
@@ -100,6 +103,7 @@ where
     pub fn new(
         config: PackageConfig,
         options: Options,
+        modules_compilation: ModulesCompilation,
         packages: Vec<ManifestPackage>,
         telemetry: Box<dyn Telemetry>,
         warning_emitter: Arc<dyn WarningEmitterIO>,
@@ -118,6 +122,7 @@ where
             ids: UniqueIdGenerator::new(),
             warnings: WarningEmitter::new(warning_emitter),
             subprocess_stdio: Stdio::Inherit,
+            modules_compilation,
             telemetry,
             packages,
             options,
@@ -180,7 +185,12 @@ where
 
     pub fn compile_root_package(&mut self) -> Result<Package, Error> {
         let config = self.config.clone();
-        let modules = self.compile_gleam_package(&config, true, self.paths.root().to_path_buf())?;
+        let modules = self.compile_gleam_package(
+            &config,
+            true,
+            self.paths.root().to_path_buf(),
+            self.modules_compilation,
+        )?;
         Ok(Package { config, modules })
     }
 
@@ -484,7 +494,12 @@ where
         };
         let config_path = package_root.join("gleam.toml");
         let config = PackageConfig::read(config_path, &self.io)?;
-        self.compile_gleam_package(&config, false, package_root)
+
+        // Since we're compiling a dependency package we always want to compile
+        // all its modules and check that it's compiling.
+        // That's why we're not using the project compiler's `modules_compilation` but
+        // we force the `CompileAll` mode.
+        self.compile_gleam_package(&config, false, package_root, ModulesCompilation::CompileAll)
     }
 
     fn load_cached_package(
@@ -509,6 +524,7 @@ where
         config: &PackageConfig,
         is_root: bool,
         root_path: Utf8PathBuf,
+        modules_compilation: ModulesCompilation,
     ) -> Result<Vec<Module>, Error> {
         let out_path =
             self.paths
@@ -544,6 +560,7 @@ where
         let mut compiler = PackageCompiler::new(
             config,
             mode,
+            modules_compilation,
             &root_path,
             &out_path,
             &lib_path,
