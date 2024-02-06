@@ -21,8 +21,8 @@ use crate::{
         hydrator::Hydrator,
         prelude::*,
         AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
-        TypeConstructor, TypeValueConstructor, TypeVariantConstructors, ValueConstructor,
-        ValueConstructorVariant,
+        TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
+        ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
@@ -403,18 +403,7 @@ fn register_values_from_custom_type(
             // Build a type from the annotation AST
             let t = hydrator.type_from_ast(ast, environment)?;
 
-            // TODO: this isn't good enough! The type variable may not be used at the top level.
-            // Determine the parameter index if this is a generic type
-            // let generic_type_parameter_id = match &ast {
-            //     TypeAst::Var(TypeAstVar { name, .. }) => {
-            //         type_parameters.iter().position(|p| p == name)
-            //     }
-            //     _ => None,
-            // };
-            // fields.push(TypeValueConstructorField {
-            //     type_: t.clone(),
-            //     generic_type_parameter_id,
-            // });
+            fields.push(TypeValueConstructorField { type_: t.clone() });
 
             // Register the type for this parameter
             args_types.push(t);
