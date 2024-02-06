@@ -345,8 +345,11 @@ impl<'a> Compiler<'a> {
                         };
                         // Make new variables for each of the fields of the variant,
                         // so they can be used in the sub tree.
-                        let new_variables =
-                            self.constructor_field_variables(&constructor.parameters);
+                        let new_variables = constructor
+                            .parameters
+                            .iter()
+                            .map(|p| self.new_variable(p.type_.clone()))
+                            .collect_vec();
                         (variant, new_variables, Vec::new())
                     })
                     .collect();
@@ -768,6 +771,13 @@ impl<'a> Compiler<'a> {
         var
     }
 
+    /// Get the constructors for a named type, with any type parameters instantiated with the
+    /// specific types being used in this case (as given in `type_arguments`).
+    ///
+    /// This instantiation is done as otherwise when traversing the tree when we encounter one of
+    /// these parameterised types we would be using a generic type variable an not the actual type,
+    /// which would result in the patterns being handled incorrectly and likely causing a panic.
+    ///
     fn instantiated_custom_type_info(
         &self,
         module: &EcoString,
@@ -784,18 +794,6 @@ impl<'a> Compiler<'a> {
             .iter()
             .map(|v| specialiser.specialise_type_value_constructor(v))
             .collect_vec())
-    }
-
-    // Construct a new variable for each of the variants of this type.
-    // See the `constructor_parameter_variable` function for further documentation.
-    fn constructor_field_variables(
-        &mut self,
-        fields: &[TypeValueConstructorField],
-    ) -> Vec<Variable> {
-        fields
-            .iter()
-            .map(|p| self.new_variable(p.type_.clone()))
-            .collect_vec()
     }
 
     fn new_variables(&mut self, type_ids: &[Arc<Type>]) -> Vec<Variable> {
