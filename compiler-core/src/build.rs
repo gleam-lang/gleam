@@ -11,7 +11,7 @@ mod telemetry;
 #[cfg(test)]
 mod tests;
 
-pub use self::package_compiler::PackageCompiler;
+pub use self::package_compiler::{ModulesCompilation, PackageCompiler};
 pub use self::package_loader::StaleTracker;
 pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};

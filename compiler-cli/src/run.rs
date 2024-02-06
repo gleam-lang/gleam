@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use gleam_core::{
-    build::{Codegen, Mode, Options, Runtime, Target},
+    build::{Built, Codegen, Mode, Options, Runtime, Target},
     config::{DenoFlag, PackageConfig},
     error::Error,
     io::{CommandExecutor, Stdio},
@@ -11,7 +11,7 @@ use gleam_core::{
     type_::ModuleFunction,
 };
 
-use crate::fs::ProjectIO;
+use crate::{config::PackageKind, fs::ProjectIO};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
@@ -42,12 +42,14 @@ pub fn command(
     let manifest = crate::build::download_dependencies()?;
 
     // Get the config for the module that is being run to check the target.
-    let mod_config = match &module {
+    // Also get the kind of the package the module belongs to: wether the module
+    // belongs to a dependency or to the root package.
+    let (mod_config, package_kind) = match &module {
         Some(mod_path) => {
-            crate::config::find_package_config_for_module(mod_path, &manifest, &paths)
+            crate::config::find_package_config_for_module(mod_path, &manifest, &paths)?
         }
-        _ => crate::config::root_config(),
-    }?;
+        _ => (crate::config::root_config()?, PackageKind::Root),
+    };
 
     // The root config is required to run the project.
     let root_config = crate::config::root_config()?;
@@ -60,18 +62,23 @@ pub fn command(
 
     let target = target.unwrap_or(mod_config.target);
 
-    // Build project so we have bytecode to run
-    let built = crate::build::main(
-        Options {
-            warnings_as_errors: false,
-            codegen: Codegen::All,
-            mode: Mode::Dev,
-            target: Some(target),
-        },
-        manifest,
-    )?;
+    let options = Options {
+        warnings_as_errors: false,
+        codegen: Codegen::All,
+        mode: Mode::Dev,
+        target: Some(target),
+    };
 
-    // A module can not be run if it does not exist or does not have a public main function.
+    let built = match package_kind {
+        // The module we want to run is under the root package,
+        // so we have to compile everything.
+        PackageKind::Root => crate::build::main(options, manifest),
+        // On the other hand, if we're trying to run a module that belongs
+        // to a dependency, we'll just build the dependencies and look for
+        // the main function there.
+        PackageKind::Dependency => crate::build::deps_only(options, manifest),
+    }?;
+
     let main_function = get_or_suggest_main_function(built, &module)?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
@@ -274,10 +281,7 @@ fn is_gleam_module(module: &str) -> bool {
 }
 
 /// If provided module is not executable, suggest a possible valid module.
-fn get_or_suggest_main_function(
-    built: gleam_core::build::Built,
-    module: &str,
-) -> Result<ModuleFunction, Error> {
+fn get_or_suggest_main_function(built: Built, module: &str) -> Result<ModuleFunction, Error> {
     // Check if the module exists
     let error = match built.get_main_function(&EcoString::from(module)) {
         Ok(main_fn) => return Ok(main_fn),

@@ -148,6 +148,18 @@ jobs:
         working-directory: ./test/project_erlang
         if: ${{ matrix.run-integration-tests }}
 
+      - name: test/run_dependency_with_broken_root erlang
+        run: |
+          gleam run -m birdie accept_all
+        working-directory: ./test/run_dependency_with_broken_root
+        if: ${{ matrix.run-integration-tests }}
+
+      - name: test/run_dependency_with_broken_root javascript
+        run: |
+          gleam run --target=js -m birdie accept_all
+        working-directory: ./test/run_dependency_with_broken_root
+        if: ${{ matrix.run-integration-tests }}
+
       - name: test/project_javascript
         run: |
           gleam run
