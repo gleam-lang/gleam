@@ -2,7 +2,7 @@ use std::time::SystemTime;
 
 use crate::{
     build::{
-        Mode, ModulesCompilation, NullTelemetry, PackageCompiler, StaleTracker,
+        CompileModules, Mode, NullTelemetry, PackageCompiler, StaleTracker,
         TargetCodegenConfiguration,
     },
     config::PackageConfig,
@@ -99,7 +99,7 @@ fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
     let mut compiler = PackageCompiler::new(
         &config,
         Mode::Dev,
-        ModulesCompilation::CompileAll,
+        CompileModules::All,
         &root,
         &build,
         &lib,
