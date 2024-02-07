@@ -15,6 +15,8 @@
 
 - Now the formatter will nest pipelines and binary operators that are used as
   function arguments, list items or as tuple items.
+- The format function literals used as the last argument in a function call
+  on long lines has been improved.
 
 ### Build tool
 
