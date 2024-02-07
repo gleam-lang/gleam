@@ -11,12 +11,6 @@
 - Type aliases with unused type parameters now emit an error.
 - Type definitions with duplicate type parameters now emit an error.
 
-### Build tool changes
-
-- The search bar in generated docs now has a darker background color.
-- The generated docs no longer shows whether an argument is discarded or
-  not in a function signature.
-
 ### Formatter
 
 - Now the formatter will nest pipelines and binary operators that are used as
@@ -34,6 +28,10 @@
 - `gleam docs build` now creates a json file containing metadata about the root
   package.
 - The order of dependencies in `manifest.toml` is now in alphabetical order.
+- The search bar in generated docs now has a darker background color.
+- The generated docs no longer shows whether an argument is discarded or
+  not in a function signature.
+
 
 ### Bug fixes
 
