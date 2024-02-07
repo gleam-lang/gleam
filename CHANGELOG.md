@@ -8,6 +8,8 @@
 - Inexhaustive matches are now compile errors, not warnings.
 - The warning for an unused module alias now shows how to not assign a name to
   the module.
+- Type aliases with unused type parameters now emit an error.
+- Type definitions with duplicate type parameters now emit an error.
 
 ### Formatter
 
