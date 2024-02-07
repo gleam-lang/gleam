@@ -1,24 +1,25 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-expression: "\n/// Foo's documentation\npub type Foo(a, b) {\n  Bar\n  Baz\n}\n"
+assertion_line: 195
+expression: "\n/// Wibble's documentation\npub type Wibble(a, b) {\n  Wob\n  Baz\n}\n"
 ---
 {
   "name": "my_package",
-  "version": "11.10.9-1.foo+build",
+  "version": "11.10.9-1.wibble+build",
   "gleam-version-constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
       "type-aliases": {},
       "types": {
-        "Foo": {
-          "documentation": " Foo's documentation",
+        "Wibble": {
+          "documentation": " Wibble's documentation",
           "deprecation": null,
           "parameters": 2,
           "constructors": [
             {
               "documentation": null,
-              "name": "Bar",
+              "name": "Wob",
               "parameters": []
             },
             {

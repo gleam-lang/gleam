@@ -72,3 +72,23 @@ fn alias_different_module() {
         vec![],
     );
 }
+
+#[test]
+fn duplicate_parameter() {
+    assert_module_error!(
+        r#"
+type A(a, a) =
+  List(a)
+"#
+    );
+}
+
+#[test]
+fn unused_parameter() {
+    assert_module_error!(
+        r#"
+type A(a) =
+  Int
+"#
+    );
+}

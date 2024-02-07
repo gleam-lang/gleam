@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/type_alias.rs
+assertion_line: 78
+expression: "\ntype A(a, a) =\n  List(a)\n"
+---
+error: Duplicate type parameter
+  ┌─ /src/one/two.gleam:2:1
+  │  
+2 │ ╭ type A(a, a) =
+3 │ │   List(a)
+  │ ╰─────────^
+
+This definition has multiple type parameters named `a`.
+Rename or remove one of them.
+

@@ -1140,7 +1140,7 @@ pub fn is_open(x: Connection) -> Bool
 #[test]
 fn infer_module_test21() {
     assert_module_infer!(
-        "pub type Pair(thing, thing)\n
+        "pub type Pair(a, b)\n
 @external(erlang, \"\", \"\")
 pub fn pair(x: a) -> Pair(a, a)
 ",

@@ -548,7 +548,7 @@ impl TypeVariantConstructors {
                 let t = named_types
                     .get(p)
                     .expect("Type parameter not found in hydrator");
-                match t.as_ref() {
+                match t.type_.as_ref() {
                     Type::Var { type_: typ } => match typ.borrow().deref() {
                         TypeVar::Generic { id } => *id,
                         _ => panic!("{}", error),

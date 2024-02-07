@@ -2355,7 +2355,8 @@ The missing patterns are:\n"
                     target: current_target,
                 } => {
                     let text = wrap_format!(
-                        "This value is not available as it is defined using externals, and there is no implementation for the {} target.",
+                        "This value is not available as it is defined using externals, \
+and there is no implementation for the {} target.",
                         match current_target {
                             Target::Erlang => "Erlang",
                             Target::JavaScript => "JavaScript",
@@ -2363,6 +2364,49 @@ The missing patterns are:\n"
                     );
                     Diagnostic {
                         title: "Unsupported target".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            path: path.clone(),
+                            src: src.clone(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::UnusedTypeAliasParameter { location, name } => {
+                    let text = wrap_format!(
+                        "The type variable `{name}` is unused. It can be safely removed.",
+                    );
+                    Diagnostic {
+                        title: "Unused type parameter".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            path: path.clone(),
+                            src: src.clone(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::DuplicateTypeParameter { location, name } => {
+                    let text = wrap_format!(
+                        "This definition has multiple type parameters named `{name}`.
+Rename or remove one of them.",
+                    );
+                    Diagnostic {
+                        title: "Duplicate type parameter".into(),
                         text,
                         hint: None,
                         level: Level::Error,

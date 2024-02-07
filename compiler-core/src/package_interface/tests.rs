@@ -112,7 +112,7 @@ pub fn compile_package(
         name: module_name,
         code: src.into(),
         mtime: SystemTime::UNIX_EPOCH,
-        input_path: "foo".into(),
+        input_path: "wibble".into(),
         origin: Origin::Src,
         ast,
         extra: parsed.extra,
@@ -133,7 +133,7 @@ fn package_from_module(module: Module) -> Package {
                 patch: 9,
                 pre: vec![
                     Identifier::Numeric(1),
-                    Identifier::AlphaNumeric("foo".into()),
+                    Identifier::AlphaNumeric("wibble".into()),
                 ],
                 build: Some("build".into()),
             },
@@ -174,29 +174,29 @@ pub fn private_definitions_are_not_included() {
         "
 const float = 1.1
 fn main() {}
-type Foo
-type Bar = Int
+type Wibble
+type Wob = Int
 "
     );
 }
 
 #[test]
 pub fn opaque_constructors_are_not_exposed() {
-    assert_package_interface!("pub opaque type Foo { Bar }")
+    assert_package_interface!("pub opaque type Wibble { Wob }")
 }
 
 #[test]
 pub fn type_aliases() {
-    assert_package_interface!("pub type Foo(a) = Int")
+    assert_package_interface!("pub type Wibble(a) = List(a)")
 }
 
 #[test]
 pub fn type_definition() {
     assert_package_interface!(
         "
-/// Foo's documentation
-pub type Foo(a, b) {
-  Bar
+/// Wibble's documentation
+pub type Wibble(a, b) {
+  Wob
   Baz
 }
 "
@@ -219,9 +219,9 @@ pub const bool = True
 pub fn generic_function() {
     assert_package_interface!(
         r#"
-pub type Bar(a) { Bar }
+pub type Wob(a) { Wob }
 @deprecated("deprecation message")
-pub fn main() { Bar }
+pub fn main() { Wob }
 "#
     );
 }

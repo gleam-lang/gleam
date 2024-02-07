@@ -1,17 +1,18 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-expression: "pub opaque type Foo { Bar }"
+assertion_line: 185
+expression: "pub opaque type Wibble { Wob }"
 ---
 {
   "name": "my_package",
-  "version": "11.10.9-1.foo+build",
+  "version": "11.10.9-1.wibble+build",
   "gleam-version-constraint": "1.0.0",
   "modules": {
     "my/module": {
       "documentation": [],
       "type-aliases": {},
       "types": {
-        "Foo": {
+        "Wibble": {
           "documentation": null,
           "deprecation": null,
           "parameters": 0,

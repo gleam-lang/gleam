@@ -1,10 +1,11 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
+assertion_line: 242
 expression: "\nimport other_module.{type Element as Alias} as module_alias\npub fn main() -> Alias(module_alias.Element(a)) {}\n"
 ---
 {
   "name": "my_package",
-  "version": "11.10.9-1.foo+build",
+  "version": "11.10.9-1.wibble+build",
   "gleam-version-constraint": "1.0.0",
   "modules": {
     "my/module": {

@@ -283,11 +283,18 @@ fn register_type_alias(
         deprecation,
         ..
     } = t;
+
+    // A type alias must not have the same name as any other type in the module.
     assert_unique_type_name(names, name, *location)?;
+
+    // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
+    // in some fashion.
     let mut hydrator = Hydrator::new();
     let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
     hydrator.disallow_new_type_variables();
     let typ = hydrator.type_from_ast(resolved_type, environment)?;
+
+    // Insert the alias so that it can be used by other code.
     environment.insert_type_constructor(
         name.clone(),
         TypeConstructor {
@@ -299,6 +306,15 @@ fn register_type_alias(
             deprecation: deprecation.clone(),
         },
     )?;
+
+    if let Some(name) = hydrator.unused_type_variables().next() {
+        return Err(Error::UnusedTypeAliasParameter {
+            location: *location,
+            name: name.clone(),
+        });
+    }
+
+    // Register the type for detection of dead code.
     if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
     };
@@ -1187,14 +1203,15 @@ fn make_type_vars(
     environment: &mut Environment<'_>,
 ) -> Result<Vec<Arc<Type>>, Error> {
     args.iter()
-        .map(|arg| {
-            TypeAst::Var(TypeAstVar {
-                location: *location,
-                name: arg.clone(),
+        .map(|name| {
+            hydrator.add_type_variable(name, environment).map_err(|()| {
+                Error::DuplicateTypeParameter {
+                    location: *location,
+                    name: name.clone(),
+                }
             })
         })
-        .map(|ast| hydrator.type_from_ast(&ast, environment))
-        .try_collect()
+        .collect::<Result<_, _>>()
 }
 
 fn assert_unique_type_name(
