@@ -29,7 +29,7 @@ use std::{
 };
 
 use super::{
-    elixir_libraries::ElixirLibraries, Codegen, ErlangAppCodegenConfiguration, ModulesCompilation,
+    elixir_libraries::ElixirLibraries, Codegen, CompileModules, ErlangAppCodegenConfiguration,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -73,6 +73,12 @@ impl Built {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum CompilationScope {
+    AllModules,
+    OnlyDependencyModules,
+}
+
 #[derive(Debug)]
 pub struct ProjectCompiler<IO> {
     // The gleam.toml config for the root package of the project
@@ -81,7 +87,7 @@ pub struct ProjectCompiler<IO> {
     importable_modules: im::HashMap<EcoString, type_::ModuleInterface>,
     defined_modules: im::HashMap<EcoString, Utf8PathBuf>,
     stale_modules: StaleTracker,
-    modules_compilation: ModulesCompilation,
+    compilation_scope: CompilationScope,
     warnings: WarningEmitter,
     telemetry: Box<dyn Telemetry>,
     options: Options,
@@ -103,7 +109,7 @@ where
     pub fn new(
         config: PackageConfig,
         options: Options,
-        modules_compilation: ModulesCompilation,
+        compilation_scope: CompilationScope,
         packages: Vec<ManifestPackage>,
         telemetry: Box<dyn Telemetry>,
         warning_emitter: Arc<dyn WarningEmitterIO>,
@@ -122,7 +128,7 @@ where
             ids: UniqueIdGenerator::new(),
             warnings: WarningEmitter::new(warning_emitter),
             subprocess_stdio: Stdio::Inherit,
-            modules_compilation,
+            compilation_scope,
             telemetry,
             packages,
             options,
@@ -189,7 +195,7 @@ where
             &config,
             true,
             self.paths.root().to_path_buf(),
-            self.modules_compilation,
+            self.compilation_scope,
         )?;
         Ok(Package { config, modules })
     }
@@ -497,9 +503,9 @@ where
 
         // Since we're compiling a dependency package we always want to compile
         // all its modules and check that it's compiling.
-        // That's why we're not using the project compiler's `modules_compilation` but
-        // we force the `CompileAll` mode.
-        self.compile_gleam_package(&config, false, package_root, ModulesCompilation::CompileAll)
+        // That's why we're not using the project compiler's `compilation_scope`
+        // but we force the `AllModules` compilation scope.
+        self.compile_gleam_package(&config, false, package_root, CompilationScope::AllModules)
     }
 
     fn load_cached_package(
@@ -524,7 +530,7 @@ where
         config: &PackageConfig,
         is_root: bool,
         root_path: Utf8PathBuf,
-        modules_compilation: ModulesCompilation,
+        compilation_scope: CompilationScope,
     ) -> Result<Vec<Module>, Error> {
         let out_path =
             self.paths
@@ -557,10 +563,20 @@ where
                 prelude_location: Utf8PathBuf::from("../prelude.mjs"),
             },
         };
+
+        // Since we're compiling the gleam root package (notice dependencies are
+        // compiled with `compile_gleam_dep_package`) we don't want to compile
+        // any module if the compilation scope requires to compile only the
+        // dependency modules.
+        let compile_modules = match compilation_scope {
+            CompilationScope::AllModules => CompileModules::All,
+            CompilationScope::OnlyDependencyModules => CompileModules::None,
+        };
+
         let mut compiler = PackageCompiler::new(
             config,
             mode,
-            modules_compilation,
+            compile_modules,
             &root_path,
             &out_path,
             &lib_path,

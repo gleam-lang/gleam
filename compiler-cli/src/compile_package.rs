@@ -7,7 +7,7 @@ use camino::Utf8Path;
 use ecow::EcoString;
 use gleam_core::{
     build::{
-        Mode, ModulesCompilation, NullTelemetry, PackageCompiler, StaleTracker, Target,
+        CompileModules, Mode, NullTelemetry, PackageCompiler, StaleTracker, Target,
         TargetCodegenConfiguration,
     },
     metadata,
@@ -42,7 +42,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let mut compiler = PackageCompiler::new(
         &config,
         Mode::Dev,
-        ModulesCompilation::CompileAll,
+        CompileModules::All,
         &options.package_directory,
         &options.output_directory,
         &options.libraries_directory,
