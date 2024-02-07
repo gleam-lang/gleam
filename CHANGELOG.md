@@ -23,6 +23,7 @@
   containing metadata about the root package.
 - `gleam docs build` now creates a json file containing metadata about the root
   package.
+- The order of dependencies in `manifest.toml` is now in alphabetical order.
 
 ### Bug fixes
 
