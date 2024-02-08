@@ -484,3 +484,30 @@ fn main() {
         expected
     );
 }
+#[test]
+fn test_inlining_fn_call() {
+    let code = "
+import list
+
+fn main() {
+  let q = list.reverse([1, 2, 3])
+  let z = list.reverse(q)
+}
+";
+    let expected = "
+import list
+
+fn main() {
+  
+  let z = list.reverse(list.reverse([1, 2, 3]))
+}
+";
+
+    let position_start = Position::new(5, 0);
+    let position_end = Position::new(5, 30);
+
+    assert_eq!(
+        inline_variable_refactor(code, position_start, position_end),
+        expected
+    );
+}
