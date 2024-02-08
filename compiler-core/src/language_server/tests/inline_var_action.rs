@@ -6,6 +6,13 @@ use lsp_types::{
 
 use super::*;
 
+macro_rules! assert_code_action {
+    ($src:expr, $position_start:expr, $position_end:expr) => {
+        let result = inline_variable_refactor($src, $position_start, $position_end);
+        insta::assert_snapshot!(insta::internals::AutoName, result, $src);
+    };
+}
+
 fn inline_variable_refactor(src: &str, position_start: Position, position_end: Position) -> String {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
@@ -139,34 +146,24 @@ fn apply_code_edit(
 
 #[test]
 fn test_inlining_func_arg() {
-    let code = "
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
   let x = [1,2,3]
   let result = list.reverse(x)
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  
-  let result = list.reverse([1, 2, 3])
-}
-";
-
-    let position_start = Position::new(5, 0);
-    let position_end = Position::new(5, 61);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+    "#,
+        Position::new(5, 0),
+        Position::new(5, 30)
     );
 }
+
 #[test]
 fn test_inlining_with_multiple_candidates() {
-    let code = "
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
@@ -175,29 +172,16 @@ fn main() {
   let y = [4, 5, 6]
   let result2 = list.reverse(y)
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  let x = [1,2,3]
-  let result1 = list.reverse(x)
-  
-  let result2 = list.reverse([4, 5, 6])
-}
-";
-
-    let position_start = Position::new(7, 0);
-    let position_end = Position::new(7, 61);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+        "#,
+        Position::new(7, 0),
+        Position::new(7, 32)
     );
 }
+
 #[test]
 fn test_inlining_pipeline() {
-    let code = "
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
@@ -207,114 +191,63 @@ fn main() {
   |> list.reverse()
   |> list.map(fn(x) { x * 2})
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  
-  let result =
-  [1, 2, 3]
-  |> list.reverse()
-  |> list.map(fn(x) { x * 2})
-}
-";
-
-    let position_start = Position::new(6, 0);
-    let position_end = Position::new(6, 61);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+        "#,
+        Position::new(6, 0),
+        Position::new(6, 4)
     );
 }
 
 #[test]
 fn test_inlining_bin_op() {
-    let code = "
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
   let x = 1
   let y = x + 1
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  
-  let y = 1 + 1
-}
-";
-
-    let position_start = Position::new(5, 0);
-    let position_end = Position::new(5, 61);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+        "#,
+        Position::new(5, 0),
+        Position::new(5, 15)
     );
 }
 
 #[test]
 fn test_inlining_tuple() {
-    let code = "
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
   let x = [1, 2, 3]
   #(1, x, 3)
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  
-  #(1, [1, 2, 3], 3)
-}
-";
-
-    let position_start = Position::new(5, 0);
-    let position_end = Position::new(5, 61);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+        "#,
+        Position::new(5, 0),
+        Position::new(5, 15)
     );
 }
-
 #[test]
-fn test_inlining_bare_expression() {
-    let code = "
+fn test_inlining_into_expression() {
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
   let x = [1, 2, 3]
   list.reverse(x)
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  
-  list.reverse([1, 2, 3])
-}
-";
-
-    let position_start = Position::new(5, 0);
-    let position_end = Position::new(5, 61);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+        "#,
+        Position::new(5, 0),
+        Position::new(5, 17)
     );
 }
+
 #[test]
 fn test_inlining_block_expression() {
-    let code = "
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
@@ -323,85 +256,48 @@ fn main() {
     list.reverse(x)
   }
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  {
-    
-    list.reverse([1, 2, 3])
-  }
-}
-";
-
-    let position_start = Position::new(6, 0);
-    let position_end = Position::new(6, 61);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+        "#,
+        Position::new(6, 0),
+        Position::new(6, 19)
     );
 }
 
 #[test]
 fn test_inlining_block_expression_with_var_outside_block() {
-    let code = "
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
   let x = [1, 2, 3]
   { list.reverse(x) }
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  
-  { list.reverse([1, 2, 3]) }
-}
-";
-
-    let position_start = Position::new(5, 0);
-    let position_end = Position::new(5, 61);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+        "#,
+        Position::new(5, 0),
+        Position::new(5, 21)
     );
 }
 
 #[test]
 fn test_inlining_list() {
-    let code = "
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
   let x = 2
   let y = [1, x, 3]
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  
-  let y = [1, 2, 3]
-}
-";
-
-    let position_start = Position::new(5, 0);
-    let position_end = Position::new(5, 61);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+        "#,
+        Position::new(5, 0),
+        Position::new(5, 20)
     );
 }
+
 #[test]
 fn test_inlining_variable_in_fn_body() {
-    let code = "
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
@@ -409,105 +305,56 @@ fn main() {
   let func = fn(x) { x + y } 
   list.map([1, 2, 3], func)
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  
-  let func = fn(x) { x + 2 } 
-  list.map([1, 2, 3], func)
-}
-";
-
-    let position_start = Position::new(5, 0);
-    let position_end = Position::new(5, 30);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+        "#,
+        Position::new(5, 0),
+        Position::new(5, 30)
     );
 }
 
 #[test]
 fn test_inlining_tuple_as_var() {
-    let code = "
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
   let y = #(1, 2, 3)
   let z = #(y, #(3, 4, 5))
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  
-  let z = #(#(1, 2, 3), #(3, 4, 5))
-}
-";
-
-    let position_start = Position::new(5, 0);
-    let position_end = Position::new(5, 30);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+        "#,
+        Position::new(5, 0),
+        Position::new(5, 30)
     );
 }
 
 #[test]
 fn test_inlining_bin_op_as_var() {
-    let code = "
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
   let x = 1 + 2
   let y = x + 3
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  
-  let y = 1 + 2 + 3
-}
-";
-
-    let position_start = Position::new(5, 0);
-    let position_end = Position::new(5, 30);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+        "#,
+        Position::new(5, 0),
+        Position::new(5, 15)
     );
 }
+
 #[test]
 fn test_inlining_fn_call() {
-    let code = "
+    assert_code_action!(
+        r#"
 import list
 
 fn main() {
   let q = list.reverse([1, 2, 3])
   let z = list.reverse(q)
 }
-";
-    let expected = "
-import list
-
-fn main() {
-  
-  let z = list.reverse(list.reverse([1, 2, 3]))
-}
-";
-
-    let position_start = Position::new(5, 0);
-    let position_end = Position::new(5, 30);
-
-    assert_eq!(
-        inline_variable_refactor(code, position_start, position_end),
-        expected
+        "#,
+        Position::new(5, 0),
+        Position::new(5, 25)
     );
 }
