@@ -188,6 +188,7 @@ fn add_missing_patterns(
                         let name = environment
                             .get_constructors_for_type(&module, &name)
                             .expect("Custom type constructor must have custom type kind")
+                            .variants
                             .get(*index as usize)
                             .expect("Custom type constructor exist for type")
                             .name

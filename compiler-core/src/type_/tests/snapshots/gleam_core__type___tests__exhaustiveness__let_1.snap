@@ -3,9 +3,8 @@ source: compiler-core/src/type_/tests/exhaustiveness.rs
 assertion_line: 849
 expression: "\npub fn main(x) {\n  let True = x\n  0\n}\n"
 ---
-
-warning: Inexhaustive pattern
-  ┌─ /src/warning/wrn.gleam:3:3
+error: Inexhaustive pattern
+  ┌─ /src/one/two.gleam:3:3
   │
 3 │   let True = x
   │   ^^^^^^^^^^^^
@@ -17,8 +16,6 @@ will crash.
 The missing patterns are:
 
     False
-
-In a future version of Gleam this will become a compile error.
 
 Hint: Use a more general pattern or use `let assert` instead.
 

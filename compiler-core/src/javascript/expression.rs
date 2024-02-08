@@ -127,9 +127,7 @@ impl<'module> Generator<'module> {
     fn statement<'a>(&mut self, statement: &'a TypedStatement) -> Output<'a> {
         match statement {
             Statement::Expression(expression) => self.expression(expression),
-            Statement::Assignment(assignment) => {
-                self.assignment(&assignment.value, &assignment.pattern)
-            }
+            Statement::Assignment(assignment) => self.assignment(assignment),
             Statement::Use(_use) => {
                 unreachable!("Use must not be present for JavaScript generation")
             }
@@ -158,11 +156,8 @@ impl<'module> Generator<'module> {
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
             TypedExpr::Case {
-                location,
-                subjects,
-                clauses,
-                ..
-            } => self.case(*location, subjects, clauses),
+                subjects, clauses, ..
+            } => self.case(subjects, clauses),
 
             TypedExpr::Call { fun, args, .. } => self.call(fun, args),
             TypedExpr::Fn { args, body, .. } => self.fn_(args, body),
@@ -431,9 +426,7 @@ impl<'module> Generator<'module> {
         let count = assignments.len();
         let mut documents = Vec::with_capacity((count + 1) * 2);
         for assignment in assignments.iter() {
-            documents.push(self.not_in_tail_position(|gen| {
-                gen.assignment(&assignment.value, &assignment.pattern)
-            })?);
+            documents.push(self.not_in_tail_position(|gen| gen.assignment(assignment))?);
             documents.push(line());
         }
         documents.push(self.expression(finally)?);
@@ -488,7 +481,15 @@ impl<'module> Generator<'module> {
         }
     }
 
-    fn assignment<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
+    fn assignment<'a>(&mut self, assignment: &'a TypedAssignment) -> Output<'a> {
+        let TypedAssignment {
+            pattern,
+            kind,
+            value,
+            annotation: _,
+            location: _,
+        } = assignment;
+
         // If it is a simple assignment to a variable we can generate a normal
         // JS assignment
         if let TypedPattern::Variable { name, .. } = pattern {
@@ -523,23 +524,23 @@ impl<'module> Generator<'module> {
 
         // If we are in tail position we can return value being assigned
         let afterwards = if self.scope_position.is_tail() {
-            line()
-                .append("return ")
-                .append(subject_assignment.clone().unwrap_or_else(|| value.clone()))
-                .append(";")
+            docvec![
+                line(),
+                "return ",
+                subject_assignment.clone().unwrap_or_else(|| value.clone()),
+                ";"
+            ]
         } else {
             nil()
         };
 
+        let compiled =
+            self.pattern_into_assignment_doc(compiled, subject, pattern.location(), *kind)?;
         // If there is a subject name given create a variable to hold it for
         // use in patterns
         let doc = match subject_assignment {
-            Some(name) => {
-                let compiled =
-                    self.pattern_into_assignment_doc(compiled, subject, pattern.location())?;
-                docvec!("let ", name, " = ", value, ";", line(), compiled)
-            }
-            None => self.pattern_into_assignment_doc(compiled, subject, pattern.location())?,
+            Some(name) => docvec!("let ", name, " = ", value, ";", line(), compiled),
+            None => compiled,
         };
 
         Ok(doc.append(afterwards).force_break())
@@ -547,12 +548,9 @@ impl<'module> Generator<'module> {
 
     fn case<'a>(
         &mut self,
-        location: SrcSpan,
         subject_values: &'a [TypedExpr],
         clauses: &'a [TypedClause],
     ) -> Output<'a> {
-        let mut possibility_of_no_match = true;
-
         let (subjects, subject_assignments): (Vec<_>, Vec<_>) =
             pattern::assign_subjects(self, subject_values)
                 .into_iter()
@@ -604,17 +602,12 @@ impl<'module> Generator<'module> {
                 let is_final_clause = clause_number == total_patterns;
                 let is_first_clause = clause_number == 1;
                 let is_only_clause = is_final_clause && is_first_clause;
-                let is_catch_all = !compiled.has_checks() && clause.guard.is_none();
 
-                if is_catch_all {
-                    possibility_of_no_match = false;
-                }
-
-                doc = if is_only_clause && is_catch_all {
+                doc = if is_only_clause {
                     // If this is the only clause and there are no checks then we can
                     // render just the body as the case does nothing
                     doc.append(body)
-                } else if is_final_clause && is_catch_all {
+                } else if is_final_clause {
                     // If this is the final clause and there are no checks then we can
                     // render `else` instead of `else if (...)`
                     doc.append(" else {")
@@ -639,16 +632,6 @@ impl<'module> Generator<'module> {
             }
         }
 
-        if possibility_of_no_match {
-            // Lastly append an error if no clause matches.
-            // We can remove this when we get exhaustiveness checking.
-            doc = doc
-                .append(" else {")
-                .append(docvec!(line(), self.case_no_match(location, subjects)?).nest(INDENT))
-                .append(line())
-                .append("}")
-        }
-
         // If there is a subject name given create a variable to hold it for
         // use in patterns
         let subject_assignments: Vec<_> = subject_assignments
@@ -662,18 +645,6 @@ impl<'module> Generator<'module> {
             .try_collect()?;
 
         Ok(docvec![subject_assignments, doc].force_break())
-    }
-
-    fn case_no_match<'a, Subjects>(&mut self, location: SrcSpan, subjects: Subjects) -> Output<'a>
-    where
-        Subjects: IntoIterator<Item = Document<'a>>,
-    {
-        Ok(self.throw_error(
-            "case_no_match",
-            &string("No case clause matched"),
-            location,
-            [("values", array(subjects.into_iter().map(Ok))?)],
-        ))
     }
 
     fn assignment_no_match<'a>(&mut self, location: SrcSpan, subject: Document<'a>) -> Output<'a> {
@@ -1052,19 +1023,26 @@ impl<'module> Generator<'module> {
         compiled_pattern: CompiledPattern<'a>,
         subject: Document<'a>,
         location: SrcSpan,
+        kind: AssignmentKind,
     ) -> Output<'a> {
-        if compiled_pattern.checks.is_empty() {
-            return Ok(Self::pattern_assignments_doc(compiled_pattern.assignments));
-        }
-        if compiled_pattern.assignments.is_empty() {
-            return self.pattern_checks_or_throw_doc(compiled_pattern.checks, subject, location);
-        }
+        let any_assignments = !compiled_pattern.assignments.is_empty();
+        let assignments = Self::pattern_assignments_doc(compiled_pattern.assignments);
 
-        Ok(docvec![
-            self.pattern_checks_or_throw_doc(compiled_pattern.checks, subject, location)?,
-            line(),
-            Self::pattern_assignments_doc(compiled_pattern.assignments)
-        ])
+        // If it's an assert then it is likely that the pattern is inexhaustive. When a value is
+        // provided that does not get matched the code needs to throw an exception, which is done
+        // by the pattern_checks_or_throw_doc method.
+        if kind.is_assert() && !compiled_pattern.checks.is_empty() {
+            let checks =
+                self.pattern_checks_or_throw_doc(compiled_pattern.checks, subject, location)?;
+
+            if !any_assignments {
+                Ok(checks)
+            } else {
+                Ok(docvec![checks, line(), assignments])
+            }
+        } else {
+            Ok(assignments)
+        }
     }
 
     fn pattern_checks_or_throw_doc<'a>(

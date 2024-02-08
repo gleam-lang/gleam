@@ -3,9 +3,8 @@ source: compiler-core/src/type_/tests/exhaustiveness.rs
 assertion_line: 799
 expression: "\npub type Type {\n  One\n  Two\n  Three(Type)\n}\n\npub fn main(x) {\n  case x {\n    One -> 1\n    Two -> 2\n    Three(One) -> 4\n  }\n}\n"
 ---
-
-warning: Inexhaustive patterns
-   ┌─ /src/warning/wrn.gleam:9:3
+error: Inexhaustive patterns
+   ┌─ /src/one/two.gleam:9:3
    │  
  9 │ ╭   case x {
 10 │ │     One -> 1
@@ -21,7 +20,4 @@ The missing patterns are:
 
     Three(Three(_))
     Three(Two)
-
-In a future version of Gleam this will become a compile error.
-
 

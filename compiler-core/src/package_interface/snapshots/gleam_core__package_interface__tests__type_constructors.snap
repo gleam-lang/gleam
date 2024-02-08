@@ -1,0 +1,73 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+assertion_line: 263
+expression: "\npub type Box(a, b) {\n  Box(b, Int)\n  OtherBox(message: String, a: a)\n}\n"
+---
+{
+  "name": "my_package",
+  "version": "11.10.9-1.wibble+build",
+  "gleam-version-constraint": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "type-aliases": {},
+      "types": {
+        "Box": {
+          "documentation": null,
+          "deprecation": null,
+          "parameters": 2,
+          "constructors": [
+            {
+              "documentation": null,
+              "name": "Box",
+              "parameters": [
+                {
+                  "label": null,
+                  "type": {
+                    "kind": "variable",
+                    "id": 1
+                  }
+                },
+                {
+                  "label": null,
+                  "type": {
+                    "kind": "named",
+                    "name": "Int",
+                    "package": "",
+                    "module": "gleam",
+                    "parameters": []
+                  }
+                }
+              ]
+            },
+            {
+              "documentation": null,
+              "name": "OtherBox",
+              "parameters": [
+                {
+                  "label": "message",
+                  "type": {
+                    "kind": "named",
+                    "name": "String",
+                    "package": "",
+                    "module": "gleam",
+                    "parameters": []
+                  }
+                },
+                {
+                  "label": "a",
+                  "type": {
+                    "kind": "variable",
+                    "id": 0
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "constants": {},
+      "functions": {}
+    }
+  }
+}

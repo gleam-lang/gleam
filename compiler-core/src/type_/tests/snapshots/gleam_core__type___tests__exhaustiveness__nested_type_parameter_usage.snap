@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 875
+expression: "\npub type Returned(a) {\n  Returned(List(a))\n}\n\nfn foo(user: Returned(#())) -> Int {\n  let Returned([#()]) = user\n  1\n}\n"
+---
+error: Inexhaustive pattern
+  ┌─ /src/one/two.gleam:7:3
+  │
+7 │   let Returned([#()]) = user
+  │   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This assignment uses a pattern that does not match all possible
+values. If one of the other values is used then the assignment
+will crash.
+
+The missing patterns are:
+
+    Returned([])
+    Returned([_, _, ..])
+
+Hint: Use a more general pattern or use `let assert` instead.
+

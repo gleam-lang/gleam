@@ -21,6 +21,7 @@ mod conditional_compilation;
 mod custom_types;
 mod errors;
 mod exhaustiveness;
+mod expression;
 mod functions;
 mod guards;
 mod imports;
@@ -162,7 +163,6 @@ fn get_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> Vec<Warning> {
         .into_iter()
         .map(|warning| match warning {
             crate::Warning::Type { warning, .. } => warning,
-            crate::Warning::Parse { .. } => panic!("Unexpected parse warning"),
             crate::Warning::InvalidSource { .. } => panic!("Invalid module file name"),
         })
         .collect_vec()
@@ -253,13 +253,18 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
     crate::type_::ExprTyper::new(
         &mut crate::type_::Environment::new(
             ids,
+            "thepackage".into(),
             "themodule".into(),
             Target::Erlang,
             &modules,
             &TypeWarningEmitter::null(),
             TargetSupport::Enforced,
         ),
-        SupportedTargets::none(),
+        Implementations {
+            gleam: false,
+            uses_erlang_externals: false,
+            uses_javascript_externals: false,
+        },
     )
     .infer_statements(ast)
 }
@@ -570,6 +575,7 @@ fn infer_module_type_retention_test() {
     assert_eq!(
         module.type_info,
         ModuleInterface {
+            contains_todo: false,
             origin: Origin::Src,
             package: "thepackage".into(),
             name: "ok".into(),
@@ -578,42 +584,49 @@ fn infer_module_type_retention_test() {
             types_value_constructors: HashMap::from([
                 (
                     "Bool".into(),
-                    vec![
-                        TypeValueConstructor {
-                            name: "True".into(),
-                            parameters: vec![],
-                        },
-                        TypeValueConstructor {
-                            name: "False".into(),
-                            parameters: vec![],
-                        }
-                    ]
+                    TypeVariantConstructors {
+                        type_parameters_ids: vec![],
+                        variants: vec![
+                            TypeValueConstructor {
+                                name: "True".into(),
+                                parameters: vec![],
+                            },
+                            TypeValueConstructor {
+                                name: "False".into(),
+                                parameters: vec![],
+                            }
+                        ]
+                    }
                 ),
                 (
                     "Result".into(),
-                    vec![
-                        TypeValueConstructor {
-                            name: "Ok".into(),
-                            parameters: vec![TypeValueConstructorParameter {
-                                type_: generic_var(1),
-                                generic_type_parameter_index: Some(0)
-                            }]
-                        },
-                        TypeValueConstructor {
-                            name: "Error".into(),
-                            parameters: vec![TypeValueConstructorParameter {
-                                type_: generic_var(2),
-                                generic_type_parameter_index: Some(1)
-                            }]
-                        }
-                    ]
+                    TypeVariantConstructors {
+                        type_parameters_ids: vec![1, 2],
+                        variants: vec![
+                            TypeValueConstructor {
+                                name: "Ok".into(),
+                                parameters: vec![TypeValueConstructorField {
+                                    type_: generic_var(1),
+                                }]
+                            },
+                            TypeValueConstructor {
+                                name: "Error".into(),
+                                parameters: vec![TypeValueConstructorField {
+                                    type_: generic_var(2),
+                                }]
+                            }
+                        ]
+                    }
                 ),
                 (
                     "Nil".into(),
-                    vec![TypeValueConstructor {
-                        name: "Nil".into(),
-                        parameters: vec![]
-                    },]
+                    TypeVariantConstructors {
+                        type_parameters_ids: vec![],
+                        variants: vec![TypeValueConstructor {
+                            name: "Nil".into(),
+                            parameters: vec![]
+                        }]
+                    }
                 )
             ]),
             values: HashMap::new(),
@@ -820,48 +833,51 @@ fn pipe() {
 
 #[test]
 fn bit_array() {
-    assert_infer!("let <<x>> = <<1>> x", "Int");
+    assert_infer!("let assert <<x>> = <<1>> x", "Int");
 }
 
 #[test]
 fn bit_array2() {
-    assert_infer!("let <<x>> = <<1>> x", "Int");
+    assert_infer!("let assert <<x>> = <<1>> x", "Int");
 }
 
 #[test]
 fn bit_array3() {
-    assert_infer!("let <<x:float>> = <<1>> x", "Float");
+    assert_infer!("let assert <<x:float>> = <<1>> x", "Float");
 }
 
 #[test]
 fn bit_array4() {
-    assert_infer!("let <<x:bytes>> = <<1>> x", "BitArray");
+    assert_infer!("let assert <<x:bytes>> = <<1>> x", "BitArray");
 }
 
 #[test]
 fn bit_array5() {
-    assert_infer!("let <<x:bytes>> = <<1>> x", "BitArray");
+    assert_infer!("let assert <<x:bytes>> = <<1>> x", "BitArray");
 }
 
 #[test]
 fn bit_array6() {
-    assert_infer!("let <<x:bits>> = <<1>> x", "BitArray");
+    assert_infer!("let assert <<x:bits>> = <<1>> x", "BitArray");
 }
 
 #[test]
 fn bit_array7() {
-    assert_infer!("let <<x:bits>> = <<1>> x", "BitArray");
+    assert_infer!("let assert <<x:bits>> = <<1>> x", "BitArray");
 }
 
 #[test]
 fn bit_array8() {
-    assert_infer!("let <<x:utf8_codepoint>> = <<128013:32>> x", "UtfCodepoint");
+    assert_infer!(
+        "let assert <<x:utf8_codepoint>> = <<128013:32>> x",
+        "UtfCodepoint"
+    );
 }
 
 #[test]
 fn bit_array9() {
     assert_infer!(
-        "let <<x:utf16_codepoint>> = <<128013:32>> x",
+        "let assert <<x:utf16_codepoint>> = <<128013:32>> x",
         "UtfCodepoint"
     );
 }
@@ -869,7 +885,7 @@ fn bit_array9() {
 #[test]
 fn bit_array10() {
     assert_infer!(
-        "let <<x:utf32_codepoint>> = <<128013:32>> x",
+        "let assert <<x:utf32_codepoint>> = <<128013:32>> x",
         "UtfCodepoint"
     );
 }
@@ -877,7 +893,7 @@ fn bit_array10() {
 #[test]
 fn bit_array11() {
     assert_infer!(
-        "let a = <<1>> let <<x:bits>> = <<1, a:2-bits>> x",
+        "let a = <<1>> let assert <<x:bits>> = <<1, a:2-bits>> x",
         "BitArray"
     );
 }
@@ -1124,7 +1140,7 @@ pub fn is_open(x: Connection) -> Bool
 #[test]
 fn infer_module_test21() {
     assert_module_infer!(
-        "pub type Pair(thing, thing)\n
+        "pub type Pair(a, b)\n
 @external(erlang, \"\", \"\")
 pub fn pair(x: a) -> Pair(a, a)
 ",
@@ -2121,4 +2137,49 @@ pub fn erlang_only() -> Int
     "#;
     assert_module_infer!(module, vec![("erlang_only", "fn() -> Int")]);
     assert_js_module_error!(module);
+}
+
+#[test]
+fn imported_javascript_only_function() {
+    assert_with_module_error!(
+        (
+            "module",
+            r#"@external(javascript, "foo", "bar")
+pub fn javascript_only() -> Int"#
+        ),
+        "import module
+pub fn main() {
+  module.javascript_only()
+}",
+    );
+}
+
+#[test]
+fn javascript_only_constant() {
+    assert_with_module_error!(
+        (
+            "module",
+            r#"@external(javascript, "foo", "bar")
+fn javascript_only() -> Int
+const constant = javascript_only
+pub const javascript_only_constant = constant 
+"#
+        ),
+        "import module
+pub fn main() {
+  module.javascript_only_constant()
+}",
+    );
+}
+
+#[test]
+fn contains_todo_true() {
+    let module = compile_module("pub fn main() { 1 }", None, vec![]).unwrap();
+    assert!(!module.type_info.contains_todo);
+}
+
+#[test]
+fn contains_todo_false() {
+    let module = compile_module("pub fn main() { todo }", None, vec![]).unwrap();
+    assert!(module.type_info.contains_todo);
 }

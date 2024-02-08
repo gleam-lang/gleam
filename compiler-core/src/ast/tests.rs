@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::analyse::TargetSupport;
 use crate::build::Target;
-use crate::type_::expression::SupportedTargets;
+use crate::type_::expression::Implementations;
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{SrcSpan, TypedExpr},
@@ -64,6 +64,7 @@ fn compile_expression(src: &str) -> TypedStatement {
     let emitter = TypeWarningEmitter::null();
     let mut environment = Environment::new(
         ids,
+        "mypackage".into(),
         "mymod".into(),
         Target::Erlang,
         &modules,
@@ -74,6 +75,7 @@ fn compile_expression(src: &str) -> TypedStatement {
     // Insert a cat record to use in the tests
     let cat_type = Arc::new(Type::Named {
         public: true,
+        package: "mypackage".into(),
         module: "mymod".into(),
         name: "Cat".into(),
         args: vec![],
@@ -125,11 +127,18 @@ fn compile_expression(src: &str) -> TypedStatement {
             .into(),
         },
     );
-    ExprTyper::new(&mut environment, SupportedTargets::none())
-        .infer_statements(ast)
-        .expect("should successfully infer")
-        .first()
-        .clone()
+    ExprTyper::new(
+        &mut environment,
+        Implementations {
+            gleam: false,
+            uses_erlang_externals: false,
+            uses_javascript_externals: false,
+        },
+    )
+    .infer_statements(ast)
+    .expect("should successfully infer")
+    .first()
+    .clone()
 }
 
 #[test]

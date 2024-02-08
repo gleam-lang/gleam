@@ -60,7 +60,7 @@ fn string_patterns() {
     assert_js!(
         r#"
 fn go(x) {
-  let "Hello" = x
+  let assert "Hello" = x
 }
 "#,
     );

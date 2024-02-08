@@ -144,11 +144,6 @@ pub enum Warning {
         src: EcoString,
         warning: crate::type_::Warning,
     },
-    Parse {
-        path: Utf8PathBuf,
-        src: EcoString,
-        warning: crate::parse::Warning,
-    },
     InvalidSource {
         path: Utf8PathBuf,
     },
@@ -157,32 +152,6 @@ pub enum Warning {
 impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
-            Self::Parse { path, warning, src } => match warning {
-                crate::parse::Warning::ReservedWord { location, word } => {
-                    let text = format!(
-                        "The word `{word}` has been reserved for future use.
-
-If you do not rename this then your code may stop working in
-a future version of Gleam."
-                    );
-                    Diagnostic {
-                        title: "Reserved word used".into(),
-                        text,
-                        hint: None,
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            path: path.to_path_buf(),
-                            src: src.clone(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-            },
-
             Warning::InvalidSource { path } => Diagnostic {
                 title: "Invalid module name".into(),
                 text: "Module names must begin with a lowercase letter and contain\
@@ -195,25 +164,6 @@ a future version of Gleam."
                 )),
             },
             Self::Type { path, warning, src } => match warning {
-                type_::Warning::UnusedFunctionBody { location } => Diagnostic {
-                    title: "Unused function body".into(),
-                    text: wrap(
-                        "This function has external implementations \
-for all targets so the body is never used.\n",
-                    ),
-                    hint: Some("The body can be safely removed".into()),
-                    level: diagnostic::Level::Warning,
-                    location: Some(Location {
-                        path: path.to_path_buf(),
-                        src: src.clone(),
-                        label: diagnostic::Label {
-                            text: None,
-                            span: *location,
-                        },
-                        extra_labels: Vec::new(),
-                    }),
-                },
-
                 type_::Warning::Todo {
                     kind,
                     location,
@@ -406,21 +356,34 @@ expression.",
                     }),
                 },
 
-                type_::Warning::UnusedImportedModuleAlias { location, .. } => Diagnostic {
-                    title: "Unused imported module alias".into(),
-                    text: "".into(),
-                    hint: Some("You can safely remove it.".into()),
-                    level: diagnostic::Level::Warning,
-                    location: Some(Location {
-                        src: src.clone(),
-                        path: path.to_path_buf(),
-                        label: diagnostic::Label {
-                            text: Some("This imported module alias is never used".into()),
-                            span: *location,
-                        },
-                        extra_labels: Vec::new(),
-                    }),
-                },
+                type_::Warning::UnusedImportedModuleAlias {
+                    location,
+                    module_name,
+                    ..
+                } => {
+                    let text = format!(
+                        "\
+Hint: You can safely remove it.
+
+    import {module_name} as _
+"
+                    );
+                    Diagnostic {
+                        title: "Unused imported module alias".into(),
+                        text,
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: Some("This alias is never used".into()),
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
 
                 type_::Warning::UnusedImportedValue { location, .. } => Diagnostic {
                     title: "Unused imported value".into(),
@@ -563,7 +526,7 @@ Run this command to add it to your dependencies:
 "
                     ));
                     Diagnostic {
-                        title: "Transative dependency imported".into(),
+                        title: "Transitive dependency imported".into(),
                         text,
                         hint: None,
                         level: diagnostic::Level::Warning,
@@ -607,79 +570,6 @@ Run this command to add it to your dependencies:
                             path: path.to_path_buf(),
                             label: diagnostic::Label {
                                 text: diagnostic_label_text,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-
-                type_::Warning::InexhaustiveLetAssignment { location, missing } => {
-                    let mut text: String =
-                        "This assignment uses a pattern that does not match all possible
-values. If one of the other values is used then the assignment
-will crash.
-
-The missing patterns are:\n"
-                            .into();
-                    for missing in missing {
-                        text.push_str("\n    ");
-                        text.push_str(missing);
-                    }
-                    text.push_str(
-                        "
-
-In a future version of Gleam this will become a compile error.
-",
-                    );
-
-                    Diagnostic {
-                        title: "Inexhaustive pattern".into(),
-                        text,
-                        hint: Some(
-                            "Use a more general pattern or use `let assert` instead.".into(),
-                        ),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            src: src.clone(),
-                            path: path.to_path_buf(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-
-                type_::Warning::InexhaustiveCaseExpression { location, missing } => {
-                    let mut text: String =
-                        "This case expression does not have a pattern for all possible values.
-If is run on one of the values without a pattern then it will crash.
-
-The missing patterns are:\n"
-                            .into();
-                    for missing in missing {
-                        text.push_str("\n    ");
-                        text.push_str(missing);
-                    }
-                    text.push_str(
-                        "
-
-In a future version of Gleam this will become a compile error.
-",
-                    );
-
-                    Diagnostic {
-                        title: "Inexhaustive patterns".into(),
-                        text,
-                        hint: None,
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            src: src.clone(),
-                            path: path.to_path_buf(),
-                            label: diagnostic::Label {
-                                text: None,
                                 span: *location,
                             },
                             extra_labels: Vec::new(),

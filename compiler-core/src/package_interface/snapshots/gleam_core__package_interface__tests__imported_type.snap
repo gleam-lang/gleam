@@ -1,0 +1,45 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+assertion_line: 231
+expression: "\nimport other_module.{type Element}\npub fn main() -> Element(Int) {}\n"
+---
+{
+  "name": "my_package",
+  "version": "11.10.9-1.wibble+build",
+  "gleam-version-constraint": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "type-aliases": {},
+      "types": {},
+      "constants": {},
+      "functions": {
+        "main": {
+          "documentation": null,
+          "deprecation": null,
+          "implementations": {
+            "gleam": true,
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
+          },
+          "parameters": [],
+          "return": {
+            "kind": "named",
+            "name": "Element",
+            "package": "other_package",
+            "module": "other_module",
+            "parameters": [
+              {
+                "kind": "named",
+                "name": "Int",
+                "package": "",
+                "module": "gleam",
+                "parameters": []
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

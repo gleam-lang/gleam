@@ -8,5 +8,6 @@ error: Unsupported target
 3 │   javascript_only()
   │   ^^^^^^^^^^^^^^^
 
-This function doesn't have an implementation for the Erlang target.
+This value is not available as it is defined using externals, and there is
+no implementation for the Erlang target.
 

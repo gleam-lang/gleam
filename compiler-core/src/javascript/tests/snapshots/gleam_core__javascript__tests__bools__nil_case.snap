@@ -3,20 +3,7 @@ source: compiler-core/src/javascript/tests/bools.rs
 assertion_line: 128
 expression: "\nfn go(a) {\n  case a {\n    Nil -> 0\n  }\n}\n"
 ---
-import { makeError } from "../gleam.mjs";
-
 function go(a) {
-  if (!a) {
-    return 0;
-  } else {
-    throw makeError(
-      "case_no_match",
-      "my/mod",
-      3,
-      "go",
-      "No case clause matched",
-      { values: [a] }
-    )
-  }
+  return 0;
 }
 

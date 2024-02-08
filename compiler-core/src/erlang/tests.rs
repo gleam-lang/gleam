@@ -554,6 +554,7 @@ fn guard_variable_rewriting() {
       let a = a
       a
     }
+    _ -> 0.0
   }
 }
 "

@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nimport module.{a}\n\npub fn b() {\n  a\n}\n"
+---
+
+warning: Deprecated value used
+  ┌─ /src/warning/wrn.gleam:5:3
+  │
+5 │   a
+  │   ^ This value has been deprecated
+
+It was deprecated with this message: Don't use this!
+

@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+assertion_line: 190
+expression: pub type Wibble(a) = List(a)
+---
+{
+  "name": "my_package",
+  "version": "11.10.9-1.wibble+build",
+  "gleam-version-constraint": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "type-aliases": {
+        "Wibble": {
+          "documentation": null,
+          "deprecation": null,
+          "parameters": 1,
+          "alias": {
+            "kind": "named",
+            "name": "List",
+            "package": "",
+            "module": "gleam",
+            "parameters": [
+              {
+                "kind": "variable",
+                "id": 0
+              }
+            ]
+          }
+        }
+      },
+      "types": {},
+      "constants": {},
+      "functions": {}
+    }
+  }
+}

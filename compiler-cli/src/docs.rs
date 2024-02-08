@@ -1,6 +1,6 @@
 use std::time::{Instant, SystemTime};
 
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
@@ -122,13 +122,18 @@ pub(crate) fn build_documentation(
         source: paths.readme(), // TODO: support non markdown READMEs. Or a default if there is none.
     }];
     pages.extend(config.documentation.pages.iter().cloned());
-    let outputs = gleam_core::docs::generate_html(
+    let mut outputs = gleam_core::docs::generate_html(
         &paths,
         config,
         compiled.modules.as_slice(),
         &pages,
         SystemTime::now(),
     );
+
+    outputs.push(gleam_core::docs::generate_json_package_interface(
+        Utf8PathBuf::from("package-interface.json"),
+        compiled,
+    ));
     Ok(outputs)
 }
 

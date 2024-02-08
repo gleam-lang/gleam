@@ -741,6 +741,10 @@ pub enum Repository {
         #[serde(with = "uri_serde_default_https")]
         host: Uri,
     },
+    SourceHut {
+        user: String,
+        repo: String,
+    },
     Custom {
         url: String,
     },
@@ -757,6 +761,9 @@ impl Repository {
             }
             Repository::CodeBerg { repo, user } => {
                 Some(format!("https://codeberg.org/{user}/{repo}"))
+            }
+            Repository::SourceHut { repo, user } => {
+                Some(format!("https://git.sr.ht/~{user}/{repo}"))
             }
             Repository::Gitea { repo, user, host } => Some(format!("{host}/{user}/{repo}")),
             Repository::Custom { url } => Some(url.clone()),

@@ -711,21 +711,30 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn1() {
     assert_format!(
         r#"fn main(label_one one, label_two two, label_three three) {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn2() {
     assert_format!(
         r#"fn main(label_one one: One, label_two two: Two) {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn3() {
     assert_format!(
         r#"fn main(
   label_one one: One,
@@ -744,14 +753,20 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn4() {
     assert_format!(
         r#"fn main(label _discarded) {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn5() {
     // https://github.com/gleam-lang/gleam/issues/613
     assert_format!(
         r#"fn main() {
@@ -760,7 +775,10 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn6() {
     //
     // Module function return annotations
     //
@@ -771,7 +789,10 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn7() {
     assert_format!(
         r#"fn main() -> Loooooooooooooooooooong(
   Looooooooooooooong,
@@ -783,7 +804,10 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn8() {
     assert_format!(
         r#"fn main() -> Loooooooooooooooooooong(
   Loooooooooooooooooooooooooooooooooooooooooong,
@@ -792,21 +816,33 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn9() {
     assert_format!(
         r#"fn main() -> program.Exit {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn10() {
     assert_format!(
-        "fn order(first: Set(member), second: Set(member)) -> #(Set(member), Set(member)) {
+        "fn order(
+  first: Set(member),
+  second: Set(member),
+) -> #(Set(member), Set(member), a) {
   Nil
 }
 "
     );
+}
 
+#[test]
+fn statement_fn11() {
     assert_format!(
         "///
 pub fn try_map(
@@ -2241,8 +2277,8 @@ fn expr_pipe() {
         r#"fn main() {
   #(
     1
-    |> succ
-    |> succ,
+      |> succ
+      |> succ,
     2,
     3,
   )
@@ -2254,8 +2290,8 @@ fn expr_pipe() {
         r#"fn main() {
   some_call(
     1
-    |> succ
-    |> succ,
+      |> succ
+      |> succ,
     2,
     3,
   )
@@ -2267,8 +2303,8 @@ fn expr_pipe() {
         r#"fn main() {
   [
     1
-    |> succ
-    |> succ,
+      |> succ
+      |> succ,
     2,
     3,
   ]
@@ -5346,7 +5382,7 @@ fn list_with_pipe_format() {
         r#"pub fn main() {
   [
     "Success!"
-    |> ansi(apply: [1, 31]),
+      |> ansi(apply: [1, 31]),
     "",
     "Wrote `" <> bin <> "`, `" <> pwsh_bin <> "`",
   ]
@@ -5372,6 +5408,141 @@ fn function_call_close_to_line_limit() {
     of,
     80,
     chars,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn multiline_string_are_not_broken_with_string_concatenation_if_they_fit() {
+    assert_format!(
+        r#"pub fn main() {
+  "pub fn foo(" <> arg <> ") ->" <> type_ <> "{
+    body
+}"
+}
+"#
+    );
+}
+
+#[test]
+fn nesting_goes_back_to_normal_after_multiline_string() {
+    assert_format!(
+        r#"pub fn main() {
+  let x = {
+    "
+1
+2
+" <> long_name_function_call(
+      1_111_111_111_111_111,
+      222_222_222_222,
+      3_333_333_333_333_333,
+    )
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn multiline_string_get_broken_on_newlines_as_function_arguments() {
+    assert_format!(
+        r#"pub fn main() {
+  foo(
+    bar,
+    "bar
+  asd
+       baz",
+    foo,
+    bar,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_used_as_function_arguments_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  foo(
+    a_variable_with_a_long_name
+      |> another_variable_with_a_long_name
+      |> yet_another_variable_with_a_long_name,
+    bar,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_used_as_function_arguments_is_not_nested_if_it_is_the_only_argument() {
+    assert_format!(
+        r#"pub fn main() {
+  foo(
+    a_variable_with_a_long_name
+    |> another_variable_with_a_long_name
+    |> yet_another_variable_with_a_long_name,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_list_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    foo,
+    a_variable_with_a_long_name
+      |> another_variable_with_a_long_name
+      |> yet_another_variable_with_a_long_name,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_list_is_not_nested_if_only_item() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    a_variable_with_a_long_name
+    |> another_variable_with_a_long_name
+    |> yet_another_variable_with_a_long_name,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_tuple_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    foo,
+    a_variable_with_a_long_name
+      |> another_variable_with_a_long_name
+      |> yet_another_variable_with_a_long_name,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_tuple_is_not_nested_if_only_item() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    a_variable_with_a_long_name
+    |> another_variable_with_a_long_name
+    |> yet_another_variable_with_a_long_name,
   )
 }
 "#

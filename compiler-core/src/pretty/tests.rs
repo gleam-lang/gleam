@@ -87,14 +87,24 @@ fn fits_test() {
     assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
 
     // Nest fits if combined smaller than limit
-    let doc = Nest(1, NestCondition::Always, Box::new(String("12".into())));
+    let doc = Nest(
+        1,
+        NestMode::Increase,
+        NestCondition::Always,
+        Box::new(String("12".into())),
+    );
     assert!(fits(2, 0, vector![(0, Broken, &doc)]));
     assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
     assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
     assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
 
     // Nest fits if combined smaller than limit
-    let doc = Nest(0, NestCondition::Always, Box::new(String("12".into())));
+    let doc = Nest(
+        0,
+        NestMode::Increase,
+        NestCondition::Always,
+        Box::new(String("12".into())),
+    );
     assert!(fits(2, 0, vector![(0, Broken, &doc)]));
     assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
     assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
@@ -127,6 +137,7 @@ fn format_test() {
 
     let doc = Nest(
         2,
+        NestMode::Increase,
         NestCondition::Always,
         Box::new(String("1".into()).append(Line(1).append(String("2".into())))),
     );
@@ -297,4 +308,10 @@ fn empty_documents() {
     assert!("".to_doc().append("".to_doc()).is_empty());
     assert!(!"foo".to_doc().append("".to_doc()).is_empty());
     assert!(!"".to_doc().append("foo".to_doc()).is_empty());
+}
+
+#[test]
+fn set_nesting() {
+    let doc = Vec(vec!["foo".to_doc(), break_("", " "), "bar".to_doc()]).group();
+    assert_eq!("foo\nbar", doc.set_nesting(0).nest(2).to_pretty_string(1));
 }

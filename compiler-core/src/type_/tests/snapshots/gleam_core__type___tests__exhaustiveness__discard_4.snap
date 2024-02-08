@@ -3,9 +3,8 @@ source: compiler-core/src/type_/tests/exhaustiveness.rs
 assertion_line: 685
 expression: "\npub type Thing {\n  Thing(a: Bool, b: Bool)\n}\n\npub fn main(x) {\n  case x {\n    Thing(a: True, ..) -> 1\n  }\n}\n"
 ---
-
-warning: Inexhaustive patterns
-  ┌─ /src/warning/wrn.gleam:7:3
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:7:3
   │  
 7 │ ╭   case x {
 8 │ │     Thing(a: True, ..) -> 1
@@ -18,7 +17,4 @@ If is run on one of the values without a pattern then it will crash.
 The missing patterns are:
 
     Thing(False, _)
-
-In a future version of Gleam this will become a compile error.
-
 

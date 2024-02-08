@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Runtime, Target};
 use crate::diagnostic::{Diagnostic, Label, Location};
-use crate::type_::error::MissingAnnotation;
+use crate::type_::error::{MissingAnnotation, UnknownTypeHint};
 use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{
@@ -246,6 +246,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("The --javascript-prelude flag must be given when compiling to JavaScript")]
     JavaScriptPreludeRequired,
+
+    #[error("The modules {unfinished:?} contain todo expressions and so cannot be published")]
+    CannotPublishTodo { unfinished: Vec<EcoString> },
 }
 
 impl Error {
@@ -534,7 +537,7 @@ forward slash and must not end with a slash."
                 level: Level::Error,
                 location: None,
                 hint: Some(format!(
-                    "Add a function with the singature `pub fn main() {{}}` \
+                    "Add a public `main` function to \
 to `src/{module}.gleam`."
                 )),
             },
@@ -572,6 +575,25 @@ to `src/{module}.gleam`."
 If you want to overwrite these files, delete them and run the command again.
 ",
                     file_names
+                        .iter()
+                        .map(|name| format!("  - {}", name.as_str()))
+                        .join("\n")
+                ),
+                level: Level::Error,
+                hint: None,
+                location: None,
+            },
+
+            Error::CannotPublishTodo { unfinished } => Diagnostic {
+                title: "Cannot publish unfinished code".into(),
+                text: format!(
+                    "These modules contain todo expressions and cannot be published:
+
+{}
+
+Please remove them and try again.
+",
+                    unfinished
                         .iter()
                         .map(|name| format!("  - {}", name.as_str()))
                         .join("\n")
@@ -1482,11 +1504,28 @@ constructing a new record with its values."
                 TypeError::UnknownType {
                     location,
                     name,
-                    types,
+                    hint,
                 } => {
-                    let text = wrap_format!(
+                    let label_text = match hint {
+                        UnknownTypeHint::AlternativeTypes(types) => did_you_mean(name, types),
+                        UnknownTypeHint::ValueInScopeWithSameName => None,
+                    };
+
+                    let mut text = wrap_format!(
                         "The type `{name}` is not defined or imported in this module."
                     );
+
+                    match hint {
+                        UnknownTypeHint::ValueInScopeWithSameName => {
+                            let hint = wrap_format!(
+                                "There is a value in scope with the name `{name}`, but no type in scope with that name."
+                            );
+                            text.push('\n');
+                            text.push_str(hint.as_str());
+                        }
+                        UnknownTypeHint::AlternativeTypes(_) => {}
+                    };
+
                     Diagnostic {
                         title: "Unknown type".into(),
                         text,
@@ -1494,7 +1533,7 @@ constructing a new record with its values."
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: did_you_mean(name, types),
+                                text: label_text,
                                 span: *location,
                             },
                             path: path.clone(),
@@ -1969,7 +2008,7 @@ allowed at the end of a bin pattern.")],
                             vec!["Hint: If you specify unit() you must also specify size().".into()],
                         ),
                     };
-                    extra.push("See: https://gleam.run/book/tour/bit-strings.html".into());
+                    extra.push("See: https://gleam.run/book/tour/bit-arrays.html".into());
                     let text = extra.join("\n");
                     Diagnostic {
                         title: "Invalid bit array segment".into(),
@@ -2250,14 +2289,74 @@ implementation but the function name `{function}` is not valid."
                     }
                 }
 
+                TypeError::InexhaustiveLetAssignment { location, missing } => {
+                    let mut text: String =
+                        "This assignment uses a pattern that does not match all possible
+values. If one of the other values is used then the assignment
+will crash.
+
+The missing patterns are:\n"
+                            .into();
+                    for missing in missing {
+                        text.push_str("\n    ");
+                        text.push_str(missing);
+                    }
+                    text.push('\n');
+
+                    Diagnostic {
+                        title: "Inexhaustive pattern".into(),
+                        text,
+                        hint: Some(
+                            "Use a more general pattern or use `let assert` instead.".into(),
+                        ),
+                        level: Level::Error,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
+                TypeError::InexhaustiveCaseExpression { location, missing } => {
+                    let mut text: String =
+                        "This case expression does not have a pattern for all possible values.
+If is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:\n"
+                            .into();
+                    for missing in missing {
+                        text.push_str("\n    ");
+                        text.push_str(missing);
+                    }
+                    Diagnostic {
+                        title: "Inexhaustive patterns".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
                 TypeError::UnsupportedTarget {
                     location,
                     target: current_target,
-                    kind,
                 } => {
                     let text = wrap_format!(
-                        "This {} doesn't have an implementation for the {} target.",
-                        kind,
+                        "This value is not available as it is defined using externals, \
+and there is no implementation for the {} target.",
                         match current_target {
                             Target::Erlang => "Erlang",
                             Target::JavaScript => "JavaScript",
@@ -2265,6 +2364,49 @@ implementation but the function name `{function}` is not valid."
                     );
                     Diagnostic {
                         title: "Unsupported target".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            path: path.clone(),
+                            src: src.clone(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::UnusedTypeAliasParameter { location, name } => {
+                    let text = wrap_format!(
+                        "The type variable `{name}` is unused. It can be safely removed.",
+                    );
+                    Diagnostic {
+                        title: "Unused type parameter".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            path: path.clone(),
+                            src: src.clone(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::DuplicateTypeParameter { location, name } => {
+                    let text = wrap_format!(
+                        "This definition has multiple type parameters named `{name}`.
+Rename or remove one of them.",
+                    );
+                    Diagnostic {
+                        title: "Duplicate type parameter".into(),
                         text,
                         hint: None,
                         level: Level::Error,

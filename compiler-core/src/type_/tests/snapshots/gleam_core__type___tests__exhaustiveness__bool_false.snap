@@ -3,9 +3,8 @@ source: compiler-core/src/type_/tests/exhaustiveness.rs
 assertion_line: 58
 expression: "\npub fn main(x) {\n  case x {\n    False -> 1\n  }\n}\n"
 ---
-
-warning: Inexhaustive patterns
-  ┌─ /src/warning/wrn.gleam:3:3
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:3:3
   │  
 3 │ ╭   case x {
 4 │ │     False -> 1
@@ -18,7 +17,4 @@ If is run on one of the values without a pattern then it will crash.
 The missing patterns are:
 
     True
-
-In a future version of Gleam this will become a compile error.
-
 

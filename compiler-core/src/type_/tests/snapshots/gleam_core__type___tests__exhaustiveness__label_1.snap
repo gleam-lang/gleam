@@ -3,9 +3,8 @@ source: compiler-core/src/type_/tests/exhaustiveness.rs
 assertion_line: 736
 expression: "\npub type Thing {\n  Thing(a: Bool, b: Bool)\n}\n\npub fn main(x) {\n  case x {\n    Thing(a: False, b: True) -> 1\n    Thing(b: False, a: True) -> 1\n  }\n}\n"
 ---
-
-warning: Inexhaustive patterns
-   ┌─ /src/warning/wrn.gleam:7:3
+error: Inexhaustive patterns
+   ┌─ /src/one/two.gleam:7:3
    │  
  7 │ ╭   case x {
  8 │ │     Thing(a: False, b: True) -> 1
@@ -20,7 +19,4 @@ The missing patterns are:
 
     Thing(False, False)
     Thing(True, True)
-
-In a future version of Gleam this will become a compile error.
-
 

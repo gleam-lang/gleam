@@ -125,3 +125,11 @@ fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
         .chars()
         .collect()
 }
+
+// https://github.com/gleam-lang/gleam/issues/2561
+#[test]
+fn discarded_arguments_are_not_shown() {
+    let config = PackageConfig::default();
+    let modules = vec![("app.gleam", "pub fn discard(_discarded: a) -> Int { 1 }")];
+    insta::assert_snapshot!(compile(config, modules));
+}

@@ -1,3 +1,4 @@
+use camino::Utf8PathBuf;
 use gleam_core::{
     build::{Codegen, Mode, Options, Target},
     Result,
@@ -121,5 +122,27 @@ pub fn javascript_prelude() -> Result<()> {
 
 pub fn typescript_prelude() -> Result<()> {
     print!("{}", gleam_core::javascript::PRELUDE_TS_DEF);
+    Ok(())
+}
+
+pub fn package_interface(path: Utf8PathBuf) -> Result<()> {
+    // Reset the build directory so we know the state of the project
+    let paths = crate::find_project_paths()?;
+    let config = crate::config::root_config()?;
+    crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
+
+    // Build the project
+    let built = crate::build::main(
+        Options {
+            mode: Mode::Prod,
+            target: None,
+            codegen: Codegen::All,
+            warnings_as_errors: false,
+        },
+        crate::build::download_dependencies()?,
+    )?;
+
+    let out = gleam_core::docs::generate_json_package_interface(path, &built.root_package);
+    crate::fs::write_outputs_under(&[out], paths.root())?;
     Ok(())
 }

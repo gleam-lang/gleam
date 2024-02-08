@@ -9,5 +9,5 @@ error: Invalid bit array segment
   │             ^ Invalid float size
 
 Hint: floats have an exact size of 16/32/64 bits.
-See: https://gleam.run/book/tour/bit-strings.html
+See: https://gleam.run/book/tour/bit-arrays.html
 

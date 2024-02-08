@@ -12,7 +12,7 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
 use crate::build::{Located, Target};
-use crate::type_::expression::SupportedTargets;
+use crate::type_::expression::Implementations;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
@@ -373,7 +373,7 @@ pub struct Function<T, Expr> {
     pub documentation: Option<EcoString>,
     pub external_erlang: Option<(EcoString, EcoString)>,
     pub external_javascript: Option<(EcoString, EcoString)>,
-    pub supported_targets: SupportedTargets,
+    pub implementations: Implementations,
 }
 
 pub type TypedFunction = Function<Arc<Type>, TypedExpr>;
@@ -442,7 +442,8 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
     pub annotation: Option<TypeAst>,
     pub value: Box<Constant<T, ConstantRecordTag>>,
     pub type_: T,
-    pub supported_targets: SupportedTargets,
+    pub deprecation: Deprecation,
+    pub implementations: Implementations,
 }
 
 pub type UntypedCustomType = CustomType<()>;
@@ -1381,6 +1382,14 @@ impl AssignmentKind {
             AssignmentKind::Let => true,
             AssignmentKind::Assert => false,
         }
+    }
+
+    /// Returns `true` if the assignment kind is [`Assert`].
+    ///
+    /// [`Assert`]: AssignmentKind::Assert
+    #[must_use]
+    pub fn is_assert(&self) -> bool {
+        matches!(self, Self::Assert)
     }
 }
 

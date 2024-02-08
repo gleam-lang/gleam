@@ -18,94 +18,82 @@ use im::hashmap;
 use itertools::Itertools;
 use vec1::Vec1;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct SupportedTargets {
-    erlang: bool,
-    javascript: bool,
+#[derive(Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq, Serialize)]
+pub struct Implementations {
+    /// Wether the function has a pure-gleam implementation.
+    ///
+    /// It's important to notice that, even if all individual targets are
+    /// supported, it would not be the same as being pure Gleam.
+    /// Imagine this scenario:
+    ///
+    /// ```gleam
+    /// @external(javascript, "foo", "bar")
+    /// @external(erlang, "foo", "bar")
+    /// pub fn func() -> Int
+    /// ```
+    ///
+    /// `func` supports all _current_ Gleam targets; however, if a new target
+    /// is added - say a WASM target - `func` wouldn't support it! On the other
+    /// hand, a pure Gleam function will support all future targets.
+    pub gleam: bool,
+    /// Wether the function has an implementation that uses external erlang
+    /// code.
+    pub uses_erlang_externals: bool,
+    /// Wether the function has an implementation that uses external javascript
+    /// code.
+    pub uses_javascript_externals: bool,
 }
 
-impl SupportedTargets {
-    pub fn none() -> SupportedTargets {
-        SupportedTargets {
-            erlang: false,
-            javascript: false,
-        }
+impl Implementations {
+    /// Given the implementations of a function update those with taking into
+    /// account the `implementations` of another function (or constant) used
+    /// inside its body.
+    pub fn update_from_use(&mut self, implementations: &Implementations) {
+        // With this pattern matching we won't forget to deal with new targets
+        // when those are added :)
+        let Implementations {
+            gleam,
+            uses_erlang_externals,
+            uses_javascript_externals,
+        } = implementations;
+
+        // If a pure-Gleam function uses a function that doesn't have a pure
+        // Gleam implementation, then it's no longer pure-Gleam.
+        self.gleam = self.gleam && *gleam;
+
+        // If a function uses a function that relies on external code (be it
+        // javascript or erlang) then it's considered as using external code as
+        // well.
+        //
+        // For example:
+        // ```gleam
+        // @external(erlang, "foo", "bar")
+        // pub fn erlang_only_with_pure_gleam_default() -> Int {
+        //   1 + 1
+        // }
+        //
+        // pub fn main() { erlang_only_with_pure_gleam_default() }
+        // ```
+        // Both functions will end up using external erlang code and have the
+        // following implementations:
+        // `Implementations { gleam: true, uses_erlang_externals: true, uses_javascript_externals: false}`.
+        // They have a pure gleam implementation and an erlang specific external
+        // implementation.
+        self.uses_erlang_externals = self.uses_erlang_externals || *uses_erlang_externals;
+        self.uses_javascript_externals =
+            self.uses_javascript_externals || *uses_javascript_externals;
     }
 
-    pub fn all() -> SupportedTargets {
-        SupportedTargets {
-            erlang: true,
-            javascript: true,
-        }
-    }
-
-    pub fn javascript() -> SupportedTargets {
-        SupportedTargets {
-            erlang: false,
-            javascript: true,
-        }
-    }
-
-    pub fn erlang() -> SupportedTargets {
-        SupportedTargets {
-            erlang: true,
-            javascript: false,
-        }
-    }
-
-    pub fn from_target(target: Target) -> SupportedTargets {
-        match target {
-            Target::Erlang => SupportedTargets::erlang(),
-            Target::JavaScript => SupportedTargets::javascript(),
-        }
-    }
-
-    pub fn intersect(&self, targets: SupportedTargets) -> SupportedTargets {
-        SupportedTargets {
-            erlang: self.erlang && targets.erlang,
-            javascript: self.javascript && targets.javascript,
-        }
-    }
-
-    pub fn merge(&self, targets: SupportedTargets) -> SupportedTargets {
-        SupportedTargets {
-            erlang: self.erlang || targets.erlang,
-            javascript: self.javascript || targets.javascript,
-        }
-    }
-
-    pub fn add(&self, target: Target) -> SupportedTargets {
-        match target {
-            Target::Erlang => SupportedTargets {
-                erlang: true,
-                javascript: self.javascript,
-            },
-            Target::JavaScript => SupportedTargets {
-                erlang: self.erlang,
-                javascript: true,
-            },
-        }
-    }
-
+    /// Returns true if the current target is supported by the given
+    /// implementations.
+    /// If something has a pure gleam implementation then it supports all
+    /// targets automatically.
     pub fn supports(&self, target: Target) -> bool {
-        match target {
-            Target::Erlang => self.erlang,
-            Target::JavaScript => self.javascript,
-        }
-    }
-
-    pub fn supports_all_targets(&self) -> bool {
-        self.javascript && self.erlang
-    }
-
-    pub fn to_vec(self) -> Vec<Target> {
-        let SupportedTargets { erlang, javascript } = self;
-        match (erlang, javascript) {
-            (true, true) => vec![Target::Erlang, Target::JavaScript],
-            (true, _) => vec![Target::Erlang],
-            (_, true) => vec![Target::JavaScript],
-            (_, _) => vec![],
-        }
+        self.gleam
+            || match target {
+                Target::Erlang => self.uses_erlang_externals,
+                Target::JavaScript => self.uses_javascript_externals,
+            }
     }
 }
 
@@ -113,28 +101,29 @@ impl SupportedTargets {
 pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) environment: &'a mut Environment<'b>,
 
-    pub(crate) supported_targets: SupportedTargets,
+    pub(crate) implementations: Implementations,
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
-
-    external_supported_targets: SupportedTargets,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
     pub fn new(
         environment: &'a mut Environment<'b>,
-        external_supported_targets: SupportedTargets,
+        mut external_implementations: Implementations,
     ) -> Self {
         let mut hydrator = Hydrator::new();
+
+        // We start assuming the function is pure Gleam and narrow it down
+        // if we run into functions/constants that have only external
+        // implementations for some of the targets.
+        external_implementations.gleam = true;
 
         hydrator.permit_holes(true);
         Self {
             hydrator,
             environment,
-            // This will be narrowed down as the expression type is inferred
-            supported_targets: SupportedTargets::all(),
-            external_supported_targets,
+            implementations: external_implementations,
         }
     }
 
@@ -293,21 +282,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         kind: TodoKind,
         message: Option<Box<UntypedExpr>>,
     ) -> Result<TypedExpr, Error> {
+        // Type the todo as whatever it would need to be to type check.
         let type_ = self.new_unbound_var();
+
+        // Emit a warning that there is a todo in the code.
         self.environment.warnings.emit(Warning::Todo {
             kind,
             location,
             typ: type_.clone(),
         });
-        let message = match message {
-            Some(message) => {
+
+        // We've seen a todo, so register that fact. This can be used by higher
+        // level tooling such as the build tool when publishing a package.
+        self.environment.todo_encountered = true;
+
+        let message = message
+            .map(|message| {
+                // If there is a message expression then it must be a string.
                 let message = self.infer(*message)?;
                 unify(string(), message.type_())
                     .map_err(|e| convert_unify_error(e, message.location()))?;
-                Some(Box::new(message))
-            }
-            None => None,
-        };
+                Ok(Box::new(message))
+            })
+            .transpose()?;
+
         Ok(TypedExpr::Todo {
             location,
             type_,
@@ -663,22 +661,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_var(&mut self, name: EcoString, location: SrcSpan) -> Result<TypedExpr, Error> {
         let constructor = self.infer_value_constructor(&None, &name, &location)?;
-
-        match constructor.variant {
-            ValueConstructorVariant::ModuleConstant {
-                supported_targets, ..
-            } => self.narrow_supported_targets(supported_targets, location, "constant".into())?,
-
-            ValueConstructorVariant::ModuleFn {
-                supported_targets, ..
-            } => self.narrow_supported_targets(supported_targets, location, "function".into())?,
-
-            // These variants are not narrowing the currently supported targets
-            ValueConstructorVariant::LocalVariable { .. }
-            | ValueConstructorVariant::LocalConstant { .. }
-            | ValueConstructorVariant::Record { .. } => {}
-        }
-
+        self.narrow_implementations(location, &constructor.variant)?;
         Ok(TypedExpr::Var {
             constructor,
             location,
@@ -686,22 +669,41 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn narrow_supported_targets(
+    fn narrow_implementations(
         &mut self,
-        new_targets: SupportedTargets,
         location: SrcSpan,
-        kind: EcoString,
+        variant: &ValueConstructorVariant,
     ) -> Result<(), Error> {
-        self.supported_targets = self.supported_targets.intersect(new_targets);
-        if self.environment.target_support == TargetSupport::Enforced
-            && !new_targets
-                .merge(self.external_supported_targets)
-                .supports(self.environment.target)
+        let variant_implementations = match variant {
+            ValueConstructorVariant::ModuleConstant {
+                implementations, ..
+            } => implementations,
+            ValueConstructorVariant::ModuleFn {
+                implementations, ..
+            } => implementations,
+            ValueConstructorVariant::Record { .. }
+            | ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::LocalConstant { .. } => return Ok(()),
+        };
+
+        self.implementations
+            .update_from_use(variant_implementations);
+
+        let fail_if_current_target_is_not_supported =
+            self.environment.target_support == TargetSupport::Enforced;
+
+        if fail_if_current_target_is_not_supported
+            // If the value used doesn't have an implementation that can be used
+            // for the current target...
+            && !variant_implementations.supports(self.environment.target)
+            // ... and there is not an external implementation for it
+            && !self
+                    .implementations
+                    .supports(self.environment.target)
         {
             Err(Error::UnsupportedTarget {
                 target: self.environment.target,
                 location,
-                kind,
             })
         } else {
             Ok(())
@@ -1581,6 +1583,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let type_ = self.instantiate(constructor.type_, &mut hashmap![]);
 
+        self.narrow_implementations(select_location, &constructor.variant)?;
+
         let constructor = match &constructor.variant {
             variant @ ValueConstructorVariant::ModuleFn { name, module, .. } => {
                 variant.to_module_value_constructor(Arc::clone(&type_), module, name)
@@ -1887,6 +1891,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
         }
 
+        self.narrow_implementations(*location, &variant)?;
+
         // Instantiate generic variables into unbound variables for this usage
         let typ = self.instantiate(typ, &mut hashmap![]);
         Ok(ValueConstructor {
@@ -2100,6 +2106,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     field_map,
                 })
             }
+
             Constant::Var {
                 location,
                 module,
@@ -2347,6 +2354,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         body: Vec1<UntypedStatement>,
         return_type: Option<Arc<Type>>,
     ) -> Result<(Vec<TypedArg>, Vec1<TypedStatement>), Error> {
+        // If a function has an empty body then it doesn't have a pure gleam
+        // implementation.
+        if body.first().is_placeholder() {
+            self.implementations.gleam = false;
+        }
         self.in_new_scope(|body_typer| {
             // Used to track if any argument names are used more than once
             let mut argument_names = HashSet::with_capacity(args.len());
@@ -2439,14 +2451,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         compiler.set_pattern_arena(arena.into_inner());
         let output = compiler.compile(rows);
 
-        // Emit warnings for missing clauses that would cause a crash
+        // Error for missing clauses that would cause a crash
         if output.diagnostics.missing {
-            self.environment
-                .warnings
-                .emit(Warning::InexhaustiveLetAssignment {
-                    location,
-                    missing: output.missing_patterns(self.environment),
-                })
+            return Err(Error::InexhaustiveLetAssignment {
+                location,
+                missing: output.missing_patterns(self.environment),
+            });
         }
 
         Ok(())
@@ -2496,14 +2506,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         compiler.set_pattern_arena(arena.into_inner());
         let output = compiler.compile(rows);
 
-        // Emit warnings for missing clauses that would cause a crash
+        // Error for missing clauses that would cause a crash
         if output.diagnostics.missing {
-            self.environment
-                .warnings
-                .emit(Warning::InexhaustiveCaseExpression {
-                    location,
-                    missing: output.missing_patterns(self.environment),
-                })
+            return Err(Error::InexhaustiveCaseExpression {
+                location,
+                missing: output.missing_patterns(self.environment),
+            });
         }
 
         // Emit warnings for unreachable clauses

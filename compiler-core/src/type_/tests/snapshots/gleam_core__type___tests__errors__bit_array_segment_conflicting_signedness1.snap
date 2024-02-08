@@ -9,5 +9,5 @@ error: Invalid bit array segment
   │                    ^^^^^^^^ This is an extra signedness specifier
 
 Hint: This segment already has a signedness of signed.
-See: https://gleam.run/book/tour/bit-strings.html
+See: https://gleam.run/book/tour/bit-arrays.html
 

@@ -23,15 +23,23 @@ pub fn str_to_keyword(word: &str) -> Option<Token> {
     match word {
         "as" => Some(Token::As),
         "assert" => Some(Token::Assert),
+        "auto" => Some(Token::Auto),
         "case" => Some(Token::Case),
         "const" => Some(Token::Const),
+        "delegate" => Some(Token::Delegate),
+        "derive" => Some(Token::Derive),
+        "echo" => Some(Token::Echo),
+        "else" => Some(Token::Else),
         "fn" => Some(Token::Fn),
         "if" => Some(Token::If),
+        "implement" => Some(Token::Implement),
         "import" => Some(Token::Import),
         "let" => Some(Token::Let),
+        "macro" => Some(Token::Macro),
         "opaque" => Some(Token::Opaque),
         "panic" => Some(Token::Panic),
         "pub" => Some(Token::Pub),
+        "test" => Some(Token::Test),
         "todo" => Some(Token::Todo),
         "type" => Some(Token::Type),
         "use" => Some(Token::Use),
@@ -167,10 +175,7 @@ where
     fn consume_character(&mut self, c: char) -> Result<(), LexicalError> {
         match c {
             '@' => {
-                let tok_start = self.get_pos();
-                let _ = self.next_char();
-                let tok_end = self.get_pos();
-                self.emit((tok_start, Token::At, tok_end));
+                self.eat_single_char(Token::At);
             }
             '"' => {
                 let string = self.lex_string()?;
@@ -239,10 +244,7 @@ where
                 }
             }
             '%' => {
-                let tok_start = self.get_pos();
-                let _ = self.next_char();
-                let tok_end = self.get_pos();
-                self.emit((tok_start, Token::Percent, tok_end));
+                self.eat_single_char(Token::Percent);
             }
             '|' => {
                 let tok_start = self.get_pos();

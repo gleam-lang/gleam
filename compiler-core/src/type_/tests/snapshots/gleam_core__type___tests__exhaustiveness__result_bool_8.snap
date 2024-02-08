@@ -3,9 +3,8 @@ source: compiler-core/src/type_/tests/exhaustiveness.rs
 assertion_line: 268
 expression: "\npub fn main(x) {\n  case x {\n    Ok(False) -> 1\n  }\n}\n"
 ---
-
-warning: Inexhaustive patterns
-  ┌─ /src/warning/wrn.gleam:3:3
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:3:3
   │  
 3 │ ╭   case x {
 4 │ │     Ok(False) -> 1
@@ -19,7 +18,4 @@ The missing patterns are:
 
     Error(_)
     Ok(True)
-
-In a future version of Gleam this will become a compile error.
-
 

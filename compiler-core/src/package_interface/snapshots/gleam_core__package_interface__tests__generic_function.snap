@@ -1,0 +1,57 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+assertion_line: 220
+expression: "\npub type Wob(a) { Wob }\n@deprecated(\"deprecation message\")\npub fn main() { Wob }\n"
+---
+{
+  "name": "my_package",
+  "version": "11.10.9-1.wibble+build",
+  "gleam-version-constraint": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "type-aliases": {},
+      "types": {
+        "Wob": {
+          "documentation": null,
+          "deprecation": null,
+          "parameters": 1,
+          "constructors": [
+            {
+              "documentation": null,
+              "name": "Wob",
+              "parameters": []
+            }
+          ]
+        }
+      },
+      "constants": {},
+      "functions": {
+        "main": {
+          "documentation": null,
+          "deprecation": {
+            "message": "deprecation message"
+          },
+          "implementations": {
+            "gleam": true,
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
+          },
+          "parameters": [],
+          "return": {
+            "kind": "named",
+            "name": "Wob",
+            "package": "my_package",
+            "module": "my/module",
+            "parameters": [
+              {
+                "kind": "variable",
+                "id": 0
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

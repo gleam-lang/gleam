@@ -4,7 +4,7 @@ use crate::error::{Error, FileIoAction, FileKind, Result};
 use async_trait::async_trait;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
-use std::{fmt::Debug, io, time::SystemTime, vec::IntoIter};
+use std::{collections::HashMap, fmt::Debug, io, time::SystemTime, vec::IntoIter};
 use tar::{Archive, Entry};
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -311,4 +311,15 @@ pub trait TarUnpacker {
                 err: Some(e.to_string()),
             })
     }
+}
+
+pub fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+    K: serde::Serialize + Ord,
+    V: serde::Serialize,
+{
+    use serde::Serialize;
+    let ordered: std::collections::BTreeMap<_, _> = value.iter().collect();
+    ordered.serialize(serializer)
 }

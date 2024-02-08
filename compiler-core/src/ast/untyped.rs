@@ -208,6 +208,16 @@ impl UntypedExpr {
     pub fn is_placeholder(&self) -> bool {
         matches!(self, Self::Placeholder { .. })
     }
+
+    #[must_use]
+    pub fn is_binop(&self) -> bool {
+        matches!(self, Self::BinOp { .. })
+    }
+
+    #[must_use]
+    pub fn is_pipeline(&self) -> bool {
+        matches!(self, Self::PipeLine { .. })
+    }
 }
 
 impl HasLocation for UntypedExpr {

@@ -66,7 +66,7 @@ use crate::ast::{
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
-use crate::type_::expression::SupportedTargets;
+use crate::type_::expression::Implementations;
 use crate::type_::Deprecation;
 use ecow::EcoString;
 use error::{LexicalError, ParseError, ParseErrorType};
@@ -84,7 +84,6 @@ mod tests;
 pub struct Parsed {
     pub module: UntypedModule,
     pub extra: ModuleExtra,
-    pub warnings: Vec<Warning>,
 }
 
 #[derive(Debug, Default)]
@@ -95,9 +94,10 @@ struct Attributes {
     external_javascript: Option<(EcoString, EcoString)>,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub enum Warning {
-    ReservedWord { location: SrcSpan, word: EcoString },
+impl Attributes {
+    fn has_function_only(&self) -> bool {
+        self.external_erlang.is_some() || self.external_javascript.is_some()
+    }
 }
 
 //
@@ -108,7 +108,6 @@ pub fn parse_module(src: &str) -> Result<Parsed, ParseError> {
     let mut parser = Parser::new(lex);
     let mut parsed = parser.parse_module()?;
     parsed.extra = parser.extra;
-    parsed.warnings = parser.warnings;
     Ok(parsed)
 }
 
@@ -155,7 +154,6 @@ pub struct Parser<T: Iterator<Item = LexResult>> {
     tok1: Option<Spanned>,
     extra: ModuleExtra,
     doc_comments: VecDeque<(u32, String)>,
-    warnings: Vec<Warning>,
 }
 impl<T> Parser<T>
 where
@@ -169,7 +167,6 @@ where
             tok1: None,
             extra: ModuleExtra::new(),
             doc_comments: VecDeque::new(),
-            warnings: vec![],
         };
         let _ = parser.next_tok();
         let _ = parser.next_tok();
@@ -188,7 +185,6 @@ where
         Ok(Parsed {
             module,
             extra: Default::default(),
-            warnings: Default::default(),
         })
     }
 
@@ -240,7 +236,7 @@ where
 
     fn parse_definition(&mut self) -> Result<Option<TargetedDefinition>, ParseError> {
         let mut attributes = Attributes::default();
-        self.parse_attributes(&mut attributes)?;
+        let location = self.parse_attributes(&mut attributes)?;
 
         let def = match (self.tok0.take(), self.tok1.as_ref()) {
             // Imports
@@ -251,12 +247,12 @@ where
             // Module Constants
             (Some((start, Token::Const, _)), _) => {
                 let _ = self.next_tok();
-                self.parse_module_const(false, start)
+                self.parse_module_const(false, start, &attributes)
             }
             (Some((start, Token::Pub, _)), Some((_, Token::Const, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
-                self.parse_module_const(true, start)
+                self.parse_module_const(true, start, &attributes)
             }
 
             // Function
@@ -293,10 +289,30 @@ where
             }
         }?;
 
-        Ok(def.map(|definition| TargetedDefinition {
-            definition,
-            target: attributes.target,
-        }))
+        match (def, location) {
+            (Some(definition), _) if definition.is_function() => Ok(Some(TargetedDefinition {
+                definition,
+                target: attributes.target,
+            })),
+
+            (Some(definition), None) => Ok(Some(TargetedDefinition {
+                definition,
+                target: attributes.target,
+            })),
+
+            (_, Some(location)) if attributes.has_function_only() => {
+                parse_error(ParseErrorType::ExpectedFunctionDefinition, location)
+            }
+
+            (Some(definition), _) => Ok(Some(TargetedDefinition {
+                definition,
+                target: attributes.target,
+            })),
+
+            (_, Some(location)) => parse_error(ParseErrorType::ExpectedDefinition, location),
+
+            (None, None) => Ok(None),
+        }
     }
 
     //
@@ -718,15 +734,7 @@ where
                     // Call
                     let args = self.parse_fn_args()?;
                     let (_, end) = self.expect_one(&Token::RightParen)?;
-                    match make_call(expr, args, start, end) {
-                        Ok(e) => expr = e,
-                        Err(_) => {
-                            return parse_error(
-                                ParseErrorType::TooManyArgHoles,
-                                SrcSpan { start, end },
-                            )
-                        }
-                    }
+                    expr = make_call(expr, args, start, end)?;
                 }
             } else {
                 // done
@@ -1536,7 +1544,11 @@ where
             deprecation: std::mem::take(&mut attributes.deprecated),
             external_erlang: attributes.external_erlang.take(),
             external_javascript: attributes.external_javascript.take(),
-            supported_targets: SupportedTargets::all(),
+            implementations: Implementations {
+                gleam: true,
+                uses_erlang_externals: false,
+                uses_javascript_externals: false,
+            },
         })))
     }
 
@@ -1666,12 +1678,16 @@ where
                 location,
                 value,
             }))))
-        } else if let Some((start, _, end)) = self.maybe_discard_name() {
+        } else if let Some((start, name, end)) = self.maybe_discard_name() {
             let mut location = SrcSpan { start, end };
             if label.is_some() {
                 location.start = start
             };
-            Ok(Some(ParserArg::Hole { location, label }))
+            Ok(Some(ParserArg::Hole {
+                location,
+                name,
+                label,
+            }))
         } else {
             Ok(None)
         }
@@ -2125,6 +2141,7 @@ where
         &mut self,
         public: bool,
         start: u32,
+        attributes: &Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let (_, name, end) = self.expect_name()?;
         let documentation = self.take_documentation(start);
@@ -2141,7 +2158,12 @@ where
                 annotation,
                 value: Box::new(value),
                 type_: (),
-                supported_targets: SupportedTargets::all(),
+                deprecation: attributes.deprecated.clone(),
+                implementations: Implementations {
+                    gleam: true,
+                    uses_erlang_externals: false,
+                    uses_javascript_externals: false,
+                },
             })))
         } else {
             parse_error(
@@ -2496,7 +2518,7 @@ where
             // invalid
             _ => self.next_tok_unexpected(vec![
                 "A valid bit array segment type".into(),
-                "See: https://gleam.run/book/tour/bit-strings.html".into(),
+                "See: https://gleam.run/book/tour/bit-arrays.html".into(),
             ]),
         }
     }
@@ -2763,17 +2785,6 @@ where
                 }
 
                 Some(Ok(tok)) => {
-                    if let (start, Token::Name { name }, end) = &tok {
-                        if let "auto" | "delegate" | "derive" | "else" | "implement" | "macro"
-                        | "test" = name.as_str()
-                        {
-                            self.warnings.push(Warning::ReservedWord {
-                                location: SrcSpan::new(*start, *end),
-                                word: name.clone(),
-                            });
-                        }
-                    }
-
                     nxt = Some(tok);
                     break;
                 }
@@ -2805,29 +2816,45 @@ where
         }
     }
 
-    fn parse_attributes(&mut self, attributes: &mut Attributes) -> Result<(), ParseError> {
-        while let Some((start, _)) = self.maybe_one(&Token::At) {
-            self.parse_attribute(start, attributes)?;
+    fn parse_attributes(
+        &mut self,
+        attributes: &mut Attributes,
+    ) -> Result<Option<SrcSpan>, ParseError> {
+        let mut attributes_span = None;
+
+        while let Some((start, end)) = self.maybe_one(&Token::At) {
+            if attributes_span.is_none() {
+                attributes_span = Some(SrcSpan { start, end });
+            }
+
+            let end = self.parse_attribute(start, attributes)?;
+            attributes_span = attributes_span.map(|span| SrcSpan {
+                start: span.start,
+                end,
+            });
         }
-        Ok(())
+
+        Ok(attributes_span)
     }
 
     fn parse_attribute(
         &mut self,
         start: u32,
         attributes: &mut Attributes,
-    ) -> Result<(), ParseError> {
+    ) -> Result<u32, ParseError> {
         // Parse the name of the attribute.
 
         let (_, name, end) = self.expect_name()?;
         let _ = self.expect_one(&Token::LeftParen)?;
 
-        match name.as_str() {
+        let end = match name.as_str() {
             "external" => self.parse_external_attribute(start, end, attributes),
             "target" => self.parse_target_attribute(start, end, attributes),
             "deprecated" => self.parse_deprecated_attribute(start, end, attributes),
             _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan { start, end }),
-        }
+        }?;
+
+        Ok(end)
     }
 
     fn parse_target_attribute(
@@ -2835,7 +2862,7 @@ where
         start: u32,
         end: u32,
         attributes: &mut Attributes,
-    ) -> Result<(), ParseError> {
+    ) -> Result<u32, ParseError> {
         let target = self.expect_target()?;
         if attributes.target.is_some() {
             return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan { start, end });
@@ -2845,7 +2872,7 @@ where
             return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan { start, end });
         }
         attributes.target = Some(target);
-        Ok(())
+        Ok(end)
     }
 
     fn parse_external_attribute(
@@ -2853,7 +2880,7 @@ where
         start: u32,
         end: u32,
         attributes: &mut Attributes,
-    ) -> Result<(), ParseError> {
+    ) -> Result<u32, ParseError> {
         let (_, name, _) = self.expect_name()?;
 
         match name.as_str() {
@@ -2868,7 +2895,7 @@ where
                     return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan { start, end });
                 }
                 attributes.external_erlang = Some((module, function));
-                Ok(())
+                Ok(end)
             }
 
             "javascript" => {
@@ -2882,7 +2909,7 @@ where
                     return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan { start, end });
                 }
                 attributes.external_javascript = Some((module, function));
-                Ok(())
+                Ok(end)
             }
 
             _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan::new(start, end)),
@@ -2894,14 +2921,14 @@ where
         start: u32,
         end: u32,
         attributes: &mut Attributes,
-    ) -> Result<(), ParseError> {
+    ) -> Result<u32, ParseError> {
         if attributes.deprecated.is_deprecated() {
             return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end));
         }
         let (_, message, _) = self.expect_string()?;
-        let (_, _) = self.expect_one(&Token::RightParen)?;
+        let (_, end) = self.expect_one(&Token::RightParen)?;
         attributes.deprecated = Deprecation::Deprecated { message };
-        Ok(())
+        Ok(end)
     }
 }
 
@@ -3218,6 +3245,7 @@ fn is_reserved_word(tok: Token) -> bool {
 pub enum ParserArg {
     Arg(Box<CallArg<UntypedExpr>>),
     Hole {
+        name: EcoString,
         location: SrcSpan,
         label: Option<EcoString>,
     },
@@ -3233,10 +3261,25 @@ pub fn make_call(
     let args = args
         .into_iter()
         .map(|a| match a {
-            ParserArg::Arg(arg) => *arg,
-            ParserArg::Hole { location, label } => {
+            ParserArg::Arg(arg) => Ok(*arg),
+            ParserArg::Hole {
+                location,
+                name,
+                label,
+            } => {
                 num_holes += 1;
-                CallArg {
+
+                if name != "_" {
+                    return parse_error(
+                        ParseErrorType::UnexpectedToken {
+                            expected: vec!["An expression".into(), "An underscore".into()],
+                            hint: None,
+                        },
+                        location,
+                    );
+                }
+
+                Ok(CallArg {
                     implicit: false,
                     label,
                     location,
@@ -3244,10 +3287,10 @@ pub fn make_call(
                         location,
                         name: CAPTURE_VARIABLE.into(),
                     },
-                }
+                })
             }
         })
-        .collect();
+        .collect::<Result<_, _>>()?;
     let call = UntypedExpr::Call {
         location: SrcSpan { start, end },
         fun: Box::new(fun),
@@ -3273,7 +3316,7 @@ pub fn make_call(
             return_annotation: None,
         }),
 
-        _ => parse_error(ParseErrorType::TooManyArgHoles, call.location()),
+        _ => parse_error(ParseErrorType::TooManyArgHoles, SrcSpan { start, end }),
     }
 }
 

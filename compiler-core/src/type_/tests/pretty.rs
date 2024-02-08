@@ -13,6 +13,7 @@ fn print(type_: Arc<Type>) -> String {
 fn custom_bool() -> Arc<Type> {
     Arc::new(Type::Named {
         public: true,
+        package: "foo".into(),
         module: "one/two".into(),
         name: "Bool".into(),
         args: vec![],

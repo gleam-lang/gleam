@@ -75,3 +75,18 @@ fn improper_list_append(
 "#
     );
 }
+
+// Bug found by Hayleigh
+#[test]
+fn long_long_external() {
+    assert_format!(
+        r#"@external(javascript, "./client-component.ffi.mjs", "register")
+pub fn register(
+  _app: App(WebComponent, Nil, model, msg),
+  _name: String,
+) -> Result(Nil, Error) {
+  Error(NotABrowser)
+}
+"#
+    );
+}

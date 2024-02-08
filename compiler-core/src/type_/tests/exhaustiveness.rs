@@ -1,4 +1,4 @@
-use crate::{assert_no_warnings, assert_warning};
+use crate::{assert_module_error, assert_no_warnings, assert_warning};
 
 #[test]
 fn whatever() {
@@ -42,7 +42,7 @@ pub fn main(x) {
 
 #[test]
 fn bool_true() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -55,7 +55,7 @@ pub fn main(x) {
 
 #[test]
 fn bool_false() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -82,7 +82,7 @@ pub fn main(x) {
 
 #[test]
 fn result_ok() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -95,7 +95,7 @@ pub fn main(x) {
 
 #[test]
 fn result_error() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -122,7 +122,7 @@ pub fn main(x) {
 
 #[test]
 fn result_nil_ok() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -135,7 +135,7 @@ pub fn main(x) {
 
 #[test]
 fn result_nil_error() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -164,7 +164,7 @@ pub fn main(x) {
 
 #[test]
 fn result_bool_1() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -179,7 +179,7 @@ pub fn main(x) {
 
 #[test]
 fn result_bool_2() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -194,7 +194,7 @@ pub fn main(x) {
 
 #[test]
 fn result_bool_3() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -209,7 +209,7 @@ pub fn main(x) {
 
 #[test]
 fn result_bool_4() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -224,7 +224,7 @@ pub fn main(x) {
 
 #[test]
 fn result_bool_5() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -238,7 +238,7 @@ pub fn main(x) {
 
 #[test]
 fn result_bool_6() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -252,7 +252,7 @@ pub fn main(x) {
 
 #[test]
 fn result_bool_7() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -265,7 +265,7 @@ pub fn main(x) {
 
 #[test]
 fn result_bool_8() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -292,7 +292,7 @@ pub fn main(x) {
 
 #[test]
 fn list_empty() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -305,7 +305,7 @@ pub fn main(x) {
 
 #[test]
 fn list_non_empty() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -318,7 +318,7 @@ pub fn main(x) {
 
 #[test]
 fn list_one() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -331,7 +331,7 @@ pub fn main(x) {
 
 #[test]
 fn list_one_two() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -345,7 +345,7 @@ pub fn main(x) {
 
 #[test]
 fn list_zero_one_two() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -376,7 +376,7 @@ pub fn main(x) {
 
 #[test]
 fn list_zero_two_any() {
-    assert_warning!(
+    assert_module_error!(
         "
 pub fn main(x) {
   case x {
@@ -407,7 +407,7 @@ pub fn main(x) {
 
 #[test]
 fn string_1() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x) {
   case x {
@@ -420,7 +420,7 @@ pub fn main(x) {
 
 #[test]
 fn string_2() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x) {
   case x {
@@ -433,7 +433,7 @@ pub fn main(x) {
 
 #[test]
 fn string_3() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x) {
   case x {
@@ -463,7 +463,7 @@ pub fn main(x) {
 
 #[test]
 fn bit_array_1() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x) {
   case x {
@@ -478,7 +478,7 @@ pub fn main(x) {
 
 #[test]
 fn bit_array_2() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x) {
   case x {
@@ -508,7 +508,7 @@ pub fn main(x) {
 
 #[test]
 fn int_1() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x) {
   case x {
@@ -523,7 +523,7 @@ pub fn main(x) {
 
 #[test]
 fn int_2() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x) {
   case x {
@@ -553,7 +553,7 @@ pub fn main(x) {
 
 #[test]
 fn float_1() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x) {
   case x {
@@ -568,7 +568,7 @@ pub fn main(x) {
 
 #[test]
 fn float_2() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x) {
   case x {
@@ -582,7 +582,7 @@ pub fn main(x) {
 
 #[test]
 fn list_bool_1() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x) {
   case x {
@@ -597,7 +597,7 @@ pub fn main(x) {
 
 #[test]
 fn list_bool_2() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x) {
   case x {
@@ -648,7 +648,7 @@ pub fn main(x) {
 
 #[test]
 fn discard_2() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub type Thing {
   Thing(a: Bool, b: Bool)
@@ -665,7 +665,7 @@ pub fn main(x) {
 
 #[test]
 fn discard_3() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub type Thing {
   Thing(a: Bool, b: Bool)
@@ -682,7 +682,7 @@ pub fn main(x) {
 
 #[test]
 fn discard_4() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub type Thing {
   Thing(a: Bool, b: Bool)
@@ -699,7 +699,7 @@ pub fn main(x) {
 
 #[test]
 fn discard_5() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub type Thing {
   Thing(a: Bool, b: Bool)
@@ -716,7 +716,7 @@ pub fn main(x) {
 
 #[test]
 fn discard_6() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub type Thing {
   Thing(a: Bool, b: Bool)
@@ -733,7 +733,7 @@ pub fn main(x) {
 
 #[test]
 fn label_1() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub type Thing {
   Thing(a: Bool, b: Bool)
@@ -751,7 +751,7 @@ pub fn main(x) {
 
 #[test]
 fn guard() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x, y) {
   case x {
@@ -764,7 +764,7 @@ pub fn main(x, y) {
 
 #[test]
 fn guard_1() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x, y) {
   case x {
@@ -778,7 +778,7 @@ pub fn main(x, y) {
 
 #[test]
 fn custom_1() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub type Type {
   One
@@ -796,7 +796,7 @@ pub fn main(x) {
 
 #[test]
 fn custom_2() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub type Type {
   One
@@ -846,7 +846,7 @@ pub fn main(x) {
 
 #[test]
 fn let_1() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x) {
   let True = x
@@ -858,12 +858,29 @@ pub fn main(x) {
 
 #[test]
 fn tuple_0() {
-    assert_warning!(
+    assert_module_error!(
         r#"
 pub fn main(x, y) {
   case #(x, y) {
     #(True, _) -> 1
   }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2577
+#[test]
+fn nested_type_parameter_usage() {
+    assert_module_error!(
+        r#"
+pub type Returned(a) {
+  Returned(List(a))
+}
+
+fn foo(user: Returned(#())) -> Int {
+  let Returned([#()]) = user
+  1
 }
 "#
     );

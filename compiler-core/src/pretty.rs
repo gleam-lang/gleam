@@ -165,7 +165,7 @@ pub enum Document<'a> {
 
     /// Nests the given document by the given indent, depending on the specified
     /// condition
-    Nest(isize, NestCondition, Box<Self>),
+    Nest(isize, NestMode, NestCondition, Box<Self>),
 
     /// Nests the given document to the current cursor position
     Group(Box<Self>),
@@ -216,6 +216,22 @@ pub enum NestCondition {
     /// Only applies the nesting if the wrapping `Group` couldn't fit on a
     /// single line and has been broken.
     IfBroken,
+}
+
+/// Used to change the way nesting of documents work.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NestMode {
+    /// If the nesting mode is `Increase`, the current indentation will be
+    /// increased by the specified value.
+    Increase,
+    /// If the nesting mode is `Set`, the current indentation is going to be set
+    /// to exactly the specified value.
+    ///
+    /// `doc.nest(2).set_nesting(0)`
+    /// "foo
+    /// bar    <- no indentation is added!
+    /// baz"
+    Set,
 }
 
 fn fits(
@@ -275,9 +291,15 @@ fn fits(
             // If the nesting level is increased we go on checking the wrapped
             // document and increase its indentation level based on the nesting
             // condition.
-            Document::Nest(i, condition, doc) => match condition {
-                NestCondition::Always => docs.push_front((i + indent, mode, doc)),
+            Document::Nest(i, nest_mode, condition, doc) => match condition {
                 NestCondition::IfBroken => docs.push_front((indent, mode, doc)),
+                NestCondition::Always => {
+                    let new_indent = match nest_mode {
+                        NestMode::Increase => indent + i,
+                        NestMode::Set => *i,
+                    };
+                    docs.push_front((new_indent, mode, doc))
+                }
             },
 
             // As a general rule, a group fits if it can stay on a single line
@@ -480,13 +502,17 @@ fn format(
             // A `Nest` document doesn't result in anything being printed, its
             // only effect is to increase the current nesting level for the
             // wrapped document [tag:format-nest].
-            Document::Nest(i, condition, doc) => match (condition, mode) {
+            Document::Nest(i, nest_mode, condition, doc) => match (condition, mode) {
                 // The nesting is only applied under two conditions:
                 // - either the nesting condition is `Always`.
                 // - or the condition is `IfBroken` and the group was actually
                 //   broken (that is, the current mode is `Broken`).
                 (NestCondition::Always, _) | (NestCondition::IfBroken, Mode::Broken) => {
-                    docs.push_front((indent + i, mode, doc))
+                    let new_indent = match nest_mode {
+                        NestMode::Increase => indent + i,
+                        NestMode::Set => *i,
+                    };
+                    docs.push_front((new_indent, mode, doc))
                 }
                 // If none of the above conditions is met, then the nesting is
                 // not applied.
@@ -558,12 +584,26 @@ impl<'a> Document<'a> {
         Self::Group(Box::new(self))
     }
 
+    pub fn set_nesting(self, indent: isize) -> Self {
+        Self::Nest(indent, NestMode::Set, NestCondition::Always, Box::new(self))
+    }
+
     pub fn nest(self, indent: isize) -> Self {
-        Self::Nest(indent, NestCondition::Always, Box::new(self))
+        Self::Nest(
+            indent,
+            NestMode::Increase,
+            NestCondition::Always,
+            Box::new(self),
+        )
     }
 
     pub fn nest_if_broken(self, indent: isize) -> Self {
-        Self::Nest(indent, NestCondition::IfBroken, Box::new(self))
+        Self::Nest(
+            indent,
+            NestMode::Increase,
+            NestCondition::IfBroken,
+            Box::new(self),
+        )
     }
 
     pub fn force_break(self) -> Self {
@@ -612,7 +652,7 @@ impl<'a> Document<'a> {
             Str(s) => s.is_empty(),
             // assuming `broken` and `unbroken` are equivalent
             Break { broken, .. } => broken.is_empty(),
-            ForceBroken(d) | Nest(_, _, d) | Group(d) | NextBreakFits(d, _) => d.is_empty(),
+            ForceBroken(d) | Nest(_, _, _, d) | Group(d) | NextBreakFits(d, _) => d.is_empty(),
             Vec(docs) => docs.iter().all(|d| d.is_empty()),
         }
     }

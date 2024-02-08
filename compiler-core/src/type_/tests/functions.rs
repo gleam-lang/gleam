@@ -1,4 +1,4 @@
-use crate::{assert_module_error, assert_module_infer, assert_warning};
+use crate::{assert_module_error, assert_module_infer};
 
 // https://github.com/gleam-lang/gleam/issues/1860
 #[test]
@@ -166,20 +166,5 @@ pub fn two(x) {
   one(x)
 }
 "#
-    );
-}
-
-#[test]
-fn unused_function_body() {
-    // https://github.com/gleam-lang/gleam/issues/2499
-    assert_warning!(
-        r#"
-@external(javascript, "foo", "bar")
-@external(erlang, "foo", "bar")
-pub fn foo() -> Int {
-  // This is dead code since there already is an
-  // external implementation for all targets.
-  11
-}"#
     );
 }

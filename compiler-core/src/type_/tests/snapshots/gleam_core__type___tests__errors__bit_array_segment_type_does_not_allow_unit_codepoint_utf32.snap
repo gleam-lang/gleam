@@ -11,5 +11,5 @@ error: Invalid bit array segment
 
 Hint: utf32_codepoint segments are sized based on their value and cannot
 have a unit.
-See: https://gleam.run/book/tour/bit-strings.html
+See: https://gleam.run/book/tour/bit-arrays.html
 

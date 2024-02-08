@@ -3,9 +3,8 @@ source: compiler-core/src/type_/tests/exhaustiveness.rs
 assertion_line: 781
 expression: "\npub type Type {\n  One\n  Two\n}\n\npub fn main(x) {\n  case x {\n    One -> 1\n  }\n}\n"
 ---
-
-warning: Inexhaustive patterns
-   ┌─ /src/warning/wrn.gleam:8:3
+error: Inexhaustive patterns
+   ┌─ /src/one/two.gleam:8:3
    │  
  8 │ ╭   case x {
  9 │ │     One -> 1
@@ -18,7 +17,4 @@ If is run on one of the values without a pattern then it will crash.
 The missing patterns are:
 
     Two
-
-In a future version of Gleam this will become a compile error.
-
 

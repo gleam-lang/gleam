@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::io::make_relative;
+use crate::io::{make_relative, ordered_map};
 use crate::requirement::Requirement;
 use crate::Result;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -62,7 +62,7 @@ impl Manifest {
             }
 
             buffer.push_str("], requirements = [");
-            for (i, package) in requirements.iter().enumerate() {
+            for (i, package) in requirements.iter().sorted_by(|a, b| a.cmp(b)).enumerate() {
                 if i != 0 {
                     buffer.push_str(", ");
                 }
@@ -193,17 +193,6 @@ pub enum ManifestPackageSource {
     Local { path: Utf8PathBuf }, // should be the canonical path
 }
 
-fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-    K: serde::Serialize + Ord,
-    V: serde::Serialize,
-{
-    use serde::Serialize;
-    let ordered: std::collections::BTreeMap<_, _> = value.iter().collect();
-    ordered.serialize(serializer)
-}
-
 fn sorted_vec<S, T>(value: &[T], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
@@ -321,7 +310,7 @@ mod tests {
 # You typically do not need to edit this file
 
 packages = [
-  { name = "aaa", version = "0.4.0", build_tools = ["rebar3", "make"], requirements = ["zzz", "gleam_stdlib"], otp_app = "aaa_app", source = "hex", outer_checksum = "0316" },
+  { name = "aaa", version = "0.4.0", build_tools = ["rebar3", "make"], requirements = ["gleam_stdlib", "zzz"], otp_app = "aaa_app", source = "hex", outer_checksum = "0316" },
   { name = "awsome_local1", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "local", path = "../path/to/package" },
   { name = "awsome_local2", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "git", repo = "https://github.com/gleam-lang/gleam.git", commit = "bd9fe02f72250e6a136967917bcb1bdccaffa3c8" },
   { name = "gleam_stdlib", version = "0.17.1", build_tools = ["gleam"], requirements = [], source = "hex", outer_checksum = "0116" },

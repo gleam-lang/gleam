@@ -8,12 +8,13 @@ use camino::Utf8PathBuf;
 
 use crate::{
     ast::{CustomType, Definition, Function, ModuleConstant, TypeAlias, TypedDefinition},
-    build::Module,
+    build::{Module, Package},
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
     format,
     io::Content,
     io::OutputFile,
+    package_interface::PackageInterface,
     paths::ProjectPaths,
     pretty,
     type_::Deprecation,
@@ -420,6 +421,16 @@ pub fn generate_html(
     });
 
     files
+}
+
+pub fn generate_json_package_interface(path: Utf8PathBuf, package: &Package) -> OutputFile {
+    OutputFile {
+        path,
+        content: Content::Text(
+            serde_json::to_string(&PackageInterface::from_package(package))
+                .expect("JSON module interface serialisation"),
+        ),
+    }
 }
 
 fn page_unnest(path: &str) -> String {

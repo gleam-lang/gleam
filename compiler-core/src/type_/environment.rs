@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Environment<'a> {
+    pub current_package: EcoString,
     pub current_module: EcoString,
     pub target: Target,
     pub ids: UniqueIdGenerator,
@@ -25,7 +26,7 @@ pub struct Environment<'a> {
 
     /// Names of modules that have been imported with as name.
     pub imported_module_aliases: HashMap<EcoString, SrcSpan>,
-    pub unused_module_aliases: HashMap<EcoString, SrcSpan>,
+    pub unused_module_aliases: HashMap<EcoString, UnusedModuleAlias>,
 
     /// Values defined in the current function (or the prelude)
     pub scope: im::HashMap<EcoString, ValueConstructor>,
@@ -34,7 +35,7 @@ pub struct Environment<'a> {
     pub module_types: HashMap<EcoString, TypeConstructor>,
 
     /// Mapping from types to constructor names in the current module (or the prelude)
-    pub module_types_constructors: HashMap<EcoString, Vec<TypeValueConstructor>>,
+    pub module_types_constructors: HashMap<EcoString, TypeVariantConstructors>,
 
     /// Values defined in the current module (or the prelude)
     pub module_values: HashMap<EcoString, ValueConstructor>,
@@ -54,11 +55,16 @@ pub struct Environment<'a> {
     /// Used to determine if all functions/constants need to support the current
     /// compilation target.
     pub target_support: TargetSupport,
+
+    /// Whether a `todo` expression has been encountered in this module.
+    /// This is used by the build tool to refuse to publish packages that are unfinished.
+    pub todo_encountered: bool,
 }
 
 impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
+        current_package: EcoString,
         current_module: EcoString,
         target: Target,
         importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
@@ -69,6 +75,7 @@ impl<'a> Environment<'a> {
             .get(PRELUDE_MODULE_NAME)
             .expect("Unable to find prelude in importable modules");
         Self {
+            current_package: current_package.clone(),
             previous_id: ids.next(),
             ids,
             target,
@@ -88,8 +95,15 @@ impl<'a> Environment<'a> {
             warnings,
             entity_usages: vec![HashMap::new()],
             target_support,
+            todo_encountered: false,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnusedModuleAlias {
+    pub location: SrcSpan,
+    pub module_name: EcoString,
 }
 
 /// For Keeping track of entity usages and knowing which error to display.
@@ -278,7 +292,7 @@ impl<'a> Environment<'a> {
     pub fn insert_type_to_constructors(
         &mut self,
         type_name: EcoString,
-        constructors: Vec<TypeValueConstructor>,
+        constructors: TypeVariantConstructors,
     ) {
         let _ = self
             .module_types_constructors
@@ -298,7 +312,7 @@ impl<'a> Environment<'a> {
                 .get(name)
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
-                    type_constructors: self.module_types.keys().cloned().collect(),
+                    hint: self.unknown_type_hint(name),
                 }),
 
             Some(module_name) => {
@@ -324,13 +338,20 @@ impl<'a> Environment<'a> {
         Ok(t)
     }
 
+    fn unknown_type_hint(&self, type_name: &EcoString) -> UnknownTypeHint {
+        match self.scope.contains_key(type_name) {
+            true => UnknownTypeHint::ValueInScopeWithSameName,
+            false => UnknownTypeHint::AlternativeTypes(self.module_types.keys().cloned().collect()),
+        }
+    }
+
     /// Lookup constructors for type in the current scope.
     ///
     pub fn get_constructors_for_type(
         &self,
         module: &EcoString,
         name: &EcoString,
-    ) -> Result<&Vec<TypeValueConstructor>, UnknownTypeConstructorError> {
+    ) -> Result<&TypeVariantConstructors, UnknownTypeConstructorError> {
         let module = if module.is_empty() || *module == self.current_module {
             None
         } else {
@@ -340,7 +361,7 @@ impl<'a> Environment<'a> {
             None => self.module_types_constructors.get(name).ok_or_else(|| {
                 UnknownTypeConstructorError::Type {
                     name: name.clone(),
-                    type_constructors: self.module_types.keys().cloned().collect(),
+                    hint: self.unknown_type_hint(name),
                 }
             }),
 
@@ -413,6 +434,7 @@ impl<'a> Environment<'a> {
             Type::Named {
                 public,
                 name,
+                package,
                 module,
                 args,
             } => {
@@ -423,6 +445,7 @@ impl<'a> Environment<'a> {
                 Arc::new(Type::Named {
                     public: *public,
                     name: name.clone(),
+                    package: package.clone(),
                     module: module.clone(),
                     args,
                 })
@@ -535,13 +558,14 @@ impl<'a> Environment<'a> {
             locations.push(location);
         }
 
-        for (name, location) in self.unused_module_aliases.iter() {
+        for (name, info) in self.unused_module_aliases.iter() {
             if self.unused_modules.get(name).is_none() {
                 self.warnings.emit(Warning::UnusedImportedModuleAlias {
-                    name: name.clone(),
-                    location: *location,
+                    alias: name.clone(),
+                    location: info.location,
+                    module_name: info.module_name.clone(),
                 });
-                locations.push(*location);
+                locations.push(info.location);
             }
         }
         locations

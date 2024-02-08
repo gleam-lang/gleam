@@ -38,13 +38,13 @@ use crate::{
     ast::AssignName,
     type_::{
         collapse_links, error::UnknownTypeConstructorError, is_prelude_module, Environment, Type,
-        TypeValueConstructor, TypeValueConstructorParameter, TypeVar,
+        TypeValueConstructor, TypeValueConstructorField, TypeVar,
     },
 };
 use ecow::EcoString;
 use id_arena::Arena;
 use itertools::Itertools;
-use std::{collections::HashMap, sync::Arc};
+use std::{cell::RefCell, collections::HashMap, sync::Arc, u64};
 
 pub use self::pattern::PatternArena;
 
@@ -333,9 +333,9 @@ impl<'a> Compiler<'a> {
 
             BranchMode::NamedType {
                 variable,
-                constructors: variants,
+                constructors,
             } => {
-                let cases = variants
+                let cases = constructors
                     .iter()
                     .enumerate()
                     .map(|(idx, constructor)| {
@@ -343,10 +343,13 @@ impl<'a> Compiler<'a> {
                             type_: variable.type_.clone(),
                             index: idx as u16,
                         };
-                        let new_variables = self.constructor_parameter_variables(
-                            &variable.type_,
-                            &constructor.parameters,
-                        );
+                        // Make new variables for each of the fields of the variant,
+                        // so they can be used in the sub tree.
+                        let new_variables = constructor
+                            .parameters
+                            .iter()
+                            .map(|p| self.new_variable(p.type_.clone()))
+                            .collect_vec();
                         (variant, new_variables, Vec::new())
                     })
                     .collect();
@@ -734,9 +737,11 @@ impl<'a> Compiler<'a> {
                 element_type: args.first().expect("Lists have 1 argument").clone(),
             },
 
-            Type::Named { module, name, .. } => {
+            Type::Named {
+                module, name, args, ..
+            } => {
                 let constructors = self
-                    .custom_type_info(module, name)
+                    .instantiated_custom_type_info(module, name, args.as_slice())
                     .expect("Custom type variants must exist")
                     .to_vec();
                 BranchMode::NamedType {
@@ -766,37 +771,29 @@ impl<'a> Compiler<'a> {
         var
     }
 
-    fn custom_type_info(
+    /// Get the constructors for a named type, with any type parameters instantiated with the
+    /// specific types being used in this case (as given in `type_arguments`).
+    ///
+    /// This instantiation is done as otherwise when traversing the tree when we encounter one of
+    /// these parameterised types we would be using a generic type variable an not the actual type,
+    /// which would result in the patterns being handled incorrectly and likely causing a panic.
+    ///
+    fn instantiated_custom_type_info(
         &self,
         module: &EcoString,
         name: &EcoString,
-    ) -> Result<&Vec<TypeValueConstructor>, UnknownTypeConstructorError> {
-        self.environment.get_constructors_for_type(module, name)
-    }
-
-    fn constructor_parameter_variables(
-        &mut self,
-        type_: &Arc<Type>,
-        parameters: &[TypeValueConstructorParameter],
-    ) -> Vec<Variable> {
-        parameters
+        type_arguments: &[Arc<Type>],
+    ) -> Result<Vec<TypeValueConstructor>, UnknownTypeConstructorError> {
+        let constructors = self.environment.get_constructors_for_type(module, name)?;
+        let specialiser = ConstructorSpecialiser::new(
+            constructors.type_parameters_ids.as_slice(),
+            type_arguments,
+        );
+        Ok(constructors
+            .variants
             .iter()
-            .map(|p| self.constructor_parameter_variable(type_, p))
-            .collect_vec()
-    }
-
-    fn constructor_parameter_variable(
-        &mut self,
-        type_: &Arc<Type>,
-        parameter: &TypeValueConstructorParameter,
-    ) -> Variable {
-        let type_ = match parameter.generic_type_parameter_index {
-            None => parameter.type_.clone(),
-            Some(i) => {
-                generic_named_type_parameter(type_, i).expect("Generic type parameter index")
-            }
-        };
-        self.new_variable(type_)
+            .map(|v| specialiser.specialise_type_value_constructor(v))
+            .collect_vec())
     }
 
     fn new_variables(&mut self, type_ids: &[Arc<Type>]) -> Vec<Variable> {
@@ -804,19 +801,6 @@ impl<'a> Compiler<'a> {
             .iter()
             .map(|t| self.new_variable(t.clone()))
             .collect()
-    }
-}
-
-fn generic_named_type_parameter(t: &Type, i: usize) -> Option<Arc<Type>> {
-    match t {
-        Type::Named { args, .. } => args.get(i).cloned(),
-
-        Type::Var { type_, .. } => match &*type_.borrow() {
-            TypeVar::Link { type_ } => generic_named_type_parameter(type_, i),
-            TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
-        },
-
-        Type::Fn { .. } | Type::Tuple { .. } => None,
     }
 }
 
@@ -835,6 +819,84 @@ enum BranchMode {
     },
     NamedType {
         variable: Variable,
+        /// The constructors for this type. For example, `Result` has `Ok` and `Error`.
         constructors: Vec<TypeValueConstructor>,
     },
+}
+
+pub struct ConstructorSpecialiser {
+    specialised_types: HashMap<u64, Arc<Type>>,
+}
+
+impl ConstructorSpecialiser {
+    fn new(parameters: &[u64], type_arguments: &[Arc<Type>]) -> Self {
+        let specialised_types = parameters
+            .iter()
+            .copied()
+            .zip(type_arguments.iter().cloned())
+            .collect();
+        Self { specialised_types }
+    }
+
+    fn specialise_type_value_constructor(&self, v: &TypeValueConstructor) -> TypeValueConstructor {
+        let TypeValueConstructor { name, parameters } = v;
+        let parameters = parameters
+            .iter()
+            .map(|p| TypeValueConstructorField {
+                type_: self.specialise_type(p.type_.as_ref()),
+            })
+            .collect_vec();
+        TypeValueConstructor {
+            name: name.clone(),
+            parameters,
+        }
+    }
+
+    fn specialise_type(&self, type_: &Type) -> Arc<Type> {
+        Arc::new(match type_ {
+            Type::Named {
+                public,
+                package,
+                module,
+                name,
+                args,
+            } => Type::Named {
+                public: *public,
+                package: package.clone(),
+                module: module.clone(),
+                name: name.clone(),
+                args: args.iter().map(|a| self.specialise_type(a)).collect(),
+            },
+
+            Type::Fn { args, retrn } => Type::Fn {
+                args: args.iter().map(|a| self.specialise_type(a)).collect(),
+                retrn: retrn.clone(),
+            },
+
+            Type::Var { type_ } => Type::Var {
+                type_: Arc::new(RefCell::new(self.specialise_var(type_))),
+            },
+
+            Type::Tuple { elems } => Type::Tuple {
+                elems: elems.iter().map(|e| self.specialise_type(e)).collect(),
+            },
+        })
+    }
+
+    fn specialise_var(&self, type_: &RefCell<TypeVar>) -> TypeVar {
+        match &*type_.borrow() {
+            TypeVar::Unbound { id } => TypeVar::Unbound { id: *id },
+
+            TypeVar::Link { type_ } => TypeVar::Link {
+                type_: self.specialise_type(type_.as_ref()),
+            },
+
+            TypeVar::Generic { id } => match self.specialised_types.get(id) {
+                Some(type_) => TypeVar::Link {
+                    type_: type_.clone(),
+                },
+                None => TypeVar::Generic { id: *id },
+            },
+        }
+    }
 }

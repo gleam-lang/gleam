@@ -10,5 +10,5 @@ error: Invalid bit string segment
   │                   ^^^^^ This option is only allowed in BitArray patterns.
 
 Hint: This option has no effect in BitArray values.
-See: https://gleam.run/book/tour/bit-strings.html
+See: https://gleam.run/book/tour/bit-arrays.html
 

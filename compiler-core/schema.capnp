@@ -25,8 +25,14 @@ struct Module {
   values @2 :List(Property(ValueConstructor));
   accessors @3 :List(Property(AccessorsMap));
   package @4 :Text;
-  typesConstructors @5 :List(Property(List(TypeValueConstructor)));
+  typesConstructors @5 :List(Property(TypesVariantConstructors));
   unusedImports @6 :List(SrcSpan);
+  containsTodo @7 :Bool;
+}
+
+struct TypesVariantConstructors {
+  variants @0 :List(TypeValueConstructor);
+  typeParametersIds @1 :List(UInt16);
 }
 
 struct TypeValueConstructor {
@@ -36,7 +42,6 @@ struct TypeValueConstructor {
 
 struct TypeValueConstructorParameter {
   type @0 :Type;
-  genericTypeParameterIndex @1 :Int16;
 }
 
 struct TypeConstructor {
@@ -67,6 +72,7 @@ struct Type {
       name @0 :Text;
       module @1 :Text;
       parameters @2 :List(Type);
+      package @7 :Text;
     }
 
     fn :group {
@@ -91,9 +97,10 @@ struct ValueConstructor {
   deprecated @3 :Text;
 }
 
-struct SupportedTargets {
-  erlang @0 :Bool;
-  javascript @1 :Bool;
+struct Implementations {
+  gleam @0 :Bool;
+  erlang @1 :Bool;
+  javascript @2 :Bool;
 }
 
 struct ValueConstructorVariant {
@@ -103,7 +110,7 @@ struct ValueConstructorVariant {
       location @1 :SrcSpan;
       module @2 :Text;
       documentation @14 :Text;
-      supportedTargets @19 :SupportedTargets;
+      implementations @19 :Implementations;
     }
 
     moduleFn :group {
@@ -113,7 +120,7 @@ struct ValueConstructorVariant {
       arity @6 :UInt16;
       location @7 :SrcSpan;
       documentation @15 :Text;
-      supportedTargets @18 :SupportedTargets;
+      implementations @18 :Implementations;
     }
 
     record :group {
@@ -227,4 +234,3 @@ struct BitArraySegmentOption {
     }
   }
 }
-

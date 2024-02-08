@@ -15,6 +15,12 @@ use pretty_assertions::assert_eq;
 use super::FieldAccessUsage;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
+pub struct UnknownType {
+    pub location: SrcSpan,
+    pub name: EcoString,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Error {
     SrcImportingTest {
         location: SrcSpan,
@@ -42,7 +48,7 @@ pub enum Error {
     UnknownType {
         location: SrcSpan,
         name: EcoString,
-        types: Vec<EcoString>,
+        hint: UnknownTypeHint,
     },
 
     UnknownModule {
@@ -270,33 +276,74 @@ pub enum Error {
         kind: MissingAnnotation,
     },
 
-    // A function has been given without either a Gleam implementation or an
-    // external one.
+    /// A function has been given without either a Gleam implementation or an
+    /// external one.
     NoImplementation {
         location: SrcSpan,
     },
 
-    // A function/constant that is used doesn't have an implementation for the
-    // current compilation target.
+    /// A function/constant that is used doesn't have an implementation for the
+    /// current compilation target.
     UnsupportedTarget {
         location: SrcSpan,
         target: Target,
-        kind: EcoString,
     },
 
-    // A function's JavaScript implementation has been given but it does not
-    // have a valid module name.
+    /// A function's JavaScript implementation has been given but it does not
+    /// have a valid module name.
     InvalidExternalJavascriptModule {
         location: SrcSpan,
         module: EcoString,
         name: EcoString,
     },
 
-    // A function's JavaScript implementation has been given but it does not
-    // have a valid function name.
+    /// A function's JavaScript implementation has been given but it does not
+    /// have a valid function name.
     InvalidExternalJavascriptFunction {
         location: SrcSpan,
         function: EcoString,
+        name: EcoString,
+    },
+
+    /// A case expression is missing one or more patterns to match all possible
+    /// values of the type.
+    InexhaustiveCaseExpression {
+        location: SrcSpan,
+        missing: Vec<EcoString>,
+    },
+
+    /// Let assignment's pattern does not match all possible values of the type.
+    InexhaustiveLetAssignment {
+        location: SrcSpan,
+        missing: Vec<EcoString>,
+    },
+
+    /// A type alias has a type variable but it is not used in the definition.
+    ///
+    /// For example, here `unused` is not used
+    ///
+    /// ```gleam
+    /// pub type Wibble(unused) =
+    ///   Int
+    /// ```
+    UnusedTypeAliasParameter {
+        location: SrcSpan,
+        name: EcoString,
+    },
+
+    /// A definition has two type parameters with the same name.
+    ///
+    /// ```gleam
+    /// pub type Wibble(a, a) =
+    ///   Int
+    /// ```
+    /// ```gleam
+    /// pub type Wibble(a, a) {
+    ///   Wibble
+    /// }
+    /// ```
+    DuplicateTypeParameter {
+        location: SrcSpan,
         name: EcoString,
     },
 }
@@ -367,7 +414,8 @@ pub enum Warning {
 
     UnusedImportedModuleAlias {
         location: SrcSpan,
-        name: EcoString,
+        alias: EcoString,
+        module_name: EcoString,
     },
 
     UnusedPrivateModuleConstant {
@@ -378,10 +426,6 @@ pub enum Warning {
     UnusedPrivateFunction {
         location: SrcSpan,
         name: EcoString,
-    },
-
-    UnusedFunctionBody {
-        location: SrcSpan,
     },
 
     UnusedVariable {
@@ -412,16 +456,6 @@ pub enum Warning {
         location: SrcSpan,
         message: EcoString,
         layer: Layer,
-    },
-
-    InexhaustiveCaseExpression {
-        location: SrcSpan,
-        missing: Vec<EcoString>,
-    },
-
-    InexhaustiveLetAssignment {
-        location: SrcSpan,
-        missing: Vec<EcoString>,
     },
 
     UnreachableCaseClause {
@@ -518,11 +552,17 @@ pub fn convert_get_value_constructor_error(
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum UnknownTypeHint {
+    AlternativeTypes(Vec<EcoString>),
+    ValueInScopeWithSameName,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum UnknownTypeConstructorError {
     Type {
         name: EcoString,
-        type_constructors: Vec<EcoString>,
+        hint: UnknownTypeHint,
     },
 
     Module {
@@ -542,13 +582,10 @@ pub fn convert_get_type_constructor_error(
     location: &SrcSpan,
 ) -> Error {
     match e {
-        UnknownTypeConstructorError::Type {
-            name,
-            type_constructors,
-        } => Error::UnknownType {
+        UnknownTypeConstructorError::Type { name, hint } => Error::UnknownType {
             location: *location,
             name,
-            types: type_constructors,
+            hint,
         },
 
         UnknownTypeConstructorError::Module {

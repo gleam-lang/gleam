@@ -4,17 +4,97 @@
 
 ### Language changes
 
-- Warn about function body not being used, because it already has external
-  implementations for all targets.
-- It's now possible to compile a project with external functions that are not
-  supported by the compilation target as long as those are not actually used.
+- Using a reserved word is now a compile error, not a warning.
+- Inexhaustive matches are now compile errors, not warnings.
+- The warning for an unused module alias now shows how to not assign a name to
+  the module.
+- Type aliases with unused type parameters now emit an error.
+- Type definitions with duplicate type parameters now emit an error.
+
+### Formatter
+
+- Now the formatter will nest pipelines and binary operators that are used as
+  function arguments, list items or as tuple items.
+- The format function literals used as the last argument in a function call
+  on long lines has been improved.
+
+### Build tool
+
+- If a package contains a `todo` expression then the build tool will now refuse
+  to publish it to Hex.
+- The search bar in generated docs now has a darker background color.
+- `gleam export` now takes a `package-interface` option to export a json file
+  containing metadata about the root package.
+- `gleam docs build` now creates a json file containing metadata about the root
+  package.
+- The order of dependencies in `manifest.toml` is now in alphabetical order.
+- The search bar in generated docs now has a darker background color.
+- The generated docs no longer shows whether an argument is discarded or
+  not in a function signature.
+
+
+### Bug fixes
+
+- Fixed a bug where the exhaustiveness checker could crash when checking nested
+  values inserted into the parent type using type parameters.
+- Fixed a bug where `functionname(_name)` would incorrectly parse as a function
+  capture instead of a syntax error.
+
+
+## v0.34.1 - 2023-01-17
 
 ### Build tool changes
 
-- The `gleam new` command now accepts any existing path, as long as there are
-  no conflicts with already existing files. Examples: `gleam new .`, `gleam new
-  ..`, `gleam new ~/projects/test`.
-- The format for the README created by `gleam new` has been altered.
+- Support has been added for using SourceHut as a repository.
+
+### Bug fixes
+
+- Fixed a bug where long function headers with external implementations could
+  format incorrectly.
+- The `@deprecated` attribute can now be used to annotate module constants.
+  This will cause a warning to be emitted when the constant is used.
+
+
+## v0.34.0 - 2023-01-16
+
+## v0.34.0-rc3 - 2023-01-12
+
+### Language changes
+
+- "echo" is now a reserved word.
+- A warning is no longer emitted when a function has a Gleam implementation as
+  well as external implementations for both targets. This is because having a
+  default Gleam implementation means the code is future-proof and continues to
+  be cross platform even if a new target is added.
+
+### Bug fixes
+
+- Fixed a bug where function heads would go over the line limit in the
+  formatter.
+
+
+## v0.34.0-rc2 - 2023-01-11
+
+### Bug fixes
+
+- Fixed a bug where `gleam run` would fail when the current directory is not
+  the root of the project and using the JavaScript target.
+- Fixed a bug where the compiler would in some cases fail to error when an
+  application uses functions that do not support the current compilation
+  target.
+
+
+## v0.34.0-rc1 - 2024-01-07
+
+### Language changes
+
+- Warn about function body not being used, because it already has external
+  implementations for all targets.
+- It's now possible to compile a project with external functions in dependency
+  packages that are not supported by the compilation target so long as they are
+  not used on the current target.
+- The error message for when one imports a constructor instead of an homonymous
+  type has been improved.
 
 ### Language Server Changes
 
@@ -27,9 +107,16 @@
   parentheses on a new line instead of splitting the function's arguments.
 - Now the formatter will format tuples as if they were functions, trying to
   first split just the last element before splitting the whole tuple.
+- Improved the formatting of multiline strings in string concatenation.
 
-### Build tool
+### Build tool changes
 
+- The `gleam new` command now accepts any existing path, as long as there are
+  no conflicts with already existing files. Examples: `gleam new .`, `gleam new
+  ..`, `gleam new ~/projects/test`.
+- The format for the README created by `gleam new` has been altered.
+- The `gleam.toml` created by `gleam new` now has a link to the full reference
+  for its available options.
 - The `gleam` binary is now statically linked on Windows.
 - New projects are created requiring between versions of v0.34.0 inclusive and
   exclusive v2.0.0.
@@ -58,6 +145,7 @@
   equal.
 - JavaScript: export from `prelude.d.mts` in `gleam.d.mts` to fix the error:
   "Type 'Result' is not generic".
+- Not providing a definition after some attributes is now a parse error.
 
 
 ## v0.33.0 - 2023-12-18

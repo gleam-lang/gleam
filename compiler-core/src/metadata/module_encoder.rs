@@ -5,12 +5,11 @@ use crate::{
         Constant, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
         TypedConstantBitArraySegmentOption,
     },
-    build::Target,
     schema_capnp::{self as schema, *},
     type_::{
-        self, expression::SupportedTargets, AccessorsMap, Deprecation, FieldMap, RecordAccessor,
-        Type, TypeConstructor, TypeValueConstructor, TypeVar, ValueConstructor,
-        ValueConstructorVariant,
+        self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, RecordAccessor,
+        Type, TypeConstructor, TypeValueConstructor, TypeVar, TypeVariantConstructors,
+        ValueConstructor, ValueConstructorVariant,
     },
 };
 use std::{collections::HashMap, ops::Deref, sync::Arc};
@@ -41,6 +40,7 @@ impl<'a> ModuleEncoder<'a> {
         let mut module = message.init_root::<module::Builder<'_>>();
         module.set_name(&self.data.name);
         module.set_package(&self.data.package);
+        module.set_contains_todo(self.data.contains_todo);
         self.set_module_types(&mut module);
         self.set_module_values(&mut module);
         self.set_module_accessors(&mut module);
@@ -112,13 +112,29 @@ impl<'a> ModuleEncoder<'a> {
         let mut types_constructors = module
             .reborrow()
             .init_types_constructors(self.data.types_value_constructors.len() as u32);
-        for (i, (name, constructors)) in self.data.types_value_constructors.iter().enumerate() {
+        for (i, (name, data)) in self.data.types_value_constructors.iter().enumerate() {
             let mut property = types_constructors.reborrow().get(i as u32);
             property.set_key(name);
-            self.build_types_constructors_mapping(
-                property.initn_value(constructors.len() as u32),
-                constructors,
-            )
+            self.build_type_variant_constructors(property.init_value(), data)
+        }
+    }
+
+    fn build_type_variant_constructors(
+        &mut self,
+        mut builder: types_variant_constructors::Builder<'_>,
+        data: &TypeVariantConstructors,
+    ) {
+        {
+            let mut builder = builder
+                .reborrow()
+                .init_type_parameters_ids(data.type_parameters_ids.len() as u32);
+            for (i, id) in data.type_parameters_ids.iter().enumerate() {
+                builder.set(i as u32, *id as u16);
+            }
+        }
+        let mut builder = builder.init_variants(data.variants.len() as u32);
+        for (i, constructor) in data.variants.iter().enumerate() {
+            self.build_type_value_constructor(builder.reborrow().get(i as u32), constructor);
         }
     }
 
@@ -153,16 +169,6 @@ impl<'a> ModuleEncoder<'a> {
         );
     }
 
-    fn build_types_constructors_mapping(
-        &mut self,
-        mut builder: capnp::struct_list::Builder<'_, type_value_constructor::Owned>,
-        constructors: &[TypeValueConstructor],
-    ) {
-        for (i, constructor) in constructors.iter().enumerate() {
-            self.build_type_value_constructor(builder.reborrow().get(i as u32), constructor);
-        }
-    }
-
     fn build_type_value_constructor(
         &mut self,
         mut builder: type_value_constructor::Builder<'_>,
@@ -180,15 +186,9 @@ impl<'a> ModuleEncoder<'a> {
 
     fn build_type_value_constructor_parameter(
         &mut self,
-        mut builder: type_value_constructor_parameter::Builder<'_>,
-        parameter: &type_::TypeValueConstructorParameter,
+        builder: type_value_constructor_parameter::Builder<'_>,
+        parameter: &type_::TypeValueConstructorField,
     ) {
-        builder.set_generic_type_parameter_index(
-            parameter
-                .generic_type_parameter_index
-                .map(|x| x as i16)
-                .unwrap_or(-1),
-        );
         self.build_type(builder.init_type(), parameter.type_.as_ref())
     }
 
@@ -230,14 +230,14 @@ impl<'a> ModuleEncoder<'a> {
                 location,
                 module,
                 documentation: doc,
-                supported_targets,
+                implementations,
             } => {
                 let mut builder = builder.init_module_constant();
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 self.build_src_span(builder.reborrow().init_location(), *location);
                 self.build_constant(builder.reborrow().init_literal(), literal);
                 builder.reborrow().set_module(module);
-                self.build_supported_target(builder.init_supported_targets(), *supported_targets)
+                self.build_implementations(builder.init_implementations(), *implementations)
             }
 
             ValueConstructorVariant::Record {
@@ -268,7 +268,7 @@ impl<'a> ModuleEncoder<'a> {
                 name,
                 location,
                 documentation: doc,
-                supported_targets,
+                implementations,
             } => {
                 let mut builder = builder.init_module_fn();
                 builder.set_name(name);
@@ -277,7 +277,7 @@ impl<'a> ModuleEncoder<'a> {
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 self.build_src_span(builder.reborrow().init_location(), *location);
-                self.build_supported_target(builder.init_supported_targets(), *supported_targets);
+                self.build_implementations(builder.init_implementations(), *implementations);
             }
         }
     }
@@ -439,11 +439,16 @@ impl<'a> ModuleEncoder<'a> {
             }
 
             Type::Named {
-                name, args, module, ..
+                name,
+                args,
+                module,
+                package,
+                ..
             } => {
                 let mut app = builder.init_app();
                 app.set_name(name);
                 app.set_module(module);
+                app.set_package(package);
                 self.build_types(app.reborrow().init_parameters(args.len() as u32), args);
             }
 
@@ -484,12 +489,13 @@ impl<'a> ModuleEncoder<'a> {
         builder.set_id(serialised_id);
     }
 
-    fn build_supported_target(
+    fn build_implementations(
         &self,
-        mut builder: supported_targets::Builder<'_>,
-        supported_targets: SupportedTargets,
+        mut builder: implementations::Builder<'_>,
+        implementations: Implementations,
     ) {
-        builder.set_erlang(supported_targets.supports(Target::Erlang));
-        builder.set_javascript(supported_targets.supports(Target::JavaScript));
+        builder.set_gleam(implementations.gleam);
+        builder.set_erlang(implementations.uses_erlang_externals);
+        builder.set_javascript(implementations.uses_javascript_externals);
     }
 }
