@@ -1,0 +1,8 @@
+name = "external_only_erlang"
+version = "1.0.0"
+target = "erlang"
+
+[dependencies]
+hello_joe = "~> 1.0"
+
+[dev-dependencies]

@@ -148,16 +148,14 @@ jobs:
         working-directory: ./test/project_erlang
         if: ${{ matrix.run-integration-tests }}
 
-      - name: test/run_dependency_with_broken_root erlang
-        run: |
-          gleam run -m gleeunit
-        working-directory: ./test/fixtures/run_dependency_with_broken_root
+      - name: test/external_only_javascript
+        run: make
+        working-directory: ./test/external_only_javascript
         if: ${{ matrix.run-integration-tests }}
 
-      - name: test/run_dependency_with_broken_root javascript
-        run: |
-          gleam run --target=js -m gleeunit
-        working-directory: ./test/fixtures/run_dependency_with_broken_root
+      - name: test/external_only_erlang
+        run: make
+        working-directory: ./test/external_only_erlang
         if: ${{ matrix.run-integration-tests }}
 
       - name: test/project_javascript
