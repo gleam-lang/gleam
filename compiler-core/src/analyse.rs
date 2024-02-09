@@ -76,9 +76,20 @@ impl Inferred<PatternConstructor> {
     }
 }
 
+/// How the compiler should treat target support.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TargetSupport {
+    /// Target support is enfored, meaning if a function is found to not have an implementation for
+    /// the current target then an error is emitted and compilation halts.
+    ///
+    /// This is used when compiling the root package, with the exception of when using
+    /// `gleam run --module $module` to run a module from a dependency package, in which case we do
+    /// not want to error as the root package code isn't going to be run.
     Enforced,
+    /// Target support is enfored, meaning if a function is found to not have an implementation for
+    /// the current target it will continue onwards and not generate any code for this function.
+    ///
+    /// This is used when compiling dependencies.
     NotEnforced,
 }
 

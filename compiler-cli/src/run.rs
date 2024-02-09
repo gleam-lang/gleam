@@ -3,6 +3,7 @@ use std::sync::OnceLock;
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use gleam_core::{
+    analyse::TargetSupport,
     build::{Built, Codegen, Mode, Options, Runtime, Target},
     config::{DenoFlag, PackageConfig},
     error::Error,
@@ -67,18 +68,17 @@ pub fn command(
         codegen: Codegen::All,
         mode: Mode::Dev,
         target: Some(target),
+        root_target_support: match package_kind {
+            // The module we want to run is in the root package, so we make sure that the package
+            // can compile successfully for the current target.
+            PackageKind::Root => TargetSupport::Enforced,
+            // On the other hand, if we're trying to run a module that belongs to a dependency, we
+            // only care if the dependency can compile for the current target.
+            PackageKind::Dependency => TargetSupport::NotEnforced,
+        },
     };
 
-    let built = match package_kind {
-        // The module we want to run is under the root package,
-        // so we have to compile everything.
-        PackageKind::Root => crate::build::main(options, manifest),
-        // On the other hand, if we're trying to run a module that belongs
-        // to a dependency, we'll just build the dependencies and look for
-        // the main function there.
-        PackageKind::Dependency => crate::build::deps_only(options, manifest),
-    }?;
-
+    let built = crate::build::main(options, manifest)?;
     let main_function = get_or_suggest_main_function(built, &module)?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

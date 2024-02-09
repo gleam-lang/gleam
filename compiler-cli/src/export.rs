@@ -1,5 +1,6 @@
 use camino::Utf8PathBuf;
 use gleam_core::{
+    analyse::TargetSupport,
     build::{Codegen, Mode, Options, Target},
     Result,
 };
@@ -41,6 +42,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
     // Build project in production mode
     let built = crate::build::main(
         Options {
+            root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
             codegen: Codegen::All,
             mode,
@@ -138,6 +140,7 @@ pub fn package_interface(path: Utf8PathBuf) -> Result<()> {
             target: None,
             codegen: Codegen::All,
             warnings_as_errors: false,
+            root_target_support: TargetSupport::Enforced,
         },
         crate::build::download_dependencies()?,
     )?;

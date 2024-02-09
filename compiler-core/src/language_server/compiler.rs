@@ -3,7 +3,8 @@ use ecow::EcoString;
 use itertools::Itertools;
 
 use crate::{
-    build::{self, CompilationScope, Mode, Module, NullTelemetry, ProjectCompiler},
+    analyse::TargetSupport,
+    build::{self, Mode, Module, NullTelemetry, ProjectCompiler},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     language_server::Locker,
@@ -69,11 +70,11 @@ where
             mode: build::Mode::Lsp,
             target: None,
             codegen: build::Codegen::None,
+            root_target_support: TargetSupport::Enforced,
         };
         let mut project_compiler = ProjectCompiler::new(
             config,
             options,
-            CompilationScope::AllModules,
             manifest.packages,
             Box::new(telemetry),
             warnings.clone(),

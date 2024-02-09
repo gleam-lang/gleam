@@ -9,7 +9,7 @@ mod generated_tests;
 
 use gleam_core::{
     build::{
-        CompileModules, ErlangAppCodegenConfiguration, Mode, NullTelemetry, StaleTracker, Target,
+        ErlangAppCodegenConfiguration, Mode, NullTelemetry, StaleTracker, Target,
         TargetCodegenConfiguration,
     },
     config::PackageConfig,
@@ -53,7 +53,6 @@ pub fn prepare(path: &str) -> String {
     let mut compiler = gleam_core::build::PackageCompiler::new(
         &config,
         Mode::Dev,
-        CompileModules::All,
         &root,
         &out,
         &lib,

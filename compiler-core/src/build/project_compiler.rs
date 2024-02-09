@@ -28,9 +28,7 @@ use std::{
     time::Instant,
 };
 
-use super::{
-    elixir_libraries::ElixirLibraries, Codegen, CompileModules, ErlangAppCodegenConfiguration,
-};
+use super::{elixir_libraries::ElixirLibraries, Codegen, ErlangAppCodegenConfiguration};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -52,6 +50,7 @@ pub struct Options {
     pub target: Option<Target>,
     pub codegen: Codegen,
     pub warnings_as_errors: bool,
+    pub root_target_support: TargetSupport,
 }
 
 #[derive(Debug)]
@@ -73,12 +72,6 @@ impl Built {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum CompilationScope {
-    AllModules,
-    OnlyDependencyModules,
-}
-
 #[derive(Debug)]
 pub struct ProjectCompiler<IO> {
     // The gleam.toml config for the root package of the project
@@ -87,7 +80,6 @@ pub struct ProjectCompiler<IO> {
     importable_modules: im::HashMap<EcoString, type_::ModuleInterface>,
     defined_modules: im::HashMap<EcoString, Utf8PathBuf>,
     stale_modules: StaleTracker,
-    compilation_scope: CompilationScope,
     warnings: WarningEmitter,
     telemetry: Box<dyn Telemetry>,
     options: Options,
@@ -109,7 +101,6 @@ where
     pub fn new(
         config: PackageConfig,
         options: Options,
-        compilation_scope: CompilationScope,
         packages: Vec<ManifestPackage>,
         telemetry: Box<dyn Telemetry>,
         warning_emitter: Arc<dyn WarningEmitterIO>,
@@ -128,7 +119,6 @@ where
             ids: UniqueIdGenerator::new(),
             warnings: WarningEmitter::new(warning_emitter),
             subprocess_stdio: Stdio::Inherit,
-            compilation_scope,
             telemetry,
             packages,
             options,
@@ -191,12 +181,7 @@ where
 
     pub fn compile_root_package(&mut self) -> Result<Package, Error> {
         let config = self.config.clone();
-        let modules = self.compile_gleam_package(
-            &config,
-            true,
-            self.paths.root().to_path_buf(),
-            self.compilation_scope,
-        )?;
+        let modules = self.compile_gleam_package(&config, true, self.paths.root().to_path_buf())?;
         Ok(Package { config, modules })
     }
 
@@ -501,11 +486,7 @@ where
         let config_path = package_root.join("gleam.toml");
         let config = PackageConfig::read(config_path, &self.io)?;
 
-        // Since we're compiling a dependency package we always want to compile
-        // all its modules and check that it's compiling.
-        // That's why we're not using the project compiler's `compilation_scope`
-        // but we force the `AllModules` compilation scope.
-        self.compile_gleam_package(&config, false, package_root, CompilationScope::AllModules)
+        self.compile_gleam_package(&config, false, package_root)
     }
 
     fn load_cached_package(
@@ -530,7 +511,6 @@ where
         config: &PackageConfig,
         is_root: bool,
         root_path: Utf8PathBuf,
-        compilation_scope: CompilationScope,
     ) -> Result<Vec<Module>, Error> {
         let out_path =
             self.paths
@@ -564,19 +544,9 @@ where
             },
         };
 
-        // Since we're compiling the gleam root package (notice dependencies are
-        // compiled with `compile_gleam_dep_package`) we don't want to compile
-        // any module if the compilation scope requires to compile only the
-        // dependency modules.
-        let compile_modules = match compilation_scope {
-            CompilationScope::OnlyDependencyModules if is_root => CompileModules::None,
-            _ => CompileModules::All,
-        };
-
         let mut compiler = PackageCompiler::new(
             config,
             mode,
-            compile_modules,
             &root_path,
             &out_path,
             &lib_path,
@@ -589,9 +559,20 @@ where
         compiler.perform_codegen = self.options.codegen.should_codegen(is_root);
         compiler.compile_beam_bytecode = self.options.codegen.should_codegen(is_root);
         compiler.subprocess_stdio = self.subprocess_stdio;
-        if is_root {
-            compiler.target_support = TargetSupport::Enforced;
-        }
+        compiler.target_support = if is_root {
+            // When compiling the root package it is context specific as to whether we need to
+            // enforce that all functions have an implementation for the current target.
+            // Typically we do, but if we are using `gleam run -m $module` to run a module that
+            // belongs to a dependency we don't need to enforce this as we don't want to fail
+            // compilation. It's impossible for a dependecy module to call functions from the root
+            // package, so it's OK if they could not be compiled.
+            self.options.root_target_support
+        } else {
+            // When compiling dependencies we don't enforce that all functions have an
+            // implementation for the current target. It is OK if they have APIs that are
+            // unaccessible so long as they are not used by the root package.
+            TargetSupport::NotEnforced
+        };
 
         // Compile project to Erlang or JavaScript source code
         let compiled = compiler.compile(

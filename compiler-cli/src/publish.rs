@@ -1,6 +1,7 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
+    analyse::TargetSupport,
     build::{Codegen, Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
     hex, paths,
@@ -185,6 +186,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
     // Build the project to check that it is valid
     let built = build::main(
         Options {
+            root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
             mode: Mode::Prod,
             target: Some(target),

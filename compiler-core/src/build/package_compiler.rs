@@ -29,16 +29,6 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
 
-#[derive(Copy, Clone, Debug)]
-/// A flag that can be used to tell the package compiler wether to compile the
-/// package's modules or not.
-/// For example we can use this to compile and run the dependencies of a project
-/// while ignoring the root package.
-pub enum CompileModules {
-    All,
-    None,
-}
-
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
     pub io: IO,
@@ -46,7 +36,6 @@ pub struct PackageCompiler<'a, IO> {
     pub lib: &'a Utf8Path,
     pub root: &'a Utf8Path,
     pub mode: Mode,
-    pub compile_modules: CompileModules,
     pub target: &'a TargetCodegenConfiguration,
     pub config: &'a PackageConfig,
     pub ids: UniqueIdGenerator,
@@ -66,7 +55,6 @@ where
     pub fn new(
         config: &'a PackageConfig,
         mode: Mode,
-        compile_modules: CompileModules,
         root: &'a Utf8Path,
         out: &'a Utf8Path,
         lib: &'a Utf8Path,
@@ -83,7 +71,6 @@ where
             mode,
             config,
             target,
-            compile_modules,
             write_metadata: true,
             perform_codegen: true,
             write_entrypoint: false,
@@ -112,21 +99,15 @@ where
         // Ensure that the package is compatible with this version of Gleam
         self.config.check_gleam_compatibility()?;
 
-        let to_compile = match self.compile_modules {
-            // If we're asked to ignore the project's modules we're going to
-            // perform the codegeneration step on an empty vector of modules.
-            CompileModules::None => vec![],
-            CompileModules::All => {
-                self.load_modules(
-                    warnings,
-                    existing_modules,
-                    already_defined_modules,
-                    stale_modules,
-                    telemetry,
-                )?
-                .to_compile
-            }
-        };
+        let to_compile = self
+            .load_modules(
+                warnings,
+                existing_modules,
+                already_defined_modules,
+                stale_modules,
+                telemetry,
+            )?
+            .to_compile;
 
         if !to_compile.is_empty() {
             // Print that work is being done
