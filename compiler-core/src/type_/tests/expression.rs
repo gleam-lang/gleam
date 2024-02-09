@@ -34,8 +34,7 @@ pub fn pure_gleam_function() {
 pub fn pure_gleam_1() { 1 + 1 }
 pub fn pure_gleam_2() { pure_gleam_1() * 2 }
 "#,
-        vec![
-            (
+        [(
                 "pure_gleam_1",
                 Implementations {
                     gleam: true,
@@ -50,8 +49,7 @@ pub fn pure_gleam_2() { pure_gleam_1() * 2 }
                     uses_erlang_externals: false,
                     uses_javascript_externals: false,
                 }
-            )
-        ],
+            )],
     );
 }
 
@@ -64,8 +62,7 @@ pub fn erlang_only_1() -> Int
 
 pub fn erlang_only_2() { erlang_only_1() * 2 }
 "#,
-        vec![
-            (
+        [(
                 "erlang_only_1",
                 Implementations {
                     gleam: false,
@@ -80,8 +77,7 @@ pub fn erlang_only_2() { erlang_only_1() * 2 }
                     uses_erlang_externals: true,
                     uses_javascript_externals: false,
                 }
-            ),
-        ],
+            )],
     );
 }
 
@@ -95,8 +91,7 @@ pub fn all_externals_1() -> Int
 
 pub fn all_externals_2() { all_externals_1() * 2 }
 "#,
-        vec![
-            (
+        [(
                 "all_externals_1",
                 Implementations {
                     gleam: false,
@@ -111,8 +106,7 @@ pub fn all_externals_2() { all_externals_1() * 2 }
                     uses_erlang_externals: true,
                     uses_javascript_externals: true,
                 }
-            )
-        ],
+            )],
     );
 }
 
@@ -130,8 +124,7 @@ pub fn pure_gleam() {
   javascript_external_and_pure_body() + erlang_external_and_pure_body()
 }
 "#,
-        vec![
-            (
+        [(
                 "erlang_external_and_pure_body",
                 Implementations {
                     gleam: true,
@@ -154,8 +147,7 @@ pub fn pure_gleam() {
                     uses_erlang_externals: true,
                     uses_javascript_externals: true,
                 }
-            )
-        ],
+            )],
     );
 }
 
@@ -171,8 +163,7 @@ pub fn erlang_external_and_javascript_body() -> Int { javascript_only() }
 
 pub fn all_externals() -> Int { erlang_external_and_javascript_body() }
 "#,
-        vec![
-            (
+        [(
                 "all_externals",
                 Implementations {
                     gleam: false,
@@ -195,8 +186,7 @@ pub fn all_externals() -> Int { erlang_external_and_javascript_body() }
                     uses_erlang_externals: false,
                     uses_javascript_externals: true,
                 }
-            ),
-        ],
+            )],
     );
 }
 
@@ -212,8 +202,7 @@ pub fn javascript_external_and_erlang_body() -> Int { erlang_only() }
 
 pub fn all_externals() -> Int { javascript_external_and_erlang_body() }
 "#,
-        vec![
-            (
+        [(
                 "all_externals",
                 Implementations {
                     gleam: false,
@@ -236,8 +225,7 @@ pub fn all_externals() -> Int { javascript_external_and_erlang_body() }
                     uses_erlang_externals: true,
                     uses_javascript_externals: true,
                 }
-            ),
-        ],
+            )],
     );
 }
 
