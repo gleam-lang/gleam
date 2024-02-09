@@ -36,6 +36,8 @@
 
 ### Bug fixes
 
+- Fixed a bug the build tool could be make to attempt to run a main function
+  that does not support the current target in some circumstances.
 - Fixed a bug where the exhaustiveness checker could crash when checking nested
   values inserted into the parent type using type parameters.
 - Fixed a bug where `functionname(_name)` would incorrectly parse as a function
