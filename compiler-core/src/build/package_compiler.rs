@@ -128,6 +128,15 @@ where
             }
         };
 
+        if !to_compile.is_empty() {
+            // Print that work is being done
+            if self.perform_codegen {
+                telemetry.compiling_package(&self.config.name);
+            } else {
+                telemetry.checking_package(&self.config.name)
+            }
+        }
+
         // Type check the modules that are new or have changed
         tracing::info!(count=%to_compile.len(), "analysing_modules");
         let modules = analyse(
@@ -144,7 +153,6 @@ where
         tracing::debug!("performing_code_generation");
         self.perform_codegen(&modules)?;
         self.encode_and_write_metadata(&modules)?;
-
         Ok(modules)
     }
 
@@ -180,15 +188,6 @@ where
         // Load the cached modules that have previously been compiled
         for module in loaded.cached.iter() {
             _ = existing_modules.insert(module.name.clone(), module.clone());
-        }
-
-        if !loaded.to_compile.is_empty() {
-            // Print that work is being done
-            if self.perform_codegen {
-                telemetry.compiling_package(&self.config.name);
-            } else {
-                telemetry.checking_package(&self.config.name)
-            }
         }
 
         Ok(loaded)
