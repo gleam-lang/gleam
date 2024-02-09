@@ -78,7 +78,7 @@ fn name_with_generics<'a>(
 ///
 ///   Examples:
 ///     fn(a) -> String       // `a` is `any`
-///     fn() -> Result(a, b)  // `a` and `b` are `any`
+///     `fn()` -> Result(a, b)  // `a` and `b` are `any`
 ///     fn(a) -> a            // `a` is a generic
 fn collect_generic_usages<'a>(
     mut ids: HashMap<u64, u64>,
