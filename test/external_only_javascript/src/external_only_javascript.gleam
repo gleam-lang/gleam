@@ -9,5 +9,5 @@ pub fn main() -> Nil {
 // Currently there is a bug in the compiler's target detection that causes
 // functions with no body to not emit an error if they don't support the
 // current target.
-@external(javascript, "./external_only_javascript.mjs", "main")
+@external(javascript, "./external_only_javascript_ffi.mjs", "main")
 pub fn run() -> Nil
