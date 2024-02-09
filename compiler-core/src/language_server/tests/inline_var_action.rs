@@ -358,3 +358,20 @@ fn main() {
         Position::new(5, 25)
     );
 }
+
+#[test]
+fn test_inlining_other_variable() {
+    assert_code_action!(
+        r#"
+import list
+
+fn main() {
+  let u = 1 + 2
+  let y = u + 3
+  let z = y + 4
+}
+        "#,
+        Position::new(6, 0),
+        Position::new(6, 25)
+    );
+}

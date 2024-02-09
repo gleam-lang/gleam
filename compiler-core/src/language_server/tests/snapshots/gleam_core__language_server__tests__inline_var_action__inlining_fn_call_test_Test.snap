@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/language_server/tests/inline_var_action.rs
+expression: "\nimport list\n\nfn main() {\n  let u = 1 + 2\n  let y = u + 3\n  let z = y + 4\n}\n        "
+---
+
+import list
+
+fn main() {
+  let u = 1 + 2
+  
+  let z = u + 3 + 4
+}
+        
