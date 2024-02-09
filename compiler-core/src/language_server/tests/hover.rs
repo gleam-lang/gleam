@@ -6,7 +6,7 @@ use lsp_types::{
 use super::*;
 
 fn positioned_with_io(src: &str, position: Position, io: &LanguageServerTestIO) -> Option<Hover> {
-    let mut engine = setup_engine(&io);
+    let mut engine = setup_engine(io);
 
     _ = io.src_module("app", src);
     for package in &io.manifest.packages {

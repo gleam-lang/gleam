@@ -287,7 +287,7 @@ fn add_package_from_manifest<B>(
     );
 
     _ = compiler.packages.insert(package.name.to_string(), package);
-    _ = compiler.io.write(toml_path.as_path(), &toml).unwrap();
+    compiler.io.write(toml_path.as_path(), &toml).unwrap();
 }
 
 fn add_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, name: &str) {

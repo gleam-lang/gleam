@@ -193,7 +193,7 @@ fn existing_directory_with_non_generated_file() {
     crate::fs::mkdir(&path).unwrap();
     let file_path = PathBuf::from(&path).join("some_fake_thing_that_is_not_generated.md");
 
-    let _ = std::fs::File::create(&file_path);
+    let _ = std::fs::File::create(file_path);
 
     let creator = super::Creator::new(
         super::NewOptions {
