@@ -618,7 +618,7 @@ impl ModuleInterface {
         let value = self
             .values
             .get(&EcoString::from("main"))
-            .ok_or_else(|| not_found())?;
+            .ok_or_else(not_found)?;
 
         assert_suitable_main_function(value, &self.name, target)?;
 
