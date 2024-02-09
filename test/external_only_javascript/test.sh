@@ -7,6 +7,8 @@ g() {
 	cargo run --quiet -- "$@"
 }
 
+g clean
+
 echo This should succeed regardless of target as it is a dependency module
 g run --module=hello_joe --target=erlang
 g run --module=hello_joe --target=javascript
