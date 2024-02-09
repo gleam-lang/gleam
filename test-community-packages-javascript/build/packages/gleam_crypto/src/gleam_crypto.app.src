@@ -1,0 +1,9 @@
+{application, gleam_crypto, [
+    {vsn, "0.3.1"},
+    {applications, [gleam_bitwise,
+                    gleam_stdlib,
+                    gleeunit]},
+    {description, "Gleam bindings to the BEAM cryptography functions"},
+    {modules, [gleam@crypto]},
+    {registered, []}
+]}.

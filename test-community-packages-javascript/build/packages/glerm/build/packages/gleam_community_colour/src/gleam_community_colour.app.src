@@ -1,0 +1,9 @@
+{application, gleam_community_colour, [
+    {vsn, "1.2.0"},
+    {applications, [gleam_stdlib,
+                    gleeunit]},
+    {description, "Colour types, conversions, and other utilities"},
+    {modules, [gleam_community@colour,
+               gleam_community@colour@accessibility]},
+    {registered, []}
+]}.

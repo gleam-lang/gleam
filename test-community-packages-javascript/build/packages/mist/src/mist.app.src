@@ -1,0 +1,20 @@
+{application, mist, [
+    {vsn, "0.11.0"},
+    {applications, [gleam_erlang,
+                    gleam_hackney,
+                    gleam_http,
+                    gleam_otp,
+                    gleam_stdlib,
+                    gleeunit,
+                    glisten]},
+    {description, "a misty Gleam web server"},
+    {modules, [mist,
+               mist@internal@encoder,
+               mist@internal@file,
+               mist@internal@handler,
+               mist@internal@http,
+               mist@internal@logger,
+               mist@internal@websocket,
+               mist@websocket]},
+    {registered, []}
+]}.

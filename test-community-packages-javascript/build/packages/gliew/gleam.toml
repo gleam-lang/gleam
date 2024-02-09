@@ -1,0 +1,16 @@
+name = "gliew"
+version = "0.3.0"
+description = "A gleam server-side rendered web framework with live updating UI"
+repository = { type = "github", user = "arnarg", repo = "gliew" }
+licences = ["MIT"]
+
+[dependencies]
+gleam_stdlib = "~> 0.29"
+nakai = "~> 0.8"
+mist = "~> 0.11"
+gleam_erlang = "~> 0.19"
+gleam_otp = "~> 0.5"
+gleam_crypto = "~> 0.3"
+
+[dev-dependencies]
+gleeunit = "~> 0.10"

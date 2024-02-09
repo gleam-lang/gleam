@@ -1,0 +1,10 @@
+{application, hug, [
+    {vsn, "0.1.0"},
+    {applications, [gleam_community_ansi,
+                    gleam_erlang,
+                    gleam_stdlib,
+                    gleeunit]},
+    {description, "Helpful and pretty CLI messages"},
+    {modules, [hug]},
+    {registered, []}
+]}.

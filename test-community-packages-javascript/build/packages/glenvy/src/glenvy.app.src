@@ -1,0 +1,16 @@
+{application, glenvy, [
+    {vsn, "0.4.0"},
+    {applications, [gleam_erlang,
+                    gleam_stdlib,
+                    gleeunit,
+                    glx]},
+    {description, "A pleasant way to interact with your environment."},
+    {modules, [glenvy@dotenv,
+               glenvy@env,
+               glenvy@error,
+               glenvy@internal@file,
+               glenvy@internal@os,
+               glenvy@internal@parser,
+               glenvy@internal@string]},
+    {registered, []}
+]}.

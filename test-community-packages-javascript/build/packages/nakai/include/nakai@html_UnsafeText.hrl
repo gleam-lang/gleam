@@ -1,0 +1,1 @@
+-record(unsafe_text, {content :: binary()}).

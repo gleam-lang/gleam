@@ -1,0 +1,13 @@
+name = "gleam_community_ansi"
+version = "1.1.0"
+licences = ["Apache-2.0"]
+description = "ANSI colours, formatting, and control codes"
+repository = { type = "github", user = "gleam-community", repo = "ansi" }
+
+[dependencies]
+gleam_bitwise = "~> 1.2"
+gleam_stdlib = "~> 0.25"
+gleam_community_colour = "~> 1.0"
+
+[dev-dependencies]
+gleeunit = "~> 0.7"

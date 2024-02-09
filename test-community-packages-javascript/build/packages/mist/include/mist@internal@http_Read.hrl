@@ -1,0 +1,1 @@
+-record(read, {data :: bitstring()}).

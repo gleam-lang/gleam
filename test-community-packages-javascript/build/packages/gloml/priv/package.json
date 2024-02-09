@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@ltd/j-toml": "^1.38.0"
+  }
+}

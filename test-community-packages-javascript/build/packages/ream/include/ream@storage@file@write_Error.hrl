@@ -1,0 +1,1 @@
+-record(error, {reason :: gleam@erlang@file:reason()}).

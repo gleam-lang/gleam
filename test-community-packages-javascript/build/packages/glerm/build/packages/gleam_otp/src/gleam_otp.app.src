@@ -1,0 +1,15 @@
+{application, gleam_otp, [
+    {vsn, "0.8.0"},
+    {applications, [gleam_erlang,
+                    gleam_stdlib,
+                    gleeunit]},
+    {description, "Fault tolerant multicore Gleam programs with OTP"},
+    {modules, [gleam@otp@actor,
+               gleam@otp@intensity_tracker,
+               gleam@otp@port,
+               gleam@otp@supervisor,
+               gleam@otp@system,
+               gleam@otp@task,
+               gleam_otp]},
+    {registered, []}
+]}.

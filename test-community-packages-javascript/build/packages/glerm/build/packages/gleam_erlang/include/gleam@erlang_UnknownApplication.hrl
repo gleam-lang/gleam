@@ -1,0 +1,1 @@
+-record(unknown_application, {name :: gleam@erlang@atom:atom_()}).

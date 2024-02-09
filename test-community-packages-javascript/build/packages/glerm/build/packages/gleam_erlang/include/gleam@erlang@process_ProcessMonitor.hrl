@@ -1,0 +1,1 @@
+-record(process_monitor, {tag :: gleam@erlang:reference_()}).

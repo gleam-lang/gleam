@@ -1,0 +1,13 @@
+{application, gleam_erlang, [
+    {vsn, "0.19.0"},
+    {applications, [gleam_stdlib,
+                    gleeunit]},
+    {description, "A Gleam library for working with Erlang"},
+    {modules, [gleam@erlang,
+               gleam@erlang@atom,
+               gleam@erlang@charlist,
+               gleam@erlang@file,
+               gleam@erlang@os,
+               gleam@erlang@process]},
+    {registered, []}
+]}.

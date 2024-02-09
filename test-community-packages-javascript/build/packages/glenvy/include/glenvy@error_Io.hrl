@@ -1,0 +1,1 @@
+-record(io, {message :: binary()}).

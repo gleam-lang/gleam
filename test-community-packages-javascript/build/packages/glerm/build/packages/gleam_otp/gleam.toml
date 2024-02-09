@@ -1,0 +1,19 @@
+name = "gleam_otp"
+version = "0.8.0"
+licences = ["Apache-2.0"]
+description = "Fault tolerant multicore Gleam programs with OTP"
+
+gleam = ">= 0.32.0"
+
+repository = { type = "github", user = "gleam-lang", repo = "otp" }
+links = [
+  { title = "Website", href = "https://gleam.run" },
+  { title = "Sponsor", href = "https://github.com/sponsors/lpil" },
+]
+
+[dependencies]
+gleam_stdlib = "~> 0.32"
+gleam_erlang = "~> 0.22"
+
+[dev-dependencies]
+gleeunit = "~> 1.0"

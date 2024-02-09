@@ -1,0 +1,17 @@
+{application, gliew, [
+    {vsn, "0.3.0"},
+    {applications, [gleam_crypto,
+                    gleam_erlang,
+                    gleam_otp,
+                    gleam_stdlib,
+                    gleeunit,
+                    mist,
+                    nakai]},
+    {description, "A gleam server-side rendered web framework with live updating UI"},
+    {modules, [gliew,
+               gliew@internal@event,
+               gliew@internal@manager,
+               gliew@internal@util,
+               gliew@internal@worker]},
+    {registered, []}
+]}.

@@ -1,0 +1,8 @@
+{application, glx, [
+    {vsn, "0.2.0"},
+    {applications, [gleam_stdlib,
+                    gleeunit]},
+    {description, "Extensions to the Gleam standard library."},
+    {modules, [glx@stringx]},
+    {registered, []}
+]}.

@@ -1,0 +1,11 @@
+{application, glerm, [
+    {vsn, "0.1.0"},
+    {applications, [gleam_community_ansi,
+                    gleam_erlang,
+                    gleam_otp,
+                    gleam_stdlib,
+                    gleeunit]},
+    {description, "A terminal wrapper for Gleam"},
+    {modules, [glerm]},
+    {registered, []}
+]}.

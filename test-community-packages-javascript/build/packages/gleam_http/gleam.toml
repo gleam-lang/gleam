@@ -1,0 +1,16 @@
+name = "gleam_http"
+version = "3.2.0"
+licences = ["Apache-2.0"]
+description = "Types and functions for Gleam HTTP clients and servers"
+
+repository = { type = "github", user = "gleam-lang", repo = "http" }
+links = [
+  { title = "Website", href = "https://gleam.run" },
+  { title = "Sponsor", href = "https://github.com/sponsors/lpil" },
+]
+
+[dependencies]
+gleam_stdlib = "~> 0.18"
+
+[dev-dependencies]
+gleeunit = "~> 0.6"

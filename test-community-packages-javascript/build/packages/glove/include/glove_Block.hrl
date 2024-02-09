@@ -1,0 +1,1 @@
+-record(block, {label :: binary(), statements :: list(glove:statement())}).

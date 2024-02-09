@@ -1,0 +1,1 @@
+-record(global, {name :: binary()}).

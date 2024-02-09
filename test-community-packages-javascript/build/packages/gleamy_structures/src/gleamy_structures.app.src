@@ -1,0 +1,16 @@
+{application, gleamy_structures, [
+    {vsn, "0.3.0"},
+    {applications, [gleam_stdlib,
+                    gleeunit]},
+    {description, "Data structures in pure Gleam."},
+    {modules, [gleamy_structures@heap@leftist_heap,
+               gleamy_structures@heap@pairing_heap,
+               gleamy_structures@map,
+               gleamy_structures@non_empty_list,
+               gleamy_structures@priority_queue,
+               gleamy_structures@set,
+               gleamy_structures@tree@binary_search_tree,
+               gleamy_structures@tree@red_black_tree,
+               gleamy_structures@tree@red_black_tree_kv]},
+    {registered, []}
+]}.

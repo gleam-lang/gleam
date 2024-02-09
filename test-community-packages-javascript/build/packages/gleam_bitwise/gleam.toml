@@ -1,0 +1,16 @@
+name = "gleam_bitwise"
+version = "1.2.0"
+licences = ["Apache-2.0"]
+description = "Bitwise operations on integers"
+
+repository = { type = "github", user = "gleam-lang", repo = "bitwise" }
+links = [
+  { title = "Website", href = "https://gleam.run" },
+  { title = "Sponsor", href = "https://github.com/sponsors/lpil" },
+]
+
+[dependencies]
+gleam_stdlib = "~> 0.21"
+
+[dev-dependencies]
+gleeunit = "~> 0.6"

@@ -1,0 +1,1 @@
+-record(index, {offset :: integer(), size :: integer(), file_id :: integer()}).

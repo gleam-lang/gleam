@@ -1,0 +1,1 @@
+-record(textdata, {inner :: binary()}).

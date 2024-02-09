@@ -1,0 +1,10 @@
+{application, gsv, [
+    {vsn, "0.1.0"},
+    {applications, [gleam_stdlib,
+                    gleeunit]},
+    {description, "A simple csv parser and generator written in gleam "},
+    {modules, [gsv,
+               gsv@internal@ast,
+               gsv@internal@token]},
+    {registered, []}
+]}.

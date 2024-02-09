@@ -1,0 +1,9 @@
+{application, gleam_cors, [
+    {vsn, "0.2.0"},
+    {applications, [gleam_http,
+                    gleam_stdlib,
+                    gleeunit]},
+    {description, "A CORS middleware for Gleam"},
+    {modules, [gleam@http@cors]},
+    {registered, []}
+]}.

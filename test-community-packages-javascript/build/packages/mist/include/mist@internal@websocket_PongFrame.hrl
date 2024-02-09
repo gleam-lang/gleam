@@ -1,0 +1,1 @@
+-record(pong_frame, {payload_length :: integer(), payload :: bitstring()}).

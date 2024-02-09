@@ -1,0 +1,1 @@
+-record(binary_message, {data :: bitstring()}).

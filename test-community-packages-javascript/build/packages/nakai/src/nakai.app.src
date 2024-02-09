@@ -1,0 +1,18 @@
+{application, nakai, [
+    {vsn, "0.8.0"},
+    {applications, [gleam_erlang,
+                    gleam_json,
+                    gleam_stdlib,
+                    gleeunit,
+                    glychee]},
+    {description, "HTML generation for Gleam, on the server or anywhere else"},
+    {modules, [nakai,
+               nakai@experimental@head,
+               nakai@experimental@on,
+               nakai@experimental@web_components,
+               nakai@html,
+               nakai@html@attrs,
+               nakai@internal@document,
+               nakai@internal@render]},
+    {registered, []}
+]}.

@@ -1,0 +1,1 @@
+-record(mouse, {event :: glerm:mouse_event()}).
