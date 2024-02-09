@@ -99,52 +99,6 @@ where
         // Ensure that the package is compatible with this version of Gleam
         self.config.check_gleam_compatibility()?;
 
-        let to_compile = self
-            .load_modules(
-                warnings,
-                existing_modules,
-                already_defined_modules,
-                stale_modules,
-                telemetry,
-            )?
-            .to_compile;
-
-        if !to_compile.is_empty() {
-            // Print that work is being done
-            if self.perform_codegen {
-                telemetry.compiling_package(&self.config.name);
-            } else {
-                telemetry.checking_package(&self.config.name)
-            }
-        }
-
-        // Type check the modules that are new or have changed
-        tracing::info!(count=%to_compile.len(), "analysing_modules");
-        let modules = analyse(
-            &self.config,
-            self.target.target(),
-            self.mode,
-            &self.ids,
-            to_compile,
-            existing_modules,
-            warnings,
-            self.target_support,
-        )?;
-
-        tracing::debug!("performing_code_generation");
-        self.perform_codegen(&modules)?;
-        self.encode_and_write_metadata(&modules)?;
-        Ok(modules)
-    }
-
-    fn load_modules(
-        &self,
-        warnings: &WarningEmitter,
-        existing_modules: &mut im::HashMap<EcoString, type_::ModuleInterface>,
-        already_defined_modules: &mut im::HashMap<EcoString, Utf8PathBuf>,
-        stale_modules: &mut StaleTracker,
-        telemetry: &dyn Telemetry,
-    ) -> Result<Loaded, Error> {
         let artefact_directory = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
         let codegen_required = if self.perform_codegen {
             CodegenRequired::Yes
@@ -167,11 +121,36 @@ where
         .run()?;
 
         // Load the cached modules that have previously been compiled
-        for module in loaded.cached.iter() {
-            _ = existing_modules.insert(module.name.clone(), module.clone());
+        for module in loaded.cached.into_iter() {
+            _ = existing_modules.insert(module.name.clone(), module);
         }
 
-        Ok(loaded)
+        if !loaded.to_compile.is_empty() {
+            // Print that work is being done
+            if self.perform_codegen {
+                telemetry.compiling_package(&self.config.name);
+            } else {
+                telemetry.checking_package(&self.config.name)
+            }
+        }
+
+        // Type check the modules that are new or have changed
+        tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
+        let modules = analyse(
+            &self.config,
+            self.target.target(),
+            self.mode,
+            &self.ids,
+            loaded.to_compile,
+            existing_modules,
+            warnings,
+            self.target_support,
+        )?;
+
+        tracing::debug!("performing_code_generation");
+        self.perform_codegen(&modules)?;
+        self.encode_and_write_metadata(&modules)?;
+        Ok(modules)
     }
 
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
