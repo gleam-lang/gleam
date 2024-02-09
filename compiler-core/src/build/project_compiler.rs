@@ -569,8 +569,8 @@ where
         // any module if the compilation scope requires to compile only the
         // dependency modules.
         let compile_modules = match compilation_scope {
-            CompilationScope::AllModules => CompileModules::All,
-            CompilationScope::OnlyDependencyModules => CompileModules::None,
+            CompilationScope::OnlyDependencyModules if is_root => CompileModules::None,
+            _ => CompileModules::All,
         };
 
         let mut compiler = PackageCompiler::new(
