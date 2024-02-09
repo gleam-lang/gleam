@@ -33,3 +33,7 @@ if g run --target=erlang; then
 	echo "Expected run to fail"
 	exit 1
 fi
+
+echo
+echo Success! 💖
+echo

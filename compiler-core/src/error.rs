@@ -145,8 +145,11 @@ pub enum Error {
     #[error("{module} does not have a main function")]
     ModuleDoesNotHaveMainFunction { module: EcoString },
 
-    #[error("{module} has the wrong arity so it can not be run.")]
+    #[error("{module}'s main function has the wrong arity so it can not be run")]
     MainFunctionHasWrongArity { module: EcoString, arity: usize },
+
+    #[error("{module}'s main function does not support the current target")]
+    MainFunctionDoesNotSupportTarget { module: EcoString, target: Target },
 
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
@@ -540,6 +543,17 @@ forward slash and must not end with a slash."
                     "Add a public `main` function to \
 to `src/{module}.gleam`."
                 )),
+            },
+
+            Error::MainFunctionDoesNotSupportTarget { module, target } => Diagnostic {
+                title: "Target not supported".into(),
+                text: wrap_format!(
+                    "`{module}` has a main function, but it does not support the {target} \
+target, so it cannot be run."
+                ),
+                level: Level::Error,
+                location: None,
+                hint: None,
             },
 
             Error::MainFunctionHasWrongArity { module, arity } => Diagnostic {
