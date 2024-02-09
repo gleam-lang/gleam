@@ -79,6 +79,8 @@ pub fn command(
     };
 
     let built = crate::build::main(options, manifest)?;
+
+    // A module can not be run if it does not exist or does not have a public main function.
     let main_function = get_or_suggest_main_function(built, &module)?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

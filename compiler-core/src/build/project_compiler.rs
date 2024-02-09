@@ -485,7 +485,6 @@ where
         };
         let config_path = package_root.join("gleam.toml");
         let config = PackageConfig::read(config_path, &self.io)?;
-
         self.compile_gleam_package(&config, false, package_root)
     }
 
