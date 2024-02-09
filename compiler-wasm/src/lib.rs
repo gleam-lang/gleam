@@ -6,8 +6,7 @@ mod wasm_filesystem;
 use camino::Utf8PathBuf;
 use gleam_core::{
     build::{
-        CompileModules, Mode, NullTelemetry, PackageCompiler, StaleTracker, Target,
-        TargetCodegenConfiguration,
+        Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
     },
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
@@ -194,7 +193,6 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
     let mut compiler = PackageCompiler::new(
         &config,
         Mode::Dev,
-        CompileModules::All,
         &package,
         &out,
         &lib,

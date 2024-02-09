@@ -1,4 +1,5 @@
 use gleam_core::{
+    analyse::TargetSupport,
     build::{Codegen, Mode, Options, Target},
     error::Error,
 };
@@ -10,6 +11,7 @@ pub fn command() -> Result<(), Error> {
     // Build project
     let _ = crate::build::main(
         Options {
+            root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
             codegen: Codegen::All,
             mode: Mode::Dev,

@@ -78,6 +78,7 @@ use fs::{get_current_directory, get_project_root};
 pub use gleam_core::error::{Error, Result};
 
 use gleam_core::{
+    analyse::TargetSupport,
     build::{Codegen, Mode, Options, Runtime, Target},
     hex::RetirementReason,
     paths::ProjectPaths,
@@ -490,6 +491,7 @@ fn main() {
 fn command_check(target: Option<Target>) -> Result<(), Error> {
     let _ = build::main(
         Options {
+            root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
             codegen: Codegen::DepsOnly,
             mode: Mode::Dev,
@@ -503,6 +505,7 @@ fn command_check(target: Option<Target>) -> Result<(), Error> {
 fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<(), Error> {
     let _ = build::main(
         Options {
+            root_target_support: TargetSupport::Enforced,
             warnings_as_errors,
             codegen: Codegen::All,
             mode: Mode::Dev,

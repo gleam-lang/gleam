@@ -31,8 +31,8 @@
 - The search bar in generated docs now has a darker background color.
 - The generated docs no longer shows whether an argument is discarded or
   not in a function signature.
-- The root project is no longer required to compile when running `gleam run -m`
-  with a module from a dependency.
+- It is now possible to use `gleam run -m` to run a dependency module even if
+  that dependency uses a compile target that your project does not support.
 
 ### Bug fixes
 

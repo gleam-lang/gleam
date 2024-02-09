@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Instant};
 
 use gleam_core::{
-    build::{Built, Codegen, CompilationScope, Options, ProjectCompiler},
+    build::{Built, Codegen, Options, ProjectCompiler},
     manifest::Manifest,
     paths::ProjectPaths,
     Result,
@@ -20,18 +20,6 @@ pub fn download_dependencies() -> Result<Manifest> {
 }
 
 pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
-    compile(options, manifest, CompilationScope::AllModules)
-}
-
-pub fn deps_only(options: Options, manifest: Manifest) -> Result<Built> {
-    compile(options, manifest, CompilationScope::OnlyDependencyModules)
-}
-
-fn compile(
-    options: Options,
-    manifest: Manifest,
-    compilation_scope: CompilationScope,
-) -> Result<Built> {
     let paths = crate::find_project_paths()?;
     let perform_codegen = options.codegen;
     let root_config = crate::config::root_config()?;
@@ -51,7 +39,6 @@ fn compile(
         let compiler = ProjectCompiler::new(
             root_config,
             options,
-            compilation_scope,
             manifest.packages,
             telemetry,
             Arc::new(ConsoleWarningEmitter),
