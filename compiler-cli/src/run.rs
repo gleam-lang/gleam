@@ -27,7 +27,7 @@ pub fn command(
     module: Option<String>,
     which: Which,
 ) -> Result<(), Error> {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::find_project_paths()?;
 
     // Validate the module path
     if let Some(mod_path) = &module {
@@ -148,7 +148,7 @@ fn run_javascript_node(
     let mut args = vec![];
     let entry = write_javascript_entrypoint(paths, package, module)?;
 
-    args.push(entry);
+    args.push(entry.to_string());
 
     for argument in arguments.into_iter() {
         args.push(argument);
@@ -161,20 +161,18 @@ fn write_javascript_entrypoint(
     paths: &ProjectPaths,
     package: &str,
     module: &str,
-) -> Result<String, Error> {
-    let entry = paths
+) -> Result<Utf8PathBuf, Error> {
+    let path = paths
         .build_directory_for_package(Mode::Dev, Target::JavaScript, package)
-        .strip_prefix(paths.root())
-        .expect("Failed to strip prefix from path")
-        .to_path_buf();
-    let entrypoint = format!("./{}/gleam.main.mjs", entry);
+        .to_path_buf()
+        .join("gleam.main.mjs");
     let module = format!(
         r#"import {{ main }} from "./{module}.mjs";
 main();
 "#,
     );
-    crate::fs::write(&Utf8PathBuf::from(&entrypoint), &module)?;
-    Ok(entrypoint)
+    crate::fs::write(&path, &module)?;
+    Ok(path)
 }
 
 fn run_javascript_deno(
@@ -239,7 +237,7 @@ fn run_javascript_deno(
     }
 
     let entrypoint = write_javascript_entrypoint(paths, package, module)?;
-    args.push(entrypoint);
+    args.push(entrypoint.to_string());
 
     for argument in arguments.into_iter() {
         args.push(argument);

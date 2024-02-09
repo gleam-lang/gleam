@@ -61,7 +61,7 @@ where
         {
             let _guard = locker.lock_for_build();
             let path = paths.build_directory_for_package(Mode::Lsp, target, &name);
-            io.delete(&path)?;
+            io.delete_directory(&path)?;
         }
 
         let options = build::Options {

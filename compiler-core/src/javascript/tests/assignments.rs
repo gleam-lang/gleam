@@ -5,7 +5,7 @@ fn tuple_matching() {
     assert_js!(
         r#"
 fn go(x) {
-  let #(1, 2) = x
+  let assert #(1, 2) = x
 }
 "#,
     )
@@ -26,7 +26,7 @@ fn nested_binding() {
     assert_js!(
         r#"
 fn go(x) {
-  let #(a, #(b, c, 2) as t, _, 1) = x
+  let assert #(a, #(b, c, 2) as t, _, 1) = x
 }
 "#,
     )
@@ -42,7 +42,7 @@ fn go(x, foo) {
   foo(a)
   let a = 2
   foo(a)
-  let #(a, 3) = x
+  let assert #(a, 3) = x
   let b = a
   foo(b)
   let c = {
@@ -169,6 +169,18 @@ fn module_const_var1() {
 pub const int = 42
 pub const int_alias = int 
 pub const compound: #(Int, Int) = #(int, int_alias)
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2443
+#[test]
+fn let_assert_string_prefix() {
+    assert_js!(
+        r#"
+pub fn main() {
+  let assert "Game " <> id = "Game 1"
+}
 "#
     );
 }

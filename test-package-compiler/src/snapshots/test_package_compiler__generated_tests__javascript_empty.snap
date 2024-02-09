@@ -14,6 +14,7 @@ export {}
 
 
 //// /out/lib/the_package/gleam.mjs
-<prelude>
+export * from "../prelude.mjs";
+
 
 

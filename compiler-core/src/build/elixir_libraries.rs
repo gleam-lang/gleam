@@ -49,7 +49,7 @@ where
 
     fn cleanup(&self) {
         self.io
-            .delete(&self.paths_cache_path())
+            .delete_file(&self.paths_cache_path())
             .expect("deleting paths cache in cleanup");
     }
 
@@ -120,7 +120,7 @@ where
             // TODO: unit test
             if self.io.is_directory(&dest) {
                 // Delete the existing link
-                self.io.delete(&dest)?;
+                self.io.delete_directory(&dest)?;
             }
             tracing::debug!("linking_{}_to_build", name,);
             self.io.symlink_dir(&source, &dest)?;

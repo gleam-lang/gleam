@@ -325,13 +325,26 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         match e {
             UntypedExpr::Int { .. }
             | UntypedExpr::Var { .. }
-            | UntypedExpr::Todo { .. }
-            | UntypedExpr::Panic { .. }
             | UntypedExpr::Float { .. }
             | UntypedExpr::String { .. }
             | UntypedExpr::NegateInt { .. }
             | UntypedExpr::NegateBool { .. }
             | UntypedExpr::Placeholder { .. } => e,
+
+            UntypedExpr::Todo {
+                kind,
+                location,
+                message,
+            } => UntypedExpr::Todo {
+                kind,
+                location,
+                message: message.map(|msg_expr| Box::new(self.fold_expr(*msg_expr))),
+            },
+
+            UntypedExpr::Panic { location, message } => UntypedExpr::Panic {
+                location,
+                message: message.map(|msg_expr| Box::new(self.fold_expr(*msg_expr))),
+            },
 
             UntypedExpr::Block {
                 location,
@@ -744,7 +757,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         &mut self,
         kind: TodoKind,
         location: SrcSpan,
-        message: Option<EcoString>,
+        message: Option<Box<UntypedExpr>>,
     ) -> UntypedExpr {
         UntypedExpr::Todo {
             kind,
@@ -753,7 +766,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         }
     }
 
-    fn fold_panic(&mut self, location: SrcSpan, message: Option<EcoString>) -> UntypedExpr {
+    fn fold_panic(&mut self, location: SrcSpan, message: Option<Box<UntypedExpr>>) -> UntypedExpr {
         UntypedExpr::Panic { location, message }
     }
 
@@ -1004,7 +1017,7 @@ pub trait PatternFolder {
 
             Pattern::String { location, value } => self.fold_pattern_string(location, value),
 
-            Pattern::Var {
+            Pattern::Variable {
                 location,
                 name,
                 type_: (),
@@ -1052,14 +1065,14 @@ pub trait PatternFolder {
                 self.fold_pattern_bit_array(location, segments)
             }
 
-            Pattern::Concatenate {
+            Pattern::StringPrefix {
                 location,
                 left_location,
                 left_side_assignment,
                 right_location,
                 left_side_string,
                 right_side_assignment,
-            } => self.fold_pattern_concatenate(
+            } => self.fold_pattern_string_prefix(
                 location,
                 left_location,
                 left_side_assignment,
@@ -1083,7 +1096,7 @@ pub trait PatternFolder {
     }
 
     fn fold_pattern_var(&mut self, location: SrcSpan, name: EcoString) -> UntypedPattern {
-        Pattern::Var {
+        Pattern::Variable {
             location,
             name,
             type_: (),
@@ -1169,7 +1182,7 @@ pub trait PatternFolder {
         Pattern::BitArray { location, segments }
     }
 
-    fn fold_pattern_concatenate(
+    fn fold_pattern_string_prefix(
         &mut self,
         location: SrcSpan,
         left_location: SrcSpan,
@@ -1178,7 +1191,7 @@ pub trait PatternFolder {
         left_side_string: EcoString,
         right_side_assignment: AssignName,
     ) -> UntypedPattern {
-        Pattern::Concatenate {
+        Pattern::StringPrefix {
             location,
             left_location,
             left_side_assignment,
@@ -1192,12 +1205,12 @@ pub trait PatternFolder {
     fn walk_pattern(&mut self, m: UntypedPattern) -> UntypedPattern {
         match m {
             Pattern::Int { .. }
-            | Pattern::Var { .. }
+            | Pattern::Variable { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
             | Pattern::Discard { .. }
             | Pattern::VarUsage { .. }
-            | Pattern::Concatenate { .. } => m,
+            | Pattern::StringPrefix { .. } => m,
 
             Pattern::Assign {
                 name,

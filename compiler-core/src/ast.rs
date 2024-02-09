@@ -12,6 +12,7 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
 use crate::build::{Located, Target};
+use crate::type_::expression::Implementations;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
@@ -372,6 +373,7 @@ pub struct Function<T, Expr> {
     pub documentation: Option<EcoString>,
     pub external_erlang: Option<(EcoString, EcoString)>,
     pub external_javascript: Option<(EcoString, EcoString)>,
+    pub implementations: Implementations,
 }
 
 pub type TypedFunction = Function<Arc<Type>, TypedExpr>;
@@ -439,6 +441,8 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
     pub annotation: Option<TypeAst>,
     pub value: Box<Constant<T, ConstantRecordTag>>,
     pub type_: T,
+    pub deprecation: Deprecation,
+    pub implementations: Implementations,
 }
 
 pub type UntypedCustomType = CustomType<()>;
@@ -689,6 +693,17 @@ pub enum BinOp {
     Concatenate,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum OperatorKind {
+    BooleanLogic,
+    Equality,
+    IntComparison,
+    FLoatComparison,
+    IntMath,
+    FloatMath,
+    StringConcatenation,
+}
+
 impl BinOp {
     pub fn precedence(&self) -> u8 {
         // Ensure that this matches the other precedence function for guards
@@ -747,6 +762,30 @@ impl BinOp {
             Self::Concatenate => "<>",
         }
     }
+
+    pub fn operator_kind(&self) -> OperatorKind {
+        match self {
+            Self::Concatenate => OperatorKind::StringConcatenation,
+            Self::Eq | Self::NotEq => OperatorKind::Equality,
+            Self::And | Self::Or => OperatorKind::BooleanLogic,
+            Self::LtInt | Self::LtEqInt | Self::GtEqInt | Self::GtInt => {
+                OperatorKind::IntComparison
+            }
+            Self::LtFloat | Self::LtEqFloat | Self::GtEqFloat | Self::GtFloat => {
+                OperatorKind::FLoatComparison
+            }
+            Self::AddInt | Self::SubInt | Self::MultInt | Self::RemainderInt | Self::DivInt => {
+                OperatorKind::IntMath
+            }
+            Self::AddFloat | Self::SubFloat | Self::MultFloat | Self::DivFloat => {
+                OperatorKind::FloatMath
+            }
+        }
+    }
+
+    pub fn can_be_grouped_with(&self, other: &BinOp) -> bool {
+        self.operator_kind() == other.operator_kind()
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -780,6 +819,12 @@ impl CallArg<UntypedExpr> {
             UntypedExpr::Var { ref name, .. } => name == CAPTURE_VARIABLE,
             _ => false,
         }
+    }
+}
+
+impl<T> HasLocation for CallArg<T> {
+    fn location(&self) -> SrcSpan {
+        self.location
     }
 }
 
@@ -828,12 +873,18 @@ pub struct Clause<Expr, Type, RecordTag> {
     pub then: Expr,
 }
 
+impl<A, B, C> Clause<A, B, C> {
+    pub fn pattern_count(&self) -> usize {
+        1 + self.alternative_patterns.len()
+    }
+}
+
 impl TypedClause {
     pub fn location(&self) -> SrcSpan {
         SrcSpan {
             start: self
                 .pattern
-                .get(0)
+                .first()
                 .map(|p| p.location().start)
                 .unwrap_or_default(),
             end: self.then.location().end,
@@ -1084,7 +1135,7 @@ pub enum Pattern<Type> {
 
     /// The creation of a variable.
     /// e.g. `assert [this_is_a_var, .._] = x`
-    Var {
+    Variable {
         location: SrcSpan,
         name: EcoString,
         type_: Type,
@@ -1145,7 +1196,7 @@ pub enum Pattern<Type> {
     },
 
     // "prefix" <> variable
-    Concatenate {
+    StringPrefix {
         location: SrcSpan,
         left_location: SrcSpan,
         left_side_assignment: Option<(EcoString, SrcSpan)>,
@@ -1195,7 +1246,7 @@ impl<A> Pattern<A> {
         match self {
             Pattern::Assign { pattern, .. } => pattern.location(),
             Pattern::Int { location, .. }
-            | Pattern::Var { location, .. }
+            | Pattern::Variable { location, .. }
             | Pattern::VarUsage { location, .. }
             | Pattern::List { location, .. }
             | Pattern::Float { location, .. }
@@ -1203,7 +1254,7 @@ impl<A> Pattern<A> {
             | Pattern::String { location, .. }
             | Pattern::Tuple { location, .. }
             | Pattern::Constructor { location, .. }
-            | Pattern::Concatenate { location, .. }
+            | Pattern::StringPrefix { location, .. }
             | Pattern::BitArray { location, .. } => *location,
         }
     }
@@ -1222,14 +1273,14 @@ impl TypedPattern {
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::Var { .. }
+            | Pattern::Variable { .. }
             | Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::List { .. }
             | Pattern::Tuple { .. }
             | Pattern::BitArray { .. }
-            | Pattern::Concatenate { .. } => None,
+            | Pattern::StringPrefix { .. } => None,
 
             Pattern::Constructor { constructor, .. } => constructor.definition_location(),
         }
@@ -1240,14 +1291,14 @@ impl TypedPattern {
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::Var { .. }
+            | Pattern::Variable { .. }
             | Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::List { .. }
             | Pattern::Tuple { .. }
             | Pattern::BitArray { .. }
-            | Pattern::Concatenate { .. } => None,
+            | Pattern::StringPrefix { .. } => None,
 
             Pattern::Constructor { constructor, .. } => constructor.get_documentation(),
         }
@@ -1259,9 +1310,9 @@ impl TypedPattern {
             Pattern::Float { .. } => type_::float(),
             Pattern::String { .. } => type_::string(),
             Pattern::BitArray { .. } => type_::bits(),
-            Pattern::Concatenate { .. } => type_::string(),
+            Pattern::StringPrefix { .. } => type_::string(),
 
-            Pattern::Var { type_, .. }
+            Pattern::Variable { type_, .. }
             | Pattern::List { type_, .. }
             | Pattern::VarUsage { type_, .. }
             | Pattern::Constructor { type_, .. } => type_.clone(),
@@ -1283,12 +1334,12 @@ impl TypedPattern {
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::Var { .. }
+            | Pattern::Variable { .. }
             | Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::BitArray { .. }
-            | Pattern::Concatenate { .. } => Some(Located::Pattern(self)),
+            | Pattern::StringPrefix { .. } => Some(Located::Pattern(self)),
 
             Pattern::Constructor { arguments, .. } => {
                 arguments.iter().find_map(|arg| arg.find_node(byte_index))
@@ -1323,6 +1374,14 @@ impl AssignmentKind {
             AssignmentKind::Let => true,
             AssignmentKind::Assert => false,
         }
+    }
+
+    /// Returns `true` if the assignment kind is [`Assert`].
+    ///
+    /// [`Assert`]: AssignmentKind::Assert
+    #[must_use]
+    pub fn is_assert(&self) -> bool {
+        matches!(self, Self::Assert)
     }
 }
 
@@ -1359,11 +1418,6 @@ pub enum BitArrayOption<Value> {
         location: SrcSpan,
     },
 
-    // TODO: remove deprecated syntax
-    Binary {
-        location: SrcSpan,
-    },
-
     Int {
         location: SrcSpan,
     },
@@ -1373,11 +1427,6 @@ pub enum BitArrayOption<Value> {
     },
 
     Bits {
-        location: SrcSpan,
-    },
-
-    // TODO: remove deprecated syntax
-    BitString {
         location: SrcSpan,
     },
 
@@ -1448,8 +1497,6 @@ impl<A> BitArrayOption<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
             BitArrayOption::Bytes { location }
-            | BitArrayOption::Binary { location }
-            | BitArrayOption::BitString { location }
             | BitArrayOption::Int { location }
             | BitArrayOption::Float { location }
             | BitArrayOption::Bits { location }
@@ -1471,12 +1518,10 @@ impl<A> BitArrayOption<A> {
 
     pub fn label(&self) -> EcoString {
         match self {
-            BitArrayOption::Binary { .. } => "bytes".into(),
             BitArrayOption::Bytes { .. } => "bytes".into(),
             BitArrayOption::Int { .. } => "int".into(),
             BitArrayOption::Float { .. } => "float".into(),
             BitArrayOption::Bits { .. } => "bits".into(),
-            BitArrayOption::BitString { .. } => "bits".into(),
             BitArrayOption::Utf8 { .. } => "utf8".into(),
             BitArrayOption::Utf16 { .. } => "utf16".into(),
             BitArrayOption::Utf32 { .. } => "utf32".into(),
@@ -1491,24 +1536,6 @@ impl<A> BitArrayOption<A> {
             BitArrayOption::Size { .. } => "size".into(),
             BitArrayOption::Unit { .. } => "unit".into(),
         }
-    }
-
-    /// Returns `true` if the bit array option is [`Binary`].
-    ///
-    /// [`Binary`]: BitArrayOption::Binary
-    #[must_use]
-    pub fn is_binary(&self) -> bool {
-        matches!(self, Self::Binary { .. })
-    }
-
-    /// Returns `true` if the bit array option is [`BitString`].
-    ///
-    /// The deprecated `bit_string` variable specifically!
-    ///
-    /// [`BitString`]: BitArrayOption::BitString
-    #[must_use]
-    pub fn is_bit_string(&self) -> bool {
-        matches!(self, Self::BitString { .. })
     }
 }
 

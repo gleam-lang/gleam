@@ -1,6 +1,6 @@
 use super::{pipe::PipeTyper, *};
 use crate::{
-    analyse::infer_bit_array_option,
+    analyse::{infer_bit_array_option, TargetSupport},
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan, Statement,
@@ -10,26 +10,120 @@ use crate::{
         UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, Use, UseAssignment,
         USE_ASSIGNMENT_VARIABLE,
     },
+    build::Target,
+    exhaustiveness,
 };
+use id_arena::Arena;
 use im::hashmap;
 use itertools::Itertools;
 use vec1::Vec1;
 
+#[derive(Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq, Serialize)]
+pub struct Implementations {
+    /// Wether the function has a pure-gleam implementation.
+    ///
+    /// It's important to notice that, even if all individual targets are
+    /// supported, it would not be the same as being pure Gleam.
+    /// Imagine this scenario:
+    ///
+    /// ```gleam
+    /// @external(javascript, "foo", "bar")
+    /// @external(erlang, "foo", "bar")
+    /// pub fn func() -> Int
+    /// ```
+    ///
+    /// `func` supports all _current_ Gleam targets; however, if a new target
+    /// is added - say a WASM target - `func` wouldn't support it! On the other
+    /// hand, a pure Gleam function will support all future targets.
+    pub gleam: bool,
+    /// Wether the function has an implementation that uses external erlang
+    /// code.
+    pub uses_erlang_externals: bool,
+    /// Wether the function has an implementation that uses external javascript
+    /// code.
+    pub uses_javascript_externals: bool,
+}
+
+impl Implementations {
+    /// Given the implementations of a function update those with taking into
+    /// account the `implementations` of another function (or constant) used
+    /// inside its body.
+    pub fn update_from_use(&mut self, implementations: &Implementations) {
+        // With this pattern matching we won't forget to deal with new targets
+        // when those are added :)
+        let Implementations {
+            gleam,
+            uses_erlang_externals,
+            uses_javascript_externals,
+        } = implementations;
+
+        // If a pure-Gleam function uses a function that doesn't have a pure
+        // Gleam implementation, then it's no longer pure-Gleam.
+        self.gleam = self.gleam && *gleam;
+
+        // If a function uses a function that relies on external code (be it
+        // javascript or erlang) then it's considered as using external code as
+        // well.
+        //
+        // For example:
+        // ```gleam
+        // @external(erlang, "foo", "bar")
+        // pub fn erlang_only_with_pure_gleam_default() -> Int {
+        //   1 + 1
+        // }
+        //
+        // pub fn main() { erlang_only_with_pure_gleam_default() }
+        // ```
+        // Both functions will end up using external erlang code and have the
+        // following implementations:
+        // `Implementations { gleam: true, uses_erlang_externals: true, uses_javascript_externals: false}`.
+        // They have a pure gleam implementation and an erlang specific external
+        // implementation.
+        self.uses_erlang_externals = self.uses_erlang_externals || *uses_erlang_externals;
+        self.uses_javascript_externals =
+            self.uses_javascript_externals || *uses_javascript_externals;
+    }
+
+    /// Returns true if the current target is supported by the given
+    /// implementations.
+    /// If something has a pure gleam implementation then it supports all
+    /// targets automatically.
+    pub fn supports(&self, target: Target) -> bool {
+        self.gleam
+            || match target {
+                Target::Erlang => self.uses_erlang_externals,
+                Target::JavaScript => self.uses_javascript_externals,
+            }
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) environment: &'a mut Environment<'b>,
+
+    pub(crate) implementations: Implementations,
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>) -> Self {
+    pub fn new(
+        environment: &'a mut Environment<'b>,
+        mut external_implementations: Implementations,
+    ) -> Self {
         let mut hydrator = Hydrator::new();
+
+        // We start assuming the function is pure Gleam and narrow it down
+        // if we run into functions/constants that have only external
+        // implementations for some of the targets.
+        external_implementations.gleam = true;
+
         hydrator.permit_holes(true);
         Self {
             hydrator,
             environment,
+            implementations: external_implementations,
         }
     }
 
@@ -70,17 +164,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 message: label,
                 kind,
                 ..
-            } => Ok(self.infer_todo(location, kind, label)),
+            } => self.infer_todo(location, kind, label),
 
             // A placeholder is used when the author has not provided a function
             // body, instead only giving an external implementation for this
             // target. This placeholder implementation will never be used so we
             // treat it as a `panic` expression during analysis.
-            UntypedExpr::Placeholder { location } => Ok(self.infer_panic(location, None)),
+            UntypedExpr::Placeholder { location } => self.infer_panic(location, None),
 
             UntypedExpr::Panic {
                 location, message, ..
-            } => Ok(self.infer_panic(location, message)),
+            } => self.infer_panic(location, message),
 
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 
@@ -186,29 +280,59 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         location: SrcSpan,
         kind: TodoKind,
-        label: Option<EcoString>,
-    ) -> TypedExpr {
-        let typ = self.new_unbound_var();
+        message: Option<Box<UntypedExpr>>,
+    ) -> Result<TypedExpr, Error> {
+        // Type the todo as whatever it would need to be to type check.
+        let type_ = self.new_unbound_var();
+
+        // Emit a warning that there is a todo in the code.
         self.environment.warnings.emit(Warning::Todo {
             kind,
             location,
-            typ: typ.clone(),
+            typ: type_.clone(),
         });
 
-        TypedExpr::Todo {
+        // We've seen a todo, so register that fact. This can be used by higher
+        // level tooling such as the build tool when publishing a package.
+        self.environment.todo_encountered = true;
+
+        let message = message
+            .map(|message| {
+                // If there is a message expression then it must be a string.
+                let message = self.infer(*message)?;
+                unify(string(), message.type_())
+                    .map_err(|e| convert_unify_error(e, message.location()))?;
+                Ok(Box::new(message))
+            })
+            .transpose()?;
+
+        Ok(TypedExpr::Todo {
             location,
-            message: label,
-            type_: typ,
-        }
+            type_,
+            message,
+        })
     }
 
-    fn infer_panic(&mut self, location: SrcSpan, message: Option<EcoString>) -> TypedExpr {
-        let typ = self.new_unbound_var();
-        TypedExpr::Panic {
+    fn infer_panic(
+        &mut self,
+        location: SrcSpan,
+        message: Option<Box<UntypedExpr>>,
+    ) -> Result<TypedExpr, Error> {
+        let type_ = self.new_unbound_var();
+        let message = match message {
+            Some(message) => {
+                let message = self.infer(*message)?;
+                unify(string(), message.type_())
+                    .map_err(|e| convert_unify_error(e, message.location()))?;
+                Some(Box::new(message))
+            }
+            None => None,
+        };
+        Ok(TypedExpr::Panic {
             location,
-            type_: typ,
+            type_,
             message,
-        }
+        })
     }
 
     fn infer_string(&mut self, value: EcoString, location: SrcSpan) -> TypedExpr {
@@ -537,11 +661,53 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_var(&mut self, name: EcoString, location: SrcSpan) -> Result<TypedExpr, Error> {
         let constructor = self.infer_value_constructor(&None, &name, &location)?;
+        self.narrow_implementations(location, &constructor.variant)?;
         Ok(TypedExpr::Var {
             constructor,
             location,
             name,
         })
+    }
+
+    fn narrow_implementations(
+        &mut self,
+        location: SrcSpan,
+        variant: &ValueConstructorVariant,
+    ) -> Result<(), Error> {
+        let variant_implementations = match variant {
+            ValueConstructorVariant::ModuleConstant {
+                implementations, ..
+            } => implementations,
+            ValueConstructorVariant::ModuleFn {
+                implementations, ..
+            } => implementations,
+            ValueConstructorVariant::Record { .. }
+            | ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::LocalConstant { .. } => return Ok(()),
+        };
+
+        self.implementations
+            .update_from_use(variant_implementations);
+
+        let fail_if_current_target_is_not_supported =
+            self.environment.target_support == TargetSupport::Enforced;
+
+        if fail_if_current_target_is_not_supported
+            // If the value used doesn't have an implementation that can be used
+            // for the current target...
+            && !variant_implementations.supports(self.environment.target)
+            // ... and there is not an external implementation for it
+            && !self
+                    .implementations
+                    .supports(self.environment.target)
+        {
+            Err(Error::UnsupportedTarget {
+                target: self.environment.target,
+                location,
+            })
+        } else {
+            Ok(())
+        }
     }
 
     fn infer_field_access(
@@ -847,20 +1013,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         }
 
-        // We currently only do only limited exhaustiveness checking of custom types
-        // at the top level of patterns.
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
         if kind.performs_exhaustiveness_check() {
-            if let Err(unmatched) = self
-                .environment
-                .check_exhaustiveness(vec![pattern.clone()], collapse_links(value_typ))
-            {
-                return Err(Error::NotExhaustivePatternMatch {
-                    location,
-                    unmatched,
-                    kind: PatternMatchKind::Assignment,
-                });
-            }
+            self.check_let_exhaustiveness(location, value.type_(), &pattern)?;
         }
 
         Ok(Assignment {
@@ -903,15 +1058,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             typed_clauses.push(typed_clause);
         }
 
-        if let Err(unmatched) =
-            self.check_case_exhaustiveness(subjects_count, &subject_types, &typed_clauses)
-        {
-            return Err(Error::NotExhaustivePatternMatch {
-                location,
-                unmatched,
-                kind: PatternMatchKind::Case,
-            });
-        }
+        self.check_case_exhaustiveness(location, &subject_types, &typed_clauses)?;
 
         Ok(TypedExpr::Case {
             location,
@@ -1436,6 +1583,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let type_ = self.instantiate(constructor.type_, &mut hashmap![]);
 
+        self.narrow_implementations(select_location, &constructor.variant)?;
+
         let constructor = match &constructor.variant {
             variant @ ValueConstructorVariant::ModuleFn { name, module, .. } => {
                 variant.to_module_value_constructor(Arc::clone(&type_), module, name)
@@ -1692,7 +1841,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         })?;
 
                 // Register the value as seen for detection of unused values
-                self.environment.increment_usage(name, Layer::Value);
+                self.environment.increment_usage(name);
 
                 constructor
             }
@@ -1741,6 +1890,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 layer: Layer::Value,
             })
         }
+
+        self.narrow_implementations(*location, &variant)?;
 
         // Instantiate generic variables into unbound variables for this usage
         let typ = self.instantiate(typ, &mut hashmap![]);
@@ -1955,6 +2106,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     field_map,
                 })
             }
+
             Constant::Var {
                 location,
                 module,
@@ -2202,6 +2354,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         body: Vec1<UntypedStatement>,
         return_type: Option<Arc<Type>>,
     ) -> Result<(Vec<TypedArg>, Vec1<TypedStatement>), Error> {
+        // If a function has an empty body then it doesn't have a pure gleam
+        // implementation.
+        if body.first().is_placeholder() {
+            self.implementations.gleam = false;
+        }
         self.in_new_scope(|body_typer| {
             // Used to track if any argument names are used more than once
             let mut argument_names = HashSet::with_capacity(args.len());
@@ -2254,47 +2411,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn check_case_exhaustiveness(
-        &mut self,
-        subjects_count: usize,
-        subjects: &[Arc<Type>],
-        typed_clauses: &[Clause<TypedExpr, Arc<Type>, EcoString>],
-    ) -> Result<(), Vec<EcoString>> {
-        // Because exhaustiveness checking in presence of multiple subjects is similar
-        // to full exhaustiveness checking of tuples or other nested record patterns,
-        // and we currently only do only limited exhaustiveness checking of custom types
-        // at the top level of patterns, only consider case expressions with one subject.
-        if subjects_count != 1 {
-            return Ok(());
-        }
-        let subject_type = subjects
-            .get(0)
-            .expect("Asserted there's one case subject but found none");
-        let value_typ = collapse_links(subject_type.clone());
-
-        // Currently guards in exhaustiveness checking are assumed that they can fail,
-        // so we go through all clauses and pluck out only the patterns
-        // for clauses that don't have guards.
-        let mut patterns = Vec::new();
-        for clause in typed_clauses {
-            if let Clause { guard: None, .. } = clause {
-                // clause.pattern is a list of patterns for all subjects
-                if let Some(pattern) = clause.pattern.get(0) {
-                    patterns.push(pattern.clone());
-                }
-                // A clause can be built with alternative patterns as well, e.g. `Audio(_) | Text(_) ->`.
-                // We're interested in all patterns so we build a flattened list.
-                for alternative_pattern in &clause.alternative_patterns {
-                    // clause.alternative_pattern is a list of patterns for all subjects
-                    if let Some(pattern) = alternative_pattern.get(0) {
-                        patterns.push(pattern.clone());
-                    }
-                }
-            }
-        }
-        self.environment.check_exhaustiveness(patterns, value_typ)
-    }
-
     fn infer_block(
         &mut self,
         statements: Vec1<UntypedStatement>,
@@ -2307,6 +2423,109 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
             })
         })
+    }
+
+    fn check_let_exhaustiveness(
+        &self,
+        location: SrcSpan,
+        subject: Arc<Type>,
+        pattern: &TypedPattern,
+    ) -> Result<(), Error> {
+        use exhaustiveness::{Body, Column, Compiler, PatternArena, Row};
+
+        let mut compiler = Compiler::new(self.environment, Arena::new());
+        let mut arena = PatternArena::new();
+
+        let subject_variable = compiler.new_variable(subject.clone());
+
+        let mut rows = Vec::with_capacity(1);
+
+        let pattern = arena.register(pattern);
+        let column = Column::new(subject_variable.clone(), pattern);
+        let guard = None;
+        let body = Body::new(0);
+        let row = Row::new(vec![column], guard, body);
+        rows.push(row);
+
+        // Perform exhaustiveness checking, building a decision tree
+        compiler.set_pattern_arena(arena.into_inner());
+        let output = compiler.compile(rows);
+
+        // Error for missing clauses that would cause a crash
+        if output.diagnostics.missing {
+            return Err(Error::InexhaustiveLetAssignment {
+                location,
+                missing: output.missing_patterns(self.environment),
+            });
+        }
+
+        Ok(())
+    }
+
+    fn check_case_exhaustiveness(
+        &self,
+        location: SrcSpan,
+        subject_types: &[Arc<Type>],
+        clauses: &[Clause<TypedExpr, Arc<Type>, EcoString>],
+    ) -> Result<(), Error> {
+        use exhaustiveness::{Body, Column, Compiler, PatternArena, Row};
+
+        let mut compiler = Compiler::new(self.environment, Arena::new());
+        let mut arena = PatternArena::new();
+
+        let subject_variables = subject_types
+            .iter()
+            .map(|t| compiler.new_variable(t.clone()))
+            .collect_vec();
+
+        let mut rows = Vec::with_capacity(clauses.iter().map(Clause::pattern_count).sum::<usize>());
+
+        for (clause_index, clause) in clauses.iter().enumerate() {
+            let mut add = |multi_pattern: &[TypedPattern]| {
+                let mut columns = Vec::with_capacity(multi_pattern.len());
+                for (subject_index, pattern) in multi_pattern.iter().enumerate() {
+                    let pattern = arena.register(pattern);
+                    let var = subject_variables
+                        .get(subject_index)
+                        .expect("Subject variable")
+                        .clone();
+                    columns.push(Column::new(var, pattern));
+                }
+                let guard = clause.guard.as_ref().map(|_| clause_index);
+                let body = Body::new(clause_index as u16);
+                rows.push(Row::new(columns, guard, body));
+            };
+
+            add(&clause.pattern);
+            for multi_pattern in &clause.alternative_patterns {
+                add(multi_pattern);
+            }
+        }
+
+        // Perform exhaustiveness checking, building a decision tree
+        compiler.set_pattern_arena(arena.into_inner());
+        let output = compiler.compile(rows);
+
+        // Error for missing clauses that would cause a crash
+        if output.diagnostics.missing {
+            return Err(Error::InexhaustiveCaseExpression {
+                location,
+                missing: output.missing_patterns(self.environment),
+            });
+        }
+
+        // Emit warnings for unreachable clauses
+        for (clause_index, clause) in clauses.iter().enumerate() {
+            if !output.is_reachable(clause_index) {
+                self.environment
+                    .warnings
+                    .emit(Warning::UnreachableCaseClause {
+                        location: clause.location,
+                    })
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -2417,7 +2636,7 @@ impl UseAssignments {
 
                 // For simple patterns of a single variable we add a regular
                 // function argument.
-                Pattern::Var { name, .. } => assignments.function_arguments.push(Arg {
+                Pattern::Variable { name, .. } => assignments.function_arguments.push(Arg {
                     location,
                     annotation,
                     names: ArgNames::Named { name },
@@ -2435,7 +2654,7 @@ impl UseAssignments {
                 | Pattern::Constructor { .. }
                 | Pattern::Tuple { .. }
                 | Pattern::BitArray { .. }
-                | Pattern::Concatenate { .. }) => {
+                | Pattern::StringPrefix { .. }) => {
                     let name: EcoString = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
                     assignments.function_arguments.push(Arg {
                         location,

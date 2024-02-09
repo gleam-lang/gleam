@@ -4,7 +4,7 @@ assertion_line: 233
 expression: "\npub fn main() {\n  do()\n}\n\n@external(erlang, \"library\", \"main\")\nfn do() -> Int\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/0]).
 

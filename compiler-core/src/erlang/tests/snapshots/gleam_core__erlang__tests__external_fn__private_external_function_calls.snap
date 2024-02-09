@@ -4,7 +4,7 @@ assertion_line: 27
 expression: "\n@external(erlang, \"m\", \"f\")\nfn go(x x: Int, y y: Int) -> Int\n\npub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([x/0]).
 

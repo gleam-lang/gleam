@@ -66,12 +66,12 @@ fn bit_array_segment_nosize3() {
 
 #[test]
 fn bit_array_segment_conflicting_options_int() {
-    assert_error!("let x = <<1:int-binary>> x");
+    assert_error!("let x = <<1:int-bytes>> x");
 }
 
 #[test]
 fn bit_array_segment_conflicting_options_bit_array() {
-    assert_error!("case <<1>> { <<1:bits-binary>> -> 1 }");
+    assert_error!("case <<1>> { <<1:bits-bytes>> -> 1 }");
 }
 
 #[test]
@@ -191,8 +191,7 @@ fn bit_array_float_size() {
 }
 
 #[test]
-fn bit_array_binary_option_in_value() {
-    // using binary in value
+fn bit_array_bits_option_in_value() {
     assert_error!("let x = <<<<1:1>>:bytes>> x");
 }
 
@@ -1424,159 +1423,6 @@ pub fn parse(input: BitArray) -> String {
       |> change
   }
 }"#
-    );
-}
-
-#[test]
-fn let_exhaustiveness1() {
-    assert_module_error!(
-        r#"
-pub fn main(b) {
-    let True = b
-    Nil
-}
-"#
-    );
-}
-
-#[test]
-fn let_exhaustiveness2() {
-    assert_module_error!(
-        r#"
-pub fn main(r) {
-    let Error(_) = r
-    Nil
-}
-"#
-    );
-}
-
-#[test]
-fn let_exhaustiveness3() {
-    assert_module_error!(
-        r#"
-pub type Media {
-    Audio(BitArray)
-    Video(BitArray)
-    Text(String)
-}
-pub fn main(m) {
-    let Video(_) = m
-    Nil
-}
-"#
-    );
-}
-
-#[test]
-fn let_exhaustiveness4() {
-    assert_module_error!(
-        r#"
-pub type Media {
-    Audio(BitArray)
-    Video(BitArray)
-    Text(String)
-}
-pub fn main(m) {
-    let Video(_) as v = m
-    v
-}
-"#
-    );
-}
-
-#[test]
-fn case_exhaustiveness1() {
-    assert_module_error!(
-        r#"
-pub fn main(b) {
-    case b {
-        True -> Nil
-    }
-}
-"#
-    );
-}
-
-#[test]
-fn case_exhaustiveness2() {
-    assert_module_error!(
-        r#"
-pub fn main(r) {
-    case r {
-        Error(_) -> Nil
-    }
-}
-"#
-    );
-}
-
-#[test]
-fn case_exhaustiveness3() {
-    assert_module_error!(
-        r#"
-pub type Media {
-    Audio(BitArray)
-    Video(BitArray)
-    Text(String)
-}
-pub fn main(m) {
-    case m {
-        Audio(_) as a -> a
-        Video(_) -> m
-    }
-}
-"#
-    );
-}
-
-#[test]
-fn case_exhaustiveness4() {
-    assert_module_error!(
-        r#"
-pub type Media {
-    Audio(BitArray)
-    Video(BitArray)
-    Text(String)
-}
-pub fn main(m) {
-    case m {
-        Video(_) -> m
-    }
-}
-"#
-    );
-}
-
-#[test]
-fn case_exhaustiveness5() {
-    assert_module_error!(
-        r#"
-pub type Media {
-    Audio(BitArray)
-    Video(BitArray)
-    Text(String)
-}
-pub fn main(m) {
-    case m {
-        Audio(_) | Text(_) -> m
-    }
-}
-"#
-    );
-}
-
-#[test]
-fn case_exhaustiveness6() {
-    assert_module_error!(
-        r#"
-pub fn main(b) {
-    case b {
-        b if b == True -> Nil
-        b if b != True -> Nil
-    }
-}
-"#
     );
 }
 

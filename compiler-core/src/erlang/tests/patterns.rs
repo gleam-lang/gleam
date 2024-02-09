@@ -5,7 +5,7 @@ fn alternative_patterns() {
     // reassigning name in alternative patterns
     assert_erl!(
         r#"
-pub fn test() {
+pub fn main() {
   let duplicate_name = 1
 
   case 1 {
@@ -13,6 +13,7 @@ pub fn test() {
       let duplicate_name = duplicate_name + 1
       duplicate_name
     }
+    _ -> 0
   }
 }"#
     );
@@ -23,7 +24,7 @@ fn alternative_patterns1() {
     // Alternative patterns with a clause containing vars
     assert_erl!(
         r#"
-pub fn test() {
+pub fn main() {
   case Ok(1) {
     Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name
   }
@@ -36,11 +37,12 @@ fn alternative_patterns2() {
     // Alternative patterns with a guard clause containing vars
     assert_erl!(
         r#"
-pub fn test() {
+pub fn main() {
     let duplicate_name = 1
 
     case 1 {
         1 | 2 if duplicate_name == 1 -> duplicate_name
+        _ -> 0
     }
 }"#
     );

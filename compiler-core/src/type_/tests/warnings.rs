@@ -298,7 +298,17 @@ fn unused_private_type_warnings_test7() {
 
 #[test]
 fn unused_private_type_warnings_test8() {
-    assert_no_warnings!("type X { X } pub fn a() { let b = X case b { X -> 1 } }");
+    assert_no_warnings!(
+        "
+type X { X }
+
+pub fn a() {
+  let b = X
+  case b {
+    X -> 1
+  }
+}"
+    );
 }
 
 #[test]
@@ -438,21 +448,22 @@ fn unused_imported_module_with_alias_warnings_test() {
 #[test]
 fn unused_imported_module_with_alias_and_unqualified_name_warnings_test() {
     let warnings = get_warnings(
-        "import gleam/foo.{bar} as foo",
-        vec![("thepackage", "gleam/foo", "pub fn bar() { 1 }")],
+        "import gleam/one.{two} as three",
+        vec![("thepackage", "gleam/one", "pub fn two() { 1 }")],
     );
     assert!(!warnings.is_empty());
     assert_eq!(
         Warning::UnusedImportedValue {
-            name: "bar".into(),
+            name: "two".into(),
             location: SrcSpan { start: 18, end: 21 },
         },
         warnings[0]
     );
     assert_eq!(
         Warning::UnusedImportedModuleAlias {
-            name: "foo".into(),
-            location: SrcSpan { start: 23, end: 29 },
+            alias: "three".into(),
+            location: SrcSpan { start: 23, end: 31 },
+            module_name: "gleam/one".into()
         },
         warnings[1]
     );
@@ -461,12 +472,8 @@ fn unused_imported_module_with_alias_and_unqualified_name_warnings_test() {
 #[test]
 fn unused_imported_module_with_alias_and_unqualified_name_no_warnings_test() {
     assert_warning!(
-        ("gleam/foo", "pub fn bar() { 1 }"),
-        "import gleam/foo.{bar} as foo\npub fn baz() { bar() }",
-        Warning::UnusedImportedModuleAlias {
-            name: "foo".into(),
-            location: SrcSpan { start: 23, end: 29 },
-        }
+        ("package", "gleam/one", "pub fn two() { 1 }"),
+        "import gleam/one.{two} as three\npub fn baz() { two() }"
     );
 }
 
@@ -516,7 +523,7 @@ fn bit_pattern_var_use() {
     assert_no_warnings!(
         "
 pub fn main(x) {
-  let <<name_size:8, name:binary-size(name_size)>> = x
+  let assert <<name_size:8, name:bytes-size(name_size)>> = x
   name
 }",
     );
@@ -887,14 +894,64 @@ pub const x = some_module.x
 
 #[test]
 fn no_unused_warnings_for_broken_code() {
-    assert_no_warnings!(
-        r#"
+    let src = r#"
 pub fn main() {
   let x = 1
   1 + ""
   x
+}"#;
+    let warnings = VectorWarningEmitterIO::default();
+    _ = compile_module(src, Some(Arc::new(warnings.clone())), vec![]).unwrap_err();
+    assert!(warnings.take().is_empty());
 }
-        "#
+
+#[test]
+fn deprecated_constant() {
+    assert_warning!(
+        r#"
+@deprecated("Don't use this!")
+pub const a = Nil
+
+pub fn b() {
+  a
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_imported_constant() {
+    assert_warning!(
+        (
+            "package",
+            "module",
+            r#"@deprecated("Don't use this!") pub const a = Nil"#
+        ),
+        r#"
+import module
+
+pub fn a() {
+  module.a
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_imported_unqualified_constant() {
+    assert_warning!(
+        (
+            "package",
+            "module",
+            r#"@deprecated("Don't use this!") pub const a = Nil"#
+        ),
+        r#"
+import module.{a}
+
+pub fn b() {
+  a
+}
+"#
     );
 }
 
@@ -1024,87 +1081,8 @@ pub fn main(){
 }
 
 #[test]
-fn deprecated_bit_array_type() {
-    assert_warning!(r#"pub type B = BitString"#);
-}
-
-#[test]
-fn deprecated_bit_array_type_imported() {
-    assert_warning!(
-        r#"
-import gleam
-pub type B = gleam.BitString
-"#
-    );
-}
-
-#[test]
-fn deprecated_bit_array_type_aliased() {
-    assert_warning!(
-        r#"
-import gleam.{type BitString as BibbleWib}
-pub type B = BibbleWib
-"#
-    );
-}
-
-#[test]
-fn deprecated_bit_array_type_shadowed() {
-    assert_no_warnings!(
-        r#"
-pub type BitString = Nil
-pub type B = BitString
-"#
-    );
-}
-
-#[test]
-fn const_bits_option() {
+fn const_bytes_option() {
     assert_no_warnings!("pub const x = <<<<>>:bits>>");
-}
-
-#[test]
-fn deprecate_type_import_extenal() {
-    assert_warning!(
-        ("package", "module", "pub type X"),
-        "
-import module.{X}
-pub type Y = X
-"
-    );
-}
-
-#[test]
-fn deprecate_type_import_type_alias() {
-    assert_warning!(
-        ("package", "module", "pub type X = Int"),
-        "
-import module.{X}
-pub type Y = X
-"
-    );
-}
-
-#[test]
-fn deprecate_type_import_type_custom_type() {
-    assert_warning!(
-        ("package", "module", "pub type X { X }"),
-        "
-import module.{X}
-pub type Y = X
-"
-    );
-}
-
-#[test]
-fn deprecate_type_import_type_custom_type_not_using_type() {
-    assert_no_warnings!(
-        ("package", "module", "pub type X { X }"),
-        "
-import module.{X}
-pub const x = X
-"
-    );
 }
 
 #[test]
@@ -1132,8 +1110,9 @@ fn unused_alias_warning_test() {
             location: SrcSpan { start: 61, end: 64 },
         },
         Warning::UnusedImportedModuleAlias {
-            name:"bar".into(),
-            location: SrcSpan { start: 36, end: 42 }
+            alias:"bar".into(),
+            location: SrcSpan { start: 36, end: 42 },
+            module_name: "gleam/foo".into(),
         }
     );
 }
@@ -1141,11 +1120,8 @@ fn unused_alias_warning_test() {
 #[test]
 fn used_type_with_import_alias_no_warning_test() {
     assert_no_warnings!(
-        ("gleam", "foo", "pub type A"),
-        r#"
-            import foo as bar
-            pub fn fun(a: bar.A) { a }
-        "#
+        ("gleam", "gleam/foo", "pub const one = 1"),
+        "import gleam/foo as _bar"
     );
 }
 

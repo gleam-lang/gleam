@@ -1,6 +1,7 @@
 use pretty_assertions::assert_eq;
 
 mod asignments;
+mod binary_operators;
 mod bit_array;
 mod blocks;
 mod conditional_compilation;
@@ -525,13 +526,10 @@ fn expr_call() {
 
     assert_format!(
         "fn main() {
-  Ok(
-    1,
-    {
-      1
-      2
-    },
-  )
+  Ok(1, {
+    1
+    2
+  })
 }
 "
     );
@@ -598,11 +596,13 @@ fn compact_single_argument_call() {
 
     assert_format!(
         r#"fn main() {
-  thingy(wiggle(my_function(
-    // ok!
-    one(),
-    two(),
-  )))
+  thingy(
+    wiggle(my_function(
+      // ok!
+      one(),
+      two(),
+    )),
+  )
 }
 "#
     );
@@ -643,13 +643,10 @@ fn compact_single_argument_call() {
 fn expr_tuple() {
     assert_format!(
         r#"fn main(one, two, three) {
-  #(
-    1,
-    {
-      1
-      2
-    },
-  )
+  #(1, {
+    1
+    2
+  })
 }
 "#
     );
@@ -714,21 +711,30 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn1() {
     assert_format!(
         r#"fn main(label_one one, label_two two, label_three three) {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn2() {
     assert_format!(
         r#"fn main(label_one one: One, label_two two: Two) {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn3() {
     assert_format!(
         r#"fn main(
   label_one one: One,
@@ -747,14 +753,20 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn4() {
     assert_format!(
         r#"fn main(label _discarded) {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn5() {
     // https://github.com/gleam-lang/gleam/issues/613
     assert_format!(
         r#"fn main() {
@@ -763,7 +775,10 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn6() {
     //
     // Module function return annotations
     //
@@ -774,7 +789,10 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn7() {
     assert_format!(
         r#"fn main() -> Loooooooooooooooooooong(
   Looooooooooooooong,
@@ -786,7 +804,10 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn8() {
     assert_format!(
         r#"fn main() -> Loooooooooooooooooooong(
   Loooooooooooooooooooooooooooooooooooooooooong,
@@ -795,21 +816,33 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn9() {
     assert_format!(
         r#"fn main() -> program.Exit {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn10() {
     assert_format!(
-        "fn order(first: Set(member), second: Set(member)) -> #(Set(member), Set(member)) {
+        "fn order(
+  first: Set(member),
+  second: Set(member),
+) -> #(Set(member), Set(member), a) {
   Nil
 }
 "
     );
+}
 
+#[test]
+fn statement_fn11() {
     assert_format!(
         "///
 pub fn try_map(
@@ -2244,8 +2277,8 @@ fn expr_pipe() {
         r#"fn main() {
   #(
     1
-    |> succ
-    |> succ,
+      |> succ
+      |> succ,
     2,
     3,
   )
@@ -2257,8 +2290,8 @@ fn expr_pipe() {
         r#"fn main() {
   some_call(
     1
-    |> succ
-    |> succ,
+      |> succ
+      |> succ,
     2,
     3,
   )
@@ -2270,8 +2303,8 @@ fn expr_pipe() {
         r#"fn main() {
   [
     1
-    |> succ
-    |> succ,
+      |> succ
+      |> succ,
     2,
     3,
   ]
@@ -3158,6 +3191,28 @@ fn expr_panic_as() {
 }
 
 #[test]
+fn expr_panic_as_value() {
+    assert_format!(
+        r#"fn main() {
+  let x = "panicking" <> "with a value"
+  panic as x
+}
+"#
+    );
+}
+
+#[test]
+fn expr_todo_as_value() {
+    assert_format!(
+        r#"fn main() {
+  let x = "Need to" <> "do this"
+  todo as x
+}
+"#
+    );
+}
+
+#[test]
 fn expr_todo() {
     assert_format!(
         "fn main() {
@@ -3675,7 +3730,8 @@ pub fn main(
 fn commented_binop() {
     assert_format!(
         "fn main() {
-  1 + // hello
+  1
+  + // hello
   2
 }
 "
@@ -3684,8 +3740,10 @@ fn commented_binop() {
     assert_format!(
         "fn main() {
   // one
-  1 + // two
-  2 + // three
+  1
+  + // two
+  2
+  + // three
   3
 }
 "
@@ -3950,7 +4008,8 @@ fn binary_operator_precedence() {
 
     assert_format!(
         "fn main() {
-  3 * {
+  3
+  * {
     1
     |> inc
   }
@@ -3963,7 +4022,8 @@ fn binary_operator_precedence() {
   {
     1
     |> inc
-  } * 3
+  }
+  * 3
 }
 "
     );
@@ -4330,13 +4390,10 @@ fn case_in_call() {
     assert_format!(
         "fn clause_guard_tests(_fns) -> List(Test) {
   example(fn() {
-    assert_equal(
-      0,
-      case Nil {
-        _ if yes -> 0
-        _ -> 1
-      },
-    )
+    assert_equal(0, case Nil {
+      _ if yes -> 0
+      _ -> 1
+    })
   })
 }
 "
@@ -4501,7 +4558,11 @@ fn no_newline_before_comments() {
 fn list_at_end_of_long_expr_line() {
     assert_format!(
         "pub fn example() {
-  Ok(RecordConstructorWithALongName(a_field: RecordConstructorWithALongName(a_field: Record(a_field: []))))
+  Ok(
+    RecordConstructorWithALongName(
+      a_field: RecordConstructorWithALongName(a_field: Record(a_field: [])),
+    ),
+  )
 }
 "
     );
@@ -4977,13 +5038,35 @@ fn wrap_long_line_with_int_negation() {
         r#"pub fn main() {
   let a = 3
   let b =
-    a * a * a * a * a * a * a * a * a * a * a * a * a * {
-      a * a * a * a * a * a * a * a * a * a
-    }
+    a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * { a * a * a * a * a * a * a * a * a * a }
   let c =
-    c * c * c * c * c * c * c * c * c * c * c * c * c * -{
-      c * c * c * c * c * c * c * c * c * c
-    }
+    c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * -{ c * c * c * c * c * c * c * c * c * c }
 }
 "#
     );
@@ -5001,13 +5084,35 @@ fn wrap_long_line_with_bool_negation() {
         r#"pub fn main() {
   let a = True
   let b =
-    a || a || a || a || a || a || a || a || a || a || a || a || a || {
-      a || a || a || a || a || a || a || a || a || a
-    }
+    a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || { a || a || a || a || a || a || a || a || a || a }
   let c =
-    c || c || c || c || c || c || c || c || c || c || c || c || c || !{
-      c || c || c || c || c || c || c || c || c || c
-    }
+    c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || !{ c || c || c || c || c || c || c || c || c || c }
 }
 "#
     );
@@ -5141,6 +5246,305 @@ fn deprecated_type_alias() {
         r#"@deprecated("Deprecated type")
 pub type Tiger =
   Nil
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2423
+#[test]
+fn prefix_as() {
+    assert_format!(
+        r#"pub fn main(x) {
+  case x {
+    "0" as digit <> rest | "1" as digit <> rest -> rest
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn case_splits_function_on_newline() {
+    assert_format!(
+        r#"pub fn main() {
+  case x {
+    1 ->
+      some_module.some_long_name_function([
+        some_module.some_long_name_function(),
+      ])
+    _ -> todo
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_list() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok([
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+  ])
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_function() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(fn() {
+    some_long_variable_name_to_force_wrapping()
+    some_long_variable_name_to_force_wrapping()
+    some_long_variable_name_to_force_wrapping()
+  })
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_tuple() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(#(
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+  ))
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_call() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(do_something(
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+  ))
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_call_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(
+    do_something(do_something_else(
+      some_long_variable_name_to_force_wrapping,
+      some_long_variable_name_to_force_wrapping,
+      some_long_variable_name_to_force_wrapping,
+    )),
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_call_nested_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(
+    do_something(
+      do_something_else(do_a_last_thing(
+        some_long_variable_name_to_force_wrapping,
+        some_long_variable_name_to_force_wrapping,
+        some_long_variable_name_to_force_wrapping,
+      )),
+    ),
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2512
+#[test]
+fn list_with_pipe_format() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    "Success!"
+      |> ansi(apply: [1, 31]),
+    "",
+    "Wrote `" <> bin <> "`, `" <> pwsh_bin <> "`",
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn function_call_close_to_line_limit() {
+    assert_format!(
+        r#"pub fn main() {
+  function_call(
+    that,
+    is,
+    super,
+    close,
+    to,
+    the,
+    max,
+    line,
+    limit,
+    of,
+    80,
+    chars,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn multiline_string_are_not_broken_with_string_concatenation_if_they_fit() {
+    assert_format!(
+        r#"pub fn main() {
+  "pub fn foo(" <> arg <> ") ->" <> type_ <> "{
+    body
+}"
+}
+"#
+    );
+}
+
+#[test]
+fn nesting_goes_back_to_normal_after_multiline_string() {
+    assert_format!(
+        r#"pub fn main() {
+  let x = {
+    "
+1
+2
+" <> long_name_function_call(
+      1_111_111_111_111_111,
+      222_222_222_222,
+      3_333_333_333_333_333,
+    )
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn multiline_string_get_broken_on_newlines_as_function_arguments() {
+    assert_format!(
+        r#"pub fn main() {
+  foo(
+    bar,
+    "bar
+  asd
+       baz",
+    foo,
+    bar,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_used_as_function_arguments_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  foo(
+    a_variable_with_a_long_name
+      |> another_variable_with_a_long_name
+      |> yet_another_variable_with_a_long_name,
+    bar,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_used_as_function_arguments_is_not_nested_if_it_is_the_only_argument() {
+    assert_format!(
+        r#"pub fn main() {
+  foo(
+    a_variable_with_a_long_name
+    |> another_variable_with_a_long_name
+    |> yet_another_variable_with_a_long_name,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_list_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    foo,
+    a_variable_with_a_long_name
+      |> another_variable_with_a_long_name
+      |> yet_another_variable_with_a_long_name,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_list_is_not_nested_if_only_item() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    a_variable_with_a_long_name
+    |> another_variable_with_a_long_name
+    |> yet_another_variable_with_a_long_name,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_tuple_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    foo,
+    a_variable_with_a_long_name
+      |> another_variable_with_a_long_name
+      |> yet_another_variable_with_a_long_name,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_tuple_is_not_nested_if_only_item() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    a_variable_with_a_long_name
+    |> another_variable_with_a_long_name
+    |> yet_another_variable_with_a_long_name,
+  )
+}
 "#
     );
 }

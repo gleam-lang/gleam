@@ -4,7 +4,7 @@ assertion_line: 44
 expression: "\nconst i = 100.001e523\nconst j = -100.001e-523\n\nconst k = 100.001e1_230\nconst l = -100.001e-1_230\n\nconst m = 100.001e123_456_789\nconst n = -100.001e-123_456_789\n\npub fn main() {\n    i\n    j\n    k\n    l\n    m\n    n\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/0]).
 

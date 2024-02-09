@@ -25,8 +25,23 @@ struct Module {
   values @2 :List(Property(ValueConstructor));
   accessors @3 :List(Property(AccessorsMap));
   package @4 :Text;
-  typesConstructors @5 :List(Property(List(Text)));
+  typesConstructors @5 :List(Property(TypesVariantConstructors));
   unusedImports @6 :List(SrcSpan);
+  containsTodo @7 :Bool;
+}
+
+struct TypesVariantConstructors {
+  variants @0 :List(TypeValueConstructor);
+  typeParametersIds @1 :List(UInt16);
+}
+
+struct TypeValueConstructor {
+  name @0 :Text;
+  parameters @1 :List(TypeValueConstructorParameter);
+}
+
+struct TypeValueConstructorParameter {
+  type @0 :Type;
 }
 
 struct TypeConstructor {
@@ -57,6 +72,7 @@ struct Type {
       name @0 :Text;
       module @1 :Text;
       parameters @2 :List(Type);
+      package @7 :Text;
     }
 
     fn :group {
@@ -81,6 +97,12 @@ struct ValueConstructor {
   deprecated @3 :Text;
 }
 
+struct Implementations {
+  gleam @0 :Bool;
+  erlang @1 :Bool;
+  javascript @2 :Bool;
+}
+
 struct ValueConstructorVariant {
   union {
     moduleConstant :group {
@@ -88,6 +110,7 @@ struct ValueConstructorVariant {
       location @1 :SrcSpan;
       module @2 :Text;
       documentation @14 :Text;
+      implementations @19 :Implementations;
     }
 
     moduleFn :group {
@@ -97,6 +120,7 @@ struct ValueConstructorVariant {
       arity @6 :UInt16;
       location @7 :SrcSpan;
       documentation @15 :Text;
+      implementations @18 :Implementations;
     }
 
     record :group {
@@ -107,6 +131,7 @@ struct ValueConstructorVariant {
       module @12 :Text;
       constructorsCount @13 :UInt16;
       documentation @16 :Text;
+      constructorIndex @17 :UInt16;
     }
   }
 }
@@ -209,4 +234,3 @@ struct BitArraySegmentOption {
     }
   }
 }
-

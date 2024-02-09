@@ -22,7 +22,7 @@ use ecow::EcoString;
 use heck::ToSnakeCase;
 use itertools::Itertools;
 use pattern::pattern;
-use regex::Regex;
+use regex::{Captures, Regex};
 use std::sync::OnceLock;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
@@ -224,7 +224,7 @@ fn module_document<'a>(
     ));
 
     Ok(header
-        .append("-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).")
+        .append("-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).")
         .append(lines(2))
         .append(exports)
         .append(type_defs)
@@ -464,8 +464,33 @@ fn escape_atom_string(value: String) -> String {
     }
 }
 
+fn unicode_escape_sequence_pattern() -> &'static Regex {
+    static PATTERN: OnceLock<Regex> = OnceLock::new();
+    PATTERN.get_or_init(|| {
+        Regex::new(r#"(\\+)(u)"#).expect("Unicode escape sequence regex cannot be constructed")
+    })
+}
+
+fn string_inner(value: &str) -> Document<'_> {
+    let content = unicode_escape_sequence_pattern()
+        // `\\u`-s should not be affected, so that "\\u..." is not converted to
+        // "\\x...". That's why capturing groups is used to exclude cases that
+        // shouldn't be replaced.
+        .replace_all(value, |caps: &Captures<'_>| {
+            let slashes = caps.get(1).map_or("", |m| m.as_str());
+
+            if slashes.len() % 2 == 0 {
+                format!("{slashes}u")
+            } else {
+                format!("{slashes}x")
+            }
+        })
+        .to_string();
+    Document::String(content)
+}
+
 fn string(value: &str) -> Document<'_> {
-    value.to_doc().surround("<<\"", "\"/utf8>>")
+    string_inner(value).surround("<<\"", "\"/utf8>>")
 }
 
 fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
@@ -499,7 +524,7 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
                 },
             ..
         }
-        | TypedExpr::String { value, .. } => docvec!['"', value, "\"/utf8"],
+        | TypedExpr::String { value, .. } => docvec!['"', string_inner(value), "\"/utf8"],
 
         TypedExpr::Var {
             name,
@@ -660,8 +685,8 @@ where
             Opt::Utf32 { .. } => others.push(override_type.unwrap_or("utf32").to_doc()),
             Opt::Int { .. } => others.push("integer".to_doc()),
             Opt::Float { .. } => others.push("float".to_doc()),
-            Opt::Binary { .. } | Opt::Bytes { .. } => others.push("binary".to_doc()),
-            Opt::BitString { .. } | Opt::Bits { .. } => others.push("bitstring".to_doc()),
+            Opt::Bytes { .. } => others.push("binary".to_doc()),
+            Opt::Bits { .. } => others.push("bitstring".to_doc()),
             Opt::Utf8Codepoint { .. } => others.push("utf8".to_doc()),
             Opt::Utf16Codepoint { .. } => others.push("utf16".to_doc()),
             Opt::Utf32Codepoint { .. } => others.push("utf32".to_doc()),
@@ -848,7 +873,7 @@ fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>
             line(),
             erlang_error(
                 "let_assert",
-                "Assertion pattern match failed",
+                &string("Assertion pattern match failed"),
                 pat.location(),
                 vec![("value", env.local_var_name(ASSERT_FAIL_VARIABLE))],
                 env,
@@ -1047,7 +1072,7 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
                 env.erl_function_scope_vars = initial_erlang_vars.clone();
 
                 let patterns_doc = if patterns.len() == 1 {
-                    let p = patterns.get(0).expect("Single pattern clause printing");
+                    let p = patterns.first().expect("Single pattern clause printing");
                     pattern(p, env)
                 } else {
                     tuple(patterns.iter().map(|p| pattern(p, env)))
@@ -1213,7 +1238,7 @@ fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
 fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
     let subjects_doc = if subjects.len() == 1 {
         let subject = subjects
-            .get(0)
+            .first()
             .expect("erl case printing of single subject");
         maybe_block_expr(subject, env).group()
     } else {
@@ -1432,21 +1457,25 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
     }
 }
 
-fn todo<'a>(message: &'a Option<EcoString>, location: SrcSpan, env: &Env<'a>) -> Document<'a> {
-    let message = message
-        .as_deref()
-        .unwrap_or("This has not yet been implemented");
-    erlang_error("todo", message, location, vec![], env)
+fn todo<'a>(message: Option<&'a TypedExpr>, location: SrcSpan, env: &mut Env<'a>) -> Document<'a> {
+    let message = match message {
+        Some(m) => expr(m, env),
+        None => string("This has not yet been implemented"),
+    };
+    erlang_error("todo", &message, location, vec![], env)
 }
 
-fn panic<'a>(location: SrcSpan, message: Option<&'a str>, env: &Env<'a>) -> Document<'a> {
-    let message = message.unwrap_or("panic expression evaluated");
-    erlang_error("panic", message, location, vec![], env)
+fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a>) -> Document<'a> {
+    let message = match message {
+        Some(m) => expr(m, env),
+        None => string("panic expression evaluated"),
+    };
+    erlang_error("panic", &message, location, vec![], env)
 }
 
 fn erlang_error<'a>(
     name: &'a str,
-    message: &'a str,
+    message: &Document<'a>,
     location: SrcSpan,
     fields: Vec<(&'a str, Document<'a>)>,
     env: &Env<'a>,
@@ -1457,8 +1486,9 @@ fn erlang_error<'a>(
         ",",
         line(),
         "message => ",
-        string(message)
+        message.clone()
     ];
+
     for (key, value) in fields {
         fields_doc = fields_doc
             .append(",")
@@ -1493,7 +1523,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             message: label,
             location,
             ..
-        } => todo(label, *location, env),
+        } => todo(label.as_deref(), *location, env),
 
         TypedExpr::Panic {
             location, message, ..
@@ -1939,11 +1969,11 @@ impl<'a> TypePrinter<'a> {
             "Float" => "float()".to_doc(),
             "BitArray" => "bitstring()".to_doc(),
             "List" => {
-                let arg0 = self.print(args.get(0).expect("print_prelude_type list"));
+                let arg0 = self.print(args.first().expect("print_prelude_type list"));
                 "list(".to_doc().append(arg0).append(")")
             }
             "Result" => {
-                let arg_ok = self.print(args.get(0).expect("print_prelude_type result ok"));
+                let arg_ok = self.print(args.first().expect("print_prelude_type result ok"));
                 let arg_err = self.print(args.get(1).expect("print_prelude_type result err"));
                 let ok = tuple(["ok".to_doc(), arg_ok]);
                 let error = tuple(["error".to_doc(), arg_err]);

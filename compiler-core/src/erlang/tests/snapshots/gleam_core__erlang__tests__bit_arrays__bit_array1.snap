@@ -4,7 +4,7 @@ assertion_line: 32
 expression: "pub fn x() { 2 }\nfn main() {\n  let a = -1\n  let b = <<a:unit(2)-size(a * 2), a:size(3 + x())-unit(1)>>\n\n  b\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([x/0]).
 

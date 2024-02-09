@@ -1,19 +1,6 @@
 use crate::assert_js;
 
 #[test]
-fn guards_cause_badmatch_to_render() {
-    assert_js!(
-        r#"pub fn main(x, y) {
-  case x {
-    1 -> 1
-    _ if y -> 0
-  }
-}
-"#,
-    );
-}
-
-#[test]
 fn referencing_pattern_var() {
     assert_js!(
         r#"pub fn main(xs) {

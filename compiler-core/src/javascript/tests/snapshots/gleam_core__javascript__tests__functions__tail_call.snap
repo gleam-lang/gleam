@@ -3,27 +3,16 @@ source: compiler-core/src/javascript/tests/functions.rs
 assertion_line: 106
 expression: "\npub fn count(xs, n) {\n  case xs {\n    [] -> n\n    [_, ..xs] -> count(xs, n + 1)\n  }\n}\n"
 ---
-import { makeError } from "../gleam.mjs";
-
 export function count(loop$xs, loop$n) {
   while (true) {
     let xs = loop$xs;
     let n = loop$n;
     if (xs.hasLength(0)) {
       return n;
-    } else if (xs.atLeastLength(1)) {
+    } else {
       let xs$1 = xs.tail;
       loop$xs = xs$1;
       loop$n = n + 1;
-    } else {
-      throw makeError(
-        "case_no_match",
-        "my/mod",
-        3,
-        "count",
-        "No case clause matched",
-        { values: [xs] }
-      )
     }
   }
 }

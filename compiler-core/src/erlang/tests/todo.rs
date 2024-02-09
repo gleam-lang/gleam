@@ -34,6 +34,20 @@ pub fn main() {
 }
 
 #[test]
+fn todo_as_function() {
+    assert_erl!(
+        r#"
+pub fn retstring() {
+  "wibble"
+}
+pub fn main() {
+  todo as { retstring() <> "wobble" }
+}
+"#
+    );
+}
+
+#[test]
 fn piped() {
     assert_erl!(
         r#"

@@ -9,13 +9,22 @@ pub struct LexicalError {
     pub location: SrcSpan,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum InvalidUnicodeEscapeError {
+    MissingOpeningBrace,          // Expected '{'
+    ExpectedHexDigitOrCloseBrace, // Expected hex digit or '}'
+    InvalidNumberOfHexDigits,     // Expected between 1 and 6 hex digits
+    InvalidCodepoint,             // Invalid Unicode codepoint
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum LexicalErrorType {
-    BadStringEscape,       // string contains an unescaped slash
-    DigitOutOfRadix,       // 0x012 , 2 is out of radix
-    NumTrailingUnderscore, // 1_000_ is not allowed
-    RadixIntNoValue,       // 0x, 0b, 0o without a value
-    UnexpectedStringEnd,   // Unterminated string literal
+    BadStringEscape,                                 // string contains an unescaped slash
+    InvalidUnicodeEscape(InvalidUnicodeEscapeError), // \u{...} escape sequence is invalid
+    DigitOutOfRadix,                                 // 0x012 , 2 is out of radix
+    NumTrailingUnderscore,                           // 1_000_ is not allowed
+    RadixIntNoValue,                                 // 0x, 0b, 0o without a value
+    UnexpectedStringEnd,                             // Unterminated string literal
     UnrecognizedToken { tok: char },
     BadName { name: String },
     BadDiscardName { name: String },
@@ -42,13 +51,19 @@ impl ParseError {
             ParseErrorType::ExpectedUpName => ("I was expecting a type name here", vec![]),
             ParseErrorType::ExpectedValue => ("I was expecting a value after this", vec![]),
             ParseErrorType::ExpectedStatement => ("I was expecting a statement after this", vec![]),
+            ParseErrorType::ExpectedDefinition => {
+                ("I was expecting a definition after this", vec![])
+            }
+            ParseErrorType::ExpectedFunctionDefinition => {
+                ("I was expecting a function definition after this", vec![])
+            }
             ParseErrorType::ExtraSeparator => (
                 "This is an extra delimiter",
                 vec!["Hint: Try removing it?".into()],
             ),
             ParseErrorType::ExprLparStart => (
                 "This parenthesis cannot be understood here",
-                vec!["Hint: To group expressions in gleam use \"{\" and \"}\"".into()],
+                vec!["Hint: To group expressions in gleam use \"{\" and \"}\".".into()],
             ),
             ParseErrorType::IncorrectName => (
                 "I'm expecting a lowercase name here",
@@ -70,7 +85,7 @@ contain a-z, A-Z, or 0-9.",
                     "Hint: Valid BitArray segment options are:".into(),
                     wrap(
                         "bits, bytes, int, float, utf8, utf16, utf32, utf8_codepoint, \
-utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, unit",
+utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, unit.",
                     ),
                     "See: https://gleam.run/book/tour/bit-strings".into(),
                 ],
@@ -78,7 +93,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ParseErrorType::InvalidBitArrayUnit => (
                 "This is not a valid BitArray unit value",
                 vec![
-                    "Hint: unit must be an integer literal >= 1 and <= 256".into(),
+                    "Hint: unit must be an integer literal >= 1 and <= 256.".into(),
                     "See: https://gleam.run/book/tour/bit-strings".into(),
                 ],
             ),
@@ -110,7 +125,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ParseErrorType::NoLetBinding => (
                 "There must be a 'let' to bind variable to value",
                 vec![
-                    "Hint: Use let for binding".into(),
+                    "Hint: Use let for binding.".into(),
                     "See: https://gleam.run/book/tour/let-bindings".into(),
                 ],
             ),
@@ -151,7 +166,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ParseErrorType::LowcaseBooleanPattern => (
                 "Did you want a Bool instead of a variable?",
                 vec![
-                    "Hint: In Gleam boolean literals are True and False".into(),
+                    "Hint: In Gleam boolean literals are `True` and `False`.".into(),
                     "See: https://gleam.run/book/tour/bools.html".into(),
                 ],
             ),
@@ -170,7 +185,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     _ => messages.collect(),
                 };
 
-                ("I was not expecting this.", messages)
+                ("I was not expecting this", messages)
             }
             ParseErrorType::ExpectedBoolean => ("Did you mean to negate a boolean?", vec![]),
             ParseErrorType::ConcatPatternVariableLeftHandSide => (
@@ -180,7 +195,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "how to handle this pattern.".into(),
                     "".into(),
                     "If you want to match one character consider using `pop_grapheme`".into(),
-                    "from the stdlib's `gleam/string` module".into(),
+                    "from the stdlib's `gleam/string` module.".into(),
                 ],
             ),
             ParseErrorType::UnexpectedFunction => (
@@ -207,22 +222,24 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseErrorType {
-    ExpectedEqual,          // expect "="
-    ExpectedExpr,           // after "->" in a case clause
-    ExpectedName,           // any token used when a Name was expected
-    ExpectedPattern,        // after ':' where a pattern is expected
-    ExpectedType,           // after ':' or '->' where a type annotation is expected
-    ExpectedUpName,         // any token used when a UpName was expected
-    ExpectedValue,          // no value after "="
-    ExpectedStatement,      // no statement after "@<name>"
-    ExprLparStart,          // it seems "(" was used to start an expression
-    ExtraSeparator,         // #(1,,) <- the 2nd comma is an extra separator
-    IncorrectName,          // UpName or DiscardName used when Name was expected
-    IncorrectUpName,        // Name or DiscardName used when UpName was expected
-    InvalidBitArraySegment, // <<7:hello>> `hello` is an invalid BitArray segment
-    InvalidBitArrayUnit,    // in <<1:unit(x)>> x must be 1 <= x <= 256
-    InvalidTailPattern,     // only name and _name are allowed after ".." in list pattern
-    InvalidTupleAccess,     // only positive int literals for tuple access
+    ExpectedEqual,              // expect "="
+    ExpectedExpr,               // after "->" in a case clause
+    ExpectedName,               // any token used when a Name was expected
+    ExpectedPattern,            // after ':' where a pattern is expected
+    ExpectedType,               // after ':' or '->' where a type annotation is expected
+    ExpectedUpName,             // any token used when a UpName was expected
+    ExpectedValue,              // no value after "="
+    ExpectedStatement,          // no statement after "@<name>"
+    ExpectedDefinition,         // after attributes
+    ExpectedFunctionDefinition, // after function-only attributes
+    ExprLparStart,              // it seems "(" was used to start an expression
+    ExtraSeparator,             // #(1,,) <- the 2nd comma is an extra separator
+    IncorrectName,              // UpName or DiscardName used when Name was expected
+    IncorrectUpName,            // Name or DiscardName used when UpName was expected
+    InvalidBitArraySegment,     // <<7:hello>> `hello` is an invalid BitArray segment
+    InvalidBitArrayUnit,        // in <<1:unit(x)>> x must be 1 <= x <= 256
+    InvalidTailPattern,         // only name and _name are allowed after ".." in list pattern
+    InvalidTupleAccess,         // only positive int literals for tuple access
     LexError {
         error: LexicalError,
     },
@@ -310,6 +327,30 @@ impl LexicalError {
                     format!("Try: {}", name.to_upper_camel_case()),
                 ],
             ),
+            LexicalErrorType::InvalidUnicodeEscape(
+                InvalidUnicodeEscapeError::MissingOpeningBrace,
+            ) => (
+                "Expected '{' in Unicode escape sequence",
+                vec!["Hint: Add it.".into()],
+            ),
+            LexicalErrorType::InvalidUnicodeEscape(
+                InvalidUnicodeEscapeError::ExpectedHexDigitOrCloseBrace,
+            ) => (
+                "Expected hex digit or '}' in Unicode escape sequence",
+                vec![
+                    "Hint: Hex digits are digits from 0 to 9 and letters from a to f or A to F."
+                        .into(),
+                ],
+            ),
+            LexicalErrorType::InvalidUnicodeEscape(
+                InvalidUnicodeEscapeError::InvalidNumberOfHexDigits,
+            ) => (
+                "Expected between 1 and 6 hex digits in Unicode escape sequence",
+                vec![],
+            ),
+            LexicalErrorType::InvalidUnicodeEscape(InvalidUnicodeEscapeError::InvalidCodepoint) => {
+                ("Invalid Unicode codepoint", vec![])
+            }
         }
     }
 }

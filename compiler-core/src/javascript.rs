@@ -363,24 +363,14 @@ impl<'a> Generator<'a> {
 
         let module_name = format!("${module_name}");
         let path = self.import_path(package, module);
-        let unqualified_imports = unqualified
-            .iter()
-            // We do not create a JS import for types as they are not used at runtime
-            .filter(|import| {
-                !self
-                    .module
-                    .type_info
-                    .type_only_unqualified_imports
-                    .contains(&import.name)
-            })
-            .map(|i| {
-                let alias = i.as_name.as_ref().map(|n| {
-                    self.register_in_scope(n);
-                    maybe_escape_identifier_doc(n)
-                });
-                let name = maybe_escape_identifier_doc(&i.name);
-                Member { name, alias }
+        let unqualified_imports = unqualified.iter().map(|i| {
+            let alias = i.as_name.as_ref().map(|n| {
+                self.register_in_scope(n);
+                maybe_escape_identifier_doc(n)
             });
+            let name = maybe_escape_identifier_doc(&i.name);
+            Member { name, alias }
+        });
 
         let aliases = if discarded { vec![] } else { vec![module_name] };
         imports.register_module(path, aliases, unqualified_imports);

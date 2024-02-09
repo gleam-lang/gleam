@@ -38,6 +38,22 @@ pub fn get_current_directory() -> Result<Utf8PathBuf, Error> {
     Utf8PathBuf::from_path_buf(curr_dir.clone()).map_err(|_| Error::NonUtf8Path { path: curr_dir })
 }
 
+// Return the first directory with a gleam.toml as a UTF-8 Path
+pub fn get_project_root(path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
+    fn walk(dir: Utf8PathBuf) -> Option<Utf8PathBuf> {
+        match dir.join("gleam.toml").is_file() {
+            true => Some(dir),
+            false => match dir.parent() {
+                Some(p) => walk(p.into()),
+                None => None,
+            },
+        }
+    }
+    walk(path.clone()).ok_or(Error::UnableToFindProjectRoot {
+        path: path.to_string(),
+    })
+}
+
 /// A `FileWriter` implementation that writes to the file system.
 #[derive(Debug, Clone, Copy)]
 pub struct ProjectIO;
@@ -130,8 +146,8 @@ impl FileSystemReader for ProjectIO {
 }
 
 impl FileSystemWriter for ProjectIO {
-    fn delete(&self, path: &Utf8Path) -> Result<()> {
-        delete_dir(path)
+    fn delete_directory(&self, path: &Utf8Path) -> Result<()> {
+        delete_directory(path)
     }
 
     fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
@@ -181,7 +197,7 @@ impl CommandExecutor for ProjectIO {
             .args(args)
             .stdin(stdio.get_process_stdio())
             .stdout(stdio.get_process_stdio())
-            .envs(env.iter().map(|(a, b)| (a, b)))
+            .envs(env.iter().map(|pair| (pair.0, &pair.1)))
             .current_dir(cwd.unwrap_or_else(|| Utf8Path::new("./")))
             .status();
 
@@ -215,7 +231,7 @@ impl DownloadDependencies for ProjectIO {
     }
 }
 
-pub fn delete_dir(dir: &Utf8Path) -> Result<(), Error> {
+pub fn delete_directory(dir: &Utf8Path) -> Result<(), Error> {
     tracing::trace!(path=?dir, "deleting_directory");
     if dir.exists() {
         std::fs::remove_dir_all(dir).map_err(|e| Error::FileIo {
@@ -342,10 +358,23 @@ fn is_gleam_path(path: &Utf8Path, dir: impl AsRef<Utf8Path>) -> bool {
     )
 }
 
+fn is_gleam_build_dir(e: &ignore::DirEntry) -> bool {
+    if !e.path().is_dir() || !e.path().ends_with("build") {
+        return false;
+    }
+
+    let Some(parent_path) = e.path().parent() else {
+        return false;
+    };
+
+    parent_path.join("gleam.toml").exists()
+}
+
 pub fn gleam_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
         .require_git(false)
+        .filter_entry(|e| !is_gleam_build_dir(e))
         .build()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))

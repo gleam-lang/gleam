@@ -7,14 +7,14 @@ use gleam_core::{
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::{env, io::Write};
-use strum::{Display, EnumString, EnumVariantNames};
+use strum::{Display, EnumIter, EnumString, EnumVariantNames, IntoEnumIterator};
 
 #[cfg(test)]
 mod tests;
 
 use crate::NewOptions;
 
-const GLEAM_STDLIB_VERSION: &str = "0.32";
+const GLEAM_STDLIB_REQUIREMENT: &str = "~> 0.34 or ~> 1.0";
 const GLEEUNIT_VERSION: &str = "1.0";
 const ERLANG_OTP_VERSION: &str = "26.0.2";
 const REBAR3_VERSION: &str = "3";
@@ -38,6 +38,159 @@ pub struct Creator {
     project_name: String,
 }
 
+#[derive(EnumIter, PartialEq, Eq, Debug, Hash)]
+enum FileToCreate {
+    Readme,
+    Gitignore,
+    SrcModule,
+    TestModule,
+    GleamToml,
+    GithubCi,
+}
+
+impl FileToCreate {
+    pub fn location(&self, creator: &Creator) -> Utf8PathBuf {
+        let project_name = &creator.project_name;
+
+        match self {
+            Self::Readme => creator.root.join(Utf8PathBuf::from("README.md")),
+            Self::Gitignore => creator.root.join(Utf8PathBuf::from(".gitignore")),
+            Self::SrcModule => creator
+                .src
+                .join(Utf8PathBuf::from(format!("{project_name}.gleam"))),
+            Self::TestModule => creator
+                .test
+                .join(Utf8PathBuf::from(format!("{project_name}_test.gleam"))),
+            Self::GleamToml => creator.root.join(Utf8PathBuf::from("gleam.toml")),
+            Self::GithubCi => creator.workflows.join(Utf8PathBuf::from("test.yml")),
+        }
+    }
+
+    pub fn contents(&self, creator: &Creator) -> Option<String> {
+        let project_name = &creator.project_name;
+        let skip_git = creator.options.skip_git;
+        let skip_github = creator.options.skip_github;
+        let gleam_version = creator.gleam_version;
+
+        match self {
+            Self::Readme => Some(format!(
+                r#"# {project_name}
+
+[![Package Version](https://img.shields.io/hexpm/v/{project_name})](https://hex.pm/packages/{project_name})
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/{project_name}/)
+
+```sh
+gleam add {project_name}
+```
+```gleam
+import {project_name}
+
+pub fn main() {{
+  // TODO: An example of the project in use
+}}
+```
+
+Further documentation can be found at <https://hexdocs.pm/{project_name}>.
+
+## Development
+
+```sh
+gleam run   # Run the project
+gleam test  # Run the tests
+gleam shell # Run an Erlang shell
+```
+"#,
+            )),
+
+            Self::Gitignore if !skip_git => Some(
+                "*.beam
+*.ez
+/build
+erl_crash.dump
+"
+                .into(),
+            ),
+
+            Self::SrcModule => Some(format!(
+                r#"import gleam/io
+
+pub fn main() {{
+  io.println("Hello from {project_name}!")
+}}
+"#,
+            )),
+
+            Self::TestModule => Some(
+                r#"import gleeunit
+import gleeunit/should
+
+pub fn main() {
+  gleeunit.main()
+}
+
+// gleeunit test functions end in `_test`
+pub fn hello_world_test() {
+  1
+  |> should.equal(1)
+}
+"#
+                .into(),
+            ),
+
+            Self::GleamToml => Some(format!(
+                r#"name = "{project_name}"
+version = "1.0.0"
+
+# Fill out these fields if you intend to generate HTML documentation or publish
+# your project to the Hex package manager.
+#
+# description = ""
+# licences = ["Apache-2.0"]
+# repository = {{ type = "github", user = "username", repo = "project" }}
+# links = [{{ title = "Website", href = "https://gleam.run" }}]
+#
+# For a full reference of all the available options, you can have a look at
+# https://gleam.run/writing-gleam/gleam-toml/. 
+
+[dependencies]
+gleam_stdlib = "{GLEAM_STDLIB_REQUIREMENT}"
+
+[dev-dependencies]
+gleeunit = "~> {GLEEUNIT_VERSION}"
+"#,
+            )),
+
+            Self::GithubCi if !skip_git && !skip_github => Some(format!(
+                r#"name: test
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "{ERLANG_OTP_VERSION}"
+          gleam-version: "{gleam_version}"
+          rebar3-version: "{REBAR3_VERSION}"
+          # elixir-version: "{ELIXIR_VERSION}"
+      - run: gleam deps download
+      - run: gleam test
+      - run: gleam format --check src test
+"#,
+            )),
+            Self::GithubCi | Self::Gitignore => None,
+        }
+    }
+}
+
 impl Creator {
     fn new(options: NewOptions, gleam_version: &'static str) -> Result<Self, Error> {
         let project_name = if let Some(name) = options.name.clone() {
@@ -49,15 +202,14 @@ impl Creator {
         .to_string();
 
         validate_name(&project_name)?;
-        validate_root_folder(&options.project_root)?;
 
         let root = Utf8PathBuf::from(&options.project_root);
         let src = root.join("src");
         let test = root.join("test");
         let github = root.join(".github");
         let workflows = github.join("workflows");
-        Ok(Self {
-            root,
+        let me = Self {
+            root: root.clone(),
             src,
             test,
             github,
@@ -65,7 +217,11 @@ impl Creator {
             gleam_version,
             options,
             project_name,
-        })
+        };
+
+        validate_root_folder(&me)?;
+
+        Ok(me)
     }
 
     fn run(&self) -> Result<()> {
@@ -84,159 +240,16 @@ impl Creator {
 
         match self.options.template {
             Template::Lib => {
-                if !self.options.skip_git {
-                    self.gitignore()?;
+                for file in FileToCreate::iter() {
+                    let path = file.location(self);
+                    if let Some(contents) = file.contents(self) {
+                        write(path, &contents)?;
+                    }
                 }
-
-                if !self.options.skip_git && !self.options.skip_github {
-                    self.github_ci()?;
-                }
-                self.readme()?;
-                self.gleam_toml()?;
-                self.src_module()?;
-                self.test_module()?;
             }
         }
 
         Ok(())
-    }
-
-    fn src_module(&self) -> Result<()> {
-        write(
-            self.src.join(format!("{}.gleam", self.project_name)),
-            &format!(
-                r#"import gleam/io
-
-pub fn main() {{
-  io.println("Hello from {}!")
-}}
-"#,
-                self.project_name
-            ),
-        )
-    }
-
-    fn gitignore(&self) -> Result<()> {
-        write(
-            self.root.join(".gitignore"),
-            "*.beam
-*.ez
-build
-erl_crash.dump
-",
-        )
-    }
-
-    fn readme(&self) -> Result<()> {
-        write(
-            self.root.join("README.md"),
-            &format!(
-                r#"# {name}
-
-[![Package Version](https://img.shields.io/hexpm/v/{name})](https://hex.pm/packages/{name})
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/{name}/)
-
-## Quick start
-
-```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-gleam shell # Run an Erlang shell
-```
-
-## Installation
-
-If available on Hex this package can be added to your Gleam project:
-
-```sh
-gleam add {name}
-```
-
-and its documentation can be found at <https://hexdocs.pm/{name}>.
-"#,
-                name = self.project_name,
-            ),
-        )
-    }
-
-    fn github_ci(&self) -> Result<()> {
-        write(
-            self.workflows.join("test.yml"),
-            &format!(
-                r#"name: test
-
-on:
-  push:
-    branches:
-      - master
-      - main
-  pull_request:
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: "{}"
-          gleam-version: "{}"
-          rebar3-version: "{}"
-          # elixir-version: "{}"
-      - run: gleam deps download
-      - run: gleam test
-      - run: gleam format --check src test
-"#,
-                ERLANG_OTP_VERSION, self.gleam_version, REBAR3_VERSION, ELIXIR_VERSION,
-            ),
-        )
-    }
-
-    fn gleam_toml(&self) -> Result<()> {
-        write(
-            self.root.join("gleam.toml"),
-            &format!(
-                r#"name = "{name}"
-version = "1.0.0"
-
-# Fill out these fields if you intend to generate HTML documentation or publish
-# your project to the Hex package manager.
-#
-# description = ""
-# licences = ["Apache-2.0"]
-# repository = {{ type = "github", user = "username", repo = "project" }}
-# links = [{{ title = "Website", href = "https://gleam.run" }}]
-
-[dependencies]
-gleam_stdlib = "~> {gleam_stdlib}"
-
-[dev-dependencies]
-gleeunit = "~> {gleeunit}"
-"#,
-                name = self.project_name,
-                gleam_stdlib = GLEAM_STDLIB_VERSION,
-                gleeunit = GLEEUNIT_VERSION,
-            ),
-        )
-    }
-
-    fn test_module(&self) -> Result<()> {
-        write(
-            self.test.join(format!("{}_test.gleam", self.project_name)),
-            r#"import gleeunit
-import gleeunit/should
-
-pub fn main() {
-  gleeunit.main()
-}
-
-// gleeunit test functions end in `_test`
-pub fn hello_world_test() {
-  1
-  |> should.equal(1)
-}
-"#,
-        )
     }
 }
 
@@ -280,14 +293,23 @@ fn write(path: Utf8PathBuf, contents: &str) -> Result<()> {
     Ok(())
 }
 
-fn validate_root_folder(name: &str) -> Result<(), Error> {
-    if Utf8Path::new(name).exists() {
-        Err(Error::ProjectRootAlreadyExist {
-            path: name.to_string(),
-        })
-    } else {
-        Ok(())
+fn validate_root_folder(creator: &Creator) -> Result<(), Error> {
+    let mut duplicate_files: Vec<Utf8PathBuf> = Vec::new();
+
+    for t in FileToCreate::iter() {
+        let full_path = t.location(creator);
+        if full_path.exists() {
+            duplicate_files.push(full_path);
+        }
     }
+
+    if !duplicate_files.is_empty() {
+        return Err(Error::OutputFilesAlreadyExist {
+            file_names: duplicate_files,
+        });
+    }
+
+    Ok(())
 }
 
 fn validate_name(name: &str) -> Result<(), Error> {

@@ -4,7 +4,213 @@
 
 ### Language changes
 
+- Using a reserved word is now a compile error, not a warning.
+- Inexhaustive matches are now compile errors, not warnings.
+- The warning for an unused module alias now shows how to not assign a name to
+  the module.
+- Type aliases with unused type parameters now emit an error.
+- Type definitions with duplicate type parameters now emit an error.
+
+### Formatter
+
+- Now the formatter will nest pipelines and binary operators that are used as
+  function arguments, list items or as tuple items.
+- The format function literals used as the last argument in a function call
+  on long lines has been improved.
+
+### Build tool
+
+- If a package contains a `todo` expression then the build tool will now refuse
+  to publish it to Hex.
+- The search bar in generated docs now has a darker background color.
+- `gleam export` now takes a `package-interface` option to export a json file
+  containing metadata about the root package.
+- `gleam docs build` now creates a json file containing metadata about the root
+  package.
+- The order of dependencies in `manifest.toml` is now in alphabetical order.
+- The search bar in generated docs now has a darker background color.
+- The generated docs no longer shows whether an argument is discarded or
+  not in a function signature.
+
+
+### Bug fixes
+
+- Fixed a bug where the exhaustiveness checker could crash when checking nested
+  values inserted into the parent type using type parameters.
+- Fixed a bug where `functionname(_name)` would incorrectly parse as a function
+  capture instead of a syntax error.
+
+
+## v0.34.1 - 2023-01-17
+
+### Build tool changes
+
+- Support has been added for using SourceHut as a repository.
+
+### Bug fixes
+
+- Fixed a bug where long function headers with external implementations could
+  format incorrectly.
+- The `@deprecated` attribute can now be used to annotate module constants.
+  This will cause a warning to be emitted when the constant is used.
+
+
+## v0.34.0 - 2023-01-16
+
+## v0.34.0-rc3 - 2023-01-12
+
+### Language changes
+
+- "echo" is now a reserved word.
+- A warning is no longer emitted when a function has a Gleam implementation as
+  well as external implementations for both targets. This is because having a
+  default Gleam implementation means the code is future-proof and continues to
+  be cross platform even if a new target is added.
+
+### Bug fixes
+
+- Fixed a bug where function heads would go over the line limit in the
+  formatter.
+
+
+## v0.34.0-rc2 - 2023-01-11
+
+### Bug fixes
+
+- Fixed a bug where `gleam run` would fail when the current directory is not
+  the root of the project and using the JavaScript target.
+- Fixed a bug where the compiler would in some cases fail to error when an
+  application uses functions that do not support the current compilation
+  target.
+
+
+## v0.34.0-rc1 - 2024-01-07
+
+### Language changes
+
+- Warn about function body not being used, because it already has external
+  implementations for all targets.
+- It's now possible to compile a project with external functions in dependency
+  packages that are not supported by the compilation target so long as they are
+  not used on the current target.
+- The error message for when one imports a constructor instead of an homonymous
+  type has been improved.
+
+### Language Server Changes
+
+- Added a `View on HexDocs` link on function hover.
+
+### Formatter
+
+- Fixed some quirk with the formatting of binary operators.
+- Fixed a bug where the formatter would move a function call's closed
+  parentheses on a new line instead of splitting the function's arguments.
+- Now the formatter will format tuples as if they were functions, trying to
+  first split just the last element before splitting the whole tuple.
+- Improved the formatting of multiline strings in string concatenation.
+
+### Build tool changes
+
+- The `gleam new` command now accepts any existing path, as long as there are
+  no conflicts with already existing files. Examples: `gleam new .`, `gleam new
+  ..`, `gleam new ~/projects/test`.
+- The format for the README created by `gleam new` has been altered.
+- The `gleam.toml` created by `gleam new` now has a link to the full reference
+  for its available options.
+- The `gleam` binary is now statically linked on Windows.
+- New projects are created requiring between versions of v0.34.0 inclusive and
+  exclusive v2.0.0.
+- The `repository` section now supports additional VCS types in the form of
+  codeberg, forgejo and gitea allowing a `user`, `repo` and additionally a
+  `host` url.
+- TypeScript declaration for the prelude exports previously missing functions
+  and classes. Additionally, swaps interfaces for classes and adds missing
+  attributes to classes.
+- `gleam` commands now look in parent directories for a `gleam.toml` file.
+
+### Bug fixes
+
+- Fixed a bug where `gleam add` would not update `manifest.toml` correctly.
+- Fixed a bug where `fn() { Nil }()` could generate invalid JavaScript code.
+- Fixed a bug where the build tool would make unnecessary calls to the Hex API
+  when path dependencies are used.
+- Fixed a bug where `gleam new` would generate a gitignore with `build` rather
+  than `/build`.
+- Fixed where the types of generic constants could be incorrecly inferred.
+- `Utf8Codepoint` has been renamed to `UtfCodepoint` in `prelude.d.mts`.
+- Fixed a bug where `gleam deps list` would look in filesystem root instead of
+  the current directory.
+- Fixed a bug with the `isEqual` function in `prelude.js` where RegExps were
+  being incorrectly structurally compared and being falsely reported as being
+  equal.
+- JavaScript: export from `prelude.d.mts` in `gleam.d.mts` to fix the error:
+  "Type 'Result' is not generic".
+- Not providing a definition after some attributes is now a parse error.
+
+
+## v0.33.0 - 2023-12-18
+
+## v0.33.0-rc4 - 2023-12-17
+
+- The deprecated bit array options `binary` and `bit_string` have been removed.
+- The deprecated ambiguous type import syntax has been removed.
+- The deprecated `BitString` type has been removed.
+- The deprecated `inspect` functions and `BitString` type has been removed from
+  the JavaScript prelude.
+
+
+## v0.33.0-rc3 - 2023-12-17
+
+### Formatter
+
+- The formatter now tries to split long chains of binary operations around the
+  operator itself, rather than around other elements like lists or function
+  calls.
+
+### Bug fixes
+
+- Fixed a bug where string prefix aliases defined in alternative case branches
+  would all be bound to the same constant.
+
+
+## v0.33.0-rc2 - 2023-12-07
+
+### Language changes
+
+- The `\e` string escape sequence has been removed. Use `\u{001b}` instead.
+- Generated Erlang now disabled redundant case clause warnings as these are now
+  redundant due to exhaustiveness checking.
+
+### Bug fixes
+
+- Fixed a bug where the `\u` string escape sequence would not work with
+  on Erlang on the right hand side of a string concatenation.
+
+
+## v0.33.0-rc1 - 2023-12-06
+
+### Formatter
+
+- The formatter now tries to keep a function body and its arguments on a single
+  line by first trying to split only its last argument on multiple lines.
+- Fixed a bug where the formatter would move comments out of blocks.
+- `gleam format` now ignores the Gleam build directory by default, even when not
+  in a git repository.
+
+### Language changes
+
+- Gleam now has full exhaustiveness checking. Exhaustiveness issues have been
+  downgraded from errors to warnings so that existing Gleam code can be
+  upgraded to be exhaustive without breaking existing code. In a future version
+  they will be upgraded to errors.
 - The `!` operator can now be used in clause guards.
+- The words `auto`, `delegate`, `derive`, `else`, `implement`, `macro`, and
+  `test` are now reserved for future use. If used they will emit a warning. In
+  a future version this may be upgraded to an error.
+- The `\u{...}` syntax can be used in strings to specify unicode codepoints via a
+  hexadecimal number with 1 to 6 digits.
+- The `todo as` and `panic as` syntaxes now accept an expression that evaluates
+  to a string rather than just a string literal.
 
 ### Build tool changes
 
@@ -17,6 +223,17 @@
   published is not yet version 1.0.0.
 - The `gleam publish` command now asks for confirmation if the package name is
   one that implies the package is maintained by the Gleam core team.
+- The error messages shown when dependency resolution fails have been improved.
+
+### Compiler WASM API
+
+- The WASM API for the compiler has been rewritten to be simpler.
+- The WASM API for the compiler now exposes warnings.
+
+### HTML documentation generator
+
+- Searching in rendered HTML documentation now also matches words that do not
+  start with the input but do contain it.
 
 ### Bug fixes
 
@@ -32,6 +249,12 @@
   for the upcoming negative zero float change in Erlang OTP 27.
 - Fixed a bug where using only types from an aliased import, wouldn't stop the
   compiler from emitting an unused alias warning for that import.
+- Fixed a bug where the formatter would remove the ` as name` from string prefix
+  patterns.
+- Fixed a bug where the formatter would misplace comments at the start of a
+  block.
+- Fixed a bug where using a string prefix pattern in `let assert` would generate
+  incorrect JavaScript.
 
 
 ## v0.32.4 - 2023-11-09
@@ -172,7 +395,7 @@
 - The content has been made wider in rendered HTML documentation.
 - Dependencies that can be built with both `mix` and `rebar3` are now built
   with `mix` if it exists on the system, and with `rebar3` if it doesn't.
-  
+
 ### Bug fixes
 
 - "Compiling $package" is now only printed when a package has new changes to

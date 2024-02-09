@@ -324,7 +324,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
             Pattern::Discard { .. } => Ok(()),
 
-            Pattern::Var { name, .. } => {
+            Pattern::Variable { name, .. } => {
                 self.push_assignment(subject.clone(), name);
                 Ok(())
             }
@@ -364,7 +364,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
             Pattern::Constructor {
                 type_,
-                constructor: Inferred::Known(PatternConstructor::Record { name, .. }),
+                constructor: Inferred::Known(PatternConstructor { name, .. }),
                 ..
             } if type_.is_bool() && name == "True" => {
                 self.push_booly_check(subject.clone(), true);
@@ -373,7 +373,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
             Pattern::Constructor {
                 type_,
-                constructor: Inferred::Known(PatternConstructor::Record { name, .. }),
+                constructor: Inferred::Known(PatternConstructor { name, .. }),
                 ..
             } if type_.is_bool() && name == "False" => {
                 self.push_booly_check(subject.clone(), false);
@@ -382,7 +382,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
             Pattern::Constructor {
                 type_,
-                constructor: Inferred::Known(PatternConstructor::Record { .. }),
+                constructor: Inferred::Known(PatternConstructor { .. }),
                 ..
             } if type_.is_nil() => {
                 self.push_booly_check(subject.clone(), false);
@@ -396,15 +396,29 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 panic!("JavaScript generation performed with uninferred pattern constructor");
             }
 
-            Pattern::Concatenate {
+            Pattern::StringPrefix {
                 left_side_string,
                 right_side_assignment,
+                left_side_assignment,
                 ..
             } => {
                 self.push_string_prefix_check(subject.clone(), left_side_string);
-                self.push_string_prefix_slice(utf16_no_escape_len(left_side_string));
                 if let AssignName::Variable(right) = right_side_assignment {
+                    self.push_string_prefix_slice(utf16_no_escape_len(left_side_string));
                     self.push_assignment(subject.clone(), right);
+                    // We remove the string slicing that was needed to push the correct assignment
+                    // this way the following assignments will only be sliced if necessary.
+                    self.pop();
+                }
+                if let Some((left, _)) = left_side_assignment {
+                    // "foo" as prefix <> rest
+                    //       ^^^^^^^^^ In case the left prefix of the pattern matching is given an
+                    //                 alias we bind it to a local variable so that it can be
+                    //                 correctly referenced inside the case branch.
+                    // let prefix = "foo";
+                    // ^^^^^^^^^^^^^^^^^^^ we're adding this assignment inside the if clause
+                    //                     the case branch gets translated into.
+                    self.push_assignment(super::expression::string(left_side_string), left);
                 }
                 self.pop();
                 Ok(())
@@ -412,7 +426,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
             Pattern::Constructor {
                 constructor:
-                    Inferred::Known(PatternConstructor::Record {
+                    Inferred::Known(PatternConstructor {
                         field_map,
                         name: record_name,
                         ..
@@ -497,7 +511,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             Ok(())
                         }
 
-                        [Opt::Bytes { .. } | Opt::Binary { .. }] => {
+                        [Opt::Bytes { .. }] => {
                             self.push_rest_from(offset.bytes);
                             self.traverse_pattern(subject, &segment.value)?;
                             self.pop();
@@ -505,29 +519,27 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             Ok(())
                         }
 
-                        [Opt::Bytes { .. } | Opt::Binary { .. }, Opt::Size { value: size, .. }]
-                        | [Opt::Size { value: size, .. }, Opt::Bytes { .. } | Opt::Binary { .. }] => {
-                            match &**size {
-                                Pattern::Int { value, .. } => {
-                                    let start = offset.bytes;
-                                    let increment = value.parse::<usize>().expect(
-                                        "part of an Int node should always parse as integer",
-                                    );
-                                    offset.increment(increment);
-                                    let end = offset.bytes;
+                        [Opt::Bytes { .. }, Opt::Size { value: size, .. }]
+                        | [Opt::Size { value: size, .. }, Opt::Bytes { .. }] => match &**size {
+                            Pattern::Int { value, .. } => {
+                                let start = offset.bytes;
+                                let increment = value
+                                    .parse::<usize>()
+                                    .expect("part of an Int node should always parse as integer");
+                                offset.increment(increment);
+                                let end = offset.bytes;
 
-                                    self.push_binary_from_slice(start, end);
-                                    self.traverse_pattern(subject, &segment.value)?;
-                                    self.pop();
-                                    Ok(())
-                                }
-
-                                _ => Err(Error::Unsupported {
-                                    feature: "This bit array size option in patterns".into(),
-                                    location: segment.location,
-                                }),
+                                self.push_binary_from_slice(start, end);
+                                self.traverse_pattern(subject, &segment.value)?;
+                                self.pop();
+                                Ok(())
                             }
-                        }
+
+                            _ => Err(Error::Unsupported {
+                                feature: "This bit array size option in patterns".into(),
+                                location: segment.location,
+                            }),
+                        },
 
                         _ => Err(Error::Unsupported {
                             feature: "This bit array segment option in patterns".into(),
@@ -635,10 +647,6 @@ pub struct CompiledPattern<'a> {
 impl<'a> CompiledPattern<'a> {
     pub fn has_assignments(&self) -> bool {
         !self.assignments.is_empty()
-    }
-
-    pub fn has_checks(&self) -> bool {
-        !self.checks.is_empty()
     }
 }
 
@@ -792,7 +800,11 @@ impl<'a> Check<'a> {
                 prefix,
             } => {
                 let prefix = super::expression::string(prefix);
-                docvec![subject, path, ".startsWith(", prefix, ")"]
+                if match_desired {
+                    docvec![subject, path, ".startsWith(", prefix, ")"]
+                } else {
+                    docvec!["!", subject, path, ".startsWith(", prefix, ")"]
+                }
             }
         }
     }

@@ -33,8 +33,8 @@ use crate::{
 
 pub fn list() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-
-    let paths = ProjectPaths::at_filesystem_root();
+    let project = fs::get_project_root(fs::get_current_directory()?)?;
+    let paths = ProjectPaths::new(project);
     let config = crate::config::root_config()?;
     let (_, manifest) = get_manifest(
         &paths,
@@ -113,7 +113,7 @@ pub enum UseManifest {
 }
 
 pub fn update() -> Result<()> {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::find_project_paths()?;
     _ = download(&paths, cli::Reporter::new(), None, UseManifest::No)?;
     Ok(())
 }
@@ -244,7 +244,7 @@ fn remove_extra_packages<Telem: Telemetry>(
         let path = paths.build_packages_package(&package_name);
         if path.exists() {
             tracing::debug!(package=%package_name, version=%version, "removing_unneeded_package");
-            fs::delete_dir(&path)?;
+            fs::delete_directory(&path)?;
         }
 
         // TODO: test
@@ -260,7 +260,7 @@ fn remove_extra_packages<Telem: Telemetry>(
                 let path = paths.build_directory_for_package(mode, target, name);
                 if path.exists() {
                     tracing::debug!(package=%package_name, version=%version, "deleting_build_cache");
-                    fs::delete_dir(&path)?;
+                    fs::delete_directory(&path)?;
                 }
             }
         }
@@ -508,7 +508,11 @@ fn get_manifest<Telem: Telemetry>(
 
     // If the config has unchanged since the manifest was written then it is up
     // to date so we can return it unmodified.
-    if manifest.requirements == config.all_dependencies()? {
+    if is_same_requirements(
+        &manifest.requirements,
+        &config.all_dependencies()?,
+        paths.root(),
+    )? {
         tracing::debug!("manifest_up_to_date");
         Ok((false, manifest))
     } else {
@@ -516,6 +520,52 @@ fn get_manifest<Telem: Telemetry>(
         let manifest = resolve_versions(runtime, mode, paths, config, Some(&manifest), telemetry)?;
         Ok((true, manifest))
     }
+}
+
+fn is_same_requirements(
+    requirements1: &HashMap<EcoString, Requirement>,
+    requirements2: &HashMap<EcoString, Requirement>,
+    root_path: &Utf8Path,
+) -> Result<bool> {
+    if requirements1.len() != requirements2.len() {
+        return Ok(false);
+    }
+
+    for (key, requirement1) in requirements1 {
+        if !same_requirements(requirement1, requirements2.get(key), root_path)? {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
+}
+
+fn same_requirements(
+    requirement1: &Requirement,
+    requirement2: Option<&Requirement>,
+    root_path: &Utf8Path,
+) -> Result<bool> {
+    let (left, right) = match (requirement1, requirement2) {
+        (Requirement::Path { path: path1 }, Some(Requirement::Path { path: path2 })) => {
+            (path1, path2)
+        }
+        (_, Some(requirement2)) => return Ok(requirement1 == requirement2),
+        (_, None) => return Ok(false),
+    };
+
+    let left = if left.is_absolute() {
+        left.to_owned()
+    } else {
+        fs::canonicalise(&root_path.join(left))?
+    };
+
+    let right = if right.is_absolute() {
+        right.to_owned()
+    } else {
+        fs::canonicalise(&root_path.join(right))?
+    };
+
+    Ok(left == right)
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -819,7 +869,7 @@ fn provide_package(
 #[test]
 fn provide_wrong_package() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
     let result = provide_local_package(
         "wrong_name".into(),
         Utf8Path::new("./test/hello_world"),
@@ -842,7 +892,7 @@ fn provide_wrong_package() {
 #[test]
 fn provide_existing_package() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
 
     let result = provide_local_package(
         "hello_world".into(),
@@ -868,7 +918,7 @@ fn provide_existing_package() {
 #[test]
 fn provide_conflicting_package() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
     let result = provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
@@ -899,7 +949,7 @@ fn provide_conflicting_package() {
 #[test]
 fn provided_is_absolute() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
     let result = provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
@@ -920,7 +970,7 @@ fn provided_is_absolute() {
 #[test]
 fn provided_recursive() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
     let result = provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),

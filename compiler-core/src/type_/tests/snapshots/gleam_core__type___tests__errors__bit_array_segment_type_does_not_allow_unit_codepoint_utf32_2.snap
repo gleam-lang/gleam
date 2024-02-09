@@ -10,5 +10,5 @@ error: Invalid bit array segment
   │                  ^^^^^^^^^^^^^^^ Size cannot be specified here
 
 Hint: utf32_codepoint segments have an autoatic size.
-See: https://gleam.run/book/tour/bit-strings.html
+See: https://gleam.run/book/tour/bit-arrays.html
 

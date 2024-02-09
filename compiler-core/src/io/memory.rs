@@ -26,6 +26,10 @@ impl InMemoryFileSystem {
         Self::default()
     }
 
+    pub fn reset(&self) {
+        self.files.deref().borrow_mut().clear();
+    }
+
     /// # Panics
     ///
     /// Panics if this is not the only reference to the underlying files.
@@ -78,7 +82,7 @@ impl InMemoryFileSystem {
 }
 
 impl FileSystemWriter for InMemoryFileSystem {
-    fn delete(&self, path: &Utf8Path) -> Result<(), Error> {
+    fn delete_directory(&self, path: &Utf8Path) -> Result<(), Error> {
         let mut files = self.files.deref().borrow_mut();
         let _ = files.remove(path);
         Ok(())

@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+expression: "\npub fn emoji() -> String {\n  \"\\u{0001f600}\"\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([emoji/0]).
+
+-spec emoji() -> binary().
+emoji() ->
+    <<(erlang:binary_to_integer(<<"0001f600">>, 16))/utf8>>.
+

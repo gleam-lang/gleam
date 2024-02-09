@@ -159,7 +159,7 @@ fn dep_compile_recompile() {
     let mut engine = setup_engine(&io);
     add_path_dep(&mut engine, "mydep");
 
-    let path = io.dep_module("mydep", "moddy", "pub fn main() { 0 }");
+    let path = io.path_dep_module("mydep", "moddy", "pub fn main() { 0 }");
 
     // The first time it compiles.
     let response = engine.compile_please();
@@ -170,7 +170,7 @@ fn dep_compile_recompile() {
     assert!(!engine.compiler.project_compiler.packages.is_empty());
 
     // The source file has been updated, so the file is compiled again.
-    _ = io.dep_module("mydep", "moddy", "pub fn main() { 1 }");
+    _ = io.path_dep_module("mydep", "moddy", "pub fn main() { 1 }");
     let response = engine.compile_please();
     assert!(response.result.is_ok());
     assert!(response.warnings.is_empty());

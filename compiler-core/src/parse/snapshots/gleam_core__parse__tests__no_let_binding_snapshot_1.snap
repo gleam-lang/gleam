@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 353
 expression: foo = 4
 ---
 error: Syntax error
@@ -9,6 +8,6 @@ error: Syntax error
 1 │ foo = 4
   │     ^ There must be a 'let' to bind variable to value
 
-Hint: Use let for binding
+Hint: Use let for binding.
 See: https://gleam.run/book/tour/let-bindings
 

@@ -1,8 +1,5 @@
 use crate::{
-    analyse::Inferred,
-    ast::{Layer, PIPE_VARIABLE},
-    build::Target,
-    uid::UniqueIdGenerator,
+    analyse::TargetSupport, ast::PIPE_VARIABLE, build::Target, uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
 };
 
@@ -11,6 +8,7 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Environment<'a> {
+    pub current_package: EcoString,
     pub current_module: EcoString,
     pub target: Target,
     pub ids: UniqueIdGenerator,
@@ -28,7 +26,7 @@ pub struct Environment<'a> {
 
     /// Names of modules that have been imported with as name.
     pub imported_module_aliases: HashMap<EcoString, SrcSpan>,
-    pub unused_module_aliases: HashMap<EcoString, SrcSpan>,
+    pub unused_module_aliases: HashMap<EcoString, UnusedModuleAlias>,
 
     /// Values defined in the current function (or the prelude)
     pub scope: im::HashMap<EcoString, ValueConstructor>,
@@ -37,7 +35,7 @@ pub struct Environment<'a> {
     pub module_types: HashMap<EcoString, TypeConstructor>,
 
     /// Mapping from types to constructor names in the current module (or the prelude)
-    pub module_types_constructors: HashMap<EcoString, Vec<EcoString>>,
+    pub module_types_constructors: HashMap<EcoString, TypeVariantConstructors>,
 
     /// Values defined in the current module (or the prelude)
     pub module_values: HashMap<EcoString, ValueConstructor>,
@@ -54,42 +52,35 @@ pub struct Environment<'a> {
     /// NOTE: The bool in the tuple here tracks if the entity has been used
     pub entity_usages: Vec<HashMap<EcoString, (EntityKind, SrcSpan, bool)>>,
 
-    pub ambiguous_imported_items: HashMap<EcoString, LayerUsage>,
-}
+    /// Used to determine if all functions/constants need to support the current
+    /// compilation target.
+    pub target_support: TargetSupport,
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct LayerUsage {
-    pub import_location: SrcSpan,
-    pub type_: bool,
-    pub value: bool,
-}
-
-impl LayerUsage {
-    fn used(&mut self, layer: Layer) {
-        match layer {
-            Layer::Value => self.value = true,
-            Layer::Type => self.type_ = true,
-        }
-    }
+    /// Whether a `todo` expression has been encountered in this module.
+    /// This is used by the build tool to refuse to publish packages that are unfinished.
+    pub todo_encountered: bool,
 }
 
 impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
+        current_package: EcoString,
         current_module: EcoString,
         target: Target,
         importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
         warnings: &'a TypeWarningEmitter,
+        target_support: TargetSupport,
     ) -> Self {
         let prelude = importable_modules
             .get(PRELUDE_MODULE_NAME)
             .expect("Unable to find prelude in importable modules");
         Self {
+            current_package: current_package.clone(),
             previous_id: ids.next(),
             ids,
             target,
             module_types: prelude.types.clone(),
-            module_types_constructors: prelude.types_constructors.clone(),
+            module_types_constructors: prelude.types_value_constructors.clone(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
             unused_modules: HashMap::new(),
@@ -103,9 +94,16 @@ impl<'a> Environment<'a> {
             current_module,
             warnings,
             entity_usages: vec![HashMap::new()],
-            ambiguous_imported_items: HashMap::new(),
+            target_support,
+            todo_encountered: false,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnusedModuleAlias {
+    pub location: SrcSpan,
+    pub module_name: EcoString,
 }
 
 /// For Keeping track of entity usages and knowing which error to display.
@@ -117,7 +115,6 @@ pub enum EntityKind {
     PrivateFunction,
     ImportedConstructor,
     ImportedType,
-    ImportedTypeAndValue(SrcSpan),
     ImportedValue,
     PrivateType,
     Variable,
@@ -260,7 +257,7 @@ impl<'a> Environment<'a> {
     /// Lookup a module constant in the current scope.
     ///
     pub fn get_module_const(&mut self, name: &EcoString) -> Option<&ValueConstructor> {
-        self.increment_usage(name, Layer::Value);
+        self.increment_usage(name);
         self.module_values
             .get(name)
             .filter(|ValueConstructor { variant, .. }| {
@@ -295,7 +292,7 @@ impl<'a> Environment<'a> {
     pub fn insert_type_to_constructors(
         &mut self,
         type_name: EcoString,
-        constructors: Vec<EcoString>,
+        constructors: TypeVariantConstructors,
     ) {
         let _ = self
             .module_types_constructors
@@ -308,8 +305,6 @@ impl<'a> Environment<'a> {
         &mut self,
         module_alias: &Option<EcoString>,
         name: &EcoString,
-        // TODO: remove this once we have removed the deprecated BitString type
-        location: SrcSpan,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         let t = match module_alias {
             None => self
@@ -317,7 +312,7 @@ impl<'a> Environment<'a> {
                 .get(name)
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
-                    type_constructors: self.module_types.keys().cloned().collect(),
+                    hint: self.unknown_type_hint(name),
                 }),
 
             Some(module_name) => {
@@ -340,29 +335,33 @@ impl<'a> Environment<'a> {
             }
         }?;
 
-        if name == "BitString"
-            && t.typ.is_bit_array()
-            && (module_alias.is_none() || module_alias.as_deref() == Some("gleam"))
-        {
-            self.warnings
-                .emit(Warning::DeprecatedBitString { location })
-        }
-
         Ok(t)
+    }
+
+    fn unknown_type_hint(&self, type_name: &EcoString) -> UnknownTypeHint {
+        match self.scope.contains_key(type_name) {
+            true => UnknownTypeHint::ValueInScopeWithSameName,
+            false => UnknownTypeHint::AlternativeTypes(self.module_types.keys().cloned().collect()),
+        }
     }
 
     /// Lookup constructors for type in the current scope.
     ///
     pub fn get_constructors_for_type(
-        &mut self,
-        full_module_name: Option<&str>,
+        &self,
+        module: &EcoString,
         name: &EcoString,
-    ) -> Result<&Vec<EcoString>, UnknownTypeConstructorError> {
-        match full_module_name {
+    ) -> Result<&TypeVariantConstructors, UnknownTypeConstructorError> {
+        let module = if module.is_empty() || *module == self.current_module {
+            None
+        } else {
+            Some(module)
+        };
+        match module {
             None => self.module_types_constructors.get(name).ok_or_else(|| {
                 UnknownTypeConstructorError::Type {
                     name: name.clone(),
-                    type_constructors: self.module_types.keys().cloned().collect(),
+                    hint: self.unknown_type_hint(name),
                 }
             }),
 
@@ -373,8 +372,7 @@ impl<'a> Environment<'a> {
                         imported_modules: self.importable_modules.keys().cloned().collect(),
                     }
                 })?;
-                let _ = self.unused_modules.remove(m);
-                module.types_constructors.get(name).ok_or_else(|| {
+                module.types_value_constructors.get(name).ok_or_else(|| {
                     UnknownTypeConstructorError::ModuleType {
                         name: name.clone(),
                         module_name: module.name.clone(),
@@ -436,6 +434,7 @@ impl<'a> Environment<'a> {
             Type::Named {
                 public,
                 name,
+                package,
                 module,
                 args,
             } => {
@@ -446,6 +445,7 @@ impl<'a> Environment<'a> {
                 Arc::new(Type::Named {
                     public: *public,
                     name: name.clone(),
+                    package: package.clone(),
                     module: module.clone(),
                     args,
                 })
@@ -505,7 +505,7 @@ impl<'a> Environment<'a> {
             // TODO: Improve this so that we can tell if an imported overriden
             // type is actually used or not by tracking whether usages apply to
             // the value or type scope
-            Some((ImportedType | ImportedTypeAndValue(_) | PrivateType, _, _)) => {}
+            Some((ImportedType | PrivateType, _, _)) => {}
 
             Some((kind, location, false)) => {
                 // an entity was overwritten in the top most scope without being used
@@ -519,7 +519,7 @@ impl<'a> Environment<'a> {
     }
 
     /// Increments an entity's usage in the current or nearest enclosing scope
-    pub fn increment_usage(&mut self, name: &EcoString, layer: Layer) {
+    pub fn increment_usage(&mut self, name: &EcoString) {
         let mut name = name.clone();
 
         while let Some((kind, _, used)) = self
@@ -535,29 +535,7 @@ impl<'a> Environment<'a> {
                 EntityKind::PrivateTypeConstructor(type_name) if *type_name != name => {
                     name = type_name.clone();
                 }
-                EntityKind::ImportedTypeAndValue(location) => {
-                    self.ambiguous_imported_items
-                        .entry(name.clone())
-                        .or_insert_with(|| LayerUsage {
-                            import_location: *location,
-                            type_: false,
-                            value: false,
-                        })
-                        .used(layer);
-                    break;
-                }
                 _ => break,
-            }
-        }
-    }
-
-    pub fn emit_warnings_for_deprecated_type_imports(&mut self) {
-        for (name, usage) in &self.ambiguous_imported_items {
-            if usage.type_ {
-                self.warnings.emit(Warning::DeprecatedTypeImport {
-                    name: name.clone(),
-                    location: usage.import_location,
-                })
             }
         }
     }
@@ -580,13 +558,14 @@ impl<'a> Environment<'a> {
             locations.push(location);
         }
 
-        for (name, location) in self.unused_module_aliases.iter() {
+        for (name, info) in self.unused_module_aliases.iter() {
             if self.unused_modules.get(name).is_none() {
                 self.warnings.emit(Warning::UnusedImportedModuleAlias {
-                    name: name.clone(),
-                    location: *location,
+                    alias: name.clone(),
+                    location: info.location,
+                    module_name: info.module_name.clone(),
                 });
-                locations.push(*location);
+                locations.push(info.location);
             }
         }
         locations
@@ -595,13 +574,11 @@ impl<'a> Environment<'a> {
     fn handle_unused(&mut self, unused: HashMap<EcoString, (EntityKind, SrcSpan, bool)>) {
         for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
             let warning = match kind {
-                EntityKind::ImportedType | EntityKind::ImportedTypeAndValue(_) => {
-                    Warning::UnusedType {
-                        name,
-                        imported: true,
-                        location,
-                    }
-                }
+                EntityKind::ImportedType => Warning::UnusedType {
+                    name,
+                    imported: true,
+                    location,
+                },
                 EntityKind::ImportedConstructor => Warning::UnusedConstructor {
                     name,
                     imported: true,
@@ -635,69 +612,6 @@ impl<'a> Environment<'a> {
             .filter(|&t| PIPE_VARIABLE != t)
             .cloned()
             .collect()
-    }
-
-    /// Checks that the given patterns are exhaustive for given type.
-    /// Currently only performs exhaustiveness checking for custom types,
-    /// only at the top level (without recursing into constructor arguments).
-    pub fn check_exhaustiveness(
-        &mut self,
-        patterns: Vec<Pattern<Arc<Type>>>,
-        value_typ: Arc<Type>,
-    ) -> Result<(), Vec<EcoString>> {
-        match &*value_typ {
-            Type::Named {
-                name: type_name,
-                module: module_name,
-                ..
-            } => {
-                let m = if module_name.is_empty() || module_name == &self.current_module {
-                    None
-                } else {
-                    Some(module_name.as_str())
-                };
-
-                if let Ok(constructors) = self.get_constructors_for_type(m, type_name) {
-                    let mut unmatched_constructors: HashSet<EcoString> =
-                        constructors.iter().cloned().collect();
-
-                    for p in &patterns {
-                        // ignore Assign patterns
-                        let mut pattern = p;
-                        while let Pattern::Assign {
-                            pattern: assign_pattern,
-                            ..
-                        } = pattern
-                        {
-                            pattern = assign_pattern;
-                        }
-
-                        match pattern {
-                            // If the pattern is a Discard or Var, all constructors are covered by it
-                            Pattern::Discard { .. } => return Ok(()),
-                            Pattern::Var { .. } => return Ok(()),
-
-                            // If the pattern is a constructor, remove it from unmatched patterns
-                            Pattern::Constructor {
-                                constructor:
-                                    Inferred::Known(PatternConstructor::Record { name, .. }),
-                                ..
-                            } => {
-                                let _ = unmatched_constructors.remove(name);
-                            }
-
-                            _ => return Ok(()),
-                        }
-                    }
-
-                    if !unmatched_constructors.is_empty() {
-                        return Err(unmatched_constructors.into_iter().sorted().collect());
-                    }
-                }
-                Ok(())
-            }
-            _ => Ok(()),
-        }
     }
 }
 

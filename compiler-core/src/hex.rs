@@ -239,7 +239,7 @@ impl Downloader {
                 return match result {
                     Ok(()) => Ok(true),
                     Err(err) => {
-                        self.fs_writer.delete(&destination)?;
+                        self.fs_writer.delete_directory(&destination)?;
                         Err(err)
                     }
                 };

@@ -183,7 +183,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             location,
             annotation: None,
             kind: AssignmentKind::Let,
-            pattern: Pattern::Var {
+            pattern: Pattern::Variable {
                 location,
                 name: PIPE_VARIABLE.into(),
                 type_: expression.type_(),
@@ -287,7 +287,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
 
         match types {
             (Type::Fn { args: a, .. }, Type::Fn { args: b, .. }) if a.len() == b.len() => {
-                match (a.get(0), b.get(0)) {
+                match (a.first(), b.first()) {
                     (Some(a), Some(b)) => unify(a.clone(), b.clone()).is_err(),
                     _ => false,
                 }

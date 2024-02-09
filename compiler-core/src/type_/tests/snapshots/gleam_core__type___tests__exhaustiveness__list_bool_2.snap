@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 600
+expression: "\npub fn main(x) {\n  case x {\n    [] -> 1\n    [True] -> 2\n    [_, False] -> 2\n    [_, _, _, ..] -> 2\n  }\n}\n"
+---
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:3:3
+  │  
+3 │ ╭   case x {
+4 │ │     [] -> 1
+5 │ │     [True] -> 2
+6 │ │     [_, False] -> 2
+7 │ │     [_, _, _, ..] -> 2
+8 │ │   }
+  │ ╰───^
+
+This case expression does not have a pattern for all possible values.
+If is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    [False]
+    [_, True]
+

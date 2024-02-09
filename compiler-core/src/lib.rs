@@ -76,6 +76,7 @@ pub mod language_server;
 pub mod line_numbers;
 pub mod manifest;
 pub mod metadata;
+pub mod package_interface;
 pub mod parse;
 pub mod paths;
 pub mod pretty;
@@ -88,6 +89,7 @@ pub mod warning;
 pub(crate) mod ast_folder;
 mod call_graph;
 mod dep_tree;
+mod exhaustiveness;
 pub(crate) mod graph;
 
 pub use error::{Error, Result};

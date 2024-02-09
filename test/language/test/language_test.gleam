@@ -1,7 +1,7 @@
 //// Here are some things that have been previously been incorrectly reported as
 //// unused.
 
-import test.{type Test, assert_equal, example, operator_test, suite}
+import tests.{type Test, assert_equal, example, operator_test, suite}
 import importable.{NoFields}
 import mod_with_numbers_0123456789
 import record_update
@@ -11,7 +11,7 @@ import gleam
 
 pub fn main() {
   let stats =
-    test.run([
+    tests.run([
       suite("ints", int_tests()),
       suite("pipes", pipes_tests()),
       suite("blocks", block_tests()),
@@ -156,6 +156,11 @@ fn strings_tests() -> List(Test) {
 ",
       "\n",
     ),
+    "let assert string prefix"
+    |> example(fn() {
+      let assert "ab" <> rest = "abcdef"
+      assert_equal("cdef", rest)
+    }),
   ]
 }
 
@@ -222,22 +227,16 @@ fn assert_tests() -> List(Test) {
   [
     "let assert Ok(_)"
     |> example(fn() {
-      assert_equal(
-        Ok(1),
-        {
-          let assert Ok(_) = Ok(1)
-        },
-      )
+      assert_equal(Ok(1), {
+        let assert Ok(_) = Ok(1)
+      })
     }),
     "let assert Ok(x)"
     |> example(fn() {
-      assert_equal(
-        1,
-        {
-          let assert Ok(x) = Ok(1)
-          x
-        },
-      )
+      assert_equal(1, {
+        let assert Ok(x) = Ok(1)
+        x
+      })
     }),
   ]
 }
@@ -393,493 +392,346 @@ fn clause_guard_tests() -> List(Test) {
   [
     "var True"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if true_ -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if true_ -> 0
+        _ -> 1
+      })
     }),
     "var False"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if false_ -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if false_ -> 0
+        _ -> 1
+      })
     }),
     "int equals match"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if int_zero == int_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if int_zero == int_zero -> 0
+        _ -> 1
+      })
     }),
     "int equals nomatch"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if int_zero == int_one -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if int_zero == int_one -> 0
+        _ -> 1
+      })
     }),
     "int not equals match"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if int_zero != int_one -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if int_zero != int_one -> 0
+        _ -> 1
+      })
     }),
     "int not equals nomatch"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if int_zero != int_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if int_zero != int_zero -> 0
+        _ -> 1
+      })
     }),
     "record equals match"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if ok == ok -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if ok == ok -> 0
+        _ -> 1
+      })
     }),
     "record equals nomatch"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if ok == error -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if ok == error -> 0
+        _ -> 1
+      })
     }),
     "record not equals match"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if ok != error -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if ok != error -> 0
+        _ -> 1
+      })
     }),
     "record not equals nomatch"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if error != error -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if error != error -> 0
+        _ -> 1
+      })
     }),
     "and true true"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if true_ && true_ -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if true_ && true_ -> 0
+        _ -> 1
+      })
     }),
     "and true false"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if true_ && false_ -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if true_ && false_ -> 0
+        _ -> 1
+      })
     }),
     "and false true"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if false_ && true_ -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if false_ && true_ -> 0
+        _ -> 1
+      })
     }),
     "and false false"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if false_ && false_ -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if false_ && false_ -> 0
+        _ -> 1
+      })
     }),
     "or true true"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if true_ || true_ -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if true_ || true_ -> 0
+        _ -> 1
+      })
     }),
     "or true false"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if true_ || false_ -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if true_ || false_ -> 0
+        _ -> 1
+      })
     }),
     "or false true"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if false_ || true_ -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if false_ || true_ -> 0
+        _ -> 1
+      })
     }),
     "or false false"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if false_ || false_ -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if false_ || false_ -> 0
+        _ -> 1
+      })
     }),
     "1. >. 0."
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if float_one >. float_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if float_one >. float_zero -> 0
+        _ -> 1
+      })
     }),
     "0. >. 0."
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if float_zero >. float_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if float_zero >. float_zero -> 0
+        _ -> 1
+      })
     }),
     "1. >=. 0."
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if float_one >=. float_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if float_one >=. float_zero -> 0
+        _ -> 1
+      })
     }),
     "0. >=. 0."
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if float_zero >=. float_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if float_zero >=. float_zero -> 0
+        _ -> 1
+      })
     }),
     "0. >=. 1."
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if float_zero >=. float_one -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if float_zero >=. float_one -> 0
+        _ -> 1
+      })
     }),
     "0. <. 1."
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if float_zero <. float_one -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if float_zero <. float_one -> 0
+        _ -> 1
+      })
     }),
     "0. <. 0."
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if float_zero <. float_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if float_zero <. float_zero -> 0
+        _ -> 1
+      })
     }),
     "0. <=. 1."
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if float_zero <=. float_one -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if float_zero <=. float_one -> 0
+        _ -> 1
+      })
     }),
     "0. <=. 0."
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if float_zero <=. float_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if float_zero <=. float_zero -> 0
+        _ -> 1
+      })
     }),
     "1. <=. 0."
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if float_one <=. float_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if float_one <=. float_zero -> 0
+        _ -> 1
+      })
     }),
     "1 > 0"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if int_one > int_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if int_one > int_zero -> 0
+        _ -> 1
+      })
     }),
     "0 > 0"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if int_zero > int_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if int_zero > int_zero -> 0
+        _ -> 1
+      })
     }),
     "1 >= 0"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if int_one >= int_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if int_one >= int_zero -> 0
+        _ -> 1
+      })
     }),
     "0 >= 0"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if int_zero >= int_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if int_zero >= int_zero -> 0
+        _ -> 1
+      })
     }),
     "0 >= 1"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if int_zero >= int_one -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if int_zero >= int_one -> 0
+        _ -> 1
+      })
     }),
     "0 < 1"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if int_zero < int_one -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if int_zero < int_one -> 0
+        _ -> 1
+      })
     }),
     "0 < 0"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if int_zero < int_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if int_zero < int_zero -> 0
+        _ -> 1
+      })
     }),
     "0 <= 1"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if int_zero <= int_one -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if int_zero <= int_one -> 0
+        _ -> 1
+      })
     }),
     "0 <= 0"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if int_zero <= int_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if int_zero <= int_zero -> 0
+        _ -> 1
+      })
     }),
     "1 <= 0"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if int_one <= int_zero -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if int_one <= int_zero -> 0
+        _ -> 1
+      })
     }),
     "#(True, False).0"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if tuple_true_false.0 -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if tuple_true_false.0 -> 0
+        _ -> 1
+      })
     }),
     "#(True, False).1"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if tuple_true_false.1 -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if tuple_true_false.1 -> 0
+        _ -> 1
+      })
     }),
     "const 0"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if int_zero == 0 -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if int_zero == 0 -> 0
+        _ -> 1
+      })
     }),
     "const 1"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if int_zero == 1 -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if int_zero == 1 -> 0
+        _ -> 1
+      })
     }),
     "const Ok(1)"
     |> example(fn() {
-      assert_equal(
-        0,
-        case Nil {
-          _ if ok == Ok(1) -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case Nil {
+        _ if ok == Ok(1) -> 0
+        _ -> 1
+      })
     }),
     "const Error(1)"
     |> example(fn() {
-      assert_equal(
-        1,
-        case Nil {
-          _ if ok == Error(1) -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(1, case Nil {
+        _ if ok == Error(1) -> 0
+        _ -> 1
+      })
     }),
     "tuple with pattern var"
     |> example(fn() {
-      assert_equal(
-        0,
-        case True {
-          a if #(a) == #(True) -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case True {
+        a if #(a) == #(True) -> 0
+        _ -> 1
+      })
     }),
     "module access to string const(matches)"
     |> example(fn() {
-      assert_equal(
-        True,
-        case "gleam" {
-          lang if lang == importable.language -> True
-          _ -> False
-        },
-      )
+      assert_equal(True, case "gleam" {
+        lang if lang == importable.language -> True
+        _ -> False
+      })
     }),
     "module access to string cnost(does not match)"
     |> example(fn() {
-      assert_equal(
-        False,
-        case "python" {
-          lang if lang == importable.language -> True
-          _ -> False
-        },
-      )
+      assert_equal(False, case "python" {
+        lang if lang == importable.language -> True
+        _ -> False
+      })
     }),
     "module access to custom type const(matches)"
     |> example(fn() {
-      assert_equal(
-        True,
-        case "WarGames" {
-          movie if movie == importable.war_games.title -> True
-          _ -> False
-        },
-      )
+      assert_equal(True, case "WarGames" {
+        movie if movie == importable.war_games.title -> True
+        _ -> False
+      })
     }),
     "module access to custom type const(does not match)"
     |> example(fn() {
-      assert_equal(
-        False,
-        case "Gattaca" {
-          movie if movie == importable.war_games.title -> True
-          _ -> False
-        },
-      )
+      assert_equal(False, case "Gattaca" {
+        movie if movie == importable.war_games.title -> True
+        _ -> False
+      })
     }),
   ]
   // TODO
@@ -904,63 +756,45 @@ fn alternative_patterns_tests() -> List(Test) {
   [
     "numbers"
     |> example(fn() {
-      assert_equal(
-        0,
-        case 4 {
-          1 | 2 | 3 | 4 -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case 4 {
+        1 | 2 | 3 | 4 -> 0
+        _ -> 1
+      })
     }),
     "lists"
     |> example(fn() {
-      assert_equal(
-        0,
-        case [1, 2] {
-          [0] | [1, 2] -> 0
-          _ -> 1
-        },
-      )
+      assert_equal(0, case [1, 2] {
+        [0] | [1, 2] -> 0
+        _ -> 1
+      })
     }),
     "assignment"
     |> example(fn() {
-      assert_equal(
-        2,
-        case [1, 2] {
-          [x] | [_, x] -> x
-          _ -> 0
-        },
-      )
+      assert_equal(2, case [1, 2] {
+        [x] | [_, x] -> x
+        _ -> 0
+      })
     }),
     "multiple assignment"
     |> example(fn() {
-      assert_equal(
-        #(1, 2),
-        case [1, 2, 3] {
-          [x, y] | [x, y, 3] -> #(x, y)
-          _ -> #(0, 0)
-        },
-      )
+      assert_equal(#(1, 2), case [1, 2, 3] {
+        [x, y] | [x, y, 3] -> #(x, y)
+        _ -> #(0, 0)
+      })
     }),
     "guard"
     |> example(fn() {
-      assert_equal(
-        2,
-        case [1, 2] {
-          [x] | [_, x] if x == int_two -> x
-          _ -> 0
-        },
-      )
+      assert_equal(2, case [1, 2] {
+        [x] | [_, x] if x == int_two -> x
+        _ -> 0
+      })
     }),
     "guard left-hand side"
     |> example(fn() {
-      assert_equal(
-        1,
-        case [1] {
-          [x] | [_, x] if x == int_one -> x
-          _ -> 0
-        },
-      )
+      assert_equal(1, case [1] {
+        [x] | [_, x] if x == int_one -> x
+        _ -> 0
+      })
     }),
   ]
 }
@@ -969,52 +803,37 @@ fn multiple_case_subjects() -> List(Test) {
   [
     "wildcard"
     |> example(fn() {
-      assert_equal(
-        0,
-        case True, False {
-          _, _ -> 0
-        },
-      )
+      assert_equal(0, case True, False {
+        _, _ -> 0
+      })
     }),
     "no match"
     |> example(fn() {
-      assert_equal(
-        0,
-        case True, False {
-          False, True -> 1
-          _, _ -> 0
-        },
-      )
+      assert_equal(0, case True, False {
+        False, True -> 1
+        _, _ -> 0
+      })
     }),
     "match"
     |> example(fn() {
-      assert_equal(
-        0,
-        case True, False {
-          False, True -> 1
-          _, _ -> 0
-        },
-      )
+      assert_equal(0, case True, False {
+        False, True -> 1
+        _, _ -> 0
+      })
     }),
     "alternative"
     |> example(fn() {
-      assert_equal(
-        1,
-        case True, False {
-          False, True | True, False -> 1
-          _, _ -> 0
-        },
-      )
+      assert_equal(1, case True, False {
+        False, True | True, False -> 1
+        _, _ -> 0
+      })
     }),
     "guard"
     |> example(fn() {
-      assert_equal(
-        1,
-        case True, True {
-          x, y if x == y -> 1
-          _, _ -> 0
-        },
-      )
+      assert_equal(1, case True, True {
+        x, y if x == y -> 1
+        _, _ -> 0
+      })
     }),
   ]
 }
@@ -1144,9 +963,9 @@ fn sized_bit_array_tests() -> List(Test) {
     |> example(fn() {
       assert_equal(
         True,
-        <<0,
-          31,
-          255, 255, 255, 255, 255, 255>> == <<9_007_199_254_740_991:size(64)>>,
+        <<0, 31, 255, 255, 255, 255, 255, 255>> == <<
+          9_007_199_254_740_991:size(64),
+        >>,
       )
     }),
   ]
@@ -1452,83 +1271,59 @@ fn bit_array_match_tests() {
   [
     "let <<1, x>> = <<1, 2>>"
     |> example(fn() {
-      assert_equal(
-        2,
-        {
-          let <<1, x>> = <<1, 2>>
-          x
-        },
-      )
+      assert_equal(2, {
+        let assert <<1, x>> = <<1, 2>>
+        x
+      })
     }),
     "let <<a:8>> = <<1>>"
     |> example(fn() {
-      assert_equal(
-        1,
-        {
-          let <<a:8>> = <<1>>
-          a
-        },
-      )
+      assert_equal(1, {
+        let assert <<a:8>> = <<1>>
+        a
+      })
     }),
     "let <<a:16, b:8>> = <<1, 2, 3>>"
     |> example(fn() {
-      assert_equal(
-        #(258, 3),
-        {
-          let <<a:16, b:8>> = <<1, 2, 3>>
-          #(a, b)
-        },
-      )
+      assert_equal(#(258, 3), {
+        let assert <<a:16, b:8>> = <<1, 2, 3>>
+        #(a, b)
+      })
     }),
     "let <<a:float, b:int>> = <<63,240,0,0,0,0,0,0,1>>"
     |> example(fn() {
-      assert_equal(
-        #(1.0, 1),
-        {
-          let <<a:float, b:int>> = <<63, 240, 0, 0, 0, 0, 0, 0, 1>>
-          #(a, b)
-        },
-      )
+      assert_equal(#(1.0, 1), {
+        let assert <<a:float, b:int>> = <<63, 240, 0, 0, 0, 0, 0, 0, 1>>
+        #(a, b)
+      })
     }),
     "let <<a:float>> = <<1.23:float>>"
     |> example(fn() {
-      assert_equal(
-        1.23,
-        {
-          let <<a:float>> = <<1.23:float>>
-          a
-        },
-      )
+      assert_equal(1.23, {
+        let assert <<a:float>> = <<1.23:float>>
+        a
+      })
     }),
     "let <<_, rest:binary>> = <<1>>"
     |> example(fn() {
-      assert_equal(
-        <<>>,
-        {
-          let <<_, rest:bytes>> = <<1>>
-          rest
-        },
-      )
+      assert_equal(<<>>, {
+        let assert <<_, rest:bytes>> = <<1>>
+        rest
+      })
     }),
     "let <<_, rest:binary>> = <<1,2,3>>"
     |> example(fn() {
-      assert_equal(
-        <<2, 3>>,
-        {
-          let <<_, rest:bytes>> = <<1, 2, 3>>
-          rest
-        },
-      )
+      assert_equal(<<2, 3>>, {
+        let assert <<_, rest:bytes>> = <<1, 2, 3>>
+        rest
+      })
     }),
     "let <<x:2-binary, rest:binary>> = <<1,2,3>>"
     |> example(fn() {
-      assert_equal(
-        <<1, 2>>,
-        {
-          let <<x:2-bytes, _:bytes>> = <<1, 2, 3>>
-          x
-        },
-      )
+      assert_equal(<<1, 2>>, {
+        let assert <<x:2-bytes, _:bytes>> = <<1, 2, 3>>
+        x
+      })
     }),
     "bit_array from function"
     |> example(fn() {
@@ -1572,16 +1367,13 @@ fn anonymous_function_tests() {
     // https://github.com/gleam-lang/gleam/issues/1637
     "fn(x) { let x = x x }(1)"
     |> example(fn() {
-      assert_equal(
-        1,
-        {
-          let f = fn(x) {
-            let x = x
-            x
-          }
-          f(1)
-        },
-      )
+      assert_equal(1, {
+        let f = fn(x) {
+          let x = x
+          x
+        }
+        f(1)
+      })
     }),
   ]
 }
@@ -1590,68 +1382,55 @@ fn string_pattern_matching_tests() {
   [
     "case \"12345\" { \"0\" <> rest -> rest \"123\" <> rest -> rest _ -> \"\" }"
     |> example(fn() {
-      assert_equal(
-        "45",
-        case "12345" {
-          "0" <> rest -> rest
-          "123" <> rest -> rest
-          _ -> ""
-        },
-      )
+      assert_equal("45", case "12345" {
+        "0" <> rest -> rest
+        "123" <> rest -> rest
+        _ -> ""
+      })
     }),
     "match 🫥 test"
     |> example(fn() {
-      assert_equal(
-        " is neutral dotted",
-        case "🫥 is neutral dotted" {
-          "🫥" <> rest -> rest
-        },
-      )
+      assert_equal(" is neutral dotted", case "🫥 is neutral dotted" {
+        "🫥" <> rest -> rest
+        _ -> panic
+      })
     }),
     "match Θ test"
     |> example(fn() {
-      assert_equal(
-        " foo bar",
-        case "Θ foo bar" {
-          "Θ" <> rest -> rest
-        },
-      )
+      assert_equal(" foo bar", case "Θ foo bar" {
+        "Θ" <> rest -> rest
+        _ -> panic
+      })
     }),
     "match 🇺🇸 test"
     |> example(fn() {
-      assert_equal(
-        " is a cluster",
-        case "🇺🇸 is a cluster" {
-          "🇺🇸" <> rest -> rest
-        },
-      )
+      assert_equal(" is a cluster", case "🇺🇸 is a cluster" {
+        "🇺🇸" <> rest -> rest
+        _ -> panic
+      })
     }),
     "match backslash test"
     |> example(fn() {
-      assert_equal(
-        " is a backslash",
-        case "\" is a backslash" {
-          "\"" <> rest -> rest
-        },
-      )
+      assert_equal(" is a backslash", case "\" is a backslash" {
+        "\"" <> rest -> rest
+        _ -> panic
+      })
     }),
     "match newline test"
     |> example(fn() {
-      assert_equal(
-        " is a newline",
-        case "\n is a newline" {
-          "\n" <> rest -> rest
-        },
-      )
+      assert_equal(" is a newline", case "\n is a newline" {
+        "\n" <> rest -> rest
+        _ -> panic
+      })
     }),
     "match newline test"
     |> example(fn() {
-      assert_equal(
-        " is a newline that escaped",
-        case "\\n is a newline that escaped" {
-          "\\n" <> rest -> rest
-        },
-      )
+      assert_equal(" is a newline that escaped", case
+        "\\n is a newline that escaped"
+      {
+        "\\n" <> rest -> rest
+        _ -> panic
+      })
     }),
   ]
 }

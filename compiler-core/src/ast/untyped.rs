@@ -94,12 +94,12 @@ pub enum UntypedExpr {
     Todo {
         kind: TodoKind,
         location: SrcSpan,
-        message: Option<EcoString>,
+        message: Option<Box<Self>>,
     },
 
     Panic {
         location: SrcSpan,
-        message: Option<EcoString>,
+        message: Option<Box<Self>>,
     },
 
     BitArray {
@@ -165,7 +165,7 @@ impl UntypedExpr {
 
     pub fn start_byte_index(&self) -> u32 {
         match self {
-            Self::Block { statements, .. } => statements.first().start_byte_index(),
+            Self::Block { location, .. } => location.start,
             Self::PipeLine { expressions, .. } => expressions.first().start_byte_index(),
             _ => self.location().start,
         }
@@ -176,6 +176,13 @@ impl UntypedExpr {
             Self::BinOp { name, .. } => name.precedence(),
             Self::PipeLine { .. } => 5,
             _ => std::u8::MAX,
+        }
+    }
+
+    pub fn binop_name(&self) -> Option<&BinOp> {
+        match self {
+            UntypedExpr::BinOp { name, .. } => Some(name),
+            _ => None,
         }
     }
 
@@ -200,6 +207,16 @@ impl UntypedExpr {
     #[must_use]
     pub fn is_placeholder(&self) -> bool {
         matches!(self, Self::Placeholder { .. })
+    }
+
+    #[must_use]
+    pub fn is_binop(&self) -> bool {
+        matches!(self, Self::BinOp { .. })
+    }
+
+    #[must_use]
+    pub fn is_pipeline(&self) -> bool {
+        matches!(self, Self::PipeLine { .. })
     }
 }
 

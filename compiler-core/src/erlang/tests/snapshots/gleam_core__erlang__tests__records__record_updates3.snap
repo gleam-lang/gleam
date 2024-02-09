@@ -4,7 +4,7 @@ assertion_line: 278
 expression: "\npub type Person { Person(name: String, age: Int) }\n\nfn main() {\n    let new_p = Person(..return_person(), age: 28)\n    new_p\n}\n\nfn return_person() {\n    Person(\"Quinn\", 27)\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export_type([person/0]).
 

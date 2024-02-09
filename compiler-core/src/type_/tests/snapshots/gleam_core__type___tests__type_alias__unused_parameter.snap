@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/type_alias.rs
+assertion_line: 88
+expression: "\ntype A(a) =\n  Int\n"
+---
+error: Unused type parameter
+  ┌─ /src/one/two.gleam:2:1
+  │  
+2 │ ╭ type A(a) =
+3 │ │   Int
+  │ ╰─────^
+
+The type variable `a` is unused. It can be safely removed.
+

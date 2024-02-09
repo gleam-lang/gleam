@@ -243,18 +243,6 @@ fn opaque_type_accessor() {
 
 #[rustfmt::skip]
 #[test]
-fn opaque_type_construct() {
-    let output =
-        crate::prepare("./cases/opaque_type_construct");
-    insta::assert_snapshot!(
-        "opaque_type_construct",
-        output,
-        "./cases/opaque_type_construct"
-    );
-}
-
-#[rustfmt::skip]
-#[test]
 fn opaque_type_destructure() {
     let output =
         crate::prepare("./cases/opaque_type_destructure");

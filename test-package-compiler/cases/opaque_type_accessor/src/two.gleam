@@ -1,4 +1,4 @@
-import one.{User}
+import one.{type User}
 
 // This operation is not permitted because the type is opaque and this module
 // did not define the custom type.

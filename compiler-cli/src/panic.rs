@@ -37,9 +37,22 @@ fn print_compiler_bug_message(info: &PanicInfo<'_>) {
         "This is a bug in the Gleam compiler, sorry!
 
 Please report this crash to https://github.com/gleam-lang/gleam/issues/new
-with this information and the code that produces the crash.
+and include this error message with your report.
 
-\t{location}{message}"
+Panic: {location}{message}
+Gleam version: {version}
+Operating system: {os}
+
+If you can also share your code and say what file you were editing or any
+steps to reproduce the crash that would be a great help.
+
+You may also want to try again with the `GLEAM_LOG=trace` environment
+variable set.
+",
+        location = location,
+        message = message,
+        version = env!("CARGO_PKG_VERSION"),
+        os = std::env::consts::OS,
     )
     .unwrap();
     buffer_writer.print(&buffer).unwrap();

@@ -24,3 +24,30 @@ fn index_block() {
 "#
     );
 }
+
+#[test]
+fn tuple_with_last_splittable_arg() {
+    assert_format!(
+        r#"fn on_attribute_change() -> Dict(String, Decoder(Msg)) {
+  dict.from_list([
+    #("value", fn(attr) {
+      attr
+      |> dynamic.int
+      |> result.map(Value)
+      |> result.map(AttributeChanged)
+    }),
+  ])
+}
+"#
+    );
+
+    assert_format!(
+        r#"pub fn main() {
+  #("value", [
+    "a long list that needs to be split on multiple lines",
+    "another long string",
+  ])
+}
+"#
+    );
+}

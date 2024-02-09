@@ -8,6 +8,6 @@
     "compiler-core/generated/**": true,
 
     // Images
-    "images/**": true,
+    "images/**": true
   }
 }

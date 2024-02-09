@@ -1,6 +1,6 @@
 [package]
 name = "gleam"
-version = "0.32.4"
+version = "0.34.1"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
@@ -86,3 +86,8 @@ camino = { version = "1.1.6", features = ["serde1"] }
 pretty_assertions = "1.0.0"
 # Creation of temporary directories
 tempfile = "3.2.0"
+
+[build-dependencies]
+# For statically linking the VCRuntime on Windows when
+# using the MSVC toolchain
+static_vcruntime = "2.0.0"

@@ -16,6 +16,7 @@ pub use error::{Error, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
+use serde::Serialize;
 
 use crate::{
     ast::{
@@ -36,6 +37,8 @@ use std::{
     sync::Arc,
 };
 
+use self::expression::Implementations;
+
 pub trait HasType {
     fn type_(&self) -> Arc<Type>;
 }
@@ -47,11 +50,12 @@ pub enum Type {
     /// arguments (aka "generics" or "parametric polymorphism").
     ///
     /// If the type is defined in the Gleam prelude the `module` field will be
-    /// empty, otherwise it will contain the name of the module that
-    /// defines the type.
+    /// the string "gleam", otherwise it will contain the name of the module
+    /// that defines the type.
     ///
     Named {
         public: bool,
+        package: EcoString,
         module: EcoString,
         name: EcoString,
         args: Vec<Arc<Type>>,
@@ -163,6 +167,14 @@ impl Type {
         }
     }
 
+    pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
+        match self {
+            Self::Named { module, name, .. } => Some((module.clone(), name.clone())),
+            Self::Var { type_ } => type_.borrow().named_type_name(),
+            _ => None,
+        }
+    }
+
     /// Get the args for the type if the type is a specific `Type::App`.
     /// Returns None if the type is not a `Type::App` or is an incorrect `Type:App`
     ///
@@ -172,6 +184,7 @@ impl Type {
     pub fn get_app_args(
         &self,
         public: bool,
+        package: &str,
         module: &str,
         name: &str,
         arity: usize,
@@ -194,7 +207,7 @@ impl Type {
             Self::Var { type_: typ } => {
                 let args: Vec<_> = match typ.borrow().deref() {
                     TypeVar::Link { type_: typ } => {
-                        return typ.get_app_args(public, module, name, arity, environment);
+                        return typ.get_app_args(public, package, module, name, arity, environment);
                     }
 
                     TypeVar::Unbound { .. } => {
@@ -209,6 +222,7 @@ impl Type {
                 *typ.borrow_mut() = TypeVar::Link {
                     type_: Arc::new(Self::Named {
                         name: name.into(),
+                        package: package.into(),
                         module: module.into(),
                         args: args.clone(),
                         public,
@@ -254,7 +268,7 @@ impl Type {
 pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
     if let Type::Var { type_: typ } = t.deref() {
         if let TypeVar::Link { type_: typ } = typ.borrow().deref() {
-            return typ.clone();
+            return collapse_links(typ.clone());
         }
     }
     t
@@ -286,6 +300,7 @@ pub enum ValueConstructorVariant {
         location: SrcSpan,
         module: EcoString,
         literal: Constant<Arc<Type>, EcoString>,
+        implementations: Implementations,
     },
 
     /// A constant defined locally, for example when pattern matching on string literals
@@ -301,6 +316,7 @@ pub enum ValueConstructorVariant {
         arity: usize,
         location: SrcSpan,
         documentation: Option<EcoString>,
+        implementations: Implementations,
     },
 
     /// A constructor for a custom type
@@ -311,6 +327,7 @@ pub enum ValueConstructorVariant {
         location: SrcSpan,
         module: EcoString,
         constructors_count: u16,
+        constructor_index: u16,
         documentation: Option<EcoString>,
     },
 }
@@ -401,6 +418,25 @@ impl ValueConstructorVariant {
     pub fn is_module_fn(&self) -> bool {
         matches!(self, Self::ModuleFn { .. })
     }
+
+    pub fn implementations(&self) -> Implementations {
+        match self {
+            ValueConstructorVariant::Record { .. }
+            | ValueConstructorVariant::LocalConstant { .. }
+            | ValueConstructorVariant::LocalVariable { .. } => Implementations {
+                gleam: true,
+                uses_javascript_externals: false,
+                uses_erlang_externals: false,
+            },
+
+            ValueConstructorVariant::ModuleFn {
+                implementations, ..
+            }
+            | ValueConstructorVariant::ModuleConstant {
+                implementations, ..
+            } => *implementations,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -470,14 +506,91 @@ pub struct ModuleInterface {
     pub origin: Origin,
     pub package: EcoString,
     pub types: HashMap<EcoString, TypeConstructor>,
-    pub types_constructors: HashMap<EcoString, Vec<EcoString>>,
+    pub types_value_constructors: HashMap<EcoString, TypeVariantConstructors>,
     pub values: HashMap<EcoString, ValueConstructor>,
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
-    pub type_only_unqualified_imports: Vec<EcoString>,
+    pub contains_todo: bool,
+}
+
+/// Information on the constructors of a custom type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeVariantConstructors {
+    /// The id of the generic type variables of the generic version of the type that these
+    /// constructors belong to.
+    /// For example, if we have this type:
+    ///
+    /// ```gleam
+    /// pub type Option(a) {
+    ///   Some(a)
+    ///   None
+    /// }
+    /// ```
+    ///
+    /// and `a` is a Generic type variable with id 1, then this field will be `[1]`.
+    ///
+    pub type_parameters_ids: Vec<u64>,
+    pub variants: Vec<TypeValueConstructor>,
+}
+
+impl TypeVariantConstructors {
+    pub(crate) fn new(
+        variants: Vec<TypeValueConstructor>,
+        type_parameters: &[EcoString],
+        hydrator: Hydrator,
+    ) -> TypeVariantConstructors {
+        let error =
+            "The hydrator should not store any types other than generic type variables here";
+        let named_types = hydrator.named_type_variables();
+        let type_parameters = type_parameters
+            .iter()
+            .map(|p| {
+                let t = named_types
+                    .get(p)
+                    .expect("Type parameter not found in hydrator");
+                match t.type_.as_ref() {
+                    Type::Var { type_: typ } => match typ.borrow().deref() {
+                        TypeVar::Generic { id } => *id,
+                        _ => panic!("{}", error),
+                    },
+                    _ => panic!("{}", error),
+                }
+            })
+            .collect_vec();
+        Self {
+            type_parameters_ids: type_parameters,
+            variants,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeValueConstructor {
+    pub name: EcoString,
+    pub parameters: Vec<TypeValueConstructorField>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeValueConstructorField {
+    /// This type of this parameter
+    pub type_: Arc<Type>,
 }
 
 impl ModuleInterface {
+    pub fn new(name: EcoString, origin: Origin, package: EcoString) -> Self {
+        Self {
+            name,
+            origin,
+            package,
+            types: Default::default(),
+            types_value_constructors: Default::default(),
+            values: Default::default(),
+            accessors: Default::default(),
+            unused_imports: Default::default(),
+            contains_todo: false,
+        }
+    }
+
     pub fn get_public_value(&self, name: &str) -> Option<&ValueConstructor> {
         let value = self.values.get(name)?;
         if value.public {
@@ -537,31 +650,25 @@ impl ModuleInterface {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PatternConstructor {
-    Record {
-        name: EcoString,
-        field_map: Option<FieldMap>,
-        documentation: Option<EcoString>,
-        module: Option<EcoString>,
-        location: SrcSpan,
-    },
+pub struct PatternConstructor {
+    pub name: EcoString,
+    pub field_map: Option<FieldMap>,
+    pub documentation: Option<EcoString>,
+    pub module: Option<EcoString>,
+    pub location: SrcSpan,
+    pub constructor_index: u16,
 }
+
 impl PatternConstructor {
     pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
-        match self {
-            PatternConstructor::Record {
-                module, location, ..
-            } => Some(DefinitionLocation {
-                module: Some(module.as_deref()?),
-                span: *location,
-            }),
-        }
+        Some(DefinitionLocation {
+            module: Some(self.module.as_deref()?),
+            span: self.location,
+        })
     }
 
     pub fn get_documentation(&self) -> Option<&str> {
-        match self {
-            PatternConstructor::Record { documentation, .. } => documentation.as_deref(),
-        }
+        self.documentation.as_deref()
     }
 }
 
@@ -635,6 +742,13 @@ impl TypeVar {
             _ => false,
         }
     }
+
+    pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
+        match self {
+            Self::Link { type_ } => type_.named_type_name(),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -661,7 +775,7 @@ pub struct ValueConstructor {
     pub type_: Arc<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum Deprecation {
     NotDeprecated,
     Deprecated { message: EcoString },
@@ -866,6 +980,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
         Type::Named {
             public,
             module,
+            package,
             name,
             args,
         } => {
@@ -873,6 +988,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             Arc::new(Type::Named {
                 public: *public,
                 module: module.clone(),
+                package: package.clone(),
                 name: name.clone(),
                 args,
             })

@@ -150,6 +150,7 @@ pub fn main() {
   let x = 0.123
   case x {
     _ if x == 3.14 -> 1
+    _ -> 0
   }
 }
 "#
@@ -164,6 +165,7 @@ pub fn main() {
   let x = 0.123
   case x {
     _ if 0.123 <. x -> 1
+    _ -> 0
   }
 }
 "#
@@ -177,6 +179,7 @@ fn clause_guards21() {
 pub fn main(x) {
   case x {
     _ if x == [1, 2, 3] -> 1
+    _ -> 0
   }
 }
 "#
@@ -241,6 +244,7 @@ pub fn main() {
   let x = 0
   case x {
     _ if x == 0 -> 1
+    _ -> 0
   }
 }
 "#
@@ -255,6 +259,7 @@ pub fn main() {
   let x = 0
   case x {
     _ if 0 < x -> 1
+    _ -> 0
   }
 }
 "#
@@ -270,6 +275,7 @@ fn clause_guards27() {
 pub fn main() {
   case "test" {
     x if x == "test" -> 1
+    _ -> 0
   }
 }
 "#

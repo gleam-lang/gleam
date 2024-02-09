@@ -1,6 +1,118 @@
 use crate::assert_erl;
 
 #[test]
+fn unicode1() {
+    assert_erl!(
+        r#"
+pub fn emoji() -> String {
+  "\u{1f600}"
+}
+"#,
+    );
+}
+
+#[test]
+fn unicode2() {
+    assert_erl!(
+        r#"
+pub fn y_with_dieresis() -> String {
+  "\u{0308}y"
+}
+"#,
+    );
+}
+
+#[test]
+fn unicode_concat1() {
+    assert_erl!(
+        r#"
+pub fn main(x) -> String {
+  x <> "\u{0308}"
+}
+"#,
+    );
+}
+
+#[test]
+fn unicode_concat2() {
+    assert_erl!(
+        r#"
+pub fn main(x) -> String {
+  x <> "\\u{0308}"
+}
+"#,
+    );
+}
+
+#[test]
+fn unicode_concat3() {
+    assert_erl!(
+        r#"
+pub fn main(x) -> String {
+  x <> "\\\u{0308}"
+}
+"#,
+    );
+}
+
+#[test]
+fn not_unicode_escape_sequence() {
+    // '\u'-s must be converted to '\x' in the Erlang codegen.
+    // but '\\u'-s mustn't.
+    assert_erl!(
+        r#"
+pub fn not_unicode_escape_sequence() -> String {
+  "\\u{03a9}"
+}
+"#,
+    );
+}
+
+#[test]
+fn not_unicode_escape_sequence2() {
+    assert_erl!(
+        r#"
+pub fn not_unicode_escape_sequence() -> String {
+  "\\\\u{03a9}"
+}
+"#,
+    );
+}
+
+#[test]
+fn unicode3() {
+    assert_erl!(
+        r#"
+pub fn y_with_dieresis_with_slash() -> String {
+  "\\\u{0308}y"
+}
+"#,
+    );
+}
+
+#[test]
+fn unicode_escape_sequence_6_digits() {
+    assert_erl!(
+        r#"
+pub fn unicode_escape_sequence_6_digits() -> String {
+  "\u{10abcd}"
+}
+"#,
+    );
+}
+
+#[test]
+fn ascii_as_unicode_escape_sequence() {
+    assert_erl!(
+        r#"
+pub fn y() -> String {
+  "\u{79}"
+}
+"#,
+    )
+}
+
+#[test]
 fn concat() {
     assert_erl!(
         r#"
@@ -43,6 +155,21 @@ fn string_prefix_assignment() {
 pub fn go(x) {
   case x {
     "Hello, " as greeting <> name -> greeting
+    _ -> "Unknown"
+  }
+}
+"#,
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/2471
+#[test]
+fn string_prefix_assignment_with_multiple_subjects() {
+    assert_erl!(
+        r#"
+pub fn go(x) {
+  case x {
+    "1" as digit <> _ | "2" as digit <> _ -> digit
     _ -> "Unknown"
   }
 }

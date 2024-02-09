@@ -4,7 +4,7 @@ assertion_line: 516
 expression: "\n          import hero\n          pub fn main() {\n            let names = [\"Tony Stark\", \"Bruce Wayne\"]\n            case names {\n              n if n == hero.heroes -> True\n              _ -> False\n            }\n          }\n        "
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/0]).
 

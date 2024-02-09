@@ -10,5 +10,5 @@ error: Invalid bit string segment
   │                     ^^^^^^^ This is an extra unit specifier.
 
 Hint: A BitArray segment can have at most 1 unit.
-See: https://gleam.run/book/tour/bit-strings.html
+See: https://gleam.run/book/tour/bit-arrays.html
 

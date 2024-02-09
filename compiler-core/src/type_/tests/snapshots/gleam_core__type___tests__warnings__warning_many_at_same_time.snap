@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 72
 expression: "\nfn main() { let five = 5 }"
 ---
 
@@ -8,7 +7,7 @@ warning: Unused variable
   ┌─ /src/warning/wrn.gleam:2:17
   │
 2 │ fn main() { let five = 5 }
-  │                 ^^^^ This variable is never used.
+  │                 ^^^^ This variable is never used
 
 Hint: You can ignore it with an underscore: `_five`.
 
@@ -16,7 +15,7 @@ warning: Unused private function
   ┌─ /src/warning/wrn.gleam:2:1
   │
 2 │ fn main() { let five = 5 }
-  │ ^^^^^^^^^ This private function is never used.
+  │ ^^^^^^^^^ This private function is never used
 
 Hint: You can safely remove it.
 

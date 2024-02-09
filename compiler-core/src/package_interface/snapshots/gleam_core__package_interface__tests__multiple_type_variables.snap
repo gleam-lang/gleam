@@ -1,0 +1,87 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+assertion_line: 253
+expression: "\npub type Box(a, b)\npub fn some_type_variables(a: a, b: b, c: Box(c, d)) -> Box(a, d) {}\n"
+---
+{
+  "name": "my_package",
+  "version": "11.10.9-1.wibble+build",
+  "gleam-version-constraint": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "type-aliases": {},
+      "types": {
+        "Box": {
+          "documentation": null,
+          "deprecation": null,
+          "parameters": 2,
+          "constructors": []
+        }
+      },
+      "constants": {},
+      "functions": {
+        "some_type_variables": {
+          "documentation": null,
+          "deprecation": null,
+          "implementations": {
+            "gleam": true,
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
+          },
+          "parameters": [
+            {
+              "label": null,
+              "type": {
+                "kind": "variable",
+                "id": 0
+              }
+            },
+            {
+              "label": null,
+              "type": {
+                "kind": "variable",
+                "id": 1
+              }
+            },
+            {
+              "label": null,
+              "type": {
+                "kind": "named",
+                "name": "Box",
+                "package": "my_package",
+                "module": "my/module",
+                "parameters": [
+                  {
+                    "kind": "variable",
+                    "id": 2
+                  },
+                  {
+                    "kind": "variable",
+                    "id": 3
+                  }
+                ]
+              }
+            }
+          ],
+          "return": {
+            "kind": "named",
+            "name": "Box",
+            "package": "my_package",
+            "module": "my/module",
+            "parameters": [
+              {
+                "kind": "variable",
+                "id": 0
+              },
+              {
+                "kind": "variable",
+                "id": 3
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

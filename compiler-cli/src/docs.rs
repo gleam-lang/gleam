@@ -1,6 +1,6 @@
 use std::time::{Instant, SystemTime};
 
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
@@ -58,11 +58,11 @@ pub struct BuildOptions {
 }
 
 pub fn build(options: BuildOptions) -> Result<()> {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::find_project_paths()?;
     let config = crate::config::root_config()?;
 
     // Reset the build directory so we know the state of the project
-    crate::fs::delete_dir(&paths.build_directory_for_target(Mode::Prod, config.target))?;
+    crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
 
     let out = paths.build_documentation_directory(&config.name);
     let mut built = crate::build::main(
@@ -77,7 +77,7 @@ pub fn build(options: BuildOptions) -> Result<()> {
     let outputs = build_documentation(&config, &mut built.root_package)?;
 
     // Write
-    crate::fs::delete_dir(&out)?;
+    crate::fs::delete_directory(&out)?;
     crate::fs::write_outputs_under(&outputs, &out)?;
 
     let index_html = out.join("index.html");
@@ -115,20 +115,25 @@ pub(crate) fn build_documentation(
 ) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
     compiled.attach_doc_and_module_comments();
     cli::print_generating_documentation();
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::find_project_paths()?;
     let mut pages = vec![DocsPage {
         title: "README".into(),
         path: "index.html".into(),
         source: paths.readme(), // TODO: support non markdown READMEs. Or a default if there is none.
     }];
     pages.extend(config.documentation.pages.iter().cloned());
-    let outputs = gleam_core::docs::generate_html(
+    let mut outputs = gleam_core::docs::generate_html(
         &paths,
         config,
         compiled.modules.as_slice(),
         &pages,
         SystemTime::now(),
     );
+
+    outputs.push(gleam_core::docs::generate_json_package_interface(
+        Utf8PathBuf::from("package-interface.json"),
+        compiled,
+    ));
     Ok(outputs)
 }
 
@@ -143,11 +148,11 @@ pub fn publish() -> Result<()> {
 
 impl PublishCommand {
     pub fn new() -> Result<Self> {
-        let paths = crate::project_paths_at_current_directory();
+        let paths = crate::find_project_paths()?;
         let config = crate::config::root_config()?;
 
         // Reset the build directory so we know the state of the project
-        crate::fs::delete_dir(&paths.build_directory_for_target(Mode::Prod, config.target))?;
+        crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
 
         let mut built = crate::build::main(
             Options {

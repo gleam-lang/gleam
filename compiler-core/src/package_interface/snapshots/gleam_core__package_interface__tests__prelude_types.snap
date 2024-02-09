@@ -1,0 +1,84 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+assertion_line: 208
+expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1\npub const bool = True\n"
+---
+{
+  "name": "my_package",
+  "version": "11.10.9-1.wibble+build",
+  "gleam-version-constraint": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "type-aliases": {},
+      "types": {},
+      "constants": {
+        "bool": {
+          "documentation": null,
+          "deprecation": null,
+          "implementations": {
+            "gleam": true,
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
+          },
+          "type": {
+            "kind": "named",
+            "name": "Bool",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
+          }
+        },
+        "float": {
+          "documentation": null,
+          "deprecation": null,
+          "implementations": {
+            "gleam": true,
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
+          },
+          "type": {
+            "kind": "named",
+            "name": "Float",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
+          }
+        },
+        "int": {
+          "documentation": null,
+          "deprecation": null,
+          "implementations": {
+            "gleam": true,
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
+          },
+          "type": {
+            "kind": "named",
+            "name": "Int",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
+          }
+        },
+        "string": {
+          "documentation": null,
+          "deprecation": null,
+          "implementations": {
+            "gleam": true,
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false
+          },
+          "type": {
+            "kind": "named",
+            "name": "String",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
+          }
+        }
+      },
+      "functions": {}
+    }
+  }
+}

@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 140
+assertion_line: 252
 expression: "\nconst cs = s\n\nfn s() {\n  \"s\"\n}\n\npub fn go() {\n  cs() <> cs()\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([go/0]).
 

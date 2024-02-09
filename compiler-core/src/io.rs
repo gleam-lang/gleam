@@ -4,7 +4,7 @@ use crate::error::{Error, FileIoAction, FileKind, Result};
 use async_trait::async_trait;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
-use std::{fmt::Debug, io, time::SystemTime, vec::IntoIter};
+use std::{collections::HashMap, fmt::Debug, io, time::SystemTime, vec::IntoIter};
 use tar::{Archive, Entry};
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -221,7 +221,7 @@ pub trait FileSystemWriter {
     fn mkdir(&self, path: &Utf8Path) -> Result<(), Error>;
     fn write(&self, path: &Utf8Path, content: &str) -> Result<(), Error>;
     fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<(), Error>;
-    fn delete(&self, path: &Utf8Path) -> Result<(), Error>;
+    fn delete_directory(&self, path: &Utf8Path) -> Result<(), Error>;
     fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
     fn copy_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
     fn hardlink(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
@@ -311,4 +311,15 @@ pub trait TarUnpacker {
                 err: Some(e.to_string()),
             })
     }
+}
+
+pub fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+    K: serde::Serialize + Ord,
+    V: serde::Serialize,
+{
+    use serde::Serialize;
+    let ordered: std::collections::BTreeMap<_, _> = value.iter().collect();
+    ordered.serialize(serializer)
 }

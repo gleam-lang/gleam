@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n@deprecated(\"Don't use this!\")\npub const a = Nil\n\npub fn b() {\n  a\n}\n"
+---
+
+warning: Deprecated value used
+  ┌─ /src/warning/wrn.gleam:6:3
+  │
+6 │   a
+  │   ^ This value has been deprecated
+
+It was deprecated with this message: Don't use this!
+

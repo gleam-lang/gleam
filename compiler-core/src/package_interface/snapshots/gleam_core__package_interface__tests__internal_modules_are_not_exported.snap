@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+assertion_line: 275
+expression: "pub fn main() { 1 }"
+---
+{
+  "name": "my_package",
+  "version": "11.10.9-1.wibble+build",
+  "gleam-version-constraint": "1.0.0",
+  "modules": {}
+}

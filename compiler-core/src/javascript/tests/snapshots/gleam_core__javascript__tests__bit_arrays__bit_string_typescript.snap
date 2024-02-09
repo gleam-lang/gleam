@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 assertion_line: 159
-expression: "\npub fn go(x) {\n  <<x:bit_string>>\n}\n"
+expression: "\npub fn go(x) {\n  <<x:bits>>\n}\n"
 ---
 import type * as _ from "../gleam.d.mts";
 

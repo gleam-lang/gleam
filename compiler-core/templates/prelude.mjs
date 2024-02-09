@@ -1,18 +1,7 @@
 export class CustomType {
-  inspect() {
-    // TODO: remove after next version
-    console.warn("Deprecated method UtfCodepoint.inspect");
-    let field = (label) => {
-      let value = inspect(this[label]);
-      return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
-    };
-    let props = Object.keys(this).map(field).join(", ");
-    return props ? `${this.constructor.name}(${props})` : this.constructor.name;
-  }
-
   withFields(fields) {
     let properties = Object.keys(this).map((label) =>
-      label in fields ? fields[label] : this[label]
+      label in fields ? fields[label] : this[label],
     );
     return new this.constructor(...properties);
   }
@@ -26,12 +15,6 @@ export class List {
 
   [Symbol.iterator]() {
     return new ListIterator(this);
-  }
-
-  inspect() {
-    // TODO: remove after next version
-    console.warn("Deprecated method UtfCodepoint.inspect");
-    return `[${this.toArray().map(inspect).join(", ")}]`;
   }
 
   toArray() {
@@ -101,12 +84,6 @@ export class BitArray {
     this.buffer = buffer;
   }
 
-  inspect() {
-    // TODO: remove after next version
-    console.warn("Deprecated method UtfCodepoint.inspect");
-    return `<<${Array.from(this.buffer).join(", ")}>>`;
-  }
-
   get length() {
     return this.buffer.length;
   }
@@ -132,18 +109,9 @@ export class BitArray {
   }
 }
 
-// TODO: remove after next version
-export const BitString = BitArray;
-
 export class UtfCodepoint {
   constructor(value) {
     this.value = value;
-  }
-
-  inspect() {
-    // TODO: remove after next version
-    console.warn("Deprecated method UtfCodepoint.inspect");
-    return `//utfcodepoint(${String.fromCodePoint(this.value)})`;
   }
 }
 
@@ -240,43 +208,6 @@ export class Error extends Result {
   }
 }
 
-export function inspect(v) {
-  let t = typeof v;
-  if (v === true) return "True";
-  if (v === false) return "False";
-  if (v === null) return "//js(null)";
-  if (v === undefined) return "Nil";
-  if (t === "string") return JSON.stringify(v);
-  if (t === "bigint" || t === "number") return v.toString();
-  if (Array.isArray(v)) return `#(${v.map(inspect).join(", ")})`;
-  if (v instanceof Set) return `//js(Set(${[...v].map(inspect).join(", ")}))`;
-  if (v instanceof RegExp) return `//js(${v})`;
-  if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
-  if (v instanceof Function) {
-    let args = [];
-    for (let i of Array(v.length).keys())
-      args.push(String.fromCharCode(i + 97));
-    return `//fn(${args.join(", ")}) { ... }`;
-  }
-  try {
-    return v.inspect();
-  } catch (_) {
-    return inspectObject(v);
-  }
-}
-
-function inspectObject(v) {
-  let [keys, get] = getters(v);
-  let name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
-  let props = [];
-  for (let k of keys(v)) {
-    props.push(`${inspect(k)}: ${inspect(get(v, k))}`);
-  }
-  let body = props.length ? " " + props.join(", ") + " " : "";
-  let head = name === "Object" ? "" : name + " ";
-  return `//js(${head}{${body}})`;
-}
-
 export function isEqual(x, y) {
   let values = [x, y];
 
@@ -292,7 +223,8 @@ export function isEqual(x, y) {
       unequalBuffers(a, b) ||
       unequalArrays(a, b) ||
       unequalMaps(a, b) ||
-      unequalSets(a, b);
+      unequalSets(a, b) ||
+      unequalRegExps(a, b);
     if (unequal) return false;
 
     const proto = Object.getPrototypeOf(a);
@@ -345,6 +277,10 @@ function unequalSets(a, b) {
   return (
     a instanceof Set && (a.size != b.size || [...a].some((e) => !b.has(e)))
   );
+}
+
+function unequalRegExps(a, b) {
+  return a instanceof RegExp && (a.source !== b.source || a.flags !== b.flags);
 }
 
 function isObject(a) {

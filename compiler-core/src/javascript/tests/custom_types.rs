@@ -284,7 +284,7 @@ type Cat {
 fn go(cat) {
   let Cat(x, y) = cat
   let Cat(name: x, ..) = cat
-  let Cat(cuteness: 4, name: x) = cat
+  let assert Cat(cuteness: 4, name: x) = cat
   x
 }
 

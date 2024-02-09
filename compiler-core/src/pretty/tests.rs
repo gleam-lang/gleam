@@ -87,14 +87,24 @@ fn fits_test() {
     assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
 
     // Nest fits if combined smaller than limit
-    let doc = Nest(1, Box::new(String("12".into())));
+    let doc = Nest(
+        1,
+        NestMode::Increase,
+        NestCondition::Always,
+        Box::new(String("12".into())),
+    );
     assert!(fits(2, 0, vector![(0, Broken, &doc)]));
     assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
     assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
     assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
 
     // Nest fits if combined smaller than limit
-    let doc = Nest(0, Box::new(String("12".into())));
+    let doc = Nest(
+        0,
+        NestMode::Increase,
+        NestCondition::Always,
+        Box::new(String("12".into())),
+    );
     assert!(fits(2, 0, vector![(0, Broken, &doc)]));
     assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
     assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
@@ -127,15 +137,17 @@ fn format_test() {
 
     let doc = Nest(
         2,
+        NestMode::Increase,
+        NestCondition::Always,
         Box::new(String("1".into()).append(Line(1).append(String("2".into())))),
     );
     assert_eq!("1\n  2", doc.to_pretty_string(1));
 
-    let doc = ForceBroken(Box::new(Break {
+    let doc = Group(Box::new(ForceBroken(Box::new(Break {
         broken: "broken",
         unbroken: "unbroken",
         kind: BreakKind::Strict,
-    }));
+    }))));
     assert_eq!("broken\n".to_string(), doc.to_pretty_string(100));
 
     let doc = ForceBroken(Box::new(Break {
@@ -144,6 +156,101 @@ fn format_test() {
         kind: BreakKind::Flex,
     }));
     assert_eq!("unbroken".to_string(), doc.to_pretty_string(100));
+}
+
+#[test]
+fn forcing_test() {
+    let docs = join(
+        [
+            "hello".to_doc(),
+            "a".to_doc(),
+            "b".to_doc(),
+            "c".to_doc(),
+            "d".to_doc(),
+        ],
+        break_("", " "),
+    );
+
+    assert_eq!(
+        "hello\na\nb\nc\nd",
+        docs.clone().force_break().group().to_pretty_string(80)
+    );
+    assert_eq!(
+        "hello a b c d",
+        docs.clone()
+            .force_break()
+            .next_break_fits(NextBreakFitsMode::Enabled)
+            .group()
+            .to_pretty_string(80)
+    );
+    assert_eq!(
+        "hello\na\nb\nc\nd",
+        docs.clone()
+            .force_break()
+            .next_break_fits(NextBreakFitsMode::Enabled)
+            .next_break_fits(NextBreakFitsMode::Disabled)
+            .group()
+            .to_pretty_string(80)
+    );
+}
+
+#[test]
+fn nest_if_broken_test() {
+    assert_eq!(
+        "hello\n  world",
+        concat(["hello".to_doc(), break_("", " "), "world".to_doc()])
+            .nest_if_broken(2)
+            .group()
+            .to_pretty_string(10)
+    );
+
+    let list_doc = concat([
+        concat([
+            break_("[", "["),
+            "a,".to_doc(),
+            break_("", " "),
+            "b".to_doc(),
+        ])
+        .nest(2),
+        break_(",", ""),
+        "]".to_doc(),
+    ])
+    .group();
+
+    let args_doc = concat([
+        break_("", ""),
+        "one".to_doc(),
+        ",".to_doc(),
+        break_("", " "),
+        list_doc.group().next_break_fits(NextBreakFitsMode::Enabled),
+    ])
+    .nest_if_broken(2)
+    .group();
+
+    let function_call_doc = concat([
+        "some_function_call(".to_doc(),
+        args_doc,
+        break_("", ""),
+        ")".to_doc(),
+    ])
+    .group();
+
+    assert_eq!(
+        "some_function_call(\n  one,\n  [\n    a,\n    b,\n  ]\n)",
+        function_call_doc.clone().to_pretty_string(2)
+    );
+    assert_eq!(
+        "some_function_call(\n  one,\n  [a, b]\n)",
+        function_call_doc.clone().to_pretty_string(20)
+    );
+    assert_eq!(
+        "some_function_call(one, [\n  a,\n  b,\n])",
+        function_call_doc.clone().to_pretty_string(25)
+    );
+    assert_eq!(
+        "some_function_call(one, [a, b])",
+        function_call_doc.clone().to_pretty_string(80)
+    );
 }
 
 #[test]
@@ -201,4 +308,10 @@ fn empty_documents() {
     assert!("".to_doc().append("".to_doc()).is_empty());
     assert!(!"foo".to_doc().append("".to_doc()).is_empty());
     assert!(!"".to_doc().append("foo".to_doc()).is_empty());
+}
+
+#[test]
+fn set_nesting() {
+    let doc = Vec(vec!["foo".to_doc(), break_("", " "), "bar".to_doc()]).group();
+    assert_eq!("foo\nbar", doc.set_nesting(0).nest(2).to_pretty_string(1));
 }

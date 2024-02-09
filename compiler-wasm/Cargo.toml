@@ -1,6 +1,6 @@
 [package]
 name = "gleam-wasm"
-version = "0.32.4"
+version = "0.34.1"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
@@ -21,6 +21,8 @@ tracing-wasm = "*"
 tracing = "*"
 termcolor = "1.1.2"
 camino = "1.1.6"
+# Immutable data structures
+im = "15.1.0"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.28"

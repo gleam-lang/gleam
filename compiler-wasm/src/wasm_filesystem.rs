@@ -7,16 +7,14 @@ use gleam_core::{
     Error, Result,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WasmFileSystem {
     imfs: InMemoryFileSystem,
 }
 
 impl WasmFileSystem {
-    pub fn new() -> WasmFileSystem {
-        WasmFileSystem {
-            imfs: InMemoryFileSystem::new(),
-        }
+    pub fn reset(&self) {
+        self.imfs.reset();
     }
 }
 
@@ -34,9 +32,9 @@ impl CommandExecutor for WasmFileSystem {
 }
 
 impl FileSystemWriter for WasmFileSystem {
-    fn delete(&self, path: &Utf8Path) -> Result<(), Error> {
+    fn delete_directory(&self, path: &Utf8Path) -> Result<(), Error> {
         tracing::trace!("delete {:?}", path);
-        self.imfs.delete(path)
+        self.imfs.delete_directory(path)
     }
 
     fn copy(&self, _from: &Utf8Path, _to: &Utf8Path) -> Result<(), Error> {

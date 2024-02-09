@@ -20,7 +20,7 @@ use im::hashmap;
 ///
 #[derive(Debug)]
 pub struct Hydrator {
-    created_type_variables: im::HashMap<EcoString, Arc<Type>>,
+    created_type_variables: im::HashMap<EcoString, CreatedTypeVariable>,
     /// A rigid type is a generic type that was specified as being generic in
     /// an annotation. As such it should never be instantiated into an unbound
     /// variable. This type_id => name map is used for reporting the original
@@ -32,7 +32,7 @@ pub struct Hydrator {
 
 #[derive(Debug)]
 pub struct ScopeResetData {
-    created_type_variables: im::HashMap<EcoString, Arc<Type>>,
+    created_type_variables: im::HashMap<EcoString, CreatedTypeVariable>,
     rigid_type_names: im::HashMap<u64, EcoString>,
 }
 
@@ -50,6 +50,10 @@ impl Hydrator {
             permit_new_type_variables: true,
             permit_holes: false,
         }
+    }
+
+    pub fn named_type_variables(&self) -> im::HashMap<EcoString, CreatedTypeVariable> {
+        self.created_type_variables.clone()
     }
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {
@@ -124,7 +128,7 @@ impl Hydrator {
                     deprecation,
                     ..
                 } = environment
-                    .get_type_constructor(module, name, *location)
+                    .get_type_constructor(module, name)
                     .map_err(|e| convert_get_type_constructor_error(e, location))?
                     .clone();
 
@@ -143,7 +147,7 @@ impl Hydrator {
                 // We do not track use of qualified type constructors as they may be
                 // used in another module.
                 if module.is_none() {
-                    environment.increment_usage(name, Layer::Type);
+                    environment.increment_usage(name);
                 }
 
                 // Ensure that the correct number of arguments have been given to the constructor
@@ -158,7 +162,7 @@ impl Hydrator {
 
                 // Instantiate the constructor type for this specific usage
                 let mut type_vars = hashmap![];
-                #[allow(clippy::needless_collect)] // Not needless, used for size effects
+                #[allow(clippy::needless_collect)] // Not needless, used for side effects
                 let parameter_types: Vec<_> = parameters
                     .into_iter()
                     .map(|typ| environment.instantiate(typ, &mut type_vars, self))
@@ -198,25 +202,41 @@ impl Hydrator {
             }
 
             TypeAst::Var(TypeAstVar { name, location }) => {
-                match self.created_type_variables.get(name) {
-                    Some(var) => Ok(var.clone()),
+                match self.created_type_variables.get_mut(name) {
+                    Some(var) => {
+                        var.usage_count += 1;
+                        Ok(var.type_.clone())
+                    }
 
                     None if self.permit_new_type_variables => {
-                        let var = environment.new_generic_var();
+                        let t = environment.new_generic_var();
                         let _ = self
                             .rigid_type_names
                             .insert(environment.previous_uid(), name.clone());
-                        let _ = self
-                            .created_type_variables
-                            .insert(name.clone(), var.clone());
-                        Ok(var)
+                        let _ = self.created_type_variables.insert(
+                            name.clone(),
+                            CreatedTypeVariable {
+                                type_: t.clone(),
+                                usage_count: 1,
+                            },
+                        );
+                        Ok(t)
                     }
 
-                    None => Err(Error::UnknownType {
-                        name: name.clone(),
-                        location: *location,
-                        types: environment.module_types.keys().cloned().collect(),
-                    }),
+                    None => {
+                        let hint = match environment.scope.contains_key(name) {
+                            true => UnknownTypeHint::ValueInScopeWithSameName,
+                            false => UnknownTypeHint::AlternativeTypes(
+                                environment.module_types.keys().cloned().collect(),
+                            ),
+                        };
+
+                        Err(Error::UnknownType {
+                            name: name.clone(),
+                            location: *location,
+                            hint,
+                        })
+                    }
                 }
             }
 
@@ -233,4 +253,35 @@ impl Hydrator {
     pub fn clear_ridgid_type_names(&mut self) {
         self.rigid_type_names.clear();
     }
+
+    /// All the type variables that were created but never used.
+    pub fn unused_type_variables(&self) -> impl Iterator<Item = &EcoString> {
+        self.created_type_variables
+            .iter()
+            .filter(|(_, var)| var.usage_count == 0)
+            .map(|(name, _)| name)
+    }
+
+    /// Create a new type variable with the given name.
+    pub fn add_type_variable(
+        &mut self,
+        name: &EcoString,
+        environment: &mut Environment<'_>,
+    ) -> Result<Arc<Type>, ()> {
+        let t = environment.new_generic_var();
+        let v = CreatedTypeVariable {
+            type_: t.clone(),
+            usage_count: 0,
+        };
+        match self.created_type_variables.insert(name.clone(), v) {
+            Some(_) => Err(()),
+            None => Ok(t),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CreatedTypeVariable {
+    pub type_: Arc<Type>,
+    pub usage_count: usize,
 }

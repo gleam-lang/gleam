@@ -11,13 +11,14 @@ use crate::{
     build::Origin,
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, RecordAccessor, Type,
-        TypeConstructor, ValueConstructor, ValueConstructorVariant,
+        self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, ModuleInterface,
+        RecordAccessor, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
+        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     Result,
 };
-use std::{collections::HashMap, io::BufRead, sync::Arc};
+use std::{collections::HashMap, io::BufRead, sync::Arc, u64};
 
 macro_rules! read_vec {
     ($reader:expr, $self:expr, $method:ident) => {{
@@ -66,17 +67,17 @@ impl ModuleDecoder {
         Ok(ModuleInterface {
             name: reader.get_name()?.into(),
             package: reader.get_package()?.into(),
+            contains_todo: reader.get_contains_todo(),
             origin: Origin::Src,
+            values: read_hashmap!(reader.get_values()?, self, value_constructor),
             types: read_hashmap!(reader.get_types()?, self, type_constructor),
-            types_constructors: read_hashmap!(
+            types_value_constructors: read_hashmap!(
                 reader.get_types_constructors()?,
                 self,
-                constructors_list
+                type_variants_constructors
             ),
-            values: read_hashmap!(reader.get_values()?, self, value_constructor),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
             unused_imports: read_vec!(reader.get_unused_imports()?, self, src_span),
-            type_only_unqualified_imports: Vec::new(),
         })
     }
 
@@ -112,11 +113,13 @@ impl ModuleDecoder {
     }
 
     fn type_app(&mut self, reader: &schema::type_::app::Reader<'_>) -> Result<Arc<Type>> {
+        let package = reader.get_package()?.into();
         let module = reader.get_module()?.into();
         let name = reader.get_name()?.into();
         let args = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(Arc::new(Type::Named {
             public: true,
+            package,
             module,
             name,
             args,
@@ -136,22 +139,66 @@ impl ModuleDecoder {
 
     fn type_var(&mut self, reader: &schema::type_::var::Reader<'_>) -> Result<Arc<Type>> {
         let serialized_id = reader.get_id();
-        let id = match self.type_var_id_map.get(&serialized_id) {
-            Some(&id) => id,
-            None => {
-                let new_id = self.ids.next();
-                let _ = self.type_var_id_map.insert(serialized_id, new_id);
-                new_id
-            }
-        };
+        let id = self.get_or_insert_type_var_id(serialized_id);
         Ok(type_::generic_var(id))
     }
 
-    fn constructors_list(
+    fn get_or_insert_type_var_id(&mut self, id: u64) -> u64 {
+        match self.type_var_id_map.get(&id) {
+            Some(&id) => id,
+            None => {
+                let new_id = self.ids.next();
+                let _ = self.type_var_id_map.insert(id, new_id);
+                new_id
+            }
+        }
+    }
+
+    fn type_variants_constructors(
         &mut self,
-        reader: &capnp::text_list::Reader<'_>,
-    ) -> Result<Vec<EcoString>> {
-        Ok(reader.iter().map_ok(EcoString::from).try_collect()?)
+        reader: &types_variant_constructors::Reader<'_>,
+    ) -> Result<TypeVariantConstructors> {
+        let variants = reader
+            .get_variants()?
+            .iter()
+            .map(|r| self.type_value_constructor(&r))
+            .try_collect()?;
+        let type_parameters_ids = read_vec!(
+            reader.get_type_parameters_ids()?,
+            self,
+            type_variant_constructor_type_parameter_id
+        );
+        Ok(TypeVariantConstructors {
+            variants,
+            type_parameters_ids,
+        })
+    }
+
+    fn type_variant_constructor_type_parameter_id(&mut self, i: &u16) -> Result<u64> {
+        Ok(self.get_or_insert_type_var_id(*i as u64))
+    }
+
+    fn type_value_constructor(
+        &mut self,
+        reader: &type_value_constructor::Reader<'_>,
+    ) -> Result<TypeValueConstructor> {
+        Ok(TypeValueConstructor {
+            name: reader.get_name()?.into(),
+            parameters: read_vec!(
+                reader.get_parameters()?,
+                self,
+                type_value_constructor_parameter
+            ),
+        })
+    }
+
+    fn type_value_constructor_parameter(
+        &mut self,
+        reader: &type_value_constructor_parameter::Reader<'_>,
+    ) -> Result<TypeValueConstructorField> {
+        Ok(TypeValueConstructorField {
+            type_: self.type_(&reader.get_type()?)?,
+        })
     }
 
     fn value_constructor(
@@ -379,6 +426,7 @@ impl ModuleDecoder {
             location: self.src_span(&reader.get_location()?)?,
             literal: self.constant(&reader.get_literal()?)?,
             module: reader.get_module()?.into(),
+            implementations: self.implementations(reader.get_implementations()?),
         })
     }
 
@@ -408,7 +456,16 @@ impl ModuleDecoder {
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
             documentation: self.optional_string(reader.get_documentation()?),
+            implementations: self.implementations(reader.get_implementations()?),
         })
+    }
+
+    fn implementations(&self, reader: implementations::Reader<'_>) -> Implementations {
+        Implementations {
+            gleam: reader.get_gleam(),
+            uses_erlang_externals: reader.get_erlang(),
+            uses_javascript_externals: reader.get_javascript(),
+        }
     }
 
     fn record(
@@ -423,6 +480,7 @@ impl ModuleDecoder {
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
             documentation: self.optional_string(reader.get_documentation()?),
+            constructor_index: reader.get_constructor_index(),
         })
     }
 

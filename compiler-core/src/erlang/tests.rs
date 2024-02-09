@@ -1,3 +1,4 @@
+use crate::analyse::TargetSupport;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     build::{Origin, Target},
@@ -52,6 +53,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
             &modules,
             &TypeWarningEmitter::null(),
             &std::collections::HashMap::new(),
+            TargetSupport::Enforced,
         )
         .expect("should successfully infer");
         let _ = modules.insert(dep_name.into(), dep.type_info);
@@ -69,6 +71,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         &modules,
         &TypeWarningEmitter::null(),
         &direct_dependencies,
+        TargetSupport::Enforced,
     )
     .expect("should successfully infer");
     let line_numbers = LineNumbers::new(src);
@@ -192,7 +195,14 @@ pub fn tail(list) { case list { [x, ..xs] -> xs z -> list } }
 
 #[test]
 fn integration_test5() {
-    assert_erl!("pub fn tail(list) { case list { [x, ..] -> x } }");
+    assert_erl!(
+        "pub fn tail(list) {
+  case list {
+    [x, ..] -> x
+    _ -> 0
+  }
+}"
+    );
 }
 
 #[test]
@@ -456,7 +466,7 @@ fn variable_name_underscores_preserved() {
 
 #[test]
 fn allowed_string_escapes() {
-    assert_erl!(r#"pub fn a() { "\n" "\r" "\t" "\\" "\"" "\e" "\\^" }"#);
+    assert_erl!(r#"pub fn a() { "\n" "\r" "\t" "\\" "\"" "\\^" }"#);
 }
 
 // https://github.com/gleam-lang/gleam/issues/1006
@@ -544,6 +554,7 @@ fn guard_variable_rewriting() {
       let a = a
       a
     }
+    _ -> 0.0
   }
 }
 "
@@ -581,6 +592,7 @@ fn inline_const_pattern_option() {
             case x {
               <<5:size(sixteen)>> -> <<5:size(sixteen)>>
               <<6:size(fifteen)>> -> <<5:size(fifteen)>>
+              _ -> <<>>
             }
           }
           

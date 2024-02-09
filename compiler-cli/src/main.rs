@@ -74,7 +74,7 @@ mod shell;
 
 use config::root_config;
 use dependencies::UseManifest;
-use fs::get_current_directory;
+use fs::{get_current_directory, get_project_root};
 pub use gleam_core::error::{Error, Result};
 
 use gleam_core::{
@@ -231,15 +231,22 @@ enum Command {
     Export(ExportTarget),
 }
 
-#[derive(Subcommand, Debug, Clone, Copy)]
+#[derive(Subcommand, Debug, Clone)]
 pub enum ExportTarget {
-    /// Precompiled Erlang, suitable for deployment.
+    /// Precompiled Erlang, suitable for deployment
     ErlangShipment,
-    /// The package bundled into a tarball, suitable for publishing to Hex.
+    /// The package bundled into a tarball, suitable for publishing to Hex
     HexTarball,
-    /// The JavaScript prelude module.
+    /// The JavaScript prelude module
     JavascriptPrelude,
+    /// The TypeScript prelude module
     TypescriptPrelude,
+    /// Information on the modules, functions, and types in the project in JSON format
+    PackageInterface {
+        #[clap(long = "out", required = true)]
+        /// The path to write the JSON file to
+        output: Utf8PathBuf,
+    },
 }
 
 #[derive(Args, Debug, Clone)]
@@ -461,6 +468,9 @@ fn main() {
         Command::Export(ExportTarget::HexTarball) => export::hex_tarball(),
         Command::Export(ExportTarget::JavascriptPrelude) => export::javascript_prelude(),
         Command::Export(ExportTarget::TypescriptPrelude) => export::typescript_prelude(),
+        Command::Export(ExportTarget::PackageInterface { output }) => {
+            export::package_interface(output)
+        }
     };
 
     match result {
@@ -510,8 +520,8 @@ fn print_config() -> Result<()> {
 }
 
 fn clean() -> Result<()> {
-    let paths = project_paths_at_current_directory();
-    fs::delete_dir(&paths.build_directory())
+    let paths = find_project_paths()?;
+    fs::delete_directory(&paths.build_directory())
 }
 
 fn initialise_logger() {
@@ -525,13 +535,19 @@ fn initialise_logger() {
         .init();
 }
 
-fn project_paths_at_current_directory() -> ProjectPaths {
+fn find_project_paths() -> Result<ProjectPaths> {
+    let current_dir = get_current_directory().expect("Failed to get current directory");
+    get_project_root(current_dir).map(ProjectPaths::new)
+}
+
+#[cfg(test)]
+fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
     let current_dir = get_current_directory().expect("Failed to get current directory");
     ProjectPaths::new(current_dir)
 }
 
 fn download_dependencies() -> Result<(), Error> {
-    let paths = project_paths_at_current_directory();
+    let paths = find_project_paths()?;
     _ = dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
     Ok(())
 }

@@ -1,6 +1,5 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 153
 expression: "./cases/import_shadowed_name_warning"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
@@ -11,7 +10,7 @@ expression: "./cases/import_shadowed_name_warning"
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export_type([port_/0]).
 
@@ -28,7 +27,7 @@ expression: "./cases/import_shadowed_name_warning"
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([use_type/1]).
 -export_type([shadowing/0]).
@@ -57,7 +56,7 @@ warning: Unused private constructor
   ┌─ src/two.gleam:9:3
   │
 9 │   Port
-  │   ^ This private constructor is never used.
+  │   ^ This private constructor is never used
 
 Hint: You can safely remove it.
 
@@ -68,7 +67,7 @@ warning: Unused private type
   ┌─ src/two.gleam:7:1
   │
 7 │ type Shadowing {
-  │ ^ This private type is never used.
+  │ ^ This private type is never used
 
 Hint: You can safely remove it.
 

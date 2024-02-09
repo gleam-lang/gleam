@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 73
+expression: "\npub fn not_unicode_escape_sequence() -> String {\n  \"\\\\\\\\u{03a9}\"\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([not_unicode_escape_sequence/0]).
+
+-spec not_unicode_escape_sequence() -> binary().
+not_unicode_escape_sequence() ->
+    <<"\\\\u{03a9}"/utf8>>.
+

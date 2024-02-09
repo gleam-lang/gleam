@@ -1,4 +1,5 @@
 use crate::{
+    analyse::TargetSupport,
     build::{
         package_compiler, package_compiler::PackageCompiler, package_loader::StaleTracker,
         project_compiler, telemetry::Telemetry, Mode, Module, Origin, Package, Target,
@@ -201,7 +202,7 @@ where
 
         // Either file is missing our the versions do not match. Time to rebuild
         tracing::info!("removing_build_state_from_different_gleam_version");
-        self.io.delete(&build_path)?;
+        self.io.delete_directory(&build_path)?;
 
         // Recreate build directory with new updated version file
         self.io.mkdir(&build_path)?;
@@ -283,7 +284,7 @@ where
                 self.target(),
                 package.application_name(),
             );
-            self.io.delete(&path)?;
+            self.io.delete_directory(&path)?;
         }
 
         result
@@ -555,6 +556,9 @@ where
         compiler.perform_codegen = self.options.codegen.should_codegen(is_root);
         compiler.compile_beam_bytecode = self.options.codegen.should_codegen(is_root);
         compiler.subprocess_stdio = self.subprocess_stdio;
+        if is_root {
+            compiler.target_support = TargetSupport::Enforced;
+        }
 
         // Compile project to Erlang or JavaScript source code
         let compiled = compiler.compile(
@@ -573,6 +577,11 @@ fn order_packages(packages: &HashMap<String, ManifestPackage>) -> Result<Vec<Eco
     dep_tree::toposort_deps(
         packages
             .values()
+            // Making sure that the package order is deterministic, to prevent different
+            // compilations of the same project compiling in different orders. This could impact
+            // any bugged outcomes, though not any where the compiler is working correctly, so it's
+            // mostly to aid debugging.
+            .sorted_by(|a, b| a.name.cmp(&b.name))
             .map(|package| {
                 (
                     package.name.as_str().into(),

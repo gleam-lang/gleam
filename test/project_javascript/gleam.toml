@@ -8,5 +8,6 @@ runtime = "node"
 
 [dependencies]
 gleam_stdlib = "~> 0.18"
+gleam_erlang = "~> 0.23"
 
 [dev-dependencies]

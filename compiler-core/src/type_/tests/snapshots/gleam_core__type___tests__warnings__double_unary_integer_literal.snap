@@ -1,14 +1,13 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 532
 expression: "pub fn main() { let _ = --7 }"
 ---
 
-warning: Unnecessary double negation (--) on integer.
+warning: Unnecessary double negation (--) on integer
   ┌─ /src/warning/wrn.gleam:1:25
   │
 1 │ pub fn main() { let _ = --7 }
   │                         ^^^
 
-Hint: You can safely remove this
+Hint: You can safely remove this.
 

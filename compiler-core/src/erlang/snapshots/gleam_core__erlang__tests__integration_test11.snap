@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 232
+assertion_line: 239
 expression: "type Point { Point(x: Int, y: Int) }\n                fn x() { Point(x: 4, y: 6) Point(y: 1, x: 9) }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export_type([point/0]).
 

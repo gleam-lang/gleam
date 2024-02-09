@@ -115,13 +115,13 @@ pub enum TypedExpr {
 
     Todo {
         location: SrcSpan,
-        message: Option<EcoString>,
+        message: Option<Box<Self>>,
         type_: Arc<Type>,
     },
 
     Panic {
         location: SrcSpan,
-        message: Option<EcoString>,
+        message: Option<Box<Self>>,
         type_: Arc<Type>,
     },
 

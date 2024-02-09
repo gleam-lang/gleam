@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/erlang/tests/panic.rs
+assertion_line: 27
+expression: "\npub fn retstring() {\n  \"wibble\"\n}\npub fn main() {\n  panic as { retstring() <> \"wobble\" }\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([retstring/0, main/0]).
+
+-spec retstring() -> binary().
+retstring() ->
+    <<"wibble"/utf8>>.
+
+-spec main() -> any().
+main() ->
+    erlang:error(#{gleam_error => panic,
+            message => (<<(retstring())/binary, "wobble"/utf8>>),
+            module => <<"my/mod"/utf8>>,
+            function => <<"main"/utf8>>,
+            line => 6}).
+

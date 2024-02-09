@@ -6,6 +6,7 @@ use crate::{
     io::{memory::InMemoryFileSystem, FileSystemWriter},
     paths::ProjectPaths,
     uid::UniqueIdGenerator,
+    version::COMPILER_VERSION,
     warning::WarningEmitter,
 };
 use camino::Utf8PathBuf;
@@ -115,10 +116,20 @@ fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
             Some(format!(
                 "//// {}\n\n{}\n\n",
                 file.path.as_str(),
-                file.content.text()?
+                file.content
+                    .text()?
+                    .replace(COMPILER_VERSION, "GLEAM_VERSION_HERE")
             ))
         })
         .collect::<String>()
         .chars()
         .collect()
+}
+
+// https://github.com/gleam-lang/gleam/issues/2561
+#[test]
+fn discarded_arguments_are_not_shown() {
+    let config = PackageConfig::default();
+    let modules = vec![("app.gleam", "pub fn discard(_discarded: a) -> Int { 1 }")];
+    insta::assert_snapshot!(compile(config, modules));
 }

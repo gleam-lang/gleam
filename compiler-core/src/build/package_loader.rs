@@ -104,6 +104,11 @@ where
         let deps = inputs
             .values()
             .map(|m| (m.name().clone(), m.dependencies()))
+            // Making sure that the module order is deterministic, to prevent different
+            // compilations of the same project compiling in different orders. This could impact
+            // any bugged outcomes, though not any where the compiler is working correctly, so it's
+            // mostly to aid debugging.
+            .sorted_by(|(a, _), (b, _)| a.cmp(b))
             .collect();
         let sequence = dep_tree::toposort_deps(deps).map_err(convert_deps_tree_error)?;
 
@@ -224,7 +229,6 @@ where
         let mtime = self.io.modification_time(&cached.source_path)?;
         read_source(
             self.io.clone(),
-            self.warnings,
             self.target,
             cached.origin,
             cached.source_path,

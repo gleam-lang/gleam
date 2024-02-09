@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 16
+expression: "\npub fn y_with_dieresis() -> String {\n  \"\\u{0308}y\"\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([y_with_dieresis/0]).
+
+-spec y_with_dieresis() -> binary().
+y_with_dieresis() ->
+    <<"\x{0308}y"/utf8>>.
+
