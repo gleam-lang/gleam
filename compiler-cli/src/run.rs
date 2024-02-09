@@ -81,7 +81,7 @@ pub fn command(
     let built = crate::build::main(options, manifest)?;
 
     // A module can not be run if it does not exist or does not have a public main function.
-    let main_function = get_or_suggest_main_function(built, &module)?;
+    let main_function = get_or_suggest_main_function(built, &module, target)?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
@@ -283,9 +283,13 @@ fn is_gleam_module(module: &str) -> bool {
 }
 
 /// If provided module is not executable, suggest a possible valid module.
-fn get_or_suggest_main_function(built: Built, module: &str) -> Result<ModuleFunction, Error> {
+fn get_or_suggest_main_function(
+    built: Built,
+    module: &str,
+    target: Target,
+) -> Result<ModuleFunction, Error> {
     // Check if the module exists
-    let error = match built.get_main_function(&EcoString::from(module)) {
+    let error = match built.get_main_function(&module.into(), target) {
         Ok(main_fn) => return Ok(main_fn),
         Err(error) => error,
     };
@@ -296,7 +300,7 @@ fn get_or_suggest_main_function(built: Built, module: &str) -> Result<ModuleFunc
             Some(other) => other.into(),
             None => continue,
         };
-        if built.get_main_function(&other).is_ok() {
+        if built.get_main_function(&other, target).is_ok() {
             return Err(Error::ModuleDoesNotExist {
                 module: EcoString::from(module),
                 suggestion: Some(other),

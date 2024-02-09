@@ -2183,3 +2183,119 @@ fn contains_todo_false() {
     let module = compile_module("pub fn main() { todo }", None, vec![]).unwrap();
     assert!(module.type_info.contains_todo);
 }
+
+#[test]
+fn assert_suitable_main_function_not_module_function() {
+    let value = ValueConstructor {
+        public: true,
+        deprecation: Deprecation::NotDeprecated,
+        type_: fn_(vec![], int()),
+        variant: ValueConstructorVariant::ModuleConstant {
+            documentation: None,
+            location: Default::default(),
+            module: "module".into(),
+            literal: Constant::Int {
+                location: Default::default(),
+                value: "1".into(),
+            },
+            implementations: Implementations {
+                gleam: true,
+                uses_erlang_externals: false,
+                uses_javascript_externals: false,
+            },
+        },
+    };
+    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
+}
+
+#[test]
+fn assert_suitable_main_function_wrong_arity() {
+    let value = ValueConstructor {
+        public: true,
+        deprecation: Deprecation::NotDeprecated,
+        type_: fn_(vec![], int()),
+        variant: ValueConstructorVariant::ModuleFn {
+            name: "name".into(),
+            field_map: None,
+            arity: 1,
+            documentation: None,
+            location: Default::default(),
+            module: "module".into(),
+            implementations: Implementations {
+                gleam: true,
+                uses_erlang_externals: false,
+                uses_javascript_externals: false,
+            },
+        },
+    };
+    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
+}
+
+#[test]
+fn assert_suitable_main_function_ok() {
+    let value = ValueConstructor {
+        public: true,
+        deprecation: Deprecation::NotDeprecated,
+        type_: fn_(vec![], int()),
+        variant: ValueConstructorVariant::ModuleFn {
+            name: "name".into(),
+            field_map: None,
+            arity: 0,
+            documentation: None,
+            location: Default::default(),
+            module: "module".into(),
+            implementations: Implementations {
+                gleam: true,
+                uses_erlang_externals: false,
+                uses_javascript_externals: false,
+            },
+        },
+    };
+    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_ok(),);
+}
+
+#[test]
+fn assert_suitable_main_function_erlang_not_supported() {
+    let value = ValueConstructor {
+        public: true,
+        deprecation: Deprecation::NotDeprecated,
+        type_: fn_(vec![], int()),
+        variant: ValueConstructorVariant::ModuleFn {
+            name: "name".into(),
+            field_map: None,
+            arity: 0,
+            documentation: None,
+            location: Default::default(),
+            module: "module".into(),
+            implementations: Implementations {
+                gleam: false,
+                uses_erlang_externals: false,
+                uses_javascript_externals: true,
+            },
+        },
+    };
+    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
+}
+
+#[test]
+fn assert_suitable_main_function_javascript_not_supported() {
+    let value = ValueConstructor {
+        public: true,
+        deprecation: Deprecation::NotDeprecated,
+        type_: fn_(vec![], int()),
+        variant: ValueConstructorVariant::ModuleFn {
+            name: "name".into(),
+            field_map: None,
+            arity: 0,
+            documentation: None,
+            location: Default::default(),
+            module: "module".into(),
+            implementations: Implementations {
+                gleam: false,
+                uses_erlang_externals: true,
+                uses_javascript_externals: false,
+            },
+        },
+    };
+    assert!(assert_suitable_main_function(&value, &"module".into(), Target::JavaScript).is_err(),);
+}

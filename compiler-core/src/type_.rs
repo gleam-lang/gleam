@@ -25,7 +25,7 @@ use crate::{
         UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
     },
     bit_array,
-    build::Origin,
+    build::{Origin, Target},
 };
 use error::*;
 use hydrator::Hydrator;
@@ -609,25 +609,22 @@ impl ModuleInterface {
         }
     }
 
-    pub fn get_main_function(&self) -> Result<ModuleFunction, crate::Error> {
-        match self.values.get(&EcoString::from("main")) {
-            Some(ValueConstructor {
-                variant: ValueConstructorVariant::ModuleFn { arity: 0, .. },
-                ..
-            }) => Ok(ModuleFunction {
-                package: self.package.clone(),
-            }),
-            Some(ValueConstructor {
-                variant: ValueConstructorVariant::ModuleFn { arity, .. },
-                ..
-            }) => Err(crate::Error::MainFunctionHasWrongArity {
-                module: self.name.clone(),
-                arity: *arity,
-            }),
-            _ => Err(crate::Error::ModuleDoesNotHaveMainFunction {
-                module: self.name.clone(),
-            }),
-        }
+    pub fn get_main_function(&self, target: Target) -> Result<ModuleFunction, crate::Error> {
+        let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
+            module: self.name.clone(),
+        };
+
+        // Module must have a value with the name "main"
+        let value = self
+            .values
+            .get(&EcoString::from("main"))
+            .ok_or_else(|| not_found())?;
+
+        assert_suitable_main_function(value, &self.name, target)?;
+
+        Ok(ModuleFunction {
+            package: self.package.clone(),
+        })
     }
 
     pub fn public_value_names(&self) -> Vec<EcoString> {
@@ -1009,4 +1006,43 @@ pub enum FieldAccessUsage {
     MethodCall,
     /// Used as `thing.field`
     Other,
+}
+
+/// Verify that a value is suitable to be used as a main function.
+fn assert_suitable_main_function(
+    value: &ValueConstructor,
+    module_name: &EcoString,
+    target: Target,
+) -> Result<(), crate::Error> {
+    let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
+        module: module_name.clone(),
+    };
+
+    // The value must be a module function
+    let ValueConstructorVariant::ModuleFn {
+        arity,
+        implementations,
+        ..
+    } = &value.variant
+    else {
+        return Err(not_found());
+    };
+
+    // The target must be supported
+    if !implementations.supports(target) {
+        return Err(crate::Error::MainFunctionDoesNotSupportTarget {
+            module: module_name.clone(),
+            target,
+        });
+    }
+
+    // The function must be zero arity
+    if *arity != 0 {
+        return Err(crate::Error::MainFunctionHasWrongArity {
+            module: module_name.clone(),
+            arity: *arity,
+        });
+    }
+
+    Ok(())
 }

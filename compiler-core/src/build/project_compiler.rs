@@ -61,9 +61,13 @@ pub struct Built {
 }
 
 impl Built {
-    pub fn get_main_function(&self, module: &EcoString) -> Result<ModuleFunction, Error> {
+    pub fn get_main_function(
+        &self,
+        module: &EcoString,
+        target: Target,
+    ) -> Result<ModuleFunction, Error> {
         match self.module_interfaces.get(module) {
-            Some(module_data) => module_data.get_main_function(),
+            Some(module_data) => module_data.get_main_function(target),
             None => Err(Error::ModuleDoesNotExist {
                 module: module.clone(),
                 suggestion: None,
