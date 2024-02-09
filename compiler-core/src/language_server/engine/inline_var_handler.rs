@@ -59,13 +59,17 @@ fn detect_possible_inlinings_for_function(
         .collect();
 
     function.body.iter().for_each(|statement| {
-        detect_possible_inlinings_for_statement(statement, &assign_statements, inline_refactors)
+        detect_possible_inlinings_for_statement(
+            statement,
+            assign_statements.as_slice(),
+            inline_refactors,
+        )
     });
 }
 
 fn detect_possible_inlinings_for_statement(
     statement: &Statement<Arc<Type>, TypedExpr>,
-    assign_statements: &Vec<&Assignment<Arc<Type>, TypedExpr>>,
+    assign_statements: &[&Assignment<Arc<Type>, TypedExpr>],
     expressions_to_inline: &mut Vec<InlineRefactor>,
 ) {
     if let Statement::Assignment(assign) = statement {
@@ -79,7 +83,7 @@ fn detect_possible_inlinings_for_statement(
 
 fn traverse_expression(
     expr: &TypedExpr,
-    assign_statements: &Vec<&Assignment<Arc<Type>, TypedExpr>>,
+    assign_statements: &[&Assignment<Arc<Type>, TypedExpr>],
     expressions_to_inline: &mut Vec<InlineRefactor>,
 ) {
     match expr {
@@ -105,7 +109,7 @@ fn traverse_expression(
             assignments.iter().for_each(|assignment| {
                 traverse_expression(&assignment.value, assign_statements, expressions_to_inline)
             });
-            traverse_expression(&finally, assign_statements, expressions_to_inline);
+            traverse_expression(finally, assign_statements, expressions_to_inline);
         }
         TypedExpr::BinOp { left, right, .. } => {
             traverse_expression(left, assign_statements, expressions_to_inline);
@@ -155,7 +159,7 @@ fn traverse_expression(
 
 fn inline_refactor(
     constructor: &crate::type_::ValueConstructor,
-    assignments: &Vec<&Assignment<Arc<Type>, TypedExpr>>,
+    assignments: &[&Assignment<Arc<Type>, TypedExpr>],
     expr: &TypedExpr,
     expressions_to_inline: &mut Vec<InlineRefactor>,
 ) {
@@ -176,7 +180,7 @@ fn inline_refactor(
                         }) {
                             expressions_to_inline.push(InlineRefactor {
                                 source: found.location,
-                                destination: callarg.location.clone(),
+                                destination: callarg.location,
                                 value_to_inline,
                             });
                         }
@@ -184,7 +188,7 @@ fn inline_refactor(
                     TypedExpr::Var { location, .. } => {
                         expressions_to_inline.push(InlineRefactor {
                             source: found.location,
-                            destination: location.clone(),
+                            destination: *location,
                             value_to_inline,
                         });
                     }
@@ -200,11 +204,11 @@ fn try_create_edits_for_inline_refactor(
     line_numbers: &LineNumbers,
     params: &lsp::CodeActionParams,
 ) -> Option<InlineRefactorEdits> {
-    let range_inline_destination = src_span_to_lsp_range(refactor.destination, &line_numbers);
+    let range_inline_destination = src_span_to_lsp_range(refactor.destination, line_numbers);
     if range_includes(&params.range, &range_inline_destination) {
         Some(InlineRefactorEdits {
             source_edit: lsp_types::TextEdit {
-                range: src_span_to_lsp_range(refactor.source.clone(), &line_numbers),
+                range: src_span_to_lsp_range(refactor.source, line_numbers),
                 new_text: "".into(),
             },
             destination_edit: lsp_types::TextEdit {
