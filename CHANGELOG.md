@@ -42,6 +42,8 @@
   values inserted into the parent type using type parameters.
 - Fixed a bug where `functionname(_name)` would incorrectly parse as a function
   capture instead of a syntax error.
+- Fixed a bug where external only functions would "successfully" compile for a
+  target they do not support, leading to a runtime error.
 
 
 ## v0.34.1 - 2023-01-17
