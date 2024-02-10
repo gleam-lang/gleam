@@ -164,7 +164,7 @@ pub fn erlang_external_with_javascript_body() {
     assert_targets!(
         r#"
 @external(javascript, "foo", "bar")
-pub fn javascript_only() -> Int
+fn javascript_only() -> Int
 
 @external(erlang, "foo", "bar")
 pub fn erlang_external_and_javascript_body() -> Int { javascript_only() }
@@ -246,10 +246,10 @@ pub fn function_with_no_valid_implementations() {
     assert_module_error!(
         r#"
 @external(javascript, "foo", "bar")
-pub fn javascript_only() -> Int
+fn javascript_only() -> Int
         
 @external(erlang, "foo", "bar")
-pub fn erlang_only() -> Int
+fn erlang_only() -> Int
 
 pub fn main() {
     javascript_only()

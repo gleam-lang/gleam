@@ -2364,7 +2364,7 @@ The missing patterns are:\n"
                     }
                 }
 
-                TypeError::UnsupportedTarget {
+                TypeError::UnsupportedExpressionTarget {
                     location,
                     target: current_target,
                 } => {
@@ -2375,6 +2375,37 @@ and there is no implementation for the {} target.",
                             Target::Erlang => "Erlang",
                             Target::JavaScript => "JavaScript",
                         }
+                    );
+                    Diagnostic {
+                        title: "Unsupported target".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            path: path.clone(),
+                            src: src.clone(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::UnsupportedPublicFunctionTarget {
+                    location,
+                    name,
+                    target,
+                } => {
+                    let target = match target {
+                        Target::Erlang => "Erlang",
+                        Target::JavaScript => "JavaScript",
+                    };
+                    let text = wrap_format!(
+                        "The `{name}` function is public but doesn't have an \
+implementation for the {target} target. All public functions of a package \
+must be able to compile for a module to be valid."
                     );
                     Diagnostic {
                         title: "Unsupported target".into(),

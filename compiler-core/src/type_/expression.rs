@@ -1,6 +1,6 @@
 use super::{pipe::PipeTyper, *};
 use crate::{
-    analyse::{infer_bit_array_option, TargetSupport},
+    analyse::infer_bit_array_option,
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan, Statement,
@@ -689,10 +689,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.implementations
             .update_from_use(variant_implementations);
 
-        let fail_if_current_target_is_not_supported =
-            self.environment.target_support == TargetSupport::Enforced;
-
-        if fail_if_current_target_is_not_supported
+        if self.environment.target_support.is_enforced()
             // If the value used doesn't have an implementation that can be used
             // for the current target...
             && !variant_implementations.supports(self.environment.target)
@@ -701,7 +698,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .implementations
                     .supports(self.environment.target)
         {
-            Err(Error::UnsupportedTarget {
+            Err(Error::UnsupportedExpressionTarget {
                 target: self.environment.target,
                 location,
             })

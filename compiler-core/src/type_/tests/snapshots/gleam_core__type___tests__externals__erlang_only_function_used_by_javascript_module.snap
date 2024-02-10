@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/externals.rs
+assertion_line: 32
+expression: "@external(erlang, \"foo\", \"bar\")\npub fn erlang_only() -> Int\n\npub fn main() {\n  erlang_only()\n}\n"
+---
+error: Unsupported target
+  ┌─ /src/one/two.gleam:5:3
+  │
+5 │   erlang_only()
+  │   ^^^^^^^^^^^
+
+This value is not available as it is defined using externals, and there is
+no implementation for the JavaScript target.
+
