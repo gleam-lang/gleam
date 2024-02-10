@@ -99,7 +99,10 @@ impl TargetSupport {
     /// [`Enforced`]: TargetSupport::Enforced
     #[must_use]
     pub fn is_enforced(&self) -> bool {
-        matches!(self, Self::Enforced)
+        match self {
+            Self::Enforced => true,
+            Self::NotEnforced => false,
+        }
     }
 }
 
