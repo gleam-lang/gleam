@@ -284,7 +284,7 @@ pub enum Error {
 
     /// A function/constant that is used doesn't have an implementation for the
     /// current compilation target.
-    UnsupportedTarget {
+    UnsupportedExpressionTarget {
         location: SrcSpan,
         target: Target,
     },
@@ -345,6 +345,22 @@ pub enum Error {
     DuplicateTypeParameter {
         location: SrcSpan,
         name: EcoString,
+    },
+
+    /// A public function doesn't have an implementation for the current target.
+    /// This is only raised when compiling a package with `TargetSupport::Enforced`, which is
+    /// typically the root package, deps not being enforced.
+    ///
+    /// For example, if compiling to Erlang:
+    ///
+    /// ```gleam
+    /// @external(javascript, "one", "two")
+    /// pub fn wobble() -> Int
+    /// ```
+    UnsupportedPublicFunctionTarget {
+        target: Target,
+        name: EcoString,
+        location: SrcSpan,
     },
 }
 

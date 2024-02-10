@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/externals.rs
+assertion_line: 183
+expression: "import module\npub fn main() {\n  module.javascript_only()\n}"
+---
+error: Unsupported target
+  ┌─ /src/one/two.gleam:3:9
+  │
+3 │   module.javascript_only()
+  │         ^^^^^^^^^^^^^^^^
+
+This value is not available as it is defined using externals, and there is
+no implementation for the Erlang target.
+

@@ -93,6 +93,16 @@ pub enum TargetSupport {
     NotEnforced,
 }
 
+impl TargetSupport {
+    /// Returns `true` if the target support is [`Enforced`].
+    ///
+    /// [`Enforced`]: TargetSupport::Enforced
+    #[must_use]
+    pub fn is_enforced(&self) -> bool {
+        matches!(self, Self::Enforced)
+    }
+}
+
 // TODO: This takes too many arguments.
 #[allow(clippy::too_many_arguments)]
 /// Crawl the AST, annotating each node with the inferred type or
@@ -623,6 +633,7 @@ fn infer_function(
         return_type: (),
         implementations: _,
     } = f;
+    let target = environment.target;
     let preregistered_fn = environment
         .get_variable(&name)
         .expect("Could not find preregistered type for function");
@@ -633,8 +644,7 @@ fn infer_function(
         .expect("Preregistered type for fn was not a fn");
 
     // Find the external implementation for the current target, if one has been given.
-    let external =
-        target_function_implementation(environment.target, &external_erlang, &external_javascript);
+    let external = target_function_implementation(target, &external_erlang, &external_javascript);
     let (impl_module, impl_function) = implementation_names(external, module_name, &name);
 
     // The function must have at least one implementation somewhere.
@@ -675,6 +685,17 @@ fn infer_function(
 
     // Assert that the inferred type matches the type of any recursive call
     unify(preregistered_type, type_.clone()).map_err(|e| convert_unify_error(e, location))?;
+
+    // Ensure that the current target has an implementation for the function.
+    // This is done at the expression level while inferring the function body, but we do it again
+    // here as externally implemented functions may not have a Gleam body.
+    if public && environment.target_support.is_enforced() && !implementations.supports(target) {
+        return Err(Error::UnsupportedPublicFunctionTarget {
+            name: name.clone(),
+            target,
+            location,
+        });
+    }
 
     let variant = ValueConstructorVariant::ModuleFn {
         documentation: doc.clone(),
