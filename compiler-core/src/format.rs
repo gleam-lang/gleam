@@ -96,6 +96,13 @@ impl<'comments> Formatter<'comments> {
             .unwrap_or(false)
     }
 
+    fn any_empty_lines(&self, limit: u32) -> bool {
+        self.empty_lines
+            .first()
+            .map(|line| *line < limit)
+            .unwrap_or(false)
+    }
+
     /// Pop comments that occur before a byte-index in the source, consuming
     /// and retaining any empty lines contained within.
     fn pop_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'comments str>> {
@@ -232,20 +239,32 @@ impl<'comments> Formatter<'comments> {
         // ```
         let mut documents = vec![];
         let mut current_group = vec![];
+        let mut group_comments = None;
 
         for import in imports {
+            let start = import.definition.location().start;
             // If the import is preceded by a comment then we want to put it
             // into a new group and we can print the current one.
-            if !current_group.is_empty() && self.any_comments(import.definition.location().start) {
-                documents.append(&mut self.sorted_import_group(&mut current_group));
+            if !current_group.is_empty()
+                && (self.any_comments(start) || self.any_empty_lines(start))
+            {
+                documents.append(&mut self.sorted_import_group(&mut current_group, group_comments));
                 documents.push(lines(2));
+                // We pop the comment introducing the group and save it for
+                // later for when the group is over and we can actually print
+                // it.
+                // We have to immediately pop the comment as soon as we start
+                // with a new group or it would still be present in
+                // `self.comments` messing up `self.any_comments` for the next
+                // imports in the group.
+                group_comments = printed_comments(self.pop_comments(start), false);
             }
             current_group.push(import);
         }
 
         // We don't have to forget about the last import group!
         if !current_group.is_empty() {
-            documents.append(&mut self.sorted_import_group(&mut current_group));
+            documents.append(&mut self.sorted_import_group(&mut current_group, group_comments));
         }
 
         documents
@@ -254,11 +273,23 @@ impl<'comments> Formatter<'comments> {
     /// Prints the imports as a single sorted group of import statements
     /// draining the given vector.
     ///
+    /// `group_comment` is the comment preceding the current group.
+    /// It might be missing since a group could also be defined by simply having
+    /// an empty line between imports.
+    ///
     fn sorted_import_group<'a>(
         &mut self,
         imports: &mut Vec<&'a TargetedDefinition>,
+        group_comment: Option<Document<'a>>,
     ) -> Vec<Document<'a>> {
         let mut documents = Vec::with_capacity(imports.len() * 2);
+
+        // If the group is defined with a single comment we print it as the
+        // first thing.
+        if let Some(comment) = group_comment {
+            documents.push(comment)
+        };
+
         imports.sort_by(|one, other| match (&one.definition, &other.definition) {
             (Definition::Import(one), Definition::Import(other)) => one.cmp(other),
             // It shouldn't really be possible for a non import to be here so
