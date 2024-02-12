@@ -1040,27 +1040,33 @@ impl<A, B> ClauseGuard<A, B> {
 
     pub fn precedence(&self) -> u8 {
         // Ensure that this matches the other precedence function for guards
+        match self.bin_op_name() {
+            Some(name) => name.precedence(),
+            None => u8::MAX,
+        }
+    }
+
+    pub fn bin_op_name(&self) -> Option<BinOp> {
         match self {
-            ClauseGuard::Or { .. } => 1,
-            ClauseGuard::And { .. } => 2,
-
-            ClauseGuard::Equals { .. } | ClauseGuard::NotEquals { .. } => 3,
-
-            ClauseGuard::GtInt { .. }
-            | ClauseGuard::GtEqInt { .. }
-            | ClauseGuard::LtInt { .. }
-            | ClauseGuard::LtEqInt { .. }
-            | ClauseGuard::GtFloat { .. }
-            | ClauseGuard::GtEqFloat { .. }
-            | ClauseGuard::LtFloat { .. }
-            | ClauseGuard::LtEqFloat { .. } => 4,
+            ClauseGuard::Or { .. } => Some(BinOp::Or),
+            ClauseGuard::And { .. } => Some(BinOp::And),
+            ClauseGuard::Equals { .. } => Some(BinOp::Eq),
+            ClauseGuard::NotEquals { .. } => Some(BinOp::NotEq),
+            ClauseGuard::GtInt { .. } => Some(BinOp::GtInt),
+            ClauseGuard::GtEqInt { .. } => Some(BinOp::GtEqInt),
+            ClauseGuard::LtInt { .. } => Some(BinOp::LtInt),
+            ClauseGuard::LtEqInt { .. } => Some(BinOp::LtEqInt),
+            ClauseGuard::GtFloat { .. } => Some(BinOp::GtFloat),
+            ClauseGuard::GtEqFloat { .. } => Some(BinOp::GtEqFloat),
+            ClauseGuard::LtFloat { .. } => Some(BinOp::LtFloat),
+            ClauseGuard::LtEqFloat { .. } => Some(BinOp::LtEqFloat),
 
             ClauseGuard::Constant(_)
             | ClauseGuard::Var { .. }
             | ClauseGuard::Not { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
-            | ClauseGuard::ModuleSelect { .. } => 5,
+            | ClauseGuard::ModuleSelect { .. } => None,
         }
     }
 }
