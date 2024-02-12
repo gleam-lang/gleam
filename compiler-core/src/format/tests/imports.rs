@@ -52,17 +52,81 @@ import a
 #[test]
 fn import_groups_are_respected() {
     assert_format_rewrite!(
+        "import group_one/a
+import group_one/b
+// another group
+import group_two/wobble
+import group_two/wibble
+// yet another group
+import group_three/b
+import group_three/c
+import group_three/a
+",
+        "import group_one/a
+import group_one/b
+
+// another group
+import group_two/wibble
+import group_two/wobble
+
+// yet another group
+import group_three/a
+import group_three/b
+import group_three/c
+"
+    );
+}
+
+#[test]
+fn empty_lines_define_different_groups() {
+    assert_format_rewrite!(
         "import c
 @target(javascript)
 import b
-// Another group
-import a",
+
+import a
+
+import gleam/string
+import gleam/list",
         "@target(javascript)
 import b
 import c
 
-// Another group
 import a
+
+import gleam/list
+import gleam/string
+"
+    );
+}
+
+#[test]
+fn import_groups_with_empty_lines_and_comments() {
+    assert_format_rewrite!(
+        "import c
+@target(javascript)
+import b
+
+import a
+// third group
+import gleam/string
+import gleam/list
+
+import wobble
+import wibble
+",
+        "@target(javascript)
+import b
+import c
+
+import a
+
+// third group
+import gleam/list
+import gleam/string
+
+import wibble
+import wobble
 "
     );
 }
