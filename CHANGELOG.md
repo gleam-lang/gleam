@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Formatter
+
+- Improved the formatting of long case guards.
+
 ## v1.0.0-rc1 - 2024-02-10
 
 ### Language changes

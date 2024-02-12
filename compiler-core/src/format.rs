@@ -1024,19 +1024,19 @@ impl<'comments> Formatter<'comments> {
         left: &'a UntypedExpr,
         right: &'a UntypedExpr,
     ) -> Document<'a> {
-        self.binop_side(name, left)
+        self.bin_op_side(name, left)
             .append(break_("", " "))
             .append(name)
             .append(" ")
-            .append(self.binop_side(name, right))
+            .append(self.bin_op_side(name, right))
     }
 
-    fn binop_side<'a>(&mut self, operator: &'a BinOp, side: &'a UntypedExpr) -> Document<'a> {
+    fn bin_op_side<'a>(&mut self, operator: &'a BinOp, side: &'a UntypedExpr) -> Document<'a> {
         let side_doc = match side {
             UntypedExpr::String { value, .. } => self.bin_op_string(value),
             _ => self.expr(side),
         };
-        match side.binop_name() {
+        match side.bin_op_name() {
             // In case the other side is a binary operation as well and it can
             // be grouped together with the current binary operation, the two
             // docs are simply concatenated, so that they will end up in the
@@ -1050,7 +1050,7 @@ impl<'comments> Formatter<'comments> {
             _ => self.operator_side(
                 side_doc.group(),
                 operator.precedence(),
-                side.binop_precedence(),
+                side.bin_op_precedence(),
             ),
         }
     }
@@ -1066,7 +1066,7 @@ impl<'comments> Formatter<'comments> {
     fn pipeline<'a>(&mut self, expressions: &'a Vec1<UntypedExpr>) -> Document<'a> {
         let mut docs = Vec::with_capacity(expressions.len() * 3);
         let first = expressions.first();
-        let first_precedence = first.binop_precedence();
+        let first_precedence = first.bin_op_precedence();
         let first = self.expr(first).group();
         docs.push(self.operator_side(first, 5, first_precedence));
 
@@ -1091,7 +1091,7 @@ impl<'comments> Formatter<'comments> {
             };
             docs.push(line());
             docs.push(commented("|> ".to_doc(), comments));
-            docs.push(self.operator_side(doc, 4, expr.binop_precedence()));
+            docs.push(self.operator_side(doc, 4, expr.bin_op_precedence()));
         }
 
         docs.to_doc().force_break()
@@ -1391,7 +1391,11 @@ impl<'comments> Formatter<'comments> {
 
         let clause_doc = match &clause.guard {
             None => clause_doc,
-            Some(guard) => clause_doc.append(" if ").append(self.clause_guard(guard)),
+            Some(guard) => clause_doc
+                .append(break_("", " "))
+                .append("if ")
+                .append(self.clause_guard(guard).group())
+                .nest(INDENT),
         };
 
         let clause_doc = commented(clause_doc, comments);
@@ -1403,7 +1407,12 @@ impl<'comments> Formatter<'comments> {
         } else {
             lines(1).append(clause_doc)
         }
-        .append(" ->")
+        .append(match &clause.guard {
+            None => " ".to_doc(),
+            Some(_) => break_("", " "),
+        })
+        .group()
+        .append("->")
         .append(self.case_clause_value(&clause.then))
     }
 
@@ -1570,60 +1579,82 @@ impl<'comments> Formatter<'comments> {
 
     pub fn clause_guard_bin_op<'a>(
         &mut self,
-        name: &'a str,
-        name_precedence: u8,
+        name: &'a BinOp,
         left: &'a UntypedClauseGuard,
         right: &'a UntypedClauseGuard,
     ) -> Document<'a> {
-        let left_precedence = left.precedence();
-        let right_precedence = right.precedence();
-        let left = self.clause_guard(left);
-        let right = self.clause_guard(right);
-        self.operator_side(left, name_precedence, left_precedence)
-            .append(name)
-            .append(self.operator_side(right, name_precedence, right_precedence - 1))
+        self.clause_guard_bin_op_side(name, left, left.precedence())
+            .append(break_("", " "))
+            .append(name.to_doc())
+            .append(" ")
+            .append(self.clause_guard_bin_op_side(name, right, right.precedence() - 1))
+    }
+
+    fn clause_guard_bin_op_side<'a>(
+        &mut self,
+        name: &BinOp,
+        side: &'a UntypedClauseGuard,
+        // As opposed to `bin_op_side`, here we take the side precedence as an
+        // argument instead of computing it ourselves. That's because
+        // `clause_guard_bin_op` will reduce the precedence of any right side to
+        // make sure the formatter doesn't remove any needed curly bracket.
+        side_precedence: u8,
+    ) -> Document<'a> {
+        let side_doc = self.clause_guard(side);
+        match side.bin_op_name() {
+            // In case the other side is a binary operation as well and it can
+            // be grouped together with the current binary operation, the two
+            // docs are simply concatenated, so that they will end up in the
+            // same group and the formatter will try to keep those on a single
+            // line.
+            Some(side_name) if side_name.can_be_grouped_with(name) => {
+                self.operator_side(side_doc, name.precedence(), side_precedence)
+            }
+            // In case the binary operations cannot be grouped together the
+            // other side is treated as a group on its own so that it can be
+            // broken independently of other pieces of the binary operations
+            // chain.
+            _ => self.operator_side(side_doc.group(), name.precedence(), side_precedence),
+        }
     }
 
     fn clause_guard<'a>(&mut self, clause_guard: &'a UntypedClauseGuard) -> Document<'a> {
         match clause_guard {
             ClauseGuard::And { left, right, .. } => {
-                self.clause_guard_bin_op(" && ", clause_guard.precedence(), left, right)
+                self.clause_guard_bin_op(&BinOp::And, left, right)
             }
             ClauseGuard::Or { left, right, .. } => {
-                self.clause_guard_bin_op(" || ", clause_guard.precedence(), left, right)
+                self.clause_guard_bin_op(&BinOp::Or, left, right)
             }
             ClauseGuard::Equals { left, right, .. } => {
-                self.clause_guard_bin_op(" == ", clause_guard.precedence(), left, right)
+                self.clause_guard_bin_op(&BinOp::Eq, left, right)
             }
-
             ClauseGuard::NotEquals { left, right, .. } => {
-                self.clause_guard_bin_op(" != ", clause_guard.precedence(), left, right)
+                self.clause_guard_bin_op(&BinOp::NotEq, left, right)
             }
             ClauseGuard::GtInt { left, right, .. } => {
-                self.clause_guard_bin_op(" > ", clause_guard.precedence(), left, right)
+                self.clause_guard_bin_op(&BinOp::GtInt, left, right)
             }
-
             ClauseGuard::GtEqInt { left, right, .. } => {
-                self.clause_guard_bin_op(" >= ", clause_guard.precedence(), left, right)
+                self.clause_guard_bin_op(&BinOp::GtEqInt, left, right)
             }
             ClauseGuard::LtInt { left, right, .. } => {
-                self.clause_guard_bin_op(" < ", clause_guard.precedence(), left, right)
+                self.clause_guard_bin_op(&BinOp::LtInt, left, right)
             }
-
             ClauseGuard::LtEqInt { left, right, .. } => {
-                self.clause_guard_bin_op(" <= ", clause_guard.precedence(), left, right)
+                self.clause_guard_bin_op(&BinOp::LtEqInt, left, right)
             }
             ClauseGuard::GtFloat { left, right, .. } => {
-                self.clause_guard_bin_op(" >. ", clause_guard.precedence(), left, right)
+                self.clause_guard_bin_op(&BinOp::GtFloat, left, right)
             }
             ClauseGuard::GtEqFloat { left, right, .. } => {
-                self.clause_guard_bin_op(" >=. ", clause_guard.precedence(), left, right)
+                self.clause_guard_bin_op(&BinOp::GtEqFloat, left, right)
             }
             ClauseGuard::LtFloat { left, right, .. } => {
-                self.clause_guard_bin_op(" <. ", clause_guard.precedence(), left, right)
+                self.clause_guard_bin_op(&BinOp::LtFloat, left, right)
             }
             ClauseGuard::LtEqFloat { left, right, .. } => {
-                self.clause_guard_bin_op(" <=. ", clause_guard.precedence(), left, right)
+                self.clause_guard_bin_op(&BinOp::LtEqFloat, left, right)
             }
 
             ClauseGuard::Var { name, .. } => name.to_doc(),

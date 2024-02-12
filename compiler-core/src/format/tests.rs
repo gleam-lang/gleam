@@ -4643,9 +4643,9 @@ fn do_not_remove_required_braces_case_guard() {
   let is_confirmed = False
   let is_admin = True
   case is_enabled, is_confirmed, is_admin {
-    is_enabled, is_confirmed, is_admin if is_enabled && {
-      is_confirmed || is_admin
-    } -> Nil
+    is_enabled, is_confirmed, is_admin
+      if is_enabled && { is_confirmed || is_admin }
+    -> Nil
     _, _, _ -> Nil
   }
 }
@@ -4706,8 +4706,9 @@ fn remove_braces_case_guard() {
   let is_confirmed = False
   let is_admin = True
   case is_enabled, is_confirmed, is_admin {
-    is_enabled, is_confirmed, is_admin if is_enabled && is_confirmed || is_admin ->
-      Nil
+    is_enabled, is_confirmed, is_admin
+      if is_enabled && is_confirmed || is_admin
+    -> Nil
     _, _, _ -> Nil
   }
 }
