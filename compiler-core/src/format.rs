@@ -150,21 +150,24 @@ impl<'comments> Formatter<'comments> {
 
     pub(crate) fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
         let mut documents = vec![];
-        let mut previous_was_import = false;
 
-        for definition in &module.definitions {
-            let is_import = definition.definition.is_import();
-
-            if documents.is_empty() {
-                // We don't insert empty lines before the first definition
-            } else if previous_was_import && is_import {
-                documents.push(lines(1));
+        // Here we take consecutive groups of imports so that they can be sorted
+        // alphabetically.
+        for (is_import_group, definitions) in &module
+            .definitions
+            .iter()
+            .group_by(|definition| definition.definition.is_import())
+        {
+            if is_import_group {
+                documents.append(&mut self.imports(definitions.collect_vec()));
             } else {
-                documents.push(lines(2));
-            };
-
-            documents.push(self.targeted_definition(definition));
-            previous_was_import = is_import;
+                for definition in definitions {
+                    if !documents.is_empty() {
+                        documents.push(lines(2));
+                    }
+                    documents.push(self.targeted_definition(definition));
+                }
+            }
         }
 
         let definitions = concat(documents);
@@ -202,6 +205,75 @@ impl<'comments> Formatter<'comments> {
             .filter(|doc| !doc.is_empty());
 
         join(non_empty, line()).append(line())
+    }
+
+    /// Separates the imports in groups delimited by comments and sorts each
+    /// group on its own.
+    ///
+    fn imports<'a>(&mut self, imports: Vec<&'a TargetedDefinition>) -> Vec<Document<'a>> {
+        // The formatter needs to play nicely with import groups defined by the
+        // programmer. If one puts a comment before an import then that's a clue
+        // for the formatter that it has run into a gorup of related imports.
+        //
+        // So we can't just sort `imports` and format each one, we have to be a
+        // bit smarter and see if each import is preceded by a comment.
+        // Once we find a comment we know we're done with the current import
+        // group and a new one has started.
+        //
+        // ```gleam
+        // // This is an import group.
+        // import gleam/int
+        // import gleam/string
+        //
+        // // This marks the beginning of a new import group that can't
+        // // be mushed together with the previous one!
+        // import wibble
+        // import wobble
+        // ```
+        let mut documents = vec![];
+        let mut current_group = vec![];
+
+        for import in imports {
+            // If the import is preceded by a comment then we want to put it
+            // into a new group and we can print the current one.
+            if !current_group.is_empty() && self.any_comments(import.definition.location().start) {
+                documents.append(&mut self.sorted_import_group(&mut current_group));
+                documents.push(lines(2));
+            }
+            current_group.push(import);
+        }
+
+        // We don't have to forget about the last import group!
+        if !current_group.is_empty() {
+            documents.append(&mut self.sorted_import_group(&mut current_group));
+        }
+
+        documents
+    }
+
+    /// Prints the imports as a single sorted group of import statements
+    /// draining the given vector.
+    ///
+    fn sorted_import_group<'a>(
+        &mut self,
+        imports: &mut Vec<&'a TargetedDefinition>,
+    ) -> Vec<Document<'a>> {
+        let mut documents = Vec::with_capacity(imports.len() * 2);
+        imports.sort_by(|one, other| match (&one.definition, &other.definition) {
+            (Definition::Import(one), Definition::Import(other)) => one.cmp(other),
+            // It shouldn't really be possible for a non import to be here so
+            // we just return a default value.
+            _ => std::cmp::Ordering::Equal,
+        });
+
+        for import in imports.iter() {
+            if !documents.is_empty() {
+                documents.push(lines(1))
+            }
+            documents.push(self.targeted_definition(import));
+        }
+        imports.clear();
+        documents
     }
 
     fn definition<'a>(&mut self, statement: &'a UntypedDefinition) -> Document<'a> {
