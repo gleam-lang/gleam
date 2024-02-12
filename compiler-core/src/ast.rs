@@ -16,6 +16,7 @@ use crate::type_::expression::Implementations;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
+use std::cmp::Ordering;
 use std::sync::Arc;
 
 use ecow::EcoString;
@@ -419,6 +420,20 @@ impl<T> Import<T> {
 
     pub(crate) fn alias_location(&self) -> Option<SrcSpan> {
         self.as_name.as_ref().map(|(_, location)| *location)
+    }
+
+    pub(crate) fn cmp(&self, other: &Self) -> Ordering {
+        let is_gleam = self.module.starts_with("gleam/");
+        let other_is_gleam = other.module.starts_with("gleam/");
+        // Gleam modules take precedence over non-gleam modules.
+        if is_gleam && !other_is_gleam {
+            std::cmp::Ordering::Less
+        } else if !is_gleam && other_is_gleam {
+            std::cmp::Ordering::Greater
+        } else {
+            // Otherwise imports are just sorted alphabetically.
+            self.module.cmp(&other.module)
+        }
     }
 }
 
