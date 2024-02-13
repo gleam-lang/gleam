@@ -1993,6 +1993,7 @@ fn contains_todo_false() {
 fn assert_suitable_main_function_not_module_function() {
     let value = ValueConstructor {
         public: true,
+        internal: false,
         deprecation: Deprecation::NotDeprecated,
         type_: fn_(vec![], int()),
         variant: ValueConstructorVariant::ModuleConstant {
@@ -2017,6 +2018,7 @@ fn assert_suitable_main_function_not_module_function() {
 fn assert_suitable_main_function_wrong_arity() {
     let value = ValueConstructor {
         public: true,
+        internal: false,
         deprecation: Deprecation::NotDeprecated,
         type_: fn_(vec![], int()),
         variant: ValueConstructorVariant::ModuleFn {
@@ -2040,6 +2042,7 @@ fn assert_suitable_main_function_wrong_arity() {
 fn assert_suitable_main_function_ok() {
     let value = ValueConstructor {
         public: true,
+        internal: false,
         deprecation: Deprecation::NotDeprecated,
         type_: fn_(vec![], int()),
         variant: ValueConstructorVariant::ModuleFn {
@@ -2063,6 +2066,7 @@ fn assert_suitable_main_function_ok() {
 fn assert_suitable_main_function_erlang_not_supported() {
     let value = ValueConstructor {
         public: true,
+        internal: false,
         deprecation: Deprecation::NotDeprecated,
         type_: fn_(vec![], int()),
         variant: ValueConstructorVariant::ModuleFn {
@@ -2086,6 +2090,7 @@ fn assert_suitable_main_function_erlang_not_supported() {
 fn assert_suitable_main_function_javascript_not_supported() {
     let value = ValueConstructor {
         public: true,
+        internal: false,
         deprecation: Deprecation::NotDeprecated,
         type_: fn_(vec![], int()),
         variant: ValueConstructorVariant::ModuleFn {
