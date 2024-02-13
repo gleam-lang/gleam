@@ -22,11 +22,11 @@ pub fn command(packages: Vec<String>) -> Result<()> {
     for package_to_remove in packages.iter() {
         #[allow(clippy::indexing_slicing)]
         let _ = toml["dependencies"]
-            .as_table_mut()
+            .as_table_like_mut()
             .and_then(|deps| deps.remove(package_to_remove));
         #[allow(clippy::indexing_slicing)]
         let _ = toml["dev-dependencies"]
-            .as_table_mut()
+            .as_table_like_mut()
             .and_then(|deps| deps.remove(package_to_remove));
     }
 
