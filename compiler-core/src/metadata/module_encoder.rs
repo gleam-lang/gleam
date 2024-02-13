@@ -129,7 +129,8 @@ impl<'a> ModuleEncoder<'a> {
                 .reborrow()
                 .init_type_parameters_ids(data.type_parameters_ids.len() as u32);
             for (i, id) in data.type_parameters_ids.iter().enumerate() {
-                builder.set(i as u32, *id as u16);
+                let id = self.get_or_insert_type_var_id(*id);
+                builder.set(i as u32, id as u16);
             }
         }
         let mut builder = builder.init_variants(data.variants.len() as u32);
@@ -477,6 +478,11 @@ impl<'a> ModuleEncoder<'a> {
     }
 
     fn build_type_var(&mut self, mut builder: schema::type_::var::Builder<'_>, id: u64) {
+        let serialised_id = self.get_or_insert_type_var_id(id);
+        builder.set_id(serialised_id);
+    }
+
+    fn get_or_insert_type_var_id(&mut self, id: u64) -> u64 {
         let serialised_id = match self.type_var_id_map.get(&id) {
             Some(&id) => id,
             None => {
@@ -486,7 +492,7 @@ impl<'a> ModuleEncoder<'a> {
                 new_id
             }
         };
-        builder.set_id(serialised_id);
+        serialised_id
     }
 
     fn build_implementations(

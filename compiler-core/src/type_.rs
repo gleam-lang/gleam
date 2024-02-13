@@ -539,8 +539,6 @@ impl TypeVariantConstructors {
         type_parameters: &[EcoString],
         hydrator: Hydrator,
     ) -> TypeVariantConstructors {
-        let error =
-            "The hydrator should not store any types other than generic type variables here";
         let named_types = hydrator.named_type_variables();
         let type_parameters = type_parameters
             .iter()
@@ -548,6 +546,7 @@ impl TypeVariantConstructors {
                 let t = named_types
                     .get(p)
                     .expect("Type parameter not found in hydrator");
+                let error = "Hydrator must not store non generic types here";
                 match t.type_.as_ref() {
                     Type::Var { type_: typ } => match typ.borrow().deref() {
                         TypeVar::Generic { id } => *id,

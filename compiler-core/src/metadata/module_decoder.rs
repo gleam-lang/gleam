@@ -168,14 +168,16 @@ impl ModuleDecoder {
             self,
             type_variant_constructor_type_parameter_id
         );
-        Ok(TypeVariantConstructors {
+        let data = TypeVariantConstructors {
             variants,
             type_parameters_ids,
-        })
+        };
+        Ok(data)
     }
 
     fn type_variant_constructor_type_parameter_id(&mut self, i: &u16) -> Result<u64> {
-        Ok(self.get_or_insert_type_var_id(*i as u64))
+        let id = self.get_or_insert_type_var_id(*i as u64);
+        Ok(id)
     }
 
     fn type_value_constructor(
