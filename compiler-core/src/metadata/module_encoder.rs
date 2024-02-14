@@ -483,7 +483,7 @@ impl<'a> ModuleEncoder<'a> {
     }
 
     fn get_or_insert_type_var_id(&mut self, id: u64) -> u64 {
-        let serialised_id = match self.type_var_id_map.get(&id) {
+        match self.type_var_id_map.get(&id) {
             Some(&id) => id,
             None => {
                 let new_id = self.next_type_var_id;
@@ -491,8 +491,7 @@ impl<'a> ModuleEncoder<'a> {
                 let _ = self.type_var_id_map.insert(id, new_id);
                 new_id
             }
-        };
-        serialised_id
+        }
     }
 
     fn build_implementations(
