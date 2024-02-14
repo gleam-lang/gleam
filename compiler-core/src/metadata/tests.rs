@@ -10,7 +10,8 @@ use crate::{
     build::Origin,
     type_::{
         self, expression::Implementations, Deprecation, ModuleInterface, Type, TypeConstructor,
-        TypeValueConstructor, TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
+        TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
+        ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
 };
@@ -1108,4 +1109,62 @@ fn module_fn_value_with_external_implementations() {
     };
 
     assert_eq!(roundtrip(&module), module);
+}
+
+// https://github.com/gleam-lang/gleam/issues/2599
+#[test]
+fn type_variable_ids_in_constructors_are_shared() {
+    let module = ModuleInterface {
+        contains_todo: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b/c".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::from([(
+            "SomeType".into(),
+            TypeVariantConstructors {
+                type_parameters_ids: vec![4, 5, 6],
+                variants: vec![TypeValueConstructor {
+                    name: "One".into(),
+                    parameters: vec![
+                        TypeValueConstructorField {
+                            type_: type_::generic_var(6),
+                        },
+                        TypeValueConstructorField {
+                            type_: type_::int(),
+                        },
+                        TypeValueConstructorField {
+                            type_: type_::tuple(vec![type_::generic_var(4), type_::generic_var(5)]),
+                        },
+                    ],
+                }],
+            },
+        )]),
+        unused_imports: Vec::new(),
+        accessors: HashMap::new(),
+        values: [].into(),
+    };
+
+    let expected = HashMap::from([(
+        "SomeType".into(),
+        TypeVariantConstructors {
+            type_parameters_ids: vec![1, 2, 0],
+            variants: vec![TypeValueConstructor {
+                name: "One".into(),
+                parameters: vec![
+                    TypeValueConstructorField {
+                        type_: type_::generic_var(0),
+                    },
+                    TypeValueConstructorField {
+                        type_: type_::int(),
+                    },
+                    TypeValueConstructorField {
+                        type_: type_::tuple(vec![type_::generic_var(1), type_::generic_var(2)]),
+                    },
+                ],
+            }],
+        },
+    )]);
+
+    assert_eq!(roundtrip(&module).types_value_constructors, expected);
 }
