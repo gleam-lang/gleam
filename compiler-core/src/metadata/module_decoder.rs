@@ -144,14 +144,16 @@ impl ModuleDecoder {
     }
 
     fn get_or_insert_type_var_id(&mut self, id: u64) -> u64 {
-        match self.type_var_id_map.get(&id) {
+        let serialised_id = match self.type_var_id_map.get(&id) {
             Some(&id) => id,
             None => {
                 let new_id = self.ids.next();
                 let _ = self.type_var_id_map.insert(id, new_id);
                 new_id
             }
-        }
+        };
+        println!("serialise: {id} -> {serialised_id}");
+        serialised_id
     }
 
     fn type_variants_constructors(
@@ -168,16 +170,14 @@ impl ModuleDecoder {
             self,
             type_variant_constructor_type_parameter_id
         );
-        let data = TypeVariantConstructors {
+        Ok(TypeVariantConstructors {
             variants,
             type_parameters_ids,
-        };
-        Ok(data)
+        })
     }
 
     fn type_variant_constructor_type_parameter_id(&mut self, i: &u16) -> Result<u64> {
-        let id = self.get_or_insert_type_var_id(*i as u64);
-        Ok(id)
+        Ok(self.get_or_insert_type_var_id(*i as u64))
     }
 
     fn type_value_constructor(
