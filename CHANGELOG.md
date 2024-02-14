@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Bug fixes
+
+- Fixed a bug where the exhaustiveness checker could crash for some generic
+  types.
+
 ### Formatter
 
 - Improved the formatting of long case guards.
