@@ -155,8 +155,8 @@ fn main() {
   let result = list.reverse(x)
 }
     "#,
-        Position::new(5, 0),
-        Position::new(5, 30)
+        Position::new(5, 28),
+        Position::new(5, 29)
     );
 }
 
@@ -173,8 +173,8 @@ fn main() {
   let result2 = list.reverse(y)
 }
         "#,
-        Position::new(7, 0),
-        Position::new(7, 32)
+        Position::new(7, 29),
+        Position::new(7, 30)
     );
 }
 
@@ -192,8 +192,8 @@ fn main() {
   |> list.map(fn(x) { x * 2})
 }
         "#,
-        Position::new(6, 0),
-        Position::new(6, 4)
+        Position::new(6, 2),
+        Position::new(6, 3)
     );
 }
 
@@ -208,8 +208,8 @@ fn main() {
   let y = x + 1
 }
         "#,
-        Position::new(5, 0),
-        Position::new(5, 15)
+        Position::new(5, 10),
+        Position::new(5, 11)
     );
 }
 
@@ -224,8 +224,8 @@ fn main() {
   #(1, x, 3)
 }
         "#,
-        Position::new(5, 0),
-        Position::new(5, 15)
+        Position::new(5, 7),
+        Position::new(5, 8)
     );
 }
 #[test]
@@ -239,8 +239,8 @@ fn main() {
   list.reverse(x)
 }
         "#,
-        Position::new(5, 0),
-        Position::new(5, 17)
+        Position::new(5, 15),
+        Position::new(5, 16)
     );
 }
 
@@ -257,8 +257,8 @@ fn main() {
   }
 }
         "#,
-        Position::new(6, 0),
-        Position::new(6, 19)
+        Position::new(6, 17),
+        Position::new(6, 18)
     );
 }
 
@@ -273,8 +273,8 @@ fn main() {
   { list.reverse(x) }
 }
         "#,
-        Position::new(5, 0),
-        Position::new(5, 21)
+        Position::new(5, 17),
+        Position::new(5, 18)
     );
 }
 
@@ -289,8 +289,8 @@ fn main() {
   let y = [1, x, 3]
 }
         "#,
-        Position::new(5, 0),
-        Position::new(5, 20)
+        Position::new(5, 14),
+        Position::new(5, 15)
     );
 }
 
@@ -306,8 +306,8 @@ fn main() {
   list.map([1, 2, 3], func)
 }
         "#,
-        Position::new(5, 0),
-        Position::new(5, 30)
+        Position::new(5, 25),
+        Position::new(5, 26)
     );
 }
 
@@ -322,8 +322,8 @@ fn main() {
   let z = #(y, #(3, 4, 5))
 }
         "#,
-        Position::new(5, 0),
-        Position::new(5, 30)
+        Position::new(5, 12),
+        Position::new(5, 13)
     );
 }
 
@@ -338,8 +338,8 @@ fn main() {
   let y = x + 3
 }
         "#,
-        Position::new(5, 0),
-        Position::new(5, 15)
+        Position::new(5, 10),
+        Position::new(5, 11)
     );
 }
 
@@ -354,8 +354,8 @@ fn main() {
   let z = list.reverse(q)
 }
         "#,
-        Position::new(5, 0),
-        Position::new(5, 25)
+        Position::new(5, 23),
+        Position::new(5, 24)
     );
 }
 
@@ -371,7 +371,7 @@ fn main() {
   let z = y + 4
 }
         "#,
-        Position::new(6, 0),
-        Position::new(6, 25)
+        Position::new(6, 10),
+        Position::new(6, 11)
     );
 }

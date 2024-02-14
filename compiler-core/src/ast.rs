@@ -1710,9 +1710,7 @@ pub type UntypedAssignment = Assignment<(), UntypedExpr>;
 
 impl TypedAssignment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.pattern
-            .find_node(byte_index)
-            .or_else(|| self.value.find_node(byte_index))
+        self.value.find_node(byte_index)
     }
 
     pub fn type_(&self) -> Arc<Type> {

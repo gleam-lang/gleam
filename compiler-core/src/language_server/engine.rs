@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, SrcSpan, Statement, TypedDefinition,
-        TypedExpr, TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, Statement, TypedDefinition, TypedExpr,
+        TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -250,7 +250,7 @@ where
             };
 
             code_action_unused_imports(module, &params, &mut actions);
-            inline_var_handler::inline_variable(module, &params, &mut actions);
+            inline_var_handler::inline_local_variable(module, &params, &mut actions);
 
             Ok(if actions.is_empty() {
                 None
@@ -514,13 +514,6 @@ fn value_completion(
 fn get_import(statement: &TypedDefinition) -> Option<&Import<EcoString>> {
     match statement {
         Definition::Import(import) => Some(import),
-        _ => None,
-    }
-}
-
-fn get_function(statement: &TypedDefinition) -> Option<&Function<Arc<Type>, TypedExpr>> {
-    match statement {
-        Definition::Function(function) => Some(function),
         _ => None,
     }
 }
