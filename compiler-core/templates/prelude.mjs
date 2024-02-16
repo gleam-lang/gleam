@@ -133,9 +133,6 @@ export function toBitArray(segments) {
   return new BitArray(new Uint8Array(view.buffer));
 }
 
-// TODO: remove after next version
-export const toBitString = toBitArray;
-
 // Derived from this answer https://stackoverflow.com/questions/8482309/converting-javascript-integer-to-byte-array-and-back
 export function sizedInt(int, size) {
   let value = int;
@@ -143,7 +140,8 @@ export function sizedInt(int, size) {
     return new Uint8Array();
   }
   if (size % 8 != 0) {
-    throw "Needs to be a byte size" + size;
+    const msg = `Bit arrays must be byte aligned on JavaScript, got size of ${size} bits`;
+    throw new globalThis.Error(msg);
   }
   const byteArray = new Uint8Array(size / 8);
 
