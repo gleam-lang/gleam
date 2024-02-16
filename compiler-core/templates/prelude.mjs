@@ -13,7 +13,10 @@ export class CustomType {
 export class List {
   static fromArray(array, tail) {
     let t = tail || new Empty();
-    return array.reduceRight((xs, x) => new NonEmpty(x, xs), t);
+    for (let i = array.length - 1; i >= 0; --i) {
+      t = new NonEmpty(array[i], t);
+    }
+    return t;
   }
 
   [Symbol.iterator]() {
@@ -47,6 +50,10 @@ export class List {
     for (let _ of this) length++;
     return length;
   }
+}
+
+export function prepend(element, tail) {
+  return new NonEmpty(element, tail)
 }
 
 export function toList(elements, tail) {

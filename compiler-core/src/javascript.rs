@@ -88,6 +88,10 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "toList", None);
         };
 
+        if self.tracker.prepend_used {
+            self.register_prelude_usage(&mut imports, "prepend", Some("$prepend"));
+        };
+
         if self.tracker.custom_type_used {
             self.register_prelude_usage(&mut imports, "CustomType", Some("$CustomType"));
         };
@@ -673,6 +677,7 @@ fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
 pub(crate) struct UsageTracker {
     pub ok_used: bool,
     pub list_used: bool,
+    pub prepend_used: bool,
     pub error_used: bool,
     pub int_remainder_used: bool,
     pub make_error_used: bool,
