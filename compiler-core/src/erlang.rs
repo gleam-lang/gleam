@@ -166,7 +166,11 @@ fn module_document<'a>(
         let mut export_anyway = false;
 
         if module.definitions.iter().any(|def| match def {
-            Definition::ModuleConstant(ModuleConstant { value, .. }) => value.depends_on(s.clone()),
+            Definition::ModuleConstant(ModuleConstant {
+                value,
+                public: true,
+                ..
+            }) => value.depends_on(s.clone()),
             _ => false,
         }) {
             export_anyway = true;
