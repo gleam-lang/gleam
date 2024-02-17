@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use super::*;
 use crate::type_::{FieldMap, HasType};
 
@@ -69,6 +71,30 @@ impl TypedConstant {
             Constant::List { typ, .. }
             | Constant::Record { typ, .. }
             | Constant::Var { typ, .. } => typ.clone(),
+        }
+    }
+
+    pub fn depends_on(&self, def: TypedDefinition) -> bool {
+        match (self, def.clone()) {
+            (
+                TypedConstant::Var {
+                    name, constructor, ..
+                },
+                Definition::Function(Function { name: fn_name, .. }),
+            ) if fn_name == *name => {
+                if let Some(constructor) = constructor.clone() {
+                    matches!(*constructor.deref().type_, Type::Fn { .. })
+                } else {
+                    false
+                }
+            }
+
+            (TypedConstant::Record { args, .. }, _) => args
+                .iter()
+                .map(|arg| arg.value.clone())
+                .any(|arg| arg.depends_on(def.clone())),
+
+            _ => false,
         }
     }
 }

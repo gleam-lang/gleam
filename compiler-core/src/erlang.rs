@@ -163,12 +163,22 @@ fn module_document<'a>(
         .append(line());
 
     for s in &module.definitions {
+        let mut export_anyway = false;
+
+        if module.definitions.iter().any(|def| match def {
+            Definition::ModuleConstant(ModuleConstant { value, .. }) => value.depends_on(s.clone()),
+            _ => false,
+        }) {
+            export_anyway = true;
+        }
+
         register_imports(
             s,
             &mut exports,
             &mut type_exports,
             &mut type_defs,
             &module.name,
+            export_anyway,
         );
     }
 
@@ -227,6 +237,7 @@ fn register_imports(
     type_exports: &mut Vec<Document<'_>>,
     type_defs: &mut Vec<Document<'_>>,
     module_name: &str,
+    export_anyway: bool,
 ) {
     match s {
         Definition::Function(Function {
@@ -240,6 +251,15 @@ fn register_imports(
             if implementations.supports(Target::Erlang) {
                 exports.push(atom_string(name.to_string()).append("/").append(args.len()))
             }
+        }
+
+        Definition::Function(Function {
+            public: false,
+            name,
+            arguments: args,
+            ..
+        }) if export_anyway => {
+            exports.push(atom_string(name.to_string()).append("/").append(args.len()))
         }
 
         Definition::CustomType(CustomType {
