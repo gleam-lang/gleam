@@ -1363,9 +1363,9 @@ fn prepend<'a, I: IntoIterator<Item = Output<'a>>>(elements: I, tail: Document<'
 where
     I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
 {
-    elements.into_iter().rev().fold(Ok(tail), |tail, element| {
-        let args = [element, tail];
-        Ok(docvec!["$prepend", call_arguments(args)?])
+    elements.into_iter().rev().try_fold(tail, |tail, element| {
+        let args = call_arguments([element, Ok(tail)])?;
+        Ok(docvec!["$prepend", args])
     })
 }
 
