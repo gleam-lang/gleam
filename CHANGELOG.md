@@ -6,6 +6,8 @@
 
 - Fixed a bug where the exhaustiveness checker could crash for some generic
   types.
+- Fixed a bug where using a private function in a public constant definition 
+  would result in a runtime error on the erlang target.
 
 ### Formatter
 
