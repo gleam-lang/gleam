@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/erlang/tests/consts.rs
+expression: "\n          fn identity(a) {\n            a\n          }\n\n          pub type Mapper(b) {\n            Mapper(fn(b) -> b)\n          }\n\n          pub const id_mapper = Mapper(identity)\n        "
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([identity/1]).
+-export_type([mapper/1]).
+
+-type mapper(I) :: {mapper, fun((I) -> I)}.
+
+-spec identity(J) -> J.
+identity(A) ->
+    A.
+
