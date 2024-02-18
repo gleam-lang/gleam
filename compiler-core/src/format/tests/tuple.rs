@@ -51,3 +51,42 @@ fn tuple_with_last_splittable_arg() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2607
+#[test]
+fn inner_items_are_not_indented_after_comment() {
+    assert_format!(
+        r#"fn main() {
+  #(
+    // Don't indent simple expressions following a comment
+    1,
+    2,
+  )
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  #(
+    // Don't indent binary operations following a comment
+    "Should we break up?" <> " (Y/n)",
+    "y",
+  )
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  #(
+    // Keep nesting even if there is a comment here
+    wobble
+    |> fun
+    |> fun2,
+    wabble,
+  )
+}
+"#
+    );
+}

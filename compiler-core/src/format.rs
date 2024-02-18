@@ -920,9 +920,14 @@ impl<'comments> Formatter<'comments> {
                 // If there's more than one item in the tuple and there's a
                 // pipeline or long binary chain, we want to indent those to
                 // make it easier to tell where one item ends and the other
-                // starts.
+                // starts, except if they are preceded by a comment.
+                let indent = if self_.any_comments(e.location().start) {
+                    0
+                } else {
+                    INDENT
+                };
                 if elements.len() > 1 && (e.is_binop() || e.is_pipeline()) {
-                    self_.expr(e).group().nest(INDENT)
+                    self_.expr(e).group().nest(indent)
                 } else {
                     self_.expr(e).group()
                 }
