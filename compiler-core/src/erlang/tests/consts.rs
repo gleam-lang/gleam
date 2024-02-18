@@ -64,3 +64,54 @@ pub fn main(){
 }"#
     );
 }
+
+#[test]
+fn pub_const_equal_to_private_function() {
+    assert_erl!(
+        r#"
+          fn identity(a) {
+            a
+          }
+
+          pub const id = identity
+        "#
+    );
+}
+
+#[test]
+fn pub_const_equal_to_record_with_private_function_field() {
+    assert_erl!(
+        r#"
+          fn identity(a) {
+            a
+          }
+
+          pub type Mapper(b) {
+            Mapper(fn(b) -> b)
+          }
+
+          pub const id_mapper = Mapper(identity)
+        "#
+    );
+}
+
+#[test]
+fn pub_const_equal_to_record_with_nested_private_function_field() {
+    assert_erl!(
+        r#"
+          fn identity(a) {
+            a
+          }
+
+          pub type Mapper(b) {
+            Mapper(fn(b) -> b)
+          }
+
+          pub type Funcs(b) {
+            Funcs(mapper: Mapper(b))
+          }
+
+          pub const id_mapper = Funcs(Mapper(identity))
+        "#
+    );
+}
