@@ -47,3 +47,16 @@ fn operators_in_guard() {
 "#
     );
 }
+
+#[test]
+fn a_comment_before_a_guard_doesnt_force_it_to_break() {
+    assert_format!(
+        r#"pub fn main() {
+  case wibble {
+    // Apparently this comment breaks everything
+    _ if wobble -> Ok(state.newest)
+  }
+}
+"#
+    );
+}

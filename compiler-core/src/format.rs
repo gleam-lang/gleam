@@ -1398,7 +1398,10 @@ impl<'comments> Formatter<'comments> {
                 .nest(INDENT),
         };
 
-        let clause_doc = commented(clause_doc, comments);
+        let clause_doc = match printed_comments(comments, false) {
+            Some(comments) => comments.append(line()).append(clause_doc),
+            None => clause_doc,
+        };
 
         if index == 0 {
             clause_doc
