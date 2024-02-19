@@ -115,3 +115,107 @@ fn pub_const_equal_to_record_with_nested_private_function_field() {
         "#
     );
 }
+
+#[test]
+fn use_unqualified_pub_const_equal_to_private_function() {
+    assert_erl!(
+        (
+            "package",
+            "mappers",
+            r#"
+              fn identity(a) {
+                a
+              }
+
+              pub const id = identity
+        "#
+        ),
+        r#"
+          import mappers.{ id } as _
+
+          pub fn main() {
+            id
+          }
+        "#
+    );
+}
+
+#[test]
+fn use_qualified_pub_const_equal_to_private_function() {
+    assert_erl!(
+        (
+            "package",
+            "mappers",
+            r#"
+              fn identity(a) {
+                a
+              }
+
+              pub const id = identity
+        "#
+        ),
+        r#"
+          import mappers
+
+          pub fn main() {
+            mappers.id
+          }
+        "#
+    );
+}
+
+#[test]
+fn use_unqualified_pub_const_equal_to_record_with_private_function_field() {
+    assert_erl!(
+        (
+            "package",
+            "mappers",
+            r#"
+              fn identity(a) {
+                a
+              }
+
+              pub type Mapper(b) {
+                Mapper(fn(b) -> b)
+              }
+
+              pub const id_mapper = Mapper(identity)
+        "#
+        ),
+        r#"
+          import mappers.{ id_mapper } as _
+
+          pub fn main() {
+            id_mapper
+          }
+        "#
+    );
+}
+
+#[test]
+fn use_qualified_pub_const_equal_to_record_with_private_function_field() {
+    assert_erl!(
+        (
+            "package",
+            "mappers",
+            r#"
+              fn identity(a) {
+                a
+              }
+
+              pub type Mapper(b) {
+                Mapper(fn(b) -> b)
+              }
+
+              pub const id_mapper = Mapper(identity)
+        "#
+        ),
+        r#"
+          import mappers
+
+          pub fn main() {
+            mappers.id_mapper
+          }
+        "#
+    );
+}
