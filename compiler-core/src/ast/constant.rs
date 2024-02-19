@@ -74,27 +74,26 @@ impl TypedConstant {
         }
     }
 
-    pub fn depends_on(&self, def: TypedDefinition) -> bool {
-        match (self, def.clone()) {
-            (
-                TypedConstant::Var {
-                    name, constructor, ..
+    pub fn private_fn_deps(&self) -> Vec<EcoString> {
+        match self {
+            TypedConstant::Var {
+                name, constructor, ..
+            } => match constructor.as_deref() {
+                Some(ValueConstructor { type_, .. }) => match type_.deref() {
+                    Type::Fn { .. } => {
+                        vec![name.clone()]
+                    }
+                    _ => vec![],
                 },
-                Definition::Function(Function { name: fn_name, .. }),
-            ) if fn_name == *name => {
-                if let Some(constructor) = constructor.clone() {
-                    matches!(*constructor.deref().type_, Type::Fn { .. })
-                } else {
-                    false
-                }
-            }
+                _ => vec![],
+            },
 
-            (TypedConstant::Record { args, .. }, _) => args
+            TypedConstant::Record { args, .. } => args
                 .iter()
-                .map(|arg| arg.value.clone())
-                .any(|arg| arg.depends_on(def.clone())),
+                .flat_map(|arg| arg.value.private_fn_deps())
+                .collect(),
 
-            _ => false,
+            _ => vec![],
         }
     }
 }
