@@ -418,22 +418,12 @@ impl<T> Import<T> {
         }
     }
 
-    pub(crate) fn alias_location(&self) -> Option<SrcSpan> {
-        self.as_name.as_ref().map(|(_, location)| *location)
+    pub(crate) fn compare(&self, other: &Self) -> Ordering {
+        self.module.cmp(&other.module)
     }
 
-    pub(crate) fn cmp(&self, other: &Self) -> Ordering {
-        let is_gleam = self.module.starts_with("gleam/");
-        let other_is_gleam = other.module.starts_with("gleam/");
-        // Gleam modules take precedence over non-gleam modules.
-        if is_gleam && !other_is_gleam {
-            std::cmp::Ordering::Less
-        } else if !is_gleam && other_is_gleam {
-            std::cmp::Ordering::Greater
-        } else {
-            // Otherwise imports are just sorted alphabetically.
-            self.module.cmp(&other.module)
-        }
+    pub(crate) fn alias_location(&self) -> Option<SrcSpan> {
+        self.as_name.as_ref().map(|(_, location)| *location)
     }
 }
 

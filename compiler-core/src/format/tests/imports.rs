@@ -39,17 +39,6 @@ import c
 }
 
 #[test]
-fn gleam_packages_are_always_on_top() {
-    assert_format_rewrite!(
-        "import a import gleam/list import gleam/int",
-        "import gleam/int
-import gleam/list
-import a
-"
-    );
-}
-
-#[test]
 fn import_groups_are_respected() {
     assert_format_rewrite!(
         "import group_one/a

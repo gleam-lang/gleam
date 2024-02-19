@@ -214,8 +214,8 @@ impl<'comments> Formatter<'comments> {
         join(non_empty, line()).append(line())
     }
 
-    /// Separates the imports in groups delimited by comments and sorts each
-    /// group on its own.
+    /// Separates the imports in groups delimited by comments or empty lines and
+    /// sorts each group alphabetically.
     ///
     fn imports<'a>(&mut self, imports: Vec<&'a TargetedDefinition>) -> Vec<Document<'a>> {
         // The formatter needs to play nicely with import groups defined by the
@@ -262,7 +262,7 @@ impl<'comments> Formatter<'comments> {
             current_group.push(import);
         }
 
-        // We don't have to forget about the last import group!
+        // Let's not forget about the last import group!
         if !current_group.is_empty() {
             documents.append(&mut self.sorted_import_group(&mut current_group, group_comments));
         }
@@ -291,7 +291,7 @@ impl<'comments> Formatter<'comments> {
         };
 
         imports.sort_by(|one, other| match (&one.definition, &other.definition) {
-            (Definition::Import(one), Definition::Import(other)) => one.cmp(other),
+            (Definition::Import(one), Definition::Import(other)) => one.compare(other),
             // It shouldn't really be possible for a non import to be here so
             // we just return a default value.
             _ => std::cmp::Ordering::Equal,
