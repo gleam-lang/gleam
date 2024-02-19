@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## Language changes
+
+- Optimised prepending to lists in JavaScript (`[x, ..xs]` syntax).
+
 ### Formatter
 
 - Fixed a bug where a record update's arguments would not be indented correctly.
