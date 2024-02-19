@@ -162,19 +162,26 @@ fn module_document<'a>(
         .append(").")
         .append(line());
 
-    for s in &module.definitions {
-        let mut export_anyway = false;
-
-        if module.definitions.iter().any(|def| match def {
+    let private_fn_deps: Vec<EcoString> = module
+        .definitions
+        .iter()
+        .flat_map(|def| match def {
             Definition::ModuleConstant(ModuleConstant {
                 value,
                 public: true,
                 ..
-            }) => value.depends_on(s.clone()),
+            }) => value.private_fn_deps(),
+            _ => vec![],
+        })
+        .collect();
+
+    for s in &module.definitions {
+        let export_anyway = match s {
+            Definition::Function(Function { name, .. }) => {
+                private_fn_deps.iter().any(|fn_name| fn_name == name)
+            }
             _ => false,
-        }) {
-            export_anyway = true;
-        }
+        };
 
         register_imports(
             s,
