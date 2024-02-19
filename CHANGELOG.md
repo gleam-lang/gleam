@@ -9,7 +9,7 @@
 
 ### Formatter
 
-- Improved the formatting of long case guards.
+- The format used by the formatter has been improved in some niche cases.
 
 ## v1.0.0-rc1 - 2024-02-10
 
