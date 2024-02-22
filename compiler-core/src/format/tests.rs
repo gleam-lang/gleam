@@ -4,6 +4,7 @@ mod asignments;
 mod binary_operators;
 mod bit_array;
 mod blocks;
+mod cases;
 mod conditional_compilation;
 mod external_fn;
 mod external_types;

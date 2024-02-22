@@ -1412,26 +1412,41 @@ impl<'comments> Formatter<'comments> {
     fn clause<'a>(&mut self, clause: &'a UntypedClause, index: u32) -> Document<'a> {
         let space_before = self.pop_empty_lines(clause.location.start);
         let comments = self.pop_comments(clause.location.start);
-        let clause_doc = join(
-            std::iter::once(&clause.pattern)
-                .chain(&clause.alternative_patterns)
-                .map(|p| join(p.iter().map(|p| self.pattern(p)), ", ".to_doc())),
-            break_("", " ").append("| "),
-        )
-        .group();
 
         let clause_doc = match &clause.guard {
-            None => clause_doc,
-            Some(guard) => clause_doc
-                .append(break_("", " "))
+            None => self.alternative_patterns(clause),
+            Some(guard) => self
+                .alternative_patterns(clause)
+                .append(break_("", " ").nest(INDENT))
                 .append("if ")
-                .append(self.clause_guard(guard).group())
-                .nest(INDENT),
+                .append(self.clause_guard(guard).group().nest(INDENT)),
         };
 
         let clause_doc = match printed_comments(comments, false) {
             Some(comments) => comments.append(line()).append(clause_doc),
             None => clause_doc,
+        };
+
+        // In case there's a guard or multiple subjects, if we decide to break
+        // the patterns on multiple lines we also want the arrow to end up on
+        // its own line to improve legibility.
+        //
+        // This looks like this:
+        // ```gleam
+        // case wibble, wobble {
+        //   Wibble(_),  // pretend this goes over the line limit
+        //     Wobble(_)
+        //   -> todo
+        //   // Notice how the arrow is broken on its own line, the same goes
+        //   // for patterns with `if` guards.
+        // }
+        // ```
+        let has_guard = clause.guard.is_some();
+        let has_multiple_subjects = clause.pattern.len() > 1;
+        let arrow_break = if has_guard || has_multiple_subjects {
+            break_("", " ")
+        } else {
+            " ".to_doc()
         };
 
         if index == 0 {
@@ -1441,13 +1456,58 @@ impl<'comments> Formatter<'comments> {
         } else {
             lines(1).append(clause_doc)
         }
-        .append(match &clause.guard {
-            None => " ".to_doc(),
-            Some(_) => break_("", " "),
-        })
+        .append(arrow_break)
         .group()
         .append("->")
         .append(self.case_clause_value(&clause.then))
+    }
+
+    fn alternative_patterns<'a>(&mut self, clause: &'a UntypedClause) -> Document<'a> {
+        let has_guard = clause.guard.is_some();
+        let has_multiple_subjects = clause.pattern.len() > 1;
+
+        // In case there's an `if` guard but no multiple subjects we want to add
+        // additional indentation before the vartical bar separating alternative
+        // patterns `|`.
+        // We're not adding the indentation if there's multiple subjects as that
+        // would make things harder to read, aligning the vertical bar with the
+        // different subjects:
+        // ```
+        // case wibble, wobble {
+        //   Wibble,
+        //     Wobble
+        //     | Wibble, // <- we don't want this indentation!
+        //     Wobble -> todo
+        // }
+        // ```
+        let alternatives_separator = if has_guard && !has_multiple_subjects {
+            break_("", " ").nest(INDENT).append("| ")
+        } else {
+            break_("", " ").append("| ")
+        };
+
+        let alternative_patterns = std::iter::once(&clause.pattern)
+            .chain(&clause.alternative_patterns)
+            .map(|p| {
+                // Here `p` is a single pattern that can be comprised of
+                // multiple subjects.
+                // ```gleam
+                // case wibble, wobble {
+                //   True, False
+                // //^^^^^^^^^^^ This is a single pattern with multiple subjects
+                //   | _, _ -> todo
+                // }
+                // ```
+                //
+                // We turn each subject pattern into a document and join those
+                // with a breakable comma (that's also going to be nested).
+                // Then we make sure that the formatter tries to keep each
+                // alternative on a single line by making it a group!
+                let patterns = p.iter().map(|p| self.pattern(p));
+                join(patterns, break_(",", ", ")).group().nest(INDENT)
+            });
+
+        join(alternative_patterns, alternatives_separator).group()
     }
 
     fn list<'a>(
