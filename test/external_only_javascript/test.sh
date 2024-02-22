@@ -8,7 +8,7 @@ g() {
 }
 
 echo Resetting the build directory to get to a known state
-rm -r build
+rm -fr build
 
 echo This should succeed regardless of target as it is a dependency module
 g run --module=hello_joe
