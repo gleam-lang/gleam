@@ -2,9 +2,11 @@
 
 set -eu
 
+GLEAM_COMMAND=${GLEAM_COMMAND:-"cargo run --quiet --"}
+
 g() {
-	echo "Running: cargo run --quiet -- $@"
-	cargo run --quiet -- "$@"
+	echo "Running: $GLEAM_COMMAND $@"
+	$GLEAM_COMMAND "$@"
 }
 
 echo Resetting the build directory to get to a known state
