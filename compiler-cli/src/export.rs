@@ -134,7 +134,7 @@ pub fn package_interface(path: Utf8PathBuf) -> Result<()> {
     crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
 
     // Build the project
-    let built = crate::build::main(
+    let mut built = crate::build::main(
         Options {
             mode: Mode::Prod,
             target: None,
@@ -144,6 +144,7 @@ pub fn package_interface(path: Utf8PathBuf) -> Result<()> {
         },
         crate::build::download_dependencies()?,
     )?;
+    built.root_package.attach_doc_and_module_comments();
 
     let out = gleam_core::docs::generate_json_package_interface(path, &built.root_package);
     crate::fs::write_outputs_under(&[out], paths.root())?;

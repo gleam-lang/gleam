@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Build tool
+
+- Fixed a bug where the exported package interface would not have a module's
+  documentation.
+
 ## v1.0.0-rc2 - 2024-02-14
 
 ### Bug fixes
