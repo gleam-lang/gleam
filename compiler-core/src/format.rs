@@ -1338,7 +1338,12 @@ impl<'comments> Formatter<'comments> {
             .to_doc()
             .append(": ")
             .append(self.expr(&arg.value));
-        commented(doc, comments)
+
+        if arg.value.is_binop() || arg.value.is_pipeline() {
+            commented(doc, comments).nest(INDENT)
+        } else {
+            commented(doc, comments)
+        }
     }
 
     fn tuple_index<'a>(&mut self, tuple: &'a UntypedExpr, index: u64) -> Document<'a> {
