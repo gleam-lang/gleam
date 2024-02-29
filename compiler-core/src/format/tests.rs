@@ -5549,3 +5549,40 @@ fn pipeline_inside_tuple_is_not_nested_if_only_item() {
 "#
     );
 }
+
+// github.com/gleam-lang/gleam/issues/2608
+#[test]
+fn comments_are_not_moved_out_of_bounded_expressions() {
+    assert_format!(
+        r#"fn main() {
+  [
+    1, 2,
+    // list
+  ]
+
+  [
+    wibble,
+    wobble,
+    // list
+  ]
+
+  case True {
+    _ -> Nil
+    // case
+  }
+
+  #(
+    1,
+    2,
+    // tuple
+  )
+
+  call(
+    1,
+    2,
+    // function call
+  )
+}
+"#
+    );
+}

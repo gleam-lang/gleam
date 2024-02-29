@@ -695,21 +695,28 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => self.expr_fn(args, return_annotation.as_ref(), body),
 
-            UntypedExpr::List { elements, tail, .. } => self.list(elements, tail.as_deref()),
+            UntypedExpr::List {
+                elements,
+                tail,
+                location,
+            } => self.list(elements, tail.as_deref(), location),
 
             UntypedExpr::Call {
                 fun,
                 arguments: args,
+                location,
                 ..
-            } => self.call(fun, args),
+            } => self.call(fun, args, location),
 
             UntypedExpr::BinOp {
                 name, left, right, ..
             } => self.bin_op(name, left, right),
 
             UntypedExpr::Case {
-                subjects, clauses, ..
-            } => self.case(subjects, clauses),
+                subjects,
+                clauses,
+                location,
+            } => self.case(subjects, clauses, location),
 
             UntypedExpr::FieldAccess {
                 label, container, ..
@@ -721,7 +728,7 @@ impl<'comments> Formatter<'comments> {
             .append(".")
             .append(label.as_str()),
 
-            UntypedExpr::Tuple { elems, .. } => self.tuple(elems),
+            UntypedExpr::Tuple { elems, location } => self.tuple(elems, location),
 
             UntypedExpr::BitArray { segments, .. } => bit_array(
                 segments
@@ -875,7 +882,12 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn call<'a>(&mut self, fun: &'a UntypedExpr, args: &'a [CallArg<UntypedExpr>]) -> Document<'a> {
+    fn call<'a>(
+        &mut self,
+        fun: &'a UntypedExpr,
+        args: &'a [CallArg<UntypedExpr>],
+        location: &SrcSpan,
+    ) -> Document<'a> {
         let expr = match fun {
             UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
 
@@ -906,15 +918,17 @@ impl<'comments> Formatter<'comments> {
         self.append_inlinable_wrapped_args(
             expr,
             args,
+            location,
             |arg| &arg.value,
             |self_, arg| self_.call_arg(arg, arity),
         )
     }
 
-    fn tuple<'a>(&mut self, elements: &'a [UntypedExpr]) -> Document<'a> {
+    fn tuple<'a>(&mut self, elements: &'a [UntypedExpr], location: &SrcSpan) -> Document<'a> {
         self.append_inlinable_wrapped_args(
             "#".to_doc(),
             elements,
+            location,
             |e| e,
             |self_, e| {
                 // If there's more than one item in the tuple and there's a
@@ -939,6 +953,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         doc: Document<'a>,
         values: &'a [T],
+        location: &SrcSpan,
         to_expr: ToExpr,
         to_doc: ToDoc,
     ) -> Document<'a>
@@ -956,21 +971,22 @@ impl<'comments> Formatter<'comments> {
                     .group()
                     .next_break_fits(NextBreakFitsMode::Enabled);
 
-                doc.append(wrap_function_call_args(
-                    initial_values
-                        .iter()
-                        .map(|value| to_doc(self, value))
-                        .chain(std::iter::once(last_value_doc)),
-                ))
-                .next_break_fits(NextBreakFitsMode::Disabled)
-                .group()
+                let docs = initial_values
+                    .iter()
+                    .map(|value| to_doc(self, value))
+                    .chain(std::iter::once(last_value_doc))
+                    .collect_vec();
+
+                doc.append(self.wrap_function_call_args(docs, location))
+                    .next_break_fits(NextBreakFitsMode::Disabled)
+                    .group()
             }
 
-            Some(_) | None => doc
-                .append(wrap_function_call_args(
-                    values.iter().map(|value| to_doc(self, value)),
-                ))
-                .group(),
+            Some(_) | None => {
+                let docs = values.iter().map(|value| to_doc(self, value)).collect_vec();
+                doc.append(self.wrap_function_call_args(docs, location))
+                    .group()
+            }
         }
     }
 
@@ -978,6 +994,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         subjects: &'a [UntypedExpr],
         clauses: &'a [UntypedClause],
+        location: &'a SrcSpan,
     ) -> Document<'a> {
         let subjects_doc = break_("case", "case ")
             .append(join(
@@ -996,10 +1013,19 @@ impl<'comments> Formatter<'comments> {
                 .map(|(i, c)| self.clause(c, i as u32)),
         );
 
+        // We get all remaining comments that come before the case's closing
+        // bracket. If there's any we add those before the closing bracket
+        // instead of moving those out of the case expression.
+        // Otherwise those would be moved out of the case expression.
+        let comments = self.pop_comments(location.end);
+        let closing_bracket = match printed_comments(comments, false) {
+            None => docvec!(line(), "}"),
+            Some(comment) => docvec!(line().nest(INDENT), comment, line(), "}"),
+        };
+
         subjects_doc
             .append(line().append(clauses_doc).nest(INDENT))
-            .append(line())
-            .append("}")
+            .append(closing_bracket)
             .force_break()
     }
 
@@ -1428,6 +1454,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         elements: &'a [UntypedExpr],
         tail: Option<&'a UntypedExpr>,
+        location: &SrcSpan,
     ) -> Document<'a> {
         if elements.is_empty() {
             return match tail {
@@ -1465,21 +1492,41 @@ impl<'comments> Formatter<'comments> {
         .next_break_fits(NextBreakFitsMode::Disabled);
 
         let doc = break_("[", "[").append(elements);
-
-        match tail {
-            None => doc.nest(INDENT).append(break_(",", "")),
+        // We need to keep the last break aside and do not add it immediately
+        // because in case there's a final comment before the closing square
+        // bracket we want to add indentation (to just that break). Otherwise,
+        // the final comment would be less indented than list's elements.
+        let (doc, last_break) = match tail {
+            None => (doc.nest(INDENT), break_(",", "")),
 
             Some(tail) => {
                 let comments = self.pop_comments(tail.location().start);
                 let tail = commented(docvec!["..", self.expr(tail)], comments);
-                doc.append(break_(",", ", "))
-                    .append(tail)
-                    .nest(INDENT)
-                    .append(break_("", ""))
+                (
+                    doc.append(break_(",", ", ")).append(tail).nest(INDENT),
+                    break_("", ""),
+                )
             }
+        };
+
+        // We get all remaining comments that come before the list's closing
+        // square bracket.
+        // If there's any we add those before the closing square bracket instead
+        // of moving those out of the list.
+        // Otherwise those would be moved out of the list.
+        let comments = self.pop_comments(location.end);
+        match printed_comments(comments, false) {
+            None => doc.append(last_break).append("]").group(),
+            Some(comment) => doc
+                .append(last_break.nest(INDENT))
+                // ^ See how here we're adding the missing indentation to the
+                //   final break so that the final comment is as indented as the
+                //   list's items.
+                .append(comment)
+                .append(line())
+                .append("]")
+                .force_break(),
         }
-        .append("]")
-        .group()
     }
 
     fn pattern<'a>(&mut self, pattern: &'a UntypedPattern) -> Document<'a> {
@@ -1810,6 +1857,35 @@ impl<'comments> Formatter<'comments> {
             block_doc.group()
         }
     }
+
+    pub fn wrap_function_call_args<'a, I>(&mut self, args: I, location: &SrcSpan) -> Document<'a>
+    where
+        I: IntoIterator<Item = Document<'a>>,
+    {
+        let mut args = args.into_iter().peekable();
+        if args.peek().is_none() {
+            return "()".to_doc();
+        }
+
+        let args_doc = break_("", "")
+            .append(join(args, break_(",", ", ")))
+            .nest_if_broken(INDENT);
+
+        // We get all remaining comments that come before the call's closing
+        // parenthesis.
+        // If there's any we add those before the closing parenthesis instead
+        // of moving those out of the call.
+        // Otherwise those would be moved out of the call.
+        let comments = self.pop_comments(location.end);
+        let closing_parens = match printed_comments(comments, false) {
+            None => docvec!(break_(",", ""), ")"),
+            Some(comment) => {
+                docvec!(break_(",", "").nest(INDENT), comment, line(), ")").force_break()
+            }
+        };
+
+        "(".to_doc().append(args_doc).append(closing_parens).group()
+    }
 }
 
 fn init_and_last<T>(vec: &[T]) -> Option<(&[T], &T)> {
@@ -1925,26 +2001,6 @@ where
         .append(break_(",", ", "))
         .append("..")
         .nest(INDENT)
-        .append(break_(",", ""))
-        .append(")")
-        .group()
-}
-
-pub fn wrap_function_call_args<'a, I>(args: I) -> Document<'a>
-where
-    I: IntoIterator<Item = Document<'a>>,
-{
-    let mut args = args.into_iter().peekable();
-    if args.peek().is_none() {
-        return "()".to_doc();
-    }
-
-    let args_doc = break_("", "")
-        .append(join(args, break_(",", ", ")))
-        .nest_if_broken(INDENT);
-
-    "(".to_doc()
-        .append(args_doc)
         .append(break_(",", ""))
         .append(")")
         .group()
