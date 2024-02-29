@@ -7,6 +7,10 @@
 - Comments have been added to the JavaScript prelude to indicate which members
   are in the public API and which are internal.
 
+### Formatter
+
+- Fixed a bug where a record update's arguments would not be indented correctly.
+
 ### Build tool
 
 - Fixed a bug where the exported package interface would not have a module's
