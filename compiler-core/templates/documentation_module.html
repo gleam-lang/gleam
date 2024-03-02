@@ -5,7 +5,7 @@
 <h2>Types</h2>
 <ul>
   {% for typ in types %}
-  <li><a href="#{{ typ.name }}">{{ typ.name }}</a></li>
+  <li><a href="#{{ typ.name }}">{{ typ.name }}</a> </li>
   {% endfor %}
 </ul>
 {% endif %}
@@ -51,12 +51,16 @@
           {{ typ.name }}
         </a>
       </h2>
+      {% if typ.opaque %} 
+        <span class="visibility-tag">opaque</span>
+      {% endif %}
       {% if !typ.source_url.is_empty() %}
       <a class="member-source" alt="View Source" title="View Source" href="{{ typ.source_url|safe }}">
         &lt;/&gt;
       </a>
       {% endif %}
     </div>
+    
     {% if !typ.deprecation_message.is_empty() %}
     <p>
       <b>Deprecated:</b> {{ typ.deprecation_message }}

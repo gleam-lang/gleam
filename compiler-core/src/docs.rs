@@ -586,6 +586,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
                 })
                 .collect(),
             source_url: source_links.url(ct.location),
+            opaque: ct.opaque,
         }),
 
         Definition::CustomType(CustomType {
@@ -612,6 +613,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
                 Deprecation::NotDeprecated => "".to_string(),
                 Deprecation::Deprecated { message } => message.to_string(),
             },
+            opaque: true,
         }),
 
         Definition::TypeAlias(TypeAlias {
@@ -638,6 +640,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
                 Deprecation::NotDeprecated => "".to_string(),
                 Deprecation::Deprecated { message } => message.to_string(),
             },
+            opaque: false,
         }),
 
         _ => None,
@@ -712,6 +715,7 @@ struct Type<'a> {
     text_documentation: String,
     source_url: String,
     deprecation_message: String,
+    opaque: bool,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
