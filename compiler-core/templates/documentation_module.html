@@ -52,7 +52,7 @@
         </a>
       </h2>
       {% if typ.opaque %} 
-        <span class="visibility-tag">opaque</span>
+        <span class="visibility-tag" title="Direct access to this type's internals is restricted to the module">opaque</span>
       {% endif %}
       {% if !typ.source_url.is_empty() %}
       <a class="member-source" alt="View Source" title="View Source" href="{{ typ.source_url|safe }}">
