@@ -527,6 +527,19 @@ body.drawer-open .label-closed {
   margin: 0 0 0 var(--small-gap);
 }
 
+.visibility-tag {
+  background-color: var(--bg-shade-2); 
+  color: var(--text); 
+  padding: 2px 6px; 
+  border-radius: 4px; 
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--fg-shade-2);
+  font-size: 0.9em; 
+  margin-left: 8px;
+  float: right;
+}
+
 /* Custom type constructors */
 
 .constructor-list {
