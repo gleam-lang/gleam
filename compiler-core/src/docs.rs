@@ -92,7 +92,7 @@ pub fn generate_html(
     // Generate user-supplied (or README) pages
     for page in docs_pages {
         let content = std::fs::read_to_string(&page.source).unwrap_or_default();
-        let rendered_content = render_markdown(&content);
+        let rendered_content = render_markdown(&content, MarkdownSource::Standalone);
         let unnest = page_unnest(&page.path);
 
         let page_path_without_ext = page.path.split('.').next().unwrap_or("");
@@ -143,7 +143,8 @@ pub fn generate_html(
         let source_links = SourceLinker::new(paths, config, module);
 
         let documentation_content = module.ast.documentation.iter().join("\n");
-        let rendered_documentation = render_markdown(&documentation_content.clone());
+        let rendered_documentation =
+            render_markdown(&documentation_content.clone(), MarkdownSource::Comment);
 
         let functions: Vec<DocsFunction<'_>> = module
             .ast
@@ -542,16 +543,31 @@ fn text_documentation(doc: &Option<EcoString>) -> String {
 }
 
 fn markdown_documentation(doc: &Option<EcoString>) -> String {
-    doc.as_deref().map(render_markdown).unwrap_or_default()
+    doc.as_deref()
+        .map(|doc| render_markdown(doc, MarkdownSource::Comment))
+        .unwrap_or_default()
 }
 
-fn render_markdown(text: &str) -> String {
-    // Doc comments start with "///\s", which can confuse the markdown parser
-    // and prevent tables from rendering correctly, so remove that first space.
-    let text = text
-        .split('\n')
-        .map(|s| s.strip_prefix(' ').unwrap_or(s))
-        .join("\n");
+/// An enum to represent the source of a Markdown string to render.
+enum MarkdownSource {
+    /// A Markdown string that comes from the documentation of a
+    /// definition/module. This means that each line is going to be preceded by
+    /// a whitespace.
+    Comment,
+    /// A Markdown string coming from a standalone file like a README.md.
+    Standalone,
+}
+
+fn render_markdown(text: &str, source: MarkdownSource) -> String {
+    let text = match source {
+        MarkdownSource::Standalone => text.into(),
+        // Doc comments start with "///\s", which can confuse the markdown parser
+        // and prevent tables from rendering correctly, so remove that first space.
+        MarkdownSource::Comment => text
+            .split('\n')
+            .map(|s| s.strip_prefix(' ').unwrap_or(s))
+            .join("\n"),
+    };
 
     let mut s = String::with_capacity(text.len() * 3 / 2);
     let p = pulldown_cmark::Parser::new_ext(&text, pulldown_cmark::Options::all());

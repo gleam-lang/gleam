@@ -2,7 +2,7 @@ use std::time::SystemTime;
 
 use crate::{
     build::{Mode, NullTelemetry, PackageCompiler, StaleTracker, TargetCodegenConfiguration},
-    config::PackageConfig,
+    config::{DocsPage, PackageConfig},
     io::{memory::InMemoryFileSystem, FileSystemWriter},
     paths::ProjectPaths,
     uid::UniqueIdGenerator,
@@ -12,6 +12,83 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
+
+fn compile_with_docs_pages(
+    config: PackageConfig,
+    modules: Vec<(&str, &str)>,
+    docs_pages: Vec<(&str, &str)>,
+) -> EcoString {
+    let fs = InMemoryFileSystem::new();
+    for (name, src) in modules {
+        fs.write(&Utf8PathBuf::from(format!("/src/{}", name)), src)
+            .unwrap();
+    }
+
+    let ids = UniqueIdGenerator::new();
+    let mut type_manifests = im::HashMap::new();
+    let mut defined_modules = im::HashMap::new();
+    let warnings = WarningEmitter::null();
+    let target = TargetCodegenConfiguration::Erlang { app_file: None };
+
+    let root = Utf8PathBuf::from("/");
+    let build = root.join("build");
+    let lib = root.join("lib");
+    let paths = ProjectPaths::new(root.clone());
+    let mut compiler =
+        PackageCompiler::new(&config, Mode::Dev, &root, &build, &lib, &target, ids, fs);
+    compiler.write_entrypoint = false;
+    compiler.write_metadata = false;
+    compiler.compile_beam_bytecode = true;
+    let mut modules = compiler
+        .compile(
+            &warnings,
+            &mut type_manifests,
+            &mut defined_modules,
+            &mut StaleTracker::default(),
+            &NullTelemetry,
+        )
+        .unwrap();
+
+    for module in &mut modules {
+        module.attach_doc_and_module_comments();
+    }
+
+    let docs_pages = docs_pages
+        .into_iter()
+        .map(|(title, source)| DocsPage {
+            title: (*title).into(),
+            path: format!("{}.html", title).into(),
+            source: (*source).into(),
+        })
+        .collect_vec();
+
+    super::generate_html(
+        &paths,
+        &config,
+        &modules,
+        &docs_pages,
+        SystemTime::UNIX_EPOCH,
+    )
+    .into_iter()
+    .filter(|file| file.path.extension() == Some("html"))
+    .sorted_by(|a, b| a.path.cmp(&b.path))
+    .flat_map(|file| {
+        Some(format!(
+            "//// {}\n\n{}\n\n",
+            file.path.as_str(),
+            file.content
+                .text()?
+                .replace(COMPILER_VERSION, "GLEAM_VERSION_HERE")
+        ))
+    })
+    .collect::<String>()
+    .chars()
+    .collect()
+}
+
+pub fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
+    compile_with_docs_pages(config, modules, vec![])
+}
 
 #[test]
 fn hello_docs() {
@@ -29,7 +106,6 @@ pub fn one() {
 }
 
 // https://github.com/gleam-lang/gleam/issues/2347
-
 #[test]
 fn tables() {
     let config = PackageConfig::default();
@@ -98,60 +174,6 @@ pub fn one() { 1 }
     insta::assert_snapshot!(compile(config, modules));
 }
 
-fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
-    let fs = InMemoryFileSystem::new();
-    for (name, src) in modules {
-        fs.write(&Utf8PathBuf::from(format!("/src/{}", name)), src)
-            .unwrap();
-    }
-
-    let ids = UniqueIdGenerator::new();
-    let mut type_manifests = im::HashMap::new();
-    let mut defined_modules = im::HashMap::new();
-    let warnings = WarningEmitter::null();
-    let target = TargetCodegenConfiguration::Erlang { app_file: None };
-
-    let root = Utf8PathBuf::from("/");
-    let build = root.join("build");
-    let lib = root.join("lib");
-    let paths = ProjectPaths::new(root.clone());
-    let mut compiler =
-        PackageCompiler::new(&config, Mode::Dev, &root, &build, &lib, &target, ids, fs);
-    compiler.write_entrypoint = false;
-    compiler.write_metadata = false;
-    compiler.compile_beam_bytecode = true;
-    let mut modules = compiler
-        .compile(
-            &warnings,
-            &mut type_manifests,
-            &mut defined_modules,
-            &mut StaleTracker::default(),
-            &NullTelemetry,
-        )
-        .unwrap();
-
-    for module in &mut modules {
-        module.attach_doc_and_module_comments();
-    }
-
-    super::generate_html(&paths, &config, &modules, &[], SystemTime::UNIX_EPOCH)
-        .into_iter()
-        .filter(|file| file.path.extension() == Some("html"))
-        .sorted_by(|a, b| a.path.cmp(&b.path))
-        .flat_map(|file| {
-            Some(format!(
-                "//// {}\n\n{}\n\n",
-                file.path.as_str(),
-                file.content
-                    .text()?
-                    .replace(COMPILER_VERSION, "GLEAM_VERSION_HERE")
-            ))
-        })
-        .collect::<String>()
-        .chars()
-        .collect()
-}
-
 // https://github.com/gleam-lang/gleam/issues/2561
 #[test]
 fn discarded_arguments_are_not_shown() {
@@ -178,4 +200,17 @@ pub fn main() { todo }
 "#,
     )];
     insta::assert_snapshot!(compile(config, modules));
+}
+
+#[test]
+fn markdown_code_from_standalone_pages_is_not_trimmed() {
+    let config = PackageConfig::default();
+    let pages = vec![(
+        "one.md",
+        "```gleam
+testing
+  indentation
+```",
+    )];
+    insta::assert_snapshot!(compile_with_docs_pages(config, vec![], pages));
 }
