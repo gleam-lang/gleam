@@ -71,6 +71,8 @@
 - Rust's Reqwest's `webpki-roots` are now used for TLS verification.
 - Update Deno config to allow passing `--location` runtime flag.
 - Fixed a bug with dependency resolution of exact versions of RC releases.
+- Fixed a bug where the documentation of a labelled record constructor could be
+  assigned to the wrong definition in the doc site.
 
 ### Language Server
 
@@ -95,7 +97,6 @@
   documentation.
 - Fixed a bug where the `export package interface` command would always
   recompile the project ignoring the cache.
-
 
 ## v1.0.0-rc2 - 2024-02-14
 

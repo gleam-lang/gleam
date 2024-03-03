@@ -133,3 +133,23 @@ fn discarded_arguments_are_not_shown() {
     let modules = vec![("app.gleam", "pub fn discard(_discarded: a) -> Int { 1 }")];
     insta::assert_snapshot!(compile(config, modules));
 }
+
+// https://github.com/gleam-lang/gleam/issues/2631
+#[test]
+fn docs_of_a_type_constructor_are_not_used_by_the_following_function() {
+    let config = PackageConfig::default();
+    let modules = vec![(
+        "app.gleam",
+        r#"
+pub type Wibble {
+  Wobble(
+    /// Documentation!!
+    wabble: Int,
+  )
+}
+
+pub fn main() { todo }
+"#,
+    )];
+    insta::assert_snapshot!(compile(config, modules));
+}
