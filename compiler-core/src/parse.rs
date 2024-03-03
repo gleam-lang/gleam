@@ -1871,13 +1871,14 @@ where
                     (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                         let _ = Parser::next_tok(p);
                         let _ = Parser::next_tok(p);
+                        let doc = p.take_documentation(start);
                         match Parser::parse_type(p)? {
                             Some(type_ast) => Ok(Some(RecordConstructorArg {
                                 label: Some(name),
                                 ast: type_ast,
                                 location: SrcSpan { start, end },
                                 type_: (),
-                                doc: None,
+                                doc,
                             })),
                             None => {
                                 parse_error(ParseErrorType::ExpectedType, SrcSpan { start, end })
@@ -1889,13 +1890,17 @@ where
                         p.tok1 = t1;
                         match Parser::parse_type(p)? {
                             Some(type_ast) => {
+                                let doc = match &p.tok0 {
+                                    Some((start, _, _)) => p.take_documentation(*start),
+                                    None => None,
+                                };
                                 let type_location = type_ast.location();
                                 Ok(Some(RecordConstructorArg {
                                     label: None,
                                     ast: type_ast,
                                     location: type_location,
                                     type_: (),
-                                    doc: None,
+                                    doc,
                                 }))
                             }
                             None => Ok(None),
