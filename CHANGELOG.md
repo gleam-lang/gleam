@@ -73,6 +73,8 @@
 - Fixed a bug with dependency resolution of exact versions of RC releases.
 - Fixed a bug where the documentation of a labelled record constructor could be
   assigned to the wrong definition in the doc site.
+- Fixed a bug where the code blocks in the generated documentation's site would
+  have a wrong indentation.
 
 ### Language Server
 
