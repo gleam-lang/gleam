@@ -29,6 +29,8 @@
 
 - Fixed a bug where the exported package interface would not have a module's
   documentation.
+- Fixed a bug where the `export package interface` command would always
+  recompile the project ignoring the cache.
 
 ## v1.0.0-rc2 - 2024-02-14
 
