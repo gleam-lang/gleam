@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="images/gleam-logo-readme.png" alt="Gleam logo">
+  <img src="images/lucy.png" alt="Lucy, Gleam's mascot">
 </p>
 
 <p align="center">
@@ -9,16 +9,11 @@
   <a href="https://gitpod.io/#https://github.com/gleam-lang/gleam"><img src="https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod"></a>
 </p>
 
-
 <!-- A spacer -->
 <div>&nbsp;</div>
 
-Gleam is a friendly language for building type-safe, scalable systems!
-
-It compiles to [Erlang](http://www.erlang.org/) (or JavaScript) and has straightforward interop
-with other BEAM languages such as Erlang, Elixir, and LFE.
-
-For more information see the Gleam website: [https://gleam.run](https://gleam.run).
+Gleam is a friendly language for building type-safe systems that scale! For more
+information see [the website](https://gleam.run).
 
 ## Sponsors
 
