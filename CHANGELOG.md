@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.0.0 - 2024-03-04
 
 ### Language changes
 
