@@ -8,6 +8,7 @@
 
 ### Formatter
 
+- The formatting of case expressions with multiple subjects has been improved.
 - Fixed a bug where the formatter would move comments from the end of bounded
   expressions like lists, tuples, case expressions or function calls.
 - Fixed a bug where a record update's arguments would not be indented correctly.
