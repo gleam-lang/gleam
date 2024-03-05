@@ -12,6 +12,11 @@
   expressions like lists, tuples, case expressions or function calls.
 - Fixed a bug where a record update's arguments would not be indented correctly.
 
+### Build tool
+
+- Fixed a bug where bit arrays would break syntax highlighting in the generated
+  HTML documentation.
+
 
 ## v1.0.0 - 2024-03-04
 
