@@ -1,15 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Formatter
+
+- Fixed a bug where a record update's arguments would not be indented correctly.
+
+
 ## v1.0.0 - 2024-03-04
 
 ### Language changes
 
 - Comments have been added to the JavaScript prelude to indicate which members
   are in the public API and which are internal.
-
-### Formatter
-
-- Fixed a bug where a record update's arguments would not be indented correctly.
 
 ### Build tool
 
