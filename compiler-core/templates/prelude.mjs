@@ -52,8 +52,9 @@ export class List {
   }
 }
 
+// @internal
 export function prepend(element, tail) {
-  return new NonEmpty(element, tail)
+  return new NonEmpty(element, tail);
 }
 
 export function toList(elements, tail) {
