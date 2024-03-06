@@ -48,6 +48,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/bcpeinhardt">Benjamin Peinhardt</a> -
   <a href="https://github.com/bentomas">Benjamin Thomas</a> -
   <a href="https://github.com/brettkolodny">brettkolodny</a> -
+  <a href="https://github.com/brian-dawn">Brian Dawn</a> -
   <a href="https://github.com/bglusman">Brian Glusman</a> -
   <a href="https://github.com/nono">Bruno Michel</a> -
   <a href="https://github.com/csaltos">Carlos Saltos</a> -
