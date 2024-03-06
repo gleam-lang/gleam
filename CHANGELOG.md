@@ -1,17 +1,52 @@
 # Changelog
 
+## Unreleased
+
+## Language changes
+
+- Optimised prepending to lists in JavaScript (`[x, ..xs]` syntax).
+
+### Formatter
+
+- The formatting of case expressions with multiple subjects has been improved.
+- Fixed a bug where the formatter would move comments from the end of bounded
+  expressions like lists, tuples, case expressions or function calls.
+- Fixed a bug where a record update's arguments would not be indented correctly.
+
+### Build tool
+
+- Fixed a bug where bit arrays would break syntax highlighting in the generated
+  HTML documentation.
+
+### Bug fixes
+
+- Fixed a bug where using a private function in a public constant definition 
+  would result in a runtime error on the erlang target.
+
+## v1.0.0 - 2024-03-04
+
+### Language changes
+
+- Comments have been added to the JavaScript prelude to indicate which members
+  are in the public API and which are internal.
+
+### Build tool
+
+- Fixed a bug where the exported package interface would not have a module's
+  documentation.
+- Fixed a bug where the `export package interface` command would always
+  recompile the project ignoring the cache.
+
 ## v1.0.0-rc2 - 2024-02-14
 
 ### Bug fixes
 
 - Fixed a bug where the exhaustiveness checker could crash for some generic
   types.
-- Fixed a bug where using a private function in a public constant definition 
-  would result in a runtime error on the erlang target.
 
 ### Formatter
 
-- Improved the formatting of long case guards.
+- The format used by the formatter has been improved in some niche cases.
 
 ## v1.0.0-rc1 - 2024-02-10
 
