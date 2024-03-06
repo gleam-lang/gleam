@@ -163,27 +163,24 @@ fn module_document<'a>(
         .append(").")
         .append(line());
 
-    for s in &module.definitions {
-        let mut overridden_publicity = HashSet::new();
+    let mut overridden_publicity = HashSet::new();
 
-        module.definitions.iter().for_each(|def| {
-            if let Definition::ModuleConstant(ModuleConstant {
-                value, publicity, ..
-            }) = def
-            {
-                if publicity.is_importable() {
-                    value.private_fn_deps(&mut overridden_publicity)
-                }
+    for def in module.definitions.iter() {
+        if let Definition::ModuleConstant(c) = def {
+            if c.publicity.is_importable() {
+                c.value.private_fn_deps(&mut overridden_publicity)
             }
-        });
+        }
+    }
 
+    for s in &module.definitions {
         register_imports(
             s,
             &mut exports,
             &mut type_exports,
             &mut type_defs,
             &module.name,
-            overridden_publicity,
+            &overridden_publicity,
         );
     }
 
@@ -242,7 +239,7 @@ fn register_imports(
     type_exports: &mut Vec<Document<'_>>,
     type_defs: &mut Vec<Document<'_>>,
     module_name: &str,
-    overridden_publicity: HashSet<EcoString>,
+    overridden_publicity: &HashSet<EcoString>,
 ) {
     match s {
         Definition::Function(Function {
