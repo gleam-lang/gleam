@@ -21,6 +21,7 @@ use crate::{
 };
 use ecow::EcoString;
 use heck::ToSnakeCase;
+use im::HashSet;
 use itertools::Itertools;
 use pattern::{pattern, requires_guard};
 use regex::{Captures, Regex};
@@ -162,26 +163,19 @@ fn module_document<'a>(
         .append(").")
         .append(line());
 
-    let private_fn_deps: Vec<EcoString> = module
-        .definitions
-        .iter()
-        .flat_map(|def| match def {
-            Definition::ModuleConstant(ModuleConstant {
-                value,
-                public: true,
-                ..
-            }) => value.private_fn_deps(),
-            _ => vec![],
-        })
-        .collect();
-
     for s in &module.definitions {
-        let export_anyway = match s {
-            Definition::Function(Function { name, .. }) => {
-                private_fn_deps.iter().any(|fn_name| fn_name == name)
+        let mut overridden_publicity = HashSet::new();
+
+        module.definitions.iter().for_each(|def| {
+            if let Definition::ModuleConstant(ModuleConstant {
+                value, publicity, ..
+            }) = def
+            {
+                if publicity.is_importable() {
+                    value.private_fn_deps(&mut overridden_publicity)
+                }
             }
-            _ => false,
-        };
+        });
 
         register_imports(
             s,
@@ -189,7 +183,7 @@ fn module_document<'a>(
             &mut type_exports,
             &mut type_defs,
             &module.name,
-            export_anyway,
+            overridden_publicity,
         );
     }
 
@@ -248,7 +242,7 @@ fn register_imports(
     type_exports: &mut Vec<Document<'_>>,
     type_defs: &mut Vec<Document<'_>>,
     module_name: &str,
-    export_anyway: bool,
+    overridden_publicity: HashSet<EcoString>,
 ) {
     match s {
         Definition::Function(Function {
@@ -257,20 +251,11 @@ fn register_imports(
             arguments: args,
             implementations,
             ..
-        }) if publicity.is_importable() => {
+        }) if publicity.is_importable() || overridden_publicity.contains(name) => {
             // If the function isn't for this target then don't attempt to export it
             if implementations.supports(Target::Erlang) {
                 exports.push(atom_string(name.to_string()).append("/").append(args.len()))
             }
-        }
-
-        Definition::Function(Function {
-            public: false,
-            name,
-            arguments: args,
-            ..
-        }) if export_anyway => {
-            exports.push(atom_string(name.to_string()).append("/").append(args.len()))
         }
 
         Definition::CustomType(CustomType {
