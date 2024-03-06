@@ -459,11 +459,18 @@ impl<'a> Generator<'a> {
         };
 
         let body = match generator.function_body(&function.body, function.arguments.as_slice()) {
+            // No error, let's continue!
             Ok(body) => body,
-            Err(error) if error.is_unsupported() && self.target_support.is_enforced() => {
-                return Some(Err(error))
+
+            // There is an error coming from some expression that is not supported on JavaScript
+            // and the target support is not enforced. In this case we do not error, instead
+            // returning nothing which will cause no function to be generated.
+            Err(error) if error.is_unsupported() && !self.target_support.is_enforced() => {
+                return None
             }
-            Err(_) => return None,
+
+            // Some other error case which will be returned to the user.
+            Err(error) => return Some(Err(error)),
         };
 
         let document = docvec![
