@@ -6,6 +6,7 @@ mod pattern;
 #[cfg(test)]
 mod tests;
 
+use crate::build::Target;
 use crate::type_::is_prelude_module;
 use crate::{
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
@@ -244,8 +245,14 @@ fn register_imports(
             public: true,
             name,
             arguments: args,
+            implementations,
             ..
-        }) => exports.push(atom_string(name.to_string()).append("/").append(args.len())),
+        }) => {
+            // If the function isn't for this target then don't attempt to export it
+            if implementations.supports(Target::Erlang) {
+                exports.push(atom_string(name.to_string()).append("/").append(args.len()))
+            }
+        }
 
         Definition::CustomType(CustomType {
             name,
@@ -357,6 +364,12 @@ fn module_function<'a>(
     // Private external functions don't need to render anything, the underlying
     // Erlang implementation is used directly at the call site.
     if function.external_erlang.is_some() && !function.public {
+        return None;
+    }
+
+    // If the function has no suitable Erlang implementation then there is nothing
+    // to generate for it.
+    if !function.implementations.supports(Target::Erlang) {
         return None;
     }
 
