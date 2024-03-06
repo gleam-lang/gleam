@@ -53,9 +53,9 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
             &modules,
             &TypeWarningEmitter::null(),
             &std::collections::HashMap::new(),
-            TargetSupport::Enforced,
+            TargetSupport::NotEnforced,
         )
-        .expect("should successfully infer");
+        .expect("should successfully infer dep Erlang");
         let _ = modules.insert(dep_name.into(), dep.type_info);
         let _ = direct_dependencies.insert(dep_package.into(), ());
     }
@@ -71,9 +71,9 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         &modules,
         &TypeWarningEmitter::null(),
         &direct_dependencies,
-        TargetSupport::Enforced,
+        TargetSupport::NotEnforced,
     )
-    .expect("should successfully infer");
+    .expect("should successfully infer root Erlang");
     let line_numbers = LineNumbers::new(src);
     module(&ast, &line_numbers).unwrap()
 }
