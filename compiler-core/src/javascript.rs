@@ -5,6 +5,7 @@ mod pattern;
 mod tests;
 mod typescript;
 
+use crate::analyse::TargetSupport;
 use crate::build::Target;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
@@ -39,10 +40,15 @@ pub struct Generator<'a> {
     tracker: UsageTracker,
     module_scope: im::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
+    target_support: TargetSupport,
 }
 
 impl<'a> Generator<'a> {
-    pub fn new(line_numbers: &'a LineNumbers, module: &'a TypedModule) -> Self {
+    pub fn new(
+        line_numbers: &'a LineNumbers,
+        module: &'a TypedModule,
+        target_support: TargetSupport,
+    ) -> Self {
         let current_module_name_segments_count = module.name.split('/').count();
 
         Self {
@@ -51,6 +57,7 @@ impl<'a> Generator<'a> {
             module,
             tracker: UsageTracker::default(),
             module_scope: Default::default(),
+            target_support,
         }
     }
 
@@ -200,7 +207,7 @@ impl<'a> Generator<'a> {
                     return None;
                 }
 
-                Some(self.module_function(function))
+                self.module_function(function)
             }
         }
     }
@@ -431,7 +438,7 @@ impl<'a> Generator<'a> {
         let _ = self.module_scope.insert(name.into(), 0);
     }
 
-    fn module_function(&mut self, function: &'a TypedFunction) -> Output<'a> {
+    fn module_function(&mut self, function: &'a TypedFunction) -> Option<Output<'a>> {
         let argument_names = function
             .arguments
             .iter()
@@ -450,8 +457,16 @@ impl<'a> Generator<'a> {
         } else {
             "function "
         };
-        let body = generator.function_body(&function.body, function.arguments.as_slice())?;
-        Ok(docvec![
+
+        let body = match generator.function_body(&function.body, function.arguments.as_slice()) {
+            Ok(body) => body,
+            Err(error) if error.is_unsupported() && self.target_support.is_enforced() => {
+                return Some(Err(error))
+            }
+            Err(_) => return None,
+        };
+
+        let document = docvec![
             head,
             maybe_escape_identifier_doc(function.name.as_str()),
             fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
@@ -459,7 +474,8 @@ impl<'a> Generator<'a> {
             docvec![line(), body].nest(INDENT).group(),
             line(),
             "}",
-        ])
+        ];
+        Some(Ok(document))
     }
 
     fn register_module_definitions_in_scope(&mut self) {
@@ -487,8 +503,9 @@ pub fn module(
     line_numbers: &LineNumbers,
     path: &Utf8Path,
     src: &EcoString,
+    target_support: TargetSupport,
 ) -> Result<String, crate::Error> {
-    let document = Generator::new(line_numbers, module)
+    let document = Generator::new(line_numbers, module, target_support)
         .compile()
         .map_err(|error| crate::Error::JavaScript {
             path: path.to_path_buf(),
@@ -516,6 +533,16 @@ pub fn ts_declaration(
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     Unsupported { feature: String, location: SrcSpan },
+}
+
+impl Error {
+    /// Returns `true` if the error is [`Unsupported`].
+    ///
+    /// [`Unsupported`]: Error::Unsupported
+    #[must_use]
+    pub fn is_unsupported(&self) -> bool {
+        matches!(self, Self::Unsupported { .. })
+    }
 }
 
 fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {

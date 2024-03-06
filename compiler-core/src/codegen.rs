@@ -1,4 +1,5 @@
 use crate::{
+    analyse::TargetSupport,
     build::{ErlangAppCodegenConfiguration, Module},
     config::PackageConfig,
     erlang,
@@ -182,6 +183,7 @@ pub struct JavaScript<'a> {
     output_directory: &'a Utf8Path,
     prelude_location: &'a Utf8Path,
     typescript: TypeScriptDeclarations,
+    target_support: TargetSupport,
 }
 
 impl<'a> JavaScript<'a> {
@@ -189,10 +191,12 @@ impl<'a> JavaScript<'a> {
         output_directory: &'a Utf8Path,
         typescript: TypeScriptDeclarations,
         prelude_location: &'a Utf8Path,
+        target_support: TargetSupport,
     ) -> Self {
         Self {
             prelude_location,
             output_directory,
+            target_support,
             typescript,
         }
     }
@@ -243,8 +247,13 @@ impl<'a> JavaScript<'a> {
         let name = format!("{js_name}.mjs");
         let path = self.output_directory.join(name);
         let line_numbers = LineNumbers::new(&module.code);
-        let output =
-            javascript::module(&module.ast, &line_numbers, &module.input_path, &module.code);
+        let output = javascript::module(
+            &module.ast,
+            &line_numbers,
+            &module.input_path,
+            &module.code,
+            self.target_support,
+        );
         tracing::debug!(name = ?js_name, "Generated js module");
         writer.write(&path, &output?)
     }

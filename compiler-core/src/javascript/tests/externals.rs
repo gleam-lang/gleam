@@ -272,3 +272,17 @@ pub fn should_not_be_generated(x: Int) -> Int
 "#
     );
 }
+
+#[test]
+fn erlang_bit_patterns() {
+    assert_js!(
+        r#"
+pub fn should_not_be_generated(x) {
+  case x {
+    <<_, rest:bits>> -> rest
+    _ -> x
+  }
+}
+"#
+    );
+}
