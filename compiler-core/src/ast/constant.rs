@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use im::HashSet;
 
 use super::*;
 use crate::type_::{FieldMap, HasType};
@@ -74,26 +74,23 @@ impl TypedConstant {
         }
     }
 
-    pub fn private_fn_deps(&self) -> Vec<EcoString> {
+    pub fn private_fn_deps(&self, already_found: &mut HashSet<EcoString>) {
         match self {
             TypedConstant::Var {
                 name, constructor, ..
-            } => match constructor.as_deref() {
-                Some(ValueConstructor { type_, .. }) => match type_.deref() {
-                    Type::Fn { .. } => {
-                        vec![name.clone()]
+            } => {
+                if let Some(ValueConstructor { type_, .. }) = constructor.as_deref() {
+                    if let Type::Fn { .. } = **type_ {
+                        let _ = already_found.insert(name.clone());
                     }
-                    _ => vec![],
-                },
-                _ => vec![],
-            },
+                }
+            }
 
             TypedConstant::Record { args, .. } => args
                 .iter()
-                .flat_map(|arg| arg.value.private_fn_deps())
-                .collect(),
+                .for_each(|arg| arg.value.private_fn_deps(already_found)),
 
-            _ => vec![],
+            _ => (),
         }
     }
 }
