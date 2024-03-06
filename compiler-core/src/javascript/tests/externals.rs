@@ -258,3 +258,17 @@ pub fn one(x: Int) -> Int {
 "#
     );
 }
+
+#[test]
+fn erlang_only() {
+    assert_js!(
+        r#"
+pub fn should_be_generated(x: Int) -> Int {
+  x
+}
+
+@external(erlang, "one", "one")
+pub fn should_not_be_generated(x: Int) -> Int
+"#
+    );
+}

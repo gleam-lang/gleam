@@ -126,7 +126,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         &modules,
         &TypeWarningEmitter::null(),
         &direct_dependencies,
-        TargetSupport::Enforced,
+        TargetSupport::NotEnforced,
     )
     .expect("should successfully infer")
 }
