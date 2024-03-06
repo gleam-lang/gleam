@@ -16,7 +16,6 @@ use crate::type_::expression::Implementations;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
-use std::cmp::Ordering;
 use std::sync::Arc;
 
 use ecow::EcoString;
@@ -416,10 +415,6 @@ impl<T> Import<T> {
             Some((AssignName::Discard(_), _)) => None,
             None => self.module.split('/').last().map(EcoString::from),
         }
-    }
-
-    pub(crate) fn compare(&self, other: &Self) -> Ordering {
-        self.module.cmp(&other.module)
     }
 
     pub(crate) fn alias_location(&self) -> Option<SrcSpan> {

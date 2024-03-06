@@ -291,7 +291,7 @@ impl<'comments> Formatter<'comments> {
         };
 
         imports.sort_by(|one, other| match (&one.definition, &other.definition) {
-            (Definition::Import(one), Definition::Import(other)) => one.compare(other),
+            (Definition::Import(one), Definition::Import(other)) => one.module.cmp(&other.module),
             // It shouldn't really be possible for a non import to be here so
             // we just return a default value.
             _ => std::cmp::Ordering::Equal,
