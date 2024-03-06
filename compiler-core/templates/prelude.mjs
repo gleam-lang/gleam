@@ -1,3 +1,6 @@
+// Values marked with @internal are not part of the public API and may change
+// without notice.
+
 export class CustomType {
   withFields(fields) {
     let properties = Object.keys(this).map((label) =>
@@ -10,7 +13,10 @@ export class CustomType {
 export class List {
   static fromArray(array, tail) {
     let t = tail || new Empty();
-    return array.reduceRight((xs, x) => new NonEmpty(x, xs), t);
+    for (let i = array.length - 1; i >= 0; --i) {
+      t = new NonEmpty(array[i], t);
+    }
+    return t;
   }
 
   [Symbol.iterator]() {
@@ -21,6 +27,7 @@ export class List {
     return [...this];
   }
 
+  // @internal
   atLeastLength(desired) {
     for (let _ of this) {
       if (desired <= 0) return true;
@@ -29,6 +36,7 @@ export class List {
     return desired <= 0;
   }
 
+  // @internal
   hasLength(desired) {
     for (let _ of this) {
       if (desired <= 0) return false;
@@ -44,10 +52,16 @@ export class List {
   }
 }
 
+// @internal
+export function prepend(element, tail) {
+  return new NonEmpty(element, tail);
+}
+
 export function toList(elements, tail) {
   return List.fromArray(elements, tail);
 }
 
+// @internal
 class ListIterator {
   #current;
 
@@ -84,26 +98,32 @@ export class BitArray {
     this.buffer = buffer;
   }
 
+  // @internal
   get length() {
     return this.buffer.length;
   }
 
+  // @internal
   byteAt(index) {
     return this.buffer[index];
   }
 
+  // @internal
   floatAt(index) {
     return byteArrayToFloat(this.buffer.slice(index, index + 8));
   }
 
+  // @internal
   intFromSlice(start, end) {
     return byteArrayToInt(this.buffer.slice(start, end));
   }
 
+  // @internal
   binaryFromSlice(start, end) {
     return new BitArray(this.buffer.slice(start, end));
   }
 
+  // @internal
   sliceAfter(index) {
     return new BitArray(this.buffer.slice(index));
   }
@@ -115,6 +135,7 @@ export class UtfCodepoint {
   }
 }
 
+// @internal
 export function toBitArray(segments) {
   let size = (segment) =>
     segment instanceof Uint8Array ? segment.byteLength : 1;
@@ -133,6 +154,7 @@ export function toBitArray(segments) {
   return new BitArray(new Uint8Array(view.buffer));
 }
 
+// @internal
 // Derived from this answer https://stackoverflow.com/questions/8482309/converting-javascript-integer-to-byte-array-and-back
 export function sizedInt(int, size) {
   let value = int;
@@ -153,6 +175,7 @@ export function sizedInt(int, size) {
   return byteArray.reverse();
 }
 
+// @internal
 export function byteArrayToInt(byteArray) {
   byteArray = byteArray.reverse();
   let value = 0;
@@ -162,23 +185,28 @@ export function byteArrayToInt(byteArray) {
   return value;
 }
 
+// @internal
 export function byteArrayToFloat(byteArray) {
   return new Float64Array(byteArray.reverse().buffer)[0];
 }
 
+// @internal
 export function stringBits(string) {
   return new TextEncoder().encode(string);
 }
 
+// @internal
 export function codepointBits(codepoint) {
   return stringBits(String.fromCodePoint(codepoint.value));
 }
 
+// @internal
 export function float64Bits(float) {
   return new Uint8Array(Float64Array.from([float]).buffer).reverse();
 }
 
 export class Result extends CustomType {
+  // @internal
   static isResult(data) {
     return data instanceof Result;
   }
@@ -190,6 +218,7 @@ export class Ok extends Result {
     this[0] = value;
   }
 
+  // @internal
   isOk() {
     return true;
   }
@@ -201,6 +230,7 @@ export class Error extends Result {
     this[0] = detail;
   }
 
+  // @internal
   isOk() {
     return false;
   }
@@ -295,6 +325,7 @@ function structurallyCompatibleObjects(a, b) {
   return a.constructor === b.constructor;
 }
 
+// @internal
 export function remainderInt(a, b) {
   if (b === 0) {
     return 0;
@@ -303,10 +334,12 @@ export function remainderInt(a, b) {
   }
 }
 
+// @internal
 export function divideInt(a, b) {
   return Math.trunc(divideFloat(a, b));
 }
 
+// @internal
 export function divideFloat(a, b) {
   if (b === 0) {
     return 0;
@@ -315,6 +348,7 @@ export function divideFloat(a, b) {
   }
 }
 
+// @internal
 export function makeError(variant, module, line, fn, message, extra) {
   let error = new globalThis.Error(message);
   error.gleam_error = variant;

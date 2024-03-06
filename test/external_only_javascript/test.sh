@@ -2,13 +2,15 @@
 
 set -eu
 
+GLEAM_COMMAND=${GLEAM_COMMAND:-"cargo run --quiet --"}
+
 g() {
-	echo "Running: cargo run --quiet -- $@"
-	cargo run --quiet -- "$@"
+	echo "Running: $GLEAM_COMMAND $@"
+	$GLEAM_COMMAND "$@"
 }
 
 echo Resetting the build directory to get to a known state
-g clean
+rm -fr build
 
 echo This should succeed regardless of target as it is a dependency module
 g run --module=hello_joe

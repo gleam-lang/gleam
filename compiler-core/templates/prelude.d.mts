@@ -14,6 +14,7 @@ export class List<T> implements Iterable<T> {
   [Symbol.iterator](): Iterator<T>;
 }
 
+export function prepend<T>(element: T, tail: List<T>): List<T>;
 export function toList<T>(array: Array<T>): List<T>;
 
 export class Empty<T = never> extends List<T> {}

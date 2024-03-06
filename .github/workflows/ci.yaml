@@ -149,14 +149,19 @@ jobs:
         if: ${{ matrix.run-integration-tests }}
 
       - name: test/external_only_javascript
-        run: make
+        run: ./test.sh
         working-directory: ./test/external_only_javascript
         if: ${{ matrix.run-integration-tests }}
+        env:
+          GLEAM_COMMAND: gleam 
+        
 
       - name: test/external_only_erlang
-        run: make
+        run: ./test.sh
         working-directory: ./test/external_only_erlang
         if: ${{ matrix.run-integration-tests }}
+        env:
+          GLEAM_COMMAND: gleam 
 
       - name: test/project_javascript
         run: |
