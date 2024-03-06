@@ -5,6 +5,7 @@ mod pattern;
 mod tests;
 mod typescript;
 
+use crate::build::Target;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
@@ -169,33 +170,38 @@ impl<'a> Generator<'a> {
         imports.register_module(path, [], [member]);
     }
 
-    pub fn statement(&mut self, statement: &'a TypedDefinition) -> Vec<Output<'a>> {
+    pub fn statement(&mut self, statement: &'a TypedDefinition) -> Option<Output<'a>> {
         match statement {
-            Definition::TypeAlias(TypeAlias { .. }) => vec![],
+            Definition::TypeAlias(TypeAlias { .. }) => None,
 
             // Handled in collect_imports
-            Definition::Import(Import { .. }) => vec![],
+            Definition::Import(Import { .. }) => None,
 
             // Handled in collect_definitions
-            Definition::CustomType(CustomType { .. }) => vec![],
+            Definition::CustomType(CustomType { .. }) => None,
 
             Definition::ModuleConstant(ModuleConstant {
                 public,
                 name,
                 value,
                 ..
-            }) => vec![self.module_constant(*public, name, value)],
+            }) => Some(self.module_constant(*public, name, value)),
 
-            Definition::Function(Function {
-                arguments,
-                name,
-                body,
-                public,
-                external_javascript: None,
-                ..
-            }) => vec![self.module_function(*public, name, arguments, body)],
+            Definition::Function(function) => {
+                // If there's an external JavaScript implementation then it will be imported,
+                // so we don't need to generate a function definition.
+                if function.external_javascript.is_some() {
+                    return None;
+                }
 
-            Definition::Function(_) => vec![],
+                // If the function does not support JavaScript then we don't need to generate
+                // a function definition.
+                if !function.implementations.supports(Target::JavaScript) {
+                    return None;
+                }
+
+                Some(self.module_function(function))
+            }
         }
     }
 
@@ -425,35 +431,30 @@ impl<'a> Generator<'a> {
         let _ = self.module_scope.insert(name.into(), 0);
     }
 
-    fn module_function(
-        &mut self,
-        public: bool,
-        name: &'a EcoString,
-        args: &'a [TypedArg],
-        body: &'a [TypedStatement],
-    ) -> Output<'a> {
-        let argument_names = args
+    fn module_function(&mut self, function: &'a TypedFunction) -> Output<'a> {
+        let argument_names = function
+            .arguments
             .iter()
             .map(|arg| arg.names.get_variable_name())
             .collect();
         let mut generator = expression::Generator::new(
             self.module.name.clone(),
             self.line_numbers,
-            name.clone(),
+            function.name.clone(),
             argument_names,
             &mut self.tracker,
             self.module_scope.clone(),
         );
-        let head = if public {
+        let head = if function.public {
             "export function "
         } else {
             "function "
         };
-        let body = generator.function_body(body, args)?;
+        let body = generator.function_body(&function.body, function.arguments.as_slice())?;
         Ok(docvec![
             head,
-            maybe_escape_identifier_doc(name),
-            fun_args(args, generator.tail_recursion_used),
+            maybe_escape_identifier_doc(function.name.as_str()),
+            fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
             " {",
             docvec![line(), body].nest(INDENT).group(),
             line(),
