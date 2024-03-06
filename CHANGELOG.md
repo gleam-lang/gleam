@@ -15,6 +15,7 @@
 
 ### Build tool
 
+- New projects are created with the GitHub `actions/checkout` v4 action.
 - Fixed a bug where bit arrays would break syntax highlighting in the generated
   HTML documentation.
 
