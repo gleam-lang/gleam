@@ -157,6 +157,7 @@ impl<'comments> Formatter<'comments> {
 
     pub(crate) fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
         let mut documents = vec![];
+        let mut previous_was_a_definition = false;
 
         // Here we take consecutive groups of imports so that they can be sorted
         // alphabetically.
@@ -166,7 +167,11 @@ impl<'comments> Formatter<'comments> {
             .group_by(|definition| definition.definition.is_import())
         {
             if is_import_group {
+                if previous_was_a_definition {
+                    documents.push(lines(2));
+                }
                 documents.append(&mut self.imports(definitions.collect_vec()));
+                previous_was_a_definition = false;
             } else {
                 for definition in definitions {
                     if !documents.is_empty() {
@@ -174,6 +179,7 @@ impl<'comments> Formatter<'comments> {
                     }
                     documents.push(self.targeted_definition(definition));
                 }
+                previous_was_a_definition = true;
             }
         }
 
@@ -259,6 +265,7 @@ impl<'comments> Formatter<'comments> {
                 // imports in the group.
                 group_comments = printed_comments(self.pop_comments(start), false);
             }
+            let _ = self.pop_empty_lines(start);
             current_group.push(import);
         }
 
