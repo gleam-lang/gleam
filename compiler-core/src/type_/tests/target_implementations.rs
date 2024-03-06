@@ -7,7 +7,7 @@ use super::compile_module_with_target;
 
 macro_rules! assert_targets {
     ($src:expr, $implementations:expr $(,)?) => {
-        let result = $crate::type_::tests::expression::implementations($src);
+        let result = $crate::type_::tests::target_implementations::implementations($src);
         let expected = $implementations
             .iter()
             .map(|(name, expected_impl)| ((*name).into(), *expected_impl))
