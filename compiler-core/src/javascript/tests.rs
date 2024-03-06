@@ -134,7 +134,14 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
 pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
-    module(&ast, &line_numbers, Utf8Path::new(""), &"".into()).unwrap()
+    module(
+        &ast,
+        &line_numbers,
+        Utf8Path::new(""),
+        &"".into(),
+        TargetSupport::NotEnforced,
+    )
+    .unwrap()
 }
 
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
