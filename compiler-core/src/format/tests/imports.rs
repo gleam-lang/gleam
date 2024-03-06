@@ -119,3 +119,31 @@ import wobble
 "
     );
 }
+
+#[test]
+fn imports_fn_imports() {
+    assert_format_rewrite!(
+        "import a
+import c
+import b
+
+pub fn main() {
+  Nil
+}
+
+import z
+import x
+",
+        "import a
+import b
+import c
+
+pub fn main() {
+  Nil
+}
+
+import x
+import z
+"
+    );
+}
