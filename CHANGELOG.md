@@ -20,6 +20,9 @@
 - New projects are created with the GitHub `actions/checkout` v4 action.
 - Fixed a bug where bit arrays would break syntax highlighting in the generated
   HTML documentation.
+- Dependencies that use Erlang-only bit options can now compile on JavaScript,
+  though the functions that use them will not be available for use in the root
+  package.
 
 
 ## v1.0.0 - 2024-03-04
