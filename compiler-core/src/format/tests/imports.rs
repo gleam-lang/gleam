@@ -119,3 +119,69 @@ import wobble
 "
     );
 }
+
+#[test]
+fn type_definition_in_between_imports() {
+    assert_format!(
+        r#"import a
+import b
+
+pub type Wibble(a) {
+  Wobble
+}
+
+import c
+import d
+
+import e
+
+pub type Wabble
+
+import f
+"#
+    );
+}
+
+#[test]
+fn function_definition_in_between_imports() {
+    assert_format!(
+        r#"import a
+import b
+
+pub fn wibble() {
+  todo
+}
+
+import c
+import d
+
+import e
+
+pub fn wobble() -> Int {
+  todo
+}
+
+import f
+"#
+    );
+}
+
+#[test]
+fn constant_definition_in_between_imports() {
+    assert_format!(
+        r#"import a
+import b
+
+pub const wibble = Wibble
+
+import c
+import d
+
+import e
+
+const wobble = 1
+
+import f
+"#
+    );
+}
