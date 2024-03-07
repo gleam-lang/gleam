@@ -1,7 +1,9 @@
 use ecow::EcoString;
 use itertools::Itertools;
 
-use crate::{assert_module_error, build::Target, type_::expression::Implementations};
+use crate::{
+    analyse::TargetSupport, assert_module_error, build::Target, type_::expression::Implementations,
+};
 
 use super::compile_module_with_target;
 
@@ -17,14 +19,20 @@ macro_rules! assert_targets {
 }
 
 pub fn implementations(src: &str) -> Vec<(EcoString, Implementations)> {
-    compile_module_with_target(src, None, vec![], Target::Erlang)
-        .expect("compile src")
-        .type_info
-        .values
-        .into_iter()
-        .map(|(name, value)| (name, value.variant.implementations()))
-        .sorted()
-        .collect_vec()
+    compile_module_with_target(
+        src,
+        None,
+        vec![],
+        Target::Erlang,
+        TargetSupport::NotEnforced,
+    )
+    .expect("compile src")
+    .type_info
+    .values
+    .into_iter()
+    .map(|(name, value)| (name, value.variant.implementations()))
+    .sorted()
+    .collect_vec()
 }
 
 #[test]
@@ -257,4 +265,131 @@ pub fn main() {
 }
 "#
     );
+}
+
+#[test]
+pub fn invalid_both_and_one_called_from_erlang() {
+    let src = r#"
+@external(erlang, "foo", "bar")
+@external(javascript, "foo", "bar")
+fn both_external() -> Int
+        
+@external(javascript, "foo", "bar")
+fn javascript_only() -> Int
+
+pub fn no_valid_erlang_impl() {
+  both_external()
+  javascript_only()
+}
+"#;
+    let out =
+        compile_module_with_target(src, None, vec![], Target::Erlang, TargetSupport::Enforced);
+    assert!(out.is_err());
+}
+
+#[test]
+pub fn invalid_both_and_one_called_from_javascript() {
+    let src = r#"
+@external(erlang, "foo", "bar")
+@external(javascript, "foo", "bar")
+fn both_external() -> Int
+        
+@external(erlang, "foo", "bar")
+fn erlang_only() -> Int
+
+pub fn no_valid_javascript_impl() {
+  both_external()
+  erlang_only()
+}
+"#;
+    let out = compile_module_with_target(
+        src,
+        None,
+        vec![],
+        Target::JavaScript,
+        TargetSupport::Enforced,
+    );
+    assert!(out.is_err());
+}
+
+#[test]
+pub fn invalid_both_and_one_called_from_erlang_flipped() {
+    let src = r#"
+@external(erlang, "foo", "bar")
+@external(javascript, "foo", "bar")
+fn both_external() -> Int
+        
+@external(javascript, "foo", "bar")
+fn javascript_only() -> Int
+
+pub fn no_valid_erlang_impl() {
+  javascript_only()
+  both_external()
+}
+"#;
+    let out =
+        compile_module_with_target(src, None, vec![], Target::Erlang, TargetSupport::Enforced);
+    assert!(out.is_err());
+}
+
+#[test]
+pub fn invalid_both_and_one_called_from_javascript_flipped() {
+    let src = r#"
+@external(erlang, "foo", "bar")
+@external(javascript, "foo", "bar")
+fn both_external() -> Int
+        
+@external(erlang, "foo", "bar")
+fn erlang_only() -> Int
+
+pub fn no_valid_javascript_impl() {
+  erlang_only()
+  both_external()
+}
+"#;
+    let out = compile_module_with_target(
+        src,
+        None,
+        vec![],
+        Target::JavaScript,
+        TargetSupport::Enforced,
+    );
+    assert!(out.is_err());
+}
+
+#[test]
+pub fn invalid_erlang_with_external() {
+    let src = r#"
+@external(javascript, "foo", "bar")
+fn javascript_only() -> Int
+
+@external(javascript, "one", "two")
+pub fn no_valid_erlang_impl() {
+  javascript_only()
+}
+"#;
+    let out =
+        compile_module_with_target(src, None, vec![], Target::Erlang, TargetSupport::Enforced);
+    assert!(out.is_err());
+}
+
+#[test]
+pub fn invalid_javascript_with_external() {
+    let src = r#"
+@external(erlang, "foo", "bar")
+fn erlang_only() -> Int
+
+@external(erlang, "one", "two")
+pub fn no_valid_javascript_impl() {
+  erlang_only()
+}
+"#;
+    let out = compile_module_with_target(
+        src,
+        None,
+        vec![],
+        Target::JavaScript,
+        TargetSupport::Enforced,
+    );
+    assert!(out.is_err());
 }

@@ -26,6 +26,7 @@ use crate::{
     },
     bit_array,
     build::{Origin, Target},
+    type_::expression::Implementations,
 };
 use error::*;
 use hydrator::Hydrator;
@@ -36,8 +37,6 @@ use std::{
     ops::Deref,
     sync::Arc,
 };
-
-use self::expression::Implementations;
 
 pub trait HasType {
     fn type_(&self) -> Arc<Type>;

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::analyse::TargetSupport;
 use crate::build::Target;
-use crate::type_::expression::{Externals, Implementations};
+use crate::type_::expression::Externals;
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{SrcSpan, TypedExpr},
