@@ -17,6 +17,8 @@
 
 ### Build tool
 
+- A warning is now emitted if there is a `.gleam` file with a path that would be
+  invalid as a module name.
 - New projects are created with the GitHub `actions/checkout` v4 action.
 - Fixed a bug where bit arrays would break syntax highlighting in the generated
   HTML documentation.
