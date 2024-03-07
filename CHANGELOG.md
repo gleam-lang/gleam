@@ -2,11 +2,13 @@
 
 ## Unreleased
 
-## Language changes
+## Compiler
 
 - Prepending to lists in JavaScript (`[x, ..xs]` syntax) has been optimised.
 - Function stubs are no longer generated for functions that do not have an
   implementation for the current targeting being compiled for.
+- Fixed a bug where some functions would not result in a compile error when
+  compiled for a target that they do not support.
 
 ### Formatter
 
