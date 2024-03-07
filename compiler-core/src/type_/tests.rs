@@ -82,7 +82,7 @@ macro_rules! assert_js_module_infer {
         let constructors = $crate::type_::tests::infer_module_with_target(
             $src,
             vec![],
-            crate::build::Target::JavaScript,
+            $crate::build::Target::JavaScript,
         );
         let expected = $crate::type_::tests::stringify_tuple_strs($module);
         assert_eq!(($src, constructors), ($src, expected));
@@ -103,7 +103,7 @@ macro_rules! assert_js_module_error {
         let output = $crate::type_::tests::module_error_with_target(
             $src,
             vec![],
-            crate::build::Target::JavaScript,
+            $crate::build::Target::JavaScript,
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
