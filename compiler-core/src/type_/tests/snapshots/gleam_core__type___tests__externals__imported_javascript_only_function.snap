@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/externals.rs
-assertion_line: 183
+assertion_line: 163
 expression: "import module\npub fn main() {\n  module.javascript_only()\n}"
 ---
 error: Unsupported target
@@ -12,3 +12,4 @@ error: Unsupported target
 This value is not available as it is defined using externals, and there is
 no implementation for the Erlang target.
 
+Hint: Did you mean to build for a different target?

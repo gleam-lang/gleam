@@ -2370,16 +2370,17 @@ The missing patterns are:\n"
                 } => {
                     let text = wrap_format!(
                         "This value is not available as it is defined using externals, \
-and there is no implementation for the {} target.",
+and there is no implementation for the {} target.\n",
                         match current_target {
                             Target::Erlang => "Erlang",
                             Target::JavaScript => "JavaScript",
                         }
                     );
+                    let hint = wrap("Did you mean to build for a different target?");
                     Diagnostic {
                         title: "Unsupported target".into(),
                         text,
-                        hint: None,
+                        hint: Some(hint),
                         level: Level::Error,
                         location: Some(Location {
                             path: path.clone(),
