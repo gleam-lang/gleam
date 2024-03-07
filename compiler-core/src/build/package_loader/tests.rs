@@ -236,3 +236,43 @@ fn invalid_nested_module_name() {
         }],
     );
 }
+
+#[test]
+fn invalid_module_name_in_test() {
+    let fs = InMemoryFileSystem::new();
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
+
+    // Cache is stale
+    write_src(&fs, "/test/One.gleam", 1, TEST_SOURCE_2);
+
+    let loaded = run_loader(fs, root, artefact);
+    assert!(loaded.to_compile.is_empty());
+    assert!(loaded.cached.is_empty());
+    assert_eq!(
+        loaded.warnings,
+        vec![Warning::InvalidSource {
+            path: Utf8PathBuf::from("/test/One.gleam"),
+        }],
+    );
+}
+
+#[test]
+fn invalid_nested_module_name_in_test() {
+    let fs = InMemoryFileSystem::new();
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
+
+    // Cache is stale
+    write_src(&fs, "/test/1/one.gleam", 1, TEST_SOURCE_2);
+
+    let loaded = run_loader(fs, root, artefact);
+    assert!(loaded.to_compile.is_empty());
+    assert!(loaded.cached.is_empty());
+    assert_eq!(
+        loaded.warnings,
+        vec![Warning::InvalidSource {
+            path: Utf8PathBuf::from("/test/1/one.gleam"),
+        }],
+    );
+}
