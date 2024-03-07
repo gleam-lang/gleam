@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/externals.rs
-assertion_line: 164
-expression: "@target(erlang)\npub fn erlang_only() -> Int {\n  javascript_only()\n}\n\n@external(javascript, \"foo\", \"bar\")\npub fn javascript_only() -> Int\n    "
+assertion_line: 144
+expression: "@target(erlang)\npub fn erlang_only() -> Int {\n  javascript_only()\n}\n\n@external(javascript, \"one\", \"two\")\nfn javascript_only() -> Int\n    "
 ---
 error: Unsupported target
   ┌─ /src/one/two.gleam:3:3
@@ -12,3 +12,4 @@ error: Unsupported target
 This value is not available as it is defined using externals, and there is
 no implementation for the Erlang target.
 
+Hint: Did you mean to build for a different target?
