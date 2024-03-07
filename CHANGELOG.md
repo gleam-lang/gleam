@@ -24,6 +24,10 @@
   though the functions that use them will not be available for use in the root
   package.
 
+### Documentation
+
+- Opaque types are now explicitly tagged in built documentation
+- Constant values are now hidden
 
 ## v1.0.0 - 2024-03-04
 
