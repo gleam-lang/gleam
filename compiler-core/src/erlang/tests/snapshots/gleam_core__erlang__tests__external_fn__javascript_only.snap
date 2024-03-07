@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/erlang/tests/external_fn.rs
+assertion_line: 271
+expression: "\npub fn should_be_generated(x: Int) -> Int {\n  x\n}\n\n@external(javascript, \"one\", \"one\")\npub fn should_not_be_generated(x: Int) -> Int\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([should_be_generated/1]).
+
+-spec should_be_generated(integer()) -> integer().
+should_be_generated(X) ->
+    X.

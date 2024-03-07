@@ -4,7 +4,9 @@
 
 ## Language changes
 
-- Optimised prepending to lists in JavaScript (`[x, ..xs]` syntax).
+- Prepending to lists in JavaScript (`[x, ..xs]` syntax) has been optimised.
+- Function stubs are no longer generated for functions that do not have an
+  implementation for the current targeting being compiled for.
 
 ### Formatter
 
@@ -15,8 +17,12 @@
 
 ### Build tool
 
+- New projects are created with the GitHub `actions/checkout` v4 action.
 - Fixed a bug where bit arrays would break syntax highlighting in the generated
   HTML documentation.
+- Dependencies that use Erlang-only bit options can now compile on JavaScript,
+  though the functions that use them will not be available for use in the root
+  package.
 
 ### Bug fixes
 
@@ -47,6 +53,9 @@
 ### Formatter
 
 - The format used by the formatter has been improved in some niche cases.
+- Improved the formatting of long case guards.
+- The formatter can now format groups of imports alphabetically.
+
 
 ## v1.0.0-rc1 - 2024-02-10
 
