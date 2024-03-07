@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::analyse::TargetSupport;
 use crate::build::Target;
-use crate::type_::expression::Implementations;
+use crate::type_::expression::{Externals, Implementations};
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{SrcSpan, TypedExpr},
@@ -129,10 +129,9 @@ fn compile_expression(src: &str) -> TypedStatement {
     );
     ExprTyper::new(
         &mut environment,
-        Implementations {
-            gleam: false,
-            uses_erlang_externals: false,
-            uses_javascript_externals: false,
+        Externals {
+            erlang: false,
+            javascript: false,
         },
     )
     .infer_statements(ast)

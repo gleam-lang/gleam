@@ -44,6 +44,27 @@ pub struct Implementations {
     pub uses_javascript_externals: bool,
 }
 
+/// Trracking whether the function being currently type checked has externals
+/// implementations or not.
+/// This is used to determine whether an error should be raised in the case when
+/// a value is used that does not have an implementation for the current target.
+#[derive(Clone, Copy, Debug)]
+pub struct Externals {
+    /// The function has @external(erlang, "...", "...")
+    pub erlang: bool,
+    /// The function has @external(JavaScript, "...", "...")
+    pub javascript: bool,
+}
+
+impl Externals {
+    pub fn exists(&self, target: Target) -> bool {
+        match target {
+            Target::Erlang => self.erlang,
+            Target::JavaScript => self.javascript,
+        }
+    }
+}
+
 impl Implementations {
     /// Given the implementations of a function update those with taking into
     /// account the `implementations` of another function (or constant) used
@@ -102,28 +123,31 @@ pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) environment: &'a mut Environment<'b>,
 
     pub(crate) implementations: Implementations,
+    pub(crate) current_function_externals: Externals,
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
-    pub fn new(
-        environment: &'a mut Environment<'b>,
-        mut external_implementations: Implementations,
-    ) -> Self {
+    pub fn new(environment: &'a mut Environment<'b>, externals: Externals) -> Self {
         let mut hydrator = Hydrator::new();
 
-        // We start assuming the function is pure Gleam and narrow it down
-        // if we run into functions/constants that have only external
-        // implementations for some of the targets.
-        external_implementations.gleam = true;
+        let implementations = Implementations {
+            // We start assuming the function is pure Gleam and narrow it down
+            // if we run into functions/constants that have only external
+            // implementations for some of the targets.
+            gleam: true,
+            uses_erlang_externals: externals.erlang,
+            uses_javascript_externals: externals.javascript,
+        };
 
         hydrator.permit_holes(true);
         Self {
             hydrator,
             environment,
-            implementations: external_implementations,
+            implementations,
+            current_function_externals: externals,
         }
     }
 
@@ -695,8 +719,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             && !variant_implementations.supports(self.environment.target)
             // ... and there is not an external implementation for it
             && !self
-                    .implementations
-                    .supports(self.environment.target)
+                    .current_function_externals
+                    .exists(self.environment.target)
         {
             Err(Error::UnsupportedExpressionTarget {
                 target: self.environment.target,
