@@ -619,6 +619,8 @@ impl ModuleInterface {
             .get(&EcoString::from("main"))
             .ok_or_else(not_found)?;
 
+        dbg!(&value);
+
         assert_suitable_main_function(value, &self.name, target)?;
 
         Ok(ModuleFunction {
