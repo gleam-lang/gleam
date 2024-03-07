@@ -16,7 +16,7 @@ use crate::{
         self,
         environment::*,
         error::{convert_unify_error, Error, MissingAnnotation},
-        expression::{ExprTyper, Externals, Implementations},
+        expression::{ExprTyper, Externals},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
