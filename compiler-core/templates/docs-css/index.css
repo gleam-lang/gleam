@@ -540,17 +540,6 @@ body.drawer-open .label-closed {
   float: right;
 }
 
-.visibility-tag:hover::after {
-  content: attr(title);
-  display: block;
-  position: absolute;
-  background-color: var(--bg-shade-3);
-  color: var(--fg-shade-3);
-  padding: 6px; 
-  border-radius: 2px;
-  margin-top: 6px; 
-}
-
 /* Custom type constructors */
 
 .constructor-list {
