@@ -30,6 +30,93 @@ use camino::Utf8PathBuf;
 
 use super::progress::ConnectionProgressReporter;
 
+#[derive(Debug)]
+pub enum Message {
+    Request(lsp_server::RequestId, Request),
+    Notification(Notification),
+}
+
+#[derive(Debug)]
+pub enum Request {
+    Format(lsp::DocumentFormattingParams),
+    Hover(lsp::HoverParams),
+    GoToDefinition(lsp::GotoDefinitionParams),
+    Completion(lsp::CompletionParams),
+    CodeAction(lsp::CodeActionParams),
+}
+
+impl Request {
+    fn extract(request: lsp_server::Request) -> Option<Message> {
+        let id = request.id.clone();
+        match request.method.as_str() {
+            "textDocument/formatting" => {
+                let params = cast_request::<Formatting>(request);
+                Some(Message::Request(id, Request::Format(params)))
+            }
+            "textDocument/hover" => {
+                let params = cast_request::<HoverRequest>(request);
+                Some(Message::Request(id, Request::Hover(params)))
+            }
+            "textDocument/definition" => {
+                let params = cast_request::<GotoDefinition>(request);
+                Some(Message::Request(id, Request::GoToDefinition(params)))
+            }
+            "textDocument/completion" => {
+                let params = cast_request::<Completion>(request);
+                Some(Message::Request(id, Request::Completion(params)))
+            }
+            "textDocument/codeAction" => {
+                let params = cast_request::<CodeActionRequest>(request);
+                Some(Message::Request(id, Request::CodeAction(params)))
+            }
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Notification {
+    DidOpenDocument(lsp::DidOpenTextDocumentParams),
+    DidSaveDocument(lsp::DidSaveTextDocumentParams),
+    DidCloseTextDocument(lsp::DidCloseTextDocumentParams),
+    DidChangeTextDocument(lsp::DidChangeTextDocumentParams),
+    DidChangeWatchedFiles(lsp::DidChangeWatchedFilesParams),
+}
+
+impl Notification {
+    fn extract(notification: lsp_server::Notification) -> Option<Message> {
+        match notification.method.as_str() {
+            "textDocument/didOpen" => {
+                let params = cast_notification::<DidOpenTextDocument>(notification);
+                Some(Message::Notification(Notification::DidOpenDocument(params)))
+            }
+            "textDocument/didSave" => {
+                let params = cast_notification::<DidSaveTextDocument>(notification);
+                Some(Message::Notification(Notification::DidSaveDocument(params)))
+            }
+            "textDocument/didClose" => {
+                let params = cast_notification::<DidCloseTextDocument>(notification);
+                Some(Message::Notification(Notification::DidCloseTextDocument(
+                    params,
+                )))
+            }
+            "textDocument/didChange" => {
+                let params = cast_notification::<DidChangeTextDocument>(notification);
+                Some(Message::Notification(Notification::DidChangeTextDocument(
+                    params,
+                )))
+            }
+            "workspace/didChangeWatchedFiles" => {
+                let params = cast_notification::<DidChangeWatchedFiles>(notification);
+                Some(Message::Notification(Notification::DidChangeWatchedFiles(
+                    params,
+                )))
+            }
+            _ => None,
+        }
+    }
+}
+
 /// This class is responsible for handling the language server protocol and
 /// delegating the work to the engine.
 ///
@@ -77,30 +164,25 @@ where
 
         // Enter the message loop, handling each message that comes in from the client
         for message in &self.connection.receiver {
-            match self.handle_message(message) {
-                Next::Continue => (),
-                Next::Break => break,
-            }
+            let message = match message {
+                lsp_server::Message::Request(r) if self.handle_shutdown(&r) => break,
+                lsp_server::Message::Request(r) => Request::extract(r),
+                lsp_server::Message::Notification(n) => Notification::extract(n),
+                lsp_server::Message::Response(_) => None,
+            };
+
+            if let Some(message) = message {
+                self.handle_message(message)
+            };
         }
 
         Ok(())
     }
 
-    fn handle_message(&mut self, message: lsp_server::Message) -> Next {
+    fn handle_message(&mut self, message: Message) {
         match message {
-            lsp_server::Message::Request(request) if self.handle_shutdown(&request) => Next::Break,
-
-            lsp_server::Message::Request(request) => {
-                self.handle_request(request);
-                Next::Continue
-            }
-
-            lsp_server::Message::Notification(notification) => {
-                self.handle_notification(notification);
-                Next::Continue
-            }
-
-            lsp_server::Message::Response(_) => Next::Continue,
+            Message::Request(id, request) => self.handle_request(id, request),
+            Message::Notification(notification) => self.handle_notification(notification),
         }
     }
 
@@ -110,35 +192,13 @@ where
             .expect("LSP shutdown")
     }
 
-    fn handle_request(&mut self, request: lsp_server::Request) {
-        let id = request.id.clone();
-        let (payload, feedback) = match request.method.as_str() {
-            "textDocument/formatting" => {
-                let params = cast_request::<Formatting>(request);
-                self.format(params)
-            }
-
-            "textDocument/hover" => {
-                let params = cast_request::<HoverRequest>(request);
-                self.hover(params)
-            }
-
-            "textDocument/definition" => {
-                let params = cast_request::<GotoDefinition>(request);
-                self.goto_definition(params)
-            }
-
-            "textDocument/completion" => {
-                let params = cast_request::<Completion>(request);
-                self.completion(params)
-            }
-
-            "textDocument/codeAction" => {
-                let params = cast_request::<CodeActionRequest>(request);
-                self.code_action(params)
-            }
-
-            name => panic!("Unsupported LSP request {}", name),
+    fn handle_request(&mut self, id: lsp_server::RequestId, request: Request) {
+        let (payload, feedback) = match request {
+            Request::Format(param) => self.format(param),
+            Request::Hover(param) => self.hover(param),
+            Request::GoToDefinition(param) => self.goto_definition(param),
+            Request::Completion(param) => self.completion(param),
+            Request::CodeAction(param) => self.code_action(param),
         };
 
         self.publish_feedback(feedback);
@@ -154,34 +214,13 @@ where
             .expect("channel send LSP response")
     }
 
-    fn handle_notification(&mut self, notification: lsp_server::Notification) {
-        let feedback = match notification.method.as_str() {
-            "textDocument/didOpen" => {
-                let params = cast_notification::<DidOpenTextDocument>(notification);
-                self.text_document_did_open(params)
-            }
-
-            "textDocument/didSave" => {
-                let params = cast_notification::<DidSaveTextDocument>(notification);
-                self.text_document_did_save(params)
-            }
-
-            "textDocument/didClose" => {
-                let params = cast_notification::<DidCloseTextDocument>(notification);
-                self.text_document_did_close(params)
-            }
-
-            "textDocument/didChange" => {
-                let params = cast_notification::<DidChangeTextDocument>(notification);
-                self.text_document_did_change(params)
-            }
-
-            "workspace/didChangeWatchedFiles" => {
-                let params = cast_notification::<DidChangeWatchedFiles>(notification);
-                self.watched_files_changed(params)
-            }
-
-            _ => return,
+    fn handle_notification(&mut self, notification: Notification) {
+        let feedback = match notification {
+            Notification::DidOpenDocument(param) => self.text_document_did_open(param),
+            Notification::DidSaveDocument(param) => self.text_document_did_save(param),
+            Notification::DidCloseTextDocument(param) => self.text_document_did_close(param),
+            Notification::DidChangeTextDocument(param) => self.text_document_did_change(param),
+            Notification::DidChangeWatchedFiles(param) => self.watched_files_changed(param),
         };
 
         self.publish_feedback(feedback);
@@ -510,12 +549,6 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
     let initialise_params: InitializeParams =
         serde_json::from_value(initialise_params_json).expect("LSP InitializeParams from json");
     initialise_params
-}
-
-#[derive(Debug, Clone, Copy)]
-enum Next {
-    Continue,
-    Break,
 }
 
 fn cast_request<R>(request: lsp_server::Request) -> R::Params
