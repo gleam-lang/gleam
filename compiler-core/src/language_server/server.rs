@@ -24,7 +24,7 @@ use lsp_types::{
     InitializeParams, PublishDiagnosticsParams,
 };
 use serde_json::Value as Json;
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use camino::Utf8PathBuf;
 
@@ -162,18 +162,41 @@ where
     pub fn run(&mut self) -> Result<()> {
         self.start_watching_gleam_toml();
 
-        // Enter the message loop, handling each message that comes in from the client
-        for message in &self.connection.receiver {
-            let message = match message {
-                lsp_server::Message::Request(r) if self.handle_shutdown(&r) => break,
-                lsp_server::Message::Request(r) => Request::extract(r),
-                lsp_server::Message::Notification(n) => Notification::extract(n),
-                lsp_server::Message::Response(_) => None,
+        let pause = Duration::from_millis(100);
+        let mut messages: Vec<Message> = vec![];
+
+        loop {
+            // Empty the message buffer so that we can store new messages in it
+            messages.clear();
+
+            // Pull the first message, waiting an unlimited amount of time until
+            // either one is available or the connection is closed.
+            let Ok(message) = self.connection.receiver.recv() else {
+                break; // The connection has been closed.
             };
 
-            if let Some(message) = message {
+            // Pull the rest of the messages until there's a pause
+            loop {
+                let Ok(message) = self.connection.receiver.recv_timeout(pause) else {
+                    break;
+                };
+                let message = match message {
+                    lsp_server::Message::Request(r) if self.handle_shutdown(&r) => break,
+                    lsp_server::Message::Request(r) => Request::extract(r),
+                    lsp_server::Message::Notification(n) => Notification::extract(n),
+                    lsp_server::Message::Response(_) => None,
+                };
+                if let Some(message) = message {
+                    messages.push(message);
+                }
+            }
+
+            // FUTURE: optimise the messages to avoid extra work
+
+            // Process all the messages
+            for message in messages.drain(..) {
                 self.handle_message(message)
-            };
+            }
         }
 
         Ok(())
