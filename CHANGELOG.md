@@ -31,6 +31,12 @@
   no longer exposes the values of constants, and indicates which types are
   opaque.
 
+## Language Server
+
+- The `Compiling Gleam` message is no longer emitted each time code is compiled.
+  This is to reduce noise in editors that show this message prominently such as
+  Neovim.
+
 
 ## v1.0.0 - 2024-03-04
 
