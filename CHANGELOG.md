@@ -27,11 +27,10 @@
 - Dependencies that use Erlang-only bit options can now compile on JavaScript,
   though the functions that use them will not be available for use in the root
   package.
+- Generated documentation no longer exposes the constructors of opaque types,
+  no longer exposes the values of constants, and indicates which types are
+  opaque.
 
-### Documentation
-
-- Opaque types are now explicitly tagged in built documentation
-- Constant values are now hidden
 
 ## v1.0.0 - 2024-03-04
 
