@@ -44,7 +44,7 @@ pub struct Implementations {
     pub uses_javascript_externals: bool,
 }
 
-/// Trracking whether the function being currently type checked has externals
+/// Tracking whether the function being currently type checked has externals
 /// implementations or not.
 /// This is used to determine whether an error should be raised in the case when
 /// a value is used that does not have an implementation for the current target.
