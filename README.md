@@ -137,7 +137,9 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/max-tern">max-tern</a> -
   <a href="https://github.com/stunthamster">Michael Duffy</a> -
   <a href="https://github.com/michaeljones">Michael Jones</a> -
+  <a href="https://github.com/SoTeKie">Michael Kieran O'Reilly</a> -
   <a href="https://github.com/mroach">Mike Roach</a> -
+  <a href="https://github.com/mogold">Moshe Goldberg</a> -
   <a href="https://github.com/natanaelsirqueira">Natanael Sirqueira</a> -
   <a href="https://github.com/nathanielknight">Nathaniel Knight</a> -
   <a href="https://github.com/NFIBrokerage">NFIBrokerage</a> -
