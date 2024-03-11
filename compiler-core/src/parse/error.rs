@@ -279,7 +279,7 @@ impl LexicalError {
                 "I don't understand this escape code",
                 vec![
                     "Hint: Add another backslash before it.".into(),
-                    "See: https://gleam.run/book/tour/strings.html#escape-sequences".into(),
+                    "See: https://tour.gleam.run/basics/strings".into(),
                 ],
             ),
             LexicalErrorType::DigitOutOfRadix => {
