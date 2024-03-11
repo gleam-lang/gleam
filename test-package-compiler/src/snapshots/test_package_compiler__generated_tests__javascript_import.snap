@@ -1,6 +1,5 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 225
 expression: "./cases/javascript_import"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
@@ -32,6 +31,7 @@ export type A$ = A;
 
 
 //// /out/lib/the_package/one/two.mjs
+/// <reference types="./one/two.d.mts" />
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class A extends $CustomType {}
@@ -44,9 +44,7 @@ export const x: $two.A$;
 
 
 //// /out/lib/the_package/two.mjs
+/// <reference types="./two.d.mts" />
 import * as $two from "./one/two.mjs";
 
 export const x = new $two.A();
-
-
-
