@@ -502,7 +502,7 @@ impl<'a> Environment<'a> {
         {
             // Private types can be shadowed by a constructor with the same name
             //
-            // TODO: Improve this so that we can tell if an imported overriden
+            // TODO: Improve this so that we can tell if an imported overridden
             // type is actually used or not by tracking whether usages apply to
             // the value or type scope
             Some((ImportedType | PrivateType, _, _)) => {}

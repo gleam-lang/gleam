@@ -300,7 +300,7 @@ pub struct CompilePackage {
     /// Required when compiling to JavaScript.
     ///
     /// This likely wants to be a `.mjs` file as NodeJS does not permit
-    /// importing of other JavaScript file extentions.
+    /// importing of other JavaScript file extensions.
     ///
     #[clap(long = "javascript-prelude")]
     javascript_prelude: Option<Utf8PathBuf>,
