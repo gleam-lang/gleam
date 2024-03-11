@@ -7,6 +7,7 @@ mod typescript;
 
 use crate::analyse::TargetSupport;
 use crate::build::Target;
+use crate::codegen::TypeScriptDeclarations;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
@@ -41,6 +42,8 @@ pub struct Generator<'a> {
     module_scope: im::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
     target_support: TargetSupport,
+
+    typescript: TypeScriptDeclarations,
 }
 
 impl<'a> Generator<'a> {
@@ -48,6 +51,7 @@ impl<'a> Generator<'a> {
         line_numbers: &'a LineNumbers,
         module: &'a TypedModule,
         target_support: TargetSupport,
+        typescript: TypeScriptDeclarations,
     ) -> Self {
         let current_module_name_segments_count = module.name.split('/').count();
 
@@ -58,10 +62,23 @@ impl<'a> Generator<'a> {
             tracker: UsageTracker::default(),
             module_scope: Default::default(),
             target_support,
+            typescript,
         }
     }
 
+    fn type_reference(&self) -> Document<'a> {
+        if self.typescript == TypeScriptDeclarations::None {
+            return Document::Str("");
+        }
+
+        let name = Document::EcoString(self.module.name.clone());
+
+        docvec!["/// <reference types=\"./", name, ".d.mts\" />", line()]
+    }
+
     pub fn compile(&mut self) -> Output<'a> {
+        let type_reference = self.type_reference();
+
         // Determine what JavaScript imports we need to generate
         let mut imports = self.collect_imports();
 
@@ -147,14 +164,18 @@ impl<'a> Generator<'a> {
         // Put it all together
 
         if imports.is_empty() && statements.is_empty() {
-            Ok(docvec!("export {}", line()))
+            Ok(docvec!(type_reference, "export {}", line()))
         } else if imports.is_empty() {
             statements.push(line());
-            Ok(statements.to_doc())
+            Ok(docvec![type_reference, statements])
         } else if statements.is_empty() {
-            Ok(imports.into_doc(JavaScriptCodegenTarget::JavaScript))
+            Ok(docvec![
+                type_reference,
+                imports.into_doc(JavaScriptCodegenTarget::JavaScript)
+            ])
         } else {
             Ok(docvec![
+                type_reference,
                 imports.into_doc(JavaScriptCodegenTarget::JavaScript),
                 line(),
                 statements,
@@ -511,8 +532,9 @@ pub fn module(
     path: &Utf8Path,
     src: &EcoString,
     target_support: TargetSupport,
+    typescript: TypeScriptDeclarations,
 ) -> Result<String, crate::Error> {
-    let document = Generator::new(line_numbers, module, target_support)
+    let document = Generator::new(line_numbers, module, target_support, typescript)
         .compile()
         .map_err(|error| crate::Error::JavaScript {
             path: path.to_path_buf(),

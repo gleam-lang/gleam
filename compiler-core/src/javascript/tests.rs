@@ -140,6 +140,7 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
         Utf8Path::new(""),
         &"".into(),
         TargetSupport::NotEnforced,
+        TypeScriptDeclarations::None,
     )
     .unwrap()
 }

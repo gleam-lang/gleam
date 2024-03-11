@@ -253,6 +253,7 @@ impl<'a> JavaScript<'a> {
             &module.input_path,
             &module.code,
             self.target_support,
+            self.typescript,
         );
         tracing::debug!(name = ?js_name, "Generated js module");
         writer.write(&path, &output?)
