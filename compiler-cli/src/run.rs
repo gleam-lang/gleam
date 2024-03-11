@@ -130,7 +130,7 @@ fn run_erlang(
         args.push(entry.path().join("ebin").into());
     }
 
-    // gleam modules are seperated by `/`. Erlang modules are separated by `@`.
+    // gleam modules are separated by `/`. Erlang modules are separated by `@`.
     let module = module.replace('/', "@");
 
     args.push("-eval".into());
