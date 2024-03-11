@@ -185,7 +185,7 @@ pub fn stdout_buffer_writer() -> BufferWriter {
 }
 
 fn color_choice() -> ColorChoice {
-    if atty::is(atty::Stream::Stderr) {
+    if atty::is(atty::Stream::Stderr) || std::env::var("FORCE_COLOR").is_ok() {
         termcolor::ColorChoice::Auto
     } else {
         termcolor::ColorChoice::Never
