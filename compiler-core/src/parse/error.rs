@@ -156,6 +156,16 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://tour.gleam.run/basics/lists/".into(),
                 ],
             ),
+            ParseErrorType::ListSpreadFollowedByElements => (
+                "I wasn't expecting elements after this spread",
+                vec![
+                    "A spread can only be used to prepend elements to lists like this: `[first, ..rest]`."
+                        .into(),
+                    "Hint: If you need to append elements to a list you can use `list.append`."
+                        .into(),
+                    "See: https://hexdocs.pm/gleam_stdlib/gleam/list.html#append".into(),
+                ],
+            ),
             ParseErrorType::UnexpectedReservedWord => (
                 "This is a reserved word",
                 vec!["Hint: I was expecting to see a name here.".into()],
@@ -200,7 +210,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 vec![],
             ),
             ParseErrorType::ListSpreadWithoutTail => (
-                "I was expecting a value here",
+                "I was expecting a value after this spread",
                 vec!["If a list expression has a spread then a tail must also be given.".into()],
             ),
             ParseErrorType::UnknownAttribute => (
@@ -240,8 +250,8 @@ pub enum ParseErrorType {
     LexError {
         error: LexicalError,
     },
-    NestedBitArrayPattern,     // <<<<1>>, 2>>, <<1>> is not allowed in there
-    NoCaseClause,              // a case with no clauses
+    NestedBitArrayPattern,        // <<<<1>>, 2>>, <<1>> is not allowed in there
+    NoCaseClause,                 // a case with no clauses
     NoExpression, // between "{" and "}" in expression position, there must be an expression
     NoLetBinding, // Bindings and rebinds always require let and must always bind to a value.
     NoValueAfterEqual, // = <something other than a value>
@@ -253,6 +263,7 @@ pub enum ParseErrorType {
     UnknownAttribute, // an attribute was used that is not known
     UnknownTarget, // an unknown target was used
     ListSpreadWithoutElements, // Pointless spread: `[..xs]`
+    ListSpreadFollowedByElements, // trying to append something after the spread: `[..xs, x]`
     LowcaseBooleanPattern, // most likely user meant True or False in patterns
     UnexpectedLabel, // argument labels were provided, but are not supported in this context
     UnexpectedEof,

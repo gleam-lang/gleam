@@ -13,6 +13,8 @@
   discarded.
 - Fixed a bug with JavaScript code generation of pattern matching guards.
 - URLs in error messages have been updated for the new language tour.
+- Improved error message when erroneously trying to append items to a list using
+  the spread syntax (like `[..rest, last]`).
 
 ### Formatter
 
