@@ -12,6 +12,7 @@
 - Fixed a bug where sometimes a warning would not be emitted when a result is
   discarded.
 - Fixed a bug with JavaScript code generation of pattern matching guards.
+- URLs in error messages have been updated for the new language tour.
 
 ### Formatter
 
