@@ -89,7 +89,7 @@ impl Type {
 
     pub fn is_result(&self) -> bool {
         match self {
-            Self::Named { name, module, .. } => "Result" == name && is_prelude_module(&module),
+            Self::Named { name, module, .. } => "Result" == name && is_prelude_module(module),
             Self::Var { type_ } => type_.borrow().is_result(),
             _ => false,
         }
