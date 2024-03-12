@@ -9,6 +9,8 @@
   implementation for the current targeting being compiled for.
 - Fixed a bug where some functions would not result in a compile error when
   compiled for a target that they do not support.
+- Fixed a bug where hovering over an expression in the middle of a pipe would
+  give the wrong node.
 
 ### Formatter
 
