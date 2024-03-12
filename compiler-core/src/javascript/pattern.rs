@@ -808,6 +808,19 @@ impl<'a> Check<'a> {
             }
         }
     }
+
+    pub(crate) fn may_require_wrapping(&self) -> bool {
+        match self {
+            Check::Result { .. }
+            | Check::Variant { .. }
+            | Check::Equal { .. }
+            | Check::ListLength { .. }
+            | Check::BitArrayLength { .. }
+            | Check::StringPrefix { .. }
+            | Check::Booly { .. } => false,
+            Check::Guard { .. } => true,
+        }
+    }
 }
 
 pub(crate) fn assign_subject<'a>(

@@ -175,3 +175,18 @@ fn go(x, y) {
 "#,
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/2665
+#[test]
+fn case_branches_guards_are_wrapped_in_parentheses() {
+    assert_js!(
+        r#"
+fn anything() -> a {
+  case [] {
+    [a] if False || True -> a
+    _ -> anything()
+  }
+}
+"#,
+    )
+}

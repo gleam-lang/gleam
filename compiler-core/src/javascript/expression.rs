@@ -1101,10 +1101,15 @@ impl<'module> Generator<'module> {
             break_(" ||", " || ")
         };
 
+        let checks_len = checks.len();
         concat(Itertools::intersperse(
-            checks
-                .into_iter()
-                .map(|check| check.into_doc(match_desired)),
+            checks.into_iter().map(|check| {
+                if checks_len > 1 && check.may_require_wrapping() {
+                    docvec!["(", check.into_doc(match_desired), ")"]
+                } else {
+                    check.into_doc(match_desired)
+                }
+            }),
             operator,
         ))
         .group()
