@@ -9,6 +9,8 @@
   implementation for the current targeting being compiled for.
 - Fixed a bug where some functions would not result in a compile error when
   compiled for a target that they do not support.
+- Fixed a bug where sometimes a warning would not be emitted when a result is
+  discarded.
 
 ### Formatter
 
