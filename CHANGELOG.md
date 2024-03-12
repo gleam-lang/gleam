@@ -9,8 +9,6 @@
   implementation for the current targeting being compiled for.
 - Fixed a bug where some functions would not result in a compile error when
   compiled for a target that they do not support.
-- Fixed a bug where hovering over an expression in the middle of a pipe would
-  give the wrong node.
 
 ### Formatter
 
@@ -38,6 +36,8 @@
 - The `Compiling Gleam` message is no longer emitted each time code is compiled.
   This is to reduce noise in editors that show this message prominently such as
   Neovim.
+- Fixed a bug where hovering over an expression in the middle of a pipe would
+  give the wrong node.
 
 
 ## v1.0.0 - 2024-03-04
