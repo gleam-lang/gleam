@@ -1,4 +1,4 @@
-<p align="center">
+<p align="right">
   <img src="images/lucy.png" alt="Lucy, Gleam's mascot">
 </p>
 
