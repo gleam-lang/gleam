@@ -107,6 +107,7 @@ fn() -> Nil
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/2654
 #[test]
 fn hover_local_function_in_pipe() {
     let code = "
