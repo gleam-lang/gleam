@@ -2517,7 +2517,7 @@ where
             // invalid
             _ => self.next_tok_unexpected(vec![
                 "A valid bit array segment type".into(),
-                "See: https://gleam.run/book/tour/bit-arrays.html".into(),
+                "See: https://tour.gleam.run/data-types/bit-arrays/".into(),
             ]),
         }
     }
