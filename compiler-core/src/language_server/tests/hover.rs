@@ -108,6 +108,113 @@ fn() -> Nil
 }
 
 #[test]
+fn hover_local_function_in_pipe() {
+    let code = "
+fn add1(num: Int) -> Int {
+  num + 1
+}
+
+pub fn main() {
+  add1(1)
+
+  1
+  |> add1
+  |> add1
+  |> add1
+}
+";
+
+    assert_eq!(
+        positioned_hover(code, Position::new(6, 3)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn(Int) -> Int
+```
+"
+                .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 6,
+                    character: 2,
+                },
+                end: Position {
+                    line: 6,
+                    character: 6,
+                },
+            },),
+        })
+    );
+    assert_eq!(
+        positioned_hover(code, Position::new(9, 7)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn(Int) -> Int
+```
+"
+                .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 9,
+                    character: 5,
+                },
+                end: Position {
+                    line: 9,
+                    character: 9,
+                },
+            },),
+        })
+    );
+    assert_eq!(
+        positioned_hover(code, Position::new(10, 7)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn(Int) -> Int
+```
+"
+                .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 10,
+                    character: 5,
+                },
+                end: Position {
+                    line: 10,
+                    character: 9,
+                },
+            },),
+        })
+    );
+    assert_eq!(
+        positioned_hover(code, Position::new(11, 7)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn(Int) -> Int
+```
+"
+                .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 11,
+                    character: 5,
+                },
+                end: Position {
+                    line: 11,
+                    character: 9,
+                },
+            },),
+        })
+    );
+}
+
+#[test]
 fn hover_imported_function() {
     let io = LanguageServerTestIO::new();
     _ = io.src_module("example_module", "pub fn my_fn() { Nil }");
