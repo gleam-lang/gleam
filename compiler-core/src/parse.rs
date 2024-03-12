@@ -474,30 +474,58 @@ where
                     Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
 
                 // Parse an optional tail
-                let mut spread_given = false;
                 let mut tail = None;
-                if self.maybe_one(&Token::DotDot).is_some() {
-                    spread_given = true;
+                let mut elements_after_tail = None;
+                let mut dot_dot_location = None;
+                if let Some(location) = self.maybe_one(&Token::DotDot) {
+                    dot_dot_location = Some(location);
                     tail = self.parse_expression()?.map(Box::new);
-                    let _ = self.maybe_one(&Token::Comma);
+
+                    if self.maybe_one(&Token::Comma).is_some() {
+                        // See if there's a list of items after the tail,
+                        // like `[..wibble, wobble, wabble]`
+                        let elements =
+                            Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma));
+                        match elements {
+                            Err(_) => {}
+                            Ok(elements) => {
+                                elements_after_tail = Some(elements);
+                            }
+                        };
+                    };
                 }
+
                 let (_, end) = self.expect_one(&Token::RightSquare)?;
 
                 // Return errors for malformed lists
-                if spread_given && tail.is_none() {
-                    return parse_error(
-                        ParseErrorType::ListSpreadWithoutTail,
-                        SrcSpan {
-                            start: end - 1,
-                            end,
-                        },
-                    );
+                match dot_dot_location {
+                    Some((start, end)) if tail.is_none() => {
+                        return parse_error(
+                            ParseErrorType::ListSpreadWithoutTail,
+                            SrcSpan { start, end },
+                        );
+                    }
+                    _ => {}
                 }
                 if tail.is_some() && elements.is_empty() {
                     return parse_error(
                         ParseErrorType::ListSpreadWithoutElements,
                         SrcSpan { start, end },
                     );
+                }
+
+                match elements_after_tail {
+                    Some(elements) if elements.len() > 0 => {
+                        let (start, end) = match (dot_dot_location, tail) {
+                            (Some((start, _)), Some(tail)) => (start, tail.location().end),
+                            (_, _) => (start, end),
+                        };
+                        return parse_error(
+                            ParseErrorType::ListSpreadFollowedByElements,
+                            SrcSpan { start, end },
+                        );
+                    }
+                    _ => {}
                 }
 
                 UntypedExpr::List {

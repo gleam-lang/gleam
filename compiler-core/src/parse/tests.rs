@@ -700,3 +700,27 @@ fn add(x, y) {
 "#
     );
 }
+
+#[test]
+fn list_spread_with_no_tail_in_the_middle_of_a_list() {
+    assert_module_error!(
+        r#"
+pub fn main() -> Nil {
+  let xs = [1, 2, 3]
+  [1, 2, .., 3 + 3, 4]
+}
+"#
+    );
+}
+
+#[test]
+fn list_spread_followed_by_extra_items() {
+    assert_module_error!(
+        r#"
+pub fn main() -> Nil {
+  let xs = [1, 2, 3]
+  [1, 2, ..xs, 3 + 3, 4]
+}
+"#
+    );
+}
