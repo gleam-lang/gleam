@@ -15,7 +15,7 @@ pub enum Token {
     LeftParen,   // (
     RightParen,  // )
     LeftSquare,  // [
-    RightSquare, // }
+    RightSquare, // ]
     LeftBrace,   // {
     RightBrace,  // }
     // Int Operators
