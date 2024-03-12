@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## Compiler
+### Compiler
 
 - Prepending to lists in JavaScript (`[x, ..xs]` syntax) has been optimised.
 - Function stubs are no longer generated for functions that do not have an
@@ -11,6 +11,7 @@
   compiled for a target that they do not support.
 - Fixed a bug where sometimes a warning would not be emitted when a result is
   discarded.
+- Fixed a bug with JavaScript code generation of pattern matching guards.
 
 ### Formatter
 
@@ -33,7 +34,7 @@
   no longer exposes the values of constants, and indicates which types are
   opaque.
 
-## Language Server
+### Language Server
 
 - The `Compiling Gleam` message is no longer emitted each time code is compiled.
   This is to reduce noise in editors that show this message prominently such as
