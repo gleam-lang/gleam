@@ -515,7 +515,7 @@ where
                 }
 
                 match elements_after_tail {
-                    Some(elements) if elements.len() > 0 => {
+                    Some(elements) if !elements.is_empty() => {
                         let (start, end) = match (dot_dot_location, tail) {
                             (Some((start, _)), Some(tail)) => (start, tail.location().end),
                             (_, _) => (start, end),
