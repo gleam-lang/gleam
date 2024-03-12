@@ -82,25 +82,37 @@ impl Type {
     pub fn is_result_constructor(&self) -> bool {
         match self {
             Type::Fn { retrn, .. } => retrn.is_result(),
+            Type::Var { type_ } => type_.borrow().is_result(),
             _ => false,
         }
     }
 
     pub fn is_result(&self) -> bool {
-        matches!(self, Self::Named { name, module, .. } if "Result" == name && is_prelude_module(module))
+        match self {
+            Self::Named { name, module, .. } => "Result" == name && is_prelude_module(&module),
+            Self::Var { type_ } => type_.borrow().is_result(),
+            _ => false,
+        }
     }
 
     pub fn is_unbound(&self) -> bool {
-        matches!(self, Self::Var { type_: typ } if typ.borrow().is_unbound())
+        match self {
+            Self::Var { type_: typ } => typ.borrow().is_unbound(),
+            _ => false,
+        }
     }
 
     pub fn is_variable(&self) -> bool {
-        matches!(self, Self::Var { type_: typ } if typ.borrow().is_variable())
+        match self {
+            Self::Var { type_: typ } => typ.borrow().is_variable(),
+            _ => false,
+        }
     }
 
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
             Self::Fn { retrn, .. } => Some(retrn.clone()),
+            Type::Var { type_ } => type_.borrow().return_type(),
             _ => None,
         }
     }
@@ -108,6 +120,7 @@ impl Type {
     pub fn fn_types(&self) -> Option<(Vec<Arc<Self>>, Arc<Self>)> {
         match self {
             Self::Fn { args, retrn, .. } => Some((args.clone(), retrn.clone())),
+            Self::Var { type_ } => type_.borrow().fn_types(),
             _ => None,
         }
     }
@@ -696,11 +709,38 @@ pub enum TypeVar {
 
 impl TypeVar {
     pub fn is_unbound(&self) -> bool {
-        matches!(self, Self::Unbound { .. })
+        match self {
+            Self::Unbound { .. } => true,
+            _ => false,
+        }
     }
 
     pub fn is_variable(&self) -> bool {
-        matches!(self, Self::Unbound { .. } | Self::Generic { .. })
+        match self {
+            Self::Unbound { .. } | Self::Generic { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn return_type(&self) -> Option<Arc<Type>> {
+        match self {
+            Self::Link { type_ } => type_.return_type(),
+            _ => None,
+        }
+    }
+
+    pub fn is_result(&self) -> bool {
+        match self {
+            Self::Link { type_ } => type_.is_result(),
+            _ => false,
+        }
+    }
+
+    pub fn fn_types(&self) -> Option<(Vec<Arc<Type>>, Arc<Type>)> {
+        match self {
+            Self::Link { type_ } => type_.fn_types(),
+            _ => None,
+        }
     }
 
     pub fn is_nil(&self) -> bool {

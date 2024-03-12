@@ -1150,3 +1150,19 @@ fn unused_alias_for_duplicate_module_no_warning_for_alias_test() {
         }
     );
 }
+
+#[test]
+fn result_in_case_discarded() {
+    assert_warning!(
+        "
+pub fn main(x) {
+  case x {
+    _ -> Error(Nil)
+  }
+  Nil
+}",
+        Warning::ImplicitlyDiscardedResult {
+            location: SrcSpan { start: 20, end: 52 }
+        }
+    );
+}
