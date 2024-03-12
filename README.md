@@ -47,10 +47,12 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/anthony-khong">Anthony Khong</a> -
   <a href="https://github.com/amscotti">Anthony Scotti</a> -
   <a href="https://github.com/oz">Arnaud Berthomier</a> -
+  <a href="https://github.com/aweagel">Arthur Weagel</a> -
   <a href="https://github.com/TeriyakiBomb">Ash Joseph</a> -
   <a href="https://github.com/chiroptical">Barry Moore</a> -
   <a href="https://github.com/bgmarx">Ben Marx</a> -
   <a href="https://github.com/benmyles">Ben Myles</a> -
+  <a href="https://github.com/benbot">Benjamin Botwin</a> -
   <a href="https://github.com/bcpeinhardt">Benjamin Peinhardt</a> -
   <a href="https://github.com/bentomas">Benjamin Thomas</a> -
   <a href="https://github.com/bigtallbill">Bill Nunney</a> -
@@ -109,6 +111,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/henrysdev">Henry Warren</a> -
   <a href="https://github.com/hexpm">Hex</a> -
   <a href="https://github.com/human154">human154</a> -
+  <a href="https://github.com/hpiaia">Humberto Piaia</a> -
   <a href="https://github.com/Ian-GL">Ian González</a> -
   <a href="https://github.com/irumiha">Igor Rumiha</a> -
   <a href="https://github.com/inoas">inoas</a> -
@@ -199,6 +202,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/simonewebdesign">Simone Vittori</a> -
   <a href="https://github.com/finalclass">Szymon Wygnański</a> -
   <a href="https://github.com/Theosaurus-Rex">Theo Harris</a> -
+  <a href="https://github.com/thomaswhyyou">Thomas</a> -
   <a href="https://github.com/timgluz">Timo Sulg</a> -
   <a href="https://github.com/tomekowal">Tomasz Kowal</a> -
   <a href="https://github.com/TristanCacqueray">Tristan de Cacqueray</a> -
