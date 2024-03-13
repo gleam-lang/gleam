@@ -1,6 +1,7 @@
 mod action;
 mod compilation;
 mod completion;
+mod definition;
 mod hover;
 
 use std::{
