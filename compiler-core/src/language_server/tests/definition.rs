@@ -1,37 +1,16 @@
-use lsp_types::{
-    GotoDefinitionParams, Location, Position, Range, TextDocumentIdentifier,
-    TextDocumentPositionParams, Url,
-};
+use lsp_types::{GotoDefinitionParams, Location, Position, Range, Url};
 
 use super::*;
 
-fn positioned_with_io(
+fn positioned_with_io_definition(
     src: &str,
     position: Position,
     io: &LanguageServerTestIO,
 ) -> Option<Location> {
-    let mut engine = setup_engine(io);
-
-    let _ = io.src_module("app", src);
-    for package in &io.manifest.packages {
-        add_package_from_manifest(&mut engine, package.clone());
-    }
-    let response = engine.compile_please();
-    assert!(response.result.is_ok());
-
-    let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-        r"\\?\C:\src\app.gleam"
-    } else {
-        "/src/app.gleam"
-    });
-
-    let url = Url::from_file_path(path).unwrap();
+    let (mut engine, position_param) = positioned_with_io(src, position, io);
 
     let params = GotoDefinitionParams {
-        text_document_position_params: TextDocumentPositionParams::new(
-            TextDocumentIdentifier::new(url),
-            position,
-        ),
+        text_document_position_params: position_param,
         work_done_progress_params: Default::default(),
         partial_result_params: Default::default(),
     };
@@ -41,7 +20,7 @@ fn positioned_with_io(
 }
 
 fn positioned_goto_definition(src: &str, position: Position) -> Option<Location> {
-    positioned_with_io(src, position, &LanguageServerTestIO::new())
+    positioned_with_io_definition(src, position, &LanguageServerTestIO::new())
 }
 
 #[test]
@@ -190,7 +169,7 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io(code, Position::new(3, 19), &io),
+        positioned_with_io_definition(code, Position::new(3, 19), &io),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\example_module.gleam"
@@ -225,7 +204,7 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io(code, Position::new(3, 3), &io),
+        positioned_with_io_definition(code, Position::new(3, 3), &io),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\example_module.gleam"
@@ -260,7 +239,7 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io(code, Position::new(3, 19), &io),
+        positioned_with_io_definition(code, Position::new(3, 19), &io),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\example_module.gleam"
@@ -302,7 +281,7 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io(code, Position::new(3, 20), &io),
+        positioned_with_io_definition(code, Position::new(3, 20), &io),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\example_module.gleam"
@@ -344,7 +323,7 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io(code, Position::new(3, 3), &io),
+        positioned_with_io_definition(code, Position::new(3, 3), &io),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\example_module.gleam"
