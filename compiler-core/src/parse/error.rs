@@ -159,7 +159,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ParseErrorType::ListSpreadFollowedByElements => (
                 "I wasn't expecting elements after this spread",
                 vec![
-                    "A spread can only be used to prepend elements to lists like this: `[first, ..rest]`."
+                    "A spread can only be used to prepend elements to lists like this: `[first, ..rest]`.\n"
                         .into(),
                     "Hint: If you need to append elements to a list you can use `list.append`."
                         .into(),
