@@ -1,33 +1,16 @@
-use lsp_types::{
-    Hover, HoverContents, HoverParams, MarkedString, Position, Range, TextDocumentIdentifier,
-    TextDocumentPositionParams, Url,
-};
+use lsp_types::{Hover, HoverContents, HoverParams, MarkedString, Position, Range};
 
 use super::*;
 
-fn positioned_with_io(src: &str, position: Position, io: &LanguageServerTestIO) -> Option<Hover> {
-    let mut engine = setup_engine(io);
-
-    _ = io.src_module("app", src);
-    for package in &io.manifest.packages {
-        add_package_from_manifest(&mut engine, package.clone());
-    }
-    let response = engine.compile_please();
-    assert!(response.result.is_ok());
-
-    let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-        r"\\?\C:\src\app.gleam"
-    } else {
-        "/src/app.gleam"
-    });
-
-    let url = Url::from_file_path(path).unwrap();
+fn positioned_with_io_hover(
+    src: &str,
+    position: Position,
+    io: &LanguageServerTestIO,
+) -> Option<Hover> {
+    let (mut engine, position_param) = positioned_with_io(src, position, io);
 
     let params = HoverParams {
-        text_document_position_params: TextDocumentPositionParams::new(
-            TextDocumentIdentifier::new(url),
-            position,
-        ),
+        text_document_position_params: position_param,
         work_done_progress_params: Default::default(),
     };
     let response = engine.hover(params);
@@ -36,7 +19,7 @@ fn positioned_with_io(src: &str, position: Position, io: &LanguageServerTestIO) 
 }
 
 fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
-    positioned_with_io(src, position, &LanguageServerTestIO::new())
+    positioned_with_io_hover(src, position, &LanguageServerTestIO::new())
 }
 
 #[test]
@@ -228,7 +211,7 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_io(code, Position::new(3, 19), &io).unwrap();
+    let hover = positioned_with_io_hover(code, Position::new(3, 19), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
@@ -246,7 +229,7 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_io(code, Position::new(3, 19), &io).unwrap();
+    let hover = positioned_with_io_hover(code, Position::new(3, 19), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
@@ -264,7 +247,7 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_io(code, Position::new(3, 5), &io).unwrap();
+    let hover = positioned_with_io_hover(code, Position::new(3, 5), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
@@ -282,7 +265,7 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_io(code, Position::new(3, 22), &io).unwrap();
+    let hover = positioned_with_io_hover(code, Position::new(3, 22), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
@@ -300,7 +283,7 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_io(code, Position::new(3, 6), &io).unwrap();
+    let hover = positioned_with_io_hover(code, Position::new(3, 6), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
@@ -323,7 +306,7 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_io(code, Position::new(3, 22), &io).unwrap();
+    let hover = positioned_with_io_hover(code, Position::new(3, 22), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
@@ -348,7 +331,7 @@ fn main() {
 "#;
 
     // hovering over "my_fn"
-    let hover = positioned_with_io(code, Position::new(3, 22), &io).unwrap();
+    let hover = positioned_with_io_hover(code, Position::new(3, 22), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
@@ -366,7 +349,7 @@ fn main() {
 ";
 
     // hovering over "my_const"
-    let hover = positioned_with_io(code, Position::new(3, 19), &io).unwrap();
+    let hover = positioned_with_io_hover(code, Position::new(3, 19), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
@@ -384,7 +367,7 @@ fn main() {
 ";
 
     // hovering over "my_const"
-    let hover = positioned_with_io(code, Position::new(3, 5), &io).unwrap();
+    let hover = positioned_with_io_hover(code, Position::new(3, 5), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
@@ -404,7 +387,7 @@ fn main() {
 ";
 
     // hovering over "my_const"
-    let hover = positioned_with_io(code, Position::new(4, 22), &io).unwrap();
+    let hover = positioned_with_io_hover(code, Position::new(4, 22), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
@@ -424,7 +407,7 @@ fn main() {
 ";
 
     // hovering over "my_const"
-    let hover = positioned_with_io(code, Position::new(4, 8), &io).unwrap();
+    let hover = positioned_with_io_hover(code, Position::new(4, 8), &io).unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
