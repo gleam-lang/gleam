@@ -164,7 +164,7 @@ impl<'a> Generator<'a> {
         // Put it all together
 
         if imports.is_empty() && statements.is_empty() {
-            Ok(docvec!(type_reference, "export {}", line()))
+            Ok(docvec![type_reference, "export {}", line()])
         } else if imports.is_empty() {
             statements.push(line());
             Ok(docvec![type_reference, statements])
