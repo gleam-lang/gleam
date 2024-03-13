@@ -60,7 +60,9 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/brian-dawn">Brian Dawn</a> -
   <a href="https://github.com/bglusman">Brian Glusman</a> -
   <a href="https://github.com/nono">Bruno Michel</a> -
+  <a href="https://github.com/carlomunguia">Carlo Munguia</a> -
   <a href="https://github.com/csaltos">Carlos Saltos</a> -
+  <a href="https://github.com/chazwatkins">Chaz Watkins</a> -
   <a href="https://github.com/choonkeat">Chew Choon Keat</a> -
   <a href="https://github.com/chrislloyd">Chris Lloyd</a> -
   <a href="https://github.com/utilForever">Chris Ohk</a> -
@@ -95,10 +97,10 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/fschwalbe">F. Schwalbe</a> -
   <a href="https://github.com/nandofarias">Fernando Farias</a> -
   <a href="https://github.com/ffigiel">Filip Figiel</a> -
+  <a href="https://github.com/fhammerschmidt">Florian Hammerschmidt</a> -
   <a href="https://github.com/floriank">Florian Kraft</a> -
   <a href="https://github.com/superfly">fly.io</a> -
   <a href="https://github.com/hagenek">Georg H. Ekeberg</a> -
-  <a href="https://github.com/ggobbe">ggobbe</a> -
   <a href="https://github.com/giacomocavalieri">Giacomo Cavalieri</a> -
   <a href="https://github.com/obmarg">Graeme Coupar</a> -
   <a href="https://github.com/nirev">Guilherme de Maio</a> -
