@@ -1,0 +1,16 @@
+name: release-winget
+on:
+  release:
+    types:
+      - released
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish to Winget
+        uses: vedantmgoyal2009/winget-releaser@v2
+        with:
+          identifier: Gleam.Gleam
+          installers-regex: '-pc-windows-msvc\.zip$'
+          token: ${{ secrets.WINGET_TOKEN }}
