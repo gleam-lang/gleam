@@ -31,7 +31,7 @@ export type A$ = A;
 
 
 //// /out/lib/the_package/one/two.mjs
-/// <reference types="./one/two.d.mts" />
+/// <reference types="./two.d.mts" />
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class A extends $CustomType {}

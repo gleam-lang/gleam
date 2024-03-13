@@ -70,7 +70,16 @@ impl<'a> Generator<'a> {
             return Document::Str("");
         }
 
-        let name = Document::EcoString(self.module.name.clone());
+        // Get the name of the module relative the directory (similar to basename)
+        let module = self
+            .module
+            .name
+            .as_str()
+            .split('/')
+            .last()
+            .expect("JavaScript generator could not identify imported module name.");
+
+        let name = Document::Str(module);
 
         docvec!["/// <reference types=\"./", name, ".d.mts\" />", line()]
     }
