@@ -42,7 +42,6 @@ pub struct Generator<'a> {
     module_scope: im::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
     target_support: TargetSupport,
-
     typescript: TypeScriptDeclarations,
 }
 
