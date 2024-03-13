@@ -300,7 +300,7 @@ impl Error {
                 version,
                 source,
             } => format!(
-                "An error occured while trying to retrieve dependencies of {package}@{version}: {source}",
+                "An error occurred while trying to retrieve dependencies of {package}@{version}: {source}",
             ),
 
             ResolutionError::DependencyOnTheEmptySet {
