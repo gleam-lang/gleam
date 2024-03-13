@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: hover
+---
+Some(
+    Hover {
+        contents: Scalar(
+            String(
+                "```gleam\npub fn example_fun(with label: a) -> b\n```\n",
+            ),
+        ),
+        range: Some(
+            Range {
+                start: Position {
+                    line: 1,
+                    character: 0,
+                },
+                end: Position {
+                    line: 1,
+                    character: 29,
+                },
+            },
+        ),
+    },
+)

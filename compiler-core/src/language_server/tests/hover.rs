@@ -52,7 +52,7 @@ fn add_2(x) {
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
-fn(Int) -> Int
+pub fn add_2(x: Int) -> Int
 ```
 "
                 .to_string()
@@ -443,7 +443,7 @@ fn append(x, y) {
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
-fn(String, String) -> String
+pub fn append(x: String, y: String) -> String
 ```
  Exciting documentation
  Maybe even multiple lines
@@ -537,6 +537,18 @@ A locally defined variable."
             }),
         })
     );
+}
+
+#[test]
+fn hover_fn_def_with_labels_test() {
+    let code = "
+fn example_fun(with label: x) {
+  todo
+}
+";
+
+    let hover = positioned_hover(code, Position::new(0, 6));
+    insta::assert_debug_snapshot!(hover);
 }
 
 #[test]

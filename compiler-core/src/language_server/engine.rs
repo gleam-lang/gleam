@@ -4,6 +4,7 @@ use crate::{
     },
     build::{Located, Module},
     config::PackageConfig,
+    format,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         compiler::LspProjectCompiler, files::FileSystemProxy, progress::ProgressReporter,
@@ -535,13 +536,14 @@ fn hover_for_function_head(
     fun: &Function<Arc<Type>, TypedExpr>,
     line_numbers: LineNumbers,
 ) -> Hover {
+    const MAX_COLUMNS: isize = 65;
+
     let empty_str = EcoString::from("");
     let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
-    let function_type = Type::Fn {
-        args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
-        retrn: fun.return_type.clone(),
-    };
-    let formatted_type = Printer::new().pretty_print(&function_type, 0);
+    let formatted_type = format::Formatter::new()
+        .docs_fn_signature(true, &fun.name, &fun.arguments, fun.return_type.clone())
+        .group()
+        .to_pretty_string(MAX_COLUMNS);
     let contents = format!(
         "```gleam
 {formatted_type}
