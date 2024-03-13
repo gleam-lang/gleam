@@ -138,15 +138,6 @@ where
         self.compiler.take_warnings()
     }
 
-    // TODO: test local variables
-    // TODO: test same module constants
-    // TODO: test imported module constants
-    // TODO: test unqualified imported module constants
-    // TODO: test same module records
-    // TODO: test imported module records
-    // TODO: test unqualified imported module records
-    // TODO: test same module functions
-    // TODO: test module function calls
     // TODO: test different package module function calls
     //
     //
