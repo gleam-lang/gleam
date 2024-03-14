@@ -2339,7 +2339,7 @@ The missing patterns are:\n"
                 TypeError::InexhaustiveCaseExpression { location, missing } => {
                     let mut text: String =
                         "This case expression does not have a pattern for all possible values.
-If is run on one of the values without a pattern then it will crash.
+If it is run on one of the values without a pattern then it will crash.
 
 The missing patterns are:\n"
                             .into();
