@@ -17,6 +17,7 @@
   the spread syntax (like `[..rest, last]`).
 - Generate [type references](https://www.typescriptlang.org/docs/handbook/triple-slash-directives.html#-reference-types-)
   when compiling to JavaScript with TypeScript definitions enabled.
+- Fix a bug where JavaScript code generation would not properly return the result of nested blocks.
 
 
 ### Formatter
