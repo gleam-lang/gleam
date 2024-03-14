@@ -5,7 +5,7 @@ use itertools::Itertools;
 use crate::{
     docvec,
     javascript::{JavaScriptCodegenTarget, INDENT},
-    pretty::{break_, concat, line, Document, Documentable},
+    pretty::{break_, concat, join, line, Document, Documentable},
 };
 
 /// A collection of JavaScript import statements from Gleam imports and from
@@ -51,10 +51,10 @@ impl<'a> Imports<'a> {
         if self.exports.is_empty() {
             imports
         } else {
-            let names = concat(Itertools::intersperse(
+            let names = join(
                 self.exports.into_iter().sorted().map(Document::String),
                 break_(",", ", "),
-            ));
+            );
             let names = docvec![
                 docvec![break_("", " "), names].nest(INDENT),
                 break_(",", " ")
@@ -113,7 +113,7 @@ impl<'a> Import<'a> {
             alias_imports
         } else {
             let members = self.unqualified.into_iter().map(Member::into_doc);
-            let members = concat(Itertools::intersperse(members, break_(",", ", ")));
+            let members = join(members, break_(",", ", "));
             let members = docvec![
                 docvec![break_("", " "), members].nest(INDENT),
                 break_(",", " ")

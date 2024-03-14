@@ -27,7 +27,7 @@ use ecow::EcoString;
 use itertools::Itertools;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use super::{concat, import::Imports, line, lines, wrap_args, Output, INDENT};
+use super::{import::Imports, join, line, lines, wrap_args, Output, INDENT};
 
 /// When rendering a type variable to an TypeScript type spec we need all type
 /// variables with the same id to end up with the same name in the generated
@@ -122,10 +122,7 @@ fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
 ///
 fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
     break_("", "")
-        .append(concat(Itertools::intersperse(
-            elems.into_iter(),
-            break_(",", ", "),
-        )))
+        .append(join(elems, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("[", "]")
@@ -137,10 +134,7 @@ where
     I: IntoIterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(concat(Itertools::intersperse(
-            args.into_iter(),
-            break_(",", ", "),
-        )))
+        .append(join(args, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("<", ">")
@@ -378,7 +372,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     x.arguments.iter().map(|a| &a.type_),
                 )
             });
-            concat(Itertools::intersperse(constructors, break_("| ", " | ")))
+            join(constructors, break_("| ", " | "))
         };
 
         definitions.push(Ok(docvec![
@@ -433,7 +427,7 @@ impl<'a> TypeScriptGenerator<'a> {
             line(),
             line(),
             // Then add each field to the class
-            concat(Itertools::intersperse(
+            join(
                 constructor.arguments.iter().enumerate().map(|(i, arg)| {
                     let name = arg
                         .label
@@ -448,7 +442,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     ]
                 }),
                 line(),
-            )),
+            ),
         ]
         .nest(INDENT);
 
