@@ -15,7 +15,7 @@ ctrlc = { version = "3.2.1", features = ["termination"] }
 # Command line interface
 clap = { version = "3.0", features = ["derive"] }
 # Extra iter methods
-itertools = "0.10.1"
+itertools = "0.12.1"
 # Parsing
 regex = "1.5.4"
 # Colours in terminal
