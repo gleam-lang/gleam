@@ -283,12 +283,12 @@ impl<'a> Generator<'a> {
             return head.append("}");
         };
 
-        let parameters = concat(Itertools::intersperse(
+        let parameters = join(
             constructor.arguments.iter().enumerate().map(parameter),
             break_(",", ", "),
-        ));
+        );
 
-        let constructor_body = concat(Itertools::intersperse(
+        let constructor_body = join(
             constructor.arguments.iter().enumerate().map(|(i, arg)| {
                 let var = parameter((i, arg));
                 match &arg.label {
@@ -297,7 +297,7 @@ impl<'a> Generator<'a> {
                 }
             }),
             line(),
-        ));
+        );
 
         let class_body = docvec![
             line(),
@@ -604,10 +604,7 @@ where
     I: IntoIterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(concat(Itertools::intersperse(
-            args.into_iter(),
-            break_(",", ", "),
-        )))
+        .append(join(args, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("(", ")")
@@ -625,7 +622,7 @@ fn wrap_object<'a>(
             None => key.to_doc(),
         }
     });
-    let fields = concat(Itertools::intersperse(fields, break_(",", ", ")));
+    let fields = join(fields, break_(",", ", "));
 
     if empty {
         "{}".to_doc()

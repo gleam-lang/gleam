@@ -347,12 +347,12 @@ impl<'comments> Formatter<'comments> {
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
                         .map(|e| e.to_doc());
-                    let unqualified = Itertools::intersperse(
+                    let unqualified = join(
                         unqualified_types.chain(unqualified_values),
                         flex_break(",", ", "),
                     );
                     let unqualified = break_("", "")
-                        .append(concat(unqualified))
+                        .append(unqualified)
                         .nest(INDENT)
                         .append(break_(",", ""))
                         .group();
