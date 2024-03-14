@@ -18,6 +18,7 @@
 - Generate [type references](https://www.typescriptlang.org/docs/handbook/triple-slash-directives.html#-reference-types-)
   when compiling to JavaScript with TypeScript definitions enabled.
 - Fix a bug where JavaScript code generation would not properly return the result of nested blocks.
+- Fix a bug where JavaScript code generation would not properly handle functions returned by blocks.
 
 
 ### Formatter
