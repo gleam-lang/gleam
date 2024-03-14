@@ -30,6 +30,8 @@
 - Generated documentation no longer exposes the constructors of opaque types,
   no longer exposes the values of constants, and indicates which types are
   opaque.
+- Terminal colors can now be forced by setting the `FORCE_COLORS` environment
+  variable to any non-empty value.
 
 ## Language Server
 
