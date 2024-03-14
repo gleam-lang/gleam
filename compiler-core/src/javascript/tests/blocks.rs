@@ -166,3 +166,39 @@ fn main(f, a, b) {
 "#,
     );
 }
+
+#[test]
+fn blocks_returning_functions() {
+    assert_js!(
+        r#"
+fn b() {
+  {
+    fn(cb) { cb(1) }
+  }
+  {
+    fn(cb) { cb(2) }
+  }
+  3
+}
+"#
+    );
+}
+
+#[test]
+fn blocks_returning_use() {
+    assert_js!(
+        r#"
+fn b() {
+  {
+    use a <- fn(cb) { cb(1) }
+    a
+  }
+  {
+    use b <- fn(cb) { cb(2) }
+    b
+  }
+  3
+}
+    "#
+    );
+}

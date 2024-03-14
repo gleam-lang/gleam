@@ -1497,14 +1497,14 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::NegateBool { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::RecordAccess { .. }
-            | TypedExpr::ModuleSelect { .. },
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Block { .. },
         ) => true,
 
         Statement::Expression(
             TypedExpr::Todo { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::Panic { .. }
-            | TypedExpr::Block { .. }
             | TypedExpr::Pipeline { .. },
         ) => false,
 
