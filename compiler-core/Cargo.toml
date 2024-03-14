@@ -14,7 +14,7 @@ termcolor = "1.1.2"
 # Logging
 tracing = "0.1.29"
 # Extra iter methods
-itertools = "0.10.1"
+itertools = "0.12.1"
 # String case conversion
 heck = "0.4.0"
 # Parsing

@@ -9,5 +9,9 @@
 
     // Images
     "images/**": true
-  }
+  },
+  "cSpell.words": [
+    "insta",
+    "rustfmt"
+  ]
 }
