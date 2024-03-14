@@ -50,6 +50,27 @@ fn go() {
 }
 
 #[test]
+fn nested_multiexpr_blocks_with_pipe() {
+    assert_js!(
+        r#"
+fn add1(a) {
+  a + 1
+}
+fn go() {
+  let x = {
+    1
+    {
+      2
+      3 |> add1
+    } |> add1
+  }
+  x
+}
+"#,
+    );
+}
+
+#[test]
 fn nested_multiexpr_non_ending_blocks() {
     assert_js!(
         r#"
