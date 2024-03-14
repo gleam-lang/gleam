@@ -265,7 +265,7 @@ impl<'module> Generator<'module> {
         Ok(docvec!["toBitArray(", segments_array, ")"])
     }
 
-    pub fn wrap_return<'a>(&self, document: Document<'a>) -> Document<'a> {
+    pub fn wrap_return<'a>(&mut self, document: Document<'a>) -> Document<'a> {
         if self.scope_position.is_tail() {
             docvec!["return ", document, ";"]
         } else {
@@ -343,7 +343,8 @@ impl<'module> Generator<'module> {
         self.scope_position = scope_position;
 
         // Wrap in iife document
-        Ok(self.immediately_involked_function_expression_document(result?))
+        let doc = self.immediately_involked_function_expression_document(result?);
+        Ok(self.wrap_return(doc))
     }
 
     /// Wrap a document in an immediately involked function expression
