@@ -50,6 +50,25 @@ fn go() {
 }
 
 #[test]
+fn nested_multiexpr_non_ending_blocks() {
+    assert_js!(
+        r#"
+fn go() {
+  let x = {
+    1
+    {
+      2
+      3
+    }
+    4
+  }
+  x
+}
+"#,
+    );
+}
+
+#[test]
 fn nested_multiexpr_blocks_with_case() {
     assert_js!(
         r#"
