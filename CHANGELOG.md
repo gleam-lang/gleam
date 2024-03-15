@@ -17,9 +17,10 @@
   the spread syntax (like `[..rest, last]`).
 - Generate [type references](https://www.typescriptlang.org/docs/handbook/triple-slash-directives.html#-reference-types-)
   when compiling to JavaScript with TypeScript definitions enabled.
-- Fix a bug where JavaScript code generation would not properly return the result of nested blocks.
-- Fix a bug where JavaScript code generation would not properly handle functions returned by blocks.
-
+- Fix a bug where JavaScript code generation would not properly return the
+  result of nested blocks.
+- Fix a bug where JavaScript code generation would not properly handle functions
+  returned by blocks.
 
 ### Formatter
 
@@ -43,6 +44,7 @@
   opaque.
 - Terminal colors can now be forced by setting the `FORCE_COLOR` environment
   variable to any non-empty value.
+- Rust's Reqwest's `webpki-roots` are now used for TLS verification.
 
 ### Language Server
 
