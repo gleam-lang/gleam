@@ -7,29 +7,29 @@ license-file = "LICENCE"
 
 [dependencies]
 # Immutable data structures
-im = "15.1.0"
+im.workspace = true
 # Error message and warning formatting
 codespan-reporting = "0.11.1"
-termcolor = "1.1.2"
+termcolor.workspace = true
 # Logging
-tracing = "0.1.29"
+tracing.workspace = true
 # Extra iter methods
-itertools = "0.12.1"
+itertools.workspace = true
 # String case conversion
 heck = "0.4.0"
 # Parsing
-regex = "1.5.4"
+regex.workspace = true
 # Graph data structures
 petgraph = "0.6.0"
 # Levenshtein string distance for typo suggestions
 strsim = "0.10.0"
 # Data (de)serialisation
-serde = { version = "1.0.130", features = ["derive"] }
-serde_json = "*"
+serde.workspace = true
+serde_json.workspace = true
 # Cap'n Proto binary format runtime
 capnp = "0.14.3"
 # Enum trait impl macros
-strum = { version = "0.26.2", features = ["derive"] }
+strum.workspace = true
 # Template rendering
 askama = "0.12.0"
 # Markdown parsing
@@ -37,31 +37,31 @@ pulldown-cmark = { version = "0.8.0", default-features = false }
 # Non-empty vectors
 vec1 = "1.8.0"
 # Hex package manager client
-hexpm = "2.1.1"
+hexpm.workspace = true
 # XDG directory locations
 dirs-next = "2.0.0"
 # HTTP types
-http = "0.2.12" # hexpm depends on ^0.2
+http.workspace = true
 # Byte collections
-bytes = "1.1.0"
+bytes.workspace = true
 # Macro to work around Rust's traits not working with async. Sigh.
-async-trait = "0.1.51"
+async-trait.workspace = true
 # Little helper to omit fields that cannot be debug printed
-debug-ignore = "1.0.1"
+debug-ignore.workspace = true
 # std::error::Error definition macro
-thiserror = "1.0.30"
+thiserror.workspace = true
 # Async combinators for futures
-futures = "0.3.17"
+futures.workspace = true
 # Creation of tar file archives
-tar = "0.4.37"
+tar.workspace = true
 # gzip compression
-flate2 = "1.0.22"
+flate2.workspace = true
 # Helper for wrapping text onto lines based upon width
 textwrap = { version = "=0.15.0", features = ["terminal_size"] }
 # base encoding
-base16 = "0.2.1"
+base16.workspace = true
 # toml config file parsing
-toml = "0.5.8"
+toml.workspace = true
 # SPDX license parsing
 spdx = "0.8.0"
 # Binary format de-serialization
@@ -69,16 +69,16 @@ bincode = "1.3.3"
 # cross platform single glob and glob set matching
 globset = { version = "0.4.9", features = ["serde1"] }
 # Compact clone-on-write vector & string type
-ecow = { version = "0.2.1", features = ["serde"] }
+ecow = { workspace = true, features = ["serde"] }
 # Checksums
 xxhash-rust = { version = "0.8.6", features = ["xxh3"] }
 # Language server protocol server plumbing
-lsp-server = "0.7"
-lsp-types = "0.94"
+lsp-server.workspace = true
+lsp-types.workspace = true
 # Pubgrub dependency resolution algorithm
 pubgrub = "0.2"
 # Drop in replacement for std::path but with only utf-8
-camino = { version = "1.1.6", features = ["serde1"] }
+camino = { workspace = true, features = ["serde1"] }
 # Used for converting absolute path to relative path
 pathdiff = { version = "0.2.1", features = ["camino"] }
 # Memory arena using ids rather than references
@@ -92,8 +92,8 @@ capnpc = "0.14.4"
 
 [dev-dependencies]
 # Test assertion errors with diffs
-pretty_assertions = "1.0.0"
+pretty_assertions.workspace = true
 # Snapshot testing to make test maintenance easier
-insta = "1.8.0"
+insta.workspace = true
 # Random value generation
 rand = "0.8.5"
