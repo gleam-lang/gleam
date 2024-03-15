@@ -37,11 +37,11 @@ pulldown-cmark = { version = "0.8.0", default-features = false }
 # Non-empty vectors
 vec1 = "1.8.0"
 # Hex package manager client
-hexpm = "2.1.0"
+hexpm = "2.1.1"
 # XDG directory locations
 dirs-next = "2.0.0"
 # HTTP types
-http = "0.2.5"
+http = "0.2.12" # hexpm depends on ^0.2
 # Byte collections
 bytes = "1.1.0"
 # Macro to work around Rust's traits not working with async. Sigh.
