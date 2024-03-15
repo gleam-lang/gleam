@@ -184,16 +184,18 @@ pub fn stdout_buffer_writer() -> BufferWriter {
     termcolor::BufferWriter::stdout(color_choice())
 }
 
-fn should_force_color() -> bool {
-    if let Ok(force_color_value) = std::env::var("FORCE_COLOR") {
-        !force_color_value.is_empty()
+fn colour_forced() -> bool {
+    if let Ok(force) = std::env::var("FORCE_COLOR") {
+        !force.is_empty()
     } else {
         false
     }
 }
 
 fn color_choice() -> ColorChoice {
-    if atty::is(atty::Stream::Stderr) || should_force_color() {
+    if colour_forced() {
+        termcolor::ColorChoice::Always
+    } else if atty::is(atty::Stream::Stderr) {
         termcolor::ColorChoice::Auto
     } else {
         termcolor::ColorChoice::Never
