@@ -73,7 +73,7 @@ lsp-types = "0.94"
 # File locking
 fslock = "0.2.1"
 # Compact clone-on-write vector & string type
-ecow = "0.2.0"
+ecow = "0.2.1"
 # Provides a way to determine if two files are the same using filesystem node ids
 same-file = "1.0.6"
 # Open generated docs in browser
