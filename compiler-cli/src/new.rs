@@ -21,7 +21,9 @@ const ERLANG_OTP_VERSION: &str = "26.0.2";
 const REBAR3_VERSION: &str = "3";
 const ELIXIR_VERSION: &str = "1.15.4";
 
-#[derive(Debug, Serialize, Deserialize, Display, EnumString, VariantNames, ValueEnum, Clone, Copy)]
+#[derive(
+    Debug, Serialize, Deserialize, Display, EnumString, VariantNames, ValueEnum, Clone, Copy,
+)]
 #[strum(serialize_all = "kebab_case")]
 pub enum Template {
     Lib,
