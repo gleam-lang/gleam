@@ -1,4 +1,5 @@
 use camino::{Utf8Path, Utf8PathBuf};
+use clap::ValueEnum;
 use gleam_core::{
     erlang,
     error::{Error, FileIoAction, FileKind, InvalidProjectNameReason},
@@ -20,7 +21,7 @@ const ERLANG_OTP_VERSION: &str = "26.0.2";
 const REBAR3_VERSION: &str = "3";
 const ELIXIR_VERSION: &str = "1.15.4";
 
-#[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, ValueEnum, Clone, Copy)]
 #[strum(serialize_all = "kebab_case")]
 pub enum Template {
     Lib,

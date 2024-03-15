@@ -13,7 +13,7 @@ im = "15.1.0"
 # OS SIGINT and SIGTERM signal handling
 ctrlc = { version = "3.2.1", features = ["termination"] }
 # Command line interface
-clap = { version = "3.0", features = ["derive"] }
+clap = { version = "4.5.2", features = ["derive"] }
 # Extra iter methods
 itertools = "0.12.1"
 # Parsing

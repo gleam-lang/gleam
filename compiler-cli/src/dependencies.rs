@@ -304,7 +304,7 @@ impl LocalPackages {
             .collect();
         self.packages
             .iter()
-            .filter(|(n, v)| !manifest_packages.contains(&(&EcoString::from(n.as_ref()), v)))
+            .filter(|(n, v)| !manifest_packages.contains(&(&EcoString::from(*n), v)))
             .map(|(n, v)| (n.clone(), v.clone()))
             .collect()
     }
