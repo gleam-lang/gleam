@@ -11,7 +11,19 @@
     "images/**": true
   },
   "cSpell.words": [
+    "camino",
+    "codegen",
+    "ecow",
+    "flate",
+    "HEXPM",
     "insta",
-    "rustfmt"
-  ]
+    "itertools",
+    "NOCOLOUR",
+    "rustfmt",
+    "subpackage",
+    "Telem",
+    "Unretire",
+    "Untar"
+  ],
+  "cSpell.language": "en,uk,en-GB,en-US"
 }
