@@ -109,6 +109,9 @@ pub enum Runtime {
     #[strum(serialize = "deno")]
     #[serde(rename = "deno")]
     Deno,
+    #[strum(serialize = "bun")]
+    #[serde(rename = "bun")]
+    Bun,
 }
 
 impl Default for Runtime {

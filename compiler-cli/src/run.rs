@@ -108,6 +108,7 @@ pub fn command(
             Runtime::NodeJs => {
                 run_javascript_node(&paths, &main_function.package, &module, arguments)
             }
+            Runtime::Bun => run_javascript_bun(&paths, &main_function.package, &module, arguments),
         },
     }?;
 
@@ -146,6 +147,24 @@ fn run_erlang(
     }
 
     ProjectIO::new().exec("erl", &args, &[], None, Stdio::Inherit)
+}
+
+fn run_javascript_bun(
+    paths: &ProjectPaths,
+    package: &str,
+    module: &str,
+    arguments: Vec<String>,
+) -> Result<i32, Error> {
+    let mut args = vec!["run".to_string()];
+    let entry = write_javascript_entrypoint(paths, package, module)?;
+
+    args.push(entry.to_string());
+
+    for arg in arguments.into_iter() {
+        args.push(arg);
+    }
+
+    ProjectIO::new().exec("bun", &args, &[], None, Stdio::Inherit)
 }
 
 fn run_javascript_node(
