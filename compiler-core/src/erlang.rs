@@ -937,7 +937,12 @@ fn expr_list<'a>(
 
 fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
     let elems = if let Some(final_tail) = tail {
-        elems.append(break_(" |", " | ")).append(final_tail)
+        if !elems.is_empty() {
+            elems.append(break_(" |", " | "))
+        } else {
+            elems
+        }
+        .append(final_tail)
     } else {
         elems
     };

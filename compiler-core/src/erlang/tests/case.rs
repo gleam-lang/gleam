@@ -73,3 +73,16 @@ fn not_two() {
 "#,
     );
 }
+
+#[test]
+fn spread_empty_list() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  case [] {
+    [..] -> 1
+  }
+}
+"#,
+    );
+}
