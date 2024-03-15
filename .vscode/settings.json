@@ -19,6 +19,7 @@
     "insta",
     "itertools",
     "NOCOLOUR",
+    "reqwest",
     "rustfmt",
     "subpackage",
     "Telem",
