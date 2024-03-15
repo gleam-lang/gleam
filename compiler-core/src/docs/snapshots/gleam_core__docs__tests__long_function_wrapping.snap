@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/docs/tests.rs
-assertion_line: 76
 expression: "compile(config, modules)"
 ---
 //// app.html
@@ -207,6 +206,13 @@ expression: "compile(config, modules)"
 
         
 
+        
+        <h2>Links</h2>
+        <ul>
+        
+          <li><a href="https://hex.pm/packages/">Package</a></li>
+        
+        </ul>
         
 
         <h2>Modules</h2>
@@ -423,5 +429,3 @@ function for a fallback value.</p>
     <script src="./search-data.js?v=0"></script>
   </body>
 </html>
-
-
