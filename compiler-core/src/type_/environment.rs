@@ -607,12 +607,35 @@ impl<'a> Environment<'a> {
         }
     }
 
+    // List all possible imports values
+    pub fn imported_modules_values(&self) -> Vec<EcoString> {
+        self.imported_modules
+            .iter()
+            .map(|(module_name, (_, module))| {
+                module
+                    .values
+                    .keys()
+                    .map(|value| format!("{}.{}", module_name, value).into())
+                    .collect::<Vec<EcoString>>()
+            })
+            .flatten()
+            .collect()
+    }
+
     pub fn local_value_names(&self) -> Vec<EcoString> {
         self.scope
             .keys()
             .filter(|&t| PIPE_VARIABLE != t)
             .cloned()
             .collect()
+    }
+
+    // Combines local values and imported values to list all possible values in the scope
+    pub fn all_value_names(&self) -> Vec<EcoString> {
+        let mut names = self.local_value_names();
+        names.extend(self.imported_modules_values());
+
+        names
     }
 }
 

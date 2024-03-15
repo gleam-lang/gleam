@@ -28,7 +28,7 @@ use crate::{
     warning::TypeWarningEmitter,
     GLEAM_CORE_PACKAGE_NAME,
 };
-use ecow::EcoString;
+use ecow::{eco_format, EcoString};
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -1362,7 +1362,7 @@ fn get_type_dependencies(typ: &TypeAst) -> Vec<EcoString> {
             ..
         }) => {
             deps.push(match module {
-                Some(module) => format!("{}.{}", name, module).into(),
+                Some(module) => eco_format!("{}.{}", name, module),
                 None => name.clone(),
             });
 
