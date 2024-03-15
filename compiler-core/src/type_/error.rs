@@ -43,6 +43,7 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
         variables: Vec<EcoString>,
+        type_with_name_in_scope: bool,
     },
 
     UnknownType {
@@ -538,6 +539,7 @@ pub enum UnknownValueConstructorError {
     Variable {
         name: EcoString,
         variables: Vec<EcoString>,
+        type_with_name_in_scope: bool,
     },
 
     Module {
@@ -557,10 +559,15 @@ pub fn convert_get_value_constructor_error(
     location: SrcSpan,
 ) -> Error {
     match e {
-        UnknownValueConstructorError::Variable { name, variables } => Error::UnknownVariable {
+        UnknownValueConstructorError::Variable {
+            name,
+            variables,
+            type_with_name_in_scope,
+        } => Error::UnknownVariable {
             location,
             name,
             variables,
+            type_with_name_in_scope,
         },
 
         UnknownValueConstructorError::Module {

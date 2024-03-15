@@ -1870,6 +1870,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             location: *location,
                             name: name.clone(),
                             variables: self.environment.local_value_names(),
+                            type_with_name_in_scope: self
+                                .environment
+                                .module_types
+                                .keys()
+                                .any(|typ| typ == name),
                         })?;
 
                 // Register the value as seen for detection of unused values
