@@ -12,9 +12,11 @@
   },
   "cSpell.words": [
     "camino",
+    "cksum",
     "codegen",
     "ecow",
     "flate",
+    "hardlinking",
     "HEXPM",
     "insta",
     "itertools",
@@ -24,7 +26,8 @@
     "subpackage",
     "Telem",
     "Unretire",
-    "Untar"
+    "Untar",
+    "walkdir"
   ],
   "cSpell.language": "en,uk,en-GB,en-US"
 }
