@@ -232,6 +232,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         location,
                         name: name.clone(),
                         variables: self.environment.local_value_names(),
+                        type_with_name_in_scope: self
+                            .environment
+                            .module_types
+                            .keys()
+                            .any(|typ| typ == &name),
                     })?;
                 self.environment.increment_usage(&name);
                 let typ =

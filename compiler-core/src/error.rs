@@ -1561,21 +1561,29 @@ constructing a new record with its values."
                     location,
                     variables,
                     name,
-                } => Diagnostic {
-                    title: "Unknown variable".into(),
-                    text: wrap_format!("The name `{name}` is not in scope here."),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: did_you_mean(name, variables),
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                },
+                    type_with_name_in_scope,
+                } => {
+                    let text = if *type_with_name_in_scope {
+                        wrap_format!("`{name}` is a type, it cannot be used as a value.")
+                    } else {
+                        wrap_format!("The name `{name}` is not in scope here.")
+                    };
+                    Diagnostic {
+                        title: "Unknown variable".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: did_you_mean(name, variables),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
 
                 TypeError::PrivateTypeLeak { location, leaked } => {
                     let mut printer = Printer::new();
