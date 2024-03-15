@@ -7,7 +7,7 @@ root = true
 
 # Matches multiple files with brace expansion notation
 # Set default charset
-[*.{rs, gleam, erl, hrl, ex, exs, mjs, js, ts, sh, toml, yaml, yml, json, jsonc, md, html, css, dockerfile}]
+[*.{rs, gleam, erl, hrl, ex, mjs, js, ts, sh, toml, yaml, yml, json, jsonc, md, html, css, dockerfile}]
 end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
@@ -15,7 +15,7 @@ insert_final_newline = true
 indent_style = space
 indent_size = 2
 
-[*.{rs, gleam, erl, hrl, ex, exs, mjs, js, ts, sh}]
+[*.{rs, gleam, erl, hrl, ex, mjs, js, ts, sh}]
 max_line_length = 80
 
 [*.rs]
