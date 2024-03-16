@@ -200,7 +200,7 @@ where
         let parse_result = self.ensure_no_errors(parse_result)?;
         if let Some((start, _, end)) = self.next_tok() {
             // there are still more tokens
-            let expected = vec!["An import, const, type, if block, or function.".into()];
+            let expected = vec!["An import, const, type, or function.".into()];
             return parse_error(
                 ParseErrorType::UnexpectedToken {
                     expected,
