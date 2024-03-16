@@ -309,14 +309,19 @@ impl<'module> Generator<'module> {
     /// being an operator or a function literal.
     pub fn child_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {
-                Ok(docvec!("(", self.expression(expression)?, ")"))
-            }
+            TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {}
+            TypedExpr::Fn { .. } => {}
 
-            TypedExpr::Fn { .. } => Ok(docvec!("(", self.expression(expression)?, ")")),
-
-            _ => self.wrap_expression(expression),
+            _ => return self.wrap_expression(expression),
         }
+
+        let document = self.expression(expression)?;
+        Ok(if self.scope_position.is_tail() {
+            // Here the document is a return statement: `return <expr>;`
+            document
+        } else {
+            docvec!("(", document, ")")
+        })
     }
 
     /// Wrap an expression in an immediately involked function expression
