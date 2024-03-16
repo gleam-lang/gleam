@@ -21,7 +21,6 @@ tracing-wasm = "*"
 tracing.workspace = true
 termcolor.workspace = true
 camino.workspace = true
-# Immutable data structures
 im.workspace = true
 
 [dev-dependencies]
