@@ -25,6 +25,8 @@
   with no head and a spread tail.
 - The compiler will now raise a warning if you're pattern matching on tuple
   literals and suggest you use multiple subjects instead.
+- Fix a bug where JavaScript code generation would incorrectly parenthesise a
+  return statement.
 
 ### Formatter
 
