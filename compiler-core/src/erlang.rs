@@ -936,15 +936,12 @@ fn expr_list<'a>(
 }
 
 fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
-    let elems = if let Some(final_tail) = tail {
-        if !elems.is_empty() {
-            elems.append(break_(" |", " | "))
-        } else {
-            elems
-        }
-        .append(final_tail)
-    } else {
-        elems
+    let elems = match tail {
+        Some(tail) if elems.is_empty() => return tail.to_doc(),
+
+        Some(tail) => elems.append(break_(" |", " | ")).append(tail),
+
+        None => elems,
     };
 
     elems.to_doc().nest(INDENT).surround("[", "]").group()
