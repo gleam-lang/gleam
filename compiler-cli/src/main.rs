@@ -90,13 +90,26 @@ use std::str::FromStr;
 use camino::Utf8PathBuf;
 
 use clap::{
-    builder::{PossibleValuesParser, TypedValueParser},
+    builder::{styling, PossibleValuesParser, Styles, TypedValueParser},
     Args, Parser, Subcommand,
 };
 use strum::VariantNames;
 
 #[derive(Parser, Debug)]
-#[command(version)]
+#[command(
+    version,
+    next_display_order = None,
+    help_template = "\
+{before-help}{name} {version}
+
+{usage-heading} {usage}
+
+{all-args}{after-help}",
+    styles = Styles::styled()
+        .header(styling::AnsiColor::Yellow.on_default() | styling::Effects::BOLD)
+        .usage(styling::AnsiColor::Yellow.on_default() | styling::Effects::BOLD)
+        .literal(styling::AnsiColor::Green.on_default() | styling::Effects::BOLD)
+)]
 enum Command {
     /// Build the project
     Build {
@@ -487,7 +500,7 @@ fn main() {
     }
 }
 
-fn command_check(target: Option<Target>) -> Result<(), Error> {
+fn command_check(target: Option<Target>) -> Result<()> {
     let _ = build::main(
         Options {
             root_target_support: TargetSupport::Enforced,
@@ -501,7 +514,7 @@ fn command_check(target: Option<Target>) -> Result<(), Error> {
     Ok(())
 }
 
-fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<(), Error> {
+fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<()> {
     let _ = build::main(
         Options {
             root_target_support: TargetSupport::Enforced,
@@ -548,7 +561,7 @@ fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
     ProjectPaths::new(current_dir)
 }
 
-fn download_dependencies() -> Result<(), Error> {
+fn download_dependencies() -> Result<()> {
     let paths = find_project_paths()?;
     _ = dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
     Ok(())
