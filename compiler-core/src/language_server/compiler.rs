@@ -31,6 +31,9 @@ pub struct LspProjectCompiler<IO> {
     pub modules: HashMap<EcoString, Module>,
     pub sources: HashMap<EcoString, ModuleSourceInformation>,
 
+    // Information on compiled dependencies.
+    pub dependency_sources: HashMap<EcoString, ModuleSourceInformation>,
+
     /// The storage for the warning emitter.
     pub warnings: Arc<VectorWarningEmitterIO>,
 
@@ -92,6 +95,7 @@ where
             project_compiler,
             modules: HashMap::new(),
             sources: HashMap::new(),
+            dependency_sources: HashMap::new(),
         })
     }
 
@@ -105,6 +109,14 @@ where
         self.project_compiler.check_gleam_version()?;
 
         let compiled_dependencies = self.project_compiler.compile_dependencies()?;
+
+        // Store the compiled dependency module information
+        for module in &compiled_dependencies {
+            let path = module.input_path.as_os_str().to_string_lossy().to_string();
+            let line_numbers = LineNumbers::new(&module.code);
+            let source = ModuleSourceInformation { path, line_numbers };
+            _ = self.dependency_sources.insert(module.name.clone(), source);
+        }
 
         // Warnings from dependencies are not fixable by the programmer so
         // we don't bother them with diagnostics for them.
@@ -149,6 +161,10 @@ impl<IO> LspProjectCompiler<IO> {
 
     pub fn get_source(&self, module: &str) -> Option<&ModuleSourceInformation> {
         self.sources.get(module)
+    }
+
+    pub fn get_dependency_source(&self, module: &str) -> Option<&ModuleSourceInformation> {
+        self.dependency_sources.get(module)
     }
 }
 
