@@ -202,3 +202,16 @@ fn b() {
     "#
     );
 }
+
+#[test]
+fn block_with_parenthesised_expression_returning_from_function() {
+    assert_js!(
+        r#"
+fn b() {
+  {
+    1 + 2
+  }
+}
+"#
+    );
+}
