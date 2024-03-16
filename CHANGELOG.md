@@ -62,6 +62,7 @@
   Neovim.
 - Fixed a bug where hovering over an expression in the middle of a pipe would
   give the wrong node.
+- Go to definition now works for types in external Gleam modules.
 
 
 ## v1.0.0 - 2024-03-04
