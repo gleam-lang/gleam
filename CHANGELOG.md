@@ -42,6 +42,7 @@
 - Generated documentation no longer exposes the constructors of opaque types,
   no longer exposes the values of constants, and indicates which types are
   opaque.
+- Generated HTML documentation now includes a link to the package on Hex.
 - Terminal colors can now be forced by setting the `FORCE_COLOR` environment
   variable to any non-empty value.
 - Rust's Reqwest's `webpki-roots` are now used for TLS verification.
