@@ -220,6 +220,11 @@ fn run_javascript_deno(
         args.push("--unstable".into())
     }
 
+    // Enable location API
+    if config.javascript.deno.location {
+        args.push(format!("--location {}", config.javascript.deno.location.to_string()));
+    }
+
     // Set deno permissions
     if config.javascript.deno.allow_all {
         // Allow all

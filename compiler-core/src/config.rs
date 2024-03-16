@@ -713,6 +713,8 @@ pub struct DenoConfig {
     pub allow_all: bool,
     #[serde(default)]
     pub unstable: bool,
+    #[serde(default)]
+    pub location: String,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
