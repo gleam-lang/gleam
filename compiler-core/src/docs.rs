@@ -66,7 +66,7 @@ pub fn generate_html(
     });
 
     let package_link = Link {
-        name: "Package".into(),
+        name: "Hex".into(),
         path: format!("https://hex.pm/packages/{0}", config.name).to_string(),
     };
 
