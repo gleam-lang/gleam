@@ -106,9 +106,9 @@ use strum::VariantNames;
 
 {all-args}{after-help}",
     styles = Styles::styled()
-        .header(styling::AnsiColor::Yellow.on_default() | styling::Effects::BOLD)
-        .usage(styling::AnsiColor::Yellow.on_default() | styling::Effects::BOLD)
-        .literal(styling::AnsiColor::Green.on_default() | styling::Effects::BOLD)
+        .header(styling::AnsiColor::Yellow.on_default())
+        .usage(styling::AnsiColor::Yellow.on_default())
+        .literal(styling::AnsiColor::Green.on_default())
 )]
 enum Command {
     /// Build the project
