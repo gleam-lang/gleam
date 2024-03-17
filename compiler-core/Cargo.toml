@@ -6,63 +6,63 @@ edition = "2021"
 license-file = "LICENCE"
 
 [dependencies]
-im.workspace = true
 # Error message and warning formatting
 codespan-reporting = "0.11.1"
-termcolor.workspace = true
-tracing.workspace = true
-itertools.workspace = true
 # String case conversion
 heck = "0.4.0"
-regex.workspace = true
 # Graph data structures
 petgraph = "0.6.0"
 # Levenshtein string distance for typo suggestions
 strsim = "0.10.0"
-serde.workspace = true
-serde_json.workspace = true
 # Cap'n Proto binary format runtime
 capnp = "0.14.3"
-strum.workspace = true
 # Template rendering
 askama = "0.12.0"
 # Markdown parsing
 pulldown-cmark = { version = "0.8.0", default-features = false }
 # Non-empty vectors
 vec1 = "1.8.0"
-hexpm.workspace = true
 # XDG directory locations
 dirs-next = "2.0.0"
-http.workspace = true
-bytes.workspace = true
-async-trait.workspace = true
-debug-ignore.workspace = true
-thiserror.workspace = true
-futures.workspace = true
-tar.workspace = true
-flate2.workspace = true
 # Helper for wrapping text onto lines based upon width
 textwrap = { version = "=0.15.0", features = ["terminal_size"] }
-base16.workspace = true
-toml.workspace = true
 # SPDX license parsing
 spdx = "0.8.0"
 # Binary format de-serialization
 bincode = "1.3.3"
 # cross platform single glob and glob set matching
 globset = { version = "0.4.9", features = ["serde1"] }
-ecow = { workspace = true, features = ["serde"] }
 # Checksums
 xxhash-rust = { version = "0.8.6", features = ["xxh3"] }
-lsp-server.workspace = true
-lsp-types.workspace = true
 # Pubgrub dependency resolution algorithm
 pubgrub = "0.2"
-camino = { workspace = true, features = ["serde1"] }
 # Used for converting absolute path to relative path
 pathdiff = { version = "0.2.1", features = ["camino"] }
 # Memory arena using ids rather than references
 id-arena = "2.1"
+async-trait.workspace = true
+base16.workspace = true
+bytes.workspace = true
+camino = { workspace = true, features = ["serde1"] }
+debug-ignore.workspace = true
+ecow = { workspace = true, features = ["serde"] }
+flate2.workspace = true
+futures.workspace = true
+hexpm.workspace = true
+http.workspace = true
+im.workspace = true
+itertools.workspace = true
+lsp-server.workspace = true
+lsp-types.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+strum.workspace = true
+tar.workspace = true
+termcolor.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+tracing.workspace = true
 
 [build-dependencies]
 # Data (de)serialisation

@@ -8,63 +8,63 @@ license-file = "LICENCE"
 [dependencies]
 # The pure compiler
 gleam-core = { path = "../compiler-core" }
-im.workspace = true
 # OS SIGINT and SIGTERM signal handling
 ctrlc = { version = "3.2.1", features = ["termination"] }
 # Command line interface
 clap = { version = "4.5.2", features = ["derive"] }
-itertools.workspace = true
-regex.workspace = true
-termcolor.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-toml.workspace = true
 # Recursively traversing directories
 ignore = "0.4.22"
-walkdir.workspace = true
-strum.workspace = true
 # Check for tty
 atty = "0.2.14"
-hexpm.workspace = true
 # Allow user to type in sensitive information without showing it in the shell
 rpassword = "5.0.1"
 # Async runtime
 tokio = { version = "1.24.2", features = ["rt", "rt-multi-thread"] }
-tar.workspace = true
-flate2.workspace = true
-bytes.workspace = true
 # Further file system functions (i.e. copy directory)
 fs_extra = "1.2.0"
-tracing.workspace = true
 tracing-subscriber = { version = "0.3.18", features = ["fmt", "env-filter"] }
 # HTTP client
 reqwest = { version = "0.11.26", default-features = false, features = ["rustls-tls"] }
-async-trait.workspace = true
-http.workspace = true
-futures.workspace = true
-debug-ignore.workspace = true
 # Checksums
 sha2 = "0.9.8"
 # Getting hostname
 hostname = "0.3.1"
-base16.workspace = true
 # TOML parser/editor that preserves comments & formatting
 toml_edit = "0.9"
-lsp-server.workspace = true
-lsp-types.workspace = true
 # File locking
 fslock = "0.2.1"
-ecow.workspace = true
 # Provides a way to determine if two files are the same using filesystem node ids
 same-file = "1.0.6"
 # Open generated docs in browser
 opener = "0.6"
 camino = { workspace = true, features = ["serde1"] }
+async-trait.workspace = true
+base16.workspace = true
+bytes.workspace = true
+debug-ignore.workspace = true
+ecow.workspace = true
+flate2.workspace = true
+futures.workspace = true
+hexpm.workspace = true
+http.workspace = true
+im.workspace = true
+itertools.workspace = true
+lsp-server.workspace = true
+lsp-types.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+strum.workspace = true
+tar.workspace = true
+termcolor.workspace = true
+toml.workspace = true
+tracing.workspace = true
+walkdir.workspace = true
 
 [dev-dependencies]
-pretty_assertions.workspace = true
 # Creation of temporary directories
 tempfile = "3.2.0"
+pretty_assertions.workspace = true
 
 [build-dependencies]
 # For statically linking the VCRuntime on Windows when
