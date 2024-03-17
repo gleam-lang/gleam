@@ -161,12 +161,8 @@ where
             let (uri, line_numbers) = match location.module {
                 None => (params.text_document.uri, &line_numbers),
                 Some(name) => {
-                    let module = match (
-                        this.compiler.get_source(name),
-                        this.compiler.get_dependency_source(name),
-                    ) {
-                        (Some(module), _) => module,
-                        (_, Some(module)) => module,
+                    let module = match this.compiler.get_source(name) {
+                        Some(module) => module,
                         _ => return Ok(None),
                     };
                     let url = Url::parse(&format!("file:///{}", &module.path))
