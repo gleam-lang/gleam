@@ -23,7 +23,7 @@
   returned by blocks.
 - Fix a bug where Erlang code generation would not properly handle list case patterns
   with no head and a spread tail.
-- The compiler will now raise a warning ig you're pattern matching on tuple
+- The compiler will now raise a warning if you're pattern matching on tuple
   literals and suggest you use multiple subjects instead.
 
 ### Formatter
