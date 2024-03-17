@@ -47,6 +47,7 @@
 )]
 #![allow(
     clippy::match_single_binding,
+    clippy::match_like_matches_macro,
     clippy::inconsistent_struct_constructor,
     // TODO: fix
     clippy::arc_with_non_send_sync,

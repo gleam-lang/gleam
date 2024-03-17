@@ -600,7 +600,7 @@ the same values.\n"
                 }
 
                 type_::Warning::CaseMatchOnLiteralTuple { location } => Diagnostic {
-                    title: "Case expression with literal tuple as subject".into(),
+                    title: "Redundant tuple".into(),
                     text: "Case expressions can take multiple subjects directly.".into(),
                     hint: Some(
                         "You can pass the contents of the tuple directly, separated by commas."
