@@ -19,3 +19,8 @@ nodejs:
 deno:
 	@echo test/language on JavaScript with Deno
 	cargo run --quiet -- test --target javascript --runtime deno
+
+.phony: bun
+bun:
+	@echo test/languate on JavaScript with Bun
+	cargo run --quiet -- test --target javascript --runtime bun
