@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Features
+- Update Deno config to allow passing `--location` runtime flag.
+
 ### Compiler
 
 - Prepending to lists in JavaScript (`[x, ..xs]` syntax) has been optimised.
