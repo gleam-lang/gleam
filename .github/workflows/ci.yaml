@@ -345,6 +345,9 @@ jobs:
         with:
           deno-version: v1.x
 
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+
       - name: Install Erlang
         uses: erlef/setup-beam@v1.15.4
         with:
@@ -374,8 +377,12 @@ jobs:
         run: make clean nodejs
         working-directory: ./test/language
 
-      - name: test/language Javascript with Deno
+      - name: test/language JavaScript with Deno
         run: make clean deno
+        working-directory: ./test/language
+
+      - name: test/language JavaScript with Bun
+        run: make clean bun
         working-directory: ./test/language
 
       - name: test/compile_package0

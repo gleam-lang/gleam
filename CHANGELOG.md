@@ -27,6 +27,7 @@
   literals and suggest you use multiple subjects instead.
 - Fix a bug where JavaScript code generation would incorrectly parenthesise a
   return statement.
+- Add support for the [Bun](https://bun.sh/) runtime when compiling to JavaScript by using `gleam run --target javascript --runtime bun`
 
 ### Formatter
 
