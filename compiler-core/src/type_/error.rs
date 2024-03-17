@@ -477,6 +477,23 @@ pub enum Warning {
     UnreachableCaseClause {
         location: SrcSpan,
     },
+
+    // This happens when someone tries to write a case expression where one of
+    // the subjects is a literal tuple, for example:
+    //
+    // ```gleam
+    // case #(wibble, wobble) { ... }
+    // ```
+    //
+    // The tuple is redundant since we could do this:
+    //
+    // ```gleam
+    // case wibble, wobble { ... }
+    // ```
+    //
+    CaseMatchOnLiteralTuple {
+        location: SrcSpan,
+    },
 }
 
 impl Error {
