@@ -309,14 +309,19 @@ impl<'module> Generator<'module> {
     /// being an operator or a function literal.
     pub fn child_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {
-                Ok(docvec!("(", self.expression(expression)?, ")"))
-            }
+            TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {}
+            TypedExpr::Fn { .. } => {}
 
-            TypedExpr::Fn { .. } => Ok(docvec!("(", self.expression(expression)?, ")")),
-
-            _ => self.wrap_expression(expression),
+            _ => return self.wrap_expression(expression),
         }
+
+        let document = self.expression(expression)?;
+        Ok(if self.scope_position.is_tail() {
+            // Here the document is a return statement: `return <expr>;`
+            document
+        } else {
+            docvec!("(", document, ")")
+        })
     }
 
     /// Wrap an expression in an immediately involked function expression
@@ -1068,7 +1073,7 @@ impl<'module> Generator<'module> {
 
     fn pattern_assignments_doc(assignments: Vec<Assignment<'_>>) -> Document<'_> {
         let assignments = assignments.into_iter().map(pattern::Assignment::into_doc);
-        concat(Itertools::intersperse(assignments, line()))
+        join(assignments, line())
     }
 
     fn pattern_take_assignments_doc<'a>(
@@ -1103,7 +1108,7 @@ impl<'module> Generator<'module> {
         };
 
         let checks_len = checks.len();
-        concat(Itertools::intersperse(
+        join(
             checks.into_iter().map(|check| {
                 if checks_len > 1 && check.may_require_wrapping() {
                     docvec!["(", check.into_doc(match_desired), ")"]
@@ -1112,7 +1117,7 @@ impl<'module> Generator<'module> {
                 }
             }),
             operator,
-        ))
+        )
         .group()
     }
 }
@@ -1397,13 +1402,13 @@ fn construct_record<'a>(
     arguments: impl IntoIterator<Item = Document<'a>>,
 ) -> Document<'a> {
     let mut any_arguments = false;
-    let arguments = concat(Itertools::intersperse(
+    let arguments = join(
         arguments.into_iter().map(|a| {
             any_arguments = true;
             a
         }),
         break_(",", ", "),
-    ));
+    );
     let arguments = docvec![break_("", ""), arguments].nest(INDENT);
     let name = if let Some(module) = module {
         docvec!["$", module, ".", name]

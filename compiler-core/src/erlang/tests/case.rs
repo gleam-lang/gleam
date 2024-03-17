@@ -73,3 +73,31 @@ fn not_two() {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2657
+#[test]
+fn spread_empty_list() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  case [] {
+    [..] -> 1
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2657
+#[test]
+fn spread_empty_list_assigning() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  case [] {
+    [..rest] -> rest
+  }
+}
+"#,
+    );
+}

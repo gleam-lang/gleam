@@ -1166,3 +1166,39 @@ pub fn main(x) {
         }
     );
 }
+
+#[test]
+fn pattern_matching_on_literal_tuple() {
+    assert_warning!(
+        "pub fn main() {
+        case #(1, 2) {
+            _ -> Nil
+        }
+      }"
+    );
+}
+
+#[test]
+fn pattern_matching_on_multiple_literal_tuples() {
+    assert_warning!(
+        "pub fn main() {
+        let wibble = 1
+        case #(1, 2), #(wibble, wibble) {
+            _, _ -> Nil
+        }
+      }"
+    );
+}
+
+#[test]
+fn pattern_matching_on_tuples_doesnt_raise_a_warning() {
+    assert_no_warnings!(
+        "pub fn main() {
+        let wibble = #(1, 2)
+        // This doesn't raise a warning since `wibble` is not a literal tuple.
+        case wibble {
+            _ -> Nil
+        }
+      }"
+    );
+}

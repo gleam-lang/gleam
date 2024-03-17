@@ -4,7 +4,6 @@ use crate::{
     pretty::{nil, *},
 };
 use ecow::EcoString;
-use itertools::Itertools;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -145,10 +144,10 @@ impl Printer {
             return nil();
         }
 
-        let args = concat(Itertools::intersperse(
+        let args = join(
             args.iter().map(|t| self.print(t).group()),
             break_(",", ", "),
-        ));
+        );
         break_("", "")
             .append(args)
             .nest(INDENT)

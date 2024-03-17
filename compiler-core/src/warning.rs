@@ -598,6 +598,25 @@ the same values.\n"
                         }),
                     }
                 }
+
+                type_::Warning::CaseMatchOnLiteralTuple { location } => Diagnostic {
+                    title: "Redundant tuple".into(),
+                    text: "Case expressions can take multiple subjects directly.".into(),
+                    hint: Some(
+                        "You can pass the contents of the tuple directly, separated by commas."
+                            .into(),
+                    ),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: Some("You can remove this tuple wrapper".into()),
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
             },
         }
     }

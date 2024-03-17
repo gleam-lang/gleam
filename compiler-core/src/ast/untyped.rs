@@ -193,6 +193,13 @@ impl UntypedExpr {
         )
     }
 
+    pub fn is_tuple(&self) -> bool {
+        match self {
+            UntypedExpr::Tuple { .. } => true,
+            _ => false,
+        }
+    }
+
     /// Returns `true` if the untyped expr is [`Call`].
     ///
     /// [`Call`]: UntypedExpr::Call

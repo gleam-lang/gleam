@@ -85,30 +85,47 @@ use gleam_core::{
     version::COMPILER_VERSION,
 };
 use hex::ApiKeyCommand as _;
+use std::str::FromStr;
 
 use camino::Utf8PathBuf;
 
-use clap::{Args, Parser, Subcommand};
+use clap::{
+    builder::{styling, PossibleValuesParser, Styles, TypedValueParser},
+    Args, Parser, Subcommand,
+};
 use strum::VariantNames;
 
 #[derive(Parser, Debug)]
-#[clap(version)]
+#[command(
+    version,
+    next_display_order = None,
+    help_template = "\
+{before-help}{name} {version}
+
+{usage-heading} {usage}
+
+{all-args}{after-help}",
+    styles = Styles::styled()
+        .header(styling::AnsiColor::Yellow.on_default())
+        .usage(styling::AnsiColor::Yellow.on_default())
+        .literal(styling::AnsiColor::Green.on_default())
+)]
 enum Command {
     /// Build the project
     Build {
         /// Emit compile time warnings as errors
-        #[clap(long)]
+        #[arg(long)]
         warnings_as_errors: bool,
 
         /// The platform to target
-        #[clap(short, long, ignore_case = true)]
+        #[arg(short, long, ignore_case = true)]
         target: Option<Target>,
     },
 
     /// Type check the project
     Check {
         /// The platform to target
-        #[clap(short, long, ignore_case = true)]
+        #[arg(short, long, ignore_case = true)]
         target: Option<Target>,
     },
 
@@ -118,27 +135,27 @@ enum Command {
     ///
     /// - HEXPM_USER: (optional) The Hex username to authenticate with.
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    #[clap(verbatim_doc_comment)]
+    #[command(verbatim_doc_comment)]
     Publish {
-        #[clap(long)]
+        #[arg(long)]
         replace: bool,
-        #[clap(short, long)]
+        #[arg(short, long)]
         yes: bool,
     },
 
     /// Render HTML documentation
-    #[clap(subcommand)]
+    #[command(subcommand)]
     Docs(Docs),
 
     /// Work with dependency packages
-    #[clap(subcommand)]
+    #[command(subcommand)]
     Deps(Dependencies),
 
     /// Update dependency packages to their latest versions
     Update,
 
     /// Work with the Hex package manager
-    #[clap(subcommand)]
+    #[command(subcommand)]
     Hex(Hex),
 
     /// Create a new project
@@ -147,15 +164,15 @@ enum Command {
     /// Format source code
     Format {
         /// Files to format
-        #[clap(default_value = ".")]
+        #[arg(default_value = ".")]
         files: Vec<String>,
 
         /// Read source from STDIN
-        #[clap(long)]
+        #[arg(long)]
         stdin: bool,
 
         /// Check if inputs are formatted without changing them
-        #[clap(long)]
+        #[arg(long)]
         check: bool,
     },
     /// Rewrite deprecated Gleam code
@@ -165,58 +182,58 @@ enum Command {
     Shell,
 
     /// Run the project
-    #[clap(trailing_var_arg = true)]
+    #[command(trailing_var_arg = true)]
     Run {
         /// The platform to target
-        #[clap(short, long, ignore_case = true)]
+        #[arg(short, long, ignore_case = true)]
         target: Option<Target>,
 
-        #[clap(long, ignore_case = true)]
+        #[arg(long, ignore_case = true)]
         runtime: Option<Runtime>,
 
         /// The module to run
-        #[clap(short, long)]
+        #[arg(short, long)]
         module: Option<String>,
 
         arguments: Vec<String>,
     },
 
     /// Run the project tests
-    #[clap(trailing_var_arg = true)]
+    #[command(trailing_var_arg = true)]
     Test {
         /// The platform to target
-        #[clap(short, long, ignore_case = true)]
+        #[arg(short, long, ignore_case = true)]
         target: Option<Target>,
 
-        #[clap(long, ignore_case = true)]
+        #[arg(long, ignore_case = true)]
         runtime: Option<Runtime>,
 
         arguments: Vec<String>,
     },
 
     /// Compile a single Gleam package
-    #[clap(hide = true)]
+    #[command(hide = true)]
     CompilePackage(CompilePackage),
 
     /// Read and print gleam.toml for debugging
-    #[clap(hide = true)]
+    #[command(hide = true)]
     PrintConfig,
 
     /// Add new project dependencies
     Add {
         /// The names of Hex packages to add
-        #[clap(required = true)]
+        #[arg(required = true)]
         packages: Vec<String>,
 
         /// Add the packages as dev-only dependencies
-        #[clap(long)]
+        #[arg(long)]
         dev: bool,
     },
 
     /// Remove project dependencies
     Remove {
         /// The names of packages to remove
-        #[clap(required = true)]
+        #[arg(required = true)]
         packages: Vec<String>,
     },
 
@@ -224,11 +241,11 @@ enum Command {
     Clean,
 
     /// Run the language server, to be used by editors
-    #[clap(name = "lsp")]
+    #[command(name = "lsp")]
     LanguageServer,
 
     /// Export something useful from the Gleam project
-    #[clap(subcommand)]
+    #[command(subcommand)]
     Export(ExportTarget),
 }
 
@@ -244,7 +261,7 @@ pub enum ExportTarget {
     TypescriptPrelude,
     /// Information on the modules, functions, and types in the project in JSON format
     PackageInterface {
-        #[clap(long = "out", required = true)]
+        #[arg(long = "out", required = true)]
         /// The path to write the JSON file to
         output: Utf8PathBuf,
     },
@@ -256,42 +273,37 @@ pub struct NewOptions {
     pub project_root: String,
 
     /// Name of the project
-    #[clap(long)]
+    #[arg(long)]
     pub name: Option<String>,
 
-    #[clap(
-        long,
-        possible_values = new::Template::VARIANTS,
-        ignore_case = true,
-        default_value = "lib"
-    )]
+    #[arg(long, ignore_case = true, default_value = "lib")]
     pub template: new::Template,
 
     /// Skip git initialization and creation of .gitignore, .git/* and .github/* files
-    #[clap(long)]
+    #[arg(long)]
     pub skip_git: bool,
 
     /// Skip creation of .github/* files
-    #[clap(long)]
+    #[arg(long)]
     pub skip_github: bool,
 }
 
 #[derive(Args, Debug)]
 pub struct CompilePackage {
     /// The compilation target for the generated project
-    #[clap(long, ignore_case = true)]
+    #[arg(long, ignore_case = true)]
     target: Target,
 
     /// The directory of the Gleam package
-    #[clap(long = "package")]
+    #[arg(long = "package")]
     package_directory: Utf8PathBuf,
 
     /// A directory to write compiled package to
-    #[clap(long = "out")]
+    #[arg(long = "out")]
     output_directory: Utf8PathBuf,
 
     /// A directories of precompiled Gleam projects
-    #[clap(long = "lib")]
+    #[arg(long = "lib")]
     libraries_directory: Utf8PathBuf,
 
     /// The location of the JavaScript prelude module, relative to the `out`
@@ -302,11 +314,11 @@ pub struct CompilePackage {
     /// This likely wants to be a `.mjs` file as NodeJS does not permit
     /// importing of other JavaScript file extensions.
     ///
-    #[clap(long = "javascript-prelude")]
+    #[arg(long = "javascript-prelude")]
     javascript_prelude: Option<Utf8PathBuf>,
 
     /// Skip Erlang to BEAM bytecode compilation if given
-    #[clap(long = "no-beam")]
+    #[arg(long = "no-beam")]
     skip_beam_compilation: bool,
 }
 
@@ -330,13 +342,13 @@ enum Hex {
     ///
     /// - HEXPM_USER: (optional) The Hex username to authenticate with.
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    #[clap(verbatim_doc_comment)]
+    #[command(verbatim_doc_comment)]
     Retire {
         package: String,
 
         version: String,
 
-        #[clap(possible_values = RetirementReason::VARIANTS)]
+        #[arg(value_parser = PossibleValuesParser::new(RetirementReason::VARIANTS).map(|s| RetirementReason::from_str(&s).unwrap()))]
         reason: RetirementReason,
 
         message: Option<String>,
@@ -348,7 +360,7 @@ enum Hex {
     ///
     /// - HEXPM_USER: (optional) The Hex username to authenticate with.
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    #[clap(verbatim_doc_comment)]
+    #[command(verbatim_doc_comment)]
     Unretire { package: String, version: String },
 }
 
@@ -357,7 +369,7 @@ enum Docs {
     /// Render HTML docs locally
     Build {
         /// Opens the docs in a browser after rendering
-        #[clap(long)]
+        #[arg(long)]
         open: bool,
     },
 
@@ -367,7 +379,7 @@ enum Docs {
     ///
     /// - HEXPM_USER: (optional) The Hex username to authenticate with.
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    #[clap(verbatim_doc_comment)]
+    #[command(verbatim_doc_comment)]
     Publish,
 
     /// Remove HTML docs from HexDocs
@@ -376,14 +388,14 @@ enum Docs {
     ///
     /// - HEXPM_USER: (optional) The Hex username to authenticate with.
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    #[clap(verbatim_doc_comment)]
+    #[command(verbatim_doc_comment)]
     Remove {
         /// The name of the package
-        #[clap(long)]
+        #[arg(long)]
         package: String,
 
         /// The version of the docs to remove
-        #[clap(long)]
+        #[arg(long)]
         version: String,
     },
 }
@@ -488,7 +500,7 @@ fn main() {
     }
 }
 
-fn command_check(target: Option<Target>) -> Result<(), Error> {
+fn command_check(target: Option<Target>) -> Result<()> {
     let _ = build::main(
         Options {
             root_target_support: TargetSupport::Enforced,
@@ -502,7 +514,7 @@ fn command_check(target: Option<Target>) -> Result<(), Error> {
     Ok(())
 }
 
-fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<(), Error> {
+fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<()> {
     let _ = build::main(
         Options {
             root_target_support: TargetSupport::Enforced,
@@ -549,7 +561,7 @@ fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
     ProjectPaths::new(current_dir)
 }
 
-fn download_dependencies() -> Result<(), Error> {
+fn download_dependencies() -> Result<()> {
     let paths = find_project_paths()?;
     _ = dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
     Ok(())

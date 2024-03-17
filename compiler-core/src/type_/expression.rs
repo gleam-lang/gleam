@@ -1054,6 +1054,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         clauses: Vec<UntypedClause>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
+        subjects
+            .iter()
+            .filter(|untyped_expr| untyped_expr.is_tuple())
+            .for_each(|literal_tuple| {
+                self.environment
+                    .warnings
+                    .emit(Warning::CaseMatchOnLiteralTuple {
+                        location: literal_tuple.location(),
+                    });
+            });
+
         let subjects_count = subjects.len();
         let mut typed_subjects = Vec::with_capacity(subjects_count);
         let mut subject_types = Vec::with_capacity(subjects_count);

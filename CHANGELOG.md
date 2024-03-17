@@ -21,6 +21,12 @@
   result of nested blocks.
 - Fix a bug where JavaScript code generation would not properly handle functions
   returned by blocks.
+- Fix a bug where Erlang code generation would not properly handle list case patterns
+  with no head and a spread tail.
+- The compiler will now raise a warning if you're pattern matching on tuple
+  literals and suggest you use multiple subjects instead.
+- Fix a bug where JavaScript code generation would incorrectly parenthesise a
+  return statement.
 
 ### Formatter
 
@@ -39,9 +45,12 @@
 - Dependencies that use Erlang-only bit options can now compile on JavaScript,
   though the functions that use them will not be available for use in the root
   package.
+- The output format of the command line help messages have been changed
+  slightly.
 - Generated documentation no longer exposes the constructors of opaque types,
   no longer exposes the values of constants, and indicates which types are
   opaque.
+- Generated HTML documentation now includes a link to the package on Hex.
 - Terminal colors can now be forced by setting the `FORCE_COLOR` environment
   variable to any non-empty value.
 - Rust's Reqwest's `webpki-roots` are now used for TLS verification.
@@ -53,6 +62,7 @@
   Neovim.
 - Fixed a bug where hovering over an expression in the middle of a pipe would
   give the wrong node.
+- Go to definition now works for values in dependency Gleam modules.
 
 
 ## v1.0.0 - 2024-03-04

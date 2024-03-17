@@ -187,12 +187,12 @@ fn pattern_list<'a>(
     define_variables: bool,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let elements = concat(Itertools::intersperse(
+    let elements = join(
         elements
             .iter()
             .map(|e| print(e, vars, define_variables, env)),
         break_(",", ", "),
-    ));
+    );
     let tail = tail.map(|tail| print(tail, vars, define_variables, env));
     list(elements, tail)
 }

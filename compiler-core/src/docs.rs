@@ -65,7 +65,12 @@ pub fn generate_html(
         path,
     });
 
-    let links: Vec<_> = doc_links.chain(repo_link).collect();
+    let package_link = Link {
+        name: "Hex".into(),
+        path: format!("https://hex.pm/packages/{0}", config.name).to_string(),
+    };
+
+    let links: Vec<_> = doc_links.chain(repo_link).chain([package_link]).collect();
 
     let mut files = vec![];
 

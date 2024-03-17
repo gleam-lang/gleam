@@ -344,3 +344,120 @@ fn main() {
         })
     )
 }
+
+#[test]
+fn goto_definition_external_module_constants() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub const my_num = 1");
+
+    let code = "
+import example_module
+fn main() {
+  example_module.my_num
+}
+";
+
+    assert_eq!(
+        positioned_with_io_definition(code, Position::new(3, 20), &io),
+        Some(Location {
+            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
+                r"\\?\C:\build\packages\my_dep\src\example_module.gleam"
+            } else {
+                "/build/packages/my_dep/src/example_module.gleam"
+            }))
+            .unwrap(),
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 10
+                },
+                end: Position {
+                    line: 0,
+                    character: 16
+                }
+            }
+        })
+    )
+}
+
+#[test]
+fn goto_definition_external_module_function_calls() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
+
+    let code = "
+import example_module
+fn main() {
+  example_module.my_fn
+}
+";
+
+    assert_eq!(
+        positioned_with_io_definition(code, Position::new(3, 20), &io),
+        Some(Location {
+            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
+                r"\\?\C:\build\packages\my_dep\src\example_module.gleam"
+            } else {
+                "/build/packages/my_dep/src/example_module.gleam"
+            }))
+            .unwrap(),
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0
+                },
+                end: Position {
+                    line: 0,
+                    character: 14
+                }
+            }
+        })
+    )
+}
+
+#[test]
+fn goto_definition_external_module_records() {
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module(
+        "my_dep",
+        "example_module",
+        "
+pub type Rec {
+  Var1(Int)
+  Var2(Int, Int)
+}
+",
+    );
+
+    let code = "
+import example_module
+fn main() {
+  example_module.Var1(1)
+}
+";
+
+    assert_eq!(
+        positioned_with_io_definition(code, Position::new(3, 20), &io),
+        Some(Location {
+            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
+                r"\\?\C:\build\packages\my_dep\src\example_module.gleam"
+            } else {
+                "/build/packages/my_dep/src/example_module.gleam"
+            }))
+            .unwrap(),
+            range: Range {
+                start: Position {
+                    line: 2,
+                    character: 2
+                },
+                end: Position {
+                    line: 2,
+                    character: 11
+                }
+            }
+        })
+    )
+}

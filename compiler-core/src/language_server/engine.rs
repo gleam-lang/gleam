@@ -140,11 +140,7 @@ where
 
     // TODO: test different package module function calls
     //
-    //
-    //
     // TODO: implement unqualified imported module functions
-    // TODO: implement goto definition of modules that do not belong to the top
-    // level package.
     //
     pub fn goto_definition(
         &mut self,
@@ -167,11 +163,7 @@ where
                 Some(name) => {
                     let module = match this.compiler.get_source(name) {
                         Some(module) => module,
-                        // TODO: support goto definition for functions defined in
-                        // different packages. Currently it is not possible as the
-                        // required LineNumbers and source file path information is
-                        // not stored in the module metadata.
-                        None => return Ok(None),
+                        _ => return Ok(None),
                     };
                     let url = Url::parse(&format!("file:///{}", &module.path))
                         .expect("goto definition URL parse");

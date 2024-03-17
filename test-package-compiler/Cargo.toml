@@ -7,19 +7,13 @@ license-file = "LICENCE"
 
 [dependencies]
 gleam-core = { path = "../compiler-core" }
-# toml config file parsing
-toml = "0.5.8"
-# Immutable data structures
-im = "15.1.0"
-# Extra iter methods
-itertools = "0.10.1"
-# Recursively finding files
-walkdir = "2.3.2"
-# Regular expressions
-regex = "*"
-camino = "1.1.6"
+toml.workspace = true
+im.workspace = true
+itertools.workspace = true
+walkdir.workspace = true
+regex.workspace = true
+camino.workspace = true
 
 [dev-dependencies]
-# Snapshot testing to make test maintenance easier
-insta = "1.8.0"
+insta.workspace = true
 

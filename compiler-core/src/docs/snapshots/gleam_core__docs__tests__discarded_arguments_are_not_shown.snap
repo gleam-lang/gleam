@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
+assertion_line: 134
 expression: "compile(config, modules)"
 ---
 //// app.html
@@ -207,6 +208,13 @@ expression: "compile(config, modules)"
         
 
         
+        <h2>Links</h2>
+        <ul>
+        
+          <li><a href="https://hex.pm/packages/">Hex</a></li>
+        
+        </ul>
+        
 
         <h2>Modules</h2>
         <ul>
@@ -348,5 +356,3 @@ expression: "compile(config, modules)"
     <script src="./search-data.js?v=0"></script>
   </body>
 </html>
-
-

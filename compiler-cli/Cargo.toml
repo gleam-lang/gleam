@@ -8,84 +8,63 @@ license-file = "LICENCE"
 [dependencies]
 # The pure compiler
 gleam-core = { path = "../compiler-core" }
-# Immutable data structures
-im = "15.1.0"
 # OS SIGINT and SIGTERM signal handling
 ctrlc = { version = "3.2.1", features = ["termination"] }
 # Command line interface
-clap = { version = "3.0", features = ["derive"] }
-# Extra iter methods
-itertools = "0.10.1"
-# Parsing
-regex = "1.5.4"
-# Colours in terminal
-termcolor = "1.1.2"
-# Data (de)serialisation
-serde = { version = "1.0.130", features = ["derive"] }
-serde_json = "*"
-# toml config file parsing
-toml = "0.5.8"
+clap = { version = "4.5.2", features = ["derive"] }
 # Recursively traversing directories
-ignore = "0.4.18"
-walkdir = "2.3.2"
-# Enum trait impl macros
-strum = { version = "0.24.0", features = ["derive"] }
+ignore = "0.4.22"
 # Check for tty
 atty = "0.2.14"
-# Hex package manager client
-hexpm = "2.1.0"
 # Allow user to type in sensitive information without showing it in the shell
 rpassword = "5.0.1"
 # Async runtime
 tokio = { version = "1.24.2", features = ["rt", "rt-multi-thread"] }
-# Creation of tar file archives
-tar = "0.4.37"
-# gzip compression
-flate2 = "1.0.22"
-# Byte array data type
-bytes = "1.1.0"
 # Further file system functions (i.e. copy directory)
 fs_extra = "1.2.0"
-# Logging
-tracing = "0.1.29"
-tracing-subscriber = { version = "0.3.2", features = ["fmt", "env-filter"] }
+tracing-subscriber = { version = "0.3.18", features = ["fmt", "env-filter"] }
 # HTTP client
 reqwest = { version = "0.11.26", default-features = false, features = ["rustls-tls"] }
-# Macro to work around Rust's traits not working with async. Sigh.
-async-trait = "0.1.51"
-# HTTP types
-http = "0.2.5"
-# Async combinators for futures
-futures = "0.3.17"
-# Little helper to omit fields that cannot be debug printed
-debug-ignore = "1.0.1"
 # Checksums
 sha2 = "0.9.8"
 # Getting hostname
 hostname = "0.3.1"
-# base encoding
-base16 = "0.2.1"
 # TOML parser/editor that preserves comments & formatting
 toml_edit = "0.9"
-# Language server protocol server plumbing
-lsp-server = "0.7"
-lsp-types = "0.94"
 # File locking
 fslock = "0.2.1"
-# Compact clone-on-write vector & string type
-ecow = "0.2.0"
 # Provides a way to determine if two files are the same using filesystem node ids
 same-file = "1.0.6"
 # Open generated docs in browser
 opener = "0.6"
-# Drop in replacement for std::path but with only utf-8
-camino = { version = "1.1.6", features = ["serde1"] }
+camino = { workspace = true, features = ["serde1"] }
+async-trait.workspace = true
+base16.workspace = true
+bytes.workspace = true
+debug-ignore.workspace = true
+ecow.workspace = true
+flate2.workspace = true
+futures.workspace = true
+hexpm.workspace = true
+http.workspace = true
+im.workspace = true
+itertools.workspace = true
+lsp-server.workspace = true
+lsp-types.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+strum.workspace = true
+tar.workspace = true
+termcolor.workspace = true
+toml.workspace = true
+tracing.workspace = true
+walkdir.workspace = true
 
 [dev-dependencies]
-# Test assertion errors with diffs
-pretty_assertions = "1.0.0"
 # Creation of temporary directories
 tempfile = "3.2.0"
+pretty_assertions.workspace = true
 
 [build-dependencies]
 # For statically linking the VCRuntime on Windows when

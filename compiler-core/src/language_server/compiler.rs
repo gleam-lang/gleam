@@ -106,6 +106,14 @@ where
 
         let compiled_dependencies = self.project_compiler.compile_dependencies()?;
 
+        // Store the compiled dependency module information
+        for module in &compiled_dependencies {
+            let path = module.input_path.as_os_str().to_string_lossy().to_string();
+            let line_numbers = LineNumbers::new(&module.code);
+            let source = ModuleSourceInformation { path, line_numbers };
+            _ = self.sources.insert(module.name.clone(), source);
+        }
+
         // Warnings from dependencies are not fixable by the programmer so
         // we don't bother them with diagnostics for them.
         let _ = self.take_warnings();
