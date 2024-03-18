@@ -58,11 +58,12 @@ use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
     CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, HasLocation, Import,
-    Module, ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread,
-    SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst, TypeAstConstructor,
-    TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause,
-    UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule,
-    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
+    Module, ModuleConstant, Pattern, Publicity, RecordConstructor, RecordConstructorArg,
+    RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
+    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport,
+    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
+    UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment,
+    CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -1564,8 +1565,7 @@ where
             documentation,
             location: SrcSpan { start, end },
             end_position,
-            public,
-            internal: attributes.internal,
+            publicity: self.publicity(public, attributes),
             name,
             arguments: args,
             body,
@@ -1580,6 +1580,16 @@ where
                 uses_javascript_externals: false,
             },
         })))
+    }
+
+    fn publicity(&self, public: bool, attributes: &Attributes) -> Publicity {
+        if attributes.internal {
+            Publicity::Internal
+        } else if public {
+            Publicity::Public
+        } else {
+            Publicity::Private
+        }
     }
 
     // Parse a single function definition param
@@ -1776,8 +1786,7 @@ where
                 return Ok(Some(Definition::TypeAlias(TypeAlias {
                     documentation,
                     location: SrcSpan::new(start, type_end),
-                    internal: attributes.internal,
-                    public,
+                    publicity: self.publicity(public, attributes),
                     alias: name,
                     parameters,
                     type_ast: t,
@@ -1793,9 +1802,8 @@ where
         Ok(Some(Definition::CustomType(CustomType {
             documentation,
             location: SrcSpan { start, end },
-            internal: attributes.internal,
             end_position,
-            public,
+            publicity: self.publicity(public, attributes),
             opaque,
             name,
             parameters,
@@ -2182,10 +2190,9 @@ where
         let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
         if let Some(value) = self.parse_const_value()? {
             Ok(Some(Definition::ModuleConstant(ModuleConstant {
-                internal: attributes.internal,
                 documentation,
                 location: SrcSpan { start, end },
-                public,
+                publicity: self.publicity(public, attributes),
                 name,
                 annotation,
                 value: Box::new(value),

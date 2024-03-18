@@ -1930,11 +1930,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         let ValueConstructor {
-            public,
+            publicity,
             variant,
             type_: typ,
             deprecation,
-            internal,
         } = constructor;
 
         // Emit a warning if the value being used is deprecated.
@@ -1951,11 +1950,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Instantiate generic variables into unbound variables for this usage
         let typ = self.instantiate(typ, &mut hashmap![]);
         Ok(ValueConstructor {
-            public,
+            publicity,
             deprecation,
             variant,
             type_: typ,
-            internal,
         })
     }
 

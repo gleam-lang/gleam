@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    ast::{Arg, Function},
+    ast::{Arg, Function, Publicity},
     type_::{expression::Implementations, Deprecation},
 };
 use ecow::EcoString;
@@ -30,7 +30,7 @@ fn parse_and_order(
             body: crate::parse::parse_statement_sequence(src).expect("syntax error"),
             location: Default::default(),
             return_annotation: None,
-            public: true,
+            publicity: Publicity::Public,
             deprecation: Deprecation::NotDeprecated,
             end_position: src.len() as u32,
             return_type: (),
@@ -42,7 +42,6 @@ fn parse_and_order(
                 uses_erlang_externals: true,
                 uses_javascript_externals: false,
             },
-            internal: false,
         })
         .collect_vec();
     let constants = constants
@@ -52,7 +51,7 @@ fn parse_and_order(
             ModuleConstant {
                 documentation: None,
                 location: Default::default(),
-                public: true,
+                publicity: Publicity::Public,
                 name: EcoString::from(*name),
                 annotation: None,
                 value: Box::from(const_value),
@@ -63,7 +62,6 @@ fn parse_and_order(
                 },
                 type_: (),
                 deprecation: Deprecation::NotDeprecated,
-                internal: false,
             }
         })
         .collect_vec();

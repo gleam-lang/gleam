@@ -1,5 +1,8 @@
 use crate::{
-    analyse::TargetSupport, ast::PIPE_VARIABLE, build::Target, uid::UniqueIdGenerator,
+    analyse::TargetSupport,
+    ast::{Publicity, PIPE_VARIABLE},
+    build::Target,
+    uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
 };
 
@@ -194,8 +197,7 @@ impl<'a> Environment<'a> {
             name,
             ValueConstructor {
                 deprecation: Deprecation::NotDeprecated,
-                public: false,
-                internal: false,
+                publicity: Publicity::Private,
                 variant: ValueConstructorVariant::LocalVariable { location },
                 type_: typ,
             },
@@ -212,8 +214,7 @@ impl<'a> Environment<'a> {
             name,
             ValueConstructor {
                 deprecation: Deprecation::NotDeprecated,
-                public: false,
-                internal: false,
+                publicity: Publicity::Private,
                 variant: ValueConstructorVariant::LocalConstant {
                     literal: literal.clone(),
                 },
@@ -229,17 +230,15 @@ impl<'a> Environment<'a> {
         name: EcoString,
         variant: ValueConstructorVariant,
         typ: Arc<Type>,
-        public: bool,
-        internal: bool,
+        publicity: Publicity,
         deprecation: Deprecation,
     ) {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
-                public,
+                publicity,
                 deprecation,
                 variant,
-                internal,
                 type_: typ,
             },
         );
@@ -437,7 +436,7 @@ impl<'a> Environment<'a> {
     ) -> Arc<Type> {
         match t.deref() {
             Type::Named {
-                public,
+                publicity,
                 name,
                 package,
                 module,
@@ -448,7 +447,7 @@ impl<'a> Environment<'a> {
                     .map(|t| self.instantiate(t.clone(), ids, hydrator))
                     .collect();
                 Arc::new(Type::Named {
-                    public: *public,
+                    publicity: *publicity,
                     name: name.clone(),
                     package: package.clone(),
                     module: module.clone(),

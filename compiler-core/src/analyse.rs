@@ -5,9 +5,10 @@ mod tests;
 use crate::{
     ast::{
         self, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
-        GroupedStatements, Import, ModuleConstant, RecordConstructor, RecordConstructorArg,
-        SrcSpan, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple,
-        TypeAstVar, TypedDefinition, TypedModule, UntypedArg, UntypedModule, UntypedStatement,
+        GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
+        RecordConstructorArg, SrcSpan, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn,
+        TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedModule, UntypedArg,
+        UntypedModule, UntypedStatement,
     },
     build::{Origin, Target},
     call_graph::{into_dependency_order, CallGraphNode},
@@ -235,11 +236,12 @@ pub fn infer_module<A>(
     // server, but are filtered out when type checking to prevent using private
     // items.
     env.module_types.retain(|_, info| info.module == name);
-    env.accessors.retain(|_, accessors| accessors.public);
+    env.accessors
+        .retain(|_, accessors| !accessors.publicity.is_private());
 
     // Ensure no exported values have private types in their type signature
     for value in env.module_values.values() {
-        if !value.public {
+        if value.publicity.is_private() {
             continue;
         }
         if let Some(leaked) = value.type_.find_private_type() {
@@ -300,12 +302,11 @@ fn register_type_alias(
 ) -> Result<(), Error> {
     let TypeAlias {
         location,
-        public,
+        publicity,
         parameters: args,
         alias: name,
         type_ast: resolved_type,
         deprecation,
-        internal,
         type_: _,
         documentation: _,
     } = t;
@@ -326,11 +327,10 @@ fn register_type_alias(
         TypeConstructor {
             origin: *location,
             module: module.clone(),
-            public: *public,
             parameters,
             typ,
             deprecation: deprecation.clone(),
-            internal: *internal,
+            publicity: *publicity,
         },
     )?;
 
@@ -342,7 +342,7 @@ fn register_type_alias(
     }
 
     // Register the type for detection of dead code.
-    if !public {
+    if publicity.is_private() {
         environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
     };
     Ok(())
@@ -357,13 +357,12 @@ fn register_types_from_custom_type<'a>(
 ) -> Result<(), Error> {
     let CustomType {
         name,
-        public,
+        publicity,
         parameters,
         location,
         deprecation,
         opaque,
         constructors,
-        internal,
         ..
     } = t;
     assert_unique_type_name(names, name, *location)?;
@@ -373,7 +372,7 @@ fn register_types_from_custom_type<'a>(
     hydrator.clear_ridgid_type_names();
 
     let typ = Arc::new(Type::Named {
-        public: *public,
+        publicity: *publicity,
         package: environment.current_package.clone(),
         module: module.to_owned(),
         name: name.clone(),
@@ -385,10 +384,9 @@ fn register_types_from_custom_type<'a>(
         TypeConstructor {
             origin: *location,
             module: module.clone(),
-            public: *public,
             deprecation: deprecation.clone(),
             parameters,
-            internal: *internal,
+            publicity: *publicity,
             typ,
         },
     )?;
@@ -401,7 +399,7 @@ fn register_types_from_custom_type<'a>(
             });
     }
 
-    if !public {
+    if publicity.is_private() {
         environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
     };
     Ok(())
@@ -417,12 +415,11 @@ fn register_values_from_custom_type(
 ) -> Result<(), Error> {
     let CustomType {
         location,
-        public,
+        publicity,
         opaque,
         name,
         constructors,
         deprecation,
-        internal,
         ..
     } = t;
 
@@ -438,7 +435,11 @@ fn register_values_from_custom_type(
         .clone();
     if let Some(accessors) = custom_type_accessors(constructors, &mut hydrator, environment)? {
         let map = AccessorsMap {
-            public: (*public && !*opaque),
+            publicity: if *opaque {
+                Publicity::Private
+            } else {
+                *publicity
+            },
             accessors,
             // TODO: improve the ownership here so that we can use the
             // `return_type_constructor` below rather than looking it up twice.
@@ -493,18 +494,25 @@ fn register_values_from_custom_type(
             constructor_index: index as u16,
         };
 
+        // If the contructor belongs to an opaque type then it's going to be
+        // considered as private.
+        let value_constructor_publicity = if *opaque {
+            Publicity::Private
+        } else {
+            *publicity
+        };
+
         environment.insert_module_value(
             constructor.name.clone(),
             ValueConstructor {
-                internal: *internal,
+                publicity: value_constructor_publicity,
                 deprecation: deprecation.clone(),
-                public: *public && !opaque,
                 type_: typ.clone(),
                 variant: constructor_info.clone(),
             },
         );
 
-        if !public {
+        if value_constructor_publicity.is_private() {
             environment.init_usage(
                 constructor.name.clone(),
                 EntityKind::PrivateTypeConstructor(name.clone()),
@@ -520,8 +528,7 @@ fn register_values_from_custom_type(
             constructor.name.clone(),
             constructor_info,
             typ,
-            *public,
-            *internal,
+            value_constructor_publicity,
             deprecation.clone(),
         );
     }
@@ -547,7 +554,7 @@ fn register_value_from_function(
         arguments: args,
         location,
         return_annotation,
-        public,
+        publicity,
         documentation,
         external_erlang,
         external_javascript,
@@ -556,7 +563,6 @@ fn register_value_from_function(
         body: _,
         return_type: _,
         implementations,
-        internal,
     } = f;
     assert_unique_name(names, name, *location)?;
     assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
@@ -592,15 +598,8 @@ fn register_value_from_function(
         location: *location,
         implementations: *implementations,
     };
-    environment.insert_variable(
-        name.clone(),
-        variant,
-        typ,
-        *public,
-        *internal,
-        deprecation.clone(),
-    );
-    if !public {
+    environment.insert_variable(name.clone(), variant, typ, *publicity, deprecation.clone());
+    if publicity.is_private() {
         environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
     };
     Ok(())
@@ -653,7 +652,7 @@ fn infer_function(
         documentation: doc,
         location,
         name,
-        public,
+        publicity,
         arguments,
         body,
         return_annotation,
@@ -662,7 +661,6 @@ fn infer_function(
         external_erlang,
         external_javascript,
         return_type: (),
-        internal,
         implementations: _,
     } = f;
     let target = environment.target;
@@ -720,7 +718,10 @@ fn infer_function(
     // Ensure that the current target has an implementation for the function.
     // This is done at the expression level while inferring the function body, but we do it again
     // here as externally implemented functions may not have a Gleam body.
-    if public && environment.target_support.is_enforced() && !implementations.supports(target) {
+    if !publicity.is_private()
+        && environment.target_support.is_enforced()
+        && !implementations.supports(target)
+    {
         return Err(Error::UnsupportedPublicFunctionTarget {
             name: name.clone(),
             target,
@@ -742,8 +743,7 @@ fn infer_function(
         name.clone(),
         variant,
         type_.clone(),
-        public,
-        internal,
+        publicity,
         deprecation.clone(),
     );
 
@@ -751,7 +751,7 @@ fn infer_function(
         documentation: doc,
         location,
         name,
-        public,
+        publicity,
         deprecation,
         arguments: args,
         end_position: end_location,
@@ -763,7 +763,6 @@ fn infer_function(
         external_erlang,
         external_javascript,
         implementations,
-        internal,
     }))
 }
 
@@ -834,12 +833,11 @@ fn insert_type_alias(
     let TypeAlias {
         documentation: doc,
         location,
-        public,
+        publicity,
         alias,
         parameters: args,
         type_ast: resolved_type,
         deprecation,
-        internal,
         ..
     } = t;
     let typ = environment
@@ -850,13 +848,12 @@ fn insert_type_alias(
     Ok(Definition::TypeAlias(TypeAlias {
         documentation: doc,
         location,
-        public,
+        publicity,
         alias,
         parameters: args,
         type_ast: resolved_type,
         type_: typ,
         deprecation,
-        internal,
     }))
 }
 
@@ -868,13 +865,12 @@ fn infer_custom_type(
         documentation: doc,
         location,
         end_position,
-        public,
+        publicity,
         opaque,
         name,
         parameters,
         constructors,
         deprecation,
-        internal,
         ..
     } = t;
     let constructors = constructors
@@ -937,14 +933,13 @@ fn infer_custom_type(
         documentation: doc,
         location,
         end_position,
-        public,
+        publicity,
         opaque,
         name,
         parameters,
         constructors,
         typed_parameters,
         deprecation,
-        internal,
     }))
 }
 
@@ -1010,10 +1005,9 @@ fn infer_module_constant(
         location,
         name,
         annotation,
-        public,
+        publicity,
         value,
         deprecation,
-        internal,
         ..
     } = c;
 
@@ -1029,8 +1023,7 @@ fn infer_module_constant(
     let implementations = expr_typer.implementations;
 
     let variant = ValueConstructor {
-        public,
-        internal,
+        publicity,
         deprecation: deprecation.clone(),
         variant: ValueConstructorVariant::ModuleConstant {
             documentation: doc.clone(),
@@ -1046,13 +1039,12 @@ fn infer_module_constant(
         name.clone(),
         variant.variant.clone(),
         type_.clone(),
-        public,
-        internal,
+        publicity,
         Deprecation::NotDeprecated,
     );
     environment.insert_module_value(name.clone(), variant);
 
-    if !public {
+    if publicity.is_private() {
         environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
     }
 
@@ -1061,12 +1053,11 @@ fn infer_module_constant(
         location,
         name,
         annotation,
-        public,
+        publicity,
         value: Box::new(typed_expr),
         type_,
         deprecation,
         implementations,
-        internal,
     }))
 }
 
@@ -1144,12 +1135,11 @@ fn generalise_module_constant(
         location,
         name,
         annotation,
-        public,
+        publicity,
         value,
         type_,
         deprecation,
         implementations,
-        internal,
     } = constant;
     let typ = type_.clone();
     let type_ = type_::generalise(typ);
@@ -1164,16 +1154,14 @@ fn generalise_module_constant(
         name.clone(),
         variant.clone(),
         type_.clone(),
-        public,
-        internal,
+        publicity,
         deprecation.clone(),
     );
 
     environment.insert_module_value(
         name.clone(),
         ValueConstructor {
-            public,
-            internal,
+            publicity,
             variant,
             deprecation: deprecation.clone(),
             type_: type_.clone(),
@@ -1185,12 +1173,11 @@ fn generalise_module_constant(
         location,
         name,
         annotation,
-        public,
+        publicity,
         value,
         type_,
         deprecation,
         implementations,
-        internal,
     })
 }
 
@@ -1203,7 +1190,7 @@ fn generalise_function(
         documentation: doc,
         location,
         name,
-        public,
+        publicity,
         deprecation,
         arguments: args,
         body,
@@ -1213,7 +1200,6 @@ fn generalise_function(
         external_erlang,
         external_javascript,
         implementations,
-        internal,
     } = function;
 
     // Lookup the inferred function information
@@ -1243,15 +1229,13 @@ fn generalise_function(
         name.clone(),
         variant.clone(),
         type_.clone(),
-        public,
-        internal,
+        publicity,
         deprecation.clone(),
     );
     environment.insert_module_value(
         name.clone(),
         ValueConstructor {
-            public,
-            internal,
+            publicity,
             deprecation: deprecation.clone(),
             type_,
             variant,
@@ -1262,7 +1246,7 @@ fn generalise_function(
         documentation: doc,
         location,
         name,
-        public,
+        publicity,
         deprecation,
         arguments: args,
         end_position: end_location,
@@ -1272,7 +1256,6 @@ fn generalise_function(
         external_erlang,
         external_javascript,
         implementations,
-        internal,
     })
 }
 
