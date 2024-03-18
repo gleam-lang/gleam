@@ -406,8 +406,8 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 if let AssignName::Variable(right) = right_side_assignment {
                     self.push_string_prefix_slice(utf16_no_escape_len(left_side_string));
                     self.push_assignment(subject.clone(), right);
-                    // We remove the string slicing that was needed to push the correct assignment
-                    // this way the following assignments will only be sliced if necessary.
+                    // After pushing the assignment we need to pop the prefix slicing we used to
+                    // check the condition.
                     self.pop();
                 }
                 if let Some((left, _)) = left_side_assignment {
@@ -420,7 +420,6 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     //                     the case branch gets translated into.
                     self.push_assignment(super::expression::string(left_side_string), left);
                 }
-                self.pop();
                 Ok(())
             }
 
