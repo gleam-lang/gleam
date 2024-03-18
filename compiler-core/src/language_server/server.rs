@@ -81,6 +81,7 @@ pub enum Notification {
     DidCloseTextDocument(lsp::DidCloseTextDocumentParams),
     DidChangeTextDocument(lsp::DidChangeTextDocumentParams),
     DidChangeWatchedFiles(lsp::DidChangeWatchedFilesParams),
+    CompilePlease,
 }
 
 impl Notification {
@@ -161,41 +162,17 @@ where
 
     pub fn run(&mut self) -> Result<()> {
         self.start_watching_gleam_toml();
-
-        let pause = Duration::from_millis(100);
-        let mut messages: Vec<Message> = vec![];
+        let mut buffer = MessageBuffer::new();
 
         loop {
-            // Empty the message buffer so that we can store new messages in it
-            messages.clear();
-
-            // Pull the first message, waiting an unlimited amount of time until
-            // either one is available or the connection is closed.
-            let Ok(message) = self.connection.receiver.recv() else {
-                break; // The connection has been closed.
-            };
-
-            // Pull the rest of the messages until there's a pause
-            loop {
-                let Ok(message) = self.connection.receiver.recv_timeout(pause) else {
-                    break;
-                };
-                let message = match message {
-                    lsp_server::Message::Request(r) if self.handle_shutdown(&r) => break,
-                    lsp_server::Message::Request(r) => Request::extract(r),
-                    lsp_server::Message::Notification(n) => Notification::extract(n),
-                    lsp_server::Message::Response(_) => None,
-                };
-                if let Some(message) = message {
-                    messages.push(message);
+            match buffer.receive(*self.connection) {
+                Next::Stop => break,
+                Next::MorePlease => (),
+                Next::Handle(messages) => {
+                    for message in messages {
+                        self.handle_message(message);
+                    }
                 }
-            }
-
-            // FUTURE: optimise the messages to avoid extra work
-
-            // Process all the messages
-            for message in messages.drain(..) {
-                self.handle_message(message)
             }
         }
 
@@ -207,12 +184,6 @@ where
             Message::Request(id, request) => self.handle_request(id, request),
             Message::Notification(notification) => self.handle_notification(notification),
         }
-    }
-
-    fn handle_shutdown(&mut self, request: &lsp_server::Request) -> bool {
-        self.connection
-            .handle_shutdown(request)
-            .expect("LSP shutdown")
     }
 
     fn handle_request(&mut self, id: lsp_server::RequestId, request: Request) {
@@ -239,6 +210,7 @@ where
 
     fn handle_notification(&mut self, notification: Notification) {
         let feedback = match notification {
+            Notification::CompilePlease => todo!("Compile please!"),
             Notification::DidOpenDocument(param) => self.text_document_did_open(param),
             Notification::DidSaveDocument(param) => self.text_document_did_save(param),
             Notification::DidCloseTextDocument(param) => self.text_document_did_close(param),
@@ -664,4 +636,100 @@ fn path(uri: &Url) -> Utf8PathBuf {
 
     #[cfg(not(any(unix, windows, target_os = "redox", target_os = "wasi")))]
     return Utf8PathBuf::from_path_buf(uri.path().into()).expect("Non Utf8 Path");
+}
+
+enum Next {
+    MorePlease,
+    Handle(Vec<Message>),
+    Stop,
+}
+
+struct MessageBuffer {
+    messages: Vec<Message>,
+}
+
+impl MessageBuffer {
+    pub fn new() -> Self {
+        Self {
+            messages: Vec::new(),
+        }
+    }
+
+    pub fn receive(&mut self, conn: &lsp_server::Connection) -> Next {
+        let pause = Duration::from_millis(100);
+
+        // If the buffer is empty, wait indefinitely for the first message.
+        // If the buffer is not empty, wait for a short time to see if more messages are
+        // coming before processing the ones we have.
+        let message = if self.messages.is_empty() {
+            Some(conn.receiver.recv().expect("Receiving LSP message"))
+        } else {
+            conn.receiver.recv_timeout(pause).ok()
+        };
+
+        // If have have not received a message then it means there is a pause in the
+        // messages from the client, implying the programmer has stopped typing. Process
+        // the currently enqueued messages.
+        let message = match message {
+            Some(message) => message,
+            None => {
+                // A compile please message it added in the instance of this
+                // pause of activity so that the client gets feedback on the
+                // state of the code as it is now.
+                self.push_compile_please_message();
+                return Next::Handle(self.take_messages());
+            }
+        };
+
+        match message {
+            lsp_server::Message::Request(r) if self.shutdown(conn, &r) => return Next::Stop,
+            lsp_server::Message::Request(r) => self.request(r),
+            lsp_server::Message::Response(r) => self.response(r),
+            lsp_server::Message::Notification(n) => self.notification(n),
+        }
+    }
+
+    fn request(&mut self, r: lsp_server::Request) -> Next {
+        let Some(message) = Request::extract(r) else {
+            return Next::MorePlease;
+        };
+
+        // Compile the code prior to attempting to process the response, to
+        // ensure that the response is based on the latest code.
+        self.push_compile_please_message();
+        self.messages.push(message);
+        Next::Handle(self.take_messages())
+    }
+
+    fn notification(&mut self, n: lsp_server::Notification) -> Next {
+        // A new notification telling us that an edit has been made, or
+        // something along those lines.
+        if let Some(message) = Notification::extract(n) {
+            self.messages.push(message);
+        }
+        // Ask for more messages (or a pause), at which point we'll start processing.
+        Next::MorePlease
+    }
+
+    fn response(&mut self, _: lsp_server::Response) -> Next {
+        // We do not use or expect responses from the client currently.
+        Next::MorePlease
+    }
+
+    fn push_compile_please_message(&mut self) {
+        let value = Message::Notification(Notification::CompilePlease);
+        self.messages.push(value);
+    }
+
+    fn take_messages(&mut self) -> Vec<Message> {
+        std::mem::take(&mut self.messages)
+    }
+
+    fn shutdown(
+        &mut self,
+        connection: &lsp_server::Connection,
+        request: &lsp_server::Request,
+    ) -> bool {
+        connection.handle_shutdown(request).expect("LSP shutdown")
+    }
 }
