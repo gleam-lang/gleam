@@ -7,7 +7,7 @@ root = true
 
 # Matches multiple files with brace expansion notation
 # Set default charset
-[*.{rs, gleam, erl, hrl, ex, mjs, js, ts, sh, toml, yaml, yml, json, jsonc, md, html, css, dockerfile}]
+[*]
 end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
@@ -18,16 +18,8 @@ indent_size = 2
 [*.{rs, gleam, erl, hrl, ex, mjs, js, ts, sh}]
 max_line_length = 80
 
-[*.rs]
+[*.{rs, .erl, .hrl}]
 indent_size = 4
-
-[*.md, *.html]
-max_line_length = off
-
-[*.md]
-# double whitespace at end of line
-# denotes a line break in Markdown
-trim_trailing_whitespace = false
 
 [Makefile]
 indent_style = tab
