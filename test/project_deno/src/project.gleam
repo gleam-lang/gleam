@@ -1,7 +1,20 @@
-pub fn main() {
-  println("Hello, from project_deno!")
+pub type Location {
+  Location(
+    href: String,
+    origin: String,
+    protocol: String,
+    host: String,
+    hostname: String,
+    port: String,
+    pathname: String,
+    search: String,
+    hash: String,
+  )
 }
 
-@external(erlang, "erlang", "display")
-@external(javascript, "./project_ffi.mjs", "log")
-fn println(a: String) -> Nil
+pub fn main() {
+  location()
+}
+
+@external(javascript, "./project_ffi.mjs", "location")
+fn location() -> Location
