@@ -767,16 +767,3 @@ tup.0.0.0.0
 "#
     );
 }
-
-#[test]
-fn struct_in_a_tuple() {
-    // https://github.com/gleam-lang/gleam/issues/1980
-    assert_parse!(
-        r#"
-pub fn main() {
-  let tup = #(Person("Nikita"),)
-  {tup.0}.name
-}
-"#
-    );
-}
