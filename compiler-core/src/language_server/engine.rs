@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, Publicity, TypedDefinition, TypedExpr,
-        TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, Publicity, Statement, TypedDefinition,
+        TypedExpr, TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -18,7 +18,7 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use lsp::CodeAction;
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 use strum::IntoEnumIterator;
 
 use super::{
@@ -228,14 +228,20 @@ where
                 Located::Pattern(_pattern) => None,
 
                 Located::Statement(_) | Located::Expression(_) => {
-                    Some(this.completion_values(module))
+                    let mut completions = this.completion_values(module);
+                    completions.extend(this.completion_variables(module, byte_index));
+                    Some(completions)
                 }
 
                 Located::ModuleStatement(Definition::Function(_)) => {
                     Some(this.completion_types(module))
                 }
 
-                Located::FunctionBody(_) => Some(this.completion_values(module)),
+                Located::FunctionBody(_) => {
+                    let mut completions = this.completion_values(module);
+                    completions.extend(this.completion_variables(module, byte_index));
+                    Some(completions)
+                }
 
                 Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_)) => {
                     Some(this.completion_types(module))
@@ -514,6 +520,57 @@ where
 
     fn root_package_name(&self) -> &str {
         self.compiler.project_compiler.config.name.as_str()
+    }
+
+    fn completion_variables<'b>(
+        &'b self,
+        module: &'b Module,
+        byte_index: u32,
+    ) -> Vec<lsp::CompletionItem> {
+        let Some(fun) = module
+            .ast
+            .definitions
+            .iter()
+            .find_map(|statement| match statement {
+                Definition::Function(fun) if fun.full_location().contains(byte_index) => Some(fun),
+                _ => None,
+            })
+        else {
+            return vec![];
+        };
+
+        // Arguments
+        let arg_patterns = fun
+            .arguments
+            .iter()
+            .filter_map(|arg| Some((arg.names.get_variable_name()?, &arg.type_)));
+
+        // Scope variables
+        let scope_variables = fun.body.iter().filter_map(|stmt| match stmt {
+            Statement::Assignment(assignment) => match &assignment.pattern {
+                crate::ast::Pattern::Variable { name, type_, .. } => Some((name, type_)),
+                _ => None,
+            },
+            _ => None,
+        });
+
+        let map: BTreeMap<_, _> = arg_patterns
+            .chain(scope_variables)
+            .map(|(name, type_)| {
+                let type_ = Printer::new().pretty_print(&type_, 0);
+                let completion_item = lsp::CompletionItem {
+                    label: name.to_string(),
+                    kind: Some(lsp::CompletionItemKind::VARIABLE),
+                    detail: Some(type_),
+                    documentation: None,
+                    ..Default::default()
+                };
+
+                (name, completion_item)
+            })
+            .collect();
+
+        map.into_values().collect()
     }
 }
 
