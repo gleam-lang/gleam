@@ -110,8 +110,7 @@ impl<'a> Importer<'a> {
                     used_name.clone(),
                     value.variant.clone(),
                     value.type_.clone(),
-                    true,
-                    value.internal,
+                    value.publicity,
                     value.deprecation.clone(),
                 );
                 &value.variant

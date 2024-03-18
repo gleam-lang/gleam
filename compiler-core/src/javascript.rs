@@ -217,11 +217,11 @@ impl<'a> Generator<'a> {
             Definition::CustomType(CustomType { .. }) => None,
 
             Definition::ModuleConstant(ModuleConstant {
-                public,
+                publicity,
                 name,
                 value,
                 ..
-            }) => Some(self.module_constant(*public, name, value)),
+            }) => Some(self.module_constant(*publicity, name, value)),
 
             Definition::Function(function) => {
                 // If there's an external JavaScript implementation then it will be imported,
@@ -244,7 +244,7 @@ impl<'a> Generator<'a> {
     fn custom_type_definition(
         &mut self,
         constructors: &'a [TypedRecordConstructor],
-        public: bool,
+        publicity: Publicity,
         opaque: bool,
     ) -> Vec<Output<'a>> {
         // If there's no constructors then there's nothing to do here.
@@ -255,14 +255,14 @@ impl<'a> Generator<'a> {
         self.tracker.custom_type_used = true;
         constructors
             .iter()
-            .map(|constructor| Ok(self.record_definition(constructor, public, opaque)))
+            .map(|constructor| Ok(self.record_definition(constructor, publicity, opaque)))
             .collect()
     }
 
     fn record_definition(
         &self,
         constructor: &'a TypedRecordConstructor,
-        public: bool,
+        publicity: Publicity,
         opaque: bool,
     ) -> Document<'a> {
         fn parameter((i, arg): (usize, &TypedRecordConstructorArg)) -> Document<'_> {
@@ -272,10 +272,10 @@ impl<'a> Generator<'a> {
                 .unwrap_or_else(|| Document::String(format!("x{i}")))
         }
 
-        let head = if public && !opaque {
-            "export class "
-        } else {
+        let head = if publicity.is_private() || opaque {
             "class "
+        } else {
+            "export class "
         };
         let head = docvec![head, &constructor.name, " extends $CustomType {"];
 
@@ -319,11 +319,11 @@ impl<'a> Generator<'a> {
             .iter()
             .flat_map(|statement| match statement {
                 Definition::CustomType(CustomType {
-                    public,
+                    publicity,
                     constructors,
                     opaque,
                     ..
-                }) => self.custom_type_definition(constructors, *public, *opaque),
+                }) => self.custom_type_definition(constructors, *publicity, *opaque),
 
                 Definition::Function(Function { .. })
                 | Definition::TypeAlias(TypeAlias { .. })
@@ -350,11 +350,17 @@ impl<'a> Generator<'a> {
 
                 Definition::Function(Function {
                     name,
-                    public,
+                    publicity,
                     external_javascript: Some((module, function)),
                     ..
                 }) => {
-                    self.register_external_function(&mut imports, *public, name, module, function);
+                    self.register_external_function(
+                        &mut imports,
+                        *publicity,
+                        name,
+                        module,
+                        function,
+                    );
                 }
 
                 Definition::Function(Function { .. })
@@ -425,7 +431,7 @@ impl<'a> Generator<'a> {
     fn register_external_function(
         &mut self,
         imports: &mut Imports<'a>,
-        public: bool,
+        publicity: Publicity,
         name: &'a str,
         module: &'a str,
         fun: &'a str,
@@ -441,7 +447,7 @@ impl<'a> Generator<'a> {
                 Some(name.to_doc())
             },
         };
-        if public {
+        if !publicity.is_private() {
             imports.register_export(maybe_escape_identifier_string(name))
         }
         imports.register_module(module.to_string(), [], [member]);
@@ -449,11 +455,15 @@ impl<'a> Generator<'a> {
 
     fn module_constant(
         &mut self,
-        public: bool,
+        publicity: Publicity,
         name: &'a str,
         value: &'a TypedConstant,
     ) -> Output<'a> {
-        let head = if public { "export const " } else { "const " };
+        let head = if publicity.is_private() {
+            "const "
+        } else {
+            "export const "
+        };
         Ok(docvec![
             head,
             maybe_escape_identifier_doc(name),
@@ -481,10 +491,10 @@ impl<'a> Generator<'a> {
             &mut self.tracker,
             self.module_scope.clone(),
         );
-        let head = if function.public {
-            "export function "
-        } else {
+        let head = if function.publicity.is_private() {
             "function "
+        } else {
+            "export function "
         };
 
         let body = match generator.function_body(&function.body, function.arguments.as_slice()) {

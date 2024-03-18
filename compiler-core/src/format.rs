@@ -318,10 +318,10 @@ impl<'comments> Formatter<'comments> {
                 alias,
                 parameters: args,
                 type_ast: resolved_type,
-                public,
+                publicity,
                 deprecation,
                 ..
-            }) => self.type_alias(*public, alias, args, resolved_type, deprecation),
+            }) => self.type_alias(*publicity, alias, args, resolved_type, deprecation),
 
             Definition::CustomType(ct) => self.custom_type(ct),
 
@@ -364,13 +364,13 @@ impl<'comments> Formatter<'comments> {
             }
 
             Definition::ModuleConstant(ModuleConstant {
-                public,
+                publicity,
                 name,
                 annotation,
                 value,
                 ..
             }) => {
-                let head = pub_(*public).append("const ").append(name.as_str());
+                let head = pub_(*publicity).append("const ").append(name.as_str());
                 let head = match annotation {
                     None => head,
                     Some(t) => head.append(": ").append(self.type_ast(t)),
@@ -472,13 +472,13 @@ impl<'comments> Formatter<'comments> {
 
     pub fn docs_const_expr<'a>(
         &mut self,
-        public: bool,
+        publicity: Publicity,
         name: &'a str,
         value: &'a TypedConstant,
     ) -> Document<'a> {
         let mut printer = type_::pretty::Printer::new();
 
-        pub_(public)
+        pub_(publicity)
             .append("const ")
             .append(name)
             .append(": ")
@@ -561,7 +561,7 @@ impl<'comments> Formatter<'comments> {
 
     pub fn type_alias<'a>(
         &mut self,
-        public: bool,
+        publicity: Publicity,
         name: &'a str,
         args: &'a [EcoString],
         typ: &'a TypeAst,
@@ -570,7 +570,7 @@ impl<'comments> Formatter<'comments> {
         // @deprecated attribute
         let head = self.deprecation_attr(deprecation);
 
-        let head = head.append(pub_(public)).append("type ").append(name);
+        let head = head.append(pub_(publicity)).append("type ").append(name);
 
         let head = if args.is_empty() {
             head
@@ -622,7 +622,7 @@ impl<'comments> Formatter<'comments> {
         };
 
         // Fn name and args
-        let signature = pub_(function.public)
+        let signature = pub_(function.publicity)
             .append("fn ")
             .append(&function.name)
             .append(wrap_args(function.arguments.iter().map(|e| self.fn_arg(e))));
@@ -1348,7 +1348,7 @@ impl<'comments> Formatter<'comments> {
         let doc = self.deprecation_attr(&ct.deprecation);
 
         let doc = doc
-            .append(pub_(ct.public))
+            .append(pub_(ct.publicity))
             .to_doc()
             .append(if ct.opaque { "opaque type " } else { "type " })
             .append(if ct.parameters.is_empty() {
@@ -1386,13 +1386,13 @@ impl<'comments> Formatter<'comments> {
 
     pub fn docs_opaque_custom_type<'a>(
         &mut self,
-        public: bool,
+        publicity: Publicity,
         name: &'a str,
         args: &'a [EcoString],
         location: &'a SrcSpan,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(location.start);
-        pub_(public)
+        pub_(publicity)
             .to_doc()
             .append("opaque type ")
             .append(if args.is_empty() {
@@ -1405,14 +1405,14 @@ impl<'comments> Formatter<'comments> {
 
     pub fn docs_fn_signature<'a>(
         &mut self,
-        public: bool,
+        publicity: Publicity,
         name: &'a str,
         args: &'a [TypedArg],
         return_type: Arc<Type>,
     ) -> Document<'a> {
         let mut printer = type_::pretty::Printer::new();
 
-        pub_(public)
+        pub_(publicity)
             .append("fn ")
             .append(name)
             .append(self.docs_fn_args(args, &mut printer))
@@ -2094,11 +2094,10 @@ impl<'a> Documentable<'a> for &'a ArgNames {
     }
 }
 
-fn pub_(public: bool) -> Document<'static> {
-    if public {
-        "pub ".to_doc()
-    } else {
-        nil()
+fn pub_(publicity: Publicity) -> Document<'static> {
+    match publicity {
+        Publicity::Public => "pub ".to_doc(),
+        Publicity::Private | Publicity::Internal => nil(),
     }
 }
 

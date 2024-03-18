@@ -1,6 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, Publicity, TypedDefinition, TypedExpr,
+        TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -365,8 +366,9 @@ where
 
             // Qualified types
             for (name, type_) in &module.types {
-                if !type_.public || type_.internal {
-                    continue;
+                match type_.publicity {
+                    Publicity::Private | Publicity::Internal => continue,
+                    Publicity::Public => {}
                 }
 
                 let module = import.used_name();
@@ -378,7 +380,7 @@ where
             // Unqualified types
             for unqualified in &import.unqualified_types {
                 match module.get_public_type(&unqualified.name) {
-                    Some(type_) if type_.internal => continue,
+                    Some(type_) if type_.publicity.is_internal() => continue,
                     Some(type_) => {
                         completions.push(type_completion(None, unqualified.used_name(), type_))
                     }
@@ -412,8 +414,9 @@ where
 
             // Qualified values
             for (name, value) in &module.values {
-                if !value.public || value.internal {
-                    continue;
+                match value.publicity {
+                    Publicity::Private | Publicity::Internal => continue,
+                    Publicity::Public => {}
                 }
 
                 let module = import.used_name();
@@ -425,7 +428,7 @@ where
             // Unqualified values
             for unqualified in &import.unqualified_values {
                 match module.get_public_value(&unqualified.name) {
-                    Some(value) if value.internal => continue,
+                    Some(value) if value.publicity.is_internal() => continue,
                     Some(value) => {
                         completions.push(value_completion(None, unqualified.used_name(), value))
                     }
@@ -649,7 +652,7 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
     match expression {
         TypedExpr::Var {
             name, constructor, ..
-        } if constructor.public => match &constructor.variant {
+        } if !constructor.publicity.is_private() => match &constructor.variant {
             ValueConstructorVariant::ModuleFn {
                 module: module_name,
                 ..
