@@ -1,3 +1,5 @@
+use ecow::eco_format;
+
 use crate::{
     analyse::TargetSupport, ast::PIPE_VARIABLE, build::Target, uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
@@ -611,14 +613,13 @@ impl<'a> Environment<'a> {
     pub fn imported_modules_values(&self) -> Vec<EcoString> {
         self.imported_modules
             .iter()
-            .map(|(module_name, (_, module))| {
+            .flat_map(|(module_name, (_, module))| {
                 module
                     .values
                     .keys()
-                    .map(|value| format!("{}.{}", module_name, value).into())
+                    .map(move |value| eco_format!("{}.{}", module_name, value))
                     .collect::<Vec<EcoString>>()
             })
-            .flatten()
             .collect()
     }
 
