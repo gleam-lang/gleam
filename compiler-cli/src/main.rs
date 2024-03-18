@@ -188,6 +188,7 @@ enum Command {
         #[arg(short, long, ignore_case = true)]
         target: Option<Target>,
 
+        /// Optionally specify the JavaScript runtime: nodejs, deno, bun
         #[arg(long, ignore_case = true)]
         runtime: Option<Runtime>,
 
