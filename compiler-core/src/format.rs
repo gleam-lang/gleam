@@ -92,15 +92,11 @@ impl<'comments> Formatter<'comments> {
     fn any_comments(&self, limit: u32) -> bool {
         self.comments
             .first()
-            .map(|comment| comment.start < limit)
-            .unwrap_or(false)
+            .is_some_and(|comment| comment.start < limit)
     }
 
     fn any_empty_lines(&self, limit: u32) -> bool {
-        self.empty_lines
-            .first()
-            .map(|line| *line < limit)
-            .unwrap_or(false)
+        self.empty_lines.first().is_some_and(|line| *line < limit)
     }
 
     /// Pop comments that occur before a byte-index in the source, consuming
