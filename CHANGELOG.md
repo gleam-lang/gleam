@@ -25,9 +25,12 @@
   with no head and a spread tail.
 - The compiler will now raise a warning if you're pattern matching on tuple
   literals and suggest you use multiple subjects instead.
-- Fix a bug where JavaScript code generation would incorrectly parenthesise a
+- Fixed a bug where JavaScript code generation would incorrectly parenthesise a
   return statement.
-- Add support for the [Bun](https://bun.sh/) runtime when compiling to JavaScript by using `gleam run --target javascript --runtime bun`
+- Added support for the [Bun](https://bun.sh/) runtime when compiling to
+  JavaScript by using `gleam run --target javascript --runtime bun`
+- Fixed a bug where `tuple.0.1` was not recognised as a nested tuple access
+  expression
 
 ### Formatter
 

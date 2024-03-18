@@ -1,0 +1,100 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nlet tup = #(#(#(#(4))))\ntup.0.0.0.0\n"
+---
+[
+    Assignment(
+        Assignment {
+            location: SrcSpan {
+                start: 1,
+                end: 24,
+            },
+            value: Tuple {
+                location: SrcSpan {
+                    start: 11,
+                    end: 24,
+                },
+                elems: [
+                    Tuple {
+                        location: SrcSpan {
+                            start: 13,
+                            end: 23,
+                        },
+                        elems: [
+                            Tuple {
+                                location: SrcSpan {
+                                    start: 15,
+                                    end: 22,
+                                },
+                                elems: [
+                                    Tuple {
+                                        location: SrcSpan {
+                                            start: 17,
+                                            end: 21,
+                                        },
+                                        elems: [
+                                            Int {
+                                                location: SrcSpan {
+                                                    start: 19,
+                                                    end: 20,
+                                                },
+                                                value: "4",
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+            pattern: Variable {
+                location: SrcSpan {
+                    start: 5,
+                    end: 8,
+                },
+                name: "tup",
+                type_: (),
+            },
+            kind: Let,
+            annotation: None,
+        },
+    ),
+    Expression(
+        TupleIndex {
+            location: SrcSpan {
+                start: 25,
+                end: 36,
+            },
+            index: 0,
+            tuple: TupleIndex {
+                location: SrcSpan {
+                    start: 25,
+                    end: 34,
+                },
+                index: 0,
+                tuple: TupleIndex {
+                    location: SrcSpan {
+                        start: 25,
+                        end: 32,
+                    },
+                    index: 0,
+                    tuple: TupleIndex {
+                        location: SrcSpan {
+                            start: 25,
+                            end: 30,
+                        },
+                        index: 0,
+                        tuple: Var {
+                            location: SrcSpan {
+                                start: 25,
+                                end: 28,
+                            },
+                            name: "tup",
+                        },
+                    },
+                },
+            },
+        },
+    ),
+]

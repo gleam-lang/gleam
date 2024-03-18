@@ -47,6 +47,7 @@ pub fn main() {
       suite("string pattern matching", string_pattern_matching_tests()),
       suite("typescript file inclusion", typescript_file_included_tests()),
       suite("custom types mixed args match", mixed_arg_match_tests()),
+      suite("tuple access", tuple_access_tests()),
     ])
 
   ffi.halt(case stats.failures {
@@ -1516,6 +1517,86 @@ fn block_tests() {
           x
         },
         1,
+      )
+    }),
+  ]
+}
+
+type ContainsTuple {
+  ContainsTuple(data: #(Int, #(Int, Person)))
+}
+
+
+fn tuple_access_tests() {
+  [
+    // https://github.com/gleam-lang/gleam/issues/1980
+    "access regular tuple item"
+    |> example(fn() {
+      assert_equal(
+        {
+          let tup = #(3, 4, 5)
+          let x = tup.0
+          let y = tup.1
+          let z = tup.2
+          #(z, y, x)
+        },
+        #(5, 4, 3),
+      )
+    }),
+    "access nested tuple item"
+    |> example(fn() {
+      assert_equal(
+        {
+          let tup = #(#(4, 5), #(6, 7))
+          #(tup.0.1, tup.1.1, tup.1.0, tup.0.0)
+        },
+        #(5, 7, 6, 4),
+      )
+    }),
+    "access deeply nested tuple item"
+    |> example(fn() {
+      assert_equal(
+        {
+          let tup = #(#(5, #(6, 7, #(8))))
+          tup.0.1.2.0
+        },
+        8,
+      )
+    }),
+    "access nested struct in a tuple item"
+    |> example(fn() {
+      assert_equal(
+        {
+          let tup = #(
+            Person("Quinn", 27, "Canada"), 
+            Person("Nikita", 99, "Internet"),
+          )
+          tup.0.name
+        },
+        "Quinn",
+      )
+    }),
+    "access nested tuple in a struct"
+    |> example(fn() {
+      assert_equal(
+        {
+          let person = Person("Nikita", 99, "Internet")
+          let container = ContainsTuple(#(5, #(6, person)))
+          container.data.1.1.name
+        },
+        "Nikita",
+      )
+    }),
+    "access tuple, then struct, then tuple"
+    |> example(fn() {
+      assert_equal(
+        {
+          let person = Person("Nikita", 99, "Internet")
+          let container = ContainsTuple(#(5, #(6, person)))
+          let tup = #(container)
+          tup.0.data.0
+        },
+        5,
       )
     }),
   ]

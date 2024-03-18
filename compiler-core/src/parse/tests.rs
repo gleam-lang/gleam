@@ -724,3 +724,59 @@ pub fn main() -> Nil {
 "#
     );
 }
+
+// Tests for nested tuples and structs in tuples
+// https://github.com/gleam-lang/gleam/issues/1980
+
+#[test]
+fn nested_tuples() {
+    assert_parse!(
+        r#"
+let tup = #(#(5, 6))
+{tup.0}.1
+"#
+    );
+}
+
+#[test]
+fn nested_tuples_no_block() {
+    assert_parse!(
+        r#"
+let tup = #(#(5, 6))
+tup.0.1
+"#
+    );
+}
+
+#[test]
+fn deeply_nested_tuples() {
+    assert_parse!(
+        r#"
+let tup = #(#(#(#(4))))
+{{{tup.0}.0}.0}.0
+"#
+    );
+}
+
+#[test]
+fn deeply_nested_tuples_no_block() {
+    assert_parse!(
+        r#"
+let tup = #(#(#(#(4))))
+tup.0.0.0.0
+"#
+    );
+}
+
+#[test]
+fn struct_in_a_tuple() {
+    // https://github.com/gleam-lang/gleam/issues/1980
+    assert_parse!(
+        r#"
+pub fn main() {
+  let tup = #(Person("Nikita"),)
+  {tup.0}.name
+}
+"#
+    );
+}
