@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn main() {\n  case \"12345\" {\n    \"0\" <> rest -> rest\n    \"123\" <> rest -> rest\n    _ -> \"\"\n  }\n}\n"
+---
+export function main() {
+  let $ = "12345";
+  if ($.startsWith("0")) {
+    let rest = $.slice(1);
+    return rest;
+  } else if ($.startsWith("123")) {
+    let rest = $.slice(3);
+    return rest;
+  } else {
+    return "";
+  }
+}
