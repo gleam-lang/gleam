@@ -1,3 +1,3 @@
-export function log(x) {
-  console.log(x);
+export function location() {
+  return globalThis.location;
 }
