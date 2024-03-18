@@ -93,7 +93,7 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         // Collapse \r\n into \n
-        while let Some((i, '\r')) = self.chr0 {
+        if let Some((i, '\r')) = self.chr0 {
             if let Some((_, '\n')) = self.chr1 {
                 // Transform windows EOL into \n
                 let _ = self.shift();
