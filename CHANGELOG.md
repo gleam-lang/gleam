@@ -2,9 +2,6 @@
 
 ## Unreleased
 
-### Features
-- Update Deno config to allow passing `--location` runtime flag.
-
 ### Compiler
 
 - Prepending to lists in JavaScript (`[x, ..xs]` syntax) has been optimised.
@@ -48,6 +45,7 @@
 - Terminal colors can now be forced by setting the `FORCE_COLOR` environment
   variable to any non-empty value.
 - Rust's Reqwest's `webpki-roots` are now used for TLS verification.
+- Update Deno config to allow passing `--location` runtime flag.
 
 ### Language Server
 
