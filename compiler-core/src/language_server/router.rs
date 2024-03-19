@@ -48,6 +48,10 @@ where
         }
     }
 
+    pub fn project_path(&self, path: &Utf8Path) -> Option<Utf8PathBuf> {
+        find_gleam_project_parent(&self.io, path)
+    }
+
     pub fn project_for_path(
         &mut self,
         path: &Utf8Path,

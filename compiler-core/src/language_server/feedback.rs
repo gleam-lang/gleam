@@ -22,6 +22,12 @@ impl Feedback {
         self.diagnostics.entry(path).or_default().push(diagnostic);
     }
 
+    /// No feedback at all.
+    ///
+    pub fn none() -> Feedback {
+        Default::default()
+    }
+
     fn append_message(&mut self, diagnostic: Diagnostic) {
         self.messages.push(diagnostic);
     }
