@@ -666,7 +666,7 @@ impl MessageBuffer {
         };
 
         match message {
-            lsp_server::Message::Request(r) if self.shutdown(conn, &r) => return Next::Stop,
+            lsp_server::Message::Request(r) if self.shutdown(conn, &r) => Next::Stop,
             lsp_server::Message::Request(r) => self.request(r),
             lsp_server::Message::Response(r) => self.response(r),
             lsp_server::Message::Notification(n) => self.notification(n),
