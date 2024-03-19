@@ -89,7 +89,7 @@ jobs:
           profile: minimal
 
       - name: Install Erlang (non-macos)
-        uses: erlef/setup-beam@v1.15.4
+        uses: erlef/setup-beam@v1.17.5
         with:
           otp-version: "25.1"
           elixir-version: "1.14.1"
@@ -362,7 +362,7 @@ jobs:
         uses: oven-sh/setup-bun@v1
 
       - name: Install Erlang
-        uses: erlef/setup-beam@v1.15.4
+        uses: erlef/setup-beam@v1.17.5
         with:
           otp-version: "25.1"
           elixir-version: "1.14.1"
