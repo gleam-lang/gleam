@@ -28,6 +28,19 @@ impl Feedback {
         Default::default()
     }
 
+    /// Add all the content of another feedback to this feedback.
+    ///
+    pub fn append_feedback(&mut self, feedback: Feedback) {
+        for (path, diagnostics) in feedback.diagnostics {
+            for diagnostic in diagnostics {
+                self.append_diagnostic(path.clone(), diagnostic);
+            }
+        }
+        for diagnostic in feedback.messages {
+            self.append_message(diagnostic);
+        }
+    }
+
     fn append_message(&mut self, diagnostic: Diagnostic) {
         self.messages.push(diagnostic);
     }
