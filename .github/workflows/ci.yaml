@@ -25,6 +25,7 @@ jobs:
   test:
     name: test
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -231,6 +232,7 @@ jobs:
 
   test-wasm:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -260,6 +262,7 @@ jobs:
   rustfmt:
     name: rustfmt
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -282,6 +285,7 @@ jobs:
   validate-deps:
     name: validate-deps
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -310,6 +314,7 @@ jobs:
   lint-build:
     name: lint-build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -349,6 +354,7 @@ jobs:
     name: test-projects
     needs: lint-build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
