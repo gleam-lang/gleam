@@ -547,10 +547,12 @@ where
 
         // Scope variables
         let scope_variables = fun.body.iter().filter_map(|stmt| match stmt {
-            Statement::Assignment(assignment) => match &assignment.pattern {
-                crate::ast::Pattern::Variable { name, type_, .. } => Some((name, type_)),
-                _ => None,
-            },
+            Statement::Assignment(assignment) if assignment.location.end < byte_index => {
+                match &assignment.pattern {
+                    crate::ast::Pattern::Variable { name, type_, .. } => Some((name, type_)),
+                    _ => None,
+                }
+            }
             _ => None,
         });
 
