@@ -455,12 +455,16 @@ where
     }
 
     fn completion_imports<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
+        let already_imported: std::collections::HashSet<EcoString> =
+            std::collections::HashSet::from_iter(module.dependencies_list());
         self.compiler
             .project_compiler
             .get_importable_modules()
             .iter()
             .filter(|(name, m)| {
-                *name != &module.name && (m.origin.is_src() || !module.origin.is_src())
+                *name != &module.name
+                    && !already_imported.contains(*name)
+                    && (m.origin.is_src() || !module.origin.is_src())
             })
             .map(|(name, _)| lsp::CompletionItem {
                 label: name.to_string(),
