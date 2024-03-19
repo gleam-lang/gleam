@@ -190,7 +190,7 @@ jobs:
           path: ./
 
       - name: Authenticate with GitHub container registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: lpil
