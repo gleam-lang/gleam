@@ -29,7 +29,7 @@ use std::{
     time::Duration,
 };
 
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 
 use super::progress::ConnectionProgressReporter;
 
@@ -79,12 +79,14 @@ impl Request {
 
 #[derive(Debug)]
 pub enum Notification {
-    DidOpenDocument { path: Utf8PathBuf, text: String },
-    DidSaveDocument { path: Utf8PathBuf },
-    DidCloseTextDocument { path: Utf8PathBuf },
-    DidChangeTextDocument { path: Utf8PathBuf, text: String },
-    DidChangeWatchedFiles { path: Utf8PathBuf },
-    CompilePlease { path: Utf8PathBuf },
+    /// A Gleam file has been modified in memory, and the new text is provided.
+    SourceFileChangedInMemory { path: Utf8PathBuf, text: String },
+    /// A Gleam file has been saved or closed in the editor.
+    SourceFileMatchesDisc { path: Utf8PathBuf },
+    /// gleam.toml has changed.
+    ConfigFileChanged { path: Utf8PathBuf },
+    /// It's time to compile all open projects.
+    CompilePlease,
 }
 
 impl Notification {
@@ -92,37 +94,39 @@ impl Notification {
         match notification.method.as_str() {
             "textDocument/didOpen" => {
                 let params = cast_notification::<DidOpenTextDocument>(notification);
-                let notification = Notification::DidOpenDocument {
+                let notification = Notification::SourceFileChangedInMemory {
                     path: path(&params.text_document.uri),
                     text: params.text_document.text,
                 };
                 Some(Message::Notification(notification))
             }
+            "textDocument/didChange" => {
+                let params = cast_notification::<DidChangeTextDocument>(notification);
+                let notification = Notification::SourceFileChangedInMemory {
+                    path: path(&params.text_document.uri),
+                    text: params.content_changes.into_iter().last()?.text,
+                };
+                Some(Message::Notification(notification))
+            }
+
             "textDocument/didSave" => {
                 let params = cast_notification::<DidSaveTextDocument>(notification);
-                let notification = Notification::DidSaveDocument {
+                let notification = Notification::SourceFileMatchesDisc {
                     path: path(&params.text_document.uri),
                 };
                 Some(Message::Notification(notification))
             }
             "textDocument/didClose" => {
                 let params = cast_notification::<DidCloseTextDocument>(notification);
-                let notification = Notification::DidCloseTextDocument {
+                let notification = Notification::SourceFileMatchesDisc {
                     path: path(&params.text_document.uri),
                 };
                 Some(Message::Notification(notification))
             }
-            "textDocument/didChange" => {
-                let params = cast_notification::<DidChangeTextDocument>(notification);
-                let notification = Notification::DidChangeTextDocument {
-                    path: path(&params.text_document.uri),
-                    text: params.content_changes.into_iter().last()?.text,
-                };
-                Some(Message::Notification(notification))
-            }
+
             "workspace/didChangeWatchedFiles" => {
                 let params = cast_notification::<DidChangeWatchedFiles>(notification);
-                let notification = Notification::DidChangeWatchedFiles {
+                let notification = Notification::ConfigFileChanged {
                     path: path(&params.changes.into_iter().last()?.uri),
                 };
                 Some(Message::Notification(notification))
@@ -148,6 +152,7 @@ pub struct LanguageServer<'a, IO> {
     connection: DebugIgnore<&'a lsp_server::Connection>,
     outside_of_project_feedback: FeedbackBookKeeper,
     router: Router<IO, ConnectionProgressReporter<'a>>,
+    changed_projects: HashSet<Utf8PathBuf>,
     io: FileSystemProxy<IO>,
 }
 
@@ -168,6 +173,7 @@ where
         Ok(Self {
             connection: connection.into(),
             initialise_params,
+            changed_projects: HashSet::new(),
             outside_of_project_feedback: FeedbackBookKeeper::default(),
             router,
             io,
@@ -224,16 +230,13 @@ where
 
     fn handle_notification(&mut self, notification: Notification) {
         let feedback = match notification {
-            Notification::CompilePlease { path } => self.compile_please(path),
-            Notification::DidOpenDocument { path, text } => self.text_document_did_open(path, text),
-            Notification::DidSaveDocument { path } => self.text_document_did_save(path),
-            Notification::DidCloseTextDocument { path } => self.text_document_did_close(path),
-            Notification::DidChangeTextDocument { path, text } => {
-                self.text_document_did_change(path, text)
+            Notification::CompilePlease => self.compile_please(),
+            Notification::SourceFileMatchesDisc { path } => self.discard_in_memory_cache(path),
+            Notification::SourceFileChangedInMemory { path, text } => {
+                self.cache_file_in_memory(path, text)
             }
-            Notification::DidChangeWatchedFiles { path } => self.watched_files_changed(path),
+            Notification::ConfigFileChanged { path } => self.watched_files_changed(path),
         };
-
         self.publish_feedback(feedback);
     }
 
@@ -422,40 +425,19 @@ where
         self.respond_with_engine(path, |engine| engine.action(params))
     }
 
-    /// A file opened in the editor may be unsaved, so store a copy of the
-    /// new content in memory and compile.
-    fn text_document_did_open(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
+    fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
+        self.project_changed(&path);
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
             return self.outside_of_project_feedback.error(error);
         }
         Feedback::none()
     }
 
-    fn text_document_did_save(&mut self, path: Utf8PathBuf) -> Feedback {
-        // The file is in sync with the file system, discard our cache of the changes
+    fn discard_in_memory_cache(&mut self, path: Utf8PathBuf) -> Feedback {
+        self.project_changed(&path);
         if let Err(error) = self.io.delete_mem_cache(&path) {
             return self.outside_of_project_feedback.error(error);
         }
-
-        Feedback::none()
-    }
-
-    fn text_document_did_close(&mut self, path: Utf8PathBuf) -> Feedback {
-        // The file is in sync with the file system, discard our cache of the changes
-        if let Err(error) = self.io.delete_mem_cache(&path) {
-            return self.outside_of_project_feedback.error(error);
-        }
-
-        Feedback::default()
-    }
-
-    /// A file has changed in the editor, so store a copy of the new content in
-    /// memory and compile.
-    fn text_document_did_change(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
-        if let Err(error) = self.io.write_mem_cache(&path, text.as_str()) {
-            return self.outside_of_project_feedback.error(error);
-        }
-
         Feedback::none()
     }
 
@@ -464,10 +446,21 @@ where
         Feedback::none()
     }
 
-    fn compile_please(&mut self, path: Utf8PathBuf) -> Feedback {
-        let (_response, feedback) =
-            self.respond_with_engine(path, |engine| engine.compile_please());
-        feedback
+    fn compile_please(&mut self) -> Feedback {
+        let mut accumulator = Feedback::none();
+        let projects = std::mem::take(&mut self.changed_projects);
+        for path in projects {
+            let (_, feedback) = self.respond_with_engine(path, |e| e.compile_please());
+            accumulator.append_feedback(feedback);
+        }
+        accumulator
+    }
+
+    fn project_changed(&mut self, path: &Utf8Path) {
+        let project_path = self.router.project_path(path);
+        if let Some(project_path) = project_path {
+            _ = self.changed_projects.insert(project_path);
+        }
     }
 }
 
@@ -636,14 +629,12 @@ enum Next {
 }
 
 struct MessageBuffer {
-    touched_projects: HashSet<Utf8PathBuf>,
     messages: Vec<Message>,
 }
 
 impl MessageBuffer {
     pub fn new() -> Self {
         Self {
-            touched_projects: HashSet::new(),
             messages: Vec::new(),
         }
     }
@@ -669,7 +660,7 @@ impl MessageBuffer {
                 // A compile please message it added in the instance of this
                 // pause of activity so that the client gets feedback on the
                 // state of the code as it is now.
-                self.push_compile_please_messages();
+                self.push_compile_please_message();
                 return Next::Handle(self.take_messages());
             }
         };
@@ -689,7 +680,7 @@ impl MessageBuffer {
 
         // Compile the code prior to attempting to process the response, to
         // ensure that the response is based on the latest code.
-        self.push_compile_please_messages();
+        self.push_compile_please_message();
         self.messages.push(message);
         Next::Handle(self.take_messages())
     }
@@ -709,16 +700,13 @@ impl MessageBuffer {
         Next::MorePlease
     }
 
-    /// Add a `CompilePlease` message for each project that has been touched
-    /// since the last time we processed messages, causing them to be
-    /// recompiled.
+    /// Add a `CompilePlease` message which will prompt the engine to compile
+    /// the projects.
     ///
-    fn push_compile_please_messages(&mut self) {
-        for path in self.touched_projects.drain() {
-            let message = Notification::CompilePlease { path };
-            let value = Message::Notification(message);
-            self.messages.push(value);
-        }
+    fn push_compile_please_message(&mut self) {
+        let message = Notification::CompilePlease;
+        let value = Message::Notification(message);
+        self.messages.push(value);
     }
 
     fn take_messages(&mut self) -> Vec<Message> {
