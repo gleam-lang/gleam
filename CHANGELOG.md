@@ -84,6 +84,7 @@
 - Fixed a bug where hovering over an expression in the middle of a pipe would
   give the wrong node.
 - Go to definition now works for values in dependency Gleam modules.
+- Completions are now provided for module imports
 
 
 ## v1.0.0 - 2024-03-04
