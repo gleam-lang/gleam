@@ -17,7 +17,7 @@ jobs:
       should_run: ${{ steps.should_run.outputs.should_run }}
     if: ${{ github.repository_owner == 'gleam-lang' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: print latest_commit
         run: echo ${{ github.sha }}
 
@@ -77,7 +77,7 @@ jobs:
             use-cross: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Update versions
         shell: bash
@@ -181,7 +181,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Download Gleam binary from previous job
         uses: actions/download-artifact@v3
