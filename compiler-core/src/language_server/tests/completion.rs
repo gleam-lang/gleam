@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use lsp_types::{
     CompletionItem, CompletionItemKind, Documentation, MarkupContent, MarkupKind, Position,
-    TextDocumentIdentifier, TextDocumentPositionParams, Url,
+    TextDocumentPositionParams,
 };
 
 use super::*;
@@ -112,6 +112,34 @@ fn add_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, n
 version = "1.0.0""#
     );
     _ = compiler.io.write(&path.join("gleam.toml"), &toml);
+}
+
+fn positioned_with_io_completions(
+    src: &str,
+    position: Position,
+    io: &LanguageServerTestIO,
+) -> Vec<CompletionItem> {
+    let (mut engine, position_param) = positioned_with_io(src, position, io);
+
+    let response = engine.completion(TextDocumentPositionParams::new(
+        position_param.text_document,
+        position_param.position,
+    ));
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+    completions
+}
+
+fn positioned_expression_completions(
+    src: &str,
+    dep: &str,
+    position: Position,
+) -> Vec<CompletionItem> {
+    let io = &LanguageServerTestIO::new();
+    _ = io.src_module("dep", dep);
+
+    positioned_with_io_completions(src, position, io)
 }
 
 fn prelude_type_completions() -> Vec<CompletionItem> {
@@ -1043,6 +1071,126 @@ fn internal_values_from_a_dependency_are_ignored() {
         Completions::for_source("import dep")
             .add_dep_module("dep", dep)
             .at_default_position(),
+        vec![]
+    );
+}
+
+#[test]
+fn completions_for_an_import() {
+    let code = "
+import gleam
+
+pub fn main() {
+  0
+}";
+    let dep = "";
+
+    assert_eq!(
+        positioned_expression_completions(code, dep, Position::new(0, 10)),
+        vec![CompletionItem {
+            label: "dep".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
+fn completions_for_an_import_with_docs() {
+    let code = "
+import gleam
+
+pub fn main() {
+  0
+}";
+    let dep = "//// Some package
+//// documentation!
+
+pub fn main() { 1 }
+    ";
+
+    assert_eq!(
+        positioned_expression_completions(code, dep, Position::new(0, 10)),
+        vec![CompletionItem {
+            label: "dep".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            documentation: Some(Documentation::MarkupContent(MarkupContent {
+                kind: MarkupKind::Markdown,
+                value: " Some package\n documentation!".into()
+            })),
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
+fn completions_for_an_import_from_dependency() {
+    let code = "
+import gleam
+
+pub fn main() {
+  0
+}";
+    let dep = "";
+
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("dep");
+    _ = io.hex_dep_module("dep", "example_module", dep);
+
+    assert_eq!(
+        positioned_with_io_completions(code, Position::new(0, 10), &io),
+        vec![CompletionItem {
+            label: "example_module".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
+fn completions_for_an_import_from_dependency_with_docs() {
+    let code = "
+import gleam
+
+pub fn main() {
+  0
+}";
+    let dep = "//// Some package
+//// documentation!
+
+pub fn main() { 1 }
+    ";
+
+    let mut io = LanguageServerTestIO::new();
+    io.add_hex_package("dep");
+    _ = io.hex_dep_module("dep", "example_module", dep);
+
+    assert_eq!(
+        positioned_with_io_completions(code, Position::new(0, 10), &io),
+        vec![CompletionItem {
+            label: "example_module".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            documentation: Some(Documentation::MarkupContent(MarkupContent {
+                kind: MarkupKind::Markdown,
+                value: " Some package\n documentation!".into()
+            })),
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
+fn completions_for_an_import_start() {
+    let code = "
+import gleam
+
+pub fn main() {
+  0
+}";
+    let dep = "";
+
+    assert_eq!(
+        positioned_expression_completions(code, dep, Position::new(0, 0)),
         vec![]
     );
 }
