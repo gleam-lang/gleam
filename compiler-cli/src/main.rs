@@ -247,11 +247,11 @@ enum Command {
 }
 
 fn target_doc() -> String {
-    format!("{:?} The platform to target", Target::VARIANTS)
+    format!("The platform to target ({})", Target::VARIANTS.join("|"))
 }
 
 fn runtime_doc() -> String {
-    format!("{:?} The JavaScript runtime to target", Runtime::VARIANTS)
+    format!("The runtime to target ({})", Runtime::VARIANTS.join("|"))
 }
 
 #[derive(Subcommand, Debug, Clone)]
