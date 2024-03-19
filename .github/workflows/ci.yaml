@@ -89,10 +89,10 @@ jobs:
           profile: minimal
 
       - name: Install Erlang (non-macos)
-        uses: erlef/setup-beam@v1.15.4
+        uses: erlef/setup-beam@v1
         with:
-          otp-version: "25.1"
-          elixir-version: "1.14.1"
+          otp-version: "26.1"
+          elixir-version: "1.16.1"
           rebar3-version: "3"
         if: ${{ runner.os != 'macOS' }} # setup-beam does not support macOS
 
@@ -362,10 +362,10 @@ jobs:
         uses: oven-sh/setup-bun@v1
 
       - name: Install Erlang
-        uses: erlef/setup-beam@v1.15.4
+        uses: erlef/setup-beam@v1
         with:
-          otp-version: "25.1"
-          elixir-version: "1.14.1"
+          otp-version: "26.1"
+          elixir-version: "1.16.1"
           rebar3-version: "3"
 
       - name: Download Gleam binary from previous job
