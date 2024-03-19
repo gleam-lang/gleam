@@ -520,14 +520,44 @@ fn hover_for_function_head(
 ) -> Hover {
     let empty_str = EcoString::from("");
     let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
-    let function_type = Type::Fn {
-        args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
-        retrn: fun.return_type.clone(),
-    };
-    let formatted_type = Printer::new().pretty_print(&function_type, 0);
+
+    let mut function_string = format!("fn {}(", fun.name);
+    if fun.public {
+        function_string = format!("pub {}", function_string);
+    }
+
+    let default_label = ecow::EcoString::from("");
+
+    let args: Vec<_> = fun
+        .arguments
+        .iter()
+        .map(|arg| {
+            let label = match arg.names.get_label() {
+                Some(val) => val,
+                None => &default_label,
+            };
+
+            format!(
+                "{} {}:{}",
+                label,
+                arg.names.get_variable_name().unwrap(),
+                Printer::new().pretty_print(&arg.type_.clone(), 0)
+            )
+            .trim()
+            .to_string()
+        })
+        .collect();
+
+    function_string = format!(
+        "{}{}) -> {}",
+        function_string,
+        args.join(", "),
+        Printer::new().pretty_print(&fun.return_type.clone(), 0),
+    );
+
     let contents = format!(
         "```gleam
-{formatted_type}
+{function_string}
 ```
 {documentation}"
     );

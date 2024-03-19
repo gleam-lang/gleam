@@ -23,6 +23,38 @@ fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
 }
 
 #[test]
+fn labelled_hover_function_definition() {
+    let code = "
+fn add_2(add adder:Int) {
+  adder + 2
+}
+";
+
+    assert_eq!(
+        positioned_hover(code, Position::new(1, 3)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam
+fn add_2(add adder:Int) -> Int
+```
+"
+                .to_string()
+            )),
+            range: Some(Range {
+                start: Position {
+                    line: 1,
+                    character: 0,
+                },
+                end: Position {
+                    line: 1,
+                    character: 23,
+                },
+            },),
+        })
+    );
+}
+
+#[test]
 fn hover_function_definition() {
     let code = "
 fn add_2(x) {
@@ -35,7 +67,7 @@ fn add_2(x) {
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
-fn(Int) -> Int
+fn add_2(x:Int) -> Int
 ```
 "
                 .to_string()
@@ -426,7 +458,7 @@ fn append(x, y) {
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
-fn(String, String) -> String
+fn append(x:String, y:String) -> String
 ```
  Exciting documentation
  Maybe even multiple lines
