@@ -3,7 +3,7 @@ use crate::{
         Arg, Definition, Function, Import, ModuleConstant, Publicity, TypedDefinition, TypedExpr,
         TypedPattern,
     },
-    build::{Located, Module},
+    build::{Located, Module, Origin},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
@@ -459,23 +459,14 @@ where
 
         // Module functions
         for (module_name, dep_module) in &self.compiler.modules {
-            if module_name == &module.name {
+            if module_name == &module.name || (module.origin == Origin::Src && dep_module.is_test())
+            {
                 continue;
-            };
-            let doc_string: String = dep_module.get_module_comments().join("\n");
-            let documentation = if doc_string.is_empty() {
-                None
-            } else {
-                Some(lsp::Documentation::MarkupContent(lsp::MarkupContent {
-                    kind: lsp::MarkupKind::Markdown,
-                    value: doc_string,
-                }))
             };
 
             completions.push(lsp::CompletionItem {
                 label: module_name.to_string(),
                 kind: Some(lsp::CompletionItemKind::MODULE),
-                documentation,
                 ..Default::default()
             })
         }
