@@ -234,17 +234,14 @@ impl Module {
         self.ast.find_node(byte_index)
     }
 
-    pub fn get_module_comments(&self) -> Vec<EcoString> {
-        self.extra
+    pub fn attach_doc_and_module_comments(&mut self) {
+        // Module Comments
+        self.ast.documentation = self
+            .extra
             .module_comments
             .iter()
             .map(|span| Comment::from((span, self.code.as_str())).content.into())
-            .collect()
-    }
-
-    pub fn attach_doc_and_module_comments(&mut self) {
-        // Module Comments
-        self.ast.documentation = self.get_module_comments();
+            .collect();
 
         // Order statements to avoid missociating doc comments after the order
         // has changed during compilation.

@@ -114,6 +114,35 @@ version = "1.0.0""#
     _ = compiler.io.write(&path.join("gleam.toml"), &toml);
 }
 
+fn positioned_with_io_completions_in_test(
+    src: &str,
+    test: &str,
+    position: Position,
+    io: &LanguageServerTestIO,
+) -> Vec<CompletionItem> {
+    _ = io.test_module("my_test", test);
+    let (mut engine, position_param) = positioned_with_io(src, position, io);
+
+    let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
+        r"\\?\C:\test\my_test.gleam"
+    } else {
+        "/test/my_test.gleam"
+    });
+
+    let url = Url::from_file_path(path).unwrap();
+
+    let document = TextDocumentIdentifier { uri: url };
+
+    let response = engine.completion(TextDocumentPositionParams::new(
+        document,
+        position_param.position,
+    ));
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+    completions
+}
+
 fn positioned_with_io_completions(
     src: &str,
     position: Position,
@@ -1096,6 +1125,72 @@ pub fn main() {
 }
 
 #[test]
+fn completions_for_an_import_no_test() {
+    let code = "
+import gleam
+
+pub fn main() {
+  0
+}";
+    let test = "
+import gleam
+
+pub fn main() {
+  0
+}
+";
+
+    let io = LanguageServerTestIO::new();
+    _ = io.test_module("my_tests", test);
+
+    assert_eq!(
+        positioned_with_io_completions(code, Position::new(0, 10), &io),
+        vec![]
+    );
+}
+
+#[test]
+fn completions_for_an_import_while_in_test() {
+    let code = "
+import gleam
+
+pub fn main() {
+  0
+}";
+    let test = "
+import gleam
+
+pub fn main() {
+  0
+}
+";
+    let test_helper = "
+pub fn test_helper() {
+  0
+}
+";
+
+    let io = LanguageServerTestIO::new();
+    _ = io.test_module("test_helper", test_helper);
+
+    assert_eq!(
+        positioned_with_io_completions_in_test(code, test, Position::new(0, 10), &io),
+        vec![
+            CompletionItem {
+                label: "app".into(),
+                kind: Some(CompletionItemKind::MODULE),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "test_helper".into(),
+                kind: Some(CompletionItemKind::MODULE),
+                ..Default::default()
+            }
+        ]
+    );
+}
+
+#[test]
 fn completions_for_an_import_with_docs() {
     let code = "
 import gleam
@@ -1114,10 +1209,6 @@ pub fn main() { 1 }
         vec![CompletionItem {
             label: "dep".into(),
             kind: Some(CompletionItemKind::MODULE),
-            documentation: Some(Documentation::MarkupContent(MarkupContent {
-                kind: MarkupKind::Markdown,
-                value: " Some package\n documentation!".into()
-            })),
             ..Default::default()
         }]
     );
@@ -1170,10 +1261,6 @@ pub fn main() { 1 }
         vec![CompletionItem {
             label: "example_module".into(),
             kind: Some(CompletionItemKind::MODULE),
-            documentation: Some(Documentation::MarkupContent(MarkupContent {
-                kind: MarkupKind::Markdown,
-                value: " Some package\n documentation!".into()
-            })),
             ..Default::default()
         }]
     );
