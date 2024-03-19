@@ -118,14 +118,14 @@ enum Command {
         warnings_as_errors: bool,
 
         /// The platform to target
-        #[arg(short, long, ignore_case = true)]
+        #[arg(short, long, ignore_case = true, value_names = Target::VARIANTS)]
         target: Option<Target>,
     },
 
     /// Type check the project
     Check {
         /// The platform to target
-        #[arg(short, long, ignore_case = true)]
+        #[arg(short, long, ignore_case = true, value_names = Target::VARIANTS)]
         target: Option<Target>,
     },
 
@@ -185,11 +185,11 @@ enum Command {
     #[command(trailing_var_arg = true)]
     Run {
         /// The platform to target
-        #[arg(short, long, ignore_case = true)]
+        #[arg(short, long, ignore_case = true, value_names = Target::VARIANTS)]
         target: Option<Target>,
 
-        /// Optionally specify the JavaScript runtime: nodejs, deno, bun
-        #[arg(long, ignore_case = true)]
+        /// Specify the JavaScript runtime
+        #[arg(long, ignore_case = true, value_names = Runtime::VARIANTS)]
         runtime: Option<Runtime>,
 
         /// The module to run
@@ -203,10 +203,10 @@ enum Command {
     #[command(trailing_var_arg = true)]
     Test {
         /// The platform to target
-        #[arg(short, long, ignore_case = true)]
+        #[arg(short, long, ignore_case = true, value_names = Target::VARIANTS)]
         target: Option<Target>,
 
-        #[arg(long, ignore_case = true)]
+        #[arg(long, ignore_case = true, value_names = Runtime::VARIANTS)]
         runtime: Option<Runtime>,
 
         arguments: Vec<String>,
