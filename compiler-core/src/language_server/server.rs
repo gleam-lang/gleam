@@ -346,7 +346,7 @@ where
             &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
         ) -> engine::Response<T>,
     {
-        match self.router.project_for_path(&path) {
+        match self.router.project_for_path(path) {
             Ok(Some(project)) => {
                 let engine::Response {
                     result,
@@ -376,7 +376,7 @@ where
         let path = path(&params.text_document.uri);
         let mut new_text = String::new();
         let mut error_response = |error| {
-            let feedback = match self.router.project_for_path(&path) {
+            let feedback = match self.router.project_for_path(path.clone()) {
                 Ok(Some(project)) => project.feedback.error(error),
                 Ok(None) | Err(_) => self.outside_of_project_feedback.error(error),
             };

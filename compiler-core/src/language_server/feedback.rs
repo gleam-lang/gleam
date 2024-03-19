@@ -28,12 +28,15 @@ impl Feedback {
         Default::default()
     }
 
+    // TODO: test
+    // TODO: test when a file diagnostic is an empty vec
     /// Add all the content of another feedback to this feedback.
     ///
     pub fn append_feedback(&mut self, feedback: Feedback) {
         for (path, diagnostics) in feedback.diagnostics {
+            let entry = self.diagnostics.entry(path).or_default();
             for diagnostic in diagnostics {
-                self.append_diagnostic(path.clone(), diagnostic);
+                entry.push(diagnostic);
             }
         }
         for diagnostic in feedback.messages {
