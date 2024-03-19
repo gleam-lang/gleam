@@ -1116,18 +1116,11 @@ pub fn main() {
 
     assert_eq!(
         positioned_expression_completions(code, dep, Position::new(0, 10)),
-        vec![
-            CompletionItem {
-                label: "dep".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "gleam".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                ..Default::default()
-            }
-        ]
+        vec![CompletionItem {
+            label: "gleam".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            ..Default::default()
+        }]
     );
 }
 
@@ -1152,11 +1145,7 @@ pub fn main() {
 
     assert_eq!(
         positioned_with_io_completions(code, Position::new(0, 10), &io),
-        vec![CompletionItem {
-            label: "gleam".into(),
-            kind: Some(CompletionItemKind::MODULE),
-            ..Default::default()
-        }]
+        vec![]
     );
 }
 
@@ -1193,11 +1182,6 @@ pub fn test_helper() {
                 ..Default::default()
             },
             CompletionItem {
-                label: "gleam".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                ..Default::default()
-            },
-            CompletionItem {
                 label: "test_helper".into(),
                 kind: Some(CompletionItemKind::MODULE),
                 ..Default::default()
@@ -1222,18 +1206,11 @@ pub fn main() { 1 }
 
     assert_eq!(
         positioned_expression_completions(code, dep, Position::new(0, 10)),
-        vec![
-            CompletionItem {
-                label: "dep".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "gleam".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                ..Default::default()
-            }
-        ]
+        vec![CompletionItem {
+            label: "dep".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            ..Default::default()
+        }]
     );
 }
 
@@ -1253,18 +1230,11 @@ pub fn main() {
 
     assert_eq!(
         positioned_with_io_completions(code, Position::new(0, 10), &io),
-        vec![
-            CompletionItem {
-                label: "example_module".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "gleam".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                ..Default::default()
-            }
-        ]
+        vec![CompletionItem {
+            label: "example_module".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            ..Default::default()
+        }]
     );
 }
 
@@ -1288,18 +1258,11 @@ pub fn main() { 1 }
 
     assert_eq!(
         positioned_with_io_completions(code, Position::new(0, 10), &io),
-        vec![
-            CompletionItem {
-                label: "example_module".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "gleam".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                ..Default::default()
-            }
-        ]
+        vec![CompletionItem {
+            label: "example_module".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            ..Default::default()
+        }]
     );
 }
 
