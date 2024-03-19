@@ -20,6 +20,12 @@ pub struct UnknownType {
     pub name: EcoString,
 }
 
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+pub enum RecordVariants {
+    HasVariants,
+    NoVariants,
+}
+
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Error {
     SrcImportingTest {
@@ -91,6 +97,7 @@ pub enum Error {
         label: EcoString,
         fields: Vec<EcoString>,
         usage: FieldAccessUsage,
+        variants: RecordVariants,
     },
 
     IncorrectArity {

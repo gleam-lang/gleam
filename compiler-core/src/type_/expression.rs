@@ -1685,12 +1685,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location: record_location,
             });
         }
+
+        let has_variants = match &*record_type {
+            Type::Named { name, .. } => {
+                self.environment.module_types_constructors
+                    .get(name)
+                    .map_or(RecordVariants::NoVariants, |type_variant_constructors| {
+                        if type_variant_constructors.variants.len() > 1 {
+                            RecordVariants::HasVariants
+                        } else {
+                            RecordVariants::NoVariants
+                        }
+                    })
+            },
+            _ => RecordVariants::NoVariants,
+        };
+        
+
         let unknown_field = |fields| Error::UnknownRecordField {
             usage,
             typ: record_type.clone(),
             location,
             label: label.clone(),
             fields,
+            variants: has_variants,
         };
         let accessors = match collapse_links(record_type.clone()).as_ref() {
             // A type in the current module which may have fields
