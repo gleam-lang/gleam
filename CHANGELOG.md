@@ -45,6 +45,8 @@
 - Fixed a bug where a record update's arguments would not be indented correctly.
 - Fixed a bug where function call arguments, tuple items and list items would be
   needlessly indented if preceded by a comment.
+- Fixed a bug where empty lines would be removed incorrectly with CRLF line
+  endings or trailing white space.
 
 ### Build tool
 
