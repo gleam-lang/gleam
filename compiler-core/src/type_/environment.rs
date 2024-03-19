@@ -618,7 +618,6 @@ impl<'a> Environment<'a> {
                     .values
                     .keys()
                     .map(move |value| eco_format!("{}.{}", module_name, value))
-                    .collect::<Vec<EcoString>>()
             })
             .collect()
     }
