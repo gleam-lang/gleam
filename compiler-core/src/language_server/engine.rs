@@ -212,9 +212,11 @@ where
                     Some(this.completion_types(module))
                 }
 
-                Located::ModuleStatement(Definition::Import(_) | Definition::ModuleConstant(_)) => {
-                    None
+                Located::ModuleStatement(Definition::Import(_)) => {
+                    Some(this.completion_imports(module))
                 }
+
+                Located::ModuleStatement(Definition::ModuleConstant(_)) => None,
 
                 Located::Arg(_) => None,
             };
@@ -447,6 +449,35 @@ where
                     None => continue,
                 }
             }
+        }
+
+        completions
+    }
+
+    fn completion_imports<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
+        let mut completions = vec![];
+
+        // Module functions
+        for (module_name, dep_module) in &self.compiler.modules {
+            if module_name == &module.name {
+                continue;
+            };
+            let doc_string: String = dep_module.get_module_comments().join("\n");
+            let documentation = if doc_string.is_empty() {
+                None
+            } else {
+                Some(lsp::Documentation::MarkupContent(lsp::MarkupContent {
+                    kind: lsp::MarkupKind::Markdown,
+                    value: doc_string,
+                }))
+            };
+
+            completions.push(lsp::CompletionItem {
+                label: module_name.to_string(),
+                kind: Some(lsp::CompletionItemKind::MODULE),
+                documentation,
+                ..Default::default()
+            })
         }
 
         completions
