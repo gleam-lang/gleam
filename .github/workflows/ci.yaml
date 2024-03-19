@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -12,6 +13,13 @@ env:
   CARGO_PROFILE_DEV_DEBUG: 0
   CARGO_PROFILE_TEST_DEBUG: 0
   CROSS_CONTAINER_UID: 0
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -61,7 +69,7 @@ jobs:
             run-integration-tests: true
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install musl-tools incl. musl-gcc
         uses: awalsh128/cache-apt-pkgs-action@v1
@@ -121,7 +129,7 @@ jobs:
           gleam test && cd src && gleam test && cd ..
           gleam docs build
         working-directory: ./test/project_erlang
-        if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }}
+        if: ${{ runner.os != 'Windows' && matrix.run-integration-tests }}
 
       - name: test/project_erlang (windows)
         run: |
@@ -130,21 +138,21 @@ jobs:
           gleam test && cd src && gleam test && cd ..
           gleam docs build
         working-directory: ./test/project_erlang_windows
-        if: ${{ matrix.os == 'windows-latest' && matrix.run-integration-tests }}
+        if: ${{ runner.os == 'Windows' && matrix.run-integration-tests }}
 
       - name: test/project_erlang export erlang-shipment (non-windows)
         run: |
           gleam export erlang-shipment
           ./build/erlang-shipment/entrypoint.sh run
         working-directory: ./test/project_erlang
-        if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }}
+        if: ${{ runner.os != 'Windows' && matrix.run-integration-tests }}
 
       - name: test/project_erlang export erlang-shipment (windows)
         run: |
           gleam export erlang-shipment
           .\build\erlang-shipment\entrypoint.ps1 run
         working-directory: ./test/project_erlang_windows
-        if: ${{ matrix.os == 'windows-latest' && matrix.run-integration-tests }}
+        if: ${{ runner.os == 'Windows' && matrix.run-integration-tests }}
 
       - name: test/project_erlang export package-interface
         run: |
@@ -225,7 +233,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -235,9 +243,9 @@ jobs:
           profile: minimal
           override: true
 
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v4
         with:
-          node-version: "16"
+          node-version: "18"
 
       - name: Install wasm-pack
         run: |
@@ -254,7 +262,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -276,7 +284,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -304,7 +312,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -332,7 +340,7 @@ jobs:
           command: build
 
       - name: Upload artifact (Ubuntu)
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: gleam
           path: target/debug/gleam
@@ -343,7 +351,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3.0.0
+        uses: actions/checkout@v4
 
       - name: Install Deno
         uses: denoland/setup-deno@v1
@@ -361,7 +369,7 @@ jobs:
           rebar3-version: "3"
 
       - name: Download Gleam binary from previous job
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: gleam
           path: ./test
