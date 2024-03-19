@@ -54,6 +54,7 @@
   package.
 - The output format of the command line help messages have been changed
   slightly.
+- The command line help text now lists valid targets and runtimes.
 - Generated documentation no longer exposes the constructors of opaque types,
   no longer exposes the values of constants, and indicates which types are
   opaque.
