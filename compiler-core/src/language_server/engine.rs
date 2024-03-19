@@ -3,7 +3,7 @@ use crate::{
         Arg, Definition, Function, Import, ModuleConstant, Publicity, TypedDefinition, TypedExpr,
         TypedPattern,
     },
-    build::{Located, Module, Origin},
+    build::{Located, Module},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
@@ -455,23 +455,19 @@ where
     }
 
     fn completion_imports<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
-        let mut completions = vec![];
-
-        // Module functions
-        for (module_name, dep_module) in &self.compiler.modules {
-            if module_name == &module.name || (module.origin == Origin::Src && dep_module.is_test())
-            {
-                continue;
-            };
-
-            completions.push(lsp::CompletionItem {
-                label: module_name.to_string(),
+        self.compiler
+            .project_compiler
+            .get_importable_modules()
+            .iter()
+            .filter(|(name, m)| {
+                *name != &module.name && (m.origin.is_src() || !module.origin.is_src())
+            })
+            .map(|(name, _)| lsp::CompletionItem {
+                label: name.to_string(),
                 kind: Some(lsp::CompletionItemKind::MODULE),
                 ..Default::default()
             })
-        }
-
-        completions
+            .collect()
     }
 
     fn root_package_name(&self) -> &str {

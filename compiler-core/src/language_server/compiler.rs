@@ -1,5 +1,6 @@
 use debug_ignore::DebugIgnore;
 use ecow::EcoString;
+use itertools::Itertools;
 
 use crate::{
     analyse::TargetSupport,
@@ -105,17 +106,12 @@ where
 
         let compiled_dependencies = self.project_compiler.compile_dependencies()?;
 
-        // Record the compiled dependency modules
-        let mut compiled_modules = vec![];
-
         // Store the compiled dependency module information
-        for module in compiled_dependencies {
-            compiled_modules.push(module.input_path.clone());
+        for module in &compiled_dependencies {
             let path = module.input_path.as_os_str().to_string_lossy().to_string();
             let line_numbers = LineNumbers::new(&module.code);
             let source = ModuleSourceInformation { path, line_numbers };
             _ = self.sources.insert(module.name.clone(), source);
-            _ = self.modules.insert(module.name.clone(), module);
         }
 
         // Warnings from dependencies are not fixable by the programmer so
@@ -129,6 +125,12 @@ where
 
         // Return any error
         let package = result?;
+
+        // Record the compiled dependency modules
+        let mut compiled_modules = compiled_dependencies
+            .into_iter()
+            .map(|m| m.input_path)
+            .collect_vec();
 
         // Store the compiled module information
         for module in package.modules {
