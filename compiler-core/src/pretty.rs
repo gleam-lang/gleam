@@ -385,7 +385,13 @@ fn format(
     limit: isize,
     mut width: isize,
     mut docs: im::Vector<(isize, Mode, &Document<'_>)>,
+    line_break: LineBreak,
 ) -> Result<()> {
+    let line_break_char = match line_break {
+        LineBreak::CRLF => "\r\n",
+        LineBreak::LF => "\n",
+    };
+
     // As long as there are documents to print we'll take each one by one and
     // output the corresponding string to the given writer.
     //
@@ -404,7 +410,7 @@ fn format(
             // add the indentation required by the given document.
             Document::Line(i) => {
                 for _ in 0..*i {
-                    writer.str_write("\n")?;
+                    writer.str_write(line_break_char)?;
                 }
                 for _ in 0..indent {
                     writer.str_write(" ")?;
@@ -431,7 +437,7 @@ fn format(
                     width = unbroken_width;
                 } else {
                     writer.str_write(broken)?;
-                    writer.str_write("\n")?;
+                    writer.str_write(line_break_char)?;
                     for _ in 0..indent {
                         writer.str_write(" ")?;
                     }
@@ -456,7 +462,7 @@ fn format(
                 // according to the current indentation level.
                 Mode::Broken | Mode::ForcedBroken => {
                     writer.str_write(broken)?;
-                    writer.str_write("\n")?;
+                    writer.str_write(line_break_char)?;
                     for _ in 0..indent {
                         writer.str_write(" ")?;
                     }
@@ -579,6 +585,12 @@ pub fn flex_break<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum LineBreak {
+    CRLF,
+    LF,
+}
+
 impl<'a> Document<'a> {
     pub fn group(self) -> Self {
         Self::Group(Box::new(self))
@@ -626,7 +638,7 @@ impl<'a> Document<'a> {
 
     pub fn to_pretty_string(self, limit: isize) -> String {
         let mut buffer = String::new();
-        self.pretty_print(limit, &mut buffer)
+        self.pretty_print(limit, &mut buffer, LineBreak::LF)
             .expect("Writing to string buffer failed");
         buffer
     }
@@ -635,9 +647,14 @@ impl<'a> Document<'a> {
         open.to_doc().append(self).append(closed)
     }
 
-    pub fn pretty_print(&self, limit: isize, writer: &mut impl Utf8Writer) -> Result<()> {
+    pub fn pretty_print(
+        &self,
+        limit: isize,
+        writer: &mut impl Utf8Writer,
+        line_break: LineBreak,
+    ) -> Result<()> {
         let docs = im::vector![(0, Mode::Unbroken, self)];
-        format(writer, limit, 0, docs)?;
+        format(writer, limit, 0, docs, line_break)?;
         Ok(())
     }
 

@@ -1,3 +1,4 @@
+use crate::format::get_line_break_from_chars;
 use crate::{
     format::{Formatter, Intermediate},
     Error, Result,
@@ -19,10 +20,11 @@ pub fn parse_fix_and_format(src: &EcoString, path: &Utf8Path) -> Result<String> 
     // let module = some_fixer_module::Fixer::fix(module);
 
     // Format
+    let line_break = get_line_break_from_chars(src.chars());
     let mut buffer = String::new();
     Formatter::with_comments(&intermediate)
         .module(&module)
-        .pretty_print(80, &mut buffer)?;
+        .pretty_print(80, &mut buffer, line_break)?;
 
     Ok(buffer)
 }

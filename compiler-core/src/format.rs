@@ -16,6 +16,7 @@ use crate::{
 };
 use ecow::EcoString;
 use itertools::Itertools;
+use std::str::Chars;
 use std::sync::Arc;
 use vec1::Vec1;
 
@@ -24,7 +25,29 @@ use camino::Utf8Path;
 
 const INDENT: isize = 2;
 
+pub fn get_line_break_from_chars(mut chars: Chars<'_>) -> LineBreak {
+    let mut line_break: LineBreak = LineBreak::LF;
+    while let Some(char) = chars.next() {
+        match char {
+            '\r' => match chars.next() {
+                Some('\n') => {
+                    line_break = LineBreak::CRLF;
+                    break;
+                }
+                _ => {}
+            },
+            '\n' => {
+                line_break = LineBreak::LF;
+                break;
+            }
+            _ => {}
+        }
+    }
+    line_break
+}
+
 pub fn pretty(writer: &mut impl Utf8Writer, src: &EcoString, path: &Utf8Path) -> Result<()> {
+    let line_break = get_line_break_from_chars(src.chars());
     let parsed = crate::parse::parse_module(src).map_err(|error| Error::Parse {
         path: path.to_path_buf(),
         src: src.clone(),
@@ -33,7 +56,7 @@ pub fn pretty(writer: &mut impl Utf8Writer, src: &EcoString, path: &Utf8Path) ->
     let intermediate = Intermediate::from_extra(&parsed.extra, src);
     Formatter::with_comments(&intermediate)
         .module(&parsed.module)
-        .pretty_print(80, writer)
+        .pretty_print(80, writer, line_break)
 }
 
 pub(crate) struct Intermediate<'a> {
