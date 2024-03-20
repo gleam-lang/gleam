@@ -94,6 +94,7 @@ tom = "~> 0.3"
 wimp = "~> 1.1"
 wisp = "~> 0.1"
 zeptomail = "~> 1.0"
+jwt = "~> 0.1"
 
 [dev-dependencies]
 gleeunit = "~> 1.0"
