@@ -1,28 +1,11 @@
 # Project
 
-A test Gleam project.
+A test Gleam project using the Deno runtime.
 
 It covers these features:
 
-- Downloading packages
-  - Specified in config.dependencies
-- Importing packages
-  - Specified in config.dependencies
-- Compilation of Gleam code
-  - in src
-  - in test
-- Importing Gleam src code into test
-
-These features are not tested yet
-
-- Downloading packages
-  - Specified in config.dev-dependencies
-- Importing packages
-  - Specified in config.dev-dependencies
-- Compilation of locally defined JavaScript modules
-  - in src
-  - in test
-- Importing Gleam src code into test
+- Deno runtime specific configuration, including
+  - `location` - used to configure [`--location`](https://docs.deno.com/runtime/manual/runtime/location_api) flag which sets the [`location`](https://developer.mozilla.org/en-US/docs/Web/API/Window/location) global from the web.
 
 ## Quick start
 
