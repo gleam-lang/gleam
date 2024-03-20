@@ -160,7 +160,8 @@ jobs:
         with:
           name: gleam
           path: target/${{ matrix.target }}/release/gleam
-          if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+          overwrite: true
+        if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
 
   build-nightly-container-images:
     runs-on: ubuntu-latest
