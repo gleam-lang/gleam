@@ -1,3 +1,7 @@
+use super::{
+    messages::{Message, MessageBuffer, Next, Notification, Request},
+    progress::ConnectionProgressReporter,
+};
 use crate::{
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -11,130 +15,14 @@ use crate::{
     line_numbers::LineNumbers,
     Result,
 };
+use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
-use lsp::{
-    notification::{DidChangeWatchedFiles, DidOpenTextDocument},
-    request::GotoDefinition,
-    HoverProviderCapability, Position, Range, TextEdit, Url,
-};
 use lsp_types::{
-    self as lsp,
-    notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
-    request::{CodeActionRequest, Completion, Formatting, HoverRequest},
-    InitializeParams, PublishDiagnosticsParams,
+    self as lsp, HoverProviderCapability, InitializeParams, Position, PublishDiagnosticsParams,
+    Range, TextEdit, Url,
 };
 use serde_json::Value as Json;
-use std::{
-    collections::{HashMap, HashSet},
-    time::Duration,
-};
-
-use camino::{Utf8Path, Utf8PathBuf};
-
-use super::progress::ConnectionProgressReporter;
-
-#[derive(Debug)]
-pub enum Message {
-    Request(lsp_server::RequestId, Request),
-    Notification(Notification),
-}
-
-#[derive(Debug)]
-pub enum Request {
-    Format(lsp::DocumentFormattingParams),
-    Hover(lsp::HoverParams),
-    GoToDefinition(lsp::GotoDefinitionParams),
-    Completion(lsp::CompletionParams),
-    CodeAction(lsp::CodeActionParams),
-}
-
-impl Request {
-    fn extract(request: lsp_server::Request) -> Option<Message> {
-        let id = request.id.clone();
-        match request.method.as_str() {
-            "textDocument/formatting" => {
-                let params = cast_request::<Formatting>(request);
-                Some(Message::Request(id, Request::Format(params)))
-            }
-            "textDocument/hover" => {
-                let params = cast_request::<HoverRequest>(request);
-                Some(Message::Request(id, Request::Hover(params)))
-            }
-            "textDocument/definition" => {
-                let params = cast_request::<GotoDefinition>(request);
-                Some(Message::Request(id, Request::GoToDefinition(params)))
-            }
-            "textDocument/completion" => {
-                let params = cast_request::<Completion>(request);
-                Some(Message::Request(id, Request::Completion(params)))
-            }
-            "textDocument/codeAction" => {
-                let params = cast_request::<CodeActionRequest>(request);
-                Some(Message::Request(id, Request::CodeAction(params)))
-            }
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum Notification {
-    /// A Gleam file has been modified in memory, and the new text is provided.
-    SourceFileChangedInMemory { path: Utf8PathBuf, text: String },
-    /// A Gleam file has been saved or closed in the editor.
-    SourceFileMatchesDisc { path: Utf8PathBuf },
-    /// gleam.toml has changed.
-    ConfigFileChanged { path: Utf8PathBuf },
-    /// It's time to compile all open projects.
-    CompilePlease,
-}
-
-impl Notification {
-    fn extract(notification: lsp_server::Notification) -> Option<Message> {
-        match notification.method.as_str() {
-            "textDocument/didOpen" => {
-                let params = cast_notification::<DidOpenTextDocument>(notification);
-                let notification = Notification::SourceFileChangedInMemory {
-                    path: path(&params.text_document.uri),
-                    text: params.text_document.text,
-                };
-                Some(Message::Notification(notification))
-            }
-            "textDocument/didChange" => {
-                let params = cast_notification::<DidChangeTextDocument>(notification);
-                let notification = Notification::SourceFileChangedInMemory {
-                    path: path(&params.text_document.uri),
-                    text: params.content_changes.into_iter().last()?.text,
-                };
-                Some(Message::Notification(notification))
-            }
-
-            "textDocument/didSave" => {
-                let params = cast_notification::<DidSaveTextDocument>(notification);
-                let notification = Notification::SourceFileMatchesDisc {
-                    path: path(&params.text_document.uri),
-                };
-                Some(Message::Notification(notification))
-            }
-            "textDocument/didClose" => {
-                let params = cast_notification::<DidCloseTextDocument>(notification);
-                let notification = Notification::SourceFileMatchesDisc {
-                    path: path(&params.text_document.uri),
-                };
-                Some(Message::Notification(notification))
-            }
-
-            "workspace/didChangeWatchedFiles" => {
-                let params = cast_notification::<DidChangeWatchedFiles>(notification);
-                let notification = Notification::ConfigFileChanged {
-                    path: path(&params.changes.into_iter().last()?.uri),
-                };
-                Some(Message::Notification(notification))
-            }
-            _ => None,
-        }
-    }
-}
+use std::collections::{HashMap, HashSet};
 
 /// This class is responsible for handling the language server protocol and
 /// delegating the work to the engine.
@@ -373,7 +261,7 @@ where
     }
 
     fn format(&mut self, params: lsp::DocumentFormattingParams) -> (Json, Feedback) {
-        let path = path(&params.text_document.uri);
+        let path = super::path(&params.text_document.uri);
         let mut new_text = String::new();
         let mut error_response = |error| {
             let feedback = match self.router.project_for_path(path.clone()) {
@@ -404,24 +292,24 @@ where
     }
 
     fn hover(&mut self, params: lsp::HoverParams) -> (Json, Feedback) {
-        let path = path(&params.text_document_position_params.text_document.uri);
+        let path = super::path(&params.text_document_position_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.hover(params))
     }
 
     fn goto_definition(&mut self, params: lsp::GotoDefinitionParams) -> (Json, Feedback) {
-        let path = path(&params.text_document_position_params.text_document.uri);
+        let path = super::path(&params.text_document_position_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.goto_definition(params))
     }
 
     fn completion(&mut self, params: lsp::CompletionParams) -> (Json, Feedback) {
-        let path = path(&params.text_document_position.text_document.uri);
+        let path = super::path(&params.text_document_position.text_document.uri);
         self.respond_with_engine(path, |engine| {
             engine.completion(params.text_document_position)
         })
     }
 
     fn code_action(&mut self, params: lsp::CodeActionParams) -> (Json, Feedback) {
-        let path = path(&params.text_document.uri);
+        let path = super::path(&params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.action(params))
     }
 
@@ -530,25 +418,6 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
     initialise_params
 }
 
-fn cast_request<R>(request: lsp_server::Request) -> R::Params
-where
-    R: lsp::request::Request,
-    R::Params: serde::de::DeserializeOwned,
-{
-    let (_, params) = request.extract(R::METHOD).expect("cast request");
-    params
-}
-
-fn cast_notification<N>(notification: lsp_server::Notification) -> N::Params
-where
-    N: lsp::notification::Notification,
-    N::Params: serde::de::DeserializeOwned,
-{
-    notification
-        .extract::<N::Params>(N::METHOD)
-        .expect("cast notification")
-}
-
 fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
     let severity = match diagnostic.level {
         Level::Error => lsp::DiagnosticSeverity::ERROR,
@@ -610,121 +479,4 @@ fn path_to_uri(path: Utf8PathBuf) -> Url {
     let mut file: String = "file://".into();
     file.push_str(&path.as_os_str().to_string_lossy());
     Url::parse(&file).expect("path_to_uri URL parse")
-}
-
-fn path(uri: &Url) -> Utf8PathBuf {
-    // The to_file_path method is available on these platforms
-    #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
-    return Utf8PathBuf::from_path_buf(uri.to_file_path().expect("URL file"))
-        .expect("Non Utf8 Path");
-
-    #[cfg(not(any(unix, windows, target_os = "redox", target_os = "wasi")))]
-    return Utf8PathBuf::from_path_buf(uri.path().into()).expect("Non Utf8 Path");
-}
-
-enum Next {
-    MorePlease,
-    Handle(Vec<Message>),
-    Stop,
-}
-
-/// The message buffer pulls messages from the client until one of the following
-/// happens:
-/// - A shutdown request is received.
-/// - A short pause in messages is detected, indicating the programmer has
-///   stopped typing for a moment and would benefit from feedback.
-/// - A request type message is received, which requires an immediate response.
-///
-struct MessageBuffer {
-    messages: Vec<Message>,
-}
-
-impl MessageBuffer {
-    pub fn new() -> Self {
-        Self {
-            messages: Vec::new(),
-        }
-    }
-
-    pub fn receive(&mut self, conn: &lsp_server::Connection) -> Next {
-        let pause = Duration::from_millis(100);
-
-        // If the buffer is empty, wait indefinitely for the first message.
-        // If the buffer is not empty, wait for a short time to see if more messages are
-        // coming before processing the ones we have.
-        let message = if self.messages.is_empty() {
-            Some(conn.receiver.recv().expect("Receiving LSP message"))
-        } else {
-            conn.receiver.recv_timeout(pause).ok()
-        };
-
-        // If have have not received a message then it means there is a pause in the
-        // messages from the client, implying the programmer has stopped typing. Process
-        // the currently enqueued messages.
-        let message = match message {
-            Some(message) => message,
-            None => {
-                // A compile please message it added in the instance of this
-                // pause of activity so that the client gets feedback on the
-                // state of the code as it is now.
-                self.push_compile_please_message();
-                return Next::Handle(self.take_messages());
-            }
-        };
-
-        match message {
-            lsp_server::Message::Request(r) if self.shutdown(conn, &r) => Next::Stop,
-            lsp_server::Message::Request(r) => self.request(r),
-            lsp_server::Message::Response(r) => self.response(r),
-            lsp_server::Message::Notification(n) => self.notification(n),
-        }
-    }
-
-    fn request(&mut self, r: lsp_server::Request) -> Next {
-        let Some(message) = Request::extract(r) else {
-            return Next::MorePlease;
-        };
-
-        // Compile the code prior to attempting to process the response, to
-        // ensure that the response is based on the latest code.
-        self.push_compile_please_message();
-        self.messages.push(message);
-        Next::Handle(self.take_messages())
-    }
-
-    fn notification(&mut self, n: lsp_server::Notification) -> Next {
-        // A new notification telling us that an edit has been made, or
-        // something along those lines.
-        if let Some(message) = Notification::extract(n) {
-            self.messages.push(message);
-        }
-        // Ask for more messages (or a pause), at which point we'll start processing.
-        Next::MorePlease
-    }
-
-    fn response(&mut self, _: lsp_server::Response) -> Next {
-        // We do not use or expect responses from the client currently.
-        Next::MorePlease
-    }
-
-    /// Add a `CompilePlease` message which will prompt the engine to compile
-    /// the projects.
-    ///
-    fn push_compile_please_message(&mut self) {
-        let message = Notification::CompilePlease;
-        let value = Message::Notification(message);
-        self.messages.push(value);
-    }
-
-    fn take_messages(&mut self) -> Vec<Message> {
-        std::mem::take(&mut self.messages)
-    }
-
-    fn shutdown(
-        &mut self,
-        connection: &lsp_server::Connection,
-        request: &lsp_server::Request,
-    ) -> bool {
-        connection.handle_shutdown(request).expect("LSP shutdown")
-    }
 }
