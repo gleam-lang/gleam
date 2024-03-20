@@ -6,6 +6,7 @@ packages = [
   { name = "argv", version = "1.0.1", build_tools = ["gleam"], requirements = [], otp_app = "argv", source = "hex", outer_checksum = "A6E9009E50BBE863EB37D963E4315398D41A3D87D0075480FC244125808F964A" },
   { name = "aws4_request", version = "0.1.1", build_tools = ["gleam"], requirements = ["gleam_crypto", "gleam_http", "gleam_stdlib"], otp_app = "aws4_request", source = "hex", outer_checksum = "90B1DB6E2A7F0396CD4713850B14B3A910331B5BA76D051E411D1499AAA2EA9A" },
   { name = "backoff", version = "1.1.6", build_tools = ["rebar3"], requirements = [], otp_app = "backoff", source = "hex", outer_checksum = "CF0CFFF8995FB20562F822E5CC47D8CCF664C5ECDC26A684CBE85C225F9D7C39" },
+  { name = "base64url", version = "0.0.1", build_tools = ["rebar"], requirements = [], otp_app = "base64url", source = "hex", outer_checksum = "FAB09B20E3F5DB886725544CBCF875B8E73EC93363954EB8A1A9ED834AA8C1F9" },
   { name = "bigi", version = "1.0.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "bigi", source = "hex", outer_checksum = "CB2766365C3DA3C651AD55F6A6389A586FA6B2D66B80BE0DA168EEBD0EE1A43D" },
   { name = "birdie", version = "1.0.4", build_tools = ["gleam"], requirements = ["argv", "filepath", "gap", "gleam_community_ansi", "gleam_erlang", "gleam_stdlib", "gleeunit", "justin", "rank", "simplifile"], otp_app = "birdie", source = "hex", outer_checksum = "0F7E16A3B12957B5B4A3B39152BD6D6175941AF40C1838F86C5A909DCFF7CF04" },
   { name = "certifi", version = "2.12.0", build_tools = ["rebar3"], requirements = [], otp_app = "certifi", source = "hex", outer_checksum = "EE68D85DF22E554040CDB4BE100F33873AC6051387BAF6A8F6CE82272340FF1C" },
@@ -64,7 +65,9 @@ packages = [
   { name = "ids", version = "0.12.0", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_otp", "gleam_stdlib"], otp_app = "ids", source = "hex", outer_checksum = "C0772022F69E6C91825115F6C7053F1AE2F5567A31650229B7B8749F8F429F3C" },
   { name = "iso_8859", version = "1.0.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "iso_8859", source = "hex", outer_checksum = "51440FA4C2CD7A11DDC0B99BB75C86D69B94B4D9D32ED2D17242E3946CA6228D" },
   { name = "jot", version = "0.2.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "jot", source = "hex", outer_checksum = "D92294CFC110CBEC6CE3CE8CD4E42B25164970B749446B5E065F285B98F4B279" },
+  { name = "jsx", version = "2.8.3", build_tools = ["mix", "rebar3"], requirements = [], otp_app = "jsx", source = "hex", outer_checksum = "FC3499FED7A726995AA659143A248534ADC754EBD16CCD437CD93B649A95091F" },
   { name = "justin", version = "1.0.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "justin", source = "hex", outer_checksum = "7FA0C6DB78640C6DC5FBFD59BF3456009F3F8B485BF6825E97E1EB44E9A1E2CD" },
+  { name = "jwt", version = "0.1.11", build_tools = ["rebar3"], requirements = ["base64url", "jsx"], otp_app = "jwt", source = "hex", outer_checksum = "B483FBB786D1BD050B3C551D323112D604E5B0F9CF9DC5671ADEEC462C2E36BB" },
   { name = "lustre", version = "3.1.3", build_tools = ["gleam"], requirements = ["argv", "gleam_community_ansi", "gleam_stdlib", "glint"], otp_app = "lustre", source = "hex", outer_checksum = "873B047E6598FA7041E5685C8C9E030AF753A9CF2EF0F6DBB3A4E6AC92461F0D" },
   { name = "lustre_http", version = "0.5.0", build_tools = ["gleam"], requirements = ["gleam_fetch", "gleam_http", "gleam_javascript", "gleam_json", "gleam_stdlib", "lustre"], otp_app = "lustre_http", source = "hex", outer_checksum = "7D7D91EB7C59177E7C2ECCF7D0BE530DDFF86264AE1BEF473E6F9F8C6C62CEB0" },
   { name = "lustre_ui", version = "0.3.0", build_tools = ["gleam"], requirements = ["gleam_community_colour", "gleam_stdlib", "lustre"], otp_app = "lustre_ui", source = "hex", outer_checksum = "F81BE5D20153CFFC717C2C4687A19375A8613528908AF7069DDA1B929C8398B1" },
@@ -162,6 +165,7 @@ ids = { version = "~> 0.12" }
 iso_8859 = { version = "~> 1.0" }
 jot = { version = "~> 0.2" }
 justin = { version = "~> 1.0" }
+jwt = { version = "~> 0.1"}
 lustre = { version = "~> 3.1" }
 lustre_http = { version = "~> 0.5" }
 lustre_ui = { version = "~> 0.3" }
