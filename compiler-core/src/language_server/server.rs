@@ -628,6 +628,13 @@ enum Next {
     Stop,
 }
 
+/// The message buffer pulls messages from the client until one of the following
+/// happens:
+/// - A shutdown request is received.
+/// - A short pause in messages is detected, indicating the programmer has
+///   stopped typing for a moment and would benefit from feedback.
+/// - A request type message is received, which requires an immediate response.
+///
 struct MessageBuffer {
     messages: Vec<Message>,
 }
