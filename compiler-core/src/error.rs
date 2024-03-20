@@ -617,13 +617,20 @@ Please remove them and try again.
                 location: None,
             },
 
-            Error::UnableToFindProjectRoot { path } => Diagnostic {
-                title: "Invalid project root".into(),
-                text: format!("We were unable to find the project root:\n\n  {path}"),
-                hint: None,
-                level: Level::Error,
-                location: None,
-            },
+            Error::UnableToFindProjectRoot { path } => {
+                let text = wrap_format!(
+                    "We were unable to find gleam.toml.
+
+We searched in {path} and all parent directories."
+                );
+                Diagnostic {
+                    title: "Project not found".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }
+            }
 
             Error::VersionDoesNotMatch { toml_ver, app_ver } => {
                 let text = format!(
