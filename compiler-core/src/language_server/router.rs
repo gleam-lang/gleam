@@ -56,6 +56,8 @@ where
         &mut self,
         path: Utf8PathBuf,
     ) -> Result<Option<&mut Project<IO, Reporter>>> {
+        // If the path is the root of a known project then return it. Otherwise
+        // find the nearest parent project.
         let path = if self.engines.contains_key(&path) {
             path
         } else {
