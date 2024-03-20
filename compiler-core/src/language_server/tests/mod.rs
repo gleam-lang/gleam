@@ -3,10 +3,11 @@ mod compilation;
 mod completion;
 mod definition;
 mod hover;
+mod inlay_hints;
 
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
     time::SystemTime,
 };
 
@@ -15,6 +16,7 @@ use hexpm::version::Version;
 use camino::{Utf8Path, Utf8PathBuf};
 use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
 
+use super::configuration::Configuration;
 use crate::{
     config::PackageConfig,
     io::{
@@ -320,11 +322,19 @@ version = "1.0.0""#
 fn setup_engine(
     io: &LanguageServerTestIO,
 ) -> LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO> {
+    setup_engine_with_config(io, Configuration::default())
+}
+
+fn setup_engine_with_config(
+    io: &LanguageServerTestIO,
+    config: Configuration,
+) -> LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO> {
     LanguageServerEngine::new(
         PackageConfig::default(),
         io.clone(),
         FileSystemProxy::new(io.clone()),
         io.paths.clone(),
+        Arc::new(RwLock::new(config)),
     )
     .unwrap()
 }

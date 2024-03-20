@@ -1,6 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr, TypedPattern,
+        Arg, AssignName, Definition, Function, Import, ModuleConstant, TypedDefinition, TypedExpr,
+        TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -15,13 +16,20 @@ use crate::{
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
-use lsp::CodeAction;
-use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
+use im::HashMap;
+use itertools::Itertools;
+use lsp_types::{
+    self as lsp, CodeAction, Hover, HoverContents, InlayHint, MarkedString, Position, Url,
+};
 use std::sync::Arc;
 use strum::IntoEnumIterator;
 
 use super::{
-    code_action::CodeActionBuilder, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+    code_action::CodeActionBuilder,
+    configuration::{InlayHintsConfig, SharedConfig},
+    src_span_to_lsp_range,
+    type_annotations::TypeAnnotations,
+    DownloadDependencies, MakeLocker,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -59,6 +67,9 @@ pub struct LanguageServerEngine<IO, Reporter> {
     /// Used to know if to show the "View on HexDocs" link
     /// when hovering on an imported value
     hex_deps: std::collections::HashSet<EcoString>,
+
+    /// Configuration the user has set in their editor.
+    pub(crate) user_config: SharedConfig,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -78,6 +89,7 @@ where
         progress_reporter: Reporter,
         io: FileSystemProxy<IO>,
         paths: ProjectPaths,
+        user_config: SharedConfig,
     ) -> Result<Self> {
         let locker = io.inner().make_locker(&paths, config.target)?;
 
@@ -113,6 +125,7 @@ where
             compiler,
             paths,
             hex_deps,
+            user_config,
         })
     }
 
@@ -229,7 +242,17 @@ where
                 return Ok(None);
             };
 
+            let type_qualifiers = get_type_qualifiers(module);
+            let module_qualifiers = get_module_qualifiers(module);
+
             code_action_unused_imports(module, &params, &mut actions);
+            code_action_annotate_types(
+                module,
+                &params,
+                &mut actions,
+                &type_qualifiers,
+                &module_qualifiers,
+            );
 
             Ok(if actions.is_empty() {
                 None
@@ -292,29 +315,15 @@ where
         })
     }
 
-    fn module_node_at_position(
-        &self,
-        params: &lsp::TextDocumentPositionParams,
-        module: &'a Module,
-    ) -> Option<(LineNumbers, Located<'a>)> {
-        let line_numbers = LineNumbers::new(&module.code);
-        let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
-        let node = module.find_node(byte_index);
-        let node = node?;
-        Some((line_numbers, node))
-    }
-
     fn node_at_position(
         &self,
         params: &lsp::TextDocumentPositionParams,
     ) -> Option<(LineNumbers, Located<'_>)> {
         let module = self.module_for_uri(&params.text_document.uri)?;
-        self.module_node_at_position(params, module)
+        module_node_at_position(&params.position, module)
     }
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
-        use itertools::Itertools;
-
         // The to_file_path method is available on these platforms
         #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
         let path = uri.to_file_path().expect("URL file");
@@ -427,6 +436,82 @@ where
 
         completions
     }
+
+    pub fn inlay_hint(&mut self, params: lsp::InlayHintParams) -> Response<Vec<InlayHint>> {
+        self.respond(|this| {
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(vec![]);
+            };
+            let line_numbers = LineNumbers::new(&module.code);
+            let mut hints = vec![];
+            let requested_range = line_numbers.src_span(params.range);
+
+            let type_qualifiers = get_type_qualifiers(module);
+            let module_qualifiers = get_module_qualifiers(module);
+
+            let config = this.user_config.read().expect("lock is poisoned");
+            add_hints_for_definitions(
+                &config.inlay_hints,
+                module.ast.definitions.iter().filter(|stmt| {
+                    // Only consider definitions in the requested range
+                    requested_range.overlaps(&stmt.location())
+                }),
+                &line_numbers,
+                &mut hints,
+                &type_qualifiers,
+                &module_qualifiers,
+            );
+
+            Ok(hints)
+        })
+    }
+}
+
+// Given a module, returns a hashMap mapping from module`.`type  to qualified_name
+// eg: import mod1.{type Value as V1} => key: mod1.Value, value: V1
+fn get_type_qualifiers(module: &Module) -> HashMap<EcoString, EcoString> {
+    let mut type_qualifiers = HashMap::new();
+    for def in &module.ast.definitions {
+        if let Definition::Import(import) = def {
+            for unqualified_type in &import.unqualified_types {
+                let _ = unqualified_type.as_name.as_ref().map(|elem| {
+                    let module_name = import
+                        .used_name()
+                        .map_or(import.module.clone(), |used_name| used_name.clone());
+                    type_qualifiers.insert(
+                        module_name + "." + unqualified_type.name.clone(),
+                        elem.clone(),
+                    )
+                });
+            }
+        }
+    }
+    type_qualifiers
+}
+
+// Given a module, returns a hashMap mapping between module names and qualified names
+// eg: import mod1 as m => key: mod1, value: m
+fn get_module_qualifiers(module: &Module) -> HashMap<EcoString, EcoString> {
+    let mut module_qualifiers = HashMap::new();
+    for def in &module.ast.definitions {
+        if let Definition::Import(import) = def {
+            if let Some((AssignName::Variable(v), _)) = &import.as_name {
+                let _ = module_qualifiers.insert(import.module.clone(), v.clone());
+            }
+        }
+    }
+    module_qualifiers
+}
+
+fn module_node_at_position<'a>(
+    position: &Position,
+    module: &'a Module,
+) -> Option<(LineNumbers, Located<'a>)> {
+    let line_numbers = LineNumbers::new(&module.code);
+    let byte_index = line_numbers.byte_index(position.line, position.character);
+    let node = module.find_node(byte_index);
+    let node = node?;
+    Some((line_numbers, node))
 }
 
 fn type_completion(
@@ -677,4 +762,68 @@ fn get_hexdocs_link_section(
 
     let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
     Some(format!("\nView on [HexDocs]({link})"))
+}
+
+fn code_action_annotate_types(
+    module: &Module,
+    params: &lsp::CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+    type_qualifiers: &HashMap<EcoString, EcoString>,
+    module_qualifiers: &HashMap<EcoString, EcoString>,
+) {
+    let uri = &params.text_document.uri;
+    let Some((line_numbers, located)) = module_node_at_position(&params.range.start, module) else {
+        return;
+    };
+
+    match located {
+        Located::ModuleStatement(Definition::Function(function)) => {
+            if let Some(annotation) = TypeAnnotations::from_function_definition(
+                function,
+                &line_numbers,
+                type_qualifiers,
+                module_qualifiers,
+            )
+            .into_code_action(uri)
+            {
+                annotation.push_to(actions)
+            }
+        }
+        Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
+            if let Some(annotation) =
+                TypeAnnotations::from_module_constant(constant, &line_numbers).into_code_action(uri)
+            {
+                annotation.push_to(actions)
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Collect inlay hints for top level definitions such as functions and constants.
+fn add_hints_for_definitions<'a>(
+    config: &InlayHintsConfig,
+    definitions: impl Iterator<Item = &'a TypedDefinition>,
+    line_numbers: &LineNumbers,
+    hints: &mut Vec<InlayHint>,
+    type_qualifiers: &HashMap<EcoString, EcoString>,
+    module_qualifiers: &HashMap<EcoString, EcoString>,
+) {
+    for def in definitions {
+        match def {
+            Definition::Function(function) if config.function_definitions => hints.extend(
+                TypeAnnotations::from_function_definition(
+                    function,
+                    line_numbers,
+                    type_qualifiers,
+                    module_qualifiers,
+                )
+                .into_inlay_hints(),
+            ),
+            Definition::ModuleConstant(constant) if config.module_constants => hints.extend(
+                TypeAnnotations::from_module_constant(constant, line_numbers).into_inlay_hints(),
+            ),
+            _ => {}
+        }
+    }
 }

@@ -14,8 +14,8 @@ use crate::{
 use debug_ignore::DebugIgnore;
 use lsp::{
     notification::{DidChangeWatchedFiles, DidOpenTextDocument},
-    request::GotoDefinition,
-    HoverProviderCapability, Position, Range, TextEdit, Url,
+    request::{GotoDefinition, InlayHintRequest},
+    ConfigurationItem, HoverProviderCapability, Position, Range, TextEdit, Url,
 };
 use lsp_types::{
     self as lsp,
@@ -28,7 +28,11 @@ use std::collections::HashMap;
 
 use camino::Utf8PathBuf;
 
-use super::progress::ConnectionProgressReporter;
+use super::{
+    configuration::{Configuration, SharedConfig},
+    progress::ConnectionProgressReporter,
+};
+use lsp_server::RequestId;
 
 /// This class is responsible for handling the language server protocol and
 /// delegating the work to the engine.
@@ -47,6 +51,9 @@ pub struct LanguageServer<'a, IO> {
     outside_of_project_feedback: FeedbackBookKeeper,
     router: Router<IO, ConnectionProgressReporter<'a>>,
     io: FileSystemProxy<IO>,
+    next_request_id: i32,
+    response_handlers: HashMap<RequestId, ResponseHandler>,
+    config: SharedConfig,
 }
 
 impl<'a, IO> LanguageServer<'a, IO>
@@ -62,18 +69,24 @@ where
         let initialise_params = initialisation_handshake(connection);
         let reporter = ConnectionProgressReporter::new(connection, &initialise_params);
         let io = FileSystemProxy::new(io);
-        let router = Router::new(reporter, io.clone());
+        let config = SharedConfig::default();
+        let router = Router::new(reporter, io.clone(), config.clone());
         Ok(Self {
             connection: connection.into(),
             initialise_params,
             outside_of_project_feedback: FeedbackBookKeeper::default(),
             router,
             io,
+            next_request_id: 1,
+            response_handlers: Default::default(),
+            config,
         })
     }
 
     pub fn run(&mut self) -> Result<()> {
         self.start_watching_gleam_toml();
+        self.start_watching_configuration();
+        self.request_configuration();
 
         // Enter the message loop, handling each message that comes in from the client
         for message in &self.connection.receiver {
@@ -100,7 +113,14 @@ where
                 Next::Continue
             }
 
-            lsp_server::Message::Response(_) => Next::Continue,
+            lsp_server::Message::Response(response) => {
+                if let Some(handler) = self.response_handlers.remove(&response.id) {
+                    if let Some(result) = response.result {
+                        self.handle_response(handler, result)
+                    }
+                }
+                Next::Continue
+            }
         }
     }
 
@@ -136,6 +156,11 @@ where
             "textDocument/codeAction" => {
                 let params = cast_request::<CodeActionRequest>(request);
                 self.code_action(params)
+            }
+
+            "textDocument/inlayHint" => {
+                let params = cast_request::<InlayHintRequest>(request);
+                self.inlay_hint(params)
             }
 
             name => panic!("Unsupported LSP request {}", name),
@@ -181,10 +206,43 @@ where
                 self.watched_files_changed(params)
             }
 
+            "workspace/didChangeConfiguration" => {
+                self.request_configuration();
+                Feedback::default()
+            }
+
             _ => return,
         };
 
         self.publish_feedback(feedback);
+    }
+
+    fn handle_response(&mut self, handler: ResponseHandler, result: Json) {
+        match handler {
+            ResponseHandler::UpdateConfiguration => self.configuration_update_received(result),
+        }
+    }
+
+    fn request(
+        &mut self,
+        method: impl Into<String>,
+        params: impl serde::Serialize,
+        handler: Option<ResponseHandler>,
+    ) {
+        let id = self.next_request_id;
+        self.next_request_id += 1;
+        let request = lsp_server::Request {
+            id: id.into(),
+            method: method.into(),
+            params: serde_json::value::to_value(params).expect("serialisation should never fail"),
+        };
+        if let Some(handler) = handler {
+            _ = self.response_handlers.insert(id.into(), handler);
+        }
+        self.connection
+            .sender
+            .send(lsp_server::Message::Request(request))
+            .expect("should send request");
     }
 
     fn publish_feedback(&self, feedback: Feedback) {
@@ -248,18 +306,42 @@ where
                 .expect("workspace/didChangeWatchedFiles to json"),
             ),
         };
-        let request = lsp_server::Request {
-            id: 1.into(),
-            method: "client/registerCapability".into(),
-            params: serde_json::value::to_value(lsp::RegistrationParams {
+        self.request(
+            "client/registerCapability",
+            lsp::RegistrationParams {
                 registrations: vec![watch_config],
-            })
-            .expect("client/registerCapability to json"),
+            },
+            None,
+        );
+    }
+
+    fn start_watching_configuration(&mut self) {
+        let supports_configuration = self
+            .initialise_params
+            .capabilities
+            .workspace
+            .as_ref()
+            .and_then(|w| w.did_change_configuration)
+            .map(|wf| wf.dynamic_registration == Some(true))
+            .unwrap_or(false);
+
+        if !supports_configuration {
+            tracing::warn!("lsp_client_cannot_watch_configuration");
+            return;
+        }
+
+        let watch_config = lsp::Registration {
+            id: "watch-configuration".into(),
+            method: "workspace/didChangeConfiguration".into(),
+            register_options: None,
         };
-        self.connection
-            .sender
-            .send(lsp_server::Message::Request(request))
-            .expect("send client/registerCapability");
+        self.request(
+            "client/registerCapability",
+            lsp::RegistrationParams {
+                registrations: vec![watch_config],
+            },
+            None,
+        );
     }
 
     fn publish_messages(&self, messages: Vec<Diagnostic>) {
@@ -382,6 +464,11 @@ where
         self.respond_with_engine(path, |engine| engine.action(params))
     }
 
+    fn inlay_hint(&mut self, params: lsp::InlayHintParams) -> (Json, Feedback) {
+        let path = path(&params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.inlay_hint(params))
+    }
+
     /// A file opened in the editor may be unsaved, so store a copy of the
     /// new content in memory and compile.
     fn text_document_did_open(&mut self, params: lsp::DidOpenTextDocumentParams) -> Feedback {
@@ -444,6 +531,46 @@ where
         self.router.delete_engine_for_path(&path);
         self.notified_with_engine(path, LanguageServerEngine::compile_please)
     }
+
+    fn request_configuration(&mut self) {
+        let supports_configuration = self
+            .initialise_params
+            .capabilities
+            .workspace
+            .as_ref()
+            .and_then(|w| w.configuration)
+            .unwrap_or(false);
+
+        if !supports_configuration {
+            tracing::warn!("lsp_client_cannot_request_configuration");
+            return;
+        }
+
+        self.request(
+            "workspace/configuration",
+            lsp::ConfigurationParams {
+                items: vec![ConfigurationItem {
+                    scope_uri: None,
+                    section: Some("gleam".into()),
+                }],
+            },
+            Some(ResponseHandler::UpdateConfiguration),
+        )
+    }
+
+    /// Response handler for the `workspace/configuration` request
+    fn configuration_update_received(&mut self, result: Json) {
+        let configs = match serde_json::from_value::<Vec<Configuration>>(result) {
+            Ok(result) => result,
+            Err(err) => panic!("unable to parse configuration: {err}"),
+        };
+
+        // We only requested one configuration item, so we only pick out one
+        if let Some(new_config) = configs.into_iter().next() {
+            let mut config = self.config.write().expect("lock is poisoned");
+            *config = new_config;
+        }
+    }
 }
 
 fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializeParams {
@@ -499,7 +626,7 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         experimental: None,
         position_encoding: None,
         inline_value_provider: None,
-        inlay_hint_provider: None,
+        inlay_hint_provider: Some(lsp::OneOf::Left(true)),
         diagnostic_provider: None,
     };
     let server_capabilities_json =
@@ -592,6 +719,11 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
         }
         None => vec![main],
     }
+}
+
+#[derive(Debug)]
+enum ResponseHandler {
+    UpdateConfiguration,
 }
 
 fn path_to_uri(path: Utf8PathBuf) -> Url {

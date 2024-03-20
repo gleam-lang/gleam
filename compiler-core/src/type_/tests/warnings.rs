@@ -338,7 +338,7 @@ fn unused_private_const_warnings_test() {
         "const a = 1",
         Warning::UnusedPrivateModuleConstant {
             name: "a".into(),
-            location: SrcSpan { start: 6, end: 7 },
+            location: SrcSpan { start: 0, end: 7 },
         }
     );
 }
@@ -1107,7 +1107,7 @@ fn unused_alias_warning_test() {
         "#,
         Warning::UnusedPrivateModuleConstant {
             name: "one".into(),
-            location: SrcSpan { start: 61, end: 64 },
+            location: SrcSpan { start: 55, end: 64 },
         },
         Warning::UnusedImportedModuleAlias {
             alias:"bar".into(),
@@ -1142,7 +1142,7 @@ fn unused_alias_for_duplicate_module_no_warning_for_alias_test() {
         "#,
         Warning::UnusedPrivateModuleConstant {
             name: "one".into(),
-            location: SrcSpan { start: 76, end: 79 },
+            location: SrcSpan { start: 70, end: 79 },
         },
         Warning::UnusedImportedModule {
             name: "bar".into(),

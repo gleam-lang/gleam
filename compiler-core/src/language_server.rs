@@ -1,11 +1,13 @@
 mod code_action;
 mod compiler;
+mod configuration;
 mod engine;
 mod feedback;
 mod files;
 mod progress;
 mod router;
 mod server;
+mod type_annotations;
 
 #[cfg(test)]
 mod tests;

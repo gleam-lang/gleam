@@ -245,14 +245,14 @@ where
                 self.parse_import(start)
             }
             // Module Constants
-            (Some((_, Token::Const, _)), _) => {
-                self.advance();
-                self.parse_module_const(false, &attributes)
+            (Some((start, Token::Const, _)), _) => {
+                let _ = self.next_tok();
+                self.parse_module_const(false, start, &attributes)
             }
-            (Some((_, Token::Pub, _)), Some((_, Token::Const, _))) => {
-                self.advance();
-                self.advance();
-                self.parse_module_const(true, &attributes)
+            (Some((start, Token::Pub, _)), Some((_, Token::Const, _))) => {
+                let _ = self.next_tok();
+                let _ = self.next_tok();
+                self.parse_module_const(true, start, &attributes)
             }
 
             // Function
@@ -2168,9 +2168,10 @@ where
     fn parse_module_const(
         &mut self,
         public: bool,
+        start: u32,
         attributes: &Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
-        let (start, name, end) = self.expect_name()?;
+        let (_, name, end) = self.expect_name()?;
         let documentation = self.take_documentation(start);
 
         let annotation = self.parse_type_annotation(&Token::Colon)?;

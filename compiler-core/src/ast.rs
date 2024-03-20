@@ -422,6 +422,7 @@ impl<T> Import<T> {
     }
 }
 
+pub type TypedModuleConstant = ModuleConstant<Arc<Type>, EcoString>;
 pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1110,6 +1111,13 @@ impl SrcSpan {
 
     pub fn contains(&self, byte_index: u32) -> bool {
         byte_index >= self.start && byte_index < self.end
+    }
+
+    /// Returns true if this `SrcSpan` overlaps the given `SrcSpan` in any way.
+    pub fn overlaps(&self, other: &SrcSpan) -> bool {
+        (other.start > self.start && other.start < self.end) // Is the start of other within this span
+                        || (other.end > self.start && other.end < self.end) // or is the end of other within this span
+                        || (self.start > other.start && self.end < other.end) // or is the span entirely contained within other
     }
 }
 
