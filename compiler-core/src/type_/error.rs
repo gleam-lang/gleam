@@ -479,20 +479,34 @@ pub enum Warning {
         location: SrcSpan,
     },
 
-    // This happens when someone tries to write a case expression where one of
-    // the subjects is a literal tuple, for example:
-    //
-    // ```gleam
-    // case #(wibble, wobble) { ... }
-    // ```
-    //
-    // The tuple is redundant since we could do this:
-    //
-    // ```gleam
-    // case wibble, wobble { ... }
-    // ```
-    //
+    /// This happens when someone tries to write a case expression where one of
+    /// the subjects is a literal tuple, for example:
+    ///
+    /// ```gleam
+    /// case #(wibble, wobble) { ... }
+    /// ```
+    ///
+    /// The tuple is redundant since we could do this:
+    ///
+    /// ```gleam
+    /// case wibble, wobble { ... }
+    /// ```
+    ///
     CaseMatchOnLiteralTuple {
+        location: SrcSpan,
+    },
+
+    /// This happens when someone defines an external type (with no
+    /// constructors) and marks it as opqaue:
+    ///
+    /// ```gleam
+    /// opaque type External
+    /// ```
+    ///
+    /// Since an external type already has no constructors, marking it as
+    /// opaque is redundant.
+    ///
+    OpaqueExternalType {
         location: SrcSpan,
     },
 }

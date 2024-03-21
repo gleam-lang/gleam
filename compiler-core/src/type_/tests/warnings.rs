@@ -1202,3 +1202,8 @@ fn pattern_matching_on_tuples_doesnt_raise_a_warning() {
       }"
     );
 }
+
+#[test]
+fn opaque_external_type_raises_a_warning() {
+    assert_warning!("pub opaque type External");
+}

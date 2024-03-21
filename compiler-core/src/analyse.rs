@@ -358,6 +358,8 @@ fn register_types_from_custom_type<'a>(
         parameters,
         location,
         deprecation,
+        opaque,
+        constructors,
         ..
     } = t;
     assert_unique_type_name(names, name, *location)?;
@@ -385,6 +387,15 @@ fn register_types_from_custom_type<'a>(
             typ,
         },
     )?;
+
+    if *opaque && constructors.len() == 0 {
+        environment
+            .warnings
+            .emit(type_::Warning::OpaqueExternalType {
+                location: *location,
+            });
+    }
+
     if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
     };
