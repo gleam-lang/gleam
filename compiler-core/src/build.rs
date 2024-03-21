@@ -314,7 +314,7 @@ impl<'a> Located<'a> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 pub enum Origin {
     Src,
     Test,

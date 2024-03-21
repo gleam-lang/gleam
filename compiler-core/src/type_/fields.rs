@@ -2,15 +2,16 @@ use super::Error;
 use crate::ast::{CallArg, SrcSpan};
 use ecow::EcoString;
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct FieldMap {
     pub arity: u32,
     pub fields: HashMap<EcoString, u32>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct DuplicateField;
 
 impl FieldMap {

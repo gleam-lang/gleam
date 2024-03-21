@@ -29,5 +29,6 @@
     "Untar",
     "walkdir"
   ],
-  "cSpell.language": "en,uk,en-GB,en-US"
+  "cSpell.language": "en,uk,en-GB,en-US",
+  "rust-analyzer.showUnlinkedFileNotification": false
 }

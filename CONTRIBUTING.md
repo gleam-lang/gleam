@@ -59,7 +59,7 @@ you can use for running any Gleam version or quickly obtaining a development env
 ```shell
 cargo test
 
-# Or if you have watchexec installed you can run them automatically 
+# Or if you have watchexec installed you can run them automatically
 # when files change
 make test-watch
 ```
@@ -100,17 +100,4 @@ latest stable.
 
 ```shell
 rustup upgrade stable
-```
-
-## Cap'n Proto schema
-
-The compiler uses a Cap'n Proto schema to serialize/deserialize module information.
-Occasionally, the schema needs to change. After modifying `compiler-core/schema.capnp`
-you need to to re-generate `compiler-core/generated/schema_capnp.rs`. To do that,
-[install Cap'n Proto](https://capnproto.org/install.html) and un-comment appropriate lines
-in `compiler-core/build.rs`. Then you should be able to re-generate that file with:
-
-```shell
-cd compiler-core
-cargo build
 ```

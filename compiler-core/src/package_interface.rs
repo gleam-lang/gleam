@@ -2,7 +2,7 @@ use std::{collections::HashMap, ops::Deref};
 
 use ecow::EcoString;
 use itertools::Itertools;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 mod tests;
@@ -151,7 +151,7 @@ pub struct FunctionInterface {
 }
 
 /// Informations about how a value is implemented.
-#[derive(Debug, Serialize, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct ImplementationsInterface {
     /// Set to `true` if the const/function has a pure Gleam implementation
