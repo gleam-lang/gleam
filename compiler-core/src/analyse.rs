@@ -388,7 +388,7 @@ fn register_types_from_custom_type<'a>(
         },
     )?;
 
-    if *opaque && constructors.len() == 0 {
+    if *opaque && constructors.is_empty() {
         environment
             .warnings
             .emit(type_::Warning::OpaqueExternalType {
