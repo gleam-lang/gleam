@@ -97,7 +97,7 @@ fn print<'a>(
                 Some((left_name, _)) => {
                     let name = env.next_local_var_name(left_name);
                     docvec![
-                        "<<", name.clone(), ":", left_side_string.len(),"/binary", ", ", right, "/binary>>",
+                        "<<", name.clone(), ":", left_side_string.len(), "/binary", ", ", right, "/binary>>",
                         " when ", name ," =:= ", "<<\"", left_side_string, "\">>"
                     ]
                 }

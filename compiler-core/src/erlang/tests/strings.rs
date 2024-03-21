@@ -162,6 +162,21 @@ pub fn go(x) {
     )
 }
 
+#[test]
+fn string_prefix_assignment_with_guard() {
+    assert_erl!(
+        r#"
+pub fn go(x) {
+  case x {
+    "Hello, " as greeting <> name -> greeting
+    "Hello, " as greeting <> name if name == "Dude" -> greeting <> "Mate"
+    _ -> "Unknown"
+  }
+}
+"#,
+    )
+}
+
 // https://github.com/gleam-lang/gleam/issues/2471
 #[test]
 fn string_prefix_assignment_with_multiple_subjects() {

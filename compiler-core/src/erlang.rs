@@ -1078,7 +1078,8 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
                     tuple(patterns.iter().map(|p| pattern(p, env)))
                 };
 
-                let guard = optional_clause_guard(guard.as_ref(), env);
+                let new_guard = !patterns_doc.contains_string("when");
+                let guard = optional_clause_guard(guard.as_ref(), new_guard, env);
                 if then_doc.is_none() {
                     then_doc = Some(clause_consequence(then, env));
                     end_erlang_vars = env.erl_function_scope_vars.clone();
@@ -1106,10 +1107,21 @@ fn clause_consequence<'a>(consequence: &'a TypedExpr, env: &mut Env<'a>) -> Docu
 
 fn optional_clause_guard<'a>(
     guard: Option<&'a TypedClauseGuard>,
+    new: bool,
     env: &mut Env<'a>,
 ) -> Document<'a> {
     guard
-        .map(|guard| " when ".to_doc().append(bare_clause_guard(guard, env)))
+        .map(|guard| {
+            if new {
+                " when "
+                    .to_doc()
+                    .append(bare_clause_guard(guard, env))
+            } else {
+                " andalso "
+                    .to_doc()
+                    .append(bare_clause_guard(guard, env).surround("(", ")"))
+            }
+        })
         .unwrap_or_else(nil)
 }
 
