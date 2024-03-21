@@ -7,6 +7,13 @@ pub(super) fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a
     to_doc(p, &mut vars, env)
 }
 
+pub(super) fn requires_guard<'a>(p: &'a TypedPattern) -> bool {
+    match p {
+        Pattern::StringPrefix{left_side_assignment: Some(_), ..} => true,
+        _ => false
+    }
+}
+
 fn print<'a>(
     p: &'a TypedPattern,
     vars: &mut Vec<&'a str>,
@@ -95,6 +102,15 @@ fn print<'a>(
 
             match left_side_assignment {
                 Some((left_name, _)) => {
+                    // "foo" as prefix <> rest
+                    //       ^^^^^^^^^ In case the left prefix of the pattern matching is given an alias
+                    //                 we bind it to a local variable so that it can be correctly
+                    //                 referenced inside the case branch.
+                    //
+                    // <<Prefix:3/binary, Rest/binary>> when Prefix =:= <<"foo">>
+                    //   ^^^^^^^^                       ^^^^^^^^^^^^^^^^^^^^^^^^^ since erlang's binary pattern matching doesn't allow direct string assignment to variables within the pattern,
+                    //                                                            we first match the expected prefix length in bytes, then use a guard clause to verify the content.
+                    //                                                            
                     let name = env.next_local_var_name(left_name);
                     docvec![
                         "<<", name.clone(), ":", left_side_string.len(), "/binary", ", ", right, "/binary>>",
@@ -191,3 +207,4 @@ fn pattern_list<'a>(
     let tail = tail.map(|tail| print(tail, vars, define_variables, env));
     list(elements, tail)
 }
+
