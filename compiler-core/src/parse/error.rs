@@ -223,6 +223,10 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ),
             ParseErrorType::UnknownTarget => ("I don't know what this attribute is", vec![]),
             ParseErrorType::ExpectedFunctionBody => ("This function does not have a body", vec![]),
+            ParseErrorType::RedundantInternalAttribute => ("Redundant internal attribute", vec![
+                format!("Only a public definition can be annotated as internal."),
+                "Hint: remove the `@internal` annotation.".into()
+            ]),
         }
     }
 }
@@ -276,8 +280,9 @@ pub enum ParseErrorType {
     UnexpectedFunction, // a function was used called outside of another function
     // A variable was assigned or discarded on the left hand side of a <> pattern
     ConcatPatternVariableLeftHandSide,
-    ListSpreadWithoutTail, // let x = [1, ..]
-    ExpectedFunctionBody,  // let x = fn()
+    ListSpreadWithoutTail,      // let x = [1, ..]
+    ExpectedFunctionBody,       // let x = fn()
+    RedundantInternalAttribute, // for a private definition marked as internal
 }
 
 impl LexicalError {
