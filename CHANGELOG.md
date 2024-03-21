@@ -134,7 +134,6 @@
 
 ### Build tool
 
-- The search bar in generated docs now has a darker background color.
 - If a package contains a `todo` expression then the build tool will now refuse
   to publish it to Hex.
 - `gleam export` now takes a `package-interface` option to export a json file
