@@ -251,13 +251,10 @@ jobs:
 
       - name: Install wasm-pack
         run: |
-          curl -L --output wasm-pack-init https://rustwasm.github.io/wasm-pack/installer/init.sh \
-          && chmod +x wasm-pack-init \
-          && ./wasm-pack-init \
-          && rm wasm-pack-init
+          curl -sSL https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+
       - name: Run wasm tests
-        working-directory: ./compiler-wasm
-        run: wasm-pack test --node
+        run: wasm-pack test --node compiler-wasm
 
   rustfmt:
     name: rustfmt
