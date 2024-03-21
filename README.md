@@ -37,6 +37,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/abs0luty">Adi Salimgereyev</a> -
   <a href="https://github.com/aidenfoxivey">Aiden Fox Ivey</a> -
   <a href="https://github.com/JitPackJoyride">Ajit Krishna</a> -
+  <a href="https://github.com/aldrin-ronco">aldrin-ronco</a> -
   <a href="https://alembic.com.au">Alembic</a> -
   <a href="https://github.com/rawhat">Alex Manning</a> -
   <a href="https://github.com/akoutmos">Alexander Koutmos</a> -
@@ -82,6 +83,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/ddresselhaus">Dan Dresselhaus</a> -
   <a href="https://github.com/DanielleMaywood">Danielle Maywood</a> -
   <a href="https://github.com/despairblue">Danny Martini</a> -
+  <a href="https://github.com/dar5hak">Darshak Parikh</a> -
   <a href="https://github.com/davydog187">Dave Lucia</a> -
   <a href="https://github.com/dbernheisel">David Bernheisel</a> -
   <a href="https://github.com/rawkode">David Flanagan</a> -
@@ -156,6 +158,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/vitlinda">Linda Vitali</a> -
   <a href="https://github.com/wowi42">Loïc Tosser</a> -
   <a href="https://github.com/lpetic">Lucian Petic</a> -
+  <a href="https://github.com/leopoldhub">Léopold Hubert</a> -
   <a href="https://github.com/manuel-rubio">Manuel Rubio</a> -
   <a href="https://github.com/ideaMarcos">Marcøs</a> -
   <a href="https://github.com/AYM1607">Mariano Uvalle</a> -
@@ -180,6 +183,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/n8nio">n8n - Workflow Automation</a> -
   <a href="https://github.com/natanaelsirqueira">Natanael Sirqueira</a> -
   <a href="https://github.com/nathanielknight">Nathaniel Knight</a> -
+  <a href="https://github.com/Kuuuuuuuu">Nayuki</a> -
   <a href="https://github.com/NFIBrokerage">NFIBrokerage</a> -
   <a href="https://github.com/ndreynolds">Nick Reynolds</a> -
   <a href="https://github.com/NicklasXYZ">Nicklas Sindlev Andersen</a> -
