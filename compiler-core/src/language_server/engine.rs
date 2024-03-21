@@ -45,7 +45,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
 
     /// A compiler for the project that supports repeat compilation of the root
     /// package.
-    /// In the event the the project config changes this will need to be
+    /// In the event the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
     pub(crate) compiler: LspProjectCompiler<FileSystemProxy<IO>>,
 
