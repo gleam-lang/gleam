@@ -41,6 +41,8 @@
 - Fixed a bug where the formatter would move comments from the end of bounded
   expressions like lists, tuples, case expressions or function calls.
 - Fixed a bug where a record update's arguments would not be indented correctly.
+- Fixed a bug where function call arguments, tuple items and list items would be
+  needlessly indented if preceded by a comment.
 
 ### Build tool
 
