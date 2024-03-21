@@ -1235,7 +1235,13 @@ Hint: Add some type annotations and try again."
 
                     match variants {
                         RecordVariants::HasVariants => {
-                            text.push_str("\n\nNote: The field you are trying to access might not be consistently present or positioned across the custom type's variants, preventing reliable access. Ensure the field exists in the same position and has the same type in all variants to enable direct accessor syntax.");
+                            let msg = wrap("Note: The field you are trying to \
+access might not be consistently present or positioned across the custom \
+type's variants, preventing reliable access. Ensure the field exists in the \
+same position and has the same type in all variants to enable direct accessor syntax.",
+                            );
+                            text.push_str("\n\n");
+                            text.push_str(&msg);
                         }
                         RecordVariants::NoVariants => ()
                     }
