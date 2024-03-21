@@ -358,6 +358,8 @@ fn register_types_from_custom_type<'a>(
         parameters,
         location,
         deprecation,
+        opaque,
+        constructors,
         ..
     } = t;
     assert_unique_type_name(names, name, *location)?;
@@ -385,6 +387,15 @@ fn register_types_from_custom_type<'a>(
             typ,
         },
     )?;
+
+    if *opaque && constructors.is_empty() {
+        environment
+            .warnings
+            .emit(type_::Warning::OpaqueExternalType {
+                location: *location,
+            });
+    }
+
     if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
     };
@@ -736,7 +747,7 @@ fn infer_function(
     }))
 }
 
-/// Returns the the module name and function name of the implementation of a
+/// Returns the module name and function name of the implementation of a
 /// function. If the function is implemented as a Gleam function then it is the
 /// same as the name of the module and function. If the function has an external
 /// implementation then it is the name of the external module and function.

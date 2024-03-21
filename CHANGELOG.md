@@ -34,6 +34,8 @@
 - Error messages are more clear about expecting values instead of types.
 - Fixed a bug where pattern matching on a string would cause the program to
   crash on the JavaScript target.
+- Allow compilation of packages that require `"rebar"` using the rebar3 compiler.
+- A warning is now emitted when defining an opaque external type.
 
 ### Formatter
 
@@ -41,6 +43,8 @@
 - Fixed a bug where the formatter would move comments from the end of bounded
   expressions like lists, tuples, case expressions or function calls.
 - Fixed a bug where a record update's arguments would not be indented correctly.
+- Fixed a bug where function call arguments, tuple items and list items would be
+  needlessly indented if preceded by a comment.
 
 ### Build tool
 
@@ -62,6 +66,7 @@
 - Terminal colors can now be forced by setting the `FORCE_COLOR` environment
   variable to any non-empty value.
 - Rust's Reqwest's `webpki-roots` are now used for TLS verification.
+- Update Deno config to allow passing `--location` runtime flag.
 
 ### Language Server
 
@@ -86,6 +91,7 @@
   documentation.
 - Fixed a bug where the `export package interface` command would always
   recompile the project ignoring the cache.
+
 
 ## v1.0.0-rc2 - 2024-02-14
 

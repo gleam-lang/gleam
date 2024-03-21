@@ -635,6 +635,7 @@ pub(crate) fn usable_build_tools(package: &ManifestPackage) -> Result<Vec<BuildT
     for tool in &package.build_tools {
         match tool.as_str() {
             "gleam" => return Ok(vec![BuildTool::Gleam]),
+            "rebar" => rebar3_present = true,
             "rebar3" => rebar3_present = true,
             "mix" => mix_present = true,
             _ => (),

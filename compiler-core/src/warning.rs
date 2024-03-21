@@ -617,6 +617,21 @@ the same values.\n"
                         extra_labels: Vec::new(),
                     }),
                 },
+                type_::Warning::OpaqueExternalType { location } => Diagnostic {
+                    title: "Opaque external type".into(),
+                    text: "This type has no constructors so making it opaque is redundant.".into(),
+                    hint: Some("Remove the `opaque` qualifier from the type definition.".into()),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
             },
         }
     }

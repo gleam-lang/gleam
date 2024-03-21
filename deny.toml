@@ -1,20 +1,13 @@
-targets = []
-
 # https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
 [advisories]
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
-vulnerability = "deny"
-unmaintained = "deny"
-yanked = "deny"
-notice = "deny"
 ignore = [
     "RUSTSEC-2021-0145"
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
-unlicensed = "deny"
 allow = [
     "MIT",
     "Apache-2.0",
@@ -26,7 +19,6 @@ allow = [
     "Unicode-DFS-2016",
     "BSL-1.0",
 ]
-default = "deny"
 confidence-threshold = 0.8
 
 [[licenses.clarify]]

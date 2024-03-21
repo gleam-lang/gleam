@@ -48,13 +48,23 @@ where
         }
     }
 
+    pub fn project_path(&self, path: &Utf8Path) -> Option<Utf8PathBuf> {
+        find_gleam_project_parent(&self.io, path)
+    }
+
     pub fn project_for_path(
         &mut self,
-        path: &Utf8Path,
+        path: Utf8PathBuf,
     ) -> Result<Option<&mut Project<IO, Reporter>>> {
-        let path = match find_gleam_project_parent(&self.io, path) {
-            Some(x) => x,
-            None => return Ok(None),
+        // If the path is the root of a known project then return it. Otherwise
+        // find the nearest parent project.
+        let path = if self.engines.contains_key(&path) {
+            path
+        } else {
+            let Some(path) = find_gleam_project_parent(&self.io, &path) else {
+                return Ok(None);
+            };
+            path
         };
 
         let entry = match self.engines.entry(path.clone()) {

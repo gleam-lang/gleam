@@ -1,3 +1,7 @@
+use super::{
+    messages::{Message, MessageBuffer, Next, Notification, Request},
+    progress::ConnectionProgressReporter,
+};
 use crate::{
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -11,24 +15,14 @@ use crate::{
     line_numbers::LineNumbers,
     Result,
 };
+use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
-use lsp::{
-    notification::{DidChangeWatchedFiles, DidOpenTextDocument},
-    request::GotoDefinition,
-    HoverProviderCapability, Position, Range, TextEdit, Url,
-};
 use lsp_types::{
-    self as lsp,
-    notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
-    request::{CodeActionRequest, Completion, Formatting, HoverRequest},
-    InitializeParams, PublishDiagnosticsParams,
+    self as lsp, HoverProviderCapability, InitializeParams, Position, PublishDiagnosticsParams,
+    Range, TextEdit, Url,
 };
 use serde_json::Value as Json;
-use std::collections::HashMap;
-
-use camino::Utf8PathBuf;
-
-use super::progress::ConnectionProgressReporter;
+use std::collections::{HashMap, HashSet};
 
 /// This class is responsible for handling the language server protocol and
 /// delegating the work to the engine.
@@ -46,6 +40,7 @@ pub struct LanguageServer<'a, IO> {
     connection: DebugIgnore<&'a lsp_server::Connection>,
     outside_of_project_feedback: FeedbackBookKeeper,
     router: Router<IO, ConnectionProgressReporter<'a>>,
+    changed_projects: HashSet<Utf8PathBuf>,
     io: FileSystemProxy<IO>,
 }
 
@@ -66,6 +61,7 @@ where
         Ok(Self {
             connection: connection.into(),
             initialise_params,
+            changed_projects: HashSet::new(),
             outside_of_project_feedback: FeedbackBookKeeper::default(),
             router,
             io,
@@ -74,71 +70,37 @@ where
 
     pub fn run(&mut self) -> Result<()> {
         self.start_watching_gleam_toml();
+        let mut buffer = MessageBuffer::new();
 
-        // Enter the message loop, handling each message that comes in from the client
-        for message in &self.connection.receiver {
-            match self.handle_message(message) {
-                Next::Continue => (),
-                Next::Break => break,
+        loop {
+            match buffer.receive(*self.connection) {
+                Next::Stop => break,
+                Next::MorePlease => (),
+                Next::Handle(messages) => {
+                    for message in messages {
+                        self.handle_message(message);
+                    }
+                }
             }
         }
 
         Ok(())
     }
 
-    fn handle_message(&mut self, message: lsp_server::Message) -> Next {
+    fn handle_message(&mut self, message: Message) {
         match message {
-            lsp_server::Message::Request(request) if self.handle_shutdown(&request) => Next::Break,
-
-            lsp_server::Message::Request(request) => {
-                self.handle_request(request);
-                Next::Continue
-            }
-
-            lsp_server::Message::Notification(notification) => {
-                self.handle_notification(notification);
-                Next::Continue
-            }
-
-            lsp_server::Message::Response(_) => Next::Continue,
+            Message::Request(id, request) => self.handle_request(id, request),
+            Message::Notification(notification) => self.handle_notification(notification),
         }
     }
 
-    fn handle_shutdown(&mut self, request: &lsp_server::Request) -> bool {
-        self.connection
-            .handle_shutdown(request)
-            .expect("LSP shutdown")
-    }
-
-    fn handle_request(&mut self, request: lsp_server::Request) {
-        let id = request.id.clone();
-        let (payload, feedback) = match request.method.as_str() {
-            "textDocument/formatting" => {
-                let params = cast_request::<Formatting>(request);
-                self.format(params)
-            }
-
-            "textDocument/hover" => {
-                let params = cast_request::<HoverRequest>(request);
-                self.hover(params)
-            }
-
-            "textDocument/definition" => {
-                let params = cast_request::<GotoDefinition>(request);
-                self.goto_definition(params)
-            }
-
-            "textDocument/completion" => {
-                let params = cast_request::<Completion>(request);
-                self.completion(params)
-            }
-
-            "textDocument/codeAction" => {
-                let params = cast_request::<CodeActionRequest>(request);
-                self.code_action(params)
-            }
-
-            name => panic!("Unsupported LSP request {}", name),
+    fn handle_request(&mut self, id: lsp_server::RequestId, request: Request) {
+        let (payload, feedback) = match request {
+            Request::Format(param) => self.format(param),
+            Request::Hover(param) => self.hover(param),
+            Request::GoToDefinition(param) => self.goto_definition(param),
+            Request::Completion(param) => self.completion(param),
+            Request::CodeAction(param) => self.code_action(param),
         };
 
         self.publish_feedback(feedback);
@@ -154,36 +116,15 @@ where
             .expect("channel send LSP response")
     }
 
-    fn handle_notification(&mut self, notification: lsp_server::Notification) {
-        let feedback = match notification.method.as_str() {
-            "textDocument/didOpen" => {
-                let params = cast_notification::<DidOpenTextDocument>(notification);
-                self.text_document_did_open(params)
+    fn handle_notification(&mut self, notification: Notification) {
+        let feedback = match notification {
+            Notification::CompilePlease => self.compile_please(),
+            Notification::SourceFileMatchesDisc { path } => self.discard_in_memory_cache(path),
+            Notification::SourceFileChangedInMemory { path, text } => {
+                self.cache_file_in_memory(path, text)
             }
-
-            "textDocument/didSave" => {
-                let params = cast_notification::<DidSaveTextDocument>(notification);
-                self.text_document_did_save(params)
-            }
-
-            "textDocument/didClose" => {
-                let params = cast_notification::<DidCloseTextDocument>(notification);
-                self.text_document_did_close(params)
-            }
-
-            "textDocument/didChange" => {
-                let params = cast_notification::<DidChangeTextDocument>(notification);
-                self.text_document_did_change(params)
-            }
-
-            "workspace/didChangeWatchedFiles" => {
-                let params = cast_notification::<DidChangeWatchedFiles>(notification);
-                self.watched_files_changed(params)
-            }
-
-            _ => return,
+            Notification::ConfigFileChanged { path } => self.watched_files_changed(path),
         };
-
         self.publish_feedback(feedback);
     }
 
@@ -293,7 +234,7 @@ where
             &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
         ) -> engine::Response<T>,
     {
-        match self.router.project_for_path(&path) {
+        match self.router.project_for_path(path) {
             Ok(Some(project)) => {
                 let engine::Response {
                     result,
@@ -319,21 +260,11 @@ where
         }
     }
 
-    fn notified_with_engine(
-        &mut self,
-        path: Utf8PathBuf,
-        handler: impl FnOnce(
-            &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
-        ) -> engine::Response<()>,
-    ) -> Feedback {
-        self.respond_with_engine(path, handler).1
-    }
-
     fn format(&mut self, params: lsp::DocumentFormattingParams) -> (Json, Feedback) {
-        let path = path(&params.text_document.uri);
+        let path = super::path(&params.text_document.uri);
         let mut new_text = String::new();
         let mut error_response = |error| {
-            let feedback = match self.router.project_for_path(&path) {
+            let feedback = match self.router.project_for_path(path.clone()) {
                 Ok(Some(project)) => project.feedback.error(error),
                 Ok(None) | Err(_) => self.outside_of_project_feedback.error(error),
             };
@@ -361,88 +292,63 @@ where
     }
 
     fn hover(&mut self, params: lsp::HoverParams) -> (Json, Feedback) {
-        let path = path(&params.text_document_position_params.text_document.uri);
+        let path = super::path(&params.text_document_position_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.hover(params))
     }
 
     fn goto_definition(&mut self, params: lsp::GotoDefinitionParams) -> (Json, Feedback) {
-        let path = path(&params.text_document_position_params.text_document.uri);
+        let path = super::path(&params.text_document_position_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.goto_definition(params))
     }
 
     fn completion(&mut self, params: lsp::CompletionParams) -> (Json, Feedback) {
-        let path = path(&params.text_document_position.text_document.uri);
+        let path = super::path(&params.text_document_position.text_document.uri);
         self.respond_with_engine(path, |engine| {
             engine.completion(params.text_document_position)
         })
     }
 
     fn code_action(&mut self, params: lsp::CodeActionParams) -> (Json, Feedback) {
-        let path = path(&params.text_document.uri);
+        let path = super::path(&params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.action(params))
     }
 
-    /// A file opened in the editor may be unsaved, so store a copy of the
-    /// new content in memory and compile.
-    fn text_document_did_open(&mut self, params: lsp::DidOpenTextDocumentParams) -> Feedback {
-        let path = path(&params.text_document.uri);
-        if let Err(error) = self.io.write_mem_cache(&path, &params.text_document.text) {
+    fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
+        self.project_changed(&path);
+        if let Err(error) = self.io.write_mem_cache(&path, &text) {
             return self.outside_of_project_feedback.error(error);
         }
-
-        self.notified_with_engine(path, |engine| engine.compile_please())
+        Feedback::none()
     }
 
-    fn text_document_did_save(&mut self, params: lsp::DidSaveTextDocumentParams) -> Feedback {
-        let path = path(&params.text_document.uri);
-
-        // The file is in sync with the file system, discard our cache of the changes
+    fn discard_in_memory_cache(&mut self, path: Utf8PathBuf) -> Feedback {
+        self.project_changed(&path);
         if let Err(error) = self.io.delete_mem_cache(&path) {
             return self.outside_of_project_feedback.error(error);
         }
-
-        // The files on disc have changed, so compile the project with the new changes
-        self.notified_with_engine(path, |engine| engine.compile_please())
+        Feedback::none()
     }
 
-    fn text_document_did_close(&mut self, params: lsp::DidCloseTextDocumentParams) -> Feedback {
-        let path = path(&params.text_document.uri);
-
-        // The file is in sync with the file system, discard our cache of the changes
-        if let Err(error) = self.io.delete_mem_cache(&path) {
-            return self.outside_of_project_feedback.error(error);
-        }
-
-        Feedback::default()
-    }
-
-    /// A file has changed in the editor, so store a copy of the new content in
-    /// memory and compile.
-    fn text_document_did_change(&mut self, params: lsp::DidChangeTextDocumentParams) -> Feedback {
-        let path = path(&params.text_document.uri);
-
-        let changes = match params.content_changes.into_iter().last() {
-            Some(changes) => changes,
-            None => return Feedback::default(),
-        };
-
-        if let Err(error) = self.io.write_mem_cache(&path, changes.text.as_str()) {
-            return self.outside_of_project_feedback.error(error);
-        }
-
-        // The files on disc have changed, so compile the project with the new changes
-        self.notified_with_engine(path, |engine| engine.compile_please())
-    }
-
-    fn watched_files_changed(&mut self, params: lsp::DidChangeWatchedFilesParams) -> Feedback {
-        let changes = match params.changes.into_iter().last() {
-            Some(changes) => changes,
-            None => return Feedback::default(),
-        };
-
-        let path = path(&changes.uri);
+    fn watched_files_changed(&mut self, path: Utf8PathBuf) -> Feedback {
         self.router.delete_engine_for_path(&path);
-        self.notified_with_engine(path, LanguageServerEngine::compile_please)
+        Feedback::none()
+    }
+
+    fn compile_please(&mut self) -> Feedback {
+        let mut accumulator = Feedback::none();
+        let projects = std::mem::take(&mut self.changed_projects);
+        for path in projects {
+            let (_, feedback) = self.respond_with_engine(path, |e| e.compile_please());
+            accumulator.append_feedback(feedback);
+        }
+        accumulator
+    }
+
+    fn project_changed(&mut self, path: &Utf8Path) {
+        let project_path = self.router.project_path(path);
+        if let Some(project_path) = project_path {
+            _ = self.changed_projects.insert(project_path);
+        }
     }
 }
 
@@ -512,31 +418,6 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
     initialise_params
 }
 
-#[derive(Debug, Clone, Copy)]
-enum Next {
-    Continue,
-    Break,
-}
-
-fn cast_request<R>(request: lsp_server::Request) -> R::Params
-where
-    R: lsp::request::Request,
-    R::Params: serde::de::DeserializeOwned,
-{
-    let (_, params) = request.extract(R::METHOD).expect("cast request");
-    params
-}
-
-fn cast_notification<N>(notification: lsp_server::Notification) -> N::Params
-where
-    N: lsp::notification::Notification,
-    N::Params: serde::de::DeserializeOwned,
-{
-    notification
-        .extract::<N::Params>(N::METHOD)
-        .expect("cast notification")
-}
-
 fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
     let severity = match diagnostic.level {
         Level::Error => lsp::DiagnosticSeverity::ERROR,
@@ -598,14 +479,4 @@ fn path_to_uri(path: Utf8PathBuf) -> Url {
     let mut file: String = "file://".into();
     file.push_str(&path.as_os_str().to_string_lossy());
     Url::parse(&file).expect("path_to_uri URL parse")
-}
-
-fn path(uri: &Url) -> Utf8PathBuf {
-    // The to_file_path method is available on these platforms
-    #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
-    return Utf8PathBuf::from_path_buf(uri.to_file_path().expect("URL file"))
-        .expect("Non Utf8 Path");
-
-    #[cfg(not(any(unix, windows, target_os = "redox", target_os = "wasi")))]
-    return Utf8PathBuf::from_path_buf(uri.path().into()).expect("Non Utf8 Path");
 }

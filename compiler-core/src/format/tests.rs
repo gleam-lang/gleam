@@ -5623,3 +5623,48 @@ fn comments_are_not_moved_out_of_function_calls() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2607
+#[test]
+fn function_arguments_after_comment_are_not_indented() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(
+    // Wobble
+    1 + 1,
+    "wibble",
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2607
+#[test]
+fn tuple_items_after_comment_are_not_indented() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    // Wobble
+    1 + 1,
+    "wibble",
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2607
+#[test]
+fn list_items_after_comment_are_not_indented() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    // Wobble
+    1 + 1,
+    "wibble",
+  ]
+}
+"#
+    );
+}
