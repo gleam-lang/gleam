@@ -1044,7 +1044,14 @@ impl<'comments> Formatter<'comments> {
                 // make it easier to tell where one item ends and the other
                 // starts.
                 if elements.len() > 1 && (e.is_binop() || e.is_pipeline()) {
-                    self_.expr(e).group().nest(INDENT)
+                    // We pop the comments ourselves without relying on the default
+                    // `expression` way of commenting stuff. That's because we want to
+                    // avoid the comment block (and its newline) being indented by the
+                    // formatter. This way the comments gets added _after_ we increase
+                    // the nesting level.
+                    let comments = self_.pop_comments(e.start_byte_index());
+                    let doc = self_.expr(e).group().nest(INDENT);
+                    commented(doc, comments)
                 } else {
                     self_.expr(e).group()
                 }
@@ -1457,7 +1464,14 @@ impl<'comments> Formatter<'comments> {
             // make it easier to tell where one item ends and the other
             // starts.
             if arity > 1 && (arg.value.is_binop() || arg.value.is_pipeline()) {
-                self.expr(&arg.value).group().nest(INDENT)
+                // We pop the comments ourselves without relying on the default
+                // `expression` way of commenting stuff. That's because we want to
+                // avoid the comment block (and its newline) being indented by the
+                // formatter. This way the comments gets added _after_ we increase
+                // the nesting level.
+                let comments = self.pop_comments(arg.value.start_byte_index());
+                let doc = self.expr(&arg.value).group().nest(INDENT);
+                commented(doc, comments)
             } else {
                 self.expr(&arg.value).group()
             },
@@ -1650,7 +1664,14 @@ impl<'comments> Formatter<'comments> {
                 // make it easier to tell where one item ends and the other
                 // starts.
                 if list_size > 1 && (e.is_binop() || e.is_pipeline()) {
-                    self.expr(e).group().nest(INDENT)
+                    // We pop the comments ourselves without relying on the default
+                    // `expression` way of commenting stuff. That's because we want to
+                    // avoid the comment block (and its newline) being indented by the
+                    // formatter. This way the comments gets added _after_ we increase
+                    // the nesting level.
+                    let comments = self.pop_comments(e.start_byte_index());
+                    let doc = self.expr(e).group().nest(INDENT);
+                    commented(doc, comments)
                 } else {
                     self.expr(e).group()
                 }
