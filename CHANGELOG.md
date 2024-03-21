@@ -35,6 +35,7 @@
 - Fixed a bug where pattern matching on a string would cause the program to
   crash on the JavaScript target.
 - Allow compilation of packages that require `"rebar"` using the rebar3 compiler.
+- A warning is now emitted when defining an opaque external type.
 
 ### Formatter
 
