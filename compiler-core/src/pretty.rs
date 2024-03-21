@@ -656,18 +656,4 @@ impl<'a> Document<'a> {
             Vec(docs) => docs.iter().all(|d| d.is_empty()),
         }
     }
-
-    pub fn contains_string(&self, pattern: &str) -> bool {
-        use Document::*;
-        match self {
-            EcoString(s) => s.contains(pattern),
-            String(s) => s.contains(pattern),
-            Str(s) => s.contains(pattern),
-            // assuming `broken` and `unbroken` are equivalent
-            Break { broken, .. } => broken.contains(pattern),
-            ForceBroken(d) | Nest(_, _, _, d) | Group(d) | NextBreakFits(d, _) => d.contains_string(pattern),
-            Vec(docs) => docs.iter().any(|d| d.contains_string(pattern)),
-            _ => false
-        }
-    }
 }

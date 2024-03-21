@@ -22,7 +22,7 @@ use crate::{
 use ecow::EcoString;
 use heck::ToSnakeCase;
 use itertools::Itertools;
-use pattern::pattern;
+use pattern::{pattern,requires_guard};
 use regex::{Captures, Regex};
 use std::sync::OnceLock;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
@@ -1078,7 +1078,7 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
                     tuple(patterns.iter().map(|p| pattern(p, env)))
                 };
 
-                let new_guard = !patterns_doc.contains_string("when");
+                let new_guard = !patterns.iter().any(requires_guard);
                 let guard = optional_clause_guard(guard.as_ref(), new_guard, env);
                 if then_doc.is_none() {
                     then_doc = Some(clause_consequence(then, env));
