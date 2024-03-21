@@ -87,13 +87,20 @@ pub struct Parsed {
     pub extra: ModuleExtra,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum InternalAttribute {
+    #[default]
+    Missing,
+    Present(SrcSpan),
+}
+
 #[derive(Debug, Default)]
 struct Attributes {
     target: Option<Target>,
     deprecated: Deprecation,
     external_erlang: Option<(EcoString, EcoString)>,
     external_javascript: Option<(EcoString, EcoString)>,
-    internal: bool,
+    internal: InternalAttribute,
 }
 
 impl Attributes {
@@ -1565,7 +1572,7 @@ where
             documentation,
             location: SrcSpan { start, end },
             end_position,
-            publicity: self.publicity(public, attributes),
+            publicity: self.publicity(public, attributes.internal)?,
             name,
             arguments: args,
             body,
@@ -1582,13 +1589,19 @@ where
         })))
     }
 
-    fn publicity(&self, public: bool, attributes: &Attributes) -> Publicity {
-        if attributes.internal {
-            Publicity::Internal
-        } else if public {
-            Publicity::Public
-        } else {
-            Publicity::Private
+    fn publicity(
+        &self,
+        public: bool,
+        internal: InternalAttribute,
+    ) -> Result<Publicity, ParseError> {
+        match (internal, public) {
+            (InternalAttribute::Missing, true) => Ok(Publicity::Public),
+            (InternalAttribute::Missing, false) => Ok(Publicity::Private),
+            (InternalAttribute::Present(_), true) => Ok(Publicity::Internal),
+            (InternalAttribute::Present(location), false) => Err(ParseError {
+                error: ParseErrorType::RedundantInternalAttribute,
+                location,
+            }),
         }
     }
 
@@ -1786,7 +1799,7 @@ where
                 return Ok(Some(Definition::TypeAlias(TypeAlias {
                     documentation,
                     location: SrcSpan::new(start, type_end),
-                    publicity: self.publicity(public, attributes),
+                    publicity: self.publicity(public, attributes.internal)?,
                     alias: name,
                     parameters,
                     type_ast: t,
@@ -1803,7 +1816,7 @@ where
             documentation,
             location: SrcSpan { start, end },
             end_position,
-            publicity: self.publicity(public, attributes),
+            publicity: self.publicity(public, attributes.internal)?,
             opaque,
             name,
             parameters,
@@ -2192,7 +2205,7 @@ where
             Ok(Some(Definition::ModuleConstant(ModuleConstant {
                 documentation,
                 location: SrcSpan { start, end },
-                publicity: self.publicity(public, attributes),
+                publicity: self.publicity(public, attributes.internal)?,
                 name,
                 annotation,
                 value: Box::new(value),
@@ -2985,14 +2998,18 @@ where
         end: u32,
         attributes: &mut Attributes,
     ) -> Result<u32, ParseError> {
-        // If `internal` is set to true that means that we have already run into
-        // another `@internal` annotation, so it results in a `DuplicateAttribute`
-        // error.
-        if attributes.internal {
-            return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end));
+        match attributes.internal {
+            // If `internal` is present that means that we have already run into
+            // another `@internal` annotation, so it results in a `DuplicateAttribute`
+            // error.
+            InternalAttribute::Present(_) => {
+                return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end))
+            }
+            InternalAttribute::Missing => {
+                attributes.internal = InternalAttribute::Present(SrcSpan::new(start, end));
+                Ok(end)
+            }
         }
-        attributes.internal = true;
-        Ok(end)
     }
 }
 
