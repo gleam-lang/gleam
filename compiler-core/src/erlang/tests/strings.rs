@@ -168,8 +168,8 @@ fn string_prefix_assignment_with_guard() {
         r#"
 pub fn go(x) {
   case x {
-    "Hello, " as greeting <> name -> greeting
     "Hello, " as greeting <> name if name == "Dude" -> greeting <> "Mate"
+    "Hello, " as greeting <> name -> greeting
     _ -> "Unknown"
   }
 }
