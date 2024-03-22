@@ -47,7 +47,7 @@ where
             version: root_version.clone(),
             outer_checksum: vec![],
             retirement_status: None,
-            requirements: requirements,
+            requirements,
             meta: (),
         }],
     };
