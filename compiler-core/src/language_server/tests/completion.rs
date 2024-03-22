@@ -7,9 +7,13 @@ use lsp_types::{
 use super::*;
 
 fn expression_completions(src: &str, dep: &str) -> Vec<CompletionItem> {
+    expression_completions_with_dep(src, dep, false)
+}
+
+fn expression_completions_with_dep(src: &str, dep: &str, external: bool) -> Vec<CompletionItem> {
     let src = format!("fn typing_in_here() {{\n  0\n}}\n {src}");
     let position = Position::new(1, 0);
-    positioned_expression_completions(&src, dep, position)
+    positioned_expression_completions_with_dep(&src, dep, external, position)
         .into_iter()
         .filter(|c| c.label != "typing_in_here")
         .collect_vec()
@@ -20,12 +24,32 @@ fn positioned_expression_completions(
     dep: &str,
     position: Position,
 ) -> Vec<CompletionItem> {
+    positioned_expression_completions_with_dep(src, dep, false, position)
+}
+
+/// `external` is used to tell whether the specified dependency has to be
+/// treated as coming from an external imported package or as coming from a
+/// module from the same root package.
+/// In any case `src` will be able to import it using `import dep`.
+fn positioned_expression_completions_with_dep(
+    src: &str,
+    dep: &str,
+    external: bool,
+    position: Position,
+) -> Vec<CompletionItem> {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
 
-    _ = io.src_module("dep", dep);
+    if external {
+        add_path_dep(&mut engine, "dep");
+        let _ = io.path_dep_module("dep", "dep", dep);
+    } else {
+        _ = io.src_module("dep", dep);
+    }
     _ = io.src_module("app", src);
+
     let response = engine.compile_please();
+    println!("{:#?}", response);
     assert!(response.result.is_ok());
 
     let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
@@ -44,6 +68,31 @@ fn positioned_expression_completions(
     let mut completions = response.result.unwrap().unwrap_or_default();
     completions.sort_by(|a, b| a.label.cmp(&b.label));
     completions
+}
+
+fn add_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, name: &str) {
+    let path = engine.paths.root().join(name);
+    let compiler = &mut engine.compiler.project_compiler;
+    _ = compiler
+        .config
+        .dependencies
+        .insert(name.into(), Requirement::Path { path: path.clone() });
+    _ = compiler.packages.insert(
+        name.into(),
+        ManifestPackage {
+            name: name.into(),
+            version: Version::new(1, 0, 0),
+            build_tools: vec!["gleam".into()],
+            otp_app: None,
+            requirements: vec![],
+            source: ManifestPackageSource::Local { path: path.clone() },
+        },
+    );
+    let toml = format!(
+        r#"name = "{name}"
+version = "1.0.0""#
+    );
+    _ = compiler.io.write(&path.join("gleam.toml"), &toml);
 }
 
 fn prelude_type_completions() -> Vec<CompletionItem> {
@@ -894,5 +943,42 @@ fn internal_types_from_the_same_module_are_in_the_completions() {
             prelude_type_completions(),
         ]
         .concat()
+    );
+}
+
+#[test]
+fn internal_types_from_a_dependency_are_ignored() {
+    let src = "import dep
+
+pub fn wibble(
+    _: String,
+) -> Nil {
+    Nil
+}";
+
+    let dep = r#"
+@internal pub type Alias = Int
+@internal pub type AnotherType { Constructor }
+"#;
+
+    assert_eq!(
+        positioned_expression_completions_with_dep(src, dep, true, Position::new(3, 0)),
+        prelude_type_completions(),
+    );
+}
+
+#[test]
+fn internal_values_from_a_dependency_are_ignored() {
+    let dep = r#"
+@external(erlang, "rand", "uniform")
+@internal pub fn random_float() -> Float
+@internal pub fn main() { 0 }
+@internal pub type Foo { Bar }
+@internal pub const foo = 1
+"#;
+
+    assert_eq!(
+        expression_completions_with_dep("import dep", dep, true),
+        vec![]
     );
 }
