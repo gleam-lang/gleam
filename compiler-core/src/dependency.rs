@@ -44,8 +44,15 @@ where
         }],
     };
 
+    let exact_deps = &root.releases[0]
+        .requirements
+        .iter()
+        .filter_map(|(name, dep)| parse_exact_version(dep.requirement.as_str()).map(|v| (name, v)))
+        .map(|(name, version)| (name.clone(), version))
+        .collect();
+
     let packages = pubgrub::solver::resolve(
-        &DependencyProvider::new(package_fetcher, provided_packages, root, locked),
+        &DependencyProvider::new(package_fetcher, provided_packages, root, locked, exact_deps),
         root_name.as_str().into(),
         root_version,
     )
@@ -55,6 +62,25 @@ where
     .collect();
 
     Ok(packages)
+}
+
+// If the string would parse to an exact version then return the version
+fn parse_exact_version(ver: &str) -> Option<Version> {
+    let version = ver.trim();
+    if version.is_empty() {
+        return None;
+    }
+    if version.starts_with("==") || version.as_bytes()[0].is_ascii_digit() {
+        let version = version.replace("==", "");
+        let version = version.as_str().trim();
+        if let Ok(v) = Version::parse(version) {
+            Some(v)
+        } else {
+            None
+        }
+    } else {
+        None
+    }
 }
 
 fn root_dependencies<Requirements>(
@@ -127,6 +153,7 @@ struct DependencyProvider<'a> {
     packages: RefCell<HashMap<EcoString, hexpm::Package>>,
     remote: Box<dyn PackageFetcher>,
     locked: &'a HashMap<EcoString, Version>,
+    exact_only: &'a HashMap<String, Version>,
 }
 
 impl<'a> DependencyProvider<'a> {
@@ -135,12 +162,14 @@ impl<'a> DependencyProvider<'a> {
         mut packages: HashMap<EcoString, hexpm::Package>,
         root: hexpm::Package,
         locked: &'a HashMap<EcoString, Version>,
+        exact_only: &'a HashMap<String, Version>,
     ) -> Self {
         let _ = packages.insert(root.name.as_str().into(), root);
         Self {
             packages: RefCell::new(packages),
             locked,
             remote,
+            exact_only,
         }
     }
 
@@ -189,12 +218,22 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
             })
             .collect::<Result<_, _>>()?;
         let list_available_versions = |name: &String| {
+            let name = name.as_str();
+            let exact_package = self.exact_only.get(name);
             self.packages
                 .borrow()
-                .get(name.as_str())
+                .get(name)
                 .cloned()
                 .into_iter()
-                .flat_map(|p| p.releases.into_iter())
+                .flat_map(move |p| {
+                    p.releases
+                        .into_iter()
+                        .filter(move |release| match exact_package {
+                            // checking exact equal by checking >= && <=
+                            Some(ver) => ver >= &release.version && ver <= &release.version,
+                            _ => true,
+                        })
+                })
                 .map(|p| p.version)
         };
         Ok(choose_package_with_fewest_versions(
@@ -330,6 +369,22 @@ mod tests {
                     },
                     Release {
                         version: Version::try_from("0.3.0-rc1").unwrap(),
+                        requirements: [(
+                            "gleam_stdlib".into(),
+                            Dependency {
+                                app: None,
+                                optional: false,
+                                repository: None,
+                                requirement: Range::new(">= 0.1.0".into()),
+                            },
+                        )]
+                        .into(),
+                        retirement_status: None,
+                        outer_checksum: vec![1, 2, 3],
+                        meta: (),
+                    },
+                    Release {
+                        version: Version::try_from("0.3.0-rc2").unwrap(),
                         requirements: [(
                             "gleam_stdlib".into(),
                             Dependency {
@@ -527,8 +582,29 @@ mod tests {
         assert_eq!(
             result,
             vec![
-                ("gleam_otp".into(), Version::try_from("0.3.0-rc1").unwrap()),
                 ("gleam_stdlib".into(), Version::try_from("0.3.0").unwrap()),
+                ("gleam_otp".into(), Version::try_from("0.3.0-rc2").unwrap()),
+            ]
+            .into_iter()
+            .collect(),
+        );
+    }
+
+    #[test]
+    fn resolution_exact_prerelease_can_be_selected() {
+        let result = resolve_versions(
+            make_remote(),
+            HashMap::new(),
+            "app".into(),
+            vec![("gleam_otp".into(), Range::new("0.3.0-rc1".into()))].into_iter(),
+            &vec![].into_iter().collect(),
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            vec![
+                ("gleam_stdlib".into(), Version::try_from("0.3.0").unwrap()),
+                ("gleam_otp".into(), Version::try_from("0.3.0-rc1").unwrap()),
             ]
             .into_iter()
             .collect(),
@@ -579,5 +655,41 @@ mod tests {
         ),
         _ => panic!("wrong error: {}", err),
         }
+    }
+
+    #[test]
+    fn resolution_with_exact_dep() {
+        let result = resolve_versions(
+            make_remote(),
+            HashMap::new(),
+            "app".into(),
+            vec![("gleam_stdlib".into(), Range::new("0.1.0".into()))].into_iter(),
+            &vec![].into_iter().collect(),
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            vec![("gleam_stdlib".into(), Version::try_from("0.1.0").unwrap())]
+                .into_iter()
+                .collect()
+        );
+    }
+
+    #[test]
+    fn parse_exact_version_test() {
+        assert_eq!(
+            parse_exact_version("1.0.0"),
+            Some(Version::parse("1.0.0").unwrap())
+        );
+        assert_eq!(
+            parse_exact_version("==1.0.0"),
+            Some(Version::parse("1.0.0").unwrap())
+        );
+        assert_eq!(
+            parse_exact_version("== 1.0.0"),
+            Some(Version::parse("1.0.0").unwrap())
+        );
+        assert_eq!(parse_exact_version("~> 1.0.0"), None);
+        assert_eq!(parse_exact_version(">= 1.0.0"), None);
     }
 }
