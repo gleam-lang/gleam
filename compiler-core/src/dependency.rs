@@ -31,6 +31,15 @@ where
 {
     tracing::info!("resolving_versions");
     let root_version = Version::new(0, 0, 0);
+    let requirements =
+        root_dependencies(dependencies, locked).map_err(Error::dependency_resolution_failed)?;
+
+    let exact_deps = &requirements
+        .iter()
+        .filter_map(|(name, dep)| parse_exact_version(dep.requirement.as_str()).map(|v| (name, v)))
+        .map(|(name, version)| (name.clone(), version))
+        .collect();
+
     let root = hexpm::Package {
         name: root_name.as_str().into(),
         repository: "local".into(),
@@ -38,18 +47,10 @@ where
             version: root_version.clone(),
             outer_checksum: vec![],
             retirement_status: None,
-            requirements: root_dependencies(dependencies, locked)
-                .map_err(Error::dependency_resolution_failed)?,
+            requirements: requirements,
             meta: (),
         }],
     };
-
-    let exact_deps = &root.releases[0]
-        .requirements
-        .iter()
-        .filter_map(|(name, dep)| parse_exact_version(dep.requirement.as_str()).map(|v| (name, v)))
-        .map(|(name, version)| (name.clone(), version))
-        .collect();
 
     let packages = pubgrub::solver::resolve(
         &DependencyProvider::new(package_fetcher, provided_packages, root, locked, exact_deps),
@@ -70,7 +71,8 @@ fn parse_exact_version(ver: &str) -> Option<Version> {
     if version.is_empty() {
         return None;
     }
-    if version.starts_with("==") || version.as_bytes()[0].is_ascii_digit() {
+
+    if version.starts_with("==") || version.as_bytes().first().unwrap().is_ascii_digit() {
         let version = version.replace("==", "");
         let version = version.as_str().trim();
         if let Ok(v) = Version::parse(version) {
@@ -229,8 +231,7 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
                     p.releases
                         .into_iter()
                         .filter(move |release| match exact_package {
-                            // checking exact equal by checking >= && <=
-                            Some(ver) => ver >= &release.version && ver <= &release.version,
+                            Some(ver) => ver == &release.version,
                             _ => true,
                         })
                 })
