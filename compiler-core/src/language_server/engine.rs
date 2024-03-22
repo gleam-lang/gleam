@@ -180,12 +180,28 @@ where
     pub fn completion(
         &mut self,
         params: lsp::TextDocumentPositionParams,
+        src: EcoString,
     ) -> Response<Option<Vec<lsp::CompletionItem>>> {
         self.respond(|this| {
             let module = match this.module_for_uri(&params.text_document.uri) {
                 Some(m) => m,
                 None => return Ok(None),
             };
+
+            // Check current file contents if the user is writing an import
+            // and handle separately from the rest of the completion flow
+            // Check if an import is being written
+            {
+                let line_num = LineNumbers::new(src.as_str());
+                let start_of_line = line_num.byte_index(params.position.line, 0);
+                let end_of_line = line_num.byte_index(params.position.line + 1, 0);
+
+                // Check if the line starts with "import"
+                let from_ind = &src[start_of_line as usize..end_of_line as usize];
+                if from_ind.starts_with("import") {
+                    return Ok(Some(this.completion_imports(module)));
+                }
+            }
 
             let line_numbers = LineNumbers::new(&module.code);
             let byte_index =
@@ -212,9 +228,7 @@ where
                     Some(this.completion_types(module))
                 }
 
-                Located::ModuleStatement(Definition::Import(_)) => {
-                    Some(this.completion_imports(module))
-                }
+                Located::ModuleStatement(Definition::Import(_)) => None,
 
                 Located::ModuleStatement(Definition::ModuleConstant(_)) => None,
 

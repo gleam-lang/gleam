@@ -133,10 +133,10 @@ fn positioned_with_io_completions_in_test(
 
     let document = TextDocumentIdentifier { uri: url };
 
-    let response = engine.completion(TextDocumentPositionParams::new(
-        document,
-        position_param.position,
-    ));
+    let response = engine.completion(
+        TextDocumentPositionParams::new(document, position_param.position),
+        src.into(),
+    );
 
     let mut completions = response.result.unwrap().unwrap_or_default();
     completions.sort_by(|a, b| a.label.cmp(&b.label));
@@ -150,10 +150,10 @@ fn positioned_with_io_completions(
 ) -> Vec<CompletionItem> {
     let (mut engine, position_param) = positioned_with_io(src, position, io);
 
-    let response = engine.completion(TextDocumentPositionParams::new(
-        position_param.text_document,
-        position_param.position,
-    ));
+    let response = engine.completion(
+        TextDocumentPositionParams::new(position_param.text_document, position_param.position),
+        src.into(),
+    );
 
     let mut completions = response.result.unwrap().unwrap_or_default();
     completions.sort_by(|a, b| a.label.cmp(&b.label));
@@ -1106,8 +1106,7 @@ fn internal_values_from_a_dependency_are_ignored() {
 
 #[test]
 fn completions_for_an_import() {
-    let code = "
-import dep
+    let code = "import dep
 
 pub fn main() {
   0
@@ -1126,8 +1125,7 @@ pub fn main() {
 
 #[test]
 fn completions_for_an_import_no_test() {
-    let code = "
-import gleam
+    let code = "import gleam
 
 pub fn main() {
   0
@@ -1151,8 +1149,7 @@ pub fn main() {
 
 #[test]
 fn completions_for_an_import_while_in_test() {
-    let code = "
-import gleam
+    let code = "import gleam
 
 pub fn main() {
   0
@@ -1192,8 +1189,7 @@ pub fn test_helper() {
 
 #[test]
 fn completions_for_an_import_with_docs() {
-    let code = "
-import gleam
+    let code = "import gleam
 
 pub fn main() {
   0
@@ -1216,8 +1212,7 @@ pub fn main() { 1 }
 
 #[test]
 fn completions_for_an_import_from_dependency() {
-    let code = "
-import gleam
+    let code = "import gleam
 
 pub fn main() {
   0
@@ -1240,7 +1235,9 @@ pub fn main() {
 
 #[test]
 fn completions_for_an_import_from_dependency_with_docs() {
-    let code = "
+    let code = "//// Main package
+//// documentation!
+
 import gleam
 
 pub fn main() {
@@ -1257,7 +1254,7 @@ pub fn main() { 1 }
     _ = io.hex_dep_module("dep", "example_module", dep);
 
     assert_eq!(
-        positioned_with_io_completions(code, Position::new(0, 10), &io),
+        positioned_with_io_completions(code, Position::new(3, 10), &io),
         vec![CompletionItem {
             label: "example_module".into(),
             kind: Some(CompletionItemKind::MODULE),
@@ -1268,8 +1265,7 @@ pub fn main() { 1 }
 
 #[test]
 fn completions_for_an_import_start() {
-    let code = "
-import gleam
+    let code = "import gleam
 
 pub fn main() {
   0
@@ -1278,6 +1274,10 @@ pub fn main() {
 
     assert_eq!(
         positioned_expression_completions(code, dep, Position::new(0, 0)),
-        vec![]
+        vec![CompletionItem {
+            label: "dep".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            ..Default::default()
+        }]
     );
 }
