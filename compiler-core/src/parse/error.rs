@@ -309,8 +309,8 @@ impl LexicalError {
                 ],
             ),
             LexicalErrorType::UnrecognizedToken { tok } if *tok == '\'' => (
-                "Change ' (single quotes) to be \" (double quotes) to define a string",
-                vec![],
+                "Unexpected single quote",
+                vec!["Hint: Strings are written with double quotes.".into()],
             ),
             LexicalErrorType::UnrecognizedToken { .. } => (
                 "I can't figure out what to do with this character",
