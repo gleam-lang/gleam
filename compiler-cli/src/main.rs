@@ -29,7 +29,7 @@
     trivial_numeric_casts,
     nonstandard_style,
     unused_import_braces,
-    unused_qualifications,
+    unused_qualifications
 )]
 #![deny(
     clippy::await_holding_lock,
