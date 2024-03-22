@@ -308,6 +308,10 @@ impl LexicalError {
                     "You can safely remove them without your program changing.".into(),
                 ],
             ),
+            LexicalErrorType::UnrecognizedToken { tok } if *tok == '\'' => (
+                "Change ' (single quotes) to be \" (double quotes) to define a string",
+                vec![],
+            ),
             LexicalErrorType::UnrecognizedToken { .. } => (
                 "I can't figure out what to do with this character",
                 vec!["Hint: Is it a typo?".into()],

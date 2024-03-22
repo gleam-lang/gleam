@@ -767,3 +767,21 @@ tup.0.0.0.0
 "#
     );
 }
+
+#[test]
+fn inner_single_quote_parses() {
+    assert_parse!(
+        r#"
+let a = "inner 'quotes'"
+"#
+    );
+}
+
+#[test]
+fn string_single_char_suggestion() {
+    assert_module_error!("
+    pub fn main() {
+        let a = 'example'
+      }
+    ");
+}

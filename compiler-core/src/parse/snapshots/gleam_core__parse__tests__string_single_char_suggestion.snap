@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n    pub fn main() {\n        let a = 'example'\n      }\n    "
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:17
+  │
+3 │         let a = 'example'
+  │                 ^ Change ' (single quotes) to be " (double quotes) to define a string
