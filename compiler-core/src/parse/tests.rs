@@ -779,9 +779,11 @@ let a = "inner 'quotes'"
 
 #[test]
 fn string_single_char_suggestion() {
-    assert_module_error!("
+    assert_module_error!(
+        "
     pub fn main() {
         let a = 'example'
       }
-    ");
+    "
+    );
 }
