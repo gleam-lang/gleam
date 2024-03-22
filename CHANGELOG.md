@@ -70,6 +70,7 @@
   variable to any non-empty value.
 - Rust's Reqwest's `webpki-roots` are now used for TLS verification.
 - Update Deno config to allow passing `--location` runtime flag.
+- Fixed a bug with dependency resolution of exact versions of RC releases.
 
 ### Language Server
 
