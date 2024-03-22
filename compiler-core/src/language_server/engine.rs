@@ -239,9 +239,9 @@ where
                     Some(this.completion_types(module))
                 }
 
-                Located::ModuleStatement(Definition::Import(_)) => None,
-
-                Located::ModuleStatement(Definition::ModuleConstant(_)) => None,
+                Located::ModuleStatement(Definition::Import(_) | Definition::ModuleConstant(_)) => {
+                    None
+                }
 
                 Located::Arg(_) => None,
             };
