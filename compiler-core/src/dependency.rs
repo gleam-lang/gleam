@@ -34,6 +34,7 @@ where
     let requirements =
         root_dependencies(dependencies, locked).map_err(Error::dependency_resolution_failed)?;
 
+    // Creating a map of all the required packages that have exact versions specified
     let exact_deps = &requirements
         .iter()
         .filter_map(|(name, dep)| parse_exact_version(dep.requirement.as_str()).map(|v| (name, v)))
@@ -70,6 +71,7 @@ fn parse_exact_version(ver: &str) -> Option<Version> {
     let version = ver.trim();
     let first_byte = version.as_bytes().first();
 
+    // Version is exact if it starts with an explicit == or a number
     if version.starts_with("==") || first_byte.map_or(false, |v| v.is_ascii_digit()) {
         let version = version.replace("==", "");
         let version = version.as_str().trim();
@@ -153,6 +155,9 @@ struct DependencyProvider<'a> {
     packages: RefCell<HashMap<EcoString, hexpm::Package>>,
     remote: Box<dyn PackageFetcher>,
     locked: &'a HashMap<EcoString, Version>,
+    // Map of packages where an exact version was requested
+    // We need this because by default pubgrub checks exact version by checking if a version is between the exact
+    // and the version 1 bump ahead. That default breaks on prerelease builds since a bump includes the whole patch
     exact_only: &'a HashMap<String, Version>,
 }
 
@@ -228,6 +233,7 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
                 .flat_map(move |p| {
                     p.releases
                         .into_iter()
+                        // if an exact version of a package is specified then we only want to allow that version as available
                         .filter(move |release| match exact_package {
                             Some(ver) => ver == &release.version,
                             _ => true,
