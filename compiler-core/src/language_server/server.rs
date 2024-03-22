@@ -261,7 +261,7 @@ where
     }
 
     fn path_error_response(&mut self, path: Utf8PathBuf, error: crate::Error) -> (Json, Feedback) {
-        let feedback = match self.router.project_for_path(&path) {
+        let feedback = match self.router.project_for_path(path) {
             Ok(Some(project)) => project.feedback.error(error),
             Ok(None) | Err(_) => self.outside_of_project_feedback.error(error),
         };
