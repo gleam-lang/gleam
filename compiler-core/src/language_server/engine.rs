@@ -368,15 +368,14 @@ where
 
             // Qualified types
             for (name, type_) in &module.types {
-
                 match type_.publicity {
                     // We skip private types as we never want those to appear in
                     // completions.
                     Publicity::Private => continue,
                     // We only skip internal types if those are not defined in
                     // the root package.
-                    Publicity::Internal if module.package != root_package=> continue,
-                    Publicity::Internal => {},
+                    Publicity::Internal if module.package != root_package => continue,
+                    Publicity::Internal => {}
                     // We never skip public types.
                     Publicity::Public => {}
                 }
@@ -424,7 +423,6 @@ where
                 continue;
             };
 
-
             // Qualified values
             for (name, value) in &module.values {
                 match value.publicity {
@@ -434,7 +432,7 @@ where
                     // We only skip internal values if those are not defined in
                     // the root package.
                     Publicity::Internal if module.package != root_package => continue,
-                    Publicity::Internal => {},
+                    Publicity::Internal => {}
                     // We never skip public values.
                     Publicity::Public => {}
                 }
