@@ -4465,6 +4465,127 @@ fn negation_block() {
 }
 
 #[test]
+fn empty_lines_work_with_trailing_space() {
+    let src = "pub fn main() {
+  let inc = fn(a) { a + 1 } 
+
+
+  pair.map_first(#(1, 2), inc)  
+  |> should.equal(#(2, 2)) 
+
+  // Comment
+
+  1  
+
+
+  // Comment 
+
+
+  2
+}
+";
+    let expected = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+  // Comment 
+
+  2
+}
+";
+    assert_format!(expected); // Sanity check
+
+    assert_format_rewrite!(src, expected);
+}
+
+#[test]
+fn empty_lines_work_with_eol_normalisation() {
+    let src = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+
+  // Comment
+
+
+  2
+}
+";
+    let expected = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+  // Comment
+
+  2
+}
+";
+    assert_format!(expected); // Sanity check
+
+    assert_format_rewrite!(&src.replace('\n', "\r\n"), expected);
+    assert_format_rewrite!(&src.replace('\n', "\r"), expected);
+}
+
+#[test]
+fn empty_lines_work_with_trailing_space_and_eol_normalisation() {
+    let src = "pub fn main() {
+  let inc = fn(a) { a + 1 } 
+
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2)) 
+
+  // Comment
+
+  1
+
+
+  // Comment
+
+
+  2
+}
+";
+    let expected = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+  // Comment
+
+  2
+}
+";
+    assert_format!(expected); // Sanity check
+
+    assert_format_rewrite!(&src.replace('\n', "\r\n"), expected);
+    assert_format_rewrite!(&src.replace('\n', "\r"), expected);
+}
+#[test]
 fn single_empty_line_between_comments() {
     // empty line isn't added if it's not already present
     assert_format!(
