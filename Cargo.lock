@@ -888,7 +888,7 @@ dependencies = [
  "flate2",
  "futures",
  "globset",
- "heck 0.4.1",
+ "heck 0.5.0",
  "hexpm",
  "http",
  "id-arena",
