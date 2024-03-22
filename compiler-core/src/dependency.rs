@@ -68,9 +68,9 @@ where
 // If the string would parse to an exact version then return the version
 fn parse_exact_version(ver: &str) -> Option<Version> {
     let version = ver.trim();
-    let is_digit = version.as_bytes().first();
+    let first_byte = version.as_bytes().first();
 
-    if version.starts_with("==") || is_digit.map_or(false, |v| v.is_ascii_digit()) {
+    if version.starts_with("==") || first_byte.map_or(false, |v| v.is_ascii_digit()) {
         let version = version.replace("==", "");
         let version = version.as_str().trim();
         if let Ok(v) = Version::parse(version) {
