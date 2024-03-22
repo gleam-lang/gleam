@@ -1,9 +1,9 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Runtime, Target};
 use crate::diagnostic::{Diagnostic, Label, Location};
+use crate::type_::error::RecordVariants;
 use crate::type_::error::{MissingAnnotation, UnknownTypeHint};
 use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
-use crate::type_::error::RecordVariants;
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{
     bit_array,
@@ -1235,7 +1235,8 @@ Hint: Add some type annotations and try again."
 
                     match variants {
                         RecordVariants::HasVariants => {
-                            let msg = wrap("Note: The field you are trying to \
+                            let msg = wrap(
+                                "Note: The field you are trying to \
 access might not be consistently present or positioned across the custom \
 type's variants, preventing reliable access. Ensure the field exists in the \
 same position and has the same type in all variants to enable direct accessor syntax.",
@@ -1243,7 +1244,7 @@ same position and has the same type in all variants to enable direct accessor sy
                             text.push_str("\n\n");
                             text.push_str(&msg);
                         }
-                        RecordVariants::NoVariants => ()
+                        RecordVariants::NoVariants => (),
                     }
 
                     // Give a hint about Gleam not having OOP methods if it

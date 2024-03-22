@@ -1687,20 +1687,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         let has_variants = match &*record_type {
-            Type::Named { name, .. } => {
-                self.environment.module_types_constructors
-                    .get(name)
-                    .map_or(RecordVariants::NoVariants, |type_variant_constructors| {
-                        if type_variant_constructors.variants.len() > 1 {
-                            RecordVariants::HasVariants
-                        } else {
-                            RecordVariants::NoVariants
-                        }
-                    })
-            },
+            Type::Named { name, .. } => self
+                .environment
+                .module_types_constructors
+                .get(name)
+                .map_or(RecordVariants::NoVariants, |type_variant_constructors| {
+                    if type_variant_constructors.variants.len() > 1 {
+                        RecordVariants::HasVariants
+                    } else {
+                        RecordVariants::NoVariants
+                    }
+                }),
             _ => RecordVariants::NoVariants,
         };
-        
 
         let unknown_field = |fields| Error::UnknownRecordField {
             usage,
