@@ -87,6 +87,21 @@ pub struct Parsed {
     pub extra: ModuleExtra,
 }
 
+/// We use this to keep track of the `@internal` annotation for top level
+/// definitions. Instead of using just a boolean we want to keep track of the
+/// source position of the annotation in case it is present. This way we can
+/// report a better error message highlighting the annotation in case it is
+/// used on a private definition (it doesn't make sense to mark something
+/// private as internal):
+///
+/// ```txt
+/// @internal
+/// ^^^^^^^^^ we first get to the annotation
+/// fn wibble() {}
+/// ^^ and only later discover it's applied on a private definition
+///    so we have to keep track of the attribute's position to highlight it
+///    in the resulting error message.
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum InternalAttribute {
     #[default]
@@ -3003,7 +3018,7 @@ where
             // another `@internal` annotation, so it results in a `DuplicateAttribute`
             // error.
             InternalAttribute::Present(_) => {
-                return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end))
+                parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end))
             }
             InternalAttribute::Missing => {
                 attributes.internal = InternalAttribute::Present(SrcSpan::new(start, end));
