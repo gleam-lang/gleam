@@ -97,6 +97,8 @@ where
             if let Some((_, '\n')) = self.chr1 {
                 // Transform windows EOL into \n
                 let _ = self.shift();
+                // using the position from the \r
+                self.chr0 = Some((i, '\n'))
             } else {
                 // Transform MAC EOL into \n
                 self.chr0 = Some((i, '\n'))
@@ -429,28 +431,23 @@ where
             '#' => {
                 self.eat_single_char(Token::Hash);
             }
-            '\n' => {
-                let _ = self.next_char();
-                let tok_start = self.get_pos();
-                while let Some(c) = self.chr0 {
-                    match c {
-                        ' ' | '\t' | '\x0C' => {
-                            let _ = self.next_char();
-                        }
-                        '\n' => {
-                            let tok_end = self.get_pos();
-                            self.emit((tok_start, Token::EmptyLine, tok_end));
-                            break;
-                        }
-                        _ => break,
+            '\n' | ' ' | '\t' | '\x0C' => {
+                // Skip whitespaces and consume empty lines
+
+                // Add one, so the empty line does not overlap with previous token's end
+                let tok_start = self.get_pos() + 1;
+
+                let mut newlines = 0;
+                while let Some('\n' | ' ' | '\t' | '\x0C') = self.chr0 {
+                    if self.next_char() == Some('\n') {
+                        newlines += 1;
                     }
                 }
+                if newlines > 1 {
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Token::EmptyLine, tok_end));
+                }
             }
-            ' ' | '\t' | '\x0C' => {
-                // Skip whitespaces
-                let _ = self.next_char();
-            }
-
             c => {
                 let location = self.get_pos();
                 return Err(LexicalError {
