@@ -199,7 +199,18 @@ where
                 // Check if the line starts with "import"
                 let from_ind = &src[start_of_line as usize..end_of_line as usize];
                 if from_ind.starts_with("import") {
-                    return Ok(Some(this.completion_imports(module)));
+                    // Find where to start and end the import completion
+                    let start = line_num.line_and_column_number(start_of_line);
+                    let end = line_num.line_and_column_number(end_of_line - 1);
+                    let start = lsp::Position {
+                        line: start.line - 1,
+                        character: start.column + 6,
+                    };
+                    let end = lsp::Position {
+                        line: end.line - 1,
+                        character: end.column,
+                    };
+                    return Ok(Some(this.completion_imports(module, start, end)));
                 }
             }
 
@@ -468,7 +479,12 @@ where
         completions
     }
 
-    fn completion_imports<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
+    fn completion_imports<'b>(
+        &'b self,
+        module: &'b Module,
+        start: lsp::Position,
+        end: lsp::Position,
+    ) -> Vec<lsp::CompletionItem> {
         let already_imported: std::collections::HashSet<EcoString> =
             std::collections::HashSet::from_iter(module.dependencies_list());
         self.compiler
@@ -483,6 +499,12 @@ where
             .map(|(name, _)| lsp::CompletionItem {
                 label: name.to_string(),
                 kind: Some(lsp::CompletionItemKind::MODULE),
+                text_edit: {
+                    Some(lsp::CompletionTextEdit::Edit(lsp::TextEdit {
+                        range: lsp::Range { start, end },
+                        new_text: name.to_string(),
+                    }))
+                },
                 ..Default::default()
             })
             .collect()
