@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use lsp_types::{
-    CompletionItem, CompletionItemKind, Documentation, MarkupContent, MarkupKind, Position,
-    TextDocumentPositionParams,
+    CompletionItem, CompletionItemKind, CompletionTextEdit, Documentation, MarkupContent,
+    MarkupKind, Position, Range, TextDocumentPositionParams, TextEdit,
 };
 
 use super::*;
@@ -1118,6 +1118,19 @@ pub fn main() {
         vec![CompletionItem {
             label: "gleam".into(),
             kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 11
+                    }
+                },
+                new_text: "gleam".into()
+            })),
             ..Default::default()
         }]
     );
@@ -1176,11 +1189,37 @@ pub fn test_helper() {
             CompletionItem {
                 label: "app".into(),
                 kind: Some(CompletionItemKind::MODULE),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 0,
+                            character: 7
+                        },
+                        end: Position {
+                            line: 0,
+                            character: 13
+                        }
+                    },
+                    new_text: "app".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
                 label: "test_helper".into(),
                 kind: Some(CompletionItemKind::MODULE),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 0,
+                            character: 7
+                        },
+                        end: Position {
+                            line: 0,
+                            character: 13
+                        }
+                    },
+                    new_text: "test_helper".into()
+                })),
                 ..Default::default()
             }
         ]
@@ -1205,6 +1244,19 @@ pub fn main() { 1 }
         vec![CompletionItem {
             label: "dep".into(),
             kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 13
+                    }
+                },
+                new_text: "dep".into()
+            })),
             ..Default::default()
         }]
     );
@@ -1228,6 +1280,19 @@ pub fn main() {
         vec![CompletionItem {
             label: "example_module".into(),
             kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 13
+                    }
+                },
+                new_text: "example_module".into()
+            })),
             ..Default::default()
         }]
     );
@@ -1258,6 +1323,19 @@ pub fn main() { 1 }
         vec![CompletionItem {
             label: "example_module".into(),
             kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 3,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 3,
+                        character: 13
+                    }
+                },
+                new_text: "example_module".into()
+            })),
             ..Default::default()
         }]
     );
@@ -1277,6 +1355,19 @@ pub fn main() {
         vec![CompletionItem {
             label: "dep".into(),
             kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 13
+                    }
+                },
+                new_text: "dep".into()
+            })),
             ..Default::default()
         }]
     );
