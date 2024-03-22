@@ -1,3 +1,5 @@
+use im::HashSet;
+
 use super::*;
 use crate::type_::{FieldMap, HasType};
 
@@ -69,6 +71,26 @@ impl TypedConstant {
             Constant::List { typ, .. }
             | Constant::Record { typ, .. }
             | Constant::Var { typ, .. } => typ.clone(),
+        }
+    }
+
+    pub fn private_fn_deps(&self, already_found: &mut HashSet<EcoString>) {
+        match self {
+            TypedConstant::Var {
+                name, constructor, ..
+            } => {
+                if let Some(ValueConstructor { type_, .. }) = constructor.as_deref() {
+                    if let Type::Fn { .. } = **type_ {
+                        let _ = already_found.insert(name.clone());
+                    }
+                }
+            }
+
+            TypedConstant::Record { args, .. } => args
+                .iter()
+                .for_each(|arg| arg.value.private_fn_deps(already_found)),
+
+            _ => (),
         }
     }
 }

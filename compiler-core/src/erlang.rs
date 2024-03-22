@@ -21,6 +21,7 @@ use crate::{
 };
 use ecow::EcoString;
 use heck::ToSnakeCase;
+use im::HashSet;
 use itertools::Itertools;
 use pattern::pattern;
 use regex::{Captures, Regex};
@@ -162,6 +163,19 @@ fn module_document<'a>(
         .append(").")
         .append(line());
 
+    let mut overridden_publicity = HashSet::new();
+
+    module.definitions.iter().for_each(|def| {
+        if let Definition::ModuleConstant(ModuleConstant {
+            value,
+            public: true,
+            ..
+        }) = def
+        {
+            value.private_fn_deps(&mut overridden_publicity)
+        }
+    });
+
     for s in &module.definitions {
         register_imports(
             s,
@@ -169,6 +183,7 @@ fn module_document<'a>(
             &mut type_exports,
             &mut type_defs,
             &module.name,
+            &overridden_publicity,
         );
     }
 
@@ -227,19 +242,19 @@ fn register_imports(
     type_exports: &mut Vec<Document<'_>>,
     type_defs: &mut Vec<Document<'_>>,
     module_name: &str,
+    overridden_publicity: &HashSet<EcoString>,
 ) {
     match s {
         Definition::Function(Function {
-            public: true,
+            public,
             name,
             arguments: args,
             implementations,
             ..
-        }) => {
-            // If the function isn't for this target then don't attempt to export it
-            if implementations.supports(Target::Erlang) {
-                exports.push(atom_string(name.to_string()).append("/").append(args.len()))
-            }
+        }) if implementations.supports(Target::Erlang)
+            && (*public || overridden_publicity.contains(name)) =>
+        {
+            exports.push(atom_string(name.to_string()).append("/").append(args.len()))
         }
 
         Definition::CustomType(CustomType {

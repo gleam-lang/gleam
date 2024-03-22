@@ -81,6 +81,10 @@
   give the wrong node.
 - Go to definition now works for values in dependency Gleam modules.
 
+### Bug fixes
+
+- Fixed a bug where using a private function in a public constant definition 
+  would result in a runtime error on the erlang target.
 
 ## v1.0.0 - 2024-03-04
 
