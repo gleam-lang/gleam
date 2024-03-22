@@ -3,8 +3,6 @@
   "recommendations": [
     // Rust:
     "rust-lang.rust-analyzer",
-    // Debugging support:
-    "vadimcn.vscode-lldb",
 
     // Gleam:
     "Gleam.gleam",
