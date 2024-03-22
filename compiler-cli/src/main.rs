@@ -29,8 +29,7 @@
     trivial_numeric_casts,
     nonstandard_style,
     unused_import_braces,
-    // TODO: re-enable this once the false positive bug is solved
-    // unused_qualifications,
+    unused_qualifications,
 )]
 #![deny(
     clippy::await_holding_lock,
