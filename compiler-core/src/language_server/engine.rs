@@ -355,6 +355,8 @@ where
             completions.push(type_completion(None, name, type_));
         }
 
+        let root_package = self.compiler.project_compiler.config.name.clone();
+
         // Imported modules
         for import in module.ast.definitions.iter().filter_map(get_import) {
             // The module may not be known of yet if it has not previously
@@ -366,8 +368,16 @@ where
 
             // Qualified types
             for (name, type_) in &module.types {
+
                 match type_.publicity {
-                    Publicity::Private | Publicity::Internal => continue,
+                    // We skip private types as we never want those to appear in
+                    // completions.
+                    Publicity::Private => continue,
+                    // We only skip internal types if those are not defined in
+                    // the root package.
+                    Publicity::Internal if module.package != root_package=> continue,
+                    Publicity::Internal => {},
+                    // We never skip public types.
                     Publicity::Public => {}
                 }
 
@@ -403,6 +413,8 @@ where
             completions.push(value_completion(None, name, value));
         }
 
+        let root_package = self.compiler.project_compiler.config.name.clone();
+
         // Imported modules
         for import in module.ast.definitions.iter().filter_map(get_import) {
             // The module may not be known of yet if it has not previously
@@ -412,10 +424,18 @@ where
                 continue;
             };
 
+
             // Qualified values
             for (name, value) in &module.values {
                 match value.publicity {
-                    Publicity::Private | Publicity::Internal => continue,
+                    // We skip private values as we never want those to appear in
+                    // completions.
+                    Publicity::Private => continue,
+                    // We only skip internal values if those are not defined in
+                    // the root package.
+                    Publicity::Internal if module.package != root_package => continue,
+                    Publicity::Internal => {},
+                    // We never skip public values.
                     Publicity::Public => {}
                 }
 

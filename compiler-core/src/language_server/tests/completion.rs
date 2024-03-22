@@ -728,22 +728,56 @@ pub fn wibble(
 }
 
 #[test]
-fn public_internal_values_from_outer_modules_are_not_in_the_completions() {
+fn internal_values_from_root_package_are_in_the_completions() {
     let dep = r#"
 @external(erlang, "rand", "uniform")
-@internal
-pub fn random_float() -> Float
-
+@internal pub fn random_float() -> Float
 @internal pub fn main() { 0 }
 @internal pub type Foo { Bar }
 @internal pub const foo = 1
 "#;
 
-    assert_eq!(expression_completions("import dep", dep), vec![]);
+    assert_eq!(
+        expression_completions("import dep", dep),
+        vec![
+            CompletionItem {
+                label: "dep.Bar".into(),
+                label_details: None,
+                kind: Some(CompletionItemKind::ENUM_MEMBER),
+                detail: Some("Foo".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "dep.foo".into(),
+                label_details: None,
+                kind: Some(CompletionItemKind::CONSTANT),
+                detail: Some("Int".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "dep.main".into(),
+                label_details: None,
+                kind: Some(CompletionItemKind::FUNCTION),
+                detail: Some("fn() -> Int".into()),
+                documentation: None,
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "dep.random_float".into(),
+                label_details: None,
+                kind: Some(CompletionItemKind::FUNCTION),
+                detail: Some("fn() -> Float".into()),
+                documentation: None,
+                ..Default::default()
+            },
+        ]
+    );
 }
 
 #[test]
-fn public_internal_types_from_outer_modules_are_not_in_the_completions() {
+fn internal_types_from_root_package_are_in_the_completions() {
     let src = "import dep
 
 pub fn wibble(
@@ -756,10 +790,27 @@ pub fn wibble(
 @internal pub type Alias = Int
 @internal pub type AnotherType { Constructor }
 "#;
+    let mut expected_completions = prelude_type_completions();
+    expected_completions.append(&mut vec![
+        CompletionItem {
+            label: "dep.Alias".into(),
+            label_details: None,
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            ..Default::default()
+        },
+        CompletionItem {
+            label: "dep.AnotherType".into(),
+            label_details: None,
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            ..Default::default()
+        },
+    ]);
 
     assert_eq!(
         positioned_expression_completions(src, dep, Position::new(3, 0)),
-        prelude_type_completions(),
+        expected_completions,
     );
 }
 
@@ -767,9 +818,7 @@ pub fn wibble(
 fn internal_values_from_the_same_module_are_in_the_completions() {
     let code = r#"
 @external(erlang, "rand", "uniform")
-@internal
-pub fn random_float() -> Float
-
+@internal pub fn random_float() -> Float
 @internal pub fn main() { 0 }
 @internal pub type Foo { Bar }
 @internal pub const foo = 1
@@ -818,7 +867,7 @@ pub fn random_float() -> Float
 fn internal_types_from_the_same_module_are_in_the_completions() {
     let code = "
 @internal pub type Alias = Result(Int, String)
-@internal pub type AnotherType { 
+@internal pub type AnotherType {
   Bar
 }
 ";
