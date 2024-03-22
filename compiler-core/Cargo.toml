@@ -14,8 +14,6 @@ heck = "0.4.0"
 petgraph = "0.6.0"
 # Levenshtein string distance for typo suggestions
 strsim = "0.10.0"
-# Cap'n Proto binary format runtime
-capnp = "0.14.3"
 # Template rendering
 askama = "0.12.0"
 # Markdown parsing
@@ -63,12 +61,6 @@ termcolor.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 tracing.workspace = true
-
-[build-dependencies]
-# Data (de)serialisation
-serde_derive = "1.0.130"
-# Cap'n Proto binary format codegen
-capnpc = "0.14.4"
 
 [dev-dependencies]
 pretty_assertions.workspace = true

@@ -299,21 +299,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "capnp"
-version = "0.14.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2dca085c2c7d9d65ad749d450b19b551efaa8e3476a439bdca07aca8533097f3"
-
-[[package]]
-name = "capnpc"
-version = "0.14.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdc9f1dc84666d4ff007b1a16c8f97db80764a624625979be05d869bcff43aaa"
-dependencies = [
- "capnp",
-]
-
-[[package]]
 name = "cc"
 version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -864,8 +849,6 @@ dependencies = [
  "bincode",
  "bytes",
  "camino",
- "capnp",
- "capnpc",
  "codespan-reporting",
  "debug-ignore",
  "dirs-next",
@@ -890,7 +873,6 @@ dependencies = [
  "rand",
  "regex",
  "serde",
- "serde_derive",
  "serde_json",
  "spdx",
  "strsim 0.10.0",

@@ -498,8 +498,8 @@ where
         package: &ManifestPackage,
     ) -> Result<(), Error> {
         for path in self.io.gleam_cache_files(&build_dir) {
-            let reader = BufReader::new(self.io.reader(&path)?);
-            let module = metadata::ModuleDecoder::new(self.ids.clone()).read(reader)?;
+            let bytes = self.io.read_bytes(&path)?;
+            let module = metadata::decode(self.ids.clone(), &bytes)?;
             let _ = self
                 .importable_modules
                 .insert(module.name.clone(), module)

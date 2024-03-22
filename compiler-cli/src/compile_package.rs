@@ -74,8 +74,8 @@ fn load_libraries(
             continue;
         }
         for module in fs::module_caches_paths(path)? {
-            let reader = fs::buffered_reader(module)?;
-            let module = metadata::ModuleDecoder::new(ids.clone()).read(reader)?;
+            let bytes = fs::read_bytes(module)?;
+            let module = metadata::decode(ids.clone(), &bytes)?;
             let _ = manifests.insert(module.name.clone(), module);
         }
     }

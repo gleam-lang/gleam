@@ -98,8 +98,3 @@ pub use warning::Warning;
 
 const GLEAM_CORE_PACKAGE_NAME: &str = "";
 const STDLIB_PACKAGE_NAME: &str = "gleam_stdlib";
-
-mod schema_capnp {
-    #![allow(dead_code, unused_qualifications)]
-    include!("../generated/schema_capnp.rs");
-}

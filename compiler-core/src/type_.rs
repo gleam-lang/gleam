@@ -16,7 +16,7 @@ pub use error::{Error, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     ast::{
@@ -42,7 +42,7 @@ pub trait HasType {
     fn type_(&self) -> Arc<Type>;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum Type {
     /// A nominal (named) type such as `Int`, `Float`, or a programmer defined
     /// custom type such as `Person`. The type can take other types as
@@ -293,14 +293,14 @@ pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
     t
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct AccessorsMap {
     pub public: bool,
     pub type_: Arc<Type>,
     pub accessors: HashMap<EcoString, RecordAccessor>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct RecordAccessor {
     // TODO: smaller int. Doesn't need to be this big
     pub index: u64,
@@ -308,7 +308,7 @@ pub struct RecordAccessor {
     pub type_: Arc<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
     LocalVariable { location: SrcSpan },
@@ -519,7 +519,7 @@ pub struct ModuleFunction {
     pub package: EcoString,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct ModuleInterface {
     pub name: EcoString,
     pub origin: Origin,
@@ -533,7 +533,7 @@ pub struct ModuleInterface {
 }
 
 /// Information on the constructors of a custom type.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct TypeVariantConstructors {
     /// The id of the generic type variables of the generic version of the type that these
     /// constructors belong to.
@@ -582,13 +582,13 @@ impl TypeVariantConstructors {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct TypeValueConstructor {
     pub name: EcoString,
     pub parameters: Vec<TypeValueConstructorField>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct TypeValueConstructorField {
     /// This type of this parameter
     pub type_: Arc<Type>,
@@ -687,7 +687,7 @@ impl PatternConstructor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum TypeVar {
     /// Unbound is an unbound variable. It is one specific type but we don't
     /// know what yet in the inference process. It has a unique id which can be used to
@@ -793,7 +793,7 @@ impl TypeVar {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct TypeConstructor {
     pub public: bool,
     pub origin: SrcSpan,
@@ -809,7 +809,7 @@ impl TypeConstructor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct ValueConstructor {
     pub public: bool,
     pub deprecation: Deprecation,
@@ -817,7 +817,7 @@ pub struct ValueConstructor {
     pub type_: Arc<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum Deprecation {
     NotDeprecated,
     Deprecated { message: EcoString },

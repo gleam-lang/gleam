@@ -13,7 +13,7 @@ use crate::{
     config::PackageConfig,
     dep_tree, error,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
-    metadata::ModuleEncoder,
+    metadata,
     parse::extra::ModuleExtra,
     paths, type_,
     uid::UniqueIdGenerator,
@@ -250,7 +250,7 @@ where
             // Write metadata file
             let name = format!("{}.cache", &module_name);
             let path = artefact_dir.join(name);
-            let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
+            let bytes = metadata::encode(&module.ast.type_info)?;
             self.io.write_bytes(&path, &bytes)?;
 
             // Write cache info

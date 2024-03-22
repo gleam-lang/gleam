@@ -15,7 +15,7 @@ use std::{
     ffi::OsStr,
     fmt::Debug,
     fs::File,
-    io::{self, BufRead, BufReader, Write},
+    io::{self, Write},
     sync::OnceLock,
     time::SystemTime,
 };
@@ -511,17 +511,6 @@ pub fn reader(path: impl AsRef<Utf8Path> + Debug) -> Result<WrappedReader, Error
     })?;
 
     Ok(WrappedReader::new(path.as_ref(), Box::new(reader)))
-}
-
-pub fn buffered_reader<P: AsRef<Utf8Path> + Debug>(path: P) -> Result<impl BufRead, Error> {
-    tracing::trace!(path=?path,"opening_file_buffered_reader");
-    let reader = File::open(path.as_ref()).map_err(|err| Error::FileIo {
-        action: FileIoAction::Open,
-        kind: FileKind::File,
-        path: Utf8PathBuf::from(path.as_ref()),
-        err: Some(err.to_string()),
-    })?;
-    Ok(BufReader::new(reader))
 }
 
 pub fn copy(

@@ -16,6 +16,7 @@ use crate::type_::expression::Implementations;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use ecow::EcoString;
@@ -788,7 +789,7 @@ impl BinOp {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
 pub struct CallArg<A> {
     pub label: Option<EcoString>,
     pub location: SrcSpan,
@@ -1097,7 +1098,7 @@ impl TypedClauseGuard {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Default, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Default, Clone, Copy, Deserialize, Serialize)]
 pub struct SrcSpan {
     pub start: u32,
     pub end: u32,
@@ -1409,7 +1410,7 @@ pub type TypedConstantBitArraySegment = BitArraySegment<TypedConstant, Arc<Type>
 pub type UntypedPatternBitArraySegment = BitArraySegment<UntypedPattern, ()>;
 pub type TypedPatternBitArraySegment = BitArraySegment<TypedPattern, Arc<Type>>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct BitArraySegment<Value, Type> {
     pub location: SrcSpan,
     pub value: Box<Value>,
@@ -1425,7 +1426,7 @@ impl TypedExprBitArraySegment {
 
 pub type TypedConstantBitArraySegmentOption = BitArrayOption<TypedConstant>;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
 pub enum BitArrayOption<Value> {
     Bytes {
         location: SrcSpan,
