@@ -5,3 +5,27 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+
+# Rust:
+- package-ecosystem: "cargo"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+- package-ecosystem: "cargo"
+  directory: "/compiler-cli"
+  schedule:
+    interval: "weekly"
+- package-ecosystem: "cargo"
+  directory: "/compiler-core"
+  schedule:
+    interval: "weekly"
+- package-ecosystem: "cargo"
+  directory: "/compiler-wasm"
+  schedule:
+    interval: "weekly"
+- package-ecosystem: "cargo"
+  # Does not have any custom deps right now,
+  # but can add them in the future:
+  directory: "/test-package-compiler"
+  schedule:
+    interval: "weekly"
