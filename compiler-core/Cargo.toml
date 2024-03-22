@@ -27,7 +27,7 @@ dirs-next = "2.0.0"
 # Helper for wrapping text onto lines based upon width
 textwrap = { version = "=0.15.0", features = ["terminal_size"] }
 # SPDX license parsing
-spdx = "0.8.0"
+spdx = "0.10.4"
 # Binary format de-serialization
 bincode = "1.3.3"
 # cross platform single glob and glob set matching
