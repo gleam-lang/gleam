@@ -65,6 +65,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/carlomunguia">Carlo Munguia</a> -
   <a href="https://github.com/csaltos">Carlos Saltos</a> -
   <a href="https://github.com/chadselph">Chad Selph</a> -
+  <a href="https://github.com/charlie-n01r">Charlie Govea</a> -
   <a href="https://github.com/chazwatkins">Chaz Watkins</a> -
   <a href="https://github.com/choonkeat">Chew Choon Keat</a> -
   <a href="https://github.com/chrislloyd">Chris Lloyd</a> -
@@ -139,6 +140,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/jlgeering">Jean-Luc Geering</a> -
   <a href="https://github.com/okkdev">Jen Stehlik</a> -
   <a href="https://github.com/jiangplus">jiangplus</a> -
+  <a href="https://github.com/jluzny">Jiri Luzny</a> -
   <a href="https://github.com/joeykilpatrick">Joey Kilpatrick</a> -
   <a href="https://github.com/johan-st">Johan Strand</a> -
   <a href="https://github.com/JohnBjrk">John Björk</a> -
