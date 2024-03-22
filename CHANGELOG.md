@@ -36,6 +36,7 @@
   crash on the JavaScript target.
 - Allow compilation of packages that require `"rebar"` using the rebar3 compiler.
 - A warning is now emitted when defining an opaque external type.
+- Improve error message when using incorrect quotes (`'`) to define a string
 
 ### Formatter
 
