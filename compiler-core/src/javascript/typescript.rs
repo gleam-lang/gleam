@@ -27,6 +27,7 @@ use ecow::EcoString;
 use itertools::Itertools;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
+use super::Publicity;
 use super::{import::Imports, join, line, lines, wrap_args, Output, INDENT};
 
 /// When rendering a type variable to an TypeScript type spec we need all type
@@ -297,7 +298,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 publicity,
                 type_,
                 ..
-            }) if !publicity.is_internal() => vec![self.type_alias(alias, type_)],
+            }) if publicity.is_importable() => vec![self.type_alias(alias, type_)],
             Definition::TypeAlias(TypeAlias { .. }) => vec![],
 
             Definition::Import(Import { .. }) => vec![],
@@ -309,7 +310,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 name,
                 typed_parameters,
                 ..
-            }) if !publicity.is_private() => {
+            }) if publicity.is_importable() => {
                 self.custom_type_definition(name, typed_parameters, constructors, *opaque)
             }
             Definition::CustomType(CustomType { .. }) => vec![],
@@ -319,7 +320,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 name,
                 value,
                 ..
-            }) if !publicity.is_private() => vec![self.module_constant(name, value)],
+            }) if publicity.is_importable() => vec![self.module_constant(name, value)],
             Definition::ModuleConstant(ModuleConstant { .. }) => vec![],
 
             Definition::Function(Function {
@@ -328,7 +329,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 publicity,
                 return_type,
                 ..
-            }) if !publicity.is_private() => {
+            }) if publicity.is_importable() => {
                 vec![self.module_function(name, arguments, return_type)]
             }
             Definition::Function(Function { .. }) => vec![],

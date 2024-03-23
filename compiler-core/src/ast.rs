@@ -370,6 +370,13 @@ impl Publicity {
             Self::Public | Self::Private => false,
         }
     }
+
+    pub fn is_importable(&self) -> bool {
+        match self {
+            Self::Internal | Self::Public => true,
+            Self::Private => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

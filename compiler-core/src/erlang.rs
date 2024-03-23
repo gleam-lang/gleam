@@ -235,7 +235,7 @@ fn register_imports(
             arguments: args,
             implementations,
             ..
-        }) if !publicity.is_private() => {
+        }) if publicity.is_importable() => {
             // If the function isn't for this target then don't attempt to export it
             if implementations.supports(Target::Erlang) {
                 exports.push(atom_string(name.to_string()).append("/").append(args.len()))

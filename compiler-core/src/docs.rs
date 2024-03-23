@@ -563,7 +563,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
     let mut formatter = format::Formatter::new();
 
     match statement {
-        Definition::CustomType(ct) if !ct.publicity.is_private() && !ct.opaque => Some(Type {
+        Definition::CustomType(ct) if ct.publicity.is_importable() && !ct.opaque => Some(Type {
             name: &ct.name,
             // TODO: Don't use the same printer for docs as for the formatter.
             // We are not interested in showing the exact implementation in the

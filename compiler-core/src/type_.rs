@@ -621,7 +621,7 @@ impl ModuleInterface {
 
     pub fn get_public_value(&self, name: &str) -> Option<&ValueConstructor> {
         let value = self.values.get(name)?;
-        if !value.publicity.is_private() {
+        if value.publicity.is_importable() {
             Some(value)
         } else {
             None
@@ -630,7 +630,7 @@ impl ModuleInterface {
 
     pub fn get_public_type(&self, name: &str) -> Option<&TypeConstructor> {
         let type_ = self.types.get(name)?;
-        if !type_.publicity.is_private() {
+        if type_.publicity.is_importable() {
             Some(type_)
         } else {
             None
@@ -658,7 +658,7 @@ impl ModuleInterface {
     pub fn public_value_names(&self) -> Vec<EcoString> {
         self.values
             .iter()
-            .filter(|(_, v)| !v.publicity.is_private())
+            .filter(|(_, v)| v.publicity.is_importable())
             .map(|(k, _)| k)
             .cloned()
             .collect_vec()
@@ -667,7 +667,7 @@ impl ModuleInterface {
     pub fn public_type_names(&self) -> Vec<EcoString> {
         self.types
             .iter()
-            .filter(|(_, v)| !v.publicity.is_private())
+            .filter(|(_, v)| v.publicity.is_importable())
             .map(|(k, _)| k)
             .cloned()
             .collect_vec()
