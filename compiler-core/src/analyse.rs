@@ -237,7 +237,7 @@ pub fn infer_module<A>(
     // items.
     env.module_types.retain(|_, info| info.module == name);
     env.accessors
-        .retain(|_, accessors| !accessors.publicity.is_private());
+        .retain(|_, accessors| accessors.publicity.is_importable());
 
     // Ensure no exported values have private types in their type signature
     for value in env.module_values.values() {
@@ -718,7 +718,7 @@ fn infer_function(
     // Ensure that the current target has an implementation for the function.
     // This is done at the expression level while inferring the function body, but we do it again
     // here as externally implemented functions may not have a Gleam body.
-    if !publicity.is_private()
+    if publicity.is_importable()
         && environment.target_support.is_enforced()
         && !implementations.supports(target)
     {

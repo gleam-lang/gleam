@@ -447,7 +447,7 @@ impl<'a> Generator<'a> {
                 Some(name.to_doc())
             },
         };
-        if !publicity.is_private() {
+        if publicity.is_importable() {
             imports.register_export(maybe_escape_identifier_string(name))
         }
         imports.register_module(module.to_string(), [], [member]);

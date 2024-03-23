@@ -310,7 +310,7 @@ pub fn infer_module_with_target(
     ast.type_info
         .values
         .iter()
-        .filter(|(_, v)| !v.publicity.is_private())
+        .filter(|(_, v)| v.publicity.is_importable())
         .map(|(k, v)| {
             let mut printer = Printer::new();
             (k.clone(), printer.pretty_print(&v.type_, 0))
