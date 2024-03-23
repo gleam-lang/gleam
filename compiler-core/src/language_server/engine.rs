@@ -355,8 +355,6 @@ where
             completions.push(type_completion(None, name, type_));
         }
 
-        let root_package = self.compiler.project_compiler.config.name.clone();
-
         // Imported modules
         for import in module.ast.definitions.iter().filter_map(get_import) {
             // The module may not be known of yet if it has not previously
@@ -374,7 +372,7 @@ where
                     Publicity::Private => continue,
                     // We only skip internal types if those are not defined in
                     // the root package.
-                    Publicity::Internal if module.package != root_package => continue,
+                    Publicity::Internal if module.package != self.root_package_name() => continue,
                     Publicity::Internal => {}
                     // We never skip public types.
                     Publicity::Public => {}
@@ -389,7 +387,6 @@ where
             // Unqualified types
             for unqualified in &import.unqualified_types {
                 match module.get_public_type(&unqualified.name) {
-                    Some(type_) if type_.publicity.is_internal() => continue,
                     Some(type_) => {
                         completions.push(type_completion(None, unqualified.used_name(), type_))
                     }
@@ -412,8 +409,6 @@ where
             completions.push(value_completion(None, name, value));
         }
 
-        let root_package = self.compiler.project_compiler.config.name.clone();
-
         // Imported modules
         for import in module.ast.definitions.iter().filter_map(get_import) {
             // The module may not be known of yet if it has not previously
@@ -431,7 +426,7 @@ where
                     Publicity::Private => continue,
                     // We only skip internal values if those are not defined in
                     // the root package.
-                    Publicity::Internal if module.package != root_package => continue,
+                    Publicity::Internal if module.package != self.root_package_name() => continue,
                     Publicity::Internal => {}
                     // We never skip public values.
                     Publicity::Public => {}
@@ -446,7 +441,6 @@ where
             // Unqualified values
             for unqualified in &import.unqualified_values {
                 match module.get_public_value(&unqualified.name) {
-                    Some(value) if value.publicity.is_internal() => continue,
                     Some(value) => {
                         completions.push(value_completion(None, unqualified.used_name(), value))
                     }
@@ -456,6 +450,10 @@ where
         }
 
         completions
+    }
+
+    fn root_package_name(&self) -> &str {
+        self.compiler.project_compiler.config.name.as_str()
     }
 }
 
