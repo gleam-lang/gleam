@@ -11,7 +11,7 @@ use crate::{
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
-    type_::{pretty::Printer, PreludeType, Type, ValueConstructorVariant},
+    type_::{self, pretty::Printer, PreludeType, Type, ValueConstructorVariant},
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
@@ -534,149 +534,28 @@ where
             return vec![];
         };
 
-        fn arg_patterns(args: &[Arg<Arc<Type>>]) -> impl Iterator<Item = (&str, Arc<Type>)> {
-            args.iter().filter_map(|arg| {
-                Some((arg.names.get_variable_name()?.as_str(), arg.type_.clone()))
-            })
-        }
-
-        fn pattern_fn(pattern: &Pattern<Arc<Type>>) -> Vec<(&str, Arc<Type>)> {
-            match pattern {
-                Pattern::Variable { name, type_, .. } | Pattern::Discard { name, type_, .. } => {
-                    vec![(name, type_.clone())]
-                }
-
-                Pattern::Assign { name, pattern, .. } => {
-                    let mut patterns = pattern_fn(pattern);
-                    patterns.push((name, pattern.type_()));
-                    patterns
-                }
-
-                Pattern::List { elements, .. }
-                | Pattern::Tuple {
-                    elems: elements, ..
-                } => elements.iter().flat_map(pattern_fn).collect(),
-
-                Pattern::Constructor { arguments, .. } => arguments
-                    .iter()
-                    .flat_map(|arg| pattern_fn(&arg.value))
-                    .collect(),
-
-                Pattern::BitArray { segments, .. } => {
-                    segments.iter().flat_map(|f| pattern_fn(&f.value)).collect()
-                }
-                Pattern::StringPrefix {
-                    right_side_assignment,
-                    ..
-                } => {
-                    todo!("figure out how to render String type")
-                }
-
-                _ => vec![],
-            }
-        }
-
-        fn expr_fn(expr: &TypedExpr, byte_index: u32) -> Vec<(&str, Arc<Type>)> {
-            if !expr.location().contains(byte_index) {
-                return vec![];
+        let mut completions = BTreeMap::new();
+        let mut variable_completion = |name: &str, ty: Arc<_>| {
+            if name.is_empty() || name == "_" {
+                return;
             }
 
-            match expr {
-                TypedExpr::Call { args, .. } => args
-                    .iter()
-                    .flat_map(|arg| expr_fn(&arg.value, byte_index))
-                    .collect::<Vec<_>>(),
+            let type_ = Printer::new().pretty_print(&ty, 0);
+            let completion_item = lsp::CompletionItem {
+                label: name.to_string(),
+                kind: Some(lsp::CompletionItemKind::VARIABLE),
+                detail: Some(type_),
+                documentation: None,
+                ..Default::default()
+            };
 
-                TypedExpr::Block { statements, .. } => {
-                    scope_variables(&statements, byte_index).collect()
-                }
+            let _ = completions.insert(EcoString::from(name), completion_item);
+        };
 
-                TypedExpr::Pipeline { assignments, .. } => assignments
-                    .iter()
-                    .flat_map(|assig| expr_fn(&assig.value, byte_index))
-                    .collect(),
+        extract_arg_variables(&fun.arguments, &mut variable_completion);
+        traverse_local_patterns(&fun.body, byte_index, &mut variable_completion);
 
-                TypedExpr::Fn { args, body, .. } => arg_patterns(&args)
-                    .chain(scope_variables(&body, byte_index))
-                    .collect::<Vec<_>>(),
-
-                TypedExpr::List {
-                    elements: elems, ..
-                }
-                | TypedExpr::Tuple { elems, .. } => elems
-                    .iter()
-                    .flat_map(|expr| expr_fn(expr, byte_index))
-                    .collect(),
-
-                TypedExpr::Case {
-                    subjects, clauses, ..
-                } => {
-                    let subjects = subjects.iter().flat_map(|expr| expr_fn(expr, byte_index));
-                    let clauses = clauses
-                        .iter()
-                        .filter(|clause| clause.then.location().contains(byte_index))
-                        .flat_map(|clause| {
-                            clause
-                                .pattern
-                                .iter()
-                                .flat_map(|pat| pattern_fn(pat))
-                                .chain(expr_fn(&clause.then, byte_index))
-                        });
-
-                    subjects.chain(clauses).collect()
-                }
-                TypedExpr::RecordAccess { record, .. } => expr_fn(record, byte_index),
-                TypedExpr::TupleIndex { tuple, .. } => expr_fn(tuple, byte_index),
-                TypedExpr::RecordUpdate { spread, args, .. } => args
-                    .iter()
-                    .flat_map(|arg| expr_fn(&arg.value, byte_index))
-                    .chain(expr_fn(&spread, byte_index))
-                    .collect(),
-                TypedExpr::NegateInt { value, .. } | TypedExpr::NegateBool { value, .. } => {
-                    expr_fn(value, byte_index)
-                }
-                _ => vec![],
-            }
-        }
-
-        fn scope_variables(
-            stmts: &[Statement<Arc<Type>, TypedExpr>],
-            byte_index: u32,
-        ) -> impl Iterator<Item = (&str, Arc<Type>)> {
-            stmts
-                .into_iter()
-                .filter(move |stmt| stmt.location().start < byte_index)
-                .flat_map(move |stmt| match stmt {
-                    Statement::Assignment(assignment) if !stmt.location().contains(byte_index) => {
-                        pattern_fn(&assignment.pattern)
-                    }
-                    Statement::Assignment(assignment) => expr_fn(&assignment.value, byte_index),
-
-                    Statement::Expression(expr) if stmt.location().end > byte_index => {
-                        expr_fn(expr, byte_index)
-                    }
-                    _ => vec![],
-                })
-        }
-
-        let map: BTreeMap<_, _> = arg_patterns(&fun.arguments)
-            .chain(scope_variables(&fun.body, byte_index))
-            .filter(|(name, _)| !name.is_empty() && *name != "_")
-            .map(|(name, type_)| {
-                let type_ = Printer::new().pretty_print(&type_, 0);
-                let completion_item = lsp::CompletionItem {
-                    label: name.to_string(),
-                    kind: Some(lsp::CompletionItemKind::VARIABLE),
-                    detail: Some(type_),
-                    documentation: None,
-                    ..Default::default()
-                };
-
-                (name, completion_item)
-            })
-            .collect();
-
-        map.into_values().collect()
+        completions.into_values().collect()
     }
 }
 
@@ -739,6 +618,139 @@ fn value_completion(
         documentation,
         ..Default::default()
     }
+}
+
+fn extract_arg_variables<F: FnMut(&str, Arc<Type>)>(args: &[Arg<Arc<Type>>], f: &mut F) {
+    args.iter()
+        .filter_map(|arg| Some((arg.names.get_variable_name()?.as_str(), arg.type_.clone())))
+        .for_each(|(n, t)| f(n, t))
+}
+
+fn resolve_pattern<F: FnMut(&str, Arc<Type>)>(pattern: &Pattern<Arc<Type>>, f: &mut F) {
+    match pattern {
+        Pattern::Variable { name, type_, .. } | Pattern::Discard { name, type_, .. } => {
+            f(name, type_.clone());
+        }
+
+        Pattern::Assign { name, pattern, .. } => {
+            resolve_pattern(pattern, f);
+            f(name, pattern.type_());
+        }
+
+        Pattern::List { elements, .. }
+        | Pattern::Tuple {
+            elems: elements, ..
+        } => {
+            for ele in elements {
+                resolve_pattern(ele, f)
+            }
+        }
+
+        Pattern::Constructor { arguments, .. } => {
+            for arg in arguments {
+                resolve_pattern(&arg.value, f)
+            }
+        }
+
+        Pattern::BitArray { segments, .. } => {
+            for seg in segments {
+                resolve_pattern(&seg.value, f)
+            }
+        }
+        Pattern::StringPrefix {
+            right_side_assignment,
+            ..
+        } => f(right_side_assignment.name(), type_::string()),
+
+        _ => {}
+    }
+}
+
+fn traverse_expr_patterns<F: FnMut(&str, Arc<Type>)>(expr: &TypedExpr, byte_index: u32, f: &mut F) {
+    if !expr.location().contains(byte_index) {
+        return;
+    }
+
+    match expr {
+        TypedExpr::Call { args, .. } => args
+            .iter()
+            .for_each(|arg| traverse_expr_patterns(&arg.value, byte_index, f)),
+        TypedExpr::Block { statements, .. } => traverse_local_patterns(&statements, byte_index, f),
+
+        TypedExpr::Pipeline { assignments, .. } => {
+            for assig in assignments {
+                traverse_expr_patterns(&assig.value, byte_index, f)
+            }
+        }
+        TypedExpr::Fn { args, body, .. } => {
+            extract_arg_variables(&args, f);
+            traverse_local_patterns(&body, byte_index, f);
+        }
+
+        TypedExpr::List {
+            elements: elems, ..
+        }
+        | TypedExpr::Tuple { elems, .. } => {
+            for ele in elems {
+                traverse_expr_patterns(ele, byte_index, f)
+            }
+        }
+
+        TypedExpr::Case {
+            subjects, clauses, ..
+        } => {
+            for expr in subjects {
+                traverse_expr_patterns(expr, byte_index, f)
+            }
+
+            clauses
+                .iter()
+                .filter(|clause| clause.then.location().contains(byte_index))
+                .for_each(|clause| {
+                    for pat in &clause.pattern {
+                        resolve_pattern(pat, f)
+                    }
+
+                    traverse_expr_patterns(&clause.then, byte_index, f);
+                });
+        }
+        TypedExpr::RecordAccess { record: expr, .. }
+        | TypedExpr::TupleIndex { tuple: expr, .. } => traverse_expr_patterns(expr, byte_index, f),
+        TypedExpr::RecordUpdate { spread, args, .. } => {
+            traverse_expr_patterns(&spread, byte_index, f);
+
+            for arg in args.iter() {
+                traverse_expr_patterns(&arg.value, byte_index, f)
+            }
+        }
+        TypedExpr::NegateInt { value, .. } | TypedExpr::NegateBool { value, .. } => {
+            traverse_expr_patterns(value, byte_index, f)
+        }
+        _ => {}
+    }
+}
+
+fn traverse_local_patterns<F: FnMut(&str, Arc<Type>)>(
+    stmts: &[Statement<Arc<Type>, TypedExpr>],
+    byte_index: u32,
+    f: &mut F,
+) {
+    stmts
+        .into_iter()
+        .filter(move |stmt| stmt.location().start < byte_index)
+        .for_each(move |stmt| match stmt {
+            Statement::Assignment(assignment) if !stmt.location().contains(byte_index) => {
+                resolve_pattern(&assignment.pattern, f)
+            }
+            Statement::Assignment(assignment) => {
+                traverse_expr_patterns(&assignment.value, byte_index, f)
+            }
+
+            Statement::Expression(expr) if stmt.location().end > byte_index => {
+                traverse_expr_patterns(expr, byte_index, f)
+            }
+            _ => {}
+        });
 }
 
 fn get_import(statement: &TypedDefinition) -> Option<&Import<EcoString>> {

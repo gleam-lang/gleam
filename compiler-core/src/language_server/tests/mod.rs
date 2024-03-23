@@ -345,7 +345,7 @@ fn positioned_with_io(
         add_package_from_manifest(&mut engine, package.clone());
     }
     let response = engine.compile_please();
-    assert!(response.result.is_ok());
+    response.result.expect("failed to compile test module");
 
     let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
         r"\\?\C:\src\app.gleam"

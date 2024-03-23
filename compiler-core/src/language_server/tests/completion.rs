@@ -1355,3 +1355,113 @@ pub fn main() {
         }]
     );
 }
+
+mod variable_completion {
+    use super::*;
+
+    fn positioned_variable_completions(src: &str, position: Position) -> Vec<CompletionItem> {
+        Completions::for_source(src)
+            .at(position)
+            .into_iter()
+            .filter(|c| c.kind == Some(CompletionItemKind::VARIABLE))
+            .collect()
+    }
+
+    fn make_variable(name: &str, ty: &str) -> CompletionItem {
+        CompletionItem {
+            label: name.into(),
+            kind: Some(CompletionItemKind::VARIABLE),
+            detail: Some(ty.into()),
+            documentation: None,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn fn_anon_args() {
+        let code = "
+fn wibble(a: String, b) -> Int {
+  let c = 10
+  let foo = fn(foobar) {  }
+  c
+}
+";
+        assert_eq!(
+            positioned_variable_completions(code, Position::new(3, 25)),
+            vec![
+                make_variable("a", "String"),
+                make_variable("b", "a"),
+                make_variable("c", "Int"),
+                make_variable("foobar", "a"),
+            ],
+        );
+    }
+
+    #[test]
+    fn all_assignment_patterns() {
+        let code = r#"
+type Foo { Bar(str: String) }
+fn wibble() {
+  let _a = 10
+  let a = 10
+  let b as c = 5.
+  let assert #([d, e] as f, g) = #([0, 1], 2)
+  let assert <<h:1>> as i = <<1:1>>
+  let assert "a" <> j = "ab"
+  let Bar(k) = Bar("baz")
+  
+}
+"#;
+        assert_eq!(
+            positioned_variable_completions(code, Position::new(10, 0)),
+            vec![
+                make_variable("_a", "Int"),
+                make_variable("a", "Int"),
+                make_variable("b", "Float"),
+                make_variable("c", "Float"),
+                make_variable("d", "Int"),
+                make_variable("e", "Int"),
+                make_variable("f", "List(Int)"),
+                make_variable("g", "Int"),
+                make_variable("h", "Int"),
+                make_variable("i", "BitArray"),
+                make_variable("j", "String"),
+                make_variable("k", "String"),
+            ],
+        );
+    }
+
+    #[test]
+    fn completes_case_exprs() {
+        let code = r#"
+fn wibble() {
+  case True {
+    True as bar -> {  todo }
+    _ -> { todo }
+  }
+}
+"#;
+        assert_eq!(
+            positioned_variable_completions(code, Position::new(3, 22)),
+            vec![make_variable("bar", "Bool"),],
+        );
+    }
+
+    #[test]
+    fn completes_inside_nested_exprs() {
+        let code = r#"
+type Foo { Bar(List(#(Bool))) }
+fn wibble() {
+  Bar([#(!{
+    let foo = True
+    foo
+  })])
+  todo
+}
+"#;
+        assert_eq!(
+            positioned_variable_completions(code, Position::new(5, 0)),
+            vec![make_variable("foo", "Bool"),],
+        );
+    }
+}
