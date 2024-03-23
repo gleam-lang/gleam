@@ -4,6 +4,7 @@ use crate::{
     },
     build::{Located, Module},
     config::PackageConfig,
+    format,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         compiler::LspProjectCompiler, files::FileSystemProxy, progress::ProgressReporter,
@@ -521,43 +522,15 @@ fn hover_for_function_head(
     let empty_str = EcoString::from("");
     let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
 
-    let mut function_string = format!("fn {}(", fun.name);
-    if fun.public {
-        function_string = format!("pub {}", function_string);
-    }
-
-    let default_label = ecow::EcoString::from("");
-
-    let args: Vec<_> = fun
-        .arguments
-        .iter()
-        .map(|arg| {
-            let label = match arg.names.get_label() {
-                Some(val) => val,
-                None => &default_label,
-            };
-
-            format!(
-                "{} {}:{}",
-                label,
-                arg.names.get_variable_name().unwrap(),
-                Printer::new().pretty_print(&arg.type_.clone(), 0)
-            )
-            .trim()
-            .to_string()
-        })
-        .collect();
-
-    function_string = format!(
-        "{}{}) -> {}",
-        function_string,
-        args.join(", "),
-        Printer::new().pretty_print(&fun.return_type.clone(), 0),
-    );
+    const MAX_COLUMNS: isize = 65;
+    let formatted_type = format::Formatter::new()
+        .docs_fn_signature(true, &fun.name, &fun.arguments, fun.return_type.clone())
+        .group()
+        .to_pretty_string(MAX_COLUMNS);
 
     let contents = format!(
         "```gleam
-{function_string}
+{formatted_type}
 ```
 {documentation}"
     );

@@ -35,7 +35,7 @@ fn add_2(add adder:Int) {
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
-fn add_2(add adder:Int) -> Int
+pub fn add_2(add adder: Int) -> Int
 ```
 "
                 .to_string()
@@ -67,7 +67,7 @@ fn add_2(x) {
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
-fn add_2(x:Int) -> Int
+pub fn add_2(x: Int) -> Int
 ```
 "
                 .to_string()
@@ -458,7 +458,7 @@ fn append(x, y) {
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
-fn append(x:String, y:String) -> String
+pub fn append(x: String, y: String) -> String
 ```
  Exciting documentation
  Maybe even multiple lines
