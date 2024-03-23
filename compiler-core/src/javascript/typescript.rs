@@ -27,7 +27,6 @@ use ecow::EcoString;
 use itertools::Itertools;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use super::Publicity;
 use super::{import::Imports, join, line, lines, wrap_args, Output, INDENT};
 
 /// When rendering a type variable to an TypeScript type spec we need all type
