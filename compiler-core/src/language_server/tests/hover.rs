@@ -23,7 +23,7 @@ fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
 }
 
 #[test]
-fn labelled_hover_function_definition() {
+fn hover_function_definition_with_label() {
     let code = "
 fn add_2(add adder:Int) {
   adder + 2
