@@ -6,67 +6,87 @@ use lsp_types::{
 
 use super::*;
 
-fn expression_completions(src: &str, dep: &str) -> Vec<CompletionItem> {
-    expression_completions_with_dep(src, dep, false)
+struct Completions<'a> {
+    src: &'a str,
+    root_package_modules: Vec<(&'a str, &'a str)>,
+    dependency_modules: Vec<(&'a str, &'a str)>,
 }
 
-fn expression_completions_with_dep(src: &str, dep: &str, external: bool) -> Vec<CompletionItem> {
-    let src = format!("fn typing_in_here() {{\n  0\n}}\n {src}");
-    let position = Position::new(1, 0);
-    positioned_expression_completions_with_dep(&src, dep, external, position)
-        .into_iter()
-        .filter(|c| c.label != "typing_in_here")
-        .collect_vec()
-}
-
-fn positioned_expression_completions(
-    src: &str,
-    dep: &str,
-    position: Position,
-) -> Vec<CompletionItem> {
-    positioned_expression_completions_with_dep(src, dep, false, position)
-}
-
-/// `external` is used to tell whether the specified dependency has to be
-/// treated as coming from an external imported package or as coming from a
-/// module from the same root package.
-/// In any case `src` will be able to import it using `import dep`.
-fn positioned_expression_completions_with_dep(
-    src: &str,
-    dep: &str,
-    external: bool,
-    position: Position,
-) -> Vec<CompletionItem> {
-    let io = LanguageServerTestIO::new();
-    let mut engine = setup_engine(&io);
-
-    if external {
-        add_path_dep(&mut engine, "dep");
-        let _ = io.path_dep_module("dep", "dep", dep);
-    } else {
-        _ = io.src_module("dep", dep);
+impl<'a> Completions<'a> {
+    pub fn for_source(src: &'a str) -> Self {
+        Completions {
+            src,
+            root_package_modules: vec![],
+            dependency_modules: vec![],
+        }
     }
-    _ = io.src_module("app", src);
 
-    let response = engine.compile_please();
-    assert!(response.result.is_ok());
+    pub fn add_module(self, name: &'a str, src: &'a str) -> Self {
+        let mut root_package_modules = self.root_package_modules;
+        root_package_modules.push((name, src));
+        Completions {
+            root_package_modules,
+            ..self
+        }
+    }
 
-    let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-        r"\\?\C:\src\app.gleam"
-    } else {
-        "/src/app.gleam"
-    });
+    pub fn add_dep_module(self, name: &'a str, src: &'a str) -> Self {
+        let mut dependency_modules = self.dependency_modules;
+        dependency_modules.push((name, src));
+        Completions {
+            dependency_modules,
+            ..self
+        }
+    }
 
-    let url = Url::from_file_path(path).unwrap();
+    pub fn at(self, position: Position) -> Vec<CompletionItem> {
+        let io = LanguageServerTestIO::new();
+        let mut engine = setup_engine(&io);
 
-    let response = engine.completion(TextDocumentPositionParams::new(
-        TextDocumentIdentifier::new(url),
-        position,
-    ));
+        // Add an external dependency and all its modules
+        add_path_dep(&mut engine, "dep");
+        self.dependency_modules.iter().for_each(|(name, code)| {
+            let _ = io.path_dep_module("dep", name, code);
+        });
 
-    let mut completions = response.result.unwrap().unwrap_or_default();
-    completions.sort_by(|a, b| a.label.cmp(&b.label));
-    completions
+        // Add all the modules belonging to the root package
+        self.root_package_modules.iter().for_each(|(name, code)| {
+            let _ = io.src_module(name, code);
+        });
+
+        // Add the final module we're going to be positioning the cursor in.
+        _ = io.src_module("app", self.src);
+
+        let response = engine.compile_please();
+        assert!(response.result.is_ok());
+
+        let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
+            r"\\?\C:\src\app.gleam"
+        } else {
+            "/src/app.gleam"
+        });
+
+        let url = Url::from_file_path(path).unwrap();
+
+        let response = engine.completion(TextDocumentPositionParams::new(
+            TextDocumentIdentifier::new(url),
+            position,
+        ));
+
+        let mut completions = response.result.unwrap().unwrap_or_default();
+        completions.sort_by(|a, b| a.label.cmp(&b.label));
+        completions
+    }
+
+    pub fn at_default_position(self) -> Vec<CompletionItem> {
+        let src = &format!("fn typing_in_here() {{\n  0\n}}\n {}", self.src);
+        let completions = Completions { src, ..self };
+        completions
+            .at(Position::new(1, 0))
+            .into_iter()
+            .filter(|c| c.label != "typing_in_here")
+            .collect_vec()
+    }
 }
 
 fn add_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, name: &str) {
@@ -171,7 +191,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        positioned_expression_completions(code, "", Position::new(0, 0)),
+        Completions::for_source(code).at(Position::new(0, 0)),
         vec![]
     );
 }
@@ -184,7 +204,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        expression_completions(code, ""),
+        Completions::for_source(code).at_default_position(),
         vec![CompletionItem {
             label: "main".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -204,7 +224,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        expression_completions(code, ""),
+        Completions::for_source(code).at_default_position(),
         vec![CompletionItem {
             label: "main".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -228,7 +248,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        expression_completions(code, ""),
+        Completions::for_source(code).at_default_position(),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -258,7 +278,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        expression_completions(code, ""),
+        Completions::for_source(code).at_default_position(),
         vec![CompletionItem {
             label: "Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -284,7 +304,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        expression_completions(code, ""),
+        Completions::for_source(code).at_default_position(),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -319,7 +339,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        expression_completions(code, ""),
+        Completions::for_source(code).at_default_position(),
         vec![CompletionItem {
             label: "Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -342,7 +362,9 @@ pub fn wobble() {
 ";
 
     assert_eq!(
-        expression_completions(code, dep),
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at_default_position(),
         vec![CompletionItem {
             label: "dep.wobble".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -366,7 +388,9 @@ pub type Direction {
 ";
 
     assert_eq!(
-        expression_completions(code, dep),
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at_default_position(),
         vec![
             CompletionItem {
                 label: "dep.Left".into(),
@@ -398,7 +422,9 @@ pub type Box {
 ";
 
     assert_eq!(
-        expression_completions(code, dep),
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at_default_position(),
         vec![CompletionItem {
             label: "dep.Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -421,7 +447,9 @@ pub fn wobble() {
 ";
 
     assert_eq!(
-        expression_completions(code, dep),
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at_default_position(),
         vec![
             CompletionItem {
                 label: "dep.wobble".into(),
@@ -454,7 +482,9 @@ pub type Direction {
 ";
 
     assert_eq!(
-        expression_completions(code, dep),
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at_default_position(),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -493,7 +523,9 @@ pub type Box {
 ";
 
     assert_eq!(
-        expression_completions(code, dep),
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at_default_position(),
         vec![
             CompletionItem {
                 label: "Box".into(),
@@ -523,7 +555,9 @@ fn private() {
     let dep = "";
 
     assert_eq!(
-        expression_completions(code, dep),
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at_default_position(),
         vec![CompletionItem {
             label: "private".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -544,7 +578,9 @@ type Wibble {
     let dep = "";
 
     assert_eq!(
-        expression_completions(code, dep),
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at_default_position(),
         vec![CompletionItem {
             label: "Wobble".into(),
             kind: Some(CompletionItemKind::ENUM_MEMBER),
@@ -565,7 +601,9 @@ pub opaque type Wibble {
     let dep = "";
 
     assert_eq!(
-        expression_completions(code, dep),
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at_default_position(),
         vec![CompletionItem {
             label: "Wobble".into(),
             kind: Some(CompletionItemKind::ENUM_MEMBER),
@@ -585,7 +623,12 @@ fn private() {
 }
 ";
 
-    assert_eq!(expression_completions(code, dep), vec![]);
+    assert_eq!(
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at_default_position(),
+        vec![]
+    );
 }
 
 #[test]
@@ -597,7 +640,12 @@ type Wibble {
 }
 ";
 
-    assert_eq!(expression_completions(code, dep), vec![]);
+    assert_eq!(
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at_default_position(),
+        vec![]
+    );
 }
 
 #[test]
@@ -609,7 +657,12 @@ type Wibble {
 }
 ";
 
-    assert_eq!(expression_completions(code, dep), vec![]);
+    assert_eq!(
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at_default_position(),
+        vec![]
+    );
 }
 
 #[test]
@@ -620,7 +673,7 @@ pub type Wibble {
 }";
 
     assert_eq!(
-        positioned_expression_completions(code, "", Position::new(2, 0)),
+        Completions::for_source(code).at(Position::new(2, 0)),
         [
             prelude_type_completions(),
             vec![CompletionItem {
@@ -645,7 +698,7 @@ pub type Wibble = Result(
 ";
 
     assert_eq!(
-        positioned_expression_completions(code, "", Position::new(2, 0)),
+        Completions::for_source(code).at(Position::new(2, 0)),
         [
             prelude_type_completions(),
             vec![CompletionItem {
@@ -671,7 +724,7 @@ pub fn wibble(
 ";
 
     assert_eq!(
-        positioned_expression_completions(code, "", Position::new(2, 0)),
+        Completions::for_source(code).at(Position::new(2, 0)),
         prelude_type_completions(),
     );
 }
@@ -692,7 +745,9 @@ pub fn wibble(
 ";
 
     assert_eq!(
-        positioned_expression_completions(code, dep, Position::new(3, 0)),
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at(Position::new(3, 0)),
         [
             prelude_type_completions(),
             vec![CompletionItem {
@@ -723,7 +778,9 @@ pub fn wibble(
 ";
 
     assert_eq!(
-        positioned_expression_completions(code, dep, Position::new(3, 0)),
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at(Position::new(3, 0)),
         [
             prelude_type_completions(),
             vec![
@@ -760,7 +817,7 @@ pub fn wibble(
 ";
 
     assert_eq!(
-        positioned_expression_completions(code, "", Position::new(4, 0)),
+        Completions::for_source(code).at(Position::new(4, 0)),
         [
             prelude_type_completions(),
             vec![CompletionItem {
@@ -786,7 +843,9 @@ fn internal_values_from_root_package_are_in_the_completions() {
 "#;
 
     assert_eq!(
-        expression_completions("import dep", dep),
+        Completions::for_source("import dep")
+            .add_module("dep", dep)
+            .at_default_position(),
         vec![
             CompletionItem {
                 label: "dep.Bar".into(),
@@ -826,7 +885,7 @@ fn internal_values_from_root_package_are_in_the_completions() {
 
 #[test]
 fn internal_types_from_root_package_are_in_the_completions() {
-    let src = "import dep
+    let code = "import dep
 
 pub fn wibble(
     _: String,
@@ -857,7 +916,9 @@ pub fn wibble(
     ]);
 
     assert_eq!(
-        positioned_expression_completions(src, dep, Position::new(3, 0)),
+        Completions::for_source(code)
+            .add_module("dep", dep)
+            .at(Position::new(3, 0)),
         expected_completions,
     );
 }
@@ -873,7 +934,7 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
 "#;
 
     assert_eq!(
-        expression_completions(code, ""),
+        Completions::for_source(code).at_default_position(),
         vec![
             CompletionItem {
                 label: "Bar".into(),
@@ -921,7 +982,7 @@ fn internal_types_from_the_same_module_are_in_the_completions() {
 ";
 
     assert_eq!(
-        positioned_expression_completions(code, "", Position::new(3, 0)),
+        Completions::for_source(code).at(Position::new(3, 0)),
         [
             vec![
                 CompletionItem {
@@ -947,7 +1008,7 @@ fn internal_types_from_the_same_module_are_in_the_completions() {
 
 #[test]
 fn internal_types_from_a_dependency_are_ignored() {
-    let src = "import dep
+    let code = "import dep
 
 pub fn wibble(
     _: String,
@@ -961,7 +1022,9 @@ pub fn wibble(
 "#;
 
     assert_eq!(
-        positioned_expression_completions_with_dep(src, dep, true, Position::new(3, 0)),
+        Completions::for_source(code)
+            .add_dep_module("dep", dep)
+            .at(Position::new(3, 0)),
         prelude_type_completions(),
     );
 }
@@ -977,7 +1040,9 @@ fn internal_values_from_a_dependency_are_ignored() {
 "#;
 
     assert_eq!(
-        expression_completions_with_dep("import dep", dep, true),
+        Completions::for_source("import dep")
+            .add_dep_module("dep", dep)
+            .at_default_position(),
         vec![]
     );
 }
