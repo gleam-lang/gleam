@@ -49,7 +49,6 @@ fn positioned_expression_completions_with_dep(
     _ = io.src_module("app", src);
 
     let response = engine.compile_please();
-    println!("{:#?}", response);
     assert!(response.result.is_ok());
 
     let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
