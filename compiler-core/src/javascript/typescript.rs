@@ -294,41 +294,43 @@ impl<'a> TypeScriptGenerator<'a> {
         match statement {
             Definition::TypeAlias(TypeAlias {
                 alias,
-                public,
+                publicity,
                 type_,
                 ..
-            }) if *public => vec![self.type_alias(alias, type_)],
+            }) if publicity.is_importable() => vec![self.type_alias(alias, type_)],
             Definition::TypeAlias(TypeAlias { .. }) => vec![],
 
             Definition::Import(Import { .. }) => vec![],
 
             Definition::CustomType(CustomType {
-                public,
+                publicity,
                 constructors,
                 opaque,
                 name,
                 typed_parameters,
                 ..
-            }) if *public => {
+            }) if publicity.is_importable() => {
                 self.custom_type_definition(name, typed_parameters, constructors, *opaque)
             }
             Definition::CustomType(CustomType { .. }) => vec![],
 
             Definition::ModuleConstant(ModuleConstant {
-                public,
+                publicity,
                 name,
                 value,
                 ..
-            }) if *public => vec![self.module_constant(name, value)],
+            }) if publicity.is_importable() => vec![self.module_constant(name, value)],
             Definition::ModuleConstant(ModuleConstant { .. }) => vec![],
 
             Definition::Function(Function {
                 arguments,
                 name,
-                public,
+                publicity,
                 return_type,
                 ..
-            }) if *public => vec![self.module_function(name, arguments, return_type)],
+            }) if publicity.is_importable() => {
+                vec![self.module_function(name, arguments, return_type)]
+            }
             Definition::Function(Function { .. }) => vec![],
         }
     }

@@ -310,7 +310,7 @@ pub fn infer_module_with_target(
     ast.type_info
         .values
         .iter()
-        .filter(|(_, v)| v.public)
+        .filter(|(_, v)| v.publicity.is_importable())
         .map(|(k, v)| {
             let mut printer = Printer::new();
             (k.clone(), printer.pretty_print(&v.type_, 0))
@@ -1992,7 +1992,7 @@ fn contains_todo_false() {
 #[test]
 fn assert_suitable_main_function_not_module_function() {
     let value = ValueConstructor {
-        public: true,
+        publicity: Publicity::Public,
         deprecation: Deprecation::NotDeprecated,
         type_: fn_(vec![], int()),
         variant: ValueConstructorVariant::ModuleConstant {
@@ -2016,7 +2016,7 @@ fn assert_suitable_main_function_not_module_function() {
 #[test]
 fn assert_suitable_main_function_wrong_arity() {
     let value = ValueConstructor {
-        public: true,
+        publicity: Publicity::Public,
         deprecation: Deprecation::NotDeprecated,
         type_: fn_(vec![], int()),
         variant: ValueConstructorVariant::ModuleFn {
@@ -2039,7 +2039,7 @@ fn assert_suitable_main_function_wrong_arity() {
 #[test]
 fn assert_suitable_main_function_ok() {
     let value = ValueConstructor {
-        public: true,
+        publicity: Publicity::Public,
         deprecation: Deprecation::NotDeprecated,
         type_: fn_(vec![], int()),
         variant: ValueConstructorVariant::ModuleFn {
@@ -2062,7 +2062,7 @@ fn assert_suitable_main_function_ok() {
 #[test]
 fn assert_suitable_main_function_erlang_not_supported() {
     let value = ValueConstructor {
-        public: true,
+        publicity: Publicity::Public,
         deprecation: Deprecation::NotDeprecated,
         type_: fn_(vec![], int()),
         variant: ValueConstructorVariant::ModuleFn {
@@ -2085,7 +2085,7 @@ fn assert_suitable_main_function_erlang_not_supported() {
 #[test]
 fn assert_suitable_main_function_javascript_not_supported() {
     let value = ValueConstructor {
-        public: true,
+        publicity: Publicity::Public,
         deprecation: Deprecation::NotDeprecated,
         type_: fn_(vec![], int()),
         variant: ValueConstructorVariant::ModuleFn {

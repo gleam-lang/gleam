@@ -349,6 +349,36 @@ impl TypeAst {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Publicity {
+    Public,
+    Private,
+    Internal,
+}
+
+impl Publicity {
+    pub fn is_private(&self) -> bool {
+        match self {
+            Self::Private => true,
+            Self::Public | Self::Internal => false,
+        }
+    }
+
+    pub fn is_internal(&self) -> bool {
+        match self {
+            Self::Internal => true,
+            Self::Public | Self::Private => false,
+        }
+    }
+
+    pub fn is_importable(&self) -> bool {
+        match self {
+            Self::Internal | Self::Public => true,
+            Self::Private => false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A function definition
 ///
@@ -366,7 +396,7 @@ pub struct Function<T, Expr> {
     pub name: EcoString,
     pub arguments: Vec<Arg<T>>,
     pub body: Vec1<Statement<T, Expr>>,
-    pub public: bool,
+    pub publicity: Publicity,
     pub deprecation: Deprecation,
     pub return_annotation: Option<TypeAst>,
     pub return_type: T,
@@ -436,7 +466,7 @@ pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 pub struct ModuleConstant<T, ConstantRecordTag> {
     pub documentation: Option<EcoString>,
     pub location: SrcSpan,
-    pub public: bool,
+    pub publicity: Publicity,
     pub name: EcoString,
     pub annotation: Option<TypeAst>,
     pub value: Box<Constant<T, ConstantRecordTag>>,
@@ -467,7 +497,7 @@ pub struct CustomType<T> {
     pub location: SrcSpan,
     pub end_position: u32,
     pub name: EcoString,
-    pub public: bool,
+    pub publicity: Publicity,
     pub constructors: Vec<RecordConstructor<T>>,
     pub documentation: Option<EcoString>,
     pub deprecation: Deprecation,
@@ -505,7 +535,7 @@ pub struct TypeAlias<T> {
     pub parameters: Vec<EcoString>,
     pub type_ast: TypeAst,
     pub type_: T,
-    pub public: bool,
+    pub publicity: Publicity,
     pub documentation: Option<EcoString>,
     pub deprecation: Deprecation,
 }
@@ -627,6 +657,17 @@ impl<A, B, C, E> Definition<A, B, C, E> {
             }) => {
                 let _ = std::mem::replace(doc, Some(new_doc));
             }
+        }
+    }
+
+    pub fn is_internal(&self) -> bool {
+        match self {
+            Definition::Function(Function { publicity, .. })
+            | Definition::CustomType(CustomType { publicity, .. })
+            | Definition::ModuleConstant(ModuleConstant { publicity, .. })
+            | Definition::TypeAlias(TypeAlias { publicity, .. }) => publicity.is_internal(),
+
+            Definition::Import(_) => false,
         }
     }
 }

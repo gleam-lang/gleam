@@ -20,9 +20,9 @@ use serde::Serialize;
 
 use crate::{
     ast::{
-        ArgNames, BitArraySegment, CallArg, Constant, DefinitionLocation, Pattern, SrcSpan,
-        TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment, TypedRecordUpdateArg,
-        UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
+        ArgNames, BitArraySegment, CallArg, Constant, DefinitionLocation, Pattern, Publicity,
+        SrcSpan, TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment,
+        TypedRecordUpdateArg, UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
     },
     bit_array,
     build::{Origin, Target},
@@ -53,7 +53,7 @@ pub enum Type {
     /// that defines the type.
     ///
     Named {
-        public: bool,
+        publicity: Publicity,
         package: EcoString,
         module: EcoString,
         name: EcoString,
@@ -202,7 +202,7 @@ impl Type {
     // TODO: specialise this to just List.
     pub fn get_app_args(
         &self,
-        public: bool,
+        publicity: Publicity,
         package: &str,
         module: &str,
         name: &str,
@@ -226,7 +226,14 @@ impl Type {
             Self::Var { type_: typ } => {
                 let args: Vec<_> = match typ.borrow().deref() {
                     TypeVar::Link { type_: typ } => {
-                        return typ.get_app_args(public, package, module, name, arity, environment);
+                        return typ.get_app_args(
+                            publicity,
+                            package,
+                            module,
+                            name,
+                            arity,
+                            environment,
+                        );
                     }
 
                     TypeVar::Unbound { .. } => {
@@ -244,7 +251,7 @@ impl Type {
                         package: package.into(),
                         module: module.into(),
                         args: args.clone(),
-                        public,
+                        publicity,
                     }),
                 };
                 Some(args)
@@ -256,7 +263,10 @@ impl Type {
 
     pub fn find_private_type(&self) -> Option<Self> {
         match self {
-            Self::Named { public: false, .. } => Some(self.clone()),
+            Self::Named {
+                publicity: Publicity::Private,
+                ..
+            } => Some(self.clone()),
 
             Self::Named { args, .. } => args.iter().find_map(|t| t.find_private_type()),
 
@@ -295,7 +305,7 @@ pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AccessorsMap {
-    pub public: bool,
+    pub publicity: Publicity,
     pub type_: Arc<Type>,
     pub accessors: HashMap<EcoString, RecordAccessor>,
 }
@@ -611,7 +621,7 @@ impl ModuleInterface {
 
     pub fn get_public_value(&self, name: &str) -> Option<&ValueConstructor> {
         let value = self.values.get(name)?;
-        if value.public {
+        if value.publicity.is_importable() {
             Some(value)
         } else {
             None
@@ -620,7 +630,7 @@ impl ModuleInterface {
 
     pub fn get_public_type(&self, name: &str) -> Option<&TypeConstructor> {
         let type_ = self.types.get(name)?;
-        if type_.public {
+        if type_.publicity.is_importable() {
             Some(type_)
         } else {
             None
@@ -648,7 +658,7 @@ impl ModuleInterface {
     pub fn public_value_names(&self) -> Vec<EcoString> {
         self.values
             .iter()
-            .filter(|(_, v)| v.public)
+            .filter(|(_, v)| v.publicity.is_importable())
             .map(|(k, _)| k)
             .cloned()
             .collect_vec()
@@ -657,7 +667,7 @@ impl ModuleInterface {
     pub fn public_type_names(&self) -> Vec<EcoString> {
         self.types
             .iter()
-            .filter(|(_, v)| v.public)
+            .filter(|(_, v)| v.publicity.is_importable())
             .map(|(k, _)| k)
             .cloned()
             .collect_vec()
@@ -795,7 +805,7 @@ impl TypeVar {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeConstructor {
-    pub public: bool,
+    pub publicity: Publicity,
     pub origin: SrcSpan,
     pub module: EcoString,
     pub parameters: Vec<Arc<Type>>,
@@ -811,7 +821,7 @@ impl TypeConstructor {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValueConstructor {
-    pub public: bool,
+    pub publicity: Publicity,
     pub deprecation: Deprecation,
     pub variant: ValueConstructorVariant,
     pub type_: Arc<Type>,
@@ -885,7 +895,7 @@ impl ValueConstructor {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAliasConstructor {
-    pub public: bool,
+    pub publicity: Publicity,
     pub module: EcoString,
     pub type_: Type,
     pub arity: usize,
@@ -1020,7 +1030,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
         },
 
         Type::Named {
-            public,
+            publicity,
             module,
             package,
             name,
@@ -1028,7 +1038,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
         } => {
             let args = args.iter().map(|t| generalise(t.clone())).collect();
             Arc::new(Type::Named {
-                public: *public,
+                publicity: *publicity,
                 module: module.clone(),
                 package: package.clone(),
                 name: name.clone(),

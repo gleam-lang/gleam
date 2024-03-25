@@ -2,7 +2,7 @@ use ecow::EcoString;
 
 use crate::{
     ast::{
-        Constant, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
+        Constant, Publicity, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
         TypedConstantBitArraySegmentOption,
     },
     schema_capnp::{self as schema, *},
@@ -154,12 +154,12 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: type_constructor::Builder<'_>,
         constructor: &TypeConstructor,
     ) {
-        builder.set_public(constructor.public);
         builder.set_module(&constructor.module);
         builder.set_deprecated(match &constructor.deprecation {
             Deprecation::NotDeprecated => "",
             Deprecation::Deprecated { message } => message,
         });
+        builder.set_publicity(self.publicity(constructor.publicity));
         let type_builder = builder.reborrow().init_type();
         self.build_type(type_builder, &constructor.typ);
         self.build_types(
@@ -198,13 +198,21 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: value_constructor::Builder<'_>,
         constructor: &ValueConstructor,
     ) {
-        builder.set_public(constructor.public);
         builder.set_deprecated(match &constructor.deprecation {
             Deprecation::NotDeprecated => "",
             Deprecation::Deprecated { message } => message,
         });
+        builder.set_publicity(self.publicity(constructor.publicity));
         self.build_type(builder.reborrow().init_type(), &constructor.type_);
         self.build_value_constructor_variant(builder.init_variant(), &constructor.variant);
+    }
+
+    fn publicity(&self, publicity: Publicity) -> crate::schema_capnp::Publicity {
+        match publicity {
+            Publicity::Public => crate::schema_capnp::Publicity::Public,
+            Publicity::Private => crate::schema_capnp::Publicity::Private,
+            Publicity::Internal => crate::schema_capnp::Publicity::Internal,
+        }
     }
 
     fn build_src_span(&mut self, mut builder: src_span::Builder<'_>, span: SrcSpan) {

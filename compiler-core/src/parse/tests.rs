@@ -612,6 +612,19 @@ pub fn main() -> Nil {
 }
 
 #[test]
+fn multiple_internal_attributes() {
+    assert_module_error!(
+        r#"
+@internal
+@internal
+pub fn main() -> Nil {
+  Nil
+}
+"#
+    );
+}
+
+#[test]
 fn attributes_with_no_definition() {
     assert_module_error!(
         r#"
@@ -785,5 +798,47 @@ fn string_single_char_suggestion() {
         let a = 'example'
       }
     "
+    );
+}
+
+#[test]
+fn private_internal_const() {
+    assert_module_error!(
+        "
+@internal
+const wibble = 1
+"
+    );
+}
+
+#[test]
+fn private_internal_type_alias() {
+    assert_module_error!(
+        "
+@internal
+type Alias = Int
+"
+    );
+}
+
+#[test]
+fn private_internal_function() {
+    assert_module_error!(
+        "
+@internal
+fn wibble() { todo }
+"
+    );
+}
+
+#[test]
+fn private_internal_type() {
+    assert_module_error!(
+        "
+@internal
+type Wibble {
+  Wibble
+}
+"
     );
 }

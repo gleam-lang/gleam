@@ -5,7 +5,7 @@ use itertools::Itertools;
 
 use crate::{
     ast::{
-        BitArrayOption, BitArraySegment, CallArg, Constant, SrcSpan, TypedConstant,
+        BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
         TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
     },
     build::Origin,
@@ -93,7 +93,7 @@ impl ModuleDecoder {
             },
         };
         Ok(TypeConstructor {
-            public: reader.get_public(),
+            publicity: self.publicity(reader.get_publicity()?),
             origin: Default::default(),
             module: reader.get_module()?.into(),
             parameters: read_vec!(reader.get_parameters()?, self, type_),
@@ -118,7 +118,7 @@ impl ModuleDecoder {
         let name = reader.get_name()?.into();
         let args = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(Arc::new(Type::Named {
-            public: true,
+            publicity: Publicity::Public,
             package,
             module,
             name,
@@ -207,7 +207,7 @@ impl ModuleDecoder {
     ) -> Result<ValueConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
         let variant = self.value_constructor_variant(&reader.get_variant()?)?;
-        let public = reader.get_public();
+        let publicity = self.publicity(reader.get_publicity()?);
         let deprecation = match reader.get_deprecated()? {
             "" => Deprecation::NotDeprecated,
             message => Deprecation::Deprecated {
@@ -216,10 +216,18 @@ impl ModuleDecoder {
         };
         Ok(ValueConstructor {
             deprecation,
-            public,
+            publicity,
             type_,
             variant,
         })
+    }
+
+    fn publicity(&self, publicity: crate::schema_capnp::Publicity) -> Publicity {
+        match publicity {
+            schema::Publicity::Public => Publicity::Public,
+            schema::Publicity::Private => Publicity::Private,
+            schema::Publicity::Internal => Publicity::Internal,
+        }
     }
 
     fn constant(&mut self, reader: &constant::Reader<'_>) -> Result<TypedConstant> {
@@ -504,7 +512,7 @@ impl ModuleDecoder {
 
     fn accessors_map(&mut self, reader: &accessors_map::Reader<'_>) -> Result<AccessorsMap> {
         Ok(AccessorsMap {
-            public: true,
+            publicity: Publicity::Public,
             type_: self.type_(&reader.get_type()?)?,
             accessors: read_hashmap!(&reader.get_accessors()?, self, record_accessor),
         })

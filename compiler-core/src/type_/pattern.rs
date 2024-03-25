@@ -321,7 +321,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 tail,
                 ..
             } => match type_.get_app_args(
-                true,
+                Publicity::Public,
                 PRELUDE_PACKAGE_NAME,
                 PRELUDE_MODULE_NAME,
                 "List",

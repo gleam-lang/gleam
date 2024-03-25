@@ -26,7 +26,7 @@ tracing-subscriber = { version = "0.3.18", features = ["fmt", "env-filter"] }
 # HTTP client
 reqwest = { version = "0.11.26", default-features = false, features = ["rustls-tls"] }
 # Checksums
-sha2 = "0.9.8"
+sha2 = "0.10.8"
 # Getting hostname
 hostname = "0.3.1"
 # TOML parser/editor that preserves comments & formatting

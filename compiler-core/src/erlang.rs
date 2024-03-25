@@ -91,7 +91,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
         .iter()
         .filter_map(|s| match s {
             Definition::CustomType(CustomType {
-                public: true,
+                publicity: Publicity::Public,
                 constructors,
                 ..
             }) => Some(constructors),
@@ -230,12 +230,12 @@ fn register_imports(
 ) {
     match s {
         Definition::Function(Function {
-            public: true,
+            publicity,
             name,
             arguments: args,
             implementations,
             ..
-        }) => {
+        }) if publicity.is_importable() => {
             // If the function isn't for this target then don't attempt to export it
             if implementations.supports(Target::Erlang) {
                 exports.push(atom_string(name.to_string()).append("/").append(args.len()))
@@ -351,7 +351,7 @@ fn module_function<'a>(
 ) -> Option<Document<'a>> {
     // Private external functions don't need to render anything, the underlying
     // Erlang implementation is used directly at the call site.
-    if function.external_erlang.is_some() && !function.public {
+    if function.external_erlang.is_some() && function.publicity.is_private() {
         return None;
     }
 

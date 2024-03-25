@@ -2,7 +2,7 @@ use std::time::{Instant, SystemTime};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
+use crate::{cli, fs::ProjectIO, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Mode, Options, Package},
@@ -129,6 +129,7 @@ pub(crate) fn build_documentation(
         config,
         compiled.modules.as_slice(),
         &pages,
+        ProjectIO::new(),
         SystemTime::now(),
     );
 

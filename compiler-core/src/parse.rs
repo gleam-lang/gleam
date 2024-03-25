@@ -58,11 +58,12 @@ use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
     CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, HasLocation, Import,
-    Module, ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread,
-    SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst, TypeAstConstructor,
-    TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause,
-    UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule,
-    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
+    Module, ModuleConstant, Pattern, Publicity, RecordConstructor, RecordConstructorArg,
+    RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
+    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport,
+    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
+    UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment,
+    CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -86,12 +87,35 @@ pub struct Parsed {
     pub extra: ModuleExtra,
 }
 
+/// We use this to keep track of the `@internal` annotation for top level
+/// definitions. Instead of using just a boolean we want to keep track of the
+/// source position of the annotation in case it is present. This way we can
+/// report a better error message highlighting the annotation in case it is
+/// used on a private definition (it doesn't make sense to mark something
+/// private as internal):
+///
+/// ```txt
+/// @internal
+/// ^^^^^^^^^ we first get to the annotation
+/// fn wibble() {}
+/// ^^ and only later discover it's applied on a private definition
+///    so we have to keep track of the attribute's position to highlight it
+///    in the resulting error message.
+/// ```
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum InternalAttribute {
+    #[default]
+    Missing,
+    Present(SrcSpan),
+}
+
 #[derive(Debug, Default)]
 struct Attributes {
     target: Option<Target>,
     deprecated: Deprecation,
     external_erlang: Option<(EcoString, EcoString)>,
     external_javascript: Option<(EcoString, EcoString)>,
+    internal: InternalAttribute,
 }
 
 impl Attributes {
@@ -168,8 +192,8 @@ where
             extra: ModuleExtra::new(),
             doc_comments: VecDeque::new(),
         };
-        let _ = parser.next_tok();
-        let _ = parser.next_tok();
+        parser.advance();
+        parser.advance();
         parser
     }
 
@@ -1563,7 +1587,7 @@ where
             documentation,
             location: SrcSpan { start, end },
             end_position,
-            public,
+            publicity: self.publicity(public, attributes.internal)?,
             name,
             arguments: args,
             body,
@@ -1578,6 +1602,22 @@ where
                 uses_javascript_externals: false,
             },
         })))
+    }
+
+    fn publicity(
+        &self,
+        public: bool,
+        internal: InternalAttribute,
+    ) -> Result<Publicity, ParseError> {
+        match (internal, public) {
+            (InternalAttribute::Missing, true) => Ok(Publicity::Public),
+            (InternalAttribute::Missing, false) => Ok(Publicity::Private),
+            (InternalAttribute::Present(_), true) => Ok(Publicity::Internal),
+            (InternalAttribute::Present(location), false) => Err(ParseError {
+                error: ParseErrorType::RedundantInternalAttribute,
+                location,
+            }),
+        }
     }
 
     // Parse a single function definition param
@@ -1774,7 +1814,7 @@ where
                 return Ok(Some(Definition::TypeAlias(TypeAlias {
                     documentation,
                     location: SrcSpan::new(start, type_end),
-                    public,
+                    publicity: self.publicity(public, attributes.internal)?,
                     alias: name,
                     parameters,
                     type_ast: t,
@@ -1791,7 +1831,7 @@ where
             documentation,
             location: SrcSpan { start, end },
             end_position,
-            public,
+            publicity: self.publicity(public, attributes.internal)?,
             opaque,
             name,
             parameters,
@@ -1831,13 +1871,14 @@ where
                     (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                         let _ = Parser::next_tok(p);
                         let _ = Parser::next_tok(p);
+                        let doc = p.take_documentation(start);
                         match Parser::parse_type(p)? {
                             Some(type_ast) => Ok(Some(RecordConstructorArg {
                                 label: Some(name),
                                 ast: type_ast,
                                 location: SrcSpan { start, end },
                                 type_: (),
-                                doc: None,
+                                doc,
                             })),
                             None => {
                                 parse_error(ParseErrorType::ExpectedType, SrcSpan { start, end })
@@ -1849,13 +1890,17 @@ where
                         p.tok1 = t1;
                         match Parser::parse_type(p)? {
                             Some(type_ast) => {
+                                let doc = match &p.tok0 {
+                                    Some((start, _, _)) => p.take_documentation(*start),
+                                    None => None,
+                                };
                                 let type_location = type_ast.location();
                                 Ok(Some(RecordConstructorArg {
                                     label: None,
                                     ast: type_ast,
                                     location: type_location,
                                     type_: (),
-                                    doc: None,
+                                    doc,
                                 }))
                             }
                             None => Ok(None),
@@ -2180,7 +2225,7 @@ where
             Ok(Some(Definition::ModuleConstant(ModuleConstant {
                 documentation,
                 location: SrcSpan { start, end },
-                public,
+                publicity: self.publicity(public, attributes.internal)?,
                 name,
                 annotation,
                 value: Box::new(value),
@@ -2872,12 +2917,21 @@ where
         // Parse the name of the attribute.
 
         let (_, name, end) = self.expect_name()?;
-        let _ = self.expect_one(&Token::LeftParen)?;
 
         let end = match name.as_str() {
-            "external" => self.parse_external_attribute(start, end, attributes),
-            "target" => self.parse_target_attribute(start, end, attributes),
-            "deprecated" => self.parse_deprecated_attribute(start, end, attributes),
+            "external" => {
+                let _ = self.expect_one(&Token::LeftParen)?;
+                self.parse_external_attribute(start, end, attributes)
+            }
+            "target" => {
+                let _ = self.expect_one(&Token::LeftParen)?;
+                self.parse_target_attribute(start, end, attributes)
+            }
+            "deprecated" => {
+                let _ = self.expect_one(&Token::LeftParen)?;
+                self.parse_deprecated_attribute(start, end, attributes)
+            }
+            "internal" => self.parse_internal_attribute(start, end, attributes),
             _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan { start, end }),
         }?;
 
@@ -2956,6 +3010,26 @@ where
         let (_, end) = self.expect_one(&Token::RightParen)?;
         attributes.deprecated = Deprecation::Deprecated { message };
         Ok(end)
+    }
+
+    fn parse_internal_attribute(
+        &mut self,
+        start: u32,
+        end: u32,
+        attributes: &mut Attributes,
+    ) -> Result<u32, ParseError> {
+        match attributes.internal {
+            // If `internal` is present that means that we have already run into
+            // another `@internal` annotation, so it results in a `DuplicateAttribute`
+            // error.
+            InternalAttribute::Present(_) => {
+                parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end))
+            }
+            InternalAttribute::Missing => {
+                attributes.internal = InternalAttribute::Present(SrcSpan::new(start, end));
+                Ok(end)
+            }
+        }
     }
 }
 

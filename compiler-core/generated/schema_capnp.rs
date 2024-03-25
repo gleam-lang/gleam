@@ -1201,8 +1201,8 @@ pub mod type_constructor {
       !self.reader.get_pointer_field(2).is_null()
     }
     #[inline]
-    pub fn get_public(self) -> bool {
-      self.reader.get_bool_field(0)
+    pub fn get_publicity(self) -> ::core::result::Result<crate::schema_capnp::Publicity,::capnp::NotInSchema> {
+      ::capnp::traits::FromU16::from_u16(self.reader.get_data_field::<u16>(0))
     }
     #[inline]
     pub fn get_deprecated(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
@@ -1311,12 +1311,12 @@ pub mod type_constructor {
       !self.builder.get_pointer_field(2).is_null()
     }
     #[inline]
-    pub fn get_public(self) -> bool {
-      self.builder.get_bool_field(0)
+    pub fn get_publicity(self) -> ::core::result::Result<crate::schema_capnp::Publicity,::capnp::NotInSchema> {
+      ::capnp::traits::FromU16::from_u16(self.builder.get_data_field::<u16>(0))
     }
     #[inline]
-    pub fn set_public(&mut self, value: bool)  {
-      self.builder.set_bool_field(0, value);
+    pub fn set_publicity(&mut self, value: crate::schema_capnp::Publicity)  {
+      self.builder.set_data_field::<u16>(0, value as u16)
     }
     #[inline]
     pub fn get_deprecated(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
@@ -2595,8 +2595,8 @@ pub mod value_constructor {
       !self.reader.get_pointer_field(1).is_null()
     }
     #[inline]
-    pub fn get_public(self) -> bool {
-      self.reader.get_bool_field(0)
+    pub fn get_publicity(self) -> ::core::result::Result<crate::schema_capnp::Publicity,::capnp::NotInSchema> {
+      ::capnp::traits::FromU16::from_u16(self.reader.get_data_field::<u16>(0))
     }
     #[inline]
     pub fn get_deprecated(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
@@ -2689,12 +2689,12 @@ pub mod value_constructor {
       !self.builder.get_pointer_field(1).is_null()
     }
     #[inline]
-    pub fn get_public(self) -> bool {
-      self.builder.get_bool_field(0)
+    pub fn get_publicity(self) -> ::core::result::Result<crate::schema_capnp::Publicity,::capnp::NotInSchema> {
+      ::capnp::traits::FromU16::from_u16(self.builder.get_data_field::<u16>(0))
     }
     #[inline]
-    pub fn set_public(&mut self, value: bool)  {
-      self.builder.set_bool_field(0, value);
+    pub fn set_publicity(&mut self, value: crate::schema_capnp::Publicity)  {
+      self.builder.set_data_field::<u16>(0, value as u16)
     }
     #[inline]
     pub fn get_deprecated(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
@@ -2733,6 +2733,33 @@ pub mod value_constructor {
     pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
     pub const TYPE_ID: u64 = 0xd4c6_d8f1_a8fb_051c;
   }
+}
+
+#[repr(u16)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Publicity {
+  Public = 0,
+  Private = 1,
+  Internal = 2,
+}
+impl ::capnp::traits::FromU16 for Publicity {
+  #[inline]
+  fn from_u16(value: u16) -> ::core::result::Result<Publicity, ::capnp::NotInSchema> {
+    match value {
+      0 => ::core::result::Result::Ok(Publicity::Public),
+      1 => ::core::result::Result::Ok(Publicity::Private),
+      2 => ::core::result::Result::Ok(Publicity::Internal),
+      n => ::core::result::Result::Err(::capnp::NotInSchema(n)),
+    }
+  }
+}
+impl ::capnp::traits::ToU16 for Publicity {
+  #[inline]
+  fn to_u16(self) -> u16 { self as u16 }
+}
+impl ::capnp::traits::HasTypeId for Publicity {
+  #[inline]
+  fn type_id() -> u64 { 0xc549_d3c8_21e9_1c66u64 }
 }
 
 pub mod implementations {

@@ -15,7 +15,7 @@ use crate::{
     warning::TypeWarningEmitter,
 };
 
-use super::{Statement, TypedModule, TypedStatement};
+use super::{Publicity, Statement, TypedModule, TypedStatement};
 
 fn compile_module(src: &str) -> TypedModule {
     use crate::type_::build_prelude;
@@ -74,7 +74,7 @@ fn compile_expression(src: &str) -> TypedStatement {
 
     // Insert a cat record to use in the tests
     let cat_type = Arc::new(Type::Named {
-        public: true,
+        publicity: Publicity::Public,
         package: "mypackage".into(),
         module: "mymod".into(),
         name: "Cat".into(),
@@ -97,14 +97,14 @@ fn compile_expression(src: &str) -> TypedStatement {
         "Cat".into(),
         variant,
         type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),
-        true,
+        Publicity::Public,
         Deprecation::NotDeprecated,
     );
 
     environment.insert_accessors(
         "Cat".into(),
         AccessorsMap {
-            public: true,
+            publicity: Publicity::Public,
             type_: cat_type,
             accessors: [
                 (
@@ -202,7 +202,7 @@ wibble}"#,
         location: SrcSpan { start: 16, end: 22 },
         constructor: ValueConstructor {
             deprecation: Deprecation::NotDeprecated,
-            public: false,
+            publicity: Publicity::Private,
             variant: ValueConstructorVariant::LocalVariable {
                 location: SrcSpan { start: 5, end: 11 },
             },
@@ -487,7 +487,7 @@ fn find_node_bool() {
         location: SrcSpan { start: 1, end: 5 },
         constructor: ValueConstructor {
             deprecation: Deprecation::NotDeprecated,
-            public: true,
+            publicity: Publicity::Public,
             variant: ValueConstructorVariant::Record {
                 documentation: None,
                 constructors_count: 2,

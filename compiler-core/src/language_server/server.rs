@@ -260,24 +260,25 @@ where
         }
     }
 
+    fn path_error_response(&mut self, path: Utf8PathBuf, error: crate::Error) -> (Json, Feedback) {
+        let feedback = match self.router.project_for_path(path) {
+            Ok(Some(project)) => project.feedback.error(error),
+            Ok(None) | Err(_) => self.outside_of_project_feedback.error(error),
+        };
+        (Json::Null, feedback)
+    }
+
     fn format(&mut self, params: lsp::DocumentFormattingParams) -> (Json, Feedback) {
         let path = super::path(&params.text_document.uri);
         let mut new_text = String::new();
-        let mut error_response = |error| {
-            let feedback = match self.router.project_for_path(path.clone()) {
-                Ok(Some(project)) => project.feedback.error(error),
-                Ok(None) | Err(_) => self.outside_of_project_feedback.error(error),
-            };
-            (Json::Null, feedback)
-        };
 
         let src = match self.io.read(&path) {
             Ok(src) => src.into(),
-            Err(error) => return error_response(error),
+            Err(error) => return self.path_error_response(path, error),
         };
 
         if let Err(error) = crate::format::pretty(&mut new_text, &src, &path) {
-            return error_response(error);
+            return self.path_error_response(path, error);
         }
 
         let line_count = src.lines().count() as u32;
@@ -303,8 +304,13 @@ where
 
     fn completion(&mut self, params: lsp::CompletionParams) -> (Json, Feedback) {
         let path = super::path(&params.text_document_position.text_document.uri);
+
+        let src = match self.io.read(&path) {
+            Ok(src) => src.into(),
+            Err(error) => return self.path_error_response(path, error),
+        };
         self.respond_with_engine(path, |engine| {
-            engine.completion(params.text_document_position)
+            engine.completion(params.text_document_position, src)
         })
     }
 

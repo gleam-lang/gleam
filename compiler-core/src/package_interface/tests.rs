@@ -181,6 +181,18 @@ type Wob = Int
 }
 
 #[test]
+pub fn internal_definitions_are_not_included() {
+    assert_package_interface!(
+        "
+@internal pub const float = 1.1
+@internal pub fn main() {}
+@internal pub type Foo
+@internal pub type Bar = Int
+"
+    );
+}
+
+#[test]
 pub fn opaque_constructors_are_not_exposed() {
     assert_package_interface!("pub opaque type Wibble { Wob }")
 }

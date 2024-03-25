@@ -4,7 +4,7 @@ use type_::{AccessorsMap, FieldMap, RecordAccessor};
 use super::*;
 use crate::{
     ast::{
-        BitArrayOption, BitArraySegment, CallArg, Constant, SrcSpan, TypedConstant,
+        BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
         TypedConstantBitArraySegmentOption,
     },
     build::Origin,
@@ -40,7 +40,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleConstant {
@@ -102,7 +102,7 @@ fn module_with_private_type() {
             "ListIntType".into(),
             TypeConstructor {
                 typ: type_::list(type_::int()),
-                public: false,
+                publicity: Publicity::Private,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -148,7 +148,7 @@ fn module_with_app_type() {
             "ListIntType".into(),
             TypeConstructor {
                 typ: type_::list(type_::int()),
-                public: true,
+                publicity: Publicity::Public,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -175,7 +175,7 @@ fn module_with_fn_type() {
             "FnType".into(),
             TypeConstructor {
                 typ: type_::fn_(vec![type_::nil(), type_::float()], type_::int()),
-                public: true,
+                publicity: Publicity::Public,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -202,7 +202,7 @@ fn module_with_tuple_type() {
             "TupleType".into(),
             TypeConstructor {
                 typ: type_::tuple(vec![type_::nil(), type_::float(), type_::int()]),
-                public: true,
+                publicity: Publicity::Public,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -235,7 +235,7 @@ fn module_with_generic_type() {
                 "TupleType".into(),
                 TypeConstructor {
                     typ: type_::tuple(vec![t1.clone(), t1.clone(), t2.clone()]),
-                    public: true,
+                    publicity: Publicity::Public,
                     origin: Default::default(),
                     module: "the/module".into(),
                     parameters: vec![t1, t2],
@@ -268,7 +268,7 @@ fn module_with_type_links() {
                 "SomeType".into(),
                 TypeConstructor {
                     typ: type_,
-                    public: true,
+                    publicity: Publicity::Public,
                     origin: Default::default(),
                     module: "a".into(),
                     parameters: vec![],
@@ -327,7 +327,7 @@ fn module_fn_value() {
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
@@ -367,7 +367,7 @@ fn deprecated_module_fn_value() {
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::Deprecated {
                     message: "wibble wobble".into(),
                 },
@@ -409,7 +409,7 @@ fn private_module_fn_value() {
         values: [(
             "one".into(),
             ValueConstructor {
-                public: false,
+                publicity: Publicity::Private,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
@@ -451,7 +451,7 @@ fn module_fn_value_regression() {
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
@@ -492,7 +492,7 @@ fn module_fn_value_with_field_map() {
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
@@ -535,7 +535,7 @@ fn record_value() {
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
@@ -575,7 +575,7 @@ fn record_value_with_field_map() {
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
@@ -617,7 +617,7 @@ fn accessors() {
             (
                 "one".into(),
                 AccessorsMap {
-                    public: true,
+                    publicity: Publicity::Public,
                     type_: type_::int(),
                     accessors: [
                         (
@@ -643,7 +643,7 @@ fn accessors() {
             (
                 "two".into(),
                 AccessorsMap {
-                    public: true,
+                    publicity: Publicity::Public,
                     type_: type_::int(),
                     accessors: [(
                         "a".into(),
@@ -796,7 +796,7 @@ fn constant_var() {
         name: "one_original".into(),
         typ: type_::int(),
         constructor: Some(Box::from(ValueConstructor {
-            public: true,
+            publicity: Publicity::Public,
             deprecation: Deprecation::NotDeprecated,
             type_: type_::int(),
             variant: ValueConstructorVariant::ModuleConstant {
@@ -826,7 +826,7 @@ fn constant_var() {
             (
                 "one".into(),
                 ValueConstructor {
-                    public: true,
+                    publicity: Publicity::Public,
                     deprecation: Deprecation::NotDeprecated,
                     type_: type_::int(),
                     variant: ValueConstructorVariant::ModuleConstant {
@@ -845,7 +845,7 @@ fn constant_var() {
             (
                 "one_original".into(),
                 ValueConstructor {
-                    public: true,
+                    publicity: Publicity::Public,
                     deprecation: Deprecation::NotDeprecated,
                     type_: type_::int(),
                     variant: ValueConstructorVariant::ModuleConstant {
@@ -1035,7 +1035,7 @@ fn deprecated_type() {
             "ListIntType".into(),
             TypeConstructor {
                 typ: type_::list(type_::int()),
-                public: true,
+                publicity: Publicity::Public,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -1084,7 +1084,48 @@ fn module_fn_value_with_external_implementations() {
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
+                deprecation: Deprecation::NotDeprecated,
+                type_: type_::int(),
+                variant: ValueConstructorVariant::ModuleFn {
+                    documentation: Some("wabble!".into()),
+                    name: "one".into(),
+                    field_map: None,
+                    module: "a".into(),
+                    arity: 5,
+                    location: SrcSpan {
+                        start: 52,
+                        end: 1100,
+                    },
+                    implementations: Implementations {
+                        gleam: false,
+                        uses_erlang_externals: true,
+                        uses_javascript_externals: true,
+                    },
+                },
+            },
+        )]
+        .into(),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn internal_module_fn() {
+    let module = ModuleInterface {
+        contains_todo: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b/c".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        unused_imports: Vec::new(),
+        accessors: HashMap::new(),
+        values: [(
+            "one".into(),
+            ValueConstructor {
+                publicity: Publicity::Internal,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {

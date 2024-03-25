@@ -8,7 +8,7 @@ use serde::Serialize;
 mod tests;
 
 use crate::{
-    ast::{CustomType, Definition, Function, ModuleConstant, TypeAlias},
+    ast::{CustomType, Definition, Function, ModuleConstant, Publicity, TypeAlias},
     io::ordered_map,
     type_::{expression::Implementations, Deprecation, Type, TypeVar},
 };
@@ -360,7 +360,7 @@ impl ModuleInterface {
             match statement {
                 // A public type definition.
                 Definition::CustomType(CustomType {
-                    public: true,
+                    publicity: Publicity::Public,
                     name,
                     constructors,
                     documentation,
@@ -413,7 +413,7 @@ impl ModuleInterface {
 
                 // A public type alias definition
                 Definition::TypeAlias(TypeAlias {
-                    public: true,
+                    publicity: Publicity::Public,
                     alias,
                     parameters,
                     type_,
@@ -435,7 +435,7 @@ impl ModuleInterface {
 
                 // A public module constant.
                 Definition::ModuleConstant(ModuleConstant {
-                    public: true,
+                    publicity: Publicity::Public,
                     name,
                     type_,
                     documentation,
@@ -460,7 +460,7 @@ impl ModuleInterface {
 
                 // A public top-level function.
                 Definition::Function(Function {
-                    public: true,
+                    publicity: Publicity::Public,
                     name,
                     arguments,
                     deprecation,
@@ -495,7 +495,7 @@ impl ModuleInterface {
                     );
                 }
 
-                // Private definitions are not included.
+                // Private or internal definitions are not included.
                 Definition::Function(_) => {}
                 Definition::CustomType(_) => {}
                 Definition::ModuleConstant(_) => {}

@@ -1376,7 +1376,7 @@ where
 {
     elements.into_iter().rev().try_fold(tail, |tail, element| {
         let args = call_arguments([element, Ok(tail)])?;
-        Ok(docvec!["$prepend", args])
+        Ok(docvec!["listPrepend", args])
     })
 }
 
