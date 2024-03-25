@@ -37,6 +37,8 @@
 - Allow compilation of packages that require `"rebar"` using the rebar3 compiler.
 - A warning is now emitted when defining an opaque external type.
 - Improve error message when using incorrect quotes (`'`) to define a string
+- Fixed a bug where an imported module named `prepend` would conflict with the
+  `prepend` function imported from the prelude in the JavaScript target.
 
 ### Formatter
 
