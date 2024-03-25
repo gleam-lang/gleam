@@ -153,7 +153,7 @@ version = "1.0.0"
 # links = [{{ title = "Website", href = "https://gleam.run" }}]
 #
 # For a full reference of all the available options, you can have a look at
-# https://gleam.run/writing-gleam/gleam-toml/. 
+# https://gleam.run/writing-gleam/gleam-toml/.
 
 [dependencies]
 gleam_stdlib = "{GLEAM_STDLIB_REQUIREMENT}"
