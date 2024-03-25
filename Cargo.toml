@@ -36,7 +36,7 @@ bytes = "1.5.0"
 # Logging
 tracing = "0.1.40"
 # Macro to work around Rust's traits not working with async. Sigh.
-async-trait = "0.1.77"
+async-trait = "0.1.79"
 # HTTP types
 http = "0.2"
 # Async combinators for futures
