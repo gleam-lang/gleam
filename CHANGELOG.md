@@ -37,6 +37,8 @@
 - Allow compilation of packages that require `"rebar"` using the rebar3 compiler.
 - A warning is now emitted when defining an opaque external type.
 - Improve error message when using incorrect quotes (`'`) to define a string
+- Fixed string prefix matching producing wrong results on the JavaScript target
+  when the prefix had a Unicode codepoint escape sequence (`\u{...}`).
 
 ### Formatter
 
