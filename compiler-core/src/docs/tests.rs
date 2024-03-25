@@ -120,7 +120,7 @@ fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
     compiler.write_entrypoint = false;
     compiler.write_metadata = false;
     compiler.compile_beam_bytecode = true;
-    let modules = compiler
+    let mut modules = compiler
         .compile(
             &warnings,
             &mut type_manifests,
@@ -129,6 +129,10 @@ fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
             &NullTelemetry,
         )
         .unwrap();
+
+    for module in &mut modules {
+        module.attach_doc_and_module_comments();
+    }
 
     super::generate_html(&paths, &config, &modules, &[], SystemTime::UNIX_EPOCH)
         .into_iter()
