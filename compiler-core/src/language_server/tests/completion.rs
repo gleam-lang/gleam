@@ -11,6 +11,7 @@ struct Completions<'a> {
     root_package_modules: Vec<(&'a str, &'a str)>,
     dependency_modules: Vec<(&'a str, &'a str)>,
     test_modules: Vec<(&'a str, &'a str)>,
+    hex_modules: Vec<(&'a str, &'a str)>,
 }
 
 impl<'a> Completions<'a> {
@@ -20,6 +21,7 @@ impl<'a> Completions<'a> {
             root_package_modules: vec![],
             dependency_modules: vec![],
             test_modules: vec![],
+            hex_modules: vec![],
         }
     }
 
@@ -50,8 +52,17 @@ impl<'a> Completions<'a> {
         }
     }
 
+    pub fn add_hex_module(self, name: &'a str, src: &'a str) -> Self {
+        let mut hex_modules = self.hex_modules;
+        hex_modules.push((name, src));
+        Completions {
+            hex_modules,
+            ..self
+        }
+    }
+
     pub fn at(self, position: Position) -> Vec<CompletionItem> {
-        let io = LanguageServerTestIO::new();
+        let mut io = LanguageServerTestIO::new();
         let mut engine = setup_engine(&io);
 
         // Add an external dependency and all its modules
@@ -69,6 +80,14 @@ impl<'a> Completions<'a> {
         self.test_modules.iter().for_each(|(name, code)| {
             let _ = io.test_module(name, code);
         });
+
+        io.add_hex_package("hex");
+        self.hex_modules.iter().for_each(|(name, code)| {
+            _ = io.hex_dep_module("hex", name, code);
+        });
+        for package in &io.manifest.packages {
+            add_package_from_manifest(&mut engine, package.clone());
+        }
 
         // Add the final module we're going to be positioning the cursor in.
         _ = io.src_module("app", self.src);
@@ -105,31 +124,6 @@ impl<'a> Completions<'a> {
     }
 }
 
-fn add_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, name: &str) {
-    let path = engine.paths.root().join(name);
-    let compiler = &mut engine.compiler.project_compiler;
-    _ = compiler
-        .config
-        .dependencies
-        .insert(name.into(), Requirement::Path { path: path.clone() });
-    _ = compiler.packages.insert(
-        name.into(),
-        ManifestPackage {
-            name: name.into(),
-            version: Version::new(1, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Local { path: path.clone() },
-        },
-    );
-    let toml = format!(
-        r#"name = "{name}"
-version = "1.0.0""#
-    );
-    _ = compiler.io.write(&path.join("gleam.toml"), &toml);
-}
-
 fn positioned_with_io_completions_in_test(
     src: &str,
     test: &str,
@@ -151,23 +145,6 @@ fn positioned_with_io_completions_in_test(
 
     let response = engine.completion(
         TextDocumentPositionParams::new(document, position_param.position),
-        src.into(),
-    );
-
-    let mut completions = response.result.unwrap().unwrap_or_default();
-    completions.sort_by(|a, b| a.label.cmp(&b.label));
-    completions
-}
-
-fn positioned_with_io_completions(
-    src: &str,
-    position: Position,
-    io: &LanguageServerTestIO,
-) -> Vec<CompletionItem> {
-    let (mut engine, position_param) = positioned_with_io(src, position, io);
-
-    let response = engine.completion(
-        TextDocumentPositionParams::new(position_param.text_document, position_param.position),
         src.into(),
     );
 
@@ -1279,12 +1256,10 @@ pub fn main() {
 }";
     let dep = "";
 
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("dep");
-    _ = io.hex_dep_module("dep", "example_module", dep);
-
     assert_eq!(
-        positioned_with_io_completions(code, Position::new(0, 10), &io),
+        Completions::for_source(code)
+            .add_hex_module("example_module", dep)
+            .at(Position::new(0, 10)),
         vec![CompletionItem {
             label: "example_module".into(),
             kind: Some(CompletionItemKind::MODULE),
@@ -1322,12 +1297,10 @@ pub fn main() {
 pub fn main() { 1 }
     ";
 
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("dep");
-    _ = io.hex_dep_module("dep", "example_module", dep);
-
     assert_eq!(
-        positioned_with_io_completions(code, Position::new(3, 10), &io),
+        Completions::for_source(code)
+            .add_hex_module("example_module", dep)
+            .at(Position::new(3, 10)),
         vec![CompletionItem {
             label: "example_module".into(),
             kind: Some(CompletionItemKind::MODULE),
