@@ -25,7 +25,7 @@ vec1 = "1.8.0"
 # XDG directory locations
 dirs-next = "2.0.0"
 # Helper for wrapping text onto lines based upon width
-textwrap = { version = "=0.15.0", features = ["terminal_size"] }
+textwrap = { version = "=0.16.1", features = ["terminal_size"] }
 # SPDX license parsing
 spdx = "0.10.4"
 # Binary format de-serialization
