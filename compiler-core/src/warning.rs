@@ -154,8 +154,9 @@ impl Warning {
         match self {
             Warning::InvalidSource { path } => Diagnostic {
                 title: "Invalid module name".into(),
-                text: "Module names must begin with a lowercase letter and contain\
- only lowercase alphanumeric characters or underscores."
+                text: "\
+Module names must begin with a lowercase letter and contain
+only lowercase alphanumeric characters or underscores."
                     .into(),
                 level: diagnostic::Level::Warning,
                 location: None,
