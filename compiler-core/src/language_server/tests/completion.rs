@@ -68,10 +68,10 @@ impl<'a> Completions<'a> {
 
         let url = Url::from_file_path(path).unwrap();
 
-        let response = engine.completion(TextDocumentPositionParams::new(
-            TextDocumentIdentifier::new(url),
-            position,
-        ));
+        let response = engine.completion(
+            TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position),
+            self.src.into(),
+        );
 
         let mut completions = response.result.unwrap().unwrap_or_default();
         completions.sort_by(|a, b| a.label.cmp(&b.label));
