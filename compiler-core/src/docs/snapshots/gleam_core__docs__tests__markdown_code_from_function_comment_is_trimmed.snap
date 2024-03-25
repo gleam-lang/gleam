@@ -1,15 +1,15 @@
 ---
 source: compiler-core/src/docs/tests.rs
-expression: "compile_with_markdown_pages(config, vec![], pages)"
+expression: "compile(config, modules)"
 ---
-//// one.html
+//// app.html
 
 <!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>one ·  · v0.1.0</title>
+    <title>app ·  · v0.1.0</title>
     <meta name="description" content=""/>
     <meta name="theme-color" content="#ffaff3" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#33384d" media="(prefers-color-scheme: dark)"/>
@@ -205,13 +205,6 @@ expression: "compile_with_markdown_pages(config, vec![], pages)"
         </button>
 
         
-        <h2>Pages</h2>
-        <ul>
-        
-          <li><a href="./one.html">one</a></li>
-        
-        </ul>
-        
 
         
         <h2>Links</h2>
@@ -225,18 +218,65 @@ expression: "compile_with_markdown_pages(config, vec![], pages)"
         <h2>Modules</h2>
         <ul>
         
+          <li><a href="./app.html">app</a></li>
+        
         </ul>
 
         
+
+
+
+
+
+<h2>Functions</h2>
+<ul>
+  
+  <li><a href="#indentation_test">indentation_test</a></li>
+  
+</ul>
+
+
       </nav>
 
       <main class="content">
         
-<p>This is an example code snippet that should be indented</p>
-<pre><code class="language-gleam">pub fn indentation_test() {
-  todo as "This line should be indented by two spaces"
-}
+<h1 id="module-name" class="module-name">
+  <a href="#module-name">app</a>
+  <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
+</h1>
+
+
+
+
+
+
+
+<section class="module-members">
+  <h1 id="module-functions" class="module-member-kind">
+    <a href="#module-functions">Functions</a>
+    <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
+  </h1>
+  
+  <div class="member">
+    <div class="member-name">
+      <h2 id="indentation_test">
+        <a href="#indentation_test">
+          indentation_test
+        </a>
+      </h2>
+      
+    </div>
+
+    <pre><code class="hljs gleam">pub fn indentation_test() -&gt; a</code></pre>
+    
+    <div class="rendered-markdown"><p>Here’s an example code snippet:</p>
+<pre><code>wibble
+  |&gt; wobble
 </code></pre>
+</div>
+  </div>
+  
+</section>
 
 
       </main>

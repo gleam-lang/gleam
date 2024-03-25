@@ -13,14 +13,26 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
 
-fn compile_with_docs_pages(
+fn compile_with_markdown_pages(
     config: PackageConfig,
     modules: Vec<(&str, &str)>,
-    docs_pages: Vec<(&str, &str)>,
+    markdown_pages: Vec<(&str, &str)>,
 ) -> EcoString {
     let fs = InMemoryFileSystem::new();
     for (name, src) in modules {
-        fs.write(&Utf8PathBuf::from(format!("/src/{}", name)), src)
+        fs.write(&Utf8PathBuf::from(format!("/src/{name}")), src)
+            .unwrap();
+    }
+
+    // We're saving the pages under a different `InMemoryFileSystem` for these
+    // tests so we don't have to juggle with borrows and lifetimes.
+    // The package compiler is going to take ownership of `fs` but later
+    // `generate_html` also needs a `FileSystemReader` to go and read the
+    // markdown pages' content.
+    let pages_fs = InMemoryFileSystem::new();
+    for (title, src) in markdown_pages.iter() {
+        pages_fs
+            .write(&Utf8PathBuf::from(format!("{title}.md")), src)
             .unwrap();
     }
 
@@ -53,12 +65,12 @@ fn compile_with_docs_pages(
         module.attach_doc_and_module_comments();
     }
 
-    let docs_pages = docs_pages
+    let docs_pages = markdown_pages
         .into_iter()
-        .map(|(title, source)| DocsPage {
+        .map(|(title, _)| DocsPage {
             title: (*title).into(),
-            path: format!("{}.html", title).into(),
-            source: (*source).into(),
+            path: format!("{title}.html"),
+            source: format!("{title}.md").into(),
         })
         .collect_vec();
 
@@ -67,6 +79,7 @@ fn compile_with_docs_pages(
         &config,
         &modules,
         &docs_pages,
+        pages_fs,
         SystemTime::UNIX_EPOCH,
     )
     .into_iter()
@@ -87,7 +100,7 @@ fn compile_with_docs_pages(
 }
 
 pub fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
-    compile_with_docs_pages(config, modules, vec![])
+    compile_with_markdown_pages(config, modules, vec![])
 }
 
 #[test]
@@ -206,11 +219,51 @@ pub fn main() { todo }
 fn markdown_code_from_standalone_pages_is_not_trimmed() {
     let config = PackageConfig::default();
     let pages = vec![(
-        "one.md",
-        "```gleam
-testing
-  indentation
+        "one",
+        "
+This is an example code snippet that should be indented
+```gleam
+pub fn indentation_test() {
+  todo as \"This line should be indented by two spaces\"
+}
 ```",
     )];
-    insta::assert_snapshot!(compile_with_docs_pages(config, vec![], pages));
+    insta::assert_snapshot!(compile_with_markdown_pages(config, vec![], pages));
+}
+
+#[test]
+fn markdown_code_from_function_comment_is_trimmed() {
+    let config = PackageConfig::default();
+    let modules = vec![(
+        "app.gleam",
+        "
+/// Here's an example code snippet:
+/// ```
+/// wibble
+///   |> wobble
+/// ```
+///
+pub fn indentation_test() {
+  todo
+}
+",
+    )];
+    insta::assert_snapshot!(compile(config, modules));
+}
+
+#[test]
+fn markdown_code_from_module_comment_is_trimmed() {
+    let config = PackageConfig::default();
+    let modules = vec![(
+        "app.gleam",
+        "
+//// Here's an example code snippet:
+//// ```
+//// wibble
+////   |> wobble
+//// ```
+////
+",
+    )];
+    insta::assert_snapshot!(compile(config, modules));
 }
