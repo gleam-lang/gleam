@@ -13,7 +13,7 @@ heck = "0.5.0"
 # Graph data structures
 petgraph = "0.6.0"
 # Levenshtein string distance for typo suggestions
-strsim = "0.10.0"
+strsim = "0.11.0"
 # Cap'n Proto binary format runtime
 capnp = "0.14.3"
 # Template rendering
