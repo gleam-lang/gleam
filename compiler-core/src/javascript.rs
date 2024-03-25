@@ -122,7 +122,7 @@ impl<'a> Generator<'a> {
         };
 
         if self.tracker.prepend_used {
-            self.register_prelude_usage(&mut imports, "prepend", Some("$prepend"));
+            self.register_prelude_usage(&mut imports, "prepend", Some("listPrepend"));
         };
 
         if self.tracker.custom_type_used {

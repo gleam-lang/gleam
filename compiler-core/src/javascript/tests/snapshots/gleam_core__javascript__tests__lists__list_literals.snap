@@ -2,12 +2,11 @@
 source: compiler-core/src/javascript/tests/lists.rs
 expression: "\nfn go(x) {\n    []\n    [1]\n    [1, 2]\n    [1, 2, ..x]\n}\n"
 ---
-import { toList, prepend as $prepend } from "../gleam.mjs";
+import { toList, prepend as listPrepend } from "../gleam.mjs";
 
 function go(x) {
   toList([]);
   toList([1]);
   toList([1, 2]);
-  return $prepend(1, $prepend(2, x));
+  return listPrepend(1, listPrepend(2, x));
 }
-
