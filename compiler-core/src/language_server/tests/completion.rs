@@ -10,6 +10,7 @@ struct Completions<'a> {
     src: &'a str,
     root_package_modules: Vec<(&'a str, &'a str)>,
     dependency_modules: Vec<(&'a str, &'a str)>,
+    test_modules: Vec<(&'a str, &'a str)>,
 }
 
 impl<'a> Completions<'a> {
@@ -18,6 +19,7 @@ impl<'a> Completions<'a> {
             src,
             root_package_modules: vec![],
             dependency_modules: vec![],
+            test_modules: vec![],
         }
     }
 
@@ -39,6 +41,15 @@ impl<'a> Completions<'a> {
         }
     }
 
+    pub fn add_test_module(self, name: &'a str, src: &'a str) -> Self {
+        let mut test_modules = self.test_modules;
+        test_modules.push((name, src));
+        Completions {
+            test_modules,
+            ..self
+        }
+    }
+
     pub fn at(self, position: Position) -> Vec<CompletionItem> {
         let io = LanguageServerTestIO::new();
         let mut engine = setup_engine(&io);
@@ -52,6 +63,11 @@ impl<'a> Completions<'a> {
         // Add all the modules belonging to the root package
         self.root_package_modules.iter().for_each(|(name, code)| {
             let _ = io.src_module(name, code);
+        });
+
+        // Add all the test modules
+        self.test_modules.iter().for_each(|(name, code)| {
+            let _ = io.test_module(name, code);
         });
 
         // Add the final module we're going to be positioning the cursor in.
@@ -158,17 +174,6 @@ fn positioned_with_io_completions(
     let mut completions = response.result.unwrap().unwrap_or_default();
     completions.sort_by(|a, b| a.label.cmp(&b.label));
     completions
-}
-
-fn positioned_expression_completions(
-    src: &str,
-    dep: &str,
-    position: Position,
-) -> Vec<CompletionItem> {
-    let io = &LanguageServerTestIO::new();
-    _ = io.src_module("dep", dep);
-
-    positioned_with_io_completions(src, position, io)
 }
 
 fn prelude_type_completions() -> Vec<CompletionItem> {
@@ -1114,7 +1119,9 @@ pub fn main() {
     let dep = "";
 
     assert_eq!(
-        positioned_expression_completions(code, dep, Position::new(0, 10)),
+        Completions::for_source(code)
+            .add_dep_module("dep", dep)
+            .at(Position::new(0, 10)),
         vec![CompletionItem {
             label: "gleam".into(),
             kind: Some(CompletionItemKind::MODULE),
@@ -1151,11 +1158,10 @@ pub fn main() {
 }
 ";
 
-    let io = LanguageServerTestIO::new();
-    _ = io.test_module("my_tests", test);
-
     assert_eq!(
-        positioned_with_io_completions(code, Position::new(0, 10), &io),
+        Completions::for_source(code)
+            .add_test_module("my_tests", test)
+            .at(Position::new(0, 10)),
         vec![]
     );
 }
@@ -1240,7 +1246,9 @@ pub fn main() { 1 }
     ";
 
     assert_eq!(
-        positioned_expression_completions(code, dep, Position::new(0, 10)),
+        Completions::for_source(code)
+            .add_dep_module("dep", dep)
+            .at(Position::new(0, 10)),
         vec![CompletionItem {
             label: "dep".into(),
             kind: Some(CompletionItemKind::MODULE),
@@ -1351,7 +1359,9 @@ pub fn main() {
     let dep = "";
 
     assert_eq!(
-        positioned_expression_completions(code, dep, Position::new(0, 0)),
+        Completions::for_source(code)
+            .add_dep_module("dep", dep)
+            .at(Position::new(0, 0)),
         vec![CompletionItem {
             label: "dep".into(),
             kind: Some(CompletionItemKind::MODULE),
