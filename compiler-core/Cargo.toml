@@ -21,7 +21,7 @@ askama = "0.12.0"
 # Markdown parsing
 pulldown-cmark = { version = "0.10.0", default-features = false, features = ["html"] }
 # Non-empty vectors
-vec1 = "1.8.0"
+vec1 = "1.11.1"
 # XDG directory locations
 dirs-next = "2.0.0"
 # Helper for wrapping text onto lines based upon width
