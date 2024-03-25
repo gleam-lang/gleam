@@ -14,7 +14,7 @@ use crate::{
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
     format,
-    io::{Content, OutputFile},
+    io::{Content, FileSystemReader, OutputFile},
     package_interface::PackageInterface,
     paths::ProjectPaths,
     pretty,
@@ -29,11 +29,12 @@ use serde_json::to_string as serde_to_string;
 
 const MAX_COLUMNS: isize = 65;
 
-pub fn generate_html(
+pub fn generate_html<IO: FileSystemReader>(
     paths: &ProjectPaths,
     config: &PackageConfig,
     analysed: &[Module],
     docs_pages: &[DocsPage],
+    fs: IO,
     rendering_timestamp: SystemTime,
 ) -> Vec<OutputFile> {
     let modules = analysed
@@ -91,7 +92,7 @@ pub fn generate_html(
 
     // Generate user-supplied (or README) pages
     for page in docs_pages {
-        let content = std::fs::read_to_string(&page.source).unwrap_or_default();
+        let content = fs.read(&page.source).unwrap_or_default();
         let rendered_content = render_markdown(&content, MarkdownSource::Standalone);
         let unnest = page_unnest(&page.path);
 
