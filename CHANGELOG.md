@@ -6,37 +6,39 @@
 
 - Prepending to lists in JavaScript (`[x, ..xs]` syntax) has been optimised.
 - Function stubs are no longer generated for functions that do not have an
-  implementation for the current targeting being compiled for.
-- Fixed a bug where some functions would not result in a compile error when
-  compiled for a target that they do not support.
-- Fixed a bug where sometimes a warning would not be emitted when a result is
-  discarded.
-- Fixed a bug with JavaScript code generation of pattern matching guards.
+ implementation for the current targeting being compiled for.
 - URLs in error messages have been updated for the new language tour.
 - Improved error message when erroneously trying to append items to a list using
-  the spread syntax (like `[..rest, last]`).
+ the spread syntax (like `[..rest, last]`).
 - Generate [type references](https://www.typescriptlang.org/docs/handbook/triple-slash-directives.html#-reference-types-)
-  when compiling to JavaScript with TypeScript definitions enabled.
-- Fix a bug where JavaScript code generation would not properly return the
-  result of nested blocks.
-- Fix a bug where JavaScript code generation would not properly handle functions
-  returned by blocks.
-- Fix a bug where Erlang code generation would not properly handle list case patterns
-  with no head and a spread tail.
+ when compiling to JavaScript with TypeScript definitions enabled.
 - The compiler will now raise a warning if you're pattern matching on tuple
-  literals and suggest you use multiple subjects instead.
-- Fixed a bug where JavaScript code generation would incorrectly parenthesise a
-  return statement.
+ literals and suggest you use multiple subjects instead.
 - Added support for the [Bun](https://bun.sh/) runtime when compiling to
-  JavaScript by using `gleam run --target javascript --runtime bun`
-- Fixed a bug where `tuple.0.1` was not recognised as a nested tuple access
-  expression
+ JavaScript by using `gleam run --target javascript --runtime bun`.
 - Error messages are more clear about expecting values instead of types.
-- Fixed a bug where pattern matching on a string would cause the program to
-  crash on the JavaScript target.
 - Allow compilation of packages that require `"rebar"` using the rebar3 compiler.
 - A warning is now emitted when defining an opaque external type.
-- Improve error message when using incorrect quotes (`'`) to define a string
+- Improve error message when using incorrect quotes (`'`) to define a string.
+- Improve error messages with a new `did_you_mean` algorithm; and added note when
+ trying to access custom types with multi-variant.
+ - Fixed a bug where some functions would not result in a compile error when
+ compiled for a target that they do not support.
+- Fixed a bug where sometimes a warning would not be emitted when a result is
+ discarded.
+- Fixed a bug with JavaScript code generation of pattern matching guards.
+- Fixed a bug where JavaScript code generation would not properly return the
+ result of nested blocks.
+- Fixed a bug where JavaScript code generation would not properly handle functions
+ returned by blocks.
+- Fixed a bug where Erlang code generation would not properly handle list case patterns
+ with no head and a spread tail.
+- Fixed a bug where JavaScript code generation would incorrectly parenthesise a
+ return statement.
+- Fixed a bug where `tuple.0.1` was not recognised as a nested tuple access
+ expression.
+- Fixed a bug where pattern matching on a string would cause the program to
+ crash on the JavaScript target.
 - Fixed a bug where an imported module named `prepend` would conflict with the
   `prepend` function imported from the prelude in the JavaScript target.
 - Fixed a bug where Erlang string prefix patterns could generate invalid Erlang.
@@ -56,13 +58,13 @@
 ### Formatter
 
 - The formatting of case expressions with multiple subjects has been improved.
+- Line endings other than `\n` are now handled by the formatter, preserving
+ blank lines and converting them to `\n`.
 - Fixed a bug where the formatter would move comments from the end of bounded
-  expressions like lists, tuples, case expressions or function calls.
+ expressions like lists, tuples, case expressions or function calls.
 - Fixed a bug where a record update's arguments would not be indented correctly.
 - Fixed a bug where function call arguments, tuple items and list items would be
-  needlessly indented if preceded by a comment.
-- Line endings other than `\n` are now handled by the formatter, preserving
-  blank lines and converting them to `\n`.
+ needlessly indented if preceded by a comment.
 
 ### Build tool
 
@@ -71,25 +73,25 @@
 - The `~> x.y` version constraint syntax has been dropped in favour of
   `> x.y.z and <= xx.0.0` syntax in `gleam add` and `gleam new`, for clarity.
 - New projects are created with the GitHub `actions/checkout` v4 action.
-- Fixed a bug where bit arrays would break syntax highlighting in the generated
-  HTML documentation.
-- Dependencies that use Erlang-only bit options can now compile on JavaScript,
-  though the functions that use them will not be available for use in the root
-  package.
-- The output format of the command line help messages have been changed
-  slightly.
-- The command line help text now lists valid targets and runtimes.
 - Generated documentation no longer exposes the constructors of opaque types,
-  no longer exposes the values of constants, and indicates which types are
-  opaque.
+ no longer exposes the values of constants, and indicates which types are
+ opaque.
 - Generated HTML documentation now includes a link to the package on Hex.
 - Terminal colors can now be forced by setting the `FORCE_COLOR` environment
-  variable to any non-empty value.
+ variable to any non-empty value.
 - Rust's Reqwest's `webpki-roots` are now used for TLS verification.
 - Update Deno config to allow passing `--location` runtime flag.
+- Dependencies that use Erlang-only bit options can now compile on JavaScript,
+ though the functions that use them will not be available for use in the root
+ package.
+- The output format of the command line help messages have been changed
+ slightly.
+- The command line help text now lists valid targets and runtimes.
+- A warning is now emitted if there is a `.gleam` file with a path that would be
+ invalid as a module name.
 - Fixed a bug with dependency resolution of exact versions of RC releases.
 - Fixed a bug where the documentation of a labelled record constructor could be
-  assigned to the wrong definition in the doc site.
+ assigned to the wrong definition in the doc site.
 - Fixed a bug where the code blocks in the generated documentation's site would
   have a wrong indentation.
 - Fixed a bug where on windows local packages had absolute paths in the manifest
@@ -99,9 +101,11 @@
 
 ### Language Server
 
+- Completions are now provided for module imports.
+- Go to definition now works for values in dependency Gleam modules.
 - The `Compiling Gleam` message is no longer emitted each time code is compiled.
-  This is to reduce noise in editors that show this message prominently such as
-  Neovim.
+ This is to reduce noise in editors that show this message prominently such as
+ Neovim.
 - Fixed a bug where hovering over an expression in the middle of a pipe would
   give the wrong node.
 - Go to definition now works for values in dependency Gleam modules.
