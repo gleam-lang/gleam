@@ -11,7 +11,7 @@ gleam-core = { path = "../compiler-core" }
 # OS SIGINT and SIGTERM signal handling
 ctrlc = { version = "3.2.1", features = ["termination"] }
 # Command line interface
-clap = { version = "4.5.2", features = ["derive"] }
+clap = { version = "4.5.4", features = ["derive"] }
 # Recursively traversing directories
 ignore = "0.4.22"
 # Check for tty
