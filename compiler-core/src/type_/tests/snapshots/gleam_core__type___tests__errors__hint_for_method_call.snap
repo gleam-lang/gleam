@@ -1,13 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1813
 expression: "\npub type User {\n  User(id: Int, name: String)\n}\n\npub fn main(user: User) {\n  user.login()\n}\n"
 ---
 error: Unknown record field
   ┌─ /src/one/two.gleam:7:7
   │
 7 │   user.login()
-  │       ^^^^^^ Did you mean `id`?
+  │       ^^^^^^ This field does not exist
 
 The value being accessed has this type:
 
@@ -22,4 +21,3 @@ Gleam is not object oriented, so if you are trying to call a method on this
 value you may want to use the function syntax instead.
 
     login(value)
-

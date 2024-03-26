@@ -1,13 +1,11 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 249
 expression: "./cases/opaque_type_destructure"
 ---
 error: Unknown module field
   ┌─ src/two.gleam:7:7
   │
 7 │   let one.User(name: name, score: score) = user
-  │       ^ Did you mean `accessors`?
+  │       ^
 
 The module `one` does not have a `User` value.
-
