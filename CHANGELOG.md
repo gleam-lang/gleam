@@ -88,6 +88,8 @@
   assigned to the wrong definition in the doc site.
 - Fixed a bug where the code blocks in the generated documentation's site would
   have a wrong indentation.
+- Fixed a bug where on windows local packages had absolute paths in the manifest
+  instead of relative.
 
 ### Language Server
 
