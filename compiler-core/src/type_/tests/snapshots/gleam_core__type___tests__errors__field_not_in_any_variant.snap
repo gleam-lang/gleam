@@ -6,7 +6,7 @@ error: Unknown record field
   ┌─ /src/one/two.gleam:6:43
   │
 6 │ pub fn get_height(person: Person) { person.height }
-  │                                           ^^^^^^^ Did you mean `age`?
+  │                                           ^^^^^^^ This field does not exist
 
 The value being accessed has this type:
 
