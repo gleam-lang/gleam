@@ -6,7 +6,7 @@ error: Unknown record field
    ┌─ /src/one/two.gleam:11:13
    │
 11 │   login(user.wibble)
-   │             ^^^^^^^ Did you mean `id`?
+   │             ^^^^^^^ This field does not exist
 
 The value being accessed has this type:
 
@@ -16,4 +16,3 @@ It has these fields:
 
     .id
     .name
-

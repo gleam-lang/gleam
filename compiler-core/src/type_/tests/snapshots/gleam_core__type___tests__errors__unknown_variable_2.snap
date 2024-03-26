@@ -1,13 +1,11 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 241
 expression: "case 1 { x -> 1 1 -> x }"
 ---
 error: Unknown variable
   ┌─ /src/one/two.gleam:1:22
   │
 1 │ case 1 { x -> 1 1 -> x }
-  │                      ^ Did you mean `Ok`?
+  │                      ^
 
 The name `x` is not in scope here.
-
