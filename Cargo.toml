@@ -32,7 +32,7 @@ tar = "0.4.40"
 # gzip compression
 flate2 = "1.0.28"
 # Byte array data type
-bytes = "1.5.0"
+bytes = "1.6.0"
 # Logging
 tracing = "0.1.40"
 # Macro to work around Rust's traits not working with async. Sigh.
