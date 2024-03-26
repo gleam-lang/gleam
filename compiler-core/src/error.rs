@@ -450,20 +450,8 @@ fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
 
     // Strip common prefix.
     while !b.is_empty() && !a.is_empty() {
-        let (b_first, b_rest) = b.split_last().unwrap();
-        let (a_first, a_rest) = a.split_last().unwrap();
-
-        if b_first == a_first {
-            a = a_rest;
-            b = b_rest;
-        } else {
-            break;
-        }
-    }
-    // Strip common suffix.
-    while !b.is_empty() && !a.is_empty() {
-        let (b_first, b_rest) = b.split_last().unwrap();
-        let (a_first, a_rest) = a.split_last().unwrap();
+        let (b_first, b_rest) = b.split_last().expect("Failed to split 'b' slice");
+        let (a_first, a_rest) = a.split_last().expect("Failed to split 'a' slice");
 
         if b_first == a_first {
             a = a_rest;
