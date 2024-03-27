@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, Publicity, TypedDefinition, TypedExpr,
-        TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, Pattern, Publicity, Statement,
+        TypedDefinition, TypedExpr, TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -18,12 +18,14 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use lsp::CodeAction;
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 use strum::IntoEnumIterator;
 
 use super::{
     code_action::CodeActionBuilder, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
+
+mod completion;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Response<T> {
@@ -228,14 +230,20 @@ where
                 Located::Pattern(_pattern) => None,
 
                 Located::Statement(_) | Located::Expression(_) => {
-                    Some(this.completion_values(module))
+                    let mut completions = this.completion_values(module);
+                    completions.extend(this.completion_variables(module, byte_index));
+                    Some(completions)
                 }
 
                 Located::ModuleStatement(Definition::Function(_)) => {
                     Some(this.completion_types(module))
                 }
 
-                Located::FunctionBody(_) => Some(this.completion_values(module)),
+                Located::FunctionBody(_) => {
+                    let mut completions = this.completion_values(module);
+                    completions.extend(this.completion_variables(module, byte_index));
+                    Some(completions)
+                }
 
                 Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_)) => {
                     Some(this.completion_types(module))
@@ -514,6 +522,163 @@ where
 
     fn root_package_name(&self) -> &str {
         self.compiler.project_compiler.config.name.as_str()
+    }
+
+    fn completion_variables<'b>(
+        &'b self,
+        module: &'b Module,
+        byte_index: u32,
+    ) -> Vec<lsp::CompletionItem> {
+        let Some(fun) = module.ast.definitions.iter().find_map(|def| match def {
+            Definition::Function(fun) if fun.full_location().contains(byte_index) => Some(fun),
+            _ => None,
+        }) else {
+            return vec![];
+        };
+
+        fn arg_patterns(args: &[Arg<Arc<Type>>]) -> impl Iterator<Item = (&str, Arc<Type>)> {
+            args.iter().filter_map(|arg| {
+                Some((arg.names.get_variable_name()?.as_str(), arg.type_.clone()))
+            })
+        }
+
+        fn pattern_fn(pattern: &Pattern<Arc<Type>>) -> Vec<(&str, Arc<Type>)> {
+            match pattern {
+                Pattern::Variable { name, type_, .. } | Pattern::Discard { name, type_, .. } => {
+                    vec![(name, type_.clone())]
+                }
+
+                Pattern::Assign { name, pattern, .. } => {
+                    let mut patterns = pattern_fn(pattern);
+                    patterns.push((name, pattern.type_()));
+                    patterns
+                }
+
+                Pattern::List { elements, .. }
+                | Pattern::Tuple {
+                    elems: elements, ..
+                } => elements.iter().flat_map(pattern_fn).collect(),
+
+                Pattern::Constructor { arguments, .. } => arguments
+                    .iter()
+                    .flat_map(|arg| pattern_fn(&arg.value))
+                    .collect(),
+
+                Pattern::BitArray { segments, .. } => {
+                    segments.iter().flat_map(|f| pattern_fn(&f.value)).collect()
+                }
+                Pattern::StringPrefix {
+                    right_side_assignment,
+                    ..
+                } => {
+                    todo!("figure out how to render String type")
+                }
+
+                _ => vec![],
+            }
+        }
+
+        fn expr_fn(expr: &TypedExpr, byte_index: u32) -> Vec<(&str, Arc<Type>)> {
+            if !expr.location().contains(byte_index) {
+                return vec![];
+            }
+
+            match expr {
+                TypedExpr::Call { args, .. } => args
+                    .iter()
+                    .flat_map(|arg| expr_fn(&arg.value, byte_index))
+                    .collect::<Vec<_>>(),
+
+                TypedExpr::Block { statements, .. } => {
+                    scope_variables(&statements, byte_index).collect()
+                }
+
+                TypedExpr::Pipeline { assignments, .. } => assignments
+                    .iter()
+                    .flat_map(|assig| expr_fn(&assig.value, byte_index))
+                    .collect(),
+
+                TypedExpr::Fn { args, body, .. } => arg_patterns(&args)
+                    .chain(scope_variables(&body, byte_index))
+                    .collect::<Vec<_>>(),
+
+                TypedExpr::List {
+                    elements: elems, ..
+                }
+                | TypedExpr::Tuple { elems, .. } => elems
+                    .iter()
+                    .flat_map(|expr| expr_fn(expr, byte_index))
+                    .collect(),
+
+                TypedExpr::Case {
+                    subjects, clauses, ..
+                } => {
+                    let subjects = subjects.iter().flat_map(|expr| expr_fn(expr, byte_index));
+                    let clauses = clauses
+                        .iter()
+                        .filter(|clause| clause.then.location().contains(byte_index))
+                        .flat_map(|clause| {
+                            clause
+                                .pattern
+                                .iter()
+                                .flat_map(|pat| pattern_fn(pat))
+                                .chain(expr_fn(&clause.then, byte_index))
+                        });
+
+                    subjects.chain(clauses).collect()
+                }
+                TypedExpr::RecordAccess { record, .. } => expr_fn(record, byte_index),
+                TypedExpr::TupleIndex { tuple, .. } => expr_fn(tuple, byte_index),
+                TypedExpr::RecordUpdate { spread, args, .. } => args
+                    .iter()
+                    .flat_map(|arg| expr_fn(&arg.value, byte_index))
+                    .chain(expr_fn(&spread, byte_index))
+                    .collect(),
+                TypedExpr::NegateInt { value, .. } | TypedExpr::NegateBool { value, .. } => {
+                    expr_fn(value, byte_index)
+                }
+                _ => vec![],
+            }
+        }
+
+        fn scope_variables(
+            stmts: &[Statement<Arc<Type>, TypedExpr>],
+            byte_index: u32,
+        ) -> impl Iterator<Item = (&str, Arc<Type>)> {
+            stmts
+                .into_iter()
+                .filter(move |stmt| stmt.location().start < byte_index)
+                .flat_map(move |stmt| match stmt {
+                    Statement::Assignment(assignment) if !stmt.location().contains(byte_index) => {
+                        pattern_fn(&assignment.pattern)
+                    }
+                    Statement::Assignment(assignment) => expr_fn(&assignment.value, byte_index),
+
+                    Statement::Expression(expr) if stmt.location().end > byte_index => {
+                        expr_fn(expr, byte_index)
+                    }
+                    _ => vec![],
+                })
+        }
+
+        let map: BTreeMap<_, _> = arg_patterns(&fun.arguments)
+            .chain(scope_variables(&fun.body, byte_index))
+            .filter(|(name, _)| !name.is_empty() && *name != "_")
+            .map(|(name, type_)| {
+                let type_ = Printer::new().pretty_print(&type_, 0);
+                let completion_item = lsp::CompletionItem {
+                    label: name.to_string(),
+                    kind: Some(lsp::CompletionItemKind::VARIABLE),
+                    detail: Some(type_),
+                    documentation: None,
+                    ..Default::default()
+                };
+
+                (name, completion_item)
+            })
+            .collect();
+
+        map.into_values().collect()
     }
 }
 
