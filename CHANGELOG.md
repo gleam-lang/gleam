@@ -41,6 +41,8 @@
   `prepend` function imported from the prelude in the JavaScript target.
 - Fixed string prefix matching producing wrong results on the JavaScript target
   when the prefix had a Unicode codepoint escape sequence (`\u{...}`).
+- Improved error message for wrong patterns using constructors from other
+  modules.
 
 ### Formatter
 
@@ -90,7 +92,6 @@
 - Go to definition now works for values in dependency Gleam modules.
 - Completions are now provided for module imports.
 
-
 ## v1.0.0 - 2024-03-04
 
 ### Language changes
@@ -117,7 +118,6 @@
 - The format used by the formatter has been improved in some niche cases.
 - Improved the formatting of long case guards.
 - The formatter can now format groups of imports alphabetically.
-
 
 ## v1.0.0-rc1 - 2024-02-10
 
@@ -166,7 +166,6 @@
 - Fixed a bug where external only functions would "successfully" compile for a
   target they do not support, leading to a runtime error.
 
-
 ## v0.34.1 - 2023-01-17
 
 ### Build tool changes
@@ -179,7 +178,6 @@
   format incorrectly.
 - The `@deprecated` attribute can now be used to annotate module constants.
   This will cause a warning to be emitted when the constant is used.
-
 
 ## v0.34.0 - 2023-01-16
 
@@ -198,7 +196,6 @@
 - Fixed a bug where function heads would go over the line limit in the
   formatter.
 
-
 ## v0.34.0-rc2 - 2023-01-11
 
 ### Bug fixes
@@ -208,7 +205,6 @@
 - Fixed a bug where the compiler would in some cases fail to error when an
   application uses functions that do not support the current compilation
   target.
-
 
 ## v0.34.0-rc1 - 2024-01-07
 
@@ -239,7 +235,7 @@
 
 - The `gleam new` command now accepts any existing path, as long as there are
   no conflicts with already existing files. Examples: `gleam new .`, `gleam new
-  ..`, `gleam new ~/projects/test`.
+..`, `gleam new ~/projects/test`.
 - The format for the README created by `gleam new` has been altered.
 - The `gleam.toml` created by `gleam new` now has a link to the full reference
   for its available options.
@@ -273,7 +269,6 @@
   "Type 'Result' is not generic".
 - Not providing a definition after some attributes is now a parse error.
 
-
 ## v0.33.0 - 2023-12-18
 
 ## v0.33.0-rc4 - 2023-12-17
@@ -283,7 +278,6 @@
 - The deprecated `BitString` type has been removed.
 - The deprecated `inspect` functions and `BitString` type has been removed from
   the JavaScript prelude.
-
 
 ## v0.33.0-rc3 - 2023-12-17
 
@@ -298,7 +292,6 @@
 - Fixed a bug where string prefix aliases defined in alternative case branches
   would all be bound to the same constant.
 
-
 ## v0.33.0-rc2 - 2023-12-07
 
 ### Language changes
@@ -311,7 +304,6 @@
 
 - Fixed a bug where the `\u` string escape sequence would not work with
   on Erlang on the right hand side of a string concatenation.
-
 
 ## v0.33.0-rc1 - 2023-12-06
 
@@ -382,7 +374,6 @@
 - Fixed a bug where using a string prefix pattern in `let assert` would generate
   incorrect JavaScript.
 
-
 ## v0.32.4 - 2023-11-09
 
 ### Build tool changes
@@ -397,7 +388,6 @@
   argument has the same name as the module function.
 - Fixed the `target` property of `gleam.toml` being ignored for local path
   dependencies by `gleam run -m module/name`
-
 
 ## v0.32.3 - 2023-11-07
 
@@ -416,7 +406,6 @@
 
 - Fixed a bug where some nested pipelines could fail to type check.
 
-
 ## v0.32.2 - 2023-11-03
 
 ### Build tool changes
@@ -432,7 +421,6 @@
 - Fixed a bug where aliased unqualified types and values of the same name could
   produce an incorrect error.
 
-
 ## v0.32.1 - 2023-11-02
 
 ### Bug fixes
@@ -442,14 +430,12 @@
 - Fixed a bug where incorrect JavaScript could be generated due to backwards
   compatibility with the deprecated import syntax.
 
-
 ## v0.32.0 - 2023-11-01
 
 ### Bug fixes
 
 - Fixed a bug where running `gleam fix` multiple times could produce incorrect
   results.
-
 
 ## v0.32.0-rc3 - 2023-10-26
 
@@ -458,14 +444,12 @@
 - Fixed a bug where `gleam fix` would fail to update the deprecated type import
   syntax for aliased unqualified types.
 
-
 ## v0.32.0-rc2 - 2023-10-26
 
 ### Bug fixes
 
 - Fixed a bug where the backward compatibility for the deprecated import syntax
   could result in an import error with some valid imports.
-
 
 ## v0.32.0-rc1 - 2023-10-25
 

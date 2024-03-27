@@ -227,6 +227,14 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 format!("Only a public definition can be annotated as internal."),
                 "Hint: remove the `@internal` annotation.".into()
             ]),
+            ParseErrorType::InvalidModuleTypePattern => (
+                "Invalid pattern", vec![
+                    "I'm expecting a pattern here".into(),
+                    "Hint: A pattern can be a constructor name, a literal value".into(),
+                    "or a variable to bind a value to, etc.".into(),
+                    "See: https://tour.gleam.run/flow-control/case-expressions/".into(),
+                ],
+            ),
         }
     }
 }
@@ -283,6 +291,7 @@ pub enum ParseErrorType {
     ListSpreadWithoutTail,      // let x = [1, ..]
     ExpectedFunctionBody,       // let x = fn()
     RedundantInternalAttribute, // for a private definition marked as internal
+    InvalidModuleTypePattern,   // for patterns that have a dot like: `name.thing`
 }
 
 impl LexicalError {

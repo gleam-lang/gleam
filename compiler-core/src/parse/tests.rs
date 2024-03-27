@@ -842,3 +842,16 @@ type Wibble {
 "
     );
 }
+
+#[test]
+fn wrong_record_access_pattern() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case wibble {
+    wibble.thing -> 1
+  }
+}
+"
+    );
+}
