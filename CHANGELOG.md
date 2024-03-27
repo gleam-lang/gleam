@@ -43,6 +43,7 @@
   when the prefix had a Unicode codepoint escape sequence (`\u{...}`).
 - Improved error message for wrong patterns using constructors from other
   modules.
+- A warning is now raised for unused binary operations.
 
 ### Formatter
 

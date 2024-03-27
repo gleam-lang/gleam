@@ -1207,3 +1207,15 @@ fn pattern_matching_on_tuples_doesnt_raise_a_warning() {
 fn opaque_external_type_raises_a_warning() {
     assert_warning!("pub opaque type External");
 }
+
+#[test]
+fn unused_binary_operation_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  let string = "a" <> "b" "c" <> "d"
+  string
+}
+"#
+    );
+}
