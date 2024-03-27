@@ -956,7 +956,21 @@ where
                 }
 
                 if self.maybe_one(&Token::Dot).is_some() {
-                    self.expect_constructor_pattern(Some((start, name, end)))?
+                    // We're doing this to get a better error message instead of a generic
+                    // `I was expecting a type`, you can have a look at this issue to get
+                    // a better idea: https://github.com/gleam-lang/gleam/issues/2841.
+                    match self.expect_constructor_pattern(Some((start, name, end))) {
+                        Ok(result) => result,
+                        Err(ParseError {
+                            location: SrcSpan { end, .. },
+                            ..
+                        }) => {
+                            return parse_error(
+                                ParseErrorType::InvalidModuleTypePattern,
+                                SrcSpan { start, end },
+                            )
+                        }
+                    }
                 } else {
                     match name.as_str() {
                         "true" | "false" => {
