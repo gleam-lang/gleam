@@ -1,4 +1,4 @@
-use crate::assert_module_infer;
+use crate::{assert_infer, assert_module_infer};
 
 // https://github.com/gleam-lang/gleam/issues/2392
 #[test]
@@ -25,5 +25,19 @@ pub fn c() {
             ("b", "fn(a) -> fn(b) -> Nil"),
             ("c", "fn() -> Nil"),
         ]
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2504
+#[test]
+fn provide_argument_type_to_anonymous_function() {
+    assert_infer!(
+        "
+   let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x) { x.0 }
+     |> fn (x) { x }
+",
+        "Int"
     );
 }

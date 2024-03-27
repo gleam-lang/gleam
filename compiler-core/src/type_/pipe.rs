@@ -1,5 +1,8 @@
 use super::*;
-use crate::ast::{Assignment, AssignmentKind, TypedAssignment, UntypedExpr, PIPE_VARIABLE};
+use crate::ast::{
+    Assignment, AssignmentKind, TypeAst, TypedAssignment, UntypedArg, UntypedExpr,
+    UntypedStatement, PIPE_VARIABLE,
+};
 use vec1::Vec1;
 
 #[derive(Debug)]
@@ -79,6 +82,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     ) -> Result<TypedExpr, Error> {
         let mut finally = None;
         for (i, call) in expressions.into_iter().enumerate() {
+            let expected_args = [self.typed_left_hand_value_variable().type_()];
             let call = match call {
                 // left |> right(..args)
                 UntypedExpr::Call {
@@ -98,6 +102,25 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                         _ => self.infer_apply_to_call_pipe(fun, arguments, location)?,
                     }
                 }
+
+                // If the left type has the correct number of arguments to the right function,
+                // we can infer the types of the arguments in the right function.
+                //
+                // left |> fn(arg) {} as fn(left)
+                UntypedExpr::Fn {
+                    arguments,
+                    body,
+                    return_annotation,
+                    is_capture,
+                    location,
+                } if arguments.len() == expected_args.len() => self.infer_apply_to_fn_pipe(
+                    arguments,
+                    &expected_args,
+                    body,
+                    is_capture,
+                    &return_annotation,
+                    location,
+                )?,
 
                 // right(left)
                 call => self.infer_apply_pipe(call)?,
@@ -247,6 +270,41 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             typ,
             args,
             fun: Box::new(fun),
+        })
+    }
+
+    /// Attempt to infer left |> fn(arg) {} as fn(arg)
+    fn infer_apply_to_fn_pipe(
+        &mut self,
+        arguments: Vec<UntypedArg>,
+        expected_args: &[Arc<Type>],
+        body: Vec1<UntypedStatement>,
+        is_capture: bool,
+        return_annotation: &Option<TypeAst>,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        let (args, body) =
+            self.expr_typer
+                .do_infer_fn(arguments, expected_args, body, return_annotation)?;
+        let args_types = args.iter().map(|a| a.type_.clone()).collect();
+        let fn_typ = fn_(args_types, body.last().type_());
+        let call_typ = body.last().type_();
+
+        let function = Box::new(TypedExpr::Fn {
+            location,
+            typ: fn_typ,
+            is_capture,
+            args,
+            body,
+            return_annotation: return_annotation.to_owned(),
+        });
+
+        // Rewrite as fn(left)
+        Ok(TypedExpr::Call {
+            location: function.location(),
+            typ: call_typ,
+            fun: function,
+            args: vec![self.typed_left_hand_value_variable_call_argument()],
         })
     }
 
