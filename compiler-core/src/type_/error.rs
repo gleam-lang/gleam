@@ -406,6 +406,10 @@ pub enum Warning {
         location: SrcSpan,
     },
 
+    UnusedBinop {
+        location: SrcSpan,
+    },
+
     NoFieldsRecordUpdate {
         location: SrcSpan,
     },

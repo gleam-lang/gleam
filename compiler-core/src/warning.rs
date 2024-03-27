@@ -618,6 +618,7 @@ the same values.\n"
                         extra_labels: Vec::new(),
                     }),
                 },
+
                 type_::Warning::OpaqueExternalType { location } => Diagnostic {
                     title: "Opaque external type".into(),
                     text: "This type has no constructors so making it opaque is redundant.".into(),
@@ -628,6 +629,22 @@ the same values.\n"
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
                             text: None,
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
+
+                type_::Warning::UnusedBinop { location } => Diagnostic {
+                    title: "Unused binary operation".into(),
+                    text: "".into(),
+                    hint: Some("You can safely remove it.".into()),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        path: path.to_path_buf(),
+                        src: src.clone(),
+                        label: diagnostic::Label {
+                            text: Some("This value is never used".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
