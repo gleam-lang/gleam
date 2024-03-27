@@ -33,7 +33,8 @@ pub trait ApiKeyCommand {
         let password = std::env::var(PASS_KEY).unwrap_or("".into());
         let api_key = std::env::var(API_KEY_KEY).unwrap_or("".into());
 
-        let insufficient_creds_in_env_var = api_key.trim().is_empty() && (username.trim().is_empty() || password.trim().is_empty());
+        let insufficient_creds_in_env_var =
+            api_key.trim().is_empty() && (username.trim().is_empty() || password.trim().is_empty());
 
         // Get login creds from user, prompting this time if
         // insufficient creds could be sourced from the env vars.
