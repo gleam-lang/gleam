@@ -48,6 +48,7 @@
   within a bit array literal inside a `case` clause's guard, would be used before they
   were defined, leading to a runtime error when evaluating the `case` expression.
 - Improved error messages when failing to parse a series of things.
+- A warning is now raised for unused binary operations.
 
 ### Formatter
 

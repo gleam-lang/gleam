@@ -427,7 +427,10 @@ impl TypedExpr {
     /// [`Case`]: TypedExpr::Case
     #[must_use]
     pub fn is_case(&self) -> bool {
-        matches!(self, Self::Case { .. })
+        match self {
+            Self::Case { .. } => true,
+            _ => false,
+        }
     }
 
     /// Returns `true` if the typed expr is [`Pipeline`].
@@ -435,7 +438,17 @@ impl TypedExpr {
     /// [`Pipeline`]: TypedExpr::Pipeline
     #[must_use]
     pub fn is_pipeline(&self) -> bool {
-        matches!(self, Self::Pipeline { .. })
+        match self {
+            Self::Pipeline { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_binop(&self) -> bool {
+        match self {
+            Self::BinOp { .. } => true,
+            _ => false,
+        }
     }
 }
 
