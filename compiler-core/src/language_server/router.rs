@@ -59,7 +59,6 @@ where
         // If the path is the root of a known project then return it. Otherwise
         // find the nearest parent project.
         let path = if self.engines.contains_key(&path) {
-            tracing::info!(?path, "found engine for path");
             path
         } else {
             let Some(path) = find_gleam_project_parent(&self.io, &path) else {
