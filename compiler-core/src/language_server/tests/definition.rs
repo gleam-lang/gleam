@@ -418,6 +418,87 @@ fn main() {
 }
 
 #[test]
+fn goto_definition_external_module_function_calls_with_multiple_compiles() {
+    let mut io = LanguageServerTestIO::new();
+    let dep = "pub fn my_fn() { Nil }";
+    io.add_hex_package("my_dep");
+    _ = io.hex_dep_module("my_dep", "example_module", dep);
+
+    let code = "
+import example_module
+fn main() {
+  example_module.my_fn
+}
+";
+
+    let (mut engine, position_param) = positioned_with_io(code, Position::new(3, 20), &io);
+
+    let params = GotoDefinitionParams {
+        text_document_position_params: position_param.clone(),
+        work_done_progress_params: Default::default(),
+        partial_result_params: Default::default(),
+    };
+    let response = engine.goto_definition(params);
+    let response = response.result.unwrap();
+
+    assert_eq!(
+        response,
+        Some(Location {
+            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
+                r"\\?\C:\build\packages\my_dep\src\example_module.gleam"
+            } else {
+                "/build/packages/my_dep/src/example_module.gleam"
+            }))
+            .unwrap(),
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0
+                },
+                end: Position {
+                    line: 0,
+                    character: 14
+                }
+            }
+        })
+    );
+
+    engine.compiler.sources.clear();
+    let response = engine.compile_please();
+    assert!(response.result.is_ok());
+
+    let params = GotoDefinitionParams {
+        text_document_position_params: position_param.clone(),
+        work_done_progress_params: Default::default(),
+        partial_result_params: Default::default(),
+    };
+    let response = engine.goto_definition(params);
+    let response = response.result.unwrap();
+
+    assert_eq!(
+        response,
+        Some(Location {
+            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
+                r"\\?\C:\build\packages\my_dep\src\example_module.gleam"
+            } else {
+                "/build/packages/my_dep/src/example_module.gleam"
+            }))
+            .unwrap(),
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0
+                },
+                end: Position {
+                    line: 0,
+                    character: 14
+                }
+            }
+        })
+    )
+}
+
+#[test]
 fn goto_definition_external_module_records() {
     let mut io = LanguageServerTestIO::new();
     io.add_hex_package("my_dep");
