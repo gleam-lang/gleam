@@ -724,7 +724,7 @@ fn resolve_versions<Telem: Telemetry>(
         &locked,
     )?;
 
-    // Convert the hex packages and local packages into manliest packages
+    // Convert the hex packages and local packages into manifest packages
     let manifest_packages = runtime.block_on(future::try_join_all(
         resolved
             .into_iter()
