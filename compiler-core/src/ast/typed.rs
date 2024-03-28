@@ -427,7 +427,10 @@ impl TypedExpr {
     /// [`Case`]: TypedExpr::Case
     #[must_use]
     pub fn is_case(&self) -> bool {
-        matches!(self, Self::Case { .. })
+        match self {
+            Self::Case { .. } => true,
+            _ => false,
+        }
     }
 
     /// Returns `true` if the typed expr is [`Pipeline`].
@@ -435,7 +438,41 @@ impl TypedExpr {
     /// [`Pipeline`]: TypedExpr::Pipeline
     #[must_use]
     pub fn is_pipeline(&self) -> bool {
-        matches!(self, Self::Pipeline { .. })
+        match self {
+            Self::Pipeline { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_binop(&self) -> bool {
+        match self {
+            Self::BinOp { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_record_constructor(&self) -> bool {
+        match self {
+            Self::Call { fun, .. } => match fun.as_ref() {
+                TypedExpr::Var { constructor, .. } if constructor.variant.is_record() => true,
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+
+    pub fn is_record_access(&self) -> bool {
+        match self {
+            Self::RecordAccess { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_record_update(&self) -> bool {
+        match self {
+            Self::RecordUpdate { .. } => true,
+            _ => false,
+        }
     }
 }
 

@@ -1207,3 +1207,65 @@ fn pattern_matching_on_tuples_doesnt_raise_a_warning() {
 fn opaque_external_type_raises_a_warning() {
     assert_warning!("pub opaque type External");
 }
+
+#[test]
+fn unused_binary_operation_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  let string = "a" <> "b" "c" <> "d"
+  string
+}
+"#
+    );
+}
+
+#[test]
+fn unused_record_access_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub type Thing {
+  Thing(value: Int)
+}
+
+pub fn main() {
+  let thing = Thing(1)
+  thing.value
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_record_constructor_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub type Thing {
+  Thing(value: Int)
+}
+
+pub fn main() {
+  Thing(1)
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_record_update_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub type Thing {
+  Thing(value: Int, other: Int)
+}
+
+pub fn main() {
+  let thing = Thing(1, 2)
+  Thing(..thing, value: 1)
+  1
+}
+"#
+    );
+}

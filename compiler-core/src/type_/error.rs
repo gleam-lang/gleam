@@ -406,6 +406,10 @@ pub enum Warning {
         location: SrcSpan,
     },
 
+    UnusedValue {
+        location: SrcSpan,
+    },
+
     NoFieldsRecordUpdate {
         location: SrcSpan,
     },
