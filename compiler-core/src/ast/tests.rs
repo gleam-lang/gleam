@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::analyse::TargetSupport;
 use crate::build::Target;
+use crate::line_numbers::LineNumbers;
 use crate::type_::expression::Externals;
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
 use crate::{
@@ -28,6 +29,7 @@ fn compile_module(src: &str) -> TypedModule {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
+    let line_numbers = LineNumbers::new(src);
     crate::analyse::infer_module::<()>(
         Target::Erlang,
         &ids,
@@ -38,6 +40,7 @@ fn compile_module(src: &str) -> TypedModule {
         &TypeWarningEmitter::null(),
         &std::collections::HashMap::new(),
         TargetSupport::Enforced,
+        line_numbers,
     )
     .expect("should successfully infer")
 }

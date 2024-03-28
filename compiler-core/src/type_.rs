@@ -26,6 +26,7 @@ use crate::{
     },
     bit_array,
     build::{Origin, Target},
+    line_numbers::LineNumbers,
     type_::expression::Implementations,
 };
 use error::*;
@@ -540,6 +541,7 @@ pub struct ModuleInterface {
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
     pub contains_todo: bool,
+    pub line_numbers: LineNumbers,
 }
 
 /// Information on the constructors of a custom type.
@@ -605,7 +607,12 @@ pub struct TypeValueConstructorField {
 }
 
 impl ModuleInterface {
-    pub fn new(name: EcoString, origin: Origin, package: EcoString) -> Self {
+    pub fn new(
+        name: EcoString,
+        origin: Origin,
+        package: EcoString,
+        line_numbers: LineNumbers,
+    ) -> Self {
         Self {
             name,
             origin,
@@ -616,6 +623,7 @@ impl ModuleInterface {
             accessors: Default::default(),
             unused_imports: Default::default(),
             contains_todo: false,
+            line_numbers,
         }
     }
 
