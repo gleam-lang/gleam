@@ -1,13 +1,12 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 33
 expression: "./cases/erlang_app_generation"
 ---
 //// /out/lib/the_package/_gleam_artefacts/main.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.cache_meta
-<29 byte binary>
+<49 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.erl
 -module(main).
@@ -27,6 +26,3 @@ expression: "./cases/erlang_app_generation"
     {modules, [main]},
     {registered, []}
 ]}.
-
-
-

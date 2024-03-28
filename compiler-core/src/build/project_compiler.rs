@@ -233,6 +233,14 @@ where
         Ok(modules)
     }
 
+    pub fn get_build_dir_for_module(&self, package: &str, module: &str) -> Utf8PathBuf {
+        self.paths
+            .build_packages_package(package)
+            .join("src")
+            .join(module)
+            .with_extension("gleam")
+    }
+
     fn write_prelude(&self) -> Result<()> {
         // Only the JavaScript target has a prelude to write.
         if !self.target().is_javascript() {
@@ -490,23 +498,6 @@ where
         let config_path = package_root.join("gleam.toml");
         let config = PackageConfig::read(config_path, &self.io)?;
         self.compile_gleam_package(&config, false, package_root)
-    }
-
-    fn load_cached_package(
-        &mut self,
-        build_dir: Utf8PathBuf,
-        package: &ManifestPackage,
-    ) -> Result<(), Error> {
-        for path in self.io.gleam_cache_files(&build_dir) {
-            let reader = BufReader::new(self.io.reader(&path)?);
-            let module = metadata::ModuleDecoder::new(self.ids.clone()).read(reader)?;
-            let _ = self
-                .importable_modules
-                .insert(module.name.clone(), module)
-                .ok_or(())
-                .expect_err("Metadata loaded for already loaded module");
-        }
-        Ok(())
     }
 
     fn compile_gleam_package(

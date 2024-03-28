@@ -13,6 +13,7 @@ use crate::{
     build::{Origin, Target},
     call_graph::{into_dependency_order, CallGraphNode},
     dep_tree,
+    line_numbers::LineNumbers,
     type_::{
         self,
         environment::*,
@@ -122,6 +123,7 @@ pub fn infer_module<A>(
     warnings: &TypeWarningEmitter,
     direct_dependencies: &HashMap<EcoString, A>,
     target_support: TargetSupport,
+    line_numbers: LineNumbers,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
@@ -275,6 +277,7 @@ pub fn infer_module<A>(
             package: package.clone(),
             unused_imports,
             contains_todo,
+            line_numbers,
         },
     })
 }

@@ -2,6 +2,7 @@ use super::*;
 use crate::{
     build::module_loader::SourceFingerprint,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
+    line_numbers::LineNumbers,
 };
 use std::time::Duration;
 
@@ -157,11 +158,13 @@ fn write_cache(
     seconds: u64,
     codegen_performed: bool,
 ) {
+    let line_numbers = LineNumbers::new(source);
     let cache_metadata = CacheMetadata {
         mtime: SystemTime::UNIX_EPOCH + Duration::from_secs(seconds),
         codegen_performed,
         dependencies: vec![],
         fingerprint: SourceFingerprint::new(source),
+        line_numbers,
     };
     let path = Utf8Path::new(path);
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();

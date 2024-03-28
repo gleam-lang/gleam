@@ -44,6 +44,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         let parsed = crate::parse::parse_module(dep_src).expect("dep syntax error");
         let mut ast = parsed.module;
         ast.name = dep_name.into();
+        let line_numbers = LineNumbers::new(dep_src);
         let dep = crate::analyse::infer_module::<()>(
             Target::Erlang,
             &ids,
@@ -54,6 +55,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
             &TypeWarningEmitter::null(),
             &std::collections::HashMap::new(),
             TargetSupport::NotEnforced,
+            line_numbers,
         )
         .expect("should successfully infer dep Erlang");
         let _ = modules.insert(dep_name.into(), dep.type_info);
@@ -62,6 +64,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
     let parsed = crate::parse::parse_module(src).expect("syntax error");
     let mut ast = parsed.module;
     ast.name = "my/mod".into();
+    let line_numbers = LineNumbers::new(src);
     let ast = crate::analyse::infer_module::<()>(
         Target::Erlang,
         &ids,
@@ -72,6 +75,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         &TypeWarningEmitter::null(),
         &direct_dependencies,
         TargetSupport::NotEnforced,
+        line_numbers,
     )
     .expect("should successfully infer root Erlang");
     let line_numbers = LineNumbers::new(src);
