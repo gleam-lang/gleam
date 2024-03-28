@@ -450,6 +450,30 @@ impl TypedExpr {
             _ => false,
         }
     }
+
+    pub fn is_record_constructor(&self) -> bool {
+        match self {
+            Self::Call { fun, .. } => match fun.as_ref() {
+                TypedExpr::Var { constructor, .. } if constructor.variant.is_record() => true,
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+
+    pub fn is_record_access(&self) -> bool {
+        match self {
+            Self::RecordAccess { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_record_update(&self) -> bool {
+        match self {
+            Self::RecordUpdate { .. } => true,
+            _ => false,
+        }
+    }
 }
 
 impl<'a> From<&'a TypedExpr> for Located<'a> {
