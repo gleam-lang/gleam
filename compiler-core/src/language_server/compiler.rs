@@ -114,6 +114,26 @@ where
             _ = self.sources.insert(module.name.clone(), source);
         }
 
+        // Since cached modules are not recompiled we need to manually add them
+        for (name, module) in self.project_compiler.get_importable_modules() {
+            if self.sources.contains_key(name) {
+                continue;
+            }
+            // Get the build path for the module
+            let build_path = self
+                .project_compiler
+                .get_build_dir_for_module(&module.package, &module.name);
+            // Read the source
+            let code = self.project_compiler.io.read(&build_path);
+            if let Ok(code) = code {
+                // Create the source information
+                let path = build_path.as_os_str().to_string_lossy().to_string();
+                let line_numbers = LineNumbers::new(&code);
+                let source = ModuleSourceInformation { path, line_numbers };
+                _ = self.sources.insert(name.clone(), source);
+            }
+        }
+
         // Warnings from dependencies are not fixable by the programmer so
         // we don't bother them with diagnostics for them.
         let _ = self.take_warnings();

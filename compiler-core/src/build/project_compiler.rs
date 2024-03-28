@@ -233,6 +233,14 @@ where
         Ok(modules)
     }
 
+    pub fn get_build_dir_for_module(&self, package: &str, module: &str) -> Utf8PathBuf {
+        self.paths
+            .build_packages_package(package)
+            .join("src")
+            .join(module)
+            .with_extension("gleam")
+    }
+
     fn write_prelude(&self) -> Result<()> {
         // Only the JavaScript target has a prelude to write.
         if !self.target().is_javascript() {
