@@ -123,29 +123,6 @@ impl<'a> ErlangApp<'a> {
                     .take_while(|_| self.config.include_dev_deps),
             )
             // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
-            // TODO: test this!
             .map(|name| self.config.package_name_overrides.get(name).unwrap_or(name))
             .chain(config.erlang.extra_applications.iter())
             .sorted()
