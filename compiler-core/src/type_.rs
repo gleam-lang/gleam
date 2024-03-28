@@ -448,6 +448,13 @@ impl ValueConstructorVariant {
         matches!(self, Self::ModuleFn { .. })
     }
 
+    pub fn is_record(&self) -> bool {
+        match self {
+            Self::Record { .. } => true,
+            _ => false,
+        }
+    }
+
     pub fn implementations(&self) -> Implementations {
         match self {
             ValueConstructorVariant::Record { .. }

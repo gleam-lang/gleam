@@ -1219,3 +1219,53 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn unused_record_access_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub type Thing {
+  Thing(value: Int)
+}
+
+pub fn main() {
+  let thing = Thing(1)
+  thing.value
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_record_constructor_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub type Thing {
+  Thing(value: Int)
+}
+
+pub fn main() {
+  Thing(1)
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_record_update_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub type Thing {
+  Thing(value: Int, other: Int)
+}
+
+pub fn main() {
+  let thing = Thing(1, 2)
+  Thing(..thing, value: 1)
+  1
+}
+"#
+    );
+}

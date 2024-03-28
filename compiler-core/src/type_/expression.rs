@@ -397,10 +397,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .emit(Warning::ImplicitlyDiscardedResult {
                     location: discarded.location(),
                 });
-        } else if discarded.is_binop() {
-            self.environment.warnings.emit(Warning::UnusedBinop {
+        } else if discarded.is_binop()
+            || discarded.is_record_constructor()
+            || discarded.is_record_access()
+            || discarded.is_record_update()
+        {
+            self.environment.warnings.emit(Warning::UnusedValue {
                 location: discarded.location(),
-            });
+            })
         }
     }
 

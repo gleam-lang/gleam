@@ -635,8 +635,8 @@ the same values.\n"
                     }),
                 },
 
-                type_::Warning::UnusedBinop { location } => Diagnostic {
-                    title: "Unused binary operation".into(),
+                type_::Warning::UnusedValue { location } => Diagnostic {
+                    title: "Unused value".into(),
                     text: "".into(),
                     hint: Some("You can safely remove it.".into()),
                     level: diagnostic::Level::Warning,

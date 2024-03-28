@@ -406,7 +406,7 @@ pub enum Warning {
         location: SrcSpan,
     },
 
-    UnusedBinop {
+    UnusedValue {
         location: SrcSpan,
     },
 
