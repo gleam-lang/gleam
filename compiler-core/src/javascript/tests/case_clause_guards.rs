@@ -29,6 +29,19 @@ fn rebound_var() {
 }
 
 #[test]
+fn bitarray_with_var() {
+    assert_js!(
+        r#"pub fn main() {
+  case 5 {
+    z if <<z>> == <<z>> -> Nil
+    _ -> Nil
+  }
+}
+"#,
+    )
+}
+
+#[test]
 fn operator_wrapping_right() {
     assert_js!(
         r#"pub fn main(xs, y: Bool, z: Bool) {

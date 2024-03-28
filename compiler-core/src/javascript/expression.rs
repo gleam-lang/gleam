@@ -1222,11 +1222,16 @@ pub(crate) fn guard_constant_expression<'a>(
             Ok(construct_record(module.as_deref(), tag, field_values))
         }
 
+        Constant::BitArray { segments, .. } => bit_array(tracker, segments, |tracker, constant| {
+            guard_constant_expression(assignments, tracker, constant)
+        }),
+
         Constant::Var { name, .. } => Ok(assignments
             .iter()
             .find(|assignment| assignment.name == name)
             .map(|assignment| assignment.subject.clone().append(assignment.path.clone()))
             .unwrap_or_else(|| name.to_doc())),
+
         expression => constant_expression(tracker, expression),
     }
 }
@@ -1277,7 +1282,7 @@ pub(crate) fn constant_expression<'a>(
             Ok(construct_record(module.as_deref(), tag, field_values))
         }
 
-        Constant::BitArray { segments, .. } => bit_array(tracker, segments),
+        Constant::BitArray { segments, .. } => bit_array(tracker, segments, constant_expression),
 
         Constant::Var { name, module, .. } => Ok({
             match module {
@@ -1291,13 +1296,14 @@ pub(crate) fn constant_expression<'a>(
 fn bit_array<'a>(
     tracker: &mut UsageTracker,
     segments: &'a [BitArraySegment<TypedConstant, Arc<Type>>],
-) -> Result<Document<'a>, Error> {
+    mut constant_expr_fun: impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
+) -> Output<'a> {
     tracker.bit_array_literal_used = true;
 
     use BitArrayOption as Opt;
 
     let segments_array = array(segments.iter().map(|segment| {
-        let value = constant_expression(tracker, &segment.value)?;
+        let value = constant_expr_fun(tracker, &segment.value)?;
         match segment.options.as_slice() {
             // Ints
             [] | [Opt::Int { .. }] => Ok(value),
@@ -1305,7 +1311,7 @@ fn bit_array<'a>(
             // Sized ints
             [Opt::Size { value: size, .. }] => {
                 tracker.sized_integer_segment_used = true;
-                let size = constant_expression(tracker, size)?;
+                let size = constant_expr_fun(tracker, size)?;
                 Ok(docvec!["sizedInt(", value, ", ", size, ")"])
             }
 
