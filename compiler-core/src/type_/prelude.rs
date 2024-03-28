@@ -3,6 +3,7 @@ use strum::{EnumIter, IntoEnumIterator};
 use crate::{
     ast::{Publicity, SrcSpan},
     build::Origin,
+    line_numbers::LineNumbers,
     uid::UniqueIdGenerator,
 };
 
@@ -210,6 +211,8 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         accessors: HashMap::new(),
         unused_imports: Vec::new(),
         contains_todo: false,
+        // prelude doesn't have real src/line numbers
+        line_numbers: LineNumbers::new(""),
     };
 
     for t in PreludeType::iter() {

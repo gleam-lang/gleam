@@ -1,4 +1,5 @@
 use crate::analyse::TargetSupport;
+use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
@@ -261,6 +262,7 @@ where
                 codegen_performed: self.perform_codegen,
                 dependencies: module.dependencies_list(),
                 fingerprint: SourceFingerprint::new(&module.code),
+                line_numbers: module.ast.type_info.line_numbers.clone(),
             };
             self.io.write_bytes(&path, &info.to_binary())?;
         }
@@ -420,6 +422,7 @@ fn analyse(
     {
         tracing::debug!(module = ?name, "Type checking");
 
+        let line_numbers = LineNumbers::new(&code);
         let ast = crate::analyse::infer_module(
             target,
             ids,
@@ -430,6 +433,7 @@ fn analyse(
             &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
             &direct_dependencies,
             target_support,
+            line_numbers,
         )
         .map_err(|error| Error::Type {
             path: path.clone(),
@@ -528,6 +532,7 @@ pub(crate) struct CachedModule {
     pub origin: Origin,
     pub dependencies: Vec<EcoString>,
     pub source_path: Utf8PathBuf,
+    pub line_numbers: LineNumbers,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -536,6 +541,7 @@ pub(crate) struct CacheMetadata {
     pub codegen_performed: bool,
     pub dependencies: Vec<EcoString>,
     pub fingerprint: SourceFingerprint,
+    pub line_numbers: LineNumbers,
 }
 
 impl CacheMetadata {
