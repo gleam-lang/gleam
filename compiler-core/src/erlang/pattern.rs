@@ -9,8 +9,11 @@ pub(super) fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a
 
 pub(super) fn requires_guard<'a>(p: &'a TypedPattern) -> bool {
     match p {
-        Pattern::StringPrefix{left_side_assignment: Some(_), ..} => true,
-        _ => false
+        Pattern::StringPrefix {
+            left_side_assignment: Some(_),
+            ..
+        } => true,
+        _ => false,
     }
 }
 
@@ -91,7 +94,7 @@ fn print<'a>(
 
         Pattern::StringPrefix {
             left_side_string,
-            right_side_assignment ,
+            right_side_assignment,
             left_side_assignment,
             ..
         } => {
@@ -110,14 +113,33 @@ fn print<'a>(
                     // <<Prefix:3/binary, Rest/binary>> when Prefix =:= <<"foo">>
                     //   ^^^^^^^^                       ^^^^^^^^^^^^^^^^^^^^^^^^^ since erlang's binary pattern matching doesn't allow direct string assignment to variables within the pattern,
                     //                                                            we first match the expected prefix length in bytes, then use a guard clause to verify the content.
-                    //                                                            
+                    //
                     let name = env.next_local_var_name(left_name);
                     docvec![
-                        "<<", name.clone(), ":", left_side_string.len(), "/binary", ", ", right, "/binary>>",
-                        " when ", name ," =:= ", "<<\"", left_side_string, "\">>"
+                        "<<",
+                        name.clone(),
+                        ":",
+                        left_side_string.len(),
+                        "/binary",
+                        ", ",
+                        right,
+                        "/binary>>",
+                        " when ",
+                        name,
+                        " =:= ",
+                        "<<\"",
+                        left_side_string,
+                        "\">>"
                     ]
                 }
-                None => docvec!["<<\"", left_side_string, "\"/utf8", ", ", right, "/binary>>"]
+                None => docvec![
+                    "<<\"",
+                    left_side_string,
+                    "\"/utf8",
+                    ", ",
+                    right,
+                    "/binary>>"
+                ],
             }
         }
     }
@@ -207,4 +229,3 @@ fn pattern_list<'a>(
     let tail = tail.map(|tail| print(tail, vars, define_variables, env));
     list(elements, tail)
 }
-
