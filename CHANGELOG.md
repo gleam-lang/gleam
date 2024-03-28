@@ -39,6 +39,7 @@
 - Improve error message when using incorrect quotes (`'`) to define a string
 - Fixed a bug where an imported module named `prepend` would conflict with the
   `prepend` function imported from the prelude in the JavaScript target.
+- Fixed a bug where Erlang string prefix patterns could generate invalid Erlang.
 - Fixed string prefix matching producing wrong results on the JavaScript target
   when the prefix had a Unicode codepoint escape sequence (`\u{...}`).
 - Improved error message for wrong patterns using constructors from other
