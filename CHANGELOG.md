@@ -43,6 +43,9 @@
   when the prefix had a Unicode codepoint escape sequence (`\u{...}`).
 - Improved error message for wrong patterns using constructors from other
   modules.
+- Fixed a bug on the JavaScript target where variables bound by patterns, if used
+  within a bit array literal inside a `case` clause's guard, would be used before they
+  were defined, leading to a runtime error when evaluating the `case` expression.
 
 ### Formatter
 
