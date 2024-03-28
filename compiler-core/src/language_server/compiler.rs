@@ -116,7 +116,7 @@ where
 
         // Since cached modules are not recompiled we need to manually add them
         for (name, module) in self.project_compiler.get_importable_modules() {
-            if self.sources.contains_key(name) {
+            if self.sources.contains_key(name) || name == "gleam" {
                 continue;
             }
             // Get the build path for the module
