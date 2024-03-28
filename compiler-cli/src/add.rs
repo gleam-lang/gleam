@@ -36,8 +36,14 @@ pub fn command(packages: Vec<String>, dev: bool) -> Result<()> {
         tracing::info!(version=%version, "new_package_version_resolved");
 
         // Produce a version requirement locked to the major version.
-        // i.e. if 1.2.3 is selected we want ~> 1.2
-        let range = format!("~> {}.{}", version.major, version.minor);
+        // i.e. if 1.2.3 is selected we want >= 1.2.3 and < 2.0.0
+        let range = format!(
+            ">= {}.{}.{} and < {}.0.0",
+            version.major,
+            version.minor,
+            version.patch,
+            version.major + 1
+        );
 
         // False positive. This package doesn't use the indexing API correctly.
         #[allow(clippy::indexing_slicing)]
