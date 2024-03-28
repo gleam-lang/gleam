@@ -22,7 +22,7 @@ use crate::{
 use ecow::EcoString;
 use heck::ToSnakeCase;
 use itertools::Itertools;
-use pattern::{pattern,requires_guard};
+use pattern::{pattern, requires_guard};
 use regex::{Captures, Regex};
 use std::sync::OnceLock;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
@@ -1113,9 +1113,7 @@ fn optional_clause_guard<'a>(
     guard
         .map(|guard| {
             if new {
-                " when "
-                    .to_doc()
-                    .append(bare_clause_guard(guard, env))
+                " when ".to_doc().append(bare_clause_guard(guard, env))
             } else {
                 " andalso "
                     .to_doc()
