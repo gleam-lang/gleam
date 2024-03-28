@@ -111,8 +111,10 @@ fn print<'a>(
                     //                 referenced inside the case branch.
                     //
                     // <<Prefix:3/binary, Rest/binary>> when Prefix =:= <<"foo">>
-                    //   ^^^^^^^^                       ^^^^^^^^^^^^^^^^^^^^^^^^^ since erlang's binary pattern matching doesn't allow direct string assignment to variables within the pattern,
-                    //                                                            we first match the expected prefix length in bytes, then use a guard clause to verify the content.
+                    //   ^^^^^^^^                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+                    //   since erlang's binary pattern matching doesn't allow direct string assignment
+                    //   to variables within the pattern, we first match the expected prefix length in
+                    //   bytes, then use a guard clause to verify the content.
                     //
                     let name = env.next_local_var_name(left_name);
                     docvec![
