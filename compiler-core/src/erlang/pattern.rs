@@ -7,7 +7,7 @@ pub(super) fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a
     to_doc(p, &mut vars, env)
 }
 
-pub(super) fn requires_guard<'a>(p: &'a TypedPattern) -> bool {
+pub(super) fn requires_guard(p: &TypedPattern) -> bool {
     match p {
         Pattern::StringPrefix {
             left_side_assignment: Some(_),
