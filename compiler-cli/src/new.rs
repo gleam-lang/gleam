@@ -16,7 +16,7 @@ mod tests;
 use crate::NewOptions;
 
 const GLEAM_STDLIB_REQUIREMENT: &str = ">= 0.34.0 and < 2.0.0";
-const GLEEUNIT_VERSION: &str = "1.0";
+const GLEEUNIT_REQUIREMENT: &str = ">= 1.0.0 and < 2.0.0";
 const ERLANG_OTP_VERSION: &str = "26.0.2";
 const REBAR3_VERSION: &str = "3";
 const ELIXIR_VERSION: &str = "1.15.4";
@@ -159,7 +159,7 @@ version = "1.0.0"
 gleam_stdlib = "{GLEAM_STDLIB_REQUIREMENT}"
 
 [dev-dependencies]
-gleeunit = "~> {GLEEUNIT_VERSION}"
+gleeunit = "{GLEEUNIT_REQUIREMENT}"
 "#,
             )),
 
