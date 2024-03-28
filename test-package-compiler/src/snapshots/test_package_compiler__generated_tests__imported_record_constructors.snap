@@ -6,7 +6,7 @@ expression: "./cases/imported_record_constructors"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@one.cache_meta
-<29 byte binary>
+<89 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@one.erl
 -module(one@one).
@@ -27,7 +27,7 @@ expression: "./cases/imported_record_constructors"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<59 byte binary>
+<475 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
@@ -123,6 +123,3 @@ aliased_fn_b() ->
 
 //// /out/lib/the_package/include/one@one_User.hrl
 -record(user, {name :: binary(), score :: integer()}).
-
-
-
