@@ -123,15 +123,11 @@ where
             let build_path = self
                 .project_compiler
                 .get_build_dir_for_module(&module.package, &module.name);
-            // Read the source
-            let code = self.project_compiler.io.read(&build_path);
-            if let Ok(code) = code {
-                // Create the source information
-                let path = build_path.as_os_str().to_string_lossy().to_string();
-                let line_numbers = LineNumbers::new(&code);
-                let source = ModuleSourceInformation { path, line_numbers };
-                _ = self.sources.insert(name.clone(), source);
-            }
+            // Create the source information
+            let path = build_path.as_os_str().to_string_lossy().to_string();
+            let line_numbers = module.line_numbers.clone();
+            let source = ModuleSourceInformation { path, line_numbers };
+            _ = self.sources.insert(name.clone(), source);
         }
 
         // Warnings from dependencies are not fixable by the programmer so

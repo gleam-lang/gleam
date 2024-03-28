@@ -135,6 +135,7 @@ where
             source_path: self.source_directory.join(format!("{}.gleam", name)),
             origin: self.origin,
             name,
+            line_numbers: meta.line_numbers,
         }
     }
 }

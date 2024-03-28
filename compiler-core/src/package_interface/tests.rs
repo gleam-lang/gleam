@@ -8,6 +8,7 @@ use crate::{
     analyse::TargetSupport,
     build::{Module, Origin, Package, Target},
     config::{Docs, ErlangConfig, JavaScriptConfig, PackageConfig, Repository},
+    line_numbers::LineNumbers,
     type_::PRELUDE_MODULE_NAME,
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
@@ -70,6 +71,7 @@ pub fn compile_package(
         let parsed = crate::parse::parse_module(dep_src).expect("dep syntax error");
         let mut ast = parsed.module;
         ast.name = dep_name.into();
+        let line_numbers = LineNumbers::new(dep_src);
         let dep = crate::analyse::infer_module::<()>(
             Target::Erlang,
             &ids,
@@ -80,6 +82,7 @@ pub fn compile_package(
             &TypeWarningEmitter::null(),
             &std::collections::HashMap::new(),
             TargetSupport::Enforced,
+            line_numbers,
         )
         .expect("should successfully infer");
         let _ = modules.insert(dep_name.into(), dep.type_info);
@@ -103,6 +106,7 @@ pub fn compile_package(
         &TypeWarningEmitter::null(),
         &direct_dependencies,
         TargetSupport::Enforced,
+        LineNumbers::new(src),
     )
     .expect("should successfully infer");
 
