@@ -63,6 +63,8 @@
 
 - A warning is now emitted if there is a `.gleam` file with a path that would be
   invalid as a module name.
+- The `~> x.y` version constraint syntax has been dropped in favour of
+  `> x.y.z and <= xx.0.0` syntax in `gleam add` and `gleam new`, for clarity.
 - New projects are created with the GitHub `actions/checkout` v4 action.
 - Fixed a bug where bit arrays would break syntax highlighting in the generated
   HTML documentation.
