@@ -500,23 +500,6 @@ where
         self.compile_gleam_package(&config, false, package_root)
     }
 
-    fn load_cached_package(
-        &mut self,
-        build_dir: Utf8PathBuf,
-        package: &ManifestPackage,
-    ) -> Result<(), Error> {
-        for path in self.io.gleam_cache_files(&build_dir) {
-            let reader = BufReader::new(self.io.reader(&path)?);
-            let module = metadata::ModuleDecoder::new(self.ids.clone()).read(reader)?;
-            let _ = self
-                .importable_modules
-                .insert(module.name.clone(), module)
-                .ok_or(())
-                .expect_err("Metadata loaded for already loaded module");
-        }
-        Ok(())
-    }
-
     fn compile_gleam_package(
         &mut self,
         config: &PackageConfig,
