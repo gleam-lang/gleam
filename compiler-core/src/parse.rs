@@ -485,7 +485,7 @@ where
                 let elems =
                     Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
                 let (_, end) =
-                    self.expect_one_following_series(&Token::RightParen, "an expression".into())?;
+                    self.expect_one_following_series(&Token::RightParen, "an expression")?;
                 UntypedExpr::Tuple {
                     location: SrcSpan { start, end },
                     elems,
@@ -576,7 +576,7 @@ where
                     Some(&Token::Comma),
                 )?;
                 let (_, end) =
-                    self.expect_one_following_series(&Token::GtGt, "a bit array segment".into())?;
+                    self.expect_one_following_series(&Token::GtGt, "a bit array segment")?;
                 UntypedExpr::BitArray {
                     location: SrcSpan { start, end },
                     segments,
@@ -619,11 +619,10 @@ where
                 self.advance();
                 let subjects =
                     Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
-                let _ =
-                    self.expect_one_following_series(&Token::LeftBrace, "an expression".into())?;
+                let _ = self.expect_one_following_series(&Token::LeftBrace, "an expression")?;
                 let clauses = Parser::series_of(self, &Parser::parse_case_clause, None)?;
                 let (_, end) =
-                    self.expect_one_following_series(&Token::RightBrace, "a case clause".into())?;
+                    self.expect_one_following_series(&Token::RightBrace, "a case clause")?;
                 if subjects.is_empty() {
                     return parse_error(
                         ParseErrorType::ExpectedExpr,
@@ -815,7 +814,7 @@ where
             Parser::series_of(self, &Parser::parse_use_assignment, Some(&Token::Comma))?
         };
 
-        _ = self.expect_one_following_series(&Token::LArrow, "a use variable assignment".into())?;
+        _ = self.expect_one_following_series(&Token::LArrow, "a use variable assignment")?;
         let call = self.expect_expression()?;
 
         Ok(Statement::Use(Use {
@@ -1106,8 +1105,7 @@ where
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elems = Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
-                let (_, end) =
-                    self.expect_one_following_series(&Token::RightParen, "a pattern".into())?;
+                let (_, end) = self.expect_one_following_series(&Token::RightParen, "a pattern")?;
                 Pattern::Tuple {
                     location: SrcSpan { start, end },
                     elems,
@@ -1133,10 +1131,8 @@ where
                     },
                     Some(&Token::Comma),
                 )?;
-                let (_, end) = self.expect_one_following_series(
-                    &Token::GtGt,
-                    "a bit array segment pattern".into(),
-                )?;
+                let (_, end) =
+                    self.expect_one_following_series(&Token::GtGt, "a bit array segment pattern")?;
                 Pattern::BitArray {
                     location: SrcSpan { start, end },
                     segments,
@@ -1156,7 +1152,7 @@ where
                     None
                 };
                 let (end, rsqb_e) =
-                    self.expect_one_following_series(&Token::RightSquare, "a pattern".into())?;
+                    self.expect_one_following_series(&Token::RightSquare, "a pattern")?;
                 let tail = match tail {
                     // There is a tail and it has a Pattern::Var or Pattern::Discard
                     Some(Some(pat @ (Pattern::Variable { .. } | Pattern::Discard { .. }))) => {
@@ -1569,7 +1565,7 @@ where
             Some(&Token::Comma),
         )?;
         let (_, rpar_e) =
-            self.expect_one_following_series(&Token::RightParen, "a function parameter".into())?;
+            self.expect_one_following_series(&Token::RightParen, "a function parameter")?;
         let return_annotation = self.parse_type_annotation(&Token::RArrow)?;
 
         let (body, end, end_position) = match self.maybe_one(&Token::LeftBrace) {
@@ -1825,8 +1821,8 @@ where
                 // No separator
                 None,
             )?;
-            let (_, close_end) = self
-                .expect_one_following_series(&Token::RightBrace, "a record constructor".into())?;
+            let (_, close_end) =
+                self.expect_one_following_series(&Token::RightBrace, "a record constructor")?;
             (constructors, close_end)
         } else if let Some((eq_s, eq_e)) = self.maybe_one(&Token::Equal) {
             // Type Alias
@@ -1874,8 +1870,7 @@ where
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args =
                 Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Token::Comma))?;
-            let (_, par_e) =
-                self.expect_one_following_series(&Token::RightParen, "a name".into())?;
+            let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
             let args2 = args.into_iter().map(|(_, a, _)| a).collect();
             Ok((start, upname, args2, par_e))
         } else {
@@ -1935,10 +1930,8 @@ where
                 },
                 Some(&Token::Comma),
             )?;
-            let (_, end) = self.expect_one_following_series(
-                &Token::RightParen,
-                "a constructor argument name".into(),
-            )?;
+            let (_, end) = self
+                .expect_one_following_series(&Token::RightParen, "a constructor argument name")?;
             Ok((args, end))
         } else {
             Ok((vec![], 0))
@@ -1995,7 +1988,7 @@ where
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let args =
                     Parser::series_of(self, &|x| Parser::parse_type(x), Some(&Token::Comma))?;
-                let _ = self.expect_one_following_series(&Token::RightParen, "a type".into())?;
+                let _ = self.expect_one_following_series(&Token::RightParen, "a type")?;
                 let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
                 let retrn = self.parse_type()?;
                 if let Some(retrn) = retrn {
@@ -2313,8 +2306,8 @@ where
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elements =
                     Parser::series_of(self, &Parser::parse_const_value, Some(&Token::Comma))?;
-                let (_, end) = self
-                    .expect_one_following_series(&Token::RightParen, "a constant value".into())?;
+                let (_, end) =
+                    self.expect_one_following_series(&Token::RightParen, "a constant value")?;
                 Ok(Some(Constant::Tuple {
                     elements,
                     location: SrcSpan { start, end },
@@ -2325,8 +2318,8 @@ where
                 self.advance();
                 let elements =
                     Parser::series_of(self, &Parser::parse_const_value, Some(&Token::Comma))?;
-                let (_, end) = self
-                    .expect_one_following_series(&Token::RightSquare, "a constant value".into())?;
+                let (_, end) =
+                    self.expect_one_following_series(&Token::RightSquare, "a constant value")?;
                 Ok(Some(Constant::List {
                     elements,
                     location: SrcSpan { start, end },
@@ -2349,7 +2342,7 @@ where
                     Some(&Token::Comma),
                 )?;
                 let (_, end) =
-                    self.expect_one_following_series(&Token::GtGt, "a bit array segment".into())?;
+                    self.expect_one_following_series(&Token::GtGt, "a bit array segment")?;
                 Ok(Some(Constant::BitArray {
                     location: SrcSpan { start, end },
                     segments,
@@ -2437,10 +2430,8 @@ where
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args =
                 Parser::series_of(self, &Parser::parse_const_record_arg, Some(&Token::Comma))?;
-            let (_, par_e) = self.expect_one_following_series(
-                &Token::RightParen,
-                "a constant record argument".into(),
-            )?;
+            let (_, par_e) =
+                self.expect_one_following_series(&Token::RightParen, "a constant record argument")?;
             Ok(Some(Constant::Record {
                 location: SrcSpan { start, end: par_e },
                 module,
@@ -2689,11 +2680,11 @@ where
     fn expect_one_following_series(
         &mut self,
         wanted: &Token,
-        series: EcoString,
+        series: &'static str,
     ) -> Result<(u32, u32), ParseError> {
         match self.maybe_one(wanted) {
             Some((start, end)) => Ok((start, end)),
-            None => self.next_tok_unexpected(vec![wanted.to_string().into(), series]),
+            None => self.next_tok_unexpected(vec![wanted.to_string().into(), series.into()]),
         }
     }
 
