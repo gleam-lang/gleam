@@ -22,7 +22,7 @@ pub trait ApiKeyCommand {
 
     fn with_new_api_key(
         &mut self,
-        runtime: &tokio::runtime::Handle,
+        runtime: &tokio::runtime,
         hex_config: &hexpm::Config,
     ) -> Result<()> {
         let hostname = crate::publish::get_hostname();
@@ -63,7 +63,7 @@ pub trait ApiKeyCommand {
         let api_key = std::env::var(API_KEY).unwrap_or_default().trim();
 
         if api_key.is_empty() {
-            self.with_new_api_key(runtime.handle(), &hex_config)
+            self.with_new_api_key(&runtime, &hex_config)
         } else {
             self.with_api_key(runtime.handle(), &hex_config, &api_key)
         }
