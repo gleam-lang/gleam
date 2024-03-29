@@ -25,6 +25,9 @@ pub trait ApiKeyCommand {
         runtime: &tokio::runtime::Handle,
         hex_config: &hexpm::Config,
     ) -> Result<()> {
+        let hostname = crate::publish::get_hostname();
+        let http = HttpClient::new();
+
         // Get login creds from user
         let username = std::env::var(USER_KEY).or_else(|_| cli::ask(USER_PROMPT))?;
         let password = std::env::var(PASS_KEY).or_else(|_| cli::ask_password(PASS_PROMPT))?;
@@ -55,9 +58,7 @@ pub trait ApiKeyCommand {
 
     fn run(&mut self) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-        let hostname = crate::publish::get_hostname();
         let hex_config = hexpm::Config::new();
-        let http = HttpClient::new();
 
         let api_key = std::env::var(API_KEY).unwrap_or_default().trim();
 
