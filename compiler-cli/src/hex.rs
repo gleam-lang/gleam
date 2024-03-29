@@ -37,18 +37,18 @@ pub trait ApiKeyCommand {
             &hostname,
             &username,
             &password,
-            &hex_config,
+            hex_config,
             &http,
         ))?;
 
         // Perform the API operation but don't exit early if it fails, we want to always
         // remove the API key
-        let result = self.with_api_key(runtime.handle(), &hex_config, &api_key);
+        let result = self.with_api_key(runtime.handle(), hex_config, &api_key);
 
         // Ensure to remove the API key
         runtime.block_on(gleam_core::hex::remove_api_key(
             &hostname,
-            &hex_config,
+            hex_config,
             &api_key,
             &http,
         ))?;
