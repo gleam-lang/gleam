@@ -22,7 +22,7 @@ pub trait ApiKeyCommand {
 
     fn with_new_api_key(
         &mut self,
-        runtime: &tokio::runtime,
+        runtime: tokio::runtime::Runtime,
         hex_config: &hexpm::Config,
     ) -> Result<()> {
         let hostname = crate::publish::get_hostname();
