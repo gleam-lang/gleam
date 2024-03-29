@@ -1269,3 +1269,94 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn unused_variable_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  let number = 1
+  number
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_function_literal_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  fn(n) { n + 1 }
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_tuple_index_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  #(1, 2).0
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_bool_negation_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  !True
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_int_negation_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  -1
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_pipeline_ending_with_variant_raises_a_warning() {
+    assert_warning!(
+        r#"
+pub type Wibble(a) { Wibble(a) }
+pub fn wibble(a) { a }
+
+pub fn main() {
+  1 |> wibble |> Wibble
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_pipeline_not_ending_with_variant_raises_no_warnings() {
+    assert_no_warnings!(
+        r#"
+pub type Wibble(a) { Wibble(a) }
+pub fn wibble(a) { a }
+
+pub fn main() {
+  1 |> wibble |> wibble
+  1
+}
+"#
+    );
+}

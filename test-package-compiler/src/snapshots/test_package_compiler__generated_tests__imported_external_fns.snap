@@ -65,10 +65,10 @@ fn_call_unqualified_aliased() ->
 
 -spec the_consts() -> nil.
 the_consts() ->
-    fun thing:new/0,
-    fun thing:new/0,
-    fun thing:new/0,
-    fun thing:new/0,
+    _ = fun thing:new/0,
+    _ = fun thing:new/0,
+    _ = fun thing:new/0,
+    _ = fun thing:new/0,
     thing:new(),
     thing:new(),
     thing:new(),
@@ -84,6 +84,3 @@ the_consts() ->
                two]},
     {registered, []}
 ]}.
-
-
-
