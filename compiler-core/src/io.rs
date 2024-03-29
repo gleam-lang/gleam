@@ -18,13 +18,12 @@ pub fn make_relative(source_path: &Utf8Path, target_path: &Utf8Path) -> Utf8Path
     assert!(source_path.is_absolute());
     // Input target will always be canonicalised whereas source will not
     // This causes problems with diffing on windows since canonicalised paths have a special root
-    // As such we are forcing the source_path to be canonicalised
+    // As such we are attempting to strip the target path
+    // Based on https://github.com/rust-lang/rust/issues/42869#issuecomment-1712317081
     #[cfg(target_family = "windows")]
-    let binding = source_path
-        .canonicalize_utf8()
-        .unwrap_or(source_path.to_path_buf());
+    let binding = target_path.to_string();
     #[cfg(target_family = "windows")]
-    let source_path = binding.as_path();
+    let target_path = Utf8Path::new(binding.trim_start_matches(r"\\?\"));
 
     match target_path.is_absolute() {
         true => pathdiff::diff_utf8_paths(target_path, source_path)
