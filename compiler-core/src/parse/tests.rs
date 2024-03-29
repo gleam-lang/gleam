@@ -855,3 +855,168 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn tuple_invalid_expr() {
+    assert_module_error!(
+        "
+fn main() {
+    #(1, 2, const)
+}
+"
+    );
+}
+
+#[test]
+fn bit_array_invalid_segment() {
+    assert_module_error!(
+        "
+fn main() {
+    <<72, 101, 108, 108, 111, 44, 32, 74, 111, 101, const>>
+}
+"
+    );
+}
+
+#[test]
+fn case_invalid_expression() {
+    assert_module_error!(
+        "
+fn main() {
+    case 1, type {
+        _, _ -> 0
+    }
+}
+"
+    );
+}
+
+#[test]
+fn case_invalid_case_pattern() {
+    assert_module_error!(
+        "
+fn main() {
+    case 1 {
+        -> -> 0
+    }
+}
+"
+    );
+}
+
+#[test]
+fn use_invalid_assignments() {
+    assert_module_error!(
+        "
+fn main() {
+    use fn <- result.try(get_username())
+}
+"
+    );
+}
+
+#[test]
+fn assignment_pattern_invalid_tuple() {
+    assert_module_error!(
+        "
+fn main() {
+    let #(a, case, c) = #(1, 2, 3)
+}
+"
+    );
+}
+
+#[test]
+fn assignment_pattern_invalid_bit_segment() {
+    assert_module_error!(
+        "
+fn main() {
+    let <<b1, pub>> = <<24, 3>>
+}
+"
+    );
+}
+
+#[test]
+fn type_invalid_constructor() {
+    assert_module_error!(
+        "
+type A { 
+    A(String)
+    type
+}
+"
+    );
+}
+
+#[test]
+fn type_invalid_type_name() {
+    assert_module_error!(
+        "
+type A(a, type) { 
+    A
+}
+"
+    );
+}
+
+#[test]
+fn type_invalid_constructor_arg() {
+    assert_module_error!(
+        "
+type A { 
+    A(type: String)
+}
+"
+    );
+}
+
+#[test]
+fn function_type_invalid_param_type() {
+    assert_module_error!(
+        "
+fn f(g: fn(Int, 1) -> Int) -> Int {
+  g(0, 1)
+}
+"
+    );
+}
+
+#[test]
+fn const_invalid_tuple() {
+    assert_module_error!(
+        "
+const a = #(1, 2, <-)
+"
+    );
+}
+
+#[test]
+fn const_invalid_list() {
+    assert_module_error!(
+        "
+const a = [1, 2, <-]
+"
+    );
+}
+
+#[test]
+fn const_invalid_bit_array_segment() {
+    assert_module_error!(
+        "
+const a = <<1, 2, <->>
+"
+    );
+}
+
+#[test]
+fn const_invalid_record_constructor() {
+    assert_module_error!(
+        "
+type A {
+    A(String, Int)
+}
+const a = A(\"a\", let)
+"
+    );
+}
