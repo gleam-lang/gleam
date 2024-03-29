@@ -60,7 +60,7 @@ pub trait ApiKeyCommand {
         let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
         let hex_config = hexpm::Config::new();
 
-        let api_key = std::env::var(API_KEY).unwrap_or_default().trim();
+        let api_key = std::env::var(API_KEY).unwrap_or_default().trim().to_owned();
 
         if api_key.is_empty() {
             self.with_new_api_key(&runtime, &hex_config)
