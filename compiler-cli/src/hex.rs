@@ -34,11 +34,7 @@ pub trait ApiKeyCommand {
 
         // Get API key
         let api_key = runtime.block_on(gleam_core::hex::create_api_key(
-            &hostname,
-            &username,
-            &password,
-            hex_config,
-            &http,
+            &hostname, &username, &password, hex_config, &http,
         ))?;
 
         // Perform the API operation but don't exit early if it fails, we want to always
@@ -47,10 +43,7 @@ pub trait ApiKeyCommand {
 
         // Ensure to remove the API key
         runtime.block_on(gleam_core::hex::remove_api_key(
-            &hostname,
-            hex_config,
-            &api_key,
-            &http,
+            &hostname, hex_config, &api_key, &http,
         ))?;
 
         result
