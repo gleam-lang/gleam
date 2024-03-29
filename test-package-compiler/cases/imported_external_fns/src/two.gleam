@@ -12,10 +12,10 @@ const const_unqualified = thing
 const const_unqualified_aliased = xthing
 
 pub fn the_consts() {
-  const_qualified
-  const_qualified_aliased
-  const_unqualified
-  const_unqualified_aliased
+  let _ = const_qualified
+  let _ = const_qualified_aliased
+  let _ = const_unqualified
+  let _ = const_unqualified_aliased
   const_qualified()
   const_qualified_aliased()
   const_unqualified()

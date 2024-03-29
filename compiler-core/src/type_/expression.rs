@@ -397,11 +397,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .emit(Warning::ImplicitlyDiscardedResult {
                     location: discarded.location(),
                 });
-        } else if discarded.is_binop()
-            || discarded.is_record_constructor()
-            || discarded.is_record_access()
-            || discarded.is_record_update()
-        {
+        } else if discarded.is_pure_value_constructor() {
             self.environment.warnings.emit(Warning::UnusedValue {
                 location: discarded.location(),
             })

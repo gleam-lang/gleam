@@ -638,7 +638,7 @@ the same values.\n"
                 type_::Warning::UnusedValue { location } => Diagnostic {
                     title: "Unused value".into(),
                     text: "".into(),
-                    hint: Some("You can safely remove it.".into()),
+                    hint: None,
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         path: path.to_path_buf(),
