@@ -46,9 +46,20 @@ impl<'a> ModuleEncoder<'a> {
         self.set_module_accessors(&mut module);
         self.set_module_types_constructors(&mut module);
         self.set_unused_imports(&mut module);
+        self.set_line_numbers(&mut module);
 
         capnp::serialize_packed::write_message(&mut buffer, &message).expect("capnp encode");
         Ok(buffer)
+    }
+
+    fn set_line_numbers(&mut self, module: &mut module::Builder<'_>) {
+        let mut line_numbers = module.reborrow().init_line_numbers();
+        line_numbers.set_length(self.data.line_numbers.length);
+        let line_starts =
+            line_numbers.init_line_starts(self.data.line_numbers.line_starts.len() as u32);
+        for (i, l) in self.data.line_numbers.line_starts.iter().enumerate() {
+            line_starts.reborrow().set(i as u32, *l);
+        }
     }
 
     fn set_unused_imports(&mut self, module: &mut module::Builder<'_>) {
