@@ -95,6 +95,27 @@ fn empty_module() {
 }
 
 #[test]
+fn with_line_numbers() {
+    let module = ModuleInterface {
+        contains_todo: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "one/two".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        unused_imports: Vec::new(),
+        accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(
+            "const a = 1
+        const b = 2
+        const c = 3",
+        ),
+    };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
 fn module_with_private_type() {
     let module = ModuleInterface {
         contains_todo: false,

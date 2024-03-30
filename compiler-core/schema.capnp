@@ -28,6 +28,7 @@ struct Module {
   typesConstructors @5 :List(Property(TypesVariantConstructors));
   unusedImports @6 :List(SrcSpan);
   containsTodo @7 :Bool;
+  lineNumbers @8 :LineNumbers;
 }
 
 struct TypesVariantConstructors {
@@ -239,4 +240,9 @@ struct BitArraySegmentOption {
       shortForm @18 :Bool;
     }
   }
+}
+
+struct LineNumbers {
+  lineStarts @0 :List(UInt32);
+  length @1 :UInt32;
 }
