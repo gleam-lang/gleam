@@ -423,6 +423,37 @@ fn identity(value: some_value) {
 }
 
 #[test]
+fn function_definition_with_type_parameter_tuple() {
+    let code = "
+fn identity(val1: generic1, val2: generic2) {
+    #(val1, val2)
+}
+";
+    expect_hints(
+        code,
+        InlayHintsConfig {
+            function_definitions: true,
+            ..Default::default()
+        },
+        None,
+        vec![InlayHint {
+            position: Position::new(1, 43),
+            label: "-> #(generic1, generic2)".to_owned().into(),
+            kind: Some(InlayHintKind::TYPE),
+            text_edits: Some(vec![TextEdit {
+                range: Range::new(Position::new(1, 43), Position::new(1, 43)),
+                new_text: " -> #(generic1, generic2)".to_owned(),
+            }]),
+            tooltip: None,
+            padding_left: Some(true),
+            padding_right: None,
+            data: None,
+        }],
+        &LanguageServerTestIO::new(),
+    );
+}
+
+#[test]
 fn function_definition_with_type_qualifiers() {
     let code = "
 import mod1.{type Value as V1}

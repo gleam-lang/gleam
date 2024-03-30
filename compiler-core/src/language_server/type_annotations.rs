@@ -34,13 +34,13 @@ impl TypeAnnotations {
         }
     }
 
-    fn extract_type_parameters_from_fn(function: &TypedFunction) -> HashMap<u64, &TypeAst> {
+    fn extract_type_parameters_from_fn(function: &TypedFunction) -> HashMap<u64, TypeAst> {
         let mut type_parameters = HashMap::new();
 
         if let Some(annotation) = &function.return_annotation {
             if let crate::type_::Type::Var { type_ } = &*function.return_type {
                 if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
-                    let _ = type_parameters.insert(*id, annotation);
+                    let _ = type_parameters.insert(*id, annotation.clone());
                 }
             }
         }
@@ -49,7 +49,7 @@ impl TypeAnnotations {
             if let Some(annotation) = &argument.annotation {
                 if let crate::type_::Type::Var { type_ } = &*argument.type_ {
                     if let crate::type_::TypeVar::Generic { id } = &*type_.borrow() {
-                        let _ = type_parameters.insert(*id, annotation);
+                        let _ = type_parameters.insert(*id, annotation.clone());
                     }
                 }
             }
@@ -61,7 +61,7 @@ impl TypeAnnotations {
                     // If user has provided an annotation that is a type parameter, make a note of it
                     if let Type::Var { type_ } = &*st.value.type_() {
                         if let TypeVar::Generic { id } = &*type_.borrow() {
-                            let _ = type_parameters.insert(*id, annotation);
+                            let _ = type_parameters.insert(*id, annotation.clone());
                         }
                     }
                 }
@@ -77,8 +77,9 @@ impl TypeAnnotations {
         type_: &Type,
         type_qualifiers: &HashMap<EcoString, EcoString>,
         module_qualifiers: &HashMap<EcoString, EcoString>,
-        type_parameters: &HashMap<u64, &TypeAst>,
-    ) -> String {
+        type_parameters: &HashMap<u64, TypeAst>,
+    ) -> String 
+    {
         if let crate::type_::Type::Var { type_ } = type_ {
             if let crate::type_::TypeVar::Generic { id } = *type_.borrow() {
                 if let Some(crate::ast::TypeAst::Var(type_var)) = type_parameters.get(&id) {
@@ -87,7 +88,7 @@ impl TypeAnnotations {
             }
         }
         let mut type_text = EcoString::from(
-            LspPrinter::new(type_qualifiers, module_qualifiers).pretty_print(type_),
+            LspPrinter::new(type_qualifiers, module_qualifiers, type_parameters).pretty_print(type_),
         );
         type_text = type_qualifiers
             .get(&type_text)
