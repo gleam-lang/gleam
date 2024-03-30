@@ -78,6 +78,18 @@ pub fn main() {
 }
 
 #[test]
+fn bit_array5() {
+    assert_erl!(
+        r#"const bit_size = 8
+pub fn main() {
+  let a = <<10:size(bit_size)>>
+  a
+}
+"#
+    );
+}
+
+#[test]
 fn bit_array_discard() {
     // https://github.com/gleam-lang/gleam/issues/704
 

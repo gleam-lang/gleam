@@ -232,6 +232,11 @@ impl<'a> CallGraphBuilder<'a> {
             UntypedExpr::BitArray { segments, .. } => {
                 for segment in segments {
                     self.expression(&segment.value);
+                    for option in &segment.options {
+                        if let BitArrayOption::Size { value, .. } = option {
+                            self.expression(value);
+                        }
+                    }
                 }
             }
 
