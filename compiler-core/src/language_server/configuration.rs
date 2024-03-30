@@ -30,9 +30,9 @@ impl Default for InlayHintsConfig {
 
 impl InlayHintsConfig {
     fn default_function_definitions() -> bool {
-        false
+        true
     }
     fn default_module_constants() -> bool {
-        false
+        true
     }
 }
