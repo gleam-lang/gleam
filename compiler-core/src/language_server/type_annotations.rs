@@ -87,7 +87,7 @@ impl TypeAnnotations {
             }
         }
         let mut type_text = EcoString::from(
-            LspPrinter::new(type_qualifiers, module_qualifiers).pretty_print(type_, 0),
+            LspPrinter::new(type_qualifiers, module_qualifiers).pretty_print(type_),
         );
         type_text = type_qualifiers
             .get(&type_text)

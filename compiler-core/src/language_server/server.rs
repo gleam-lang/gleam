@@ -563,7 +563,9 @@ where
         if result.is_array() && !result[0].is_null() {
             let configs = match serde_json::from_value::<Vec<Configuration>>(result) {
                 Ok(result) => result,
-                Err(err) => {panic!("unable to parse configuration: {err}");},
+                Err(err) => {
+                    panic!("unable to parse configuration: {err}");
+                }
             };
             // We only requested one configuration item, so we only pick out one
             if let Some(new_config) = configs.into_iter().next() {
