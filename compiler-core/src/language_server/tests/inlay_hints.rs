@@ -566,6 +566,7 @@ fn foo(num, z: a) {
         code,
         InlayHintsConfig {
             function_definitions: true,
+            variable_assignments: false,
             ..Default::default()
         },
         None,
@@ -596,26 +597,13 @@ fn foo(num, z: a) {
                 padding_right: None,
                 data: None,
             },
-            InlayHint {
-                position: Position::new(5, 7),
-                label: ": Int".to_owned().into(),
-                kind: Some(InlayHintKind::TYPE),
-                text_edits: Some(vec![TextEdit {
-                    range: Range::new(Position::new(5, 7), Position::new(5, 7)),
-                    new_text: ": Int".to_owned(),
-                }]),
-                tooltip: None,
-                padding_left: None,
-                padding_right: None,
-                data: None,
-            },
         ],
         &io,
     );
 }
 
 #[test]
-fn function_definition_with_qualified_modules_and_type_paramaeters() {
+fn function_definition_and_var_assignments_with_qualified_modules_and_type_paramaeters() {
     let code = "
 import mod1 as a
 import mod2 as b
@@ -661,6 +649,7 @@ fn foo(num, z: a) {
         code,
         InlayHintsConfig {
             function_definitions: true,
+            variable_assignments: true,
             ..Default::default()
         },
         None,
@@ -829,7 +818,7 @@ fn equals(a: value, b) {
 }
 
 #[test]
-fn function_definition_with_type_parameter_defined_later() {
+fn function_def_and_var_assignment_with_type_parameter_defined_later() {
     let code = "
 fn identity(x) {
     let z = x
@@ -841,6 +830,7 @@ fn identity(x) {
         code,
         InlayHintsConfig {
             function_definitions: true,
+            variable_assignments: true,
             ..Default::default()
         },
         None,

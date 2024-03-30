@@ -795,11 +795,13 @@ fn code_action_annotate_types(
 
     match located {
         Located::ModuleStatement(Definition::Function(function)) => {
+            let type_parameters = TypeAnnotations::extract_type_parameters_from_fn(function);
             if let Some(annotation) = TypeAnnotations::from_function_definition(
                 function,
                 &line_numbers,
                 type_qualifiers,
                 module_qualifiers,
+                &type_parameters
             )
             .into_code_action(uri)
             {
@@ -828,15 +830,28 @@ fn add_hints_for_definitions<'a>(
 ) {
     for def in definitions {
         match def {
-            Definition::Function(function) if config.function_definitions => hints.extend(
-                TypeAnnotations::from_function_definition(
-                    function,
-                    line_numbers,
-                    type_qualifiers,
-                    module_qualifiers,
-                )
-                .into_inlay_hints(),
-            ),
+            Definition::Function(function) =>  { 
+                let type_parameters = TypeAnnotations::extract_type_parameters_from_fn(function);
+                if config.function_definitions {
+                    hints.extend(
+                    TypeAnnotations::from_function_definition(
+                        function,
+                        line_numbers,
+                        type_qualifiers,
+                        module_qualifiers,
+                        &type_parameters
+                    ).into_inlay_hints());
+                }
+                if config.variable_assignments{
+                    hints.extend(
+                        TypeAnnotations::from_function_body(
+                            function,
+                            line_numbers,
+                            type_qualifiers,
+                            module_qualifiers,
+                            &type_parameters).into_inlay_hints());
+                }
+            },
             Definition::ModuleConstant(constant) if config.module_constants => hints.extend(
                 TypeAnnotations::from_module_constant(constant, line_numbers).into_inlay_hints(),
             ),

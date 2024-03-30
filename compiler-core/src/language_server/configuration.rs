@@ -17,6 +17,9 @@ pub struct InlayHintsConfig {
 
     #[serde(default = "InlayHintsConfig::default_module_constants")]
     pub module_constants: bool,
+
+    #[serde(default = "InlayHintsConfig::default_variable_assignments")]
+    pub variable_assignments: bool,
 }
 
 impl Default for InlayHintsConfig {
@@ -24,6 +27,7 @@ impl Default for InlayHintsConfig {
         Self {
             function_definitions: Self::default_function_definitions(),
             module_constants: Self::default_module_constants(),
+            variable_assignments: Self::default_variable_assignments(),
         }
     }
 }
@@ -33,6 +37,9 @@ impl InlayHintsConfig {
         true
     }
     fn default_module_constants() -> bool {
+        true
+    }
+    fn default_variable_assignments() -> bool {
         true
     }
 }

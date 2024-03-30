@@ -560,7 +560,7 @@ where
 
     /// Response handler for the `workspace/configuration` request
     fn configuration_update_received(&mut self, result: Json) {
-        if result.is_array() && !result[0].is_null() {
+        if result.is_array() && !result.get(0).is_some_and(|config| config.is_null()) {
             let configs = match serde_json::from_value::<Vec<Configuration>>(result) {
                 Ok(result) => result,
                 Err(err) => {
