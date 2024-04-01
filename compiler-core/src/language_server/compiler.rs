@@ -116,6 +116,9 @@ where
 
         // Since cached modules are not recompiled we need to manually add them
         for (name, module) in self.project_compiler.get_importable_modules() {
+            // It we already have the source for an importable module it means
+            // that we already have all the information we are adding here, so
+            // we can skip past to to avoid doing extra work for no gain.
             if self.sources.contains_key(name) || name == "gleam" {
                 continue;
             }
