@@ -14,7 +14,7 @@ im = "15.1.0"
 # Extra iter methods
 itertools = "0.12.1"
 # Parsing
-regex = "1.10.3"
+regex = "1.10.4"
 # Colours in terminal
 termcolor = "1.4.1"
 # Data (de)serialisation
