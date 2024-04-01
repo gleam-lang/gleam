@@ -101,6 +101,8 @@
   instead of relative.
 - The `gleam publish` command now asks for confirmation if the package repository
   URL doesn't return a successful status code.
+- `gleam publish` can now optionally use a Hex API key to authorise publishing
+  and retiring packages, set via the environment variable `HEXPM_API_KEY`.
 
 ### Language Server
 
