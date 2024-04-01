@@ -50,6 +50,8 @@
 - Improved error messages when failing to parse a series of things.
 - A warning is now raised for unused binary operations, records, record access
   and record updates.
+- Fixed a bug when using constant as the size option parameter
+  for `BitArray` caused unknown variable exception.
 
 ### Formatter
 
