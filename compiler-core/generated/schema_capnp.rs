@@ -2840,12 +2840,20 @@ pub mod implementations {
       self.reader.get_bool_field(0)
     }
     #[inline]
-    pub fn get_erlang(self) -> bool {
+    pub fn get_uses_erlang_externals(self) -> bool {
       self.reader.get_bool_field(1)
     }
     #[inline]
-    pub fn get_javascript(self) -> bool {
+    pub fn get_uses_javascript_externals(self) -> bool {
       self.reader.get_bool_field(2)
+    }
+    #[inline]
+    pub fn get_can_run_on_erlang(self) -> bool {
+      self.reader.get_bool_field(3)
+    }
+    #[inline]
+    pub fn get_can_run_on_javascript(self) -> bool {
+      self.reader.get_bool_field(4)
     }
   }
 
@@ -2906,20 +2914,36 @@ pub mod implementations {
       self.builder.set_bool_field(0, value);
     }
     #[inline]
-    pub fn get_erlang(self) -> bool {
+    pub fn get_uses_erlang_externals(self) -> bool {
       self.builder.get_bool_field(1)
     }
     #[inline]
-    pub fn set_erlang(&mut self, value: bool)  {
+    pub fn set_uses_erlang_externals(&mut self, value: bool)  {
       self.builder.set_bool_field(1, value);
     }
     #[inline]
-    pub fn get_javascript(self) -> bool {
+    pub fn get_uses_javascript_externals(self) -> bool {
       self.builder.get_bool_field(2)
     }
     #[inline]
-    pub fn set_javascript(&mut self, value: bool)  {
+    pub fn set_uses_javascript_externals(&mut self, value: bool)  {
       self.builder.set_bool_field(2, value);
+    }
+    #[inline]
+    pub fn get_can_run_on_erlang(self) -> bool {
+      self.builder.get_bool_field(3)
+    }
+    #[inline]
+    pub fn set_can_run_on_erlang(&mut self, value: bool)  {
+      self.builder.set_bool_field(3, value);
+    }
+    #[inline]
+    pub fn get_can_run_on_javascript(self) -> bool {
+      self.builder.get_bool_field(4)
+    }
+    #[inline]
+    pub fn set_can_run_on_javascript(&mut self, value: bool)  {
+      self.builder.set_bool_field(4, value);
     }
   }
 

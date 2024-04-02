@@ -462,6 +462,8 @@ impl ValueConstructorVariant {
             | ValueConstructorVariant::LocalConstant { .. }
             | ValueConstructorVariant::LocalVariable { .. } => Implementations {
                 gleam: true,
+                can_run_on_erlang: true,
+                can_run_on_javascript: true,
                 uses_javascript_externals: false,
                 uses_erlang_externals: false,
             },

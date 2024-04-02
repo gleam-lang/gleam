@@ -49,6 +49,8 @@ pub fn pure_gleam_2() { pure_gleam_1() * 2 }
                     gleam: true,
                     uses_erlang_externals: false,
                     uses_javascript_externals: false,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                 }
             ),
             (
@@ -57,6 +59,8 @@ pub fn pure_gleam_2() { pure_gleam_1() * 2 }
                     gleam: true,
                     uses_erlang_externals: false,
                     uses_javascript_externals: false,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                 }
             )
         ],
@@ -79,6 +83,8 @@ pub fn erlang_only_2() { erlang_only_1() * 2 }
                     gleam: false,
                     uses_erlang_externals: true,
                     uses_javascript_externals: false,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: false,
                 }
             ),
             (
@@ -87,6 +93,8 @@ pub fn erlang_only_2() { erlang_only_1() * 2 }
                     gleam: false,
                     uses_erlang_externals: true,
                     uses_javascript_externals: false,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: false,
                 }
             )
         ],
@@ -110,6 +118,8 @@ pub fn all_externals_2() { all_externals_1() * 2 }
                     gleam: false,
                     uses_erlang_externals: true,
                     uses_javascript_externals: true,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                 }
             ),
             (
@@ -118,6 +128,8 @@ pub fn all_externals_2() { all_externals_1() * 2 }
                     gleam: false,
                     uses_erlang_externals: true,
                     uses_javascript_externals: true,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                 }
             )
         ],
@@ -145,6 +157,8 @@ pub fn pure_gleam() {
                     gleam: true,
                     uses_erlang_externals: true,
                     uses_javascript_externals: false,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                 }
             ),
             (
@@ -153,6 +167,8 @@ pub fn pure_gleam() {
                     gleam: true,
                     uses_erlang_externals: false,
                     uses_javascript_externals: true,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                 }
             ),
             (
@@ -161,6 +177,8 @@ pub fn pure_gleam() {
                     gleam: true,
                     uses_erlang_externals: true,
                     uses_javascript_externals: true,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                 }
             )
         ],
@@ -186,6 +204,8 @@ pub fn all_externals() -> Int { erlang_external_and_javascript_body() }
                     gleam: false,
                     uses_erlang_externals: true,
                     uses_javascript_externals: true,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                 }
             ),
             (
@@ -194,6 +214,8 @@ pub fn all_externals() -> Int { erlang_external_and_javascript_body() }
                     gleam: false,
                     uses_erlang_externals: true,
                     uses_javascript_externals: true,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                 }
             ),
             (
@@ -202,6 +224,8 @@ pub fn all_externals() -> Int { erlang_external_and_javascript_body() }
                     gleam: false,
                     uses_erlang_externals: false,
                     uses_javascript_externals: true,
+                    can_run_on_erlang: false,
+                    can_run_on_javascript: true,
                 }
             )
         ],
@@ -227,6 +251,8 @@ pub fn all_externals() -> Int { javascript_external_and_erlang_body() }
                     gleam: false,
                     uses_erlang_externals: true,
                     uses_javascript_externals: true,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                 }
             ),
             (
@@ -235,6 +261,8 @@ pub fn all_externals() -> Int { javascript_external_and_erlang_body() }
                     gleam: false,
                     uses_erlang_externals: true,
                     uses_javascript_externals: false,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: false,
                 }
             ),
             (
@@ -243,6 +271,8 @@ pub fn all_externals() -> Int { javascript_external_and_erlang_body() }
                     gleam: false,
                     uses_erlang_externals: true,
                     uses_javascript_externals: true,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                 }
             )
         ],
@@ -255,7 +285,7 @@ pub fn function_with_no_valid_implementations() {
         r#"
 @external(javascript, "foo", "bar")
 fn javascript_only() -> Int
-        
+
 @external(erlang, "foo", "bar")
 fn erlang_only() -> Int
 
@@ -273,7 +303,7 @@ pub fn invalid_both_and_one_called_from_erlang() {
 @external(erlang, "foo", "bar")
 @external(javascript, "foo", "bar")
 fn both_external() -> Int
-        
+
 @external(javascript, "foo", "bar")
 fn javascript_only() -> Int
 
@@ -293,7 +323,7 @@ pub fn invalid_both_and_one_called_from_javascript() {
 @external(erlang, "foo", "bar")
 @external(javascript, "foo", "bar")
 fn both_external() -> Int
-        
+
 @external(erlang, "foo", "bar")
 fn erlang_only() -> Int
 
@@ -318,7 +348,7 @@ pub fn invalid_both_and_one_called_from_erlang_flipped() {
 @external(erlang, "foo", "bar")
 @external(javascript, "foo", "bar")
 fn both_external() -> Int
-        
+
 @external(javascript, "foo", "bar")
 fn javascript_only() -> Int
 
@@ -338,7 +368,7 @@ pub fn invalid_both_and_one_called_from_javascript_flipped() {
 @external(erlang, "foo", "bar")
 @external(javascript, "foo", "bar")
 fn both_external() -> Int
-        
+
 @external(erlang, "foo", "bar")
 fn erlang_only() -> Int
 
