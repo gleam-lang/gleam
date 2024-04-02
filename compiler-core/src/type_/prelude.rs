@@ -212,6 +212,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         unused_imports: Vec::new(),
         contains_todo: false,
         // prelude doesn't have real src/line numbers
+        src_path: "".into(),
         line_numbers: LineNumbers::new(""),
     };
 

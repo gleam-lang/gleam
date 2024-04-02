@@ -5,7 +5,7 @@ expression: hover
 Hover {
     contents: Scalar(
         String(
-            "```gleam\nfn() -> Nil\n```\n\nView on [HexDocs](https://hexdocs.pm/my_dep/example_module.html#my_fn)",
+            "```gleam\nfn() -> Nil\n```\n\nView on [HexDocs](https://hexdocs.pm/hex/example_module.html#my_fn)",
         ),
     ),
     range: Some(

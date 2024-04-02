@@ -549,6 +549,7 @@ pub struct ModuleInterface {
     pub unused_imports: Vec<SrcSpan>,
     pub contains_todo: bool,
     pub line_numbers: LineNumbers,
+    pub src_path: EcoString,
 }
 
 /// Information on the constructors of a custom type.
@@ -619,6 +620,7 @@ impl ModuleInterface {
         origin: Origin,
         package: EcoString,
         line_numbers: LineNumbers,
+        src_path: EcoString,
     ) -> Self {
         Self {
             name,
@@ -631,6 +633,7 @@ impl ModuleInterface {
             unused_imports: Default::default(),
             contains_todo: false,
             line_numbers,
+            src_path,
         }
     }
 

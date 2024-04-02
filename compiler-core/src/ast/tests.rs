@@ -41,6 +41,7 @@ fn compile_module(src: &str) -> TypedModule {
         &std::collections::HashMap::new(),
         TargetSupport::Enforced,
         line_numbers,
+        "".into(),
     )
     .expect("should successfully infer")
 }

@@ -124,6 +124,7 @@ pub fn infer_module<A>(
     direct_dependencies: &HashMap<EcoString, A>,
     target_support: TargetSupport,
     line_numbers: LineNumbers,
+    src_path: EcoString,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
@@ -278,6 +279,7 @@ pub fn infer_module<A>(
             unused_imports,
             contains_todo,
             line_numbers,
+            src_path,
         },
     })
 }

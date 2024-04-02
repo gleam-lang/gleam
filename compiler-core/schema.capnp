@@ -29,6 +29,7 @@ struct Module {
   unusedImports @6 :List(SrcSpan);
   containsTodo @7 :Bool;
   lineNumbers @8 :LineNumbers;
+  srcPath @9 :Text;
 }
 
 struct TypesVariantConstructors {

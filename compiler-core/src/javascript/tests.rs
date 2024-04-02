@@ -110,6 +110,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
             &std::collections::HashMap::new(),
             TargetSupport::Enforced,
             line_numbers,
+            "".into(),
         )
         .expect("should successfully infer");
         let _ = modules.insert((*dep_name).into(), dep.type_info);
@@ -131,6 +132,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         &direct_dependencies,
         TargetSupport::NotEnforced,
         line_numbers,
+        "".into(),
     )
     .expect("should successfully infer")
 }
