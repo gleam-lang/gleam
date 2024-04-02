@@ -10,6 +10,7 @@ use std::{
     time::SystemTime,
 };
 
+use ecow::EcoString;
 use hexpm::version::Version;
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -345,7 +346,7 @@ fn positioned_with_io(
         add_package_from_manifest(&mut engine, package.clone());
     }
     let response = engine.compile_please();
-    assert!(response.result.is_ok());
+    response.result.expect("failed to compile");
 
     let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
         r"\\?\C:\src\app.gleam"
@@ -359,4 +360,118 @@ fn positioned_with_io(
         engine,
         TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position),
     )
+}
+
+struct TestRunner<'a> {
+    src: &'a str,
+    root_package_modules: Vec<(&'a str, &'a str)>,
+    dependency_modules: Vec<(&'a str, &'a str)>,
+    test_modules: Vec<(&'a str, &'a str)>,
+    hex_modules: Vec<(&'a str, &'a str)>,
+}
+
+impl<'a> TestRunner<'a> {
+    pub fn for_source(src: &'a str) -> Self {
+        TestRunner {
+            src,
+            root_package_modules: vec![],
+            dependency_modules: vec![],
+            test_modules: vec![],
+            hex_modules: vec![],
+        }
+    }
+
+    pub fn add_module(self, name: &'a str, src: &'a str) -> Self {
+        let mut root_package_modules = self.root_package_modules;
+        root_package_modules.push((name, src));
+        TestRunner {
+            root_package_modules,
+            ..self
+        }
+    }
+
+    pub fn add_dep_module(self, name: &'a str, src: &'a str) -> Self {
+        let mut dependency_modules = self.dependency_modules;
+        dependency_modules.push((name, src));
+        TestRunner {
+            dependency_modules,
+            ..self
+        }
+    }
+
+    pub fn add_test_module(self, name: &'a str, src: &'a str) -> Self {
+        let mut test_modules = self.test_modules;
+        test_modules.push((name, src));
+        TestRunner {
+            test_modules,
+            ..self
+        }
+    }
+
+    pub fn add_hex_module(self, name: &'a str, src: &'a str) -> Self {
+        let mut hex_modules = self.hex_modules;
+        hex_modules.push((name, src));
+        TestRunner {
+            hex_modules,
+            ..self
+        }
+    }
+
+    pub fn at<T>(
+        self,
+        position: Position,
+        executor: impl FnOnce(
+            &mut LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
+            TextDocumentPositionParams,
+            EcoString,
+        ) -> T,
+    ) -> T {
+        let mut io = LanguageServerTestIO::new();
+
+        io.add_hex_package("hex");
+        self.hex_modules.iter().for_each(|(name, code)| {
+            _ = io.hex_dep_module("hex", name, code);
+        });
+
+        let mut engine = setup_engine(&io);
+
+        // Add an external dependency and all its modules
+        add_path_dep(&mut engine, "dep");
+        self.dependency_modules.iter().for_each(|(name, code)| {
+            let _ = io.path_dep_module("dep", name, code);
+        });
+
+        // Add all the modules belonging to the root package
+        self.root_package_modules.iter().for_each(|(name, code)| {
+            let _ = io.src_module(name, code);
+        });
+
+        // Add all the test modules
+        self.test_modules.iter().for_each(|(name, code)| {
+            let _ = io.test_module(name, code);
+        });
+        for package in &io.manifest.packages {
+            add_package_from_manifest(&mut engine, package.clone());
+        }
+
+        // Add the final module we're going to be positioning the cursor in.
+        _ = io.src_module("app", self.src);
+
+        let response = engine.compile_please();
+        assert!(response.result.is_ok());
+
+        let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
+            r"\\?\C:\src\app.gleam"
+        } else {
+            "/src/app.gleam"
+        });
+
+        let url = Url::from_file_path(path).unwrap();
+
+        executor(
+            &mut engine,
+            TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position),
+            self.src.into(),
+        )
+    }
 }

@@ -122,12 +122,8 @@ where
             if self.sources.contains_key(name) || name == "gleam" {
                 continue;
             }
-            // Get the build path for the module
-            let build_path = self
-                .project_compiler
-                .get_build_dir_for_module(&module.package, &module.name);
             // Create the source information
-            let path = build_path.to_string();
+            let path = module.src_path.to_string();
             let line_numbers = module.line_numbers.clone();
             let source = ModuleSourceInformation { path, line_numbers };
             _ = self.sources.insert(name.clone(), source);

@@ -2,25 +2,17 @@ use lsp_types::{GotoDefinitionParams, Location, Position, Range, Url};
 
 use super::*;
 
-fn positioned_with_io_definition(
-    src: &str,
-    position: Position,
-    io: &LanguageServerTestIO,
-) -> Option<Location> {
-    let (mut engine, position_param) = positioned_with_io(src, position, io);
+fn definition<'a>(tester: TestRunner<'a>, position: Position) -> Option<Location> {
+    tester.at(position, |engine, param, _| {
+        let params = GotoDefinitionParams {
+            text_document_position_params: param,
+            work_done_progress_params: Default::default(),
+            partial_result_params: Default::default(),
+        };
+        let response = engine.goto_definition(params);
 
-    let params = GotoDefinitionParams {
-        text_document_position_params: position_param,
-        work_done_progress_params: Default::default(),
-        partial_result_params: Default::default(),
-    };
-    let response = engine.goto_definition(params);
-
-    response.result.unwrap()
-}
-
-fn positioned_goto_definition(src: &str, position: Position) -> Option<Location> {
-    positioned_with_io_definition(src, position, &LanguageServerTestIO::new())
+        response.result.unwrap()
+    })
 }
 
 #[test]
@@ -32,7 +24,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        positioned_goto_definition(code, Position::new(3, 2)),
+        definition(TestRunner::for_source(code), Position::new(3, 2)),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\app.gleam"
@@ -64,7 +56,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        positioned_goto_definition(code, Position::new(4, 2)),
+        definition(TestRunner::for_source(code), Position::new(4, 2)),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\app.gleam"
@@ -98,7 +90,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        positioned_goto_definition(code, Position::new(6, 3)),
+        definition(TestRunner::for_source(code), Position::new(6, 3)),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\app.gleam"
@@ -134,7 +126,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        positioned_goto_definition(code, Position::new(7, 11)),
+        definition(TestRunner::for_source(code), Position::new(7, 11)),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\app.gleam"
@@ -158,9 +150,6 @@ pub fn main() {
 
 #[test]
 fn goto_definition_imported_module_constants() {
-    let io = LanguageServerTestIO::new();
-    _ = io.src_module("example_module", "pub const my_num = 1");
-
     let code = "
 import example_module
 fn main() {
@@ -169,7 +158,10 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io_definition(code, Position::new(3, 19), &io),
+        definition(
+            TestRunner::for_source(code).add_module("example_module", "pub const my_num = 1"),
+            Position::new(3, 19)
+        ),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\example_module.gleam"
@@ -193,9 +185,6 @@ fn main() {
 
 #[test]
 fn goto_definition_unqualified_imported_module_constants() {
-    let io = LanguageServerTestIO::new();
-    _ = io.src_module("example_module", "pub const my_num = 1");
-
     let code = "
 import example_module.{my_num}
 fn main() {
@@ -204,7 +193,10 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io_definition(code, Position::new(3, 3), &io),
+        definition(
+            TestRunner::for_source(code).add_module("example_module", "pub const my_num = 1"),
+            Position::new(3, 3)
+        ),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\example_module.gleam"
@@ -228,9 +220,6 @@ fn main() {
 
 #[test]
 fn goto_definition_module_function_calls() {
-    let io = LanguageServerTestIO::new();
-    _ = io.src_module("example_module", "pub fn my_fn() { Nil }");
-
     let code = "
 import example_module
 fn main() {
@@ -239,7 +228,10 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io_definition(code, Position::new(3, 19), &io),
+        definition(
+            TestRunner::for_source(code).add_module("example_module", "pub fn my_fn() { Nil }"),
+            Position::new(3, 19)
+        ),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\example_module.gleam"
@@ -263,15 +255,11 @@ fn main() {
 
 #[test]
 fn goto_definition_imported_module_records() {
-    let io = LanguageServerTestIO::new();
-    _ = io.src_module(
-        "example_module",
-        "
+    let dep_src = "
 pub type Rec {
   Var1(Int)
   Var2(Int, Int)
-}",
-    );
+}";
 
     let code = "
 import example_module
@@ -281,7 +269,10 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io_definition(code, Position::new(3, 20), &io),
+        definition(
+            TestRunner::for_source(code).add_module("example_module", dep_src),
+            Position::new(3, 20)
+        ),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\example_module.gleam"
@@ -305,15 +296,11 @@ fn main() {
 
 #[test]
 fn goto_definition_unqualified_imported_module_records() {
-    let io = LanguageServerTestIO::new();
-    _ = io.src_module(
-        "example_module",
-        "
+    let dep_src = "
 pub type Rec {
   Var1(Int)
   Var2(Int, Int)
-}",
-    );
+}";
 
     let code = "
 import example_module.{Var1}
@@ -323,7 +310,10 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io_definition(code, Position::new(3, 3), &io),
+        definition(
+            TestRunner::for_source(code).add_module("example_module", dep_src),
+            Position::new(3, 3)
+        ),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\example_module.gleam"
@@ -347,10 +337,6 @@ fn main() {
 
 #[test]
 fn goto_definition_external_module_constants() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module("my_dep", "example_module", "pub const my_num = 1");
-
     let code = "
 import example_module
 fn main() {
@@ -359,12 +345,15 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io_definition(code, Position::new(3, 20), &io),
+        definition(
+            TestRunner::for_source(code).add_hex_module("example_module", "pub const my_num = 1"),
+            Position::new(3, 20)
+        ),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\build\packages\my_dep\src\example_module.gleam"
+                r"\\?\C:\build\packages\hex\src\example_module.gleam"
             } else {
-                "/build/packages/my_dep/src/example_module.gleam"
+                "/build/packages/hex/src/example_module.gleam"
             }))
             .unwrap(),
             range: Range {
@@ -383,10 +372,6 @@ fn main() {
 
 #[test]
 fn goto_definition_external_module_function_calls() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
-
     let code = "
 import example_module
 fn main() {
@@ -395,12 +380,15 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io_definition(code, Position::new(3, 20), &io),
+        definition(
+            TestRunner::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
+            Position::new(3, 20)
+        ),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\build\packages\my_dep\src\example_module.gleam"
+                r"\\?\C:\build\packages\hex\src\example_module.gleam"
             } else {
-                "/build/packages/my_dep/src/example_module.gleam"
+                "/build/packages/hex/src/example_module.gleam"
             }))
             .unwrap(),
             range: Range {
@@ -500,18 +488,12 @@ fn main() {
 
 #[test]
 fn goto_definition_external_module_records() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module(
-        "my_dep",
-        "example_module",
-        "
+    let hex_src = "
 pub type Rec {
   Var1(Int)
   Var2(Int, Int)
 }
-",
-    );
+";
 
     let code = "
 import example_module
@@ -521,12 +503,15 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_with_io_definition(code, Position::new(3, 20), &io),
+        definition(
+            TestRunner::for_source(code).add_hex_module("example_module", hex_src),
+            Position::new(3, 20)
+        ),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\build\packages\my_dep\src\example_module.gleam"
+                r"\\?\C:\build\packages\hex\src\example_module.gleam"
             } else {
-                "/build/packages/my_dep/src/example_module.gleam"
+                "/build/packages/hex/src/example_module.gleam"
             }))
             .unwrap(),
             range: Range {
@@ -537,6 +522,41 @@ fn main() {
                 end: Position {
                     line: 2,
                     character: 11
+                }
+            }
+        })
+    )
+}
+
+#[test]
+fn goto_definition_path_module_function_calls() {
+    let code = "
+import example_module
+fn main() {
+  example_module.my_fn
+}
+";
+
+    assert_eq!(
+        definition(
+            TestRunner::for_source(code).add_dep_module("example_module", "pub fn my_fn() { Nil }"),
+            Position::new(3, 20)
+        ),
+        Some(Location {
+            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
+                r"\\?\C:\dep\src\example_module.gleam"
+            } else {
+                "/dep/src/example_module.gleam"
+            }))
+            .unwrap(),
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0
+                },
+                end: Position {
+                    line: 0,
+                    character: 14
                 }
             }
         })

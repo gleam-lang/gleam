@@ -61,6 +61,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
         )]
         .into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     }
 }
 
@@ -92,6 +93,7 @@ fn empty_module() {
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -113,6 +115,7 @@ fn with_line_numbers() {
         const b = 2
         const c = 3",
         ),
+        src_path: "some_path".into(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -141,6 +144,7 @@ fn module_with_private_type() {
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -161,6 +165,7 @@ fn module_with_unused_import() {
         accessors: HashMap::new(),
         values: HashMap::new(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -189,6 +194,7 @@ fn module_with_app_type() {
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -217,6 +223,7 @@ fn module_with_fn_type() {
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -245,6 +252,7 @@ fn module_with_tuple_type() {
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -279,6 +287,7 @@ fn module_with_generic_type() {
             unused_imports: Vec::new(),
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
+            src_path: "some_path".into(),
         }
     }
 
@@ -313,6 +322,7 @@ fn module_with_type_links() {
             unused_imports: Vec::new(),
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
+            src_path: "some_path".into(),
         }
     }
 
@@ -342,6 +352,7 @@ fn module_type_to_constructors_mapping() {
         accessors: HashMap::new(),
         values: HashMap::new(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -386,6 +397,7 @@ fn module_fn_value() {
         )]
         .into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -431,6 +443,7 @@ fn deprecated_module_fn_value() {
         )]
         .into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -474,6 +487,7 @@ fn private_module_fn_value() {
         )]
         .into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -519,6 +533,7 @@ fn module_fn_value_regression() {
         )]
         .into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -563,6 +578,7 @@ fn module_fn_value_with_field_map() {
         )]
         .into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -604,6 +620,7 @@ fn record_value() {
         )]
         .into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -648,6 +665,7 @@ fn record_value_with_field_map() {
         )]
         .into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -710,6 +728,7 @@ fn accessors() {
         ]
         .into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -922,6 +941,7 @@ fn constant_var() {
         ]
         .into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1109,6 +1129,7 @@ fn deprecated_type() {
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -1127,6 +1148,7 @@ fn contains_todo() {
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -1170,6 +1192,7 @@ fn module_fn_value_with_external_implementations() {
         )]
         .into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1214,6 +1237,7 @@ fn internal_module_fn() {
         )]
         .into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1252,6 +1276,7 @@ fn type_variable_ids_in_constructors_are_shared() {
         accessors: HashMap::new(),
         values: [].into(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
 
     let expected = HashMap::from([(

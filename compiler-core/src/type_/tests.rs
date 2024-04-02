@@ -374,6 +374,7 @@ pub fn compile_module_with_target(
             &std::collections::HashMap::from_iter(vec![]),
             target_support,
             line_numbers,
+            "".into(),
         )
         .expect("should successfully infer");
         let _ = modules.insert(name.into(), module.type_info);
@@ -396,6 +397,7 @@ pub fn compile_module_with_target(
         &direct_dependencies,
         TargetSupport::Enforced,
         LineNumbers::new(src),
+        "".into(),
     )
 }
 
@@ -587,6 +589,7 @@ fn infer_module_type_retention_test() {
         &direct_dependencies,
         TargetSupport::Enforced,
         LineNumbers::new(""),
+        "".into(),
     )
     .expect("Should infer OK");
 
@@ -651,6 +654,7 @@ fn infer_module_type_retention_test() {
             accessors: HashMap::new(),
             unused_imports: Vec::new(),
             line_numbers: LineNumbers::new(""),
+            src_path: "".into(),
         }
     );
 }

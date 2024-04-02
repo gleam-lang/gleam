@@ -1,4 +1,4 @@
-use ecow::EcoString;
+use ecow::{eco_format, EcoString};
 
 use super::*;
 use crate::{
@@ -52,6 +52,7 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<EcoS
         unused_imports: Vec::new(),
         contains_todo: false,
         line_numbers: line_numbers.clone(),
+        src_path: eco_format!("/src/{}.gleam", name),
     };
     let path = Utf8Path::new("/artefact").join(format!("{name}.cache"));
     fs.write_bytes(
