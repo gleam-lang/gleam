@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionTextEdit, Documentation, MarkupContent,
-    MarkupKind, Position, Range, TextDocumentPositionParams, TextEdit,
+    MarkupKind, Position, Range, TextEdit,
 };
 
 use super::*;
@@ -23,35 +23,6 @@ fn completion_at_default_position<'a>(tester: TestRunner<'a>) -> Vec<CompletionI
         .into_iter()
         .filter(|c| c.label != "typing_in_here")
         .collect_vec()
-}
-
-fn positioned_with_io_completions_in_test(
-    src: &str,
-    test: &str,
-    position: Position,
-    io: &LanguageServerTestIO,
-) -> Vec<CompletionItem> {
-    _ = io.test_module("my_test", test);
-    let (mut engine, position_param) = positioned_with_io(src, position, io);
-
-    let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-        r"\\?\C:\test\my_test.gleam"
-    } else {
-        "/test/my_test.gleam"
-    });
-
-    let url = Url::from_file_path(path).unwrap();
-
-    let document = TextDocumentIdentifier { uri: url };
-
-    let response = engine.completion(
-        TextDocumentPositionParams::new(document, position_param.position),
-        src.into(),
-    );
-
-    let mut completions = response.result.unwrap().unwrap_or_default();
-    completions.sort_by(|a, b| a.label.cmp(&b.label));
-    completions
 }
 
 fn prelude_type_completions() -> Vec<CompletionItem> {
@@ -1044,11 +1015,18 @@ pub fn test_helper() {
 }
 ";
 
-    let io = LanguageServerTestIO::new();
-    _ = io.test_module("test_helper", test_helper);
+    let (mut engine, position_param) = TestRunner::for_source(code)
+        .add_test_module("my_test", test)
+        .add_test_module("test_helper", test_helper)
+        .positioned_with_io_in_test(Position::new(0, 10), "my_test");
+
+    let response = engine.completion(position_param, code.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
 
     assert_eq!(
-        positioned_with_io_completions_in_test(code, test, Position::new(0, 10), &io),
+        completions,
         vec![
             CompletionItem {
                 label: "app".into(),

@@ -330,38 +330,6 @@ fn setup_engine(
     .unwrap()
 }
 
-// Helper for position tests to create a LanguageServerEngine and TextDocumentPositionParams with the right location & path
-fn positioned_with_io(
-    src: &str,
-    position: Position,
-    io: &LanguageServerTestIO,
-) -> (
-    LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
-    TextDocumentPositionParams,
-) {
-    let mut engine = setup_engine(io);
-
-    let _ = io.src_module("app", src);
-    for package in &io.manifest.packages {
-        add_package_from_manifest(&mut engine, package.clone());
-    }
-    let response = engine.compile_please();
-    response.result.expect("failed to compile");
-
-    let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-        r"\\?\C:\src\app.gleam"
-    } else {
-        "/src/app.gleam"
-    });
-
-    let url = Url::from_file_path(path).unwrap();
-
-    (
-        engine,
-        TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position),
-    )
-}
-
 struct TestRunner<'a> {
     src: &'a str,
     root_package_modules: Vec<(&'a str, &'a str)>,
@@ -417,17 +385,10 @@ impl<'a> TestRunner<'a> {
         }
     }
 
-    pub fn at<T>(
-        self,
-        position: Position,
-        executor: impl FnOnce(
-            &mut LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
-            TextDocumentPositionParams,
-            EcoString,
-        ) -> T,
-    ) -> T {
-        let mut io = LanguageServerTestIO::new();
-
+    pub fn build_engine(
+        &self,
+        io: &mut LanguageServerTestIO,
+    ) -> LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO> {
         io.add_hex_package("hex");
         self.hex_modules.iter().for_each(|(name, code)| {
             _ = io.hex_dep_module("hex", name, code);
@@ -454,6 +415,19 @@ impl<'a> TestRunner<'a> {
             add_package_from_manifest(&mut engine, package.clone());
         }
 
+        engine
+    }
+
+    pub fn positioned_with_io(
+        &self,
+        position: Position,
+    ) -> (
+        LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
+        TextDocumentPositionParams,
+    ) {
+        let mut io = LanguageServerTestIO::new();
+        let mut engine = self.build_engine(&mut io);
+
         // Add the final module we're going to be positioning the cursor in.
         _ = io.src_module("app", self.src);
 
@@ -468,10 +442,54 @@ impl<'a> TestRunner<'a> {
 
         let url = Url::from_file_path(path).unwrap();
 
-        executor(
-            &mut engine,
+        (
+            engine,
             TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position),
-            self.src.into(),
         )
+    }
+
+    pub fn positioned_with_io_in_test(
+        &self,
+        position: Position,
+        test_name: &str,
+    ) -> (
+        LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
+        TextDocumentPositionParams,
+    ) {
+        let mut io = LanguageServerTestIO::new();
+        let mut engine = self.build_engine(&mut io);
+
+        // Add the final module we're going to be positioning the cursor in.
+        _ = io.src_module("app", self.src);
+
+        let response = engine.compile_please();
+        assert!(response.result.is_ok());
+
+        let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
+            format!(r"\\?\C:\test\{}.gleam", test_name)
+        } else {
+            format!("/test/{}.gleam", test_name)
+        });
+
+        let url = Url::from_file_path(path).unwrap();
+
+        (
+            engine,
+            TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position),
+        )
+    }
+
+    pub fn at<T>(
+        self,
+        position: Position,
+        executor: impl FnOnce(
+            &mut LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
+            TextDocumentPositionParams,
+            EcoString,
+        ) -> T,
+    ) -> T {
+        let (mut engine, params) = self.positioned_with_io(position);
+
+        executor(&mut engine, params, self.src.into())
     }
 }
