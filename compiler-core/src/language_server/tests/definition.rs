@@ -407,11 +407,7 @@ fn main() {
 
 #[test]
 fn goto_definition_external_module_function_calls_with_multiple_compiles() {
-    let mut io = LanguageServerTestIO::new();
     let dep = "pub fn my_fn() { Nil }";
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module("my_dep", "example_module", dep);
-
     let code = "
 import example_module
 fn main() {
@@ -419,23 +415,25 @@ fn main() {
 }
 ";
 
-    let (mut engine, position_param) = positioned_with_io(code, Position::new(3, 20), &io);
+    let (mut engine, position_param) = TestRunner::for_source(code)
+        .add_hex_module("example_module", dep)
+        .positioned_with_io(Position::new(3, 20));
 
     let params = GotoDefinitionParams {
         text_document_position_params: position_param.clone(),
         work_done_progress_params: Default::default(),
         partial_result_params: Default::default(),
     };
-    let response = engine.goto_definition(params);
+    let response = engine.goto_definition(params.clone());
     let response = response.result.unwrap();
 
     assert_eq!(
         response,
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\build\packages\my_dep\src\example_module.gleam"
+                r"\\?\C:\build\packages\hex\src\example_module.gleam"
             } else {
-                "/build/packages/my_dep/src/example_module.gleam"
+                "/build/packages/hex/src/example_module.gleam"
             }))
             .unwrap(),
             range: Range {
@@ -455,21 +453,91 @@ fn main() {
     let response = engine.compile_please();
     assert!(response.result.is_ok());
 
-    let params = GotoDefinitionParams {
-        text_document_position_params: position_param.clone(),
-        work_done_progress_params: Default::default(),
-        partial_result_params: Default::default(),
-    };
-    let response = engine.goto_definition(params);
+    let response = engine.goto_definition(params.clone());
     let response = response.result.unwrap();
 
     assert_eq!(
         response,
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\build\packages\my_dep\src\example_module.gleam"
+                r"\\?\C:\build\packages\hex\src\example_module.gleam"
             } else {
-                "/build/packages/my_dep/src/example_module.gleam"
+                "/build/packages/hex/src/example_module.gleam"
+            }))
+            .unwrap(),
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0
+                },
+                end: Position {
+                    line: 0,
+                    character: 14
+                }
+            }
+        })
+    )
+}
+
+#[test]
+fn goto_definition_path_module_function_calls_with_multiple_compiles() {
+    let dep = "pub fn my_fn() { Nil }";
+    let code = "
+import example_module
+fn main() {
+  example_module.my_fn
+}
+";
+
+    let (mut engine, position_param) = TestRunner::for_source(code)
+        .add_dep_module("example_module", dep)
+        .positioned_with_io(Position::new(3, 20));
+
+    let params = GotoDefinitionParams {
+        text_document_position_params: position_param.clone(),
+        work_done_progress_params: Default::default(),
+        partial_result_params: Default::default(),
+    };
+
+    let response = engine.goto_definition(params.clone());
+    let response = response.result.unwrap();
+
+    assert_eq!(
+        response,
+        Some(Location {
+            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
+                r"\\?\C:\dep\src\example_module.gleam"
+            } else {
+                "/dep/src/example_module.gleam"
+            }))
+            .unwrap(),
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0
+                },
+                end: Position {
+                    line: 0,
+                    character: 14
+                }
+            }
+        })
+    );
+
+    engine.compiler.sources.clear();
+    let response = engine.compile_please();
+    assert!(response.result.is_ok());
+
+    let response = engine.goto_definition(params.clone());
+    let response = response.result.unwrap();
+
+    assert_eq!(
+        response,
+        Some(Location {
+            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
+                r"\\?\C:\dep\src\example_module.gleam"
+            } else {
+                "/dep/src/example_module.gleam"
             }))
             .unwrap(),
             range: Range {
