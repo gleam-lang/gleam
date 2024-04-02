@@ -71,6 +71,26 @@ updates that would normally be safe."
             println!();
         }
 
+        if let Some(url) = config.repository.url() {
+            let runtime =
+                tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+            let response = runtime.block_on(reqwest::get(&url)).map_err(Error::http)?;
+            if !response.status().is_success() {
+                println!(
+                    "The repository configuration in your `gleam.toml` file does not appear to be valid.
+
+The repository URL {} returned status {}
+", &url, response.status()
+                );
+                let should_publish = i_am_sure || cli::confirm("\nDo you wish to continue?")?;
+                if !should_publish {
+                    println!("Not publishing.");
+                    std::process::exit(0);
+                }
+                println!();
+            }
+        }
+
         let Tarball {
             mut compile_result,
             data: package_tarball,
