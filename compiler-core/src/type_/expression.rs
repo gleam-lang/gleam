@@ -36,6 +36,8 @@ pub struct Implementations {
     /// is added - say a WASM target - `func` wouldn't support it! On the other
     /// hand, a pure Gleam function will support all future targets.
     pub gleam: bool,
+    pub can_run_on_erlang: bool,
+    pub can_run_on_javascript: bool,
     /// Wether the function has an implementation that uses external erlang
     /// code.
     pub uses_erlang_externals: bool,
@@ -49,18 +51,20 @@ pub struct Implementations {
 /// This is used to determine whether an error should be raised in the case when
 /// a value is used that does not have an implementation for the current target.
 #[derive(Clone, Copy, Debug)]
-pub struct Externals {
+pub struct FunctionDefinition {
+    /// The function has { ... } after the function head
+    pub has_body: bool,
     /// The function has @external(erlang, "...", "...")
-    pub erlang: bool,
+    pub has_erlang_external: bool,
     /// The function has @external(JavaScript, "...", "...")
-    pub javascript: bool,
+    pub has_javascript_external: bool,
 }
 
-impl Externals {
+impl FunctionDefinition {
     pub fn exists(&self, target: Target) -> bool {
         match target {
-            Target::Erlang => self.erlang,
-            Target::JavaScript => self.javascript,
+            Target::Erlang => self.has_erlang_external,
+            Target::JavaScript => self.has_javascript_external,
         }
     }
 }
@@ -69,18 +73,36 @@ impl Implementations {
     /// Given the implementations of a function update those with taking into
     /// account the `implementations` of another function (or constant) used
     /// inside its body.
-    pub fn update_from_use(&mut self, implementations: &Implementations) {
+    pub fn update_from_use(
+        &mut self,
+        implementations: &Implementations,
+        current_function_definition: &FunctionDefinition,
+    ) {
         // With this pattern matching we won't forget to deal with new targets
         // when those are added :)
         let Implementations {
             gleam,
             uses_erlang_externals,
             uses_javascript_externals,
+            can_run_on_erlang,
+            can_run_on_javascript,
         } = implementations;
+        let FunctionDefinition {
+            has_body: _,
+            has_erlang_external,
+            has_javascript_external,
+        } = current_function_definition;
 
         // If a pure-Gleam function uses a function that doesn't have a pure
         // Gleam implementation, then it's no longer pure-Gleam.
         self.gleam = self.gleam && *gleam;
+
+        // A function can run on a target if the code that it uses can run on on
+        // the same target,
+        self.can_run_on_erlang =
+            *has_erlang_external || (self.can_run_on_erlang && (*gleam || *can_run_on_erlang));
+        self.can_run_on_javascript = *has_javascript_external
+            || (self.can_run_on_javascript && (*gleam || *can_run_on_javascript));
 
         // If a function uses a function that relies on external code (be it
         // javascript or erlang) then it's considered as using external code as
@@ -112,8 +134,8 @@ impl Implementations {
     pub fn supports(&self, target: Target) -> bool {
         self.gleam
             || match target {
-                Target::Erlang => self.uses_erlang_externals,
-                Target::JavaScript => self.uses_javascript_externals,
+                Target::Erlang => self.can_run_on_erlang,
+                Target::JavaScript => self.can_run_on_javascript,
             }
     }
 }
@@ -123,23 +145,25 @@ pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) environment: &'a mut Environment<'b>,
 
     pub(crate) implementations: Implementations,
-    pub(crate) current_function_externals: Externals,
+    pub(crate) current_function_definition: FunctionDefinition,
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>, externals: Externals) -> Self {
+    pub fn new(environment: &'a mut Environment<'b>, definition: FunctionDefinition) -> Self {
         let mut hydrator = Hydrator::new();
 
         let implementations = Implementations {
             // We start assuming the function is pure Gleam and narrow it down
             // if we run into functions/constants that have only external
             // implementations for some of the targets.
-            gleam: true,
-            uses_erlang_externals: externals.erlang,
-            uses_javascript_externals: externals.javascript,
+            gleam: definition.has_body,
+            can_run_on_erlang: definition.has_body || definition.has_erlang_external,
+            can_run_on_javascript: definition.has_body || definition.has_javascript_external,
+            uses_erlang_externals: definition.has_erlang_external,
+            uses_javascript_externals: definition.has_javascript_external,
         };
 
         hydrator.permit_holes(true);
@@ -147,7 +171,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             hydrator,
             environment,
             implementations,
-            current_function_externals: externals,
+            current_function_definition: definition,
         }
     }
 
@@ -714,7 +738,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         self.implementations
-            .update_from_use(variant_implementations);
+            .update_from_use(variant_implementations, &self.current_function_definition);
 
         if self.environment.target_support.is_enforced()
             // If the value used doesn't have an implementation that can be used
@@ -722,7 +746,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             && !variant_implementations.supports(self.environment.target)
             // ... and there is not an external implementation for it
             && !self
-                    .current_function_externals
+                    .current_function_definition
                     .exists(self.environment.target)
         {
             Err(Error::UnsupportedExpressionTarget {

@@ -473,8 +473,10 @@ impl ModuleDecoder {
     fn implementations(&self, reader: implementations::Reader<'_>) -> Implementations {
         Implementations {
             gleam: reader.get_gleam(),
-            uses_erlang_externals: reader.get_erlang(),
-            uses_javascript_externals: reader.get_javascript(),
+            uses_erlang_externals: reader.get_uses_erlang_externals(),
+            uses_javascript_externals: reader.get_uses_javascript_externals(),
+            can_run_on_erlang: reader.get_can_run_on_erlang(),
+            can_run_on_javascript: reader.get_can_run_on_javascript(),
         }
     }
 

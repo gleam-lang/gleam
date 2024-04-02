@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::analyse::TargetSupport;
 use crate::build::Target;
 use crate::line_numbers::LineNumbers;
-use crate::type_::expression::Externals;
+use crate::type_::expression::FunctionDefinition;
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{SrcSpan, TypedExpr},
@@ -132,9 +132,10 @@ fn compile_expression(src: &str) -> TypedStatement {
     );
     ExprTyper::new(
         &mut environment,
-        Externals {
-            erlang: false,
-            javascript: false,
+        FunctionDefinition {
+            has_body: true,
+            has_erlang_external: false,
+            has_javascript_external: false,
         },
     )
     .infer_statements(ast)

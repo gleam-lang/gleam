@@ -106,8 +106,10 @@ enum Publicity {
 
 struct Implementations {
   gleam @0 :Bool;
-  erlang @1 :Bool;
-  javascript @2 :Bool;
+  usesErlangExternals @1 :Bool;
+  usesJavascriptExternals @2 :Bool;
+  canRunOnErlang @3 :Bool;
+  canRunOnJavascript @4 :Bool;
 }
 
 struct ValueConstructorVariant {

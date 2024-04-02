@@ -5,7 +5,7 @@ fn integration_test1_3() {
     assert_erl!(
         r#"
 @external(erlang, "Elixir.MyApp", "run")
-pub fn run() -> Int 
+pub fn run() -> Int
 "#
     );
 }
@@ -276,6 +276,43 @@ pub fn should_be_generated(x: Int) -> Int {
 
 @external(javascript, "one", "one")
 pub fn should_not_be_generated(x: Int) -> Int
+"#
+    );
+}
+
+#[test]
+fn javascript_only_indirect() {
+    assert_erl!(
+        r#"
+pub fn should_be_generated(x: Int) -> Int {
+  x
+}
+
+@external(javascript, "one", "one")
+pub fn should_not_be_generated(x: Int) -> Int
+
+pub fn also_should_not_be_generated() {
+  should_not_be_generated(1)
+  |> should_be_generated
+}
+"#
+    );
+}
+
+#[test]
+fn both_externals_no_valid_impl() {
+    assert_erl!(
+        r#"
+@external(javascript, "one", "one")
+pub fn js() -> Nil
+
+@external(erlang, "one", "one")
+pub fn erl() -> Nil
+
+pub fn should_not_be_generated() {
+  js()
+  erl()
+}
 "#
     );
 }

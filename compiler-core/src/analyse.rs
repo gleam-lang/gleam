@@ -18,7 +18,7 @@ use crate::{
         self,
         environment::*,
         error::{convert_unify_error, Error, MissingAnnotation},
-        expression::{ExprTyper, Externals},
+        expression::{ExprTyper, FunctionDefinition},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
@@ -691,9 +691,10 @@ fn infer_function(
         ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
     }
 
-    let externals = Externals {
-        erlang: external_erlang.is_some(),
-        javascript: external_javascript.is_some(),
+    let definition = FunctionDefinition {
+        has_body: !body.first().is_placeholder(),
+        has_erlang_external: external_erlang.is_some(),
+        has_javascript_external: external_javascript.is_some(),
     };
 
     // Infer the type using the preregistered args + return types as a starting point
@@ -703,7 +704,7 @@ fn infer_function(
             .zip(&args_types)
             .map(|(a, t)| a.set_type(t.clone()))
             .collect();
-        let mut expr_typer = ExprTyper::new(environment, externals);
+        let mut expr_typer = ExprTyper::new(environment, definition);
         expr_typer.hydrator = hydrators
             .remove(&name)
             .expect("Could not find hydrator for fn");
@@ -1016,9 +1017,10 @@ fn infer_module_constant(
 
     let mut expr_typer = ExprTyper::new(
         environment,
-        Externals {
-            erlang: false,
-            javascript: false,
+        FunctionDefinition {
+            has_body: true,
+            has_erlang_external: false,
+            has_javascript_external: false,
         },
     );
     let typed_expr = expr_typer.infer_const(&annotation, *value)?;

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-assertion_line: 161
+assertion_line: 165
 expression: "\n//// Some package\n//// documentation!\n\npub fn main() { 1 }\n"
 ---
 {
@@ -23,7 +23,9 @@ expression: "\n//// Some package\n//// documentation!\n\npub fn main() { 1 }\n"
           "implementations": {
             "gleam": true,
             "uses-erlang-externals": false,
-            "uses-javascript-externals": false
+            "uses-javascript-externals": false,
+            "can-run-on-erlang": true,
+            "can-run-on-javascript": true
           },
           "parameters": [],
           "return": {

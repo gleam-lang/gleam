@@ -286,3 +286,21 @@ pub fn should_not_be_generated(x) {
 "#
     );
 }
+
+#[test]
+fn both_externals_no_valid_impl() {
+    assert_js!(
+        r#"
+@external(javascript, "one", "one")
+pub fn js() -> Nil
+
+@external(erlang, "one", "one")
+pub fn erl() -> Nil
+
+pub fn should_not_be_generated() {
+  js()
+  erl()
+}
+"#
+    );
+}

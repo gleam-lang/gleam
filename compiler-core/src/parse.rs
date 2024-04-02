@@ -1618,6 +1618,8 @@ where
             external_javascript: attributes.external_javascript.take(),
             implementations: Implementations {
                 gleam: true,
+                can_run_on_erlang: true,
+                can_run_on_javascript: true,
                 uses_erlang_externals: false,
                 uses_javascript_externals: false,
             },
@@ -2255,6 +2257,8 @@ where
                 deprecation: attributes.deprecated.clone(),
                 implementations: Implementations {
                     gleam: true,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                     uses_erlang_externals: false,
                     uses_javascript_externals: false,
                 },
