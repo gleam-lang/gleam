@@ -94,6 +94,8 @@
   have a wrong indentation.
 - Fixed a bug where on windows local packages had absolute paths in the manifest
   instead of relative.
+- The `gleam publish` command now asks for confirmation if the package repository
+  URL doesn't return a successful status code.
 
 ### Language Server
 
