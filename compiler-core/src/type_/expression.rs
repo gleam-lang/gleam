@@ -61,7 +61,7 @@ pub struct FunctionDefinition {
 }
 
 impl FunctionDefinition {
-    pub fn exists(&self, target: Target) -> bool {
+    pub fn has_external_for_target(&self, target: Target) -> bool {
         match target {
             Target::Erlang => self.has_erlang_external,
             Target::JavaScript => self.has_javascript_external,
@@ -82,10 +82,10 @@ impl Implementations {
         // when those are added :)
         let Implementations {
             gleam,
-            uses_erlang_externals,
-            uses_javascript_externals,
-            can_run_on_erlang,
-            can_run_on_javascript,
+            uses_erlang_externals: other_uses_erlang_externals,
+            uses_javascript_externals: other_uses_javascript_externals,
+            can_run_on_erlang: other_can_run_on_erlang,
+            can_run_on_javascript: other_can_run_on_javascript,
         } = implementations;
         let FunctionDefinition {
             has_body: _,
@@ -99,10 +99,10 @@ impl Implementations {
 
         // A function can run on a target if the code that it uses can run on on
         // the same target,
-        self.can_run_on_erlang =
-            *has_erlang_external || (self.can_run_on_erlang && (*gleam || *can_run_on_erlang));
+        self.can_run_on_erlang = *has_erlang_external
+            || (self.can_run_on_erlang && (*gleam || *other_can_run_on_erlang));
         self.can_run_on_javascript = *has_javascript_external
-            || (self.can_run_on_javascript && (*gleam || *can_run_on_javascript));
+            || (self.can_run_on_javascript && (*gleam || *other_can_run_on_javascript));
 
         // If a function uses a function that relies on external code (be it
         // javascript or erlang) then it's considered as using external code as
@@ -122,9 +122,9 @@ impl Implementations {
         // `Implementations { gleam: true, uses_erlang_externals: true, uses_javascript_externals: false}`.
         // They have a pure gleam implementation and an erlang specific external
         // implementation.
-        self.uses_erlang_externals = self.uses_erlang_externals || *uses_erlang_externals;
+        self.uses_erlang_externals = self.uses_erlang_externals || *other_uses_erlang_externals;
         self.uses_javascript_externals =
-            self.uses_javascript_externals || *uses_javascript_externals;
+            self.uses_javascript_externals || *other_uses_javascript_externals;
     }
 
     /// Returns true if the current target is supported by the given
@@ -747,7 +747,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // ... and there is not an external implementation for it
             && !self
                     .current_function_definition
-                    .exists(self.environment.target)
+                    .has_external_for_target(self.environment.target)
         {
             Err(Error::UnsupportedExpressionTarget {
                 target: self.environment.target,
