@@ -52,6 +52,7 @@
   and record updates.
 - Fixed a bug when using constant as the size option parameter
   for `BitArray` caused unknown variable exception.
+- Improved recommendations on error messages.
 
 ### Formatter
 
