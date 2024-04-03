@@ -13,7 +13,7 @@ use strum::{Display, EnumIter, EnumString, IntoEnumIterator, VariantNames};
 #[cfg(test)]
 mod tests;
 
-use crate::NewOptions;
+use crate::{fs::get_current_directory, NewOptions};
 
 const GLEAM_STDLIB_REQUIREMENT: &str = ">= 0.34.0 and < 2.0.0";
 const GLEEUNIT_REQUIREMENT: &str = ">= 1.0.0 and < 2.0.0";
@@ -206,7 +206,7 @@ impl Creator {
 
         validate_name(&project_name)?;
 
-        let root = Utf8PathBuf::from(&options.project_root);
+        let root = get_current_directory()?.join(&options.project_root);
         let src = root.join("src");
         let test = root.join("test");
         let github = root.join(".github");
