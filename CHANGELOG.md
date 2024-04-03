@@ -94,6 +94,7 @@
   have a wrong indentation.
 - Fixed a bug where on windows local packages had absolute paths in the manifest
   instead of relative.
+- avoid panicking in find_project_paths() when get_current_directory() returns Err.
 
 ### Language Server
 
