@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn go(x) {\n  case x {\n    \"\\u{0032} \" as greeting <> name -> greeting\n    \"\\u{0007ff} \" as greeting <> name -> greeting\n    \"\\u{00ffff} \" as greeting <> name -> greeting\n    \"\\u{10ffff} \" as greeting <> name -> greeting\n    _ -> \"Unknown\"\n  }\n}\n"
+---
+export function go(x) {
+  if (x.startsWith("\u{0032} ")) {
+    let name = x.slice(2);
+    let greeting = "\u{0032} ";
+    return greeting;
+  } else if (x.startsWith("\u{0007ff} ")) {
+    let name = x.slice(2);
+    let greeting = "\u{0007ff} ";
+    return greeting;
+  } else if (x.startsWith("\u{00ffff} ")) {
+    let name = x.slice(2);
+    let greeting = "\u{00ffff} ";
+    return greeting;
+  } else if (x.startsWith("\u{10ffff} ")) {
+    let name = x.slice(3);
+    let greeting = "\u{10ffff} ";
+    return greeting;
+  } else {
+    return "Unknown";
+  }
+}

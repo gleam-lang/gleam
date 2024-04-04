@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/externals.rs
+assertion_line: 199
+expression: "@external(javascript, \"one\", \"two\")\npub fn main() -> Int\n"
+---
+error: Unsupported target
+  ┌─ /src/one/two.gleam:2:1
+  │
+2 │ pub fn main() -> Int
+  │ ^^^^^^^^^^^^^
+
+The `main` function is public but doesn't have an implementation for the
+Erlang target. All public functions of a package must be able to compile
+for a module to be valid.
+

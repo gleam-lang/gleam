@@ -3,6 +3,7 @@ mod compiler;
 mod engine;
 mod feedback;
 mod files;
+mod messages;
 mod progress;
 mod router;
 mod server;
@@ -16,7 +17,8 @@ use crate::{
     ast::SrcSpan, build::Target, line_numbers::LineNumbers, manifest::Manifest,
     paths::ProjectPaths, Result,
 };
-use lsp_types::{CodeActionParams, CodeActionTriggerKind, Position, Range};
+use lsp_types::{CodeActionParams, CodeActionTriggerKind, Position, Range,Url};
+use camino::Utf8PathBuf;
 use std::any::Any;
 
 #[derive(Debug)]
@@ -70,4 +72,13 @@ impl ResolveStrategy {
     pub fn is_lazy(&self) -> bool {
         matches!(self, ResolveStrategy::Lazy)
     }
+}
+fn path(uri: &Url) -> Utf8PathBuf {
+    // The to_file_path method is available on these platforms
+    #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
+    return Utf8PathBuf::from_path_buf(uri.to_file_path().expect("URL file"))
+        .expect("Non Utf8 Path");
+
+    #[cfg(not(any(unix, windows, target_os = "redox", target_os = "wasi")))]
+    return Utf8PathBuf::from_path_buf(uri.path().into()).expect("Non Utf8 Path");
 }

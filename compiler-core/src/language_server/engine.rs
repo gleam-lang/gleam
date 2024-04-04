@@ -1,7 +1,7 @@
 
 use crate::{
     ast::{
-        Arg, Assignment, Definition, Function, Import, ModuleConstant, Pattern, Statement, TypedDefinition, TypedExpr, TypedPattern
+        Arg, Definition, Function, Import, ModuleConstant, Statement, TypedDefinition, TypedExpr, TypedPattern, Publicity,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -49,7 +49,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
 
     /// A compiler for the project that supports repeat compilation of the root
     /// package.
-    /// In the event the the project config changes this will need to be
+    /// In the event the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
     pub(crate) compiler: LspProjectCompiler<FileSystemProxy<IO>>,
 
@@ -142,22 +142,9 @@ where
         self.compiler.take_warnings()
     }
 
-    // TODO: test local variables
-    // TODO: test same module constants
-    // TODO: test imported module constants
-    // TODO: test unqualified imported module constants
-    // TODO: test same module records
-    // TODO: test imported module records
-    // TODO: test unqualified imported module records
-    // TODO: test same module functions
-    // TODO: test module function calls
     // TODO: test different package module function calls
     //
-    //
-    //
     // TODO: implement unqualified imported module functions
-    // TODO: implement goto definition of modules that do not belong to the top
-    // level package.
     //
     pub fn goto_definition(
         &mut self,
@@ -180,11 +167,7 @@ where
                 Some(name) => {
                     let module = match this.compiler.get_source(name) {
                         Some(module) => module,
-                        // TODO: support goto definition for functions defined in
-                        // different packages. Currently it is not possible as the
-                        // required LineNumbers and source file path information is
-                        // not stored in the module metadata.
-                        None => return Ok(None),
+                        _ => return Ok(None),
                     };
                     let url = Url::parse(&format!("file:///{}", &module.path))
                         .expect("goto definition URL parse");
@@ -200,12 +183,41 @@ where
     pub fn completion(
         &mut self,
         params: lsp::TextDocumentPositionParams,
+        src: EcoString,
     ) -> Response<Option<Vec<lsp::CompletionItem>>> {
         self.respond(|this| {
             let module = match this.module_for_uri(&params.text_document.uri) {
                 Some(m) => m,
                 None => return Ok(None),
             };
+
+            // Check current file contents if the user is writing an import
+            // and handle separately from the rest of the completion flow
+            // Check if an import is being written
+            {
+                let line_num = LineNumbers::new(src.as_str());
+                let start_of_line = line_num.byte_index(params.position.line, 0);
+                let end_of_line = line_num.byte_index(params.position.line + 1, 0);
+
+                // Check if the line starts with "import"
+                let from_ind = &src.get(start_of_line as usize..end_of_line as usize);
+                if let Some(from_ind) = from_ind {
+                    if from_ind.starts_with("import") {
+                        // Find where to start and end the import completion
+                        let start = line_num.line_and_column_number(start_of_line);
+                        let end = line_num.line_and_column_number(end_of_line - 1);
+                        let start = lsp::Position {
+                            line: start.line - 1,
+                            character: start.column + 6,
+                        };
+                        let end = lsp::Position {
+                            line: end.line - 1,
+                            character: end.column,
+                        };
+                        return Ok(Some(this.completion_imports(module, start, end)));
+                    }
+                }
+            }
 
             let line_numbers = LineNumbers::new(&module.code);
             let byte_index =
@@ -448,8 +460,16 @@ where
 
             // Qualified types
             for (name, type_) in &module.types {
-                if !type_.public {
-                    continue;
+                match type_.publicity {
+                    // We skip private types as we never want those to appear in
+                    // completions.
+                    Publicity::Private => continue,
+                    // We only skip internal types if those are not defined in
+                    // the root package.
+                    Publicity::Internal if module.package != self.root_package_name() => continue,
+                    Publicity::Internal => {}
+                    // We never skip public types.
+                    Publicity::Public => {}
                 }
 
                 let module = import.used_name();
@@ -460,10 +480,12 @@ where
 
             // Unqualified types
             for unqualified in &import.unqualified_types {
-                let Some(type_) = module.get_public_type(&unqualified.name) else {
-                    continue;
-                };
-                completions.push(type_completion(None, unqualified.used_name(), type_));
+                match module.get_public_type(&unqualified.name) {
+                    Some(type_) => {
+                        completions.push(type_completion(None, unqualified.used_name(), type_))
+                    }
+                    None => continue,
+                }
             }
         }
 
@@ -475,6 +497,9 @@ where
 
         // Module functions
         for (name, value) in &module.ast.type_info.values {
+            // Here we do not check for the internal attribute: we always want
+            // to show autocompletions for values defined in the same module,
+            // even if those are internal.
             completions.push(value_completion(None, name, value));
         }
 
@@ -489,8 +514,16 @@ where
 
             // Qualified values
             for (name, value) in &module.values {
-                if !value.public {
-                    continue;
+                match value.publicity {
+                    // We skip private values as we never want those to appear in
+                    // completions.
+                    Publicity::Private => continue,
+                    // We only skip internal values if those are not defined in
+                    // the root package.
+                    Publicity::Internal if module.package != self.root_package_name() => continue,
+                    Publicity::Internal => {}
+                    // We never skip public values.
+                    Publicity::Public => {}
                 }
 
                 let module = import.used_name();
@@ -501,14 +534,51 @@ where
 
             // Unqualified values
             for unqualified in &import.unqualified_values {
-                let Some(value) = module.get_public_value(&unqualified.name) else {
-                    continue;
-                };
-                completions.push(value_completion(None, unqualified.used_name(), value));
+                match module.get_public_value(&unqualified.name) {
+                    Some(value) => {
+                        completions.push(value_completion(None, unqualified.used_name(), value))
+                    }
+                    None => continue,
+                }
             }
         }
 
         completions
+    }
+
+    fn completion_imports<'b>(
+        &'b self,
+        module: &'b Module,
+        start: lsp::Position,
+        end: lsp::Position,
+    ) -> Vec<lsp::CompletionItem> {
+        let already_imported: std::collections::HashSet<EcoString> =
+            std::collections::HashSet::from_iter(module.dependencies_list());
+        self.compiler
+            .project_compiler
+            .get_importable_modules()
+            .iter()
+            .filter(|(name, m)| {
+                *name != &module.name
+                    && !already_imported.contains(*name)
+                    && (m.origin.is_src() || !module.origin.is_src())
+            })
+            .map(|(name, _)| lsp::CompletionItem {
+                label: name.to_string(),
+                kind: Some(lsp::CompletionItemKind::MODULE),
+                text_edit: {
+                    Some(lsp::CompletionTextEdit::Edit(lsp::TextEdit {
+                        range: lsp::Range { start, end },
+                        new_text: name.to_string(),
+                    }))
+                },
+                ..Default::default()
+            })
+            .collect()
+    }
+
+    fn root_package_name(&self) -> &str {
+        self.compiler.project_compiler.config.name.as_str()
     }
 }
 
@@ -724,7 +794,7 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
     match expression {
         TypedExpr::Var {
             name, constructor, ..
-        } if constructor.public => match &constructor.variant {
+        } if constructor.publicity.is_importable() => match &constructor.variant {
             ValueConstructorVariant::ModuleFn {
                 module: module_name,
                 ..

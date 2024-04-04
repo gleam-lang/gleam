@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 190
 expression: "let x = <<1:8-float>> x"
 ---
 error: Invalid bit array segment
@@ -9,5 +10,4 @@ error: Invalid bit array segment
   │             ^ Invalid float size
 
 Hint: floats have an exact size of 16/32/64 bits.
-See: https://gleam.run/book/tour/bit-arrays.html
-
+See: https://tour.gleam.run/data-types/bit-arrays/

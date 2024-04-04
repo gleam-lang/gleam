@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub fn main() {\n        let wibble = 1\n        case #(1, 2), #(wibble, wibble) {\n            _, _ -> Nil\n        }\n      }"
+---
+warning: Redundant tuple
+  ┌─ /src/warning/wrn.gleam:3:14
+  │
+3 │         case #(1, 2), #(wibble, wibble) {
+  │              ^^^^^^^ You can remove this tuple wrapper
+
+Case expressions can take multiple subjects directly.
+Hint: You can pass the contents of the tuple directly, separated by commas.
+
+warning: Redundant tuple
+  ┌─ /src/warning/wrn.gleam:3:23
+  │
+3 │         case #(1, 2), #(wibble, wibble) {
+  │                       ^^^^^^^^^^^^^^^^^ You can remove this tuple wrapper
+
+Case expressions can take multiple subjects directly.
+Hint: You can pass the contents of the tuple directly, separated by commas.

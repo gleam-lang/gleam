@@ -304,7 +304,7 @@ impl LocalPackages {
             .collect();
         self.packages
             .iter()
-            .filter(|(n, v)| !manifest_packages.contains(&(&EcoString::from(n.as_ref()), v)))
+            .filter(|(n, v)| !manifest_packages.contains(&(&EcoString::from(*n), v)))
             .map(|(n, v)| (n.clone(), v.clone()))
             .collect()
     }
@@ -724,7 +724,7 @@ fn resolve_versions<Telem: Telemetry>(
         &locked,
     )?;
 
-    // Convert the hex packages and local packages into manliest packages
+    // Convert the hex packages and local packages into manifest packages
     let manifest_packages = runtime.block_on(future::try_join_all(
         resolved
             .into_iter()

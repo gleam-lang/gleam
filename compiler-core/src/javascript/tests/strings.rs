@@ -180,6 +180,23 @@ pub fn go(x) {
 }
 
 #[test]
+fn string_prefix_assignment_with_utf_escape_sequence() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    "\u{0032} " as greeting <> name -> greeting
+    "\u{0007ff} " as greeting <> name -> greeting
+    "\u{00ffff} " as greeting <> name -> greeting
+    "\u{10ffff} " as greeting <> name -> greeting
+    _ -> "Unknown"
+  }
+}
+"#,
+    )
+}
+
+#[test]
 fn string_prefix_shadowing() {
     assert_js!(
         r#"

@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nfn main() {\n    #(1, 2, const)\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:13
+  │
+3 │     #(1, 2, const)
+  │             ^^^^^ I was not expecting this
+
+Expected one of: 
+")"
+an expression

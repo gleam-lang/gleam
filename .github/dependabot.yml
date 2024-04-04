@@ -1,0 +1,36 @@
+version: 2
+updates:
+- package-ecosystem: github-actions
+  directory: "/"
+  schedule:
+    interval: weekly
+  open-pull-requests-limit: 10
+
+# Rust:
+- package-ecosystem: "cargo"
+  directory: "/"
+  labels: []
+  schedule:
+    interval: "weekly"
+- package-ecosystem: "cargo"
+  directory: "/compiler-cli"
+  labels: []
+  schedule:
+    interval: "weekly"
+- package-ecosystem: "cargo"
+  directory: "/compiler-core"
+  labels: []
+  schedule:
+    interval: "weekly"
+- package-ecosystem: "cargo"
+  directory: "/compiler-wasm"
+  labels: []
+  schedule:
+    interval: "weekly"
+- package-ecosystem: "cargo"
+  # Does not have any custom deps right now,
+  # but can add them in the future:
+  directory: "/test-package-compiler"
+  labels: []
+  schedule:
+    interval: "weekly"

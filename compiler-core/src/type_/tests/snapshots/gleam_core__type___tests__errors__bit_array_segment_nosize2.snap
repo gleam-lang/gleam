@@ -11,5 +11,4 @@ error: Invalid bit array segment
 
 Hint: Bit array segments without a size are only allowed at the end of a
 bin pattern.
-See: https://gleam.run/book/tour/bit-arrays.html
-
+See: https://tour.gleam.run/data-types/bit-arrays/

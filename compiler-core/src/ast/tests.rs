@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use crate::analyse::TargetSupport;
 use crate::build::Target;
-use crate::type_::expression::Implementations;
+use crate::line_numbers::LineNumbers;
+use crate::type_::expression::FunctionDefinition;
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{SrcSpan, TypedExpr},
@@ -15,7 +16,7 @@ use crate::{
     warning::TypeWarningEmitter,
 };
 
-use super::{Statement, TypedModule, TypedStatement};
+use super::{Publicity, Statement, TypedModule, TypedStatement};
 
 fn compile_module(src: &str) -> TypedModule {
     use crate::type_::build_prelude;
@@ -28,6 +29,7 @@ fn compile_module(src: &str) -> TypedModule {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
+    let line_numbers = LineNumbers::new(src);
     crate::analyse::infer_module::<()>(
         Target::Erlang,
         &ids,
@@ -38,6 +40,7 @@ fn compile_module(src: &str) -> TypedModule {
         &TypeWarningEmitter::null(),
         &std::collections::HashMap::new(),
         TargetSupport::Enforced,
+        line_numbers,
     )
     .expect("should successfully infer")
 }
@@ -74,7 +77,7 @@ fn compile_expression(src: &str) -> TypedStatement {
 
     // Insert a cat record to use in the tests
     let cat_type = Arc::new(Type::Named {
-        public: true,
+        publicity: Publicity::Public,
         package: "mypackage".into(),
         module: "mymod".into(),
         name: "Cat".into(),
@@ -97,14 +100,14 @@ fn compile_expression(src: &str) -> TypedStatement {
         "Cat".into(),
         variant,
         type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),
-        true,
+        Publicity::Public,
         Deprecation::NotDeprecated,
     );
 
     environment.insert_accessors(
         "Cat".into(),
         AccessorsMap {
-            public: true,
+            publicity: Publicity::Public,
             type_: cat_type,
             accessors: [
                 (
@@ -129,10 +132,10 @@ fn compile_expression(src: &str) -> TypedStatement {
     );
     ExprTyper::new(
         &mut environment,
-        Implementations {
-            gleam: false,
-            uses_erlang_externals: false,
-            uses_javascript_externals: false,
+        FunctionDefinition {
+            has_body: true,
+            has_erlang_external: false,
+            has_javascript_external: false,
         },
     )
     .infer_statements(ast)
@@ -203,7 +206,7 @@ wibble}"#,
         location: SrcSpan { start: 16, end: 22 },
         constructor: ValueConstructor {
             deprecation: Deprecation::NotDeprecated,
-            public: false,
+            publicity: Publicity::Private,
             variant: ValueConstructorVariant::LocalVariable {
                 location: SrcSpan { start: 5, end: 11 },
             },
@@ -514,7 +517,7 @@ fn find_node_bool() {
         location: SrcSpan { start: 1, end: 5 },
         constructor: ValueConstructor {
             deprecation: Deprecation::NotDeprecated,
-            public: true,
+            publicity: Publicity::Public,
             variant: ValueConstructorVariant::Record {
                 documentation: None,
                 constructors_count: 2,

@@ -1,6 +1,8 @@
 use super::*;
 
-#[test]
+use wasm_bindgen_test::wasm_bindgen_test;
+
+#[wasm_bindgen_test]
 fn test_reset_filesystem() {
     reset_filesystem(0);
     assert_eq!(read_file_bytes(0, "hello"), None);
@@ -10,7 +12,7 @@ fn test_reset_filesystem() {
     assert_eq!(read_file_bytes(0, "hello"), None);
 }
 
-#[test]
+#[wasm_bindgen_test]
 fn test_write_module() {
     reset_filesystem(0);
     assert_eq!(read_file_bytes(0, "/src/some/module.gleam"), None);
@@ -23,19 +25,19 @@ fn test_write_module() {
     assert_eq!(read_file_bytes(0, "/src/some/module.gleam"), None);
 }
 
-#[test]
+#[wasm_bindgen_test]
 fn test_compile_package_bad_target() {
     reset_filesystem(0);
     assert!(compile_package(0, "ruby").is_err());
 }
 
-#[test]
+#[wasm_bindgen_test]
 fn test_compile_package_empty() {
     reset_filesystem(0);
     assert!(compile_package(0, "javascript").is_ok());
 }
 
-#[test]
+#[wasm_bindgen_test]
 fn test_compile_package_js() {
     reset_filesystem(0);
     write_module(0, "one/two", "pub const x = 1");
@@ -73,7 +75,7 @@ export function go() {
     );
 }
 
-#[test]
+#[wasm_bindgen_test]
 fn test_warnings() {
     reset_filesystem(0);
     write_module(0, "one", "const x = 1");

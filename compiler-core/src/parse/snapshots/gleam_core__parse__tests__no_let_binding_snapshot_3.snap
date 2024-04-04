@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 476
 expression: "let bar:Int = 32\n        bar = 42"
 ---
 error: Syntax error
@@ -9,5 +10,4 @@ error: Syntax error
   │             ^ There must be a 'let' to bind variable to value
 
 Hint: Use let for binding.
-See: https://gleam.run/book/tour/let-bindings
-
+See: https://tour.gleam.run/basics/assignments/

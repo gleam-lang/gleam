@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 195
 expression: "let x = <<<<1:1>>:bytes>> x"
 ---
 error: Invalid bit array segment
@@ -9,5 +10,4 @@ error: Invalid bit array segment
   │                   ^^^^^ This option is only allowed in BitArray patterns
 
 Hint: This option has no effect in BitArray values.
-See: https://gleam.run/book/tour/bit-arrays.html
-
+See: https://tour.gleam.run/data-types/bit-arrays/

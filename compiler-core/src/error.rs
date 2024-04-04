@@ -1,6 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Runtime, Target};
 use crate::diagnostic::{Diagnostic, Label, Location};
+use crate::type_::error::RecordVariants;
 use crate::type_::error::{MissingAnnotation, UnknownTypeHint};
 use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
@@ -145,8 +146,11 @@ pub enum Error {
     #[error("{module} does not have a main function")]
     ModuleDoesNotHaveMainFunction { module: EcoString },
 
-    #[error("{module} has the wrong arity so it can not be run.")]
+    #[error("{module}'s main function has the wrong arity so it can not be run")]
     MainFunctionHasWrongArity { module: EcoString, arity: usize },
+
+    #[error("{module}'s main function does not support the current target")]
+    MainFunctionDoesNotSupportTarget { module: EcoString, target: Target },
 
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
@@ -297,7 +301,7 @@ impl Error {
                 version,
                 source,
             } => format!(
-                "An error occured while trying to retrieve dependencies of {package}@{version}: {source}",
+                "An error occurred while trying to retrieve dependencies of {package}@{version}: {source}",
             ),
 
             ResolutionError::DependencyOnTheEmptySet {
@@ -429,14 +433,175 @@ impl FileKind {
     }
 }
 
+// https://github.com/rust-lang/rust/blob/03994e498df79aa1f97f7bbcfd52d57c8e865049/compiler/rustc_span/src/edit_distance.rs
+fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
+    let mut a = &a.chars().collect::<Vec<_>>()[..];
+    let mut b = &b.chars().collect::<Vec<_>>()[..];
+
+    if a.len() < b.len() {
+        std::mem::swap(&mut a, &mut b);
+    }
+
+    let min_dist = a.len() - b.len();
+    // If we know the limit will be exceeded, we can return early.
+    if min_dist > limit {
+        return None;
+    }
+
+    // Strip common prefix.
+    while !b.is_empty() && !a.is_empty() {
+        let (b_first, b_rest) = b.split_last().expect("Failed to split 'b' slice");
+        let (a_first, a_rest) = a.split_last().expect("Failed to split 'a' slice");
+
+        if b_first == a_first {
+            a = a_rest;
+            b = b_rest;
+        } else {
+            break;
+        }
+    }
+
+    // If either string is empty, the distance is the length of the other.
+    // We know that `b` is the shorter string, so we don't need to check `a`.
+    if b.is_empty() {
+        return Some(min_dist);
+    }
+
+    let mut prev_prev = vec![usize::MAX; b.len() + 1];
+    let mut prev = (0..=b.len()).collect::<Vec<_>>();
+    let mut current = vec![0; b.len() + 1];
+
+    // row by row
+    for i in 1..=a.len() {
+        if let Some(elem) = current.get_mut(0) {
+            *elem = i;
+        }
+        let a_idx = i - 1;
+
+        // column by column
+        for j in 1..=b.len() {
+            let b_idx = j - 1;
+
+            // There is no cost to substitute a character with itself.
+            let substitution_cost = match (a.get(a_idx), b.get(b_idx)) {
+                (Some(&a_char), Some(&b_char)) => {
+                    if a_char == b_char {
+                        0
+                    } else {
+                        1
+                    }
+                }
+                _ => panic!("Index out of bounds"),
+            };
+
+            let insertion = current.get(j - 1).map_or(std::usize::MAX, |&x| x + 1);
+
+            if let Some(value) = current.get_mut(j) {
+                *value = std::cmp::min(
+                    // deletion
+                    prev.get(j).map_or(std::usize::MAX, |&x| x + 1),
+                    std::cmp::min(
+                        // insertion
+                        insertion,
+                        // substitution
+                        prev.get(j - 1)
+                            .map_or(std::usize::MAX, |&x| x + substitution_cost),
+                    ),
+                );
+            }
+
+            if (i > 1) && (j > 1) {
+                if let (Some(&a_val), Some(&b_val_prev), Some(&a_val_prev), Some(&b_val)) = (
+                    a.get(a_idx),
+                    b.get(b_idx - 1),
+                    a.get(a_idx - 1),
+                    b.get(b_idx),
+                ) {
+                    if (a_val == b_val_prev) && (a_val_prev == b_val) {
+                        // transposition
+                        if let Some(curr) = current.get_mut(j) {
+                            if let Some(&prev_prev_val) = prev_prev.get(j - 2) {
+                                *curr = std::cmp::min(*curr, prev_prev_val + 1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Rotate the buffers, reusing the memory.
+        [prev_prev, prev, current] = [prev, current, prev_prev];
+    }
+
+    // `prev` because we already rotated the buffers.
+    let distance = match prev.get(b.len()) {
+        Some(&d) => d,
+        None => std::usize::MAX,
+    };
+    (distance <= limit).then_some(distance)
+}
+
+fn edit_distance_with_substrings(a: &str, b: &str, limit: usize) -> Option<usize> {
+    let n = a.chars().count();
+    let m = b.chars().count();
+
+    // Check one isn't less than half the length of the other. If this is true then there is a
+    // big difference in length.
+    let big_len_diff = (n * 2) < m || (m * 2) < n;
+    let len_diff = if n < m { m - n } else { n - m };
+    let distance = edit_distance(a, b, limit + len_diff)?;
+
+    // This is the crux, subtracting length difference means exact substring matches will now be 0
+    let score = distance - len_diff;
+
+    // If the score is 0 but the words have different lengths then it's a substring match not a full
+    // word match
+    let score = if score == 0 && len_diff > 0 && !big_len_diff {
+        1 // Exact substring match, but not a total word match so return non-zero
+    } else if !big_len_diff {
+        // Not a big difference in length, discount cost of length difference
+        score + (len_diff + 1) / 2
+    } else {
+        // A big difference in length, add back the difference in length to the score
+        score + len_diff
+    };
+
+    (score <= limit).then_some(score)
+}
+
 fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
-    // Find best match
+    // If only one option is given, return that option.
+    // This seems to solve the `unknown_variable_3` test.
+    if options.len() == 1 {
+        return options
+            .first()
+            .map(|option| format!("Did you mean `{}`?", option));
+    }
+
+    // Check for case-insensitive matches.
+    // This solves the comparison to small and single character terms,
+    // such as the test on `type_vars_must_be_declared`.
+    if let Some(exact_match) = options
+        .iter()
+        .find(|&option| option.eq_ignore_ascii_case(name))
+    {
+        return Some(format!("Did you mean `{}`?", exact_match));
+    }
+
+    // Calculate the threshold as one third of the name's length, with a minimum of 1.
+    let threshold = std::cmp::max(name.chars().count() / 3, 1);
+
+    // Filter and sort options based on edit distance.
     options
         .iter()
         .filter(|&option| option != crate::ast::CAPTURE_VARIABLE)
         .sorted()
-        .min_by_key(|option| strsim::levenshtein(option, name))
-        .map(|option| format!("Did you mean `{option}`?"))
+        .filter_map(|option| {
+            edit_distance_with_substrings(option, name, threshold)
+                .map(|distance| (option, distance))
+        })
+        .min_by_key(|&(_, distance)| distance)
+        .map(|(option, _)| format!("Did you mean `{}`?", option))
 }
 
 impl Error {
@@ -542,6 +707,17 @@ to `src/{module}.gleam`."
                 )),
             },
 
+            Error::MainFunctionDoesNotSupportTarget { module, target } => Diagnostic {
+                title: "Target not supported".into(),
+                text: wrap_format!(
+                    "`{module}` has a main function, but it does not support the {target} \
+target, so it cannot be run."
+                ),
+                level: Level::Error,
+                location: None,
+                hint: None,
+            },
+
             Error::MainFunctionHasWrongArity { module, arity } => Diagnostic {
                 title: "Main function has wrong arity".into(),
                 text: format!(
@@ -603,13 +779,20 @@ Please remove them and try again.
                 location: None,
             },
 
-            Error::UnableToFindProjectRoot { path } => Diagnostic {
-                title: "Invalid project root".into(),
-                text: format!("We were unable to find the project root:\n\n  {path}"),
-                hint: None,
-                level: Level::Error,
-                location: None,
-            },
+            Error::UnableToFindProjectRoot { path } => {
+                let text = wrap_format!(
+                    "We were unable to find gleam.toml.
+
+We searched in {path} and all parent directories."
+                );
+                Diagnostic {
+                    title: "Project not found".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }
+            }
 
             Error::VersionDoesNotMatch { toml_ver, app_ver } => {
                 let text = format!(
@@ -1190,6 +1373,7 @@ Hint: Add some type annotations and try again."
                     typ,
                     label,
                     fields,
+                    variants,
                 } => {
                     let mut printer = Printer::new();
 
@@ -1208,6 +1392,20 @@ Hint: Add some type annotations and try again."
                     for field in fields.iter().sorted() {
                         text.push_str("\n    .");
                         text.push_str(field);
+                    }
+
+                    match variants {
+                        RecordVariants::HasVariants => {
+                            let msg = wrap(
+                                "Note: The field you are trying to \
+access might not be consistently present or positioned across the custom \
+type's variants, preventing reliable access. Ensure the field exists in the \
+same position and has the same type in all variants to enable direct accessor syntax.",
+                            );
+                            text.push_str("\n\n");
+                            text.push_str(&msg);
+                        }
+                        RecordVariants::NoVariants => (),
                     }
 
                     // Give a hint about Gleam not having OOP methods if it
@@ -1547,21 +1745,29 @@ constructing a new record with its values."
                     location,
                     variables,
                     name,
-                } => Diagnostic {
-                    title: "Unknown variable".into(),
-                    text: wrap_format!("The name `{name}` is not in scope here."),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: did_you_mean(name, variables),
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                },
+                    type_with_name_in_scope,
+                } => {
+                    let text = if *type_with_name_in_scope {
+                        wrap_format!("`{name}` is a type, it cannot be used as a value.")
+                    } else {
+                        wrap_format!("The name `{name}` is not in scope here.")
+                    };
+                    Diagnostic {
+                        title: "Unknown variable".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: did_you_mean(name, variables),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
 
                 TypeError::PrivateTypeLeak { location, leaked } => {
                     let mut printer = Printer::new();
@@ -2008,7 +2214,7 @@ allowed at the end of a bin pattern.")],
                             vec!["Hint: If you specify unit() you must also specify size().".into()],
                         ),
                     };
-                    extra.push("See: https://gleam.run/book/tour/bit-arrays.html".into());
+                    extra.push("See: https://tour.gleam.run/data-types/bit-arrays/".into());
                     let text = extra.join("\n");
                     Diagnostic {
                         title: "Invalid bit array segment".into(),
@@ -2325,7 +2531,7 @@ The missing patterns are:\n"
                 TypeError::InexhaustiveCaseExpression { location, missing } => {
                     let mut text: String =
                         "This case expression does not have a pattern for all possible values.
-If is run on one of the values without a pattern then it will crash.
+If it is run on one of the values without a pattern then it will crash.
 
 The missing patterns are:\n"
                             .into();
@@ -2350,17 +2556,49 @@ The missing patterns are:\n"
                     }
                 }
 
-                TypeError::UnsupportedTarget {
+                TypeError::UnsupportedExpressionTarget {
                     location,
                     target: current_target,
                 } => {
                     let text = wrap_format!(
                         "This value is not available as it is defined using externals, \
-and there is no implementation for the {} target.",
+and there is no implementation for the {} target.\n",
                         match current_target {
                             Target::Erlang => "Erlang",
                             Target::JavaScript => "JavaScript",
                         }
+                    );
+                    let hint = wrap("Did you mean to build for a different target?");
+                    Diagnostic {
+                        title: "Unsupported target".into(),
+                        text,
+                        hint: Some(hint),
+                        level: Level::Error,
+                        location: Some(Location {
+                            path: path.clone(),
+                            src: src.clone(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::UnsupportedPublicFunctionTarget {
+                    location,
+                    name,
+                    target,
+                } => {
+                    let target = match target {
+                        Target::Erlang => "Erlang",
+                        Target::JavaScript => "JavaScript",
+                    };
+                    let text = wrap_format!(
+                        "The `{name}` function is public but doesn't have an \
+implementation for the {target} target. All public functions of a package \
+must be able to compile for a module to be valid."
                     );
                     Diagnostic {
                         title: "Unsupported target".into(),

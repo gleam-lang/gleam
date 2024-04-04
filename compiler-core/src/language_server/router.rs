@@ -48,13 +48,23 @@ where
         }
     }
 
+    pub fn project_path(&self, path: &Utf8Path) -> Option<Utf8PathBuf> {
+        find_gleam_project_parent(&self.io, path)
+    }
+
     pub fn project_for_path(
         &mut self,
-        path: &Utf8Path,
+        path: Utf8PathBuf,
     ) -> Result<Option<&mut Project<IO, Reporter>>> {
-        let path = match find_gleam_project_parent(&self.io, path) {
-            Some(x) => x,
-            None => return Ok(None),
+        // If the path is the root of a known project then return it. Otherwise
+        // find the nearest parent project.
+        let path = if self.engines.contains_key(&path) {
+            path
+        } else {
+            let Some(path) = find_gleam_project_parent(&self.io, &path) else {
+                return Ok(None);
+            };
+            path
         };
 
         let entry = match self.engines.entry(path.clone()) {
@@ -104,6 +114,12 @@ where
 {
     let is_module = path.extension().map(|x| x == "gleam").unwrap_or(false);
     let mut directory = path.to_path_buf();
+
+    // If we are finding the gleam project of a directory then we want to check the directory itself
+    let is_directory = path.extension().is_none();
+    if is_directory {
+        directory.push("src");
+    }
 
     while let Some(root) = directory.parent() {
         // If there's no gleam.toml in the root then we continue to the next parent.
@@ -155,6 +171,16 @@ mod find_gleam_project_parent_tests {
         io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
         assert_eq!(
             find_gleam_project_parent(&io, Utf8Path::new("/app/gleam.toml")),
+            Some(Utf8PathBuf::from("/app"))
+        );
+    }
+
+    #[test]
+    fn directory_with_gleam_toml() {
+        let io = InMemoryFileSystem::new();
+        io.write(Utf8Path::new("/app/gleam.toml"), "").unwrap();
+        assert_eq!(
+            find_gleam_project_parent(&io, Utf8Path::new("/app")),
             Some(Utf8PathBuf::from("/app"))
         );
     }

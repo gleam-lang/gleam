@@ -34,7 +34,7 @@ pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
     let current_dir = get_project_root(get_current_directory()?)?;
 
     tracing::info!("Compiling packages");
-    let compiled = {
+    let result = {
         let _guard = lock.lock(telemetry.as_ref());
         let compiler = ProjectCompiler::new(
             root_config,
@@ -52,5 +52,6 @@ pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
         Codegen::All | Codegen::DepsOnly => cli::print_compiled(start.elapsed()),
         Codegen::None => cli::print_checked(start.elapsed()),
     };
-    Ok(compiled)
+
+    Ok(result)
 }

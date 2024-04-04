@@ -4,7 +4,6 @@ use crate::{
     pretty::{nil, *},
 };
 use ecow::EcoString;
-use itertools::Itertools;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -145,10 +144,10 @@ impl Printer {
             return nil();
         }
 
-        let args = concat(Itertools::intersperse(
+        let args = join(
             args.iter().map(|t| self.print(t).group()),
             break_(",", ", "),
-        ));
+        );
         break_("", "")
             .append(args)
             .nest(INDENT)
@@ -259,7 +258,7 @@ fn pretty_print_test() {
             module: "whatever".into(),
             package: "whatever".into(),
             name: "Int".into(),
-            public: true,
+            publicity: Publicity::Public,
             args: vec![],
         },
         "Int",
@@ -269,20 +268,20 @@ fn pretty_print_test() {
             module: "themodule".into(),
             package: "whatever".into(),
             name: "Pair".into(),
-            public: true,
+            publicity: Publicity::Public,
             args: vec![
                 Arc::new(Type::Named {
                     module: "whatever".into(),
                     package: "whatever".into(),
                     name: "Int".into(),
-                    public: true,
+                    publicity: Publicity::Public,
                     args: vec![],
                 }),
                 Arc::new(Type::Named {
                     module: "whatever".into(),
                     package: "whatever".into(),
                     name: "Bool".into(),
-                    public: true,
+                    publicity: Publicity::Public,
                     args: vec![],
                 }),
             ],
@@ -297,14 +296,14 @@ fn pretty_print_test() {
                     module: "whatever".into(),
                     package: "whatever".into(),
                     name: "Int".into(),
-                    public: true,
+                    publicity: Publicity::Public,
                 }),
                 Arc::new(Type::Named {
                     args: vec![],
                     module: "whatever".into(),
                     package: "whatever".into(),
                     name: "Bool".into(),
-                    public: true,
+                    publicity: Publicity::Public,
                 }),
             ],
             retrn: Arc::new(Type::Named {
@@ -312,7 +311,7 @@ fn pretty_print_test() {
                 module: "whatever".into(),
                 package: "whatever".into(),
                 name: "Bool".into(),
-                public: true,
+                publicity: Publicity::Public,
             }),
         },
         "fn(Int, Bool) -> Bool",
@@ -325,7 +324,7 @@ fn pretty_print_test() {
                     module: "whatever".into(),
                     package: "whatever".into(),
                     name: "Int".into(),
-                    public: true,
+                    publicity: Publicity::Public,
                 }),
             })),
         },

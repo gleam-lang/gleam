@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nfn main() {\n    let <<b1, pub>> = <<24, 3>>\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:15
+  │
+3 │     let <<b1, pub>> = <<24, 3>>
+  │               ^^^ I was not expecting this
+
+Expected one of: 
+">>"
+a bit array segment pattern

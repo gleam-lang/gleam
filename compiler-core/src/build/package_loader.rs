@@ -217,6 +217,10 @@ where
             loader.source_directory = &test;
 
             for path in self.io.gleam_source_files(&test) {
+                if !self.is_gleam_path(&path, &test) {
+                    self.warnings.emit(crate::Warning::InvalidSource { path });
+                    continue;
+                }
                 let input = loader.load(path)?;
                 inputs.insert(input)?;
             }

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 69
 expression: "let x = <<1:int-bytes>> x"
 ---
 error: Invalid bit array segment
@@ -9,5 +10,4 @@ error: Invalid bit array segment
   │                 ^^^^^ This is an extra type specifier
 
 Hint: This segment already has the type int.
-See: https://gleam.run/book/tour/bit-arrays.html
-
+See: https://tour.gleam.run/data-types/bit-arrays/
