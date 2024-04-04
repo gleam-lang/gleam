@@ -188,32 +188,11 @@ where
                 None => return Ok(None),
             };
 
-            // Check current file contents if the user is writing an import
+            // Check current filercontents if the user is writing an import
             // and handle separately from the rest of the completion flow
             // Check if an import is being written
-            {
-                let line_num = LineNumbers::new(src.as_str());
-                let start_of_line = line_num.byte_index(params.position.line, 0);
-                let end_of_line = line_num.byte_index(params.position.line + 1, 0);
-
-                // Check if the line starts with "import"
-                let from_ind = &src.get(start_of_line as usize..end_of_line as usize);
-                if let Some(from_ind) = from_ind {
-                    if from_ind.starts_with("import") {
-                        // Find where to start and end the import completion
-                        let start = line_num.line_and_column_number(start_of_line);
-                        let end = line_num.line_and_column_number(end_of_line - 1);
-                        let start = lsp::Position {
-                            line: start.line - 1,
-                            character: start.column + 6,
-                        };
-                        let end = lsp::Position {
-                            line: end.line - 1,
-                            character: end.column,
-                        };
-                        return Ok(Some(this.completion_imports(module, start, end)));
-                    }
-                }
+            if let Some(value) = this.import_completions(src, &params, module) {
+                return value;
             }
 
             let line_numbers = LineNumbers::new(&module.code);
@@ -481,7 +460,37 @@ where
         completions
     }
 
-    fn completion_imports<'b>(
+    fn import_completions<'b>(
+        &'b self,
+        src: EcoString,
+        params: &lsp::TextDocumentPositionParams,
+        module: &'b Module,
+    ) -> Option<Result<Option<Vec<lsp::CompletionItem>>>> {
+        let line_num = LineNumbers::new(src.as_str());
+        let start_of_line = line_num.byte_index(params.position.line, 0);
+        let end_of_line = line_num.byte_index(params.position.line + 1, 0);
+
+        // Drop all lines before the line the cursor is on
+        let Some(src) = &src.get(start_of_line as usize..) else {
+            return None;
+        };
+
+        // If this isn't an import line then we don't offer import completions
+        if !src.trim_start().starts_with("import") {
+            return None;
+        }
+
+        // Find where to start and end the import completion
+        let start = line_num.line_and_column_number(start_of_line);
+        let end = line_num.line_and_column_number(end_of_line - 1);
+        let start = lsp::Position::new(start.line - 1, start.column + 6);
+        let end = lsp::Position::new(end.line - 1, end.column);
+        let completions = self.complete_modules_for_import(module, start, end);
+
+        return Some(Ok(Some(completions)));
+    }
+
+    fn complete_modules_for_import<'b>(
         &'b self,
         module: &'b Module,
         start: lsp::Position,

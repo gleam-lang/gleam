@@ -1218,3 +1218,37 @@ pub fn main() {
         }]
     );
 }
+
+#[test]
+fn completions_for_an_import_preceeding_whitespace() {
+    let code = " import gleam
+
+pub fn main() {
+  0
+}";
+    let dep = "";
+
+    assert_eq!(
+        Completions::for_source(code)
+            .add_dep_module("dep", dep)
+            .at(Position::new(0, 2)),
+        vec![CompletionItem {
+            label: "dep".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 14
+                    }
+                },
+                new_text: "dep".into()
+            })),
+            ..Default::default()
+        }]
+    );
+}
