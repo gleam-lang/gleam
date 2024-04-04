@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub fn main() {\n        case #(1, 2) {\n            _ -> Nil\n        }\n      }"
+---
+warning: Redundant tuple
+  ┌─ /src/warning/wrn.gleam:2:14
+  │
+2 │         case #(1, 2) {
+  │              ^^^^^^^ You can remove this tuple wrapper
+
+Case expressions can take multiple subjects directly.
+Hint: You can pass the contents of the tuple directly, separated by commas.

@@ -1,6 +1,7 @@
 mod action;
 mod compilation;
 mod completion;
+mod definition;
 mod hover;
 
 use std::{
@@ -12,6 +13,7 @@ use std::{
 use hexpm::version::Version;
 
 use camino::{Utf8Path, Utf8PathBuf};
+use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
 
 use crate::{
     config::PackageConfig,
@@ -287,7 +289,7 @@ fn add_package_from_manifest<B>(
     );
 
     _ = compiler.packages.insert(package.name.to_string(), package);
-    _ = compiler.io.write(toml_path.as_path(), &toml).unwrap();
+    compiler.io.write(toml_path.as_path(), &toml).unwrap();
 }
 
 fn add_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, name: &str) {
@@ -325,4 +327,36 @@ fn setup_engine(
         io.paths.clone(),
     )
     .unwrap()
+}
+
+// Helper for position tests to create a LanguageServerEngine and TextDocumentPositionParams with the right location & path
+fn positioned_with_io(
+    src: &str,
+    position: Position,
+    io: &LanguageServerTestIO,
+) -> (
+    LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
+    TextDocumentPositionParams,
+) {
+    let mut engine = setup_engine(io);
+
+    let _ = io.src_module("app", src);
+    for package in &io.manifest.packages {
+        add_package_from_manifest(&mut engine, package.clone());
+    }
+    let response = engine.compile_please();
+    assert!(response.result.is_ok());
+
+    let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
+        r"\\?\C:\src\app.gleam"
+    } else {
+        "/src/app.gleam"
+    });
+
+    let url = Url::from_file_path(path).unwrap();
+
+    (
+        engine,
+        TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position),
+    )
 }

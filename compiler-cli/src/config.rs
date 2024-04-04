@@ -15,13 +15,19 @@ pub fn root_config() -> Result<PackageConfig, Error> {
     read(paths.root_config())
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum PackageKind {
+    Dependency,
+    Root,
+}
+
 /// Get the config for a dependency module. Return the config for the current
 /// project if a dependency doesn't have a config file.
 pub fn find_package_config_for_module(
     mod_path: &str,
     manifest: &Manifest,
     project_paths: &ProjectPaths,
-) -> Result<PackageConfig, Error> {
+) -> Result<(PackageConfig, PackageKind), Error> {
     for package in &manifest.packages {
         // Not a Gleam package
         if !package.build_tools.contains(&"gleam".into()) {
@@ -37,10 +43,11 @@ pub fn find_package_config_for_module(
             continue;
         }
 
-        return read(root.join("gleam.toml"));
+        let configuration = read(root.join("gleam.toml"))?;
+        return Ok((configuration, PackageKind::Dependency));
     }
 
-    root_config()
+    Ok((root_config()?, PackageKind::Root))
 }
 
 fn package_root(package: &ManifestPackage, project_paths: &ProjectPaths) -> Utf8PathBuf {

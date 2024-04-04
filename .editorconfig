@@ -1,6 +1,26 @@
+# EditorConfig helps developers define and maintain consistent
+# coding styles between different editors and IDEs
+# editorconfig.org
+
 # top-most EditorConfig file
 root = true
 
-[*.html]
+# Matches multiple files with brace expansion notation
+# Set default charset
+[*]
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
 indent_style = space
 indent_size = 2
+
+[*.{rs, gleam, erl, hrl, ex, mjs, js, ts, sh}]
+max_line_length = 80
+
+[*.{rs, .erl, .hrl}]
+indent_size = 4
+
+[Makefile]
+indent_style = tab
+indent_size = 4

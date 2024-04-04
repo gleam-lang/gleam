@@ -17,7 +17,7 @@ jobs:
       should_run: ${{ steps.should_run.outputs.should_run }}
     if: ${{ github.repository_owner == 'gleam-lang' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: print latest_commit
         run: echo ${{ github.sha }}
 
@@ -77,7 +77,7 @@ jobs:
             use-cross: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Update versions
         shell: bash
@@ -156,11 +156,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload x86_64-unknown-linux-musl artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: gleam
           path: target/${{ matrix.target }}/release/gleam
-          if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+          overwrite: true
+        if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
 
   build-nightly-container-images:
     runs-on: ubuntu-latest
@@ -181,26 +182,26 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Download Gleam binary from previous job
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: gleam
           path: ./
 
       - name: Authenticate with GitHub container registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: lpil
           password: ${{ secrets.CONTAINER_REGISTRY_PERSONAL_ACCESS_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: containers/${{ matrix.base-image }}.dockerfile

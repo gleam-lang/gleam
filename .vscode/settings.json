@@ -9,5 +9,25 @@
 
     // Images
     "images/**": true
-  }
+  },
+  "cSpell.words": [
+    "camino",
+    "cksum",
+    "codegen",
+    "ecow",
+    "flate",
+    "hardlinking",
+    "HEXPM",
+    "insta",
+    "itertools",
+    "NOCOLOUR",
+    "reqwest",
+    "rustfmt",
+    "subpackage",
+    "Telem",
+    "Unretire",
+    "Untar",
+    "walkdir"
+  ],
+  "cSpell.language": "en,uk,en-GB,en-US"
 }

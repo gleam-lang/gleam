@@ -58,11 +58,12 @@ use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
     CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, HasLocation, Import,
-    Module, ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread,
-    SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst, TypeAstConstructor,
-    TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause,
-    UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule,
-    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
+    Module, ModuleConstant, Pattern, Publicity, RecordConstructor, RecordConstructorArg,
+    RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
+    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport,
+    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
+    UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment,
+    CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -86,12 +87,35 @@ pub struct Parsed {
     pub extra: ModuleExtra,
 }
 
+/// We use this to keep track of the `@internal` annotation for top level
+/// definitions. Instead of using just a boolean we want to keep track of the
+/// source position of the annotation in case it is present. This way we can
+/// report a better error message highlighting the annotation in case it is
+/// used on a private definition (it doesn't make sense to mark something
+/// private as internal):
+///
+/// ```txt
+/// @internal
+/// ^^^^^^^^^ we first get to the annotation
+/// fn wibble() {}
+/// ^^ and only later discover it's applied on a private definition
+///    so we have to keep track of the attribute's position to highlight it
+///    in the resulting error message.
+/// ```
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum InternalAttribute {
+    #[default]
+    Missing,
+    Present(SrcSpan),
+}
+
 #[derive(Debug, Default)]
 struct Attributes {
     target: Option<Target>,
     deprecated: Deprecation,
     external_erlang: Option<(EcoString, EcoString)>,
     external_javascript: Option<(EcoString, EcoString)>,
+    internal: InternalAttribute,
 }
 
 impl Attributes {
@@ -168,8 +192,8 @@ where
             extra: ModuleExtra::new(),
             doc_comments: VecDeque::new(),
         };
-        let _ = parser.next_tok();
-        let _ = parser.next_tok();
+        parser.advance();
+        parser.advance();
         parser
     }
 
@@ -200,7 +224,7 @@ where
         let parse_result = self.ensure_no_errors(parse_result)?;
         if let Some((start, _, end)) = self.next_tok() {
             // there are still more tokens
-            let expected = vec!["An import, const, type, if block, or function.".into()];
+            let expected = vec!["An import, const, type, or function.".into()];
             return parse_error(
                 ParseErrorType::UnexpectedToken {
                     expected,
@@ -460,7 +484,8 @@ where
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elems =
                     Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
-                let (_, end) = self.expect_one(&Token::RightParen)?;
+                let (_, end) =
+                    self.expect_one_following_series(&Token::RightParen, "an expression")?;
                 UntypedExpr::Tuple {
                     location: SrcSpan { start, end },
                     elems,
@@ -474,30 +499,58 @@ where
                     Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
 
                 // Parse an optional tail
-                let mut spread_given = false;
                 let mut tail = None;
-                if self.maybe_one(&Token::DotDot).is_some() {
-                    spread_given = true;
+                let mut elements_after_tail = None;
+                let mut dot_dot_location = None;
+                if let Some(location) = self.maybe_one(&Token::DotDot) {
+                    dot_dot_location = Some(location);
                     tail = self.parse_expression()?.map(Box::new);
-                    let _ = self.maybe_one(&Token::Comma);
+
+                    if self.maybe_one(&Token::Comma).is_some() {
+                        // See if there's a list of items after the tail,
+                        // like `[..wibble, wobble, wabble]`
+                        let elements =
+                            Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma));
+                        match elements {
+                            Err(_) => {}
+                            Ok(elements) => {
+                                elements_after_tail = Some(elements);
+                            }
+                        };
+                    };
                 }
+
                 let (_, end) = self.expect_one(&Token::RightSquare)?;
 
                 // Return errors for malformed lists
-                if spread_given && tail.is_none() {
-                    return parse_error(
-                        ParseErrorType::ListSpreadWithoutTail,
-                        SrcSpan {
-                            start: end - 1,
-                            end,
-                        },
-                    );
+                match dot_dot_location {
+                    Some((start, end)) if tail.is_none() => {
+                        return parse_error(
+                            ParseErrorType::ListSpreadWithoutTail,
+                            SrcSpan { start, end },
+                        );
+                    }
+                    _ => {}
                 }
                 if tail.is_some() && elements.is_empty() {
                     return parse_error(
                         ParseErrorType::ListSpreadWithoutElements,
                         SrcSpan { start, end },
                     );
+                }
+
+                match elements_after_tail {
+                    Some(elements) if !elements.is_empty() => {
+                        let (start, end) = match (dot_dot_location, tail) {
+                            (Some((start, _)), Some(tail)) => (start, tail.location().end),
+                            (_, _) => (start, end),
+                        };
+                        return parse_error(
+                            ParseErrorType::ListSpreadFollowedByElements,
+                            SrcSpan { start, end },
+                        );
+                    }
+                    _ => {}
                 }
 
                 UntypedExpr::List {
@@ -522,7 +575,8 @@ where
                     },
                     Some(&Token::Comma),
                 )?;
-                let (_, end) = self.expect_one(&Token::GtGt)?;
+                let (_, end) =
+                    self.expect_one_following_series(&Token::GtGt, "a bit array segment")?;
                 UntypedExpr::BitArray {
                     location: SrcSpan { start, end },
                     segments,
@@ -565,9 +619,10 @@ where
                 self.advance();
                 let subjects =
                     Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
-                let _ = self.expect_one(&Token::LeftBrace)?;
+                let _ = self.expect_one_following_series(&Token::LeftBrace, "an expression")?;
                 let clauses = Parser::series_of(self, &Parser::parse_case_clause, None)?;
-                let (_, end) = self.expect_one(&Token::RightBrace)?;
+                let (_, end) =
+                    self.expect_one_following_series(&Token::RightBrace, "a case clause")?;
                 if subjects.is_empty() {
                     return parse_error(
                         ParseErrorType::ExpectedExpr,
@@ -759,7 +814,7 @@ where
             Parser::series_of(self, &Parser::parse_use_assignment, Some(&Token::Comma))?
         };
 
-        _ = self.expect_one(&Token::LArrow)?;
+        _ = self.expect_one_following_series(&Token::LArrow, "a use variable assignment")?;
         let call = self.expect_expression()?;
 
         Ok(Statement::Use(Use {
@@ -904,7 +959,21 @@ where
                 }
 
                 if self.maybe_one(&Token::Dot).is_some() {
-                    self.expect_constructor_pattern(Some((start, name, end)))?
+                    // We're doing this to get a better error message instead of a generic
+                    // `I was expecting a type`, you can have a look at this issue to get
+                    // a better idea: https://github.com/gleam-lang/gleam/issues/2841.
+                    match self.expect_constructor_pattern(Some((start, name, end))) {
+                        Ok(result) => result,
+                        Err(ParseError {
+                            location: SrcSpan { end, .. },
+                            ..
+                        }) => {
+                            return parse_error(
+                                ParseErrorType::InvalidModuleTypePattern,
+                                SrcSpan { start, end },
+                            )
+                        }
+                    }
                 } else {
                     match name.as_str() {
                         "true" | "false" => {
@@ -1036,7 +1105,7 @@ where
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elems = Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
-                let (_, end) = self.expect_one(&Token::RightParen)?;
+                let (_, end) = self.expect_one_following_series(&Token::RightParen, "a pattern")?;
                 Pattern::Tuple {
                     location: SrcSpan { start, end },
                     elems,
@@ -1062,7 +1131,8 @@ where
                     },
                     Some(&Token::Comma),
                 )?;
-                let (_, end) = self.expect_one(&Token::GtGt)?;
+                let (_, end) =
+                    self.expect_one_following_series(&Token::GtGt, "a bit array segment pattern")?;
                 Pattern::BitArray {
                     location: SrcSpan { start, end },
                     segments,
@@ -1081,7 +1151,8 @@ where
                 } else {
                     None
                 };
-                let (end, rsqb_e) = self.expect_one(&Token::RightSquare)?;
+                let (end, rsqb_e) =
+                    self.expect_one_following_series(&Token::RightSquare, "a pattern")?;
                 let tail = match tail {
                     // There is a tail and it has a Pattern::Var or Pattern::Discard
                     Some(Some(pat @ (Pattern::Variable { .. } | Pattern::Discard { .. }))) => {
@@ -1493,7 +1564,8 @@ where
             &|parser| Parser::parse_fn_param(parser, is_anon),
             Some(&Token::Comma),
         )?;
-        let (_, rpar_e) = self.expect_one(&Token::RightParen)?;
+        let (_, rpar_e) =
+            self.expect_one_following_series(&Token::RightParen, "a function parameter")?;
         let return_annotation = self.parse_type_annotation(&Token::RArrow)?;
 
         let (body, end, end_position) = match self.maybe_one(&Token::LeftBrace) {
@@ -1535,7 +1607,7 @@ where
             documentation,
             location: SrcSpan { start, end },
             end_position,
-            public,
+            publicity: self.publicity(public, attributes.internal)?,
             name,
             arguments: args,
             body,
@@ -1546,10 +1618,28 @@ where
             external_javascript: attributes.external_javascript.take(),
             implementations: Implementations {
                 gleam: true,
+                can_run_on_erlang: true,
+                can_run_on_javascript: true,
                 uses_erlang_externals: false,
                 uses_javascript_externals: false,
             },
         })))
+    }
+
+    fn publicity(
+        &self,
+        public: bool,
+        internal: InternalAttribute,
+    ) -> Result<Publicity, ParseError> {
+        match (internal, public) {
+            (InternalAttribute::Missing, true) => Ok(Publicity::Public),
+            (InternalAttribute::Missing, false) => Ok(Publicity::Private),
+            (InternalAttribute::Present(_), true) => Ok(Publicity::Internal),
+            (InternalAttribute::Present(location), false) => Err(ParseError {
+                error: ParseErrorType::RedundantInternalAttribute,
+                location,
+            }),
+        }
     }
 
     // Parse a single function definition param
@@ -1733,7 +1823,8 @@ where
                 // No separator
                 None,
             )?;
-            let (_, close_end) = self.expect_one(&Token::RightBrace)?;
+            let (_, close_end) =
+                self.expect_one_following_series(&Token::RightBrace, "a record constructor")?;
             (constructors, close_end)
         } else if let Some((eq_s, eq_e)) = self.maybe_one(&Token::Equal) {
             // Type Alias
@@ -1746,7 +1837,7 @@ where
                 return Ok(Some(Definition::TypeAlias(TypeAlias {
                     documentation,
                     location: SrcSpan::new(start, type_end),
-                    public,
+                    publicity: self.publicity(public, attributes.internal)?,
                     alias: name,
                     parameters,
                     type_ast: t,
@@ -1763,7 +1854,7 @@ where
             documentation,
             location: SrcSpan { start, end },
             end_position,
-            public,
+            publicity: self.publicity(public, attributes.internal)?,
             opaque,
             name,
             parameters,
@@ -1781,7 +1872,7 @@ where
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args =
                 Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Token::Comma))?;
-            let (_, par_e) = self.expect_one(&Token::RightParen)?;
+            let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
             let args2 = args.into_iter().map(|(_, a, _)| a).collect();
             Ok((start, upname, args2, par_e))
         } else {
@@ -1803,13 +1894,14 @@ where
                     (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                         let _ = Parser::next_tok(p);
                         let _ = Parser::next_tok(p);
+                        let doc = p.take_documentation(start);
                         match Parser::parse_type(p)? {
                             Some(type_ast) => Ok(Some(RecordConstructorArg {
                                 label: Some(name),
                                 ast: type_ast,
                                 location: SrcSpan { start, end },
                                 type_: (),
-                                doc: None,
+                                doc,
                             })),
                             None => {
                                 parse_error(ParseErrorType::ExpectedType, SrcSpan { start, end })
@@ -1821,13 +1913,17 @@ where
                         p.tok1 = t1;
                         match Parser::parse_type(p)? {
                             Some(type_ast) => {
+                                let doc = match &p.tok0 {
+                                    Some((start, _, _)) => p.take_documentation(*start),
+                                    None => None,
+                                };
                                 let type_location = type_ast.location();
                                 Ok(Some(RecordConstructorArg {
                                     label: None,
                                     ast: type_ast,
                                     location: type_location,
                                     type_: (),
-                                    doc: None,
+                                    doc,
                                 }))
                             }
                             None => Ok(None),
@@ -1836,7 +1932,8 @@ where
                 },
                 Some(&Token::Comma),
             )?;
-            let (_, end) = self.expect_one(&Token::RightParen)?;
+            let (_, end) = self
+                .expect_one_following_series(&Token::RightParen, "a constructor argument name")?;
             Ok((args, end))
         } else {
             Ok((vec![], 0))
@@ -1893,7 +1990,7 @@ where
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let args =
                     Parser::series_of(self, &|x| Parser::parse_type(x), Some(&Token::Comma))?;
-                let _ = self.expect_one(&Token::RightParen)?;
+                let _ = self.expect_one_following_series(&Token::RightParen, "a type")?;
                 let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
                 let retrn = self.parse_type()?;
                 if let Some(retrn) = retrn {
@@ -2152,7 +2249,7 @@ where
             Ok(Some(Definition::ModuleConstant(ModuleConstant {
                 documentation,
                 location: SrcSpan { start, end },
-                public,
+                publicity: self.publicity(public, attributes.internal)?,
                 name,
                 annotation,
                 value: Box::new(value),
@@ -2160,6 +2257,8 @@ where
                 deprecation: attributes.deprecated.clone(),
                 implementations: Implementations {
                     gleam: true,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
                     uses_erlang_externals: false,
                     uses_javascript_externals: false,
                 },
@@ -2211,7 +2310,8 @@ where
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elements =
                     Parser::series_of(self, &Parser::parse_const_value, Some(&Token::Comma))?;
-                let (_, end) = self.expect_one(&Token::RightParen)?;
+                let (_, end) =
+                    self.expect_one_following_series(&Token::RightParen, "a constant value")?;
                 Ok(Some(Constant::Tuple {
                     elements,
                     location: SrcSpan { start, end },
@@ -2222,7 +2322,8 @@ where
                 self.advance();
                 let elements =
                     Parser::series_of(self, &Parser::parse_const_value, Some(&Token::Comma))?;
-                let (_, end) = self.expect_one(&Token::RightSquare)?;
+                let (_, end) =
+                    self.expect_one_following_series(&Token::RightSquare, "a constant value")?;
                 Ok(Some(Constant::List {
                     elements,
                     location: SrcSpan { start, end },
@@ -2244,7 +2345,8 @@ where
                     },
                     Some(&Token::Comma),
                 )?;
-                let (_, end) = self.expect_one(&Token::GtGt)?;
+                let (_, end) =
+                    self.expect_one_following_series(&Token::GtGt, "a bit array segment")?;
                 Ok(Some(Constant::BitArray {
                     location: SrcSpan { start, end },
                     segments,
@@ -2332,7 +2434,8 @@ where
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args =
                 Parser::series_of(self, &Parser::parse_const_record_arg, Some(&Token::Comma))?;
-            let (_, par_e) = self.expect_one(&Token::RightParen)?;
+            let (_, par_e) =
+                self.expect_one_following_series(&Token::RightParen, "a constant record argument")?;
             Ok(Some(Constant::Record {
                 location: SrcSpan { start, end: par_e },
                 module,
@@ -2517,7 +2620,7 @@ where
             // invalid
             _ => self.next_tok_unexpected(vec![
                 "A valid bit array segment type".into(),
-                "See: https://gleam.run/book/tour/bit-arrays.html".into(),
+                "See: https://tour.gleam.run/data-types/bit-arrays/".into(),
             ]),
         }
     }
@@ -2573,6 +2676,19 @@ where
         match self.maybe_one(wanted) {
             Some((start, end)) => Ok((start, end)),
             None => self.next_tok_unexpected(vec![wanted.to_string().into()]),
+        }
+    }
+
+    // Expect a particular token after having parsed a series, advances the token stream
+    // Used for giving a clearer error message in cases where the series item is what failed to parse
+    fn expect_one_following_series(
+        &mut self,
+        wanted: &Token,
+        series: &'static str,
+    ) -> Result<(u32, u32), ParseError> {
+        match self.maybe_one(wanted) {
+            Some((start, end)) => Ok((start, end)),
+            None => self.next_tok_unexpected(vec![wanted.to_string().into(), series.into()]),
         }
     }
 
@@ -2844,12 +2960,21 @@ where
         // Parse the name of the attribute.
 
         let (_, name, end) = self.expect_name()?;
-        let _ = self.expect_one(&Token::LeftParen)?;
 
         let end = match name.as_str() {
-            "external" => self.parse_external_attribute(start, end, attributes),
-            "target" => self.parse_target_attribute(start, end, attributes),
-            "deprecated" => self.parse_deprecated_attribute(start, end, attributes),
+            "external" => {
+                let _ = self.expect_one(&Token::LeftParen)?;
+                self.parse_external_attribute(start, end, attributes)
+            }
+            "target" => {
+                let _ = self.expect_one(&Token::LeftParen)?;
+                self.parse_target_attribute(start, end, attributes)
+            }
+            "deprecated" => {
+                let _ = self.expect_one(&Token::LeftParen)?;
+                self.parse_deprecated_attribute(start, end, attributes)
+            }
+            "internal" => self.parse_internal_attribute(start, end, attributes),
             _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan { start, end }),
         }?;
 
@@ -2928,6 +3053,26 @@ where
         let (_, end) = self.expect_one(&Token::RightParen)?;
         attributes.deprecated = Deprecation::Deprecated { message };
         Ok(end)
+    }
+
+    fn parse_internal_attribute(
+        &mut self,
+        start: u32,
+        end: u32,
+        attributes: &mut Attributes,
+    ) -> Result<u32, ParseError> {
+        match attributes.internal {
+            // If `internal` is present that means that we have already run into
+            // another `@internal` annotation, so it results in a `DuplicateAttribute`
+            // error.
+            InternalAttribute::Present(_) => {
+                parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end))
+            }
+            InternalAttribute::Missing => {
+                attributes.internal = InternalAttribute::Present(SrcSpan::new(start, end));
+                Ok(end)
+            }
+        }
     }
 }
 

@@ -1,5 +1,8 @@
 use crate::{
-    analyse::TargetSupport, ast::PIPE_VARIABLE, build::Target, uid::UniqueIdGenerator,
+    analyse::TargetSupport,
+    ast::{Publicity, PIPE_VARIABLE},
+    build::Target,
+    uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
 };
 
@@ -194,7 +197,7 @@ impl<'a> Environment<'a> {
             name,
             ValueConstructor {
                 deprecation: Deprecation::NotDeprecated,
-                public: false,
+                publicity: Publicity::Private,
                 variant: ValueConstructorVariant::LocalVariable { location },
                 type_: typ,
             },
@@ -211,7 +214,7 @@ impl<'a> Environment<'a> {
             name,
             ValueConstructor {
                 deprecation: Deprecation::NotDeprecated,
-                public: false,
+                publicity: Publicity::Private,
                 variant: ValueConstructorVariant::LocalConstant {
                     literal: literal.clone(),
                 },
@@ -227,13 +230,13 @@ impl<'a> Environment<'a> {
         name: EcoString,
         variant: ValueConstructorVariant,
         typ: Arc<Type>,
-        public: bool,
+        publicity: Publicity,
         deprecation: Deprecation,
     ) {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
-                public,
+                publicity,
                 deprecation,
                 variant,
                 type_: typ,
@@ -391,13 +394,14 @@ impl<'a> Environment<'a> {
         name: &EcoString,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
-            None => self
-                .scope
-                .get(name)
-                .ok_or_else(|| UnknownValueConstructorError::Variable {
+            None => self.scope.get(name).ok_or_else(|| {
+                let type_with_name_in_scope = self.module_types.keys().any(|typ| typ == name);
+                UnknownValueConstructorError::Variable {
                     name: name.clone(),
                     variables: self.local_value_names(),
-                }),
+                    type_with_name_in_scope,
+                }
+            }),
 
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
@@ -432,7 +436,7 @@ impl<'a> Environment<'a> {
     ) -> Arc<Type> {
         match t.deref() {
             Type::Named {
-                public,
+                publicity,
                 name,
                 package,
                 module,
@@ -443,7 +447,7 @@ impl<'a> Environment<'a> {
                     .map(|t| self.instantiate(t.clone(), ids, hydrator))
                     .collect();
                 Arc::new(Type::Named {
-                    public: *public,
+                    publicity: *publicity,
                     name: name.clone(),
                     package: package.clone(),
                     module: module.clone(),
@@ -502,7 +506,7 @@ impl<'a> Environment<'a> {
         {
             // Private types can be shadowed by a constructor with the same name
             //
-            // TODO: Improve this so that we can tell if an imported overriden
+            // TODO: Improve this so that we can tell if an imported overridden
             // type is actually used or not by tracking whether usages apply to
             // the value or type scope
             Some((ImportedType | PrivateType, _, _)) => {}

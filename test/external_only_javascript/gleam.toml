@@ -1,0 +1,8 @@
+name = "external_only_javascript"
+version = "1.0.0"
+target = "javascript"
+
+[dependencies]
+hello_joe = "~> 1.0"
+
+[dev-dependencies]

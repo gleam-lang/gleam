@@ -713,6 +713,8 @@ pub struct DenoConfig {
     pub allow_all: bool,
     #[serde(default)]
     pub unstable: bool,
+    #[serde(default, deserialize_with = "uri_serde::deserialize_option")]
+    pub location: Option<Uri>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -815,6 +817,20 @@ mod uri_serde {
             return Err(D::Error::custom("uri without scheme"));
         }
         Ok(uri)
+    }
+
+    pub fn deserialize_option<'de, D>(deserializer: D) -> Result<Option<http::Uri>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let string: Option<String> = Option::deserialize(deserializer)?;
+        match string {
+            Some(s) => {
+                let deserializer = serde::de::value::StringDeserializer::new(s);
+                deserialize(deserializer).map(Some)
+            }
+            None => Ok(None),
+        }
     }
 }
 

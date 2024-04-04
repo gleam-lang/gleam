@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -13,10 +14,18 @@ env:
   CARGO_PROFILE_TEST_DEBUG: 0
   CROSS_CONTAINER_UID: 0
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: test
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -46,8 +55,13 @@ jobs:
             target: aarch64-unknown-linux-musl
             use-cross: true
             run-integration-tests: false # Cannot run aarch64 binaries on x86_64
-          - os: macos-latest
+          - os: macos-12  # intel
             target: x86_64-apple-darwin
+            use-cross: false
+            run-integration-tests: true
+          - os: macos-14  # aarch64
+            toolchain: stable
+            target: aarch64-apple-darwin
             use-cross: false
             run-integration-tests: true
           - os: windows-latest
@@ -56,7 +70,7 @@ jobs:
             run-integration-tests: true
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install musl-tools incl. musl-gcc
         uses: awalsh128/cache-apt-pkgs-action@v1
@@ -76,18 +90,18 @@ jobs:
           profile: minimal
 
       - name: Install Erlang (non-macos)
-        uses: erlef/setup-beam@v1.15.4
+        uses: erlef/setup-beam@v1
         with:
-          otp-version: "25.1"
-          elixir-version: "1.14.1"
+          otp-version: "26.1"
+          elixir-version: "1.16.1"
           rebar3-version: "3"
-        if: ${{ matrix.os != 'macos-latest' }} # setup-beam does not support macOS
+        if: ${{ runner.os != 'macOS' }} # setup-beam does not support macOS
 
       - name: Install Erlang (macos)
         run: |
           brew install erlang rebar3 elixir
           mix local.hex --force
-        if: ${{ matrix.os == 'macos-latest' }} # setup-beam does not support macOS
+        if: ${{ runner.os == 'macOS' }} # setup-beam does not support macOS
 
       - name: Handle Rust dependencies caching
         uses: Swatinem/rust-cache@v2
@@ -116,7 +130,7 @@ jobs:
           gleam test && cd src && gleam test && cd ..
           gleam docs build
         working-directory: ./test/project_erlang
-        if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }}
+        if: ${{ runner.os != 'Windows' && matrix.run-integration-tests }}
 
       - name: test/project_erlang (windows)
         run: |
@@ -125,21 +139,21 @@ jobs:
           gleam test && cd src && gleam test && cd ..
           gleam docs build
         working-directory: ./test/project_erlang_windows
-        if: ${{ matrix.os == 'windows-latest' && matrix.run-integration-tests }}
+        if: ${{ runner.os == 'Windows' && matrix.run-integration-tests }}
 
       - name: test/project_erlang export erlang-shipment (non-windows)
         run: |
           gleam export erlang-shipment
           ./build/erlang-shipment/entrypoint.sh run
         working-directory: ./test/project_erlang
-        if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }}
+        if: ${{ runner.os != 'Windows' && matrix.run-integration-tests }}
 
       - name: test/project_erlang export erlang-shipment (windows)
         run: |
           gleam export erlang-shipment
           .\build\erlang-shipment\entrypoint.ps1 run
         working-directory: ./test/project_erlang_windows
-        if: ${{ matrix.os == 'windows-latest' && matrix.run-integration-tests }}
+        if: ${{ runner.os == 'Windows' && matrix.run-integration-tests }}
 
       - name: test/project_erlang export package-interface
         run: |
@@ -147,6 +161,21 @@ jobs:
           cat interface.json
         working-directory: ./test/project_erlang
         if: ${{ matrix.run-integration-tests }}
+
+      - name: test/external_only_javascript
+        run: ./test.sh
+        working-directory: ./test/external_only_javascript
+        if: ${{ matrix.run-integration-tests }}
+        env:
+          GLEAM_COMMAND: gleam
+
+
+      - name: test/external_only_erlang
+        run: ./test.sh
+        working-directory: ./test/external_only_erlang
+        if: ${{ matrix.run-integration-tests }}
+        env:
+          GLEAM_COMMAND: gleam
 
       - name: test/project_javascript
         run: |
@@ -203,9 +232,10 @@ jobs:
 
   test-wasm:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -215,26 +245,24 @@ jobs:
           profile: minimal
           override: true
 
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v4
         with:
-          node-version: "16"
+          node-version: "18"
 
       - name: Install wasm-pack
         run: |
-          curl -L --output wasm-pack-init https://rustwasm.github.io/wasm-pack/installer/init.sh \
-          && chmod +x wasm-pack-init \
-          && ./wasm-pack-init \
-          && rm wasm-pack-init
+          curl -sSL https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+
       - name: Run wasm tests
-        working-directory: ./compiler-wasm
-        run: wasm-pack test --node
+        run: wasm-pack test --node compiler-wasm
 
   rustfmt:
     name: rustfmt
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -254,9 +282,10 @@ jobs:
   validate-deps:
     name: validate-deps
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -269,7 +298,7 @@ jobs:
       - name: Install cargo-deny
         run: |
           set -e
-          curl -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.8.5/cargo-deny-0.8.5-x86_64-unknown-linux-musl.tar.gz | tar xzf -
+          curl -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.14.18/cargo-deny-0.14.18-x86_64-unknown-linux-musl.tar.gz | tar xzf -
           mv cargo-deny-*-x86_64-unknown-linux-musl/cargo-deny cargo-deny
           echo `pwd` >> $GITHUB_PATH
 
@@ -282,9 +311,10 @@ jobs:
   lint-build:
     name: lint-build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -312,7 +342,7 @@ jobs:
           command: build
 
       - name: Upload artifact (Ubuntu)
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: gleam
           path: target/debug/gleam
@@ -321,24 +351,28 @@ jobs:
     name: test-projects
     needs: lint-build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3.0.0
+        uses: actions/checkout@v4
 
       - name: Install Deno
         uses: denoland/setup-deno@v1
         with:
           deno-version: v1.x
 
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+
       - name: Install Erlang
-        uses: erlef/setup-beam@v1.15.4
+        uses: erlef/setup-beam@v1
         with:
-          otp-version: "25.1"
-          elixir-version: "1.14.1"
+          otp-version: "26.1"
+          elixir-version: "1.16.1"
           rebar3-version: "3"
 
       - name: Download Gleam binary from previous job
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: gleam
           path: ./test
@@ -359,8 +393,12 @@ jobs:
         run: make clean nodejs
         working-directory: ./test/language
 
-      - name: test/language Javascript with Deno
+      - name: test/language JavaScript with Deno
         run: make clean deno
+        working-directory: ./test/language
+
+      - name: test/language JavaScript with Bun
+        run: make clean bun
         working-directory: ./test/language
 
       - name: test/compile_package0

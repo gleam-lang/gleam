@@ -4,6 +4,7 @@ mod asignments;
 mod binary_operators;
 mod bit_array;
 mod blocks;
+mod cases;
 mod conditional_compilation;
 mod external_fn;
 mod external_types;
@@ -40,7 +41,7 @@ fn imports() {
     assert_format!("import one\n");
     assert_format!("import one\nimport two\n");
     assert_format!("import one/two/three\n");
-    assert_format!("import one/two/three\nimport four/five\n");
+    assert_format!("import four/five\nimport one/two/three\n");
     assert_format!("import one.{fun, fun2, fun3}\n");
     assert_format!("import one.{One, Two, fun1, fun2}\n");
     assert_format!("import one.{main as entrypoint}\n");
@@ -67,8 +68,8 @@ fn imports() {
 fn multiple_statements_test() {
     assert_format!(
         r#"import one
-import two
 import three
+import two
 
 pub type One
 
@@ -4464,6 +4465,127 @@ fn negation_block() {
 }
 
 #[test]
+fn empty_lines_work_with_trailing_space() {
+    let src = "pub fn main() {
+  let inc = fn(a) { a + 1 } 
+
+
+  pair.map_first(#(1, 2), inc)  
+  |> should.equal(#(2, 2)) 
+
+  // Comment
+
+  1  
+
+
+  // Comment 
+
+
+  2
+}
+";
+    let expected = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+  // Comment 
+
+  2
+}
+";
+    assert_format!(expected); // Sanity check
+
+    assert_format_rewrite!(src, expected);
+}
+
+#[test]
+fn empty_lines_work_with_eol_normalisation() {
+    let src = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+
+  // Comment
+
+
+  2
+}
+";
+    let expected = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+  // Comment
+
+  2
+}
+";
+    assert_format!(expected); // Sanity check
+
+    assert_format_rewrite!(&src.replace('\n', "\r\n"), expected);
+    assert_format_rewrite!(&src.replace('\n', "\r"), expected);
+}
+
+#[test]
+fn empty_lines_work_with_trailing_space_and_eol_normalisation() {
+    let src = "pub fn main() {
+  let inc = fn(a) { a + 1 } 
+
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2)) 
+
+  // Comment
+
+  1
+
+
+  // Comment
+
+
+  2
+}
+";
+    let expected = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+  // Comment
+
+  2
+}
+";
+    assert_format!(expected); // Sanity check
+
+    assert_format_rewrite!(&src.replace('\n', "\r\n"), expected);
+    assert_format_rewrite!(&src.replace('\n', "\r"), expected);
+}
+#[test]
 fn single_empty_line_between_comments() {
     // empty line isn't added if it's not already present
     assert_format!(
@@ -4643,9 +4765,9 @@ fn do_not_remove_required_braces_case_guard() {
   let is_confirmed = False
   let is_admin = True
   case is_enabled, is_confirmed, is_admin {
-    is_enabled, is_confirmed, is_admin if is_enabled && {
-      is_confirmed || is_admin
-    } -> Nil
+    is_enabled, is_confirmed, is_admin
+      if is_enabled && { is_confirmed || is_admin }
+    -> Nil
     _, _, _ -> Nil
   }
 }
@@ -4706,8 +4828,9 @@ fn remove_braces_case_guard() {
   let is_confirmed = False
   let is_admin = True
   case is_enabled, is_confirmed, is_admin {
-    is_enabled, is_confirmed, is_admin if is_enabled && is_confirmed || is_admin ->
-      Nil
+    is_enabled, is_confirmed, is_admin
+      if is_enabled && is_confirmed || is_admin
+    -> Nil
     _, _, _ -> Nil
   }
 }
@@ -5544,6 +5667,124 @@ fn pipeline_inside_tuple_is_not_nested_if_only_item() {
     |> another_variable_with_a_long_name
     |> yet_another_variable_with_a_long_name,
   )
+}
+"#
+    );
+}
+
+// github.com/gleam-lang/gleam/issues/2608
+#[test]
+fn comments_are_not_moved_out_of_list_of_literals() {
+    assert_format!(
+        r#"fn main() {
+  [
+    1, 2,
+    // list
+  ]
+}
+"#
+    );
+}
+
+// github.com/gleam-lang/gleam/issues/2608
+#[test]
+fn comments_are_not_moved_out_of_list() {
+    assert_format!(
+        r#"fn main() {
+  [
+    wibble,
+    wobble,
+    // list
+  ]
+}
+"#
+    );
+}
+
+// github.com/gleam-lang/gleam/issues/2608
+#[test]
+fn comments_are_not_moved_out_of_case_expressions() {
+    assert_format!(
+        r#"fn main() {
+  case True {
+    _ -> Nil
+    // case
+  }
+}
+"#
+    );
+}
+
+// github.com/gleam-lang/gleam/issues/2608
+#[test]
+fn comments_are_not_moved_out_of_tuples() {
+    assert_format!(
+        r#"fn main() {
+  #(
+    1,
+    2,
+    // tuple
+  )
+}
+"#
+    );
+}
+
+// github.com/gleam-lang/gleam/issues/2608
+#[test]
+fn comments_are_not_moved_out_of_function_calls() {
+    assert_format!(
+        r#"fn main() {
+  call(
+    1,
+    2,
+    // function call
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2607
+#[test]
+fn function_arguments_after_comment_are_not_indented() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(
+    // Wobble
+    1 + 1,
+    "wibble",
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2607
+#[test]
+fn tuple_items_after_comment_are_not_indented() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    // Wobble
+    1 + 1,
+    "wibble",
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2607
+#[test]
+fn list_items_after_comment_are_not_indented() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    // Wobble
+    1 + 1,
+    "wibble",
+  ]
 }
 "#
     );

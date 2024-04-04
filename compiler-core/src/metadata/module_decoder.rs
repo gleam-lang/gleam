@@ -5,10 +5,11 @@ use itertools::Itertools;
 
 use crate::{
     ast::{
-        BitArrayOption, BitArraySegment, CallArg, Constant, SrcSpan, TypedConstant,
+        BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
         TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
     },
     build::Origin,
+    line_numbers::LineNumbers,
     schema_capnp::{self as schema, *},
     type_::{
         self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, ModuleInterface,
@@ -78,6 +79,7 @@ impl ModuleDecoder {
             ),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
             unused_imports: read_vec!(reader.get_unused_imports()?, self, src_span),
+            line_numbers: self.line_numbers(&reader.get_line_numbers()?)?,
         })
     }
 
@@ -93,7 +95,7 @@ impl ModuleDecoder {
             },
         };
         Ok(TypeConstructor {
-            public: reader.get_public(),
+            publicity: self.publicity(reader.get_publicity()?),
             origin: Default::default(),
             module: reader.get_module()?.into(),
             parameters: read_vec!(reader.get_parameters()?, self, type_),
@@ -118,7 +120,7 @@ impl ModuleDecoder {
         let name = reader.get_name()?.into();
         let args = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(Arc::new(Type::Named {
-            public: true,
+            publicity: Publicity::Public,
             package,
             module,
             name,
@@ -207,7 +209,7 @@ impl ModuleDecoder {
     ) -> Result<ValueConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
         let variant = self.value_constructor_variant(&reader.get_variant()?)?;
-        let public = reader.get_public();
+        let publicity = self.publicity(reader.get_publicity()?);
         let deprecation = match reader.get_deprecated()? {
             "" => Deprecation::NotDeprecated,
             message => Deprecation::Deprecated {
@@ -216,10 +218,18 @@ impl ModuleDecoder {
         };
         Ok(ValueConstructor {
             deprecation,
-            public,
+            publicity,
             type_,
             variant,
         })
+    }
+
+    fn publicity(&self, publicity: crate::schema_capnp::Publicity) -> Publicity {
+        match publicity {
+            schema::Publicity::Public => Publicity::Public,
+            schema::Publicity::Private => Publicity::Private,
+            schema::Publicity::Internal => Publicity::Internal,
+        }
     }
 
     fn constant(&mut self, reader: &constant::Reader<'_>) -> Result<TypedConstant> {
@@ -463,8 +473,10 @@ impl ModuleDecoder {
     fn implementations(&self, reader: implementations::Reader<'_>) -> Implementations {
         Implementations {
             gleam: reader.get_gleam(),
-            uses_erlang_externals: reader.get_erlang(),
-            uses_javascript_externals: reader.get_javascript(),
+            uses_erlang_externals: reader.get_uses_erlang_externals(),
+            uses_javascript_externals: reader.get_uses_javascript_externals(),
+            can_run_on_erlang: reader.get_can_run_on_erlang(),
+            can_run_on_javascript: reader.get_can_run_on_javascript(),
         }
     }
 
@@ -504,7 +516,7 @@ impl ModuleDecoder {
 
     fn accessors_map(&mut self, reader: &accessors_map::Reader<'_>) -> Result<AccessorsMap> {
         Ok(AccessorsMap {
-            public: true,
+            publicity: Publicity::Public,
             type_: self.type_(&reader.get_type()?)?,
             accessors: read_hashmap!(&reader.get_accessors()?, self, record_accessor),
         })
@@ -515,6 +527,17 @@ impl ModuleDecoder {
             index: reader.get_index() as u64,
             label: reader.get_label()?.into(),
             type_: self.type_(&reader.get_type()?)?,
+        })
+    }
+
+    fn line_starts(&mut self, i: &u32) -> Result<u32> {
+        Ok(*i)
+    }
+
+    fn line_numbers(&mut self, reader: &line_numbers::Reader<'_>) -> Result<LineNumbers> {
+        Ok(LineNumbers {
+            length: reader.get_length(),
+            line_starts: read_vec!(reader.get_line_starts()?, self, line_starts),
         })
     }
 }

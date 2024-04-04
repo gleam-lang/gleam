@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 104
 expression: "case <<1>> { <<1:size(2)-size(8)>> -> a }"
 ---
 error: Invalid bit array segment
@@ -9,5 +10,4 @@ error: Invalid bit array segment
   │                          ^^^^^^^ This is an extra size specifier
 
 Hint: This segment already has a size.
-See: https://gleam.run/book/tour/bit-arrays.html
-
+See: https://tour.gleam.run/data-types/bit-arrays/

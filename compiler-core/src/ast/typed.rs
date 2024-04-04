@@ -376,15 +376,15 @@ impl TypedExpr {
     }
 
     pub fn is_literal(&self) -> bool {
-        matches!(
-            self,
+        match self {
             Self::Int { .. }
-                | Self::List { .. }
-                | Self::Float { .. }
-                | Self::Tuple { .. }
-                | Self::String { .. }
-                | Self::BitArray { .. }
-        )
+            | Self::List { .. }
+            | Self::Float { .. }
+            | Self::Tuple { .. }
+            | Self::String { .. }
+            | Self::BitArray { .. } => true,
+            _ => false,
+        }
     }
 
     /// Returns `true` if the typed expr is [`Var`].
@@ -392,7 +392,10 @@ impl TypedExpr {
     /// [`Var`]: TypedExpr::Var
     #[must_use]
     pub fn is_var(&self) -> bool {
-        matches!(self, Self::Var { .. })
+        match self {
+            Self::Var { .. } => true,
+            _ => false,
+        }
     }
 
     pub(crate) fn get_documentation(&self) -> Option<&str> {
@@ -427,7 +430,10 @@ impl TypedExpr {
     /// [`Case`]: TypedExpr::Case
     #[must_use]
     pub fn is_case(&self) -> bool {
-        matches!(self, Self::Case { .. })
+        match self {
+            Self::Case { .. } => true,
+            _ => false,
+        }
     }
 
     /// Returns `true` if the typed expr is [`Pipeline`].
@@ -435,7 +441,59 @@ impl TypedExpr {
     /// [`Pipeline`]: TypedExpr::Pipeline
     #[must_use]
     pub fn is_pipeline(&self) -> bool {
-        matches!(self, Self::Pipeline { .. })
+        match self {
+            Self::Pipeline { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_pure_value_constructor(&self) -> bool {
+        match self {
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Fn { .. } => true,
+
+            TypedExpr::NegateBool { value, .. } | TypedExpr::NegateInt { value, .. } => {
+                value.is_pure_value_constructor()
+            }
+
+            // A pipeline is a pure value constructor if its last step is a record builder.
+            // For example `wibble() |> wobble() |> Ok`
+            TypedExpr::Pipeline { finally, .. } => finally.is_record_builder(),
+
+            // A function call is a pure record constructor if it is a record builder.
+            // For example `Ok(wobble(wibble()))`
+            TypedExpr::Call { fun, .. } => fun.as_ref().is_record_builder(),
+
+            // Blocks and Cases are not considered pure value constructors for now,
+            // in the future we might want to do something a bit smarter and inspect
+            // their content to see if they end up returning something that is a
+            // pure value constructor and raise a warning for those as well.
+            TypedExpr::Block { .. } | TypedExpr::Case { .. } => false,
+
+            // `panic` and `todo` are never considered pure value constructors,
+            // we don't want to raise a warning for an unused value if it's one
+            // of those two.
+            TypedExpr::Todo { .. } | TypedExpr::Panic { .. } => false,
+        }
+    }
+
+    pub fn is_record_builder(&self) -> bool {
+        match self {
+            TypedExpr::Call { fun, .. } => fun.is_record_builder(),
+            TypedExpr::Var { constructor, .. } => constructor.variant.is_record(),
+            _ => false,
+        }
     }
 }
 

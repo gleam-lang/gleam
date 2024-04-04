@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/javascript/tests/blocks.rs
+expression: "\nfn go() {\n  let x = {\n    {\n      3\n    }\n  }\n  x\n}\n"
+---
+function go() {
+  let x = 3;
+  return x;
+}

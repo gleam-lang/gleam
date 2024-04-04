@@ -257,3 +257,19 @@ fn binop_inside_tuple_is_not_nested_if_only_item() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2624
+#[test]
+fn binop_as_argument_in_variant_with_spread_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  Wibble(
+    ..wibble,
+    label: string
+      <> "a long string that is making things go on multiple lines"
+      <> "another string",
+  )
+}
+"#
+    );
+}

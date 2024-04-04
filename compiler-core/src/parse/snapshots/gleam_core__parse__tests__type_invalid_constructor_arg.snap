@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\ntype A { \n    A(type: String)\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:7
+  │
+3 │     A(type: String)
+  │       ^^^^ I was not expecting this
+
+Expected one of: 
+")"
+a constructor argument name

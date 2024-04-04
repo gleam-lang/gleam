@@ -10,5 +10,4 @@ error: Invalid bit array segment
   │       ^^^^^^ This cannot be a variable
 
 Hint: in patterns utf8, utf16, and utf32  must be an exact string.
-See: https://gleam.run/book/tour/bit-arrays.html
-
+See: https://tour.gleam.run/data-types/bit-arrays/

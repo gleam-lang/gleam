@@ -10,5 +10,4 @@ error: Invalid bit array segment
   │             ^^^^ Unit cannot be specified here
 
 Hint: utf8 segments are sized based on their value and cannot have a unit.
-See: https://gleam.run/book/tour/bit-arrays.html
-
+See: https://tour.gleam.run/data-types/bit-arrays/
