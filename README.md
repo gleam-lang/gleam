@@ -129,6 +129,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/hammad-r-javed">Hammad Javed</a> -
   <a href="https://github.com/hampuskraft">Hampus Kraft</a> -
   <a href="https://github.com/ildorn">Hannes Schnaitter</a> -
+  <a href="https://github.com/jhundman">Hayes Hundman</a> -
   <a href="https://github.com/hayleigh-dot-dev">Hayleigh Thompson</a> -
   <a href="https://github.com/hibachrach">Hazel Bachrach</a> -
   <a href="https://github.com/hdahlheim">Henning Dahlheim</a> -
@@ -150,10 +151,12 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/jlgeering">Jean-Luc Geering</a> -
   <a href="https://github.com/okkdev">Jen Stehlik</a> -
   <a href="https://github.com/jiangplus">jiangplus</a> -
+  <a href="https://github.com/hunkyjimpjorps">Jimpjorps™</a> -
   <a href="https://github.com/jluzny">Jiri Luzny</a> -
   <a href="https://github.com/joeykilpatrick">Joey Kilpatrick</a> -
   <a href="https://github.com/johan-st">Johan Strand</a> -
   <a href="https://github.com/JohnBjrk">John Björk</a> -
+  <a href="https://github.com/jmpavlick">John Pavlick</a> -
   <a href="https://github.com/JonasHedEng">Jonas Hedman Engström</a> -
   <a href="https://github.com/josefrichter">Josef Richter</a> -
   <a href="https://github.com/joshocalico">Joshua Steele</a> -
