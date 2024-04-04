@@ -550,7 +550,9 @@ pub struct ModuleInterface {
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
     pub contains_todo: bool,
+    /// Used for mapping to original source locations on disk
     pub line_numbers: LineNumbers,
+    /// Used for determining the source path of the module on disk
     pub src_path: EcoString,
 }
 
