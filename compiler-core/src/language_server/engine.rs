@@ -487,7 +487,7 @@ where
         let end = lsp::Position::new(end.line - 1, end.column);
         let completions = self.complete_modules_for_import(module, start, end);
 
-        return Some(Ok(Some(completions)));
+        Some(Ok(Some(completions)))
     }
 
     fn complete_modules_for_import<'b>(
