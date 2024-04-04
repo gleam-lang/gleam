@@ -94,6 +94,8 @@
 - Fixed a bug where the code blocks in the generated documentation's site would
   have a wrong indentation.
 - Fixed a bug where the compiler would panic when it cannot get current directory.
+- Improved error message for non-UTF-8 paths encountered during Gleam commands.
+  Now includes the path that caused the error for better diagnostics.
 - Fixed a bug where on windows local packages had absolute paths in the manifest
   instead of relative.
 - The `gleam publish` command now asks for confirmation if the package repository
