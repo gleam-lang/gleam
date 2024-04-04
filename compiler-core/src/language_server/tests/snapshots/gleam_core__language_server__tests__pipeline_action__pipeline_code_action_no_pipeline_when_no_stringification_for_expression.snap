@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/pipeline_action.rs
+expression: "\nimport list\n\nfn main() {\n  list.take_while(list.reverse(list.map([1,2,3], fn(x){ x + 1 })), fn(x){x<3})\n}\n"
+---
+No codeaction produced...

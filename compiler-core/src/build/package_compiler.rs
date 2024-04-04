@@ -1,5 +1,4 @@
 use crate::analyse::TargetSupport;
-use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
@@ -123,7 +122,7 @@ where
 
         // Load the cached modules that have previously been compiled
         for module in loaded.cached.into_iter() {
-            _ = existing_modules.insert(module.name.clone(), module);
+            _ = existing_modules.insert(module.name.clone(), module.clone());
         }
 
         if !loaded.to_compile.is_empty() {
@@ -151,6 +150,7 @@ where
         tracing::debug!("performing_code_generation");
         self.perform_codegen(&modules)?;
         self.encode_and_write_metadata(&modules)?;
+
         Ok(modules)
     }
 
@@ -262,7 +262,6 @@ where
                 codegen_performed: self.perform_codegen,
                 dependencies: module.dependencies_list(),
                 fingerprint: SourceFingerprint::new(&module.code),
-                line_numbers: module.ast.type_info.line_numbers.clone(),
             };
             self.io.write_bytes(&path, &info.to_binary())?;
         }
@@ -350,8 +349,7 @@ where
             TypeScriptDeclarations::None
         };
 
-        JavaScript::new(&self.out, typescript, prelude_location, self.target_support)
-            .render(&self.io, modules)?;
+        JavaScript::new(&self.out, typescript, prelude_location).render(&self.io, modules)?;
 
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;
@@ -422,7 +420,6 @@ fn analyse(
     {
         tracing::debug!(module = ?name, "Type checking");
 
-        let line_numbers = LineNumbers::new(&code);
         let ast = crate::analyse::infer_module(
             target,
             ids,
@@ -433,7 +430,6 @@ fn analyse(
             &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
             &direct_dependencies,
             target_support,
-            line_numbers,
         )
         .map_err(|error| Error::Type {
             path: path.clone(),
@@ -532,7 +528,6 @@ pub(crate) struct CachedModule {
     pub origin: Origin,
     pub dependencies: Vec<EcoString>,
     pub source_path: Utf8PathBuf,
-    pub line_numbers: LineNumbers,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -541,7 +536,6 @@ pub(crate) struct CacheMetadata {
     pub codegen_performed: bool,
     pub dependencies: Vec<EcoString>,
     pub fingerprint: SourceFingerprint,
-    pub line_numbers: LineNumbers,
 }
 
 impl CacheMetadata {

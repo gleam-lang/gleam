@@ -231,11 +231,6 @@ fn unknown_variable() {
 }
 
 #[test]
-fn unknown_variable_type() {
-    assert_error!("Int");
-}
-
-#[test]
 fn unknown_module() {
     assert_module_error!("import xpto");
 }
@@ -308,7 +303,7 @@ fn function_return_annotation_mismatch_with_pipe() {
             1
             |> add_two
          }
-
+          
          fn add_two(i: Int) -> Int {
             i + 2
          }"
@@ -327,10 +322,10 @@ fn pipe_mismatch_error() {
             Orange
             |> eat_veggie
          }
-
+          
          type Fruit{ Orange }
          type Veg{ Lettuce }
-
+          
          fn eat_veggie(v: Veg) -> String {
             \"Ok\"
          }"

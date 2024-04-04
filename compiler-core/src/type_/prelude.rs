@@ -1,11 +1,6 @@
 use strum::{EnumIter, IntoEnumIterator};
 
-use crate::{
-    ast::{Publicity, SrcSpan},
-    build::Origin,
-    line_numbers::LineNumbers,
-    uid::UniqueIdGenerator,
-};
+use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 
 use super::{
     ModuleInterface, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
@@ -62,7 +57,7 @@ impl PreludeType {
 
 pub fn int() -> Arc<Type> {
     Arc::new(Type::Named {
-        publicity: Publicity::Public,
+        public: true,
         name: INT.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
@@ -73,7 +68,7 @@ pub fn int() -> Arc<Type> {
 pub fn float() -> Arc<Type> {
     Arc::new(Type::Named {
         args: vec![],
-        publicity: Publicity::Public,
+        public: true,
         name: FLOAT.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
@@ -83,7 +78,7 @@ pub fn float() -> Arc<Type> {
 pub fn bool() -> Arc<Type> {
     Arc::new(Type::Named {
         args: vec![],
-        publicity: Publicity::Public,
+        public: true,
         name: BOOL.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
@@ -93,7 +88,7 @@ pub fn bool() -> Arc<Type> {
 pub fn string() -> Arc<Type> {
     Arc::new(Type::Named {
         args: vec![],
-        publicity: Publicity::Public,
+        public: true,
         name: STRING.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
@@ -103,7 +98,7 @@ pub fn string() -> Arc<Type> {
 pub fn nil() -> Arc<Type> {
     Arc::new(Type::Named {
         args: vec![],
-        publicity: Publicity::Public,
+        public: true,
         name: NIL.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
@@ -112,7 +107,7 @@ pub fn nil() -> Arc<Type> {
 
 pub fn list(t: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Named {
-        publicity: Publicity::Public,
+        public: true,
         name: LIST.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
@@ -122,7 +117,7 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
 
 pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Named {
-        publicity: Publicity::Public,
+        public: true,
         name: RESULT.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
@@ -142,11 +137,11 @@ pub fn named(
     package: &str,
     module: &str,
     name: &str,
-    publicity: Publicity,
+    public: bool,
     args: Vec<Arc<Type>>,
 ) -> Arc<Type> {
     Arc::new(Type::Named {
-        publicity,
+        public,
         package: package.into(),
         module: module.into(),
         name: name.into(),
@@ -157,7 +152,7 @@ pub fn named(
 pub fn bits() -> Arc<Type> {
     Arc::new(Type::Named {
         args: vec![],
-        publicity: Publicity::Public,
+        public: true,
         name: BIT_ARRAY.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
@@ -167,7 +162,7 @@ pub fn bits() -> Arc<Type> {
 pub fn utf_codepoint() -> Arc<Type> {
     Arc::new(Type::Named {
         args: vec![],
-        publicity: Publicity::Public,
+        public: true,
         name: UTF_CODEPOINT.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
@@ -195,7 +190,7 @@ pub fn link(type_: Arc<Type>) -> Arc<Type> {
 
 pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
     let value = |variant, type_| ValueConstructor {
-        publicity: Publicity::Public,
+        public: true,
         deprecation: NotDeprecated,
         variant,
         type_,
@@ -211,8 +206,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         accessors: HashMap::new(),
         unused_imports: Vec::new(),
         contains_todo: false,
-        // prelude doesn't have real src/line numbers
-        line_numbers: LineNumbers::new(""),
     };
 
     for t in PreludeType::iter() {
@@ -223,7 +216,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     parameters: vec![],
                     typ: bits(),
                     module: PRELUDE_MODULE_NAME.into(),
-                    publicity: Publicity::Public,
+                    public: true,
                     deprecation: NotDeprecated,
                 };
                 let _ = prelude.types.insert(BIT_ARRAY.into(), v.clone());
@@ -285,7 +278,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         parameters: vec![],
                         typ: bool(),
                         module: PRELUDE_MODULE_NAME.into(),
-                        publicity: Publicity::Public,
+                        public: true,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -299,7 +292,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         parameters: vec![],
                         typ: float(),
                         module: PRELUDE_MODULE_NAME.into(),
-                        publicity: Publicity::Public,
+                        public: true,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -313,7 +306,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         typ: int(),
                         origin: Default::default(),
                         module: PRELUDE_MODULE_NAME.into(),
-                        publicity: Publicity::Public,
+                        public: true,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -328,7 +321,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         parameters: vec![list_parameter.clone()],
                         typ: list(list_parameter),
                         module: PRELUDE_MODULE_NAME.into(),
-                        publicity: Publicity::Public,
+                        public: true,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -358,7 +351,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         parameters: vec![],
                         typ: nil(),
                         module: PRELUDE_MODULE_NAME.into(),
-                        publicity: Publicity::Public,
+                        public: true,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -386,7 +379,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         parameters: vec![result_value.clone(), result_error.clone()],
                         typ: result(result_value.clone(), result_error.clone()),
                         module: PRELUDE_MODULE_NAME.into(),
-                        publicity: Publicity::Public,
+                        public: true,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -456,7 +449,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         parameters: vec![],
                         typ: string(),
                         module: PRELUDE_MODULE_NAME.into(),
-                        publicity: Publicity::Public,
+                        public: true,
                         deprecation: NotDeprecated,
                     },
                 );
@@ -470,7 +463,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         parameters: vec![],
                         typ: utf_codepoint(),
                         module: PRELUDE_MODULE_NAME.into(),
-                        publicity: Publicity::Public,
+                        public: true,
                         deprecation: NotDeprecated,
                     },
                 );

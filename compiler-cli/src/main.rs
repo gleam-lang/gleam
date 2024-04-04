@@ -29,7 +29,8 @@
     trivial_numeric_casts,
     nonstandard_style,
     unused_import_braces,
-    unused_qualifications
+    // TODO: re-enable this once the false positive bug is solved
+    // unused_qualifications,
 )]
 #![deny(
     clippy::await_holding_lock,
@@ -77,53 +78,36 @@ use fs::{get_current_directory, get_project_root};
 pub use gleam_core::error::{Error, Result};
 
 use gleam_core::{
-    analyse::TargetSupport,
     build::{Codegen, Mode, Options, Runtime, Target},
     hex::RetirementReason,
     paths::ProjectPaths,
     version::COMPILER_VERSION,
 };
 use hex::ApiKeyCommand as _;
-use std::str::FromStr;
 
 use camino::Utf8PathBuf;
 
-use clap::{
-    builder::{styling, PossibleValuesParser, Styles, TypedValueParser},
-    Args, Parser, Subcommand,
-};
+use clap::{Args, Parser, Subcommand};
 use strum::VariantNames;
 
 #[derive(Parser, Debug)]
-#[command(
-    version,
-    next_display_order = None,
-    help_template = "\
-{before-help}{name} {version}
-
-{usage-heading} {usage}
-
-{all-args}{after-help}",
-    styles = Styles::styled()
-        .header(styling::AnsiColor::Yellow.on_default())
-        .usage(styling::AnsiColor::Yellow.on_default())
-        .literal(styling::AnsiColor::Green.on_default())
-)]
-
+#[clap(version)]
 enum Command {
     /// Build the project
     Build {
         /// Emit compile time warnings as errors
-        #[arg(long)]
+        #[clap(long)]
         warnings_as_errors: bool,
 
-        #[arg(short, long, ignore_case = true, help = target_doc())]
+        /// The platform to target
+        #[clap(short, long, ignore_case = true)]
         target: Option<Target>,
     },
 
     /// Type check the project
     Check {
-        #[arg(short, long, ignore_case = true, help = target_doc())]
+        /// The platform to target
+        #[clap(short, long, ignore_case = true)]
         target: Option<Target>,
     },
 
@@ -133,27 +117,27 @@ enum Command {
     ///
     /// - HEXPM_USER: (optional) The Hex username to authenticate with.
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    #[command(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment)]
     Publish {
-        #[arg(long)]
+        #[clap(long)]
         replace: bool,
-        #[arg(short, long)]
+        #[clap(short, long)]
         yes: bool,
     },
 
     /// Render HTML documentation
-    #[command(subcommand)]
+    #[clap(subcommand)]
     Docs(Docs),
 
     /// Work with dependency packages
-    #[command(subcommand)]
+    #[clap(subcommand)]
     Deps(Dependencies),
 
     /// Update dependency packages to their latest versions
     Update,
 
     /// Work with the Hex package manager
-    #[command(subcommand)]
+    #[clap(subcommand)]
     Hex(Hex),
 
     /// Create a new project
@@ -162,15 +146,15 @@ enum Command {
     /// Format source code
     Format {
         /// Files to format
-        #[arg(default_value = ".")]
+        #[clap(default_value = ".")]
         files: Vec<String>,
 
         /// Read source from STDIN
-        #[arg(long)]
+        #[clap(long)]
         stdin: bool,
 
         /// Check if inputs are formatted without changing them
-        #[arg(long)]
+        #[clap(long)]
         check: bool,
     },
     /// Rewrite deprecated Gleam code
@@ -180,56 +164,58 @@ enum Command {
     Shell,
 
     /// Run the project
-    #[command(trailing_var_arg = true)]
+    #[clap(trailing_var_arg = true)]
     Run {
-        #[arg(short, long, ignore_case = true, help = target_doc())]
+        /// The platform to target
+        #[clap(short, long, ignore_case = true)]
         target: Option<Target>,
 
-        #[arg(long, ignore_case = true, help = runtime_doc())]
+        #[clap(long, ignore_case = true)]
         runtime: Option<Runtime>,
 
         /// The module to run
-        #[arg(short, long)]
+        #[clap(short, long)]
         module: Option<String>,
 
         arguments: Vec<String>,
     },
 
     /// Run the project tests
-    #[command(trailing_var_arg = true)]
+    #[clap(trailing_var_arg = true)]
     Test {
-        #[arg(short, long, ignore_case = true, help = target_doc())]
+        /// The platform to target
+        #[clap(short, long, ignore_case = true)]
         target: Option<Target>,
 
-        #[arg(long, ignore_case = true, help = runtime_doc())]
+        #[clap(long, ignore_case = true)]
         runtime: Option<Runtime>,
 
         arguments: Vec<String>,
     },
 
     /// Compile a single Gleam package
-    #[command(hide = true)]
+    #[clap(hide = true)]
     CompilePackage(CompilePackage),
 
     /// Read and print gleam.toml for debugging
-    #[command(hide = true)]
+    #[clap(hide = true)]
     PrintConfig,
 
     /// Add new project dependencies
     Add {
         /// The names of Hex packages to add
-        #[arg(required = true)]
+        #[clap(required = true)]
         packages: Vec<String>,
 
         /// Add the packages as dev-only dependencies
-        #[arg(long)]
+        #[clap(long)]
         dev: bool,
     },
 
     /// Remove project dependencies
     Remove {
         /// The names of packages to remove
-        #[arg(required = true)]
+        #[clap(required = true)]
         packages: Vec<String>,
     },
 
@@ -237,20 +223,12 @@ enum Command {
     Clean,
 
     /// Run the language server, to be used by editors
-    #[command(name = "lsp")]
+    #[clap(name = "lsp")]
     LanguageServer,
 
     /// Export something useful from the Gleam project
-    #[command(subcommand)]
+    #[clap(subcommand)]
     Export(ExportTarget),
-}
-
-fn target_doc() -> String {
-    format!("The platform to target ({})", Target::VARIANTS.join("|"))
-}
-
-fn runtime_doc() -> String {
-    format!("The runtime to target ({})", Runtime::VARIANTS.join("|"))
 }
 
 #[derive(Subcommand, Debug, Clone)]
@@ -265,7 +243,7 @@ pub enum ExportTarget {
     TypescriptPrelude,
     /// Information on the modules, functions, and types in the project in JSON format
     PackageInterface {
-        #[arg(long = "out", required = true)]
+        #[clap(long = "out", required = true)]
         /// The path to write the JSON file to
         output: Utf8PathBuf,
     },
@@ -277,37 +255,42 @@ pub struct NewOptions {
     pub project_root: String,
 
     /// Name of the project
-    #[arg(long)]
+    #[clap(long)]
     pub name: Option<String>,
 
-    #[arg(long, ignore_case = true, default_value = "lib")]
+    #[clap(
+        long,
+        possible_values = new::Template::VARIANTS,
+        ignore_case = true,
+        default_value = "lib"
+    )]
     pub template: new::Template,
 
     /// Skip git initialization and creation of .gitignore, .git/* and .github/* files
-    #[arg(long)]
+    #[clap(long)]
     pub skip_git: bool,
 
     /// Skip creation of .github/* files
-    #[arg(long)]
+    #[clap(long)]
     pub skip_github: bool,
 }
 
 #[derive(Args, Debug)]
 pub struct CompilePackage {
     /// The compilation target for the generated project
-    #[arg(long, ignore_case = true)]
+    #[clap(long, ignore_case = true)]
     target: Target,
 
     /// The directory of the Gleam package
-    #[arg(long = "package")]
+    #[clap(long = "package")]
     package_directory: Utf8PathBuf,
 
     /// A directory to write compiled package to
-    #[arg(long = "out")]
+    #[clap(long = "out")]
     output_directory: Utf8PathBuf,
 
     /// A directories of precompiled Gleam projects
-    #[arg(long = "lib")]
+    #[clap(long = "lib")]
     libraries_directory: Utf8PathBuf,
 
     /// The location of the JavaScript prelude module, relative to the `out`
@@ -316,13 +299,13 @@ pub struct CompilePackage {
     /// Required when compiling to JavaScript.
     ///
     /// This likely wants to be a `.mjs` file as NodeJS does not permit
-    /// importing of other JavaScript file extensions.
+    /// importing of other JavaScript file extentions.
     ///
-    #[arg(long = "javascript-prelude")]
+    #[clap(long = "javascript-prelude")]
     javascript_prelude: Option<Utf8PathBuf>,
 
     /// Skip Erlang to BEAM bytecode compilation if given
-    #[arg(long = "no-beam")]
+    #[clap(long = "no-beam")]
     skip_beam_compilation: bool,
 }
 
@@ -346,13 +329,13 @@ enum Hex {
     ///
     /// - HEXPM_USER: (optional) The Hex username to authenticate with.
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    #[command(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment)]
     Retire {
         package: String,
 
         version: String,
 
-        #[arg(value_parser = PossibleValuesParser::new(RetirementReason::VARIANTS).map(|s| RetirementReason::from_str(&s).unwrap()))]
+        #[clap(possible_values = RetirementReason::VARIANTS)]
         reason: RetirementReason,
 
         message: Option<String>,
@@ -364,7 +347,7 @@ enum Hex {
     ///
     /// - HEXPM_USER: (optional) The Hex username to authenticate with.
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    #[command(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment)]
     Unretire { package: String, version: String },
 }
 
@@ -373,7 +356,7 @@ enum Docs {
     /// Render HTML docs locally
     Build {
         /// Opens the docs in a browser after rendering
-        #[arg(long)]
+        #[clap(long)]
         open: bool,
     },
 
@@ -383,7 +366,7 @@ enum Docs {
     ///
     /// - HEXPM_USER: (optional) The Hex username to authenticate with.
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    #[command(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment)]
     Publish,
 
     /// Remove HTML docs from HexDocs
@@ -392,14 +375,14 @@ enum Docs {
     ///
     /// - HEXPM_USER: (optional) The Hex username to authenticate with.
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
-    #[command(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment)]
     Remove {
         /// The name of the package
-        #[arg(long)]
+        #[clap(long)]
         package: String,
 
         /// The version of the docs to remove
-        #[arg(long)]
+        #[clap(long)]
         version: String,
     },
 }
@@ -504,10 +487,9 @@ fn main() {
     }
 }
 
-fn command_check(target: Option<Target>) -> Result<()> {
+fn command_check(target: Option<Target>) -> Result<(), Error> {
     let _ = build::main(
         Options {
-            root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
             codegen: Codegen::DepsOnly,
             mode: Mode::Dev,
@@ -518,10 +500,9 @@ fn command_check(target: Option<Target>) -> Result<()> {
     Ok(())
 }
 
-fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<()> {
+fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<(), Error> {
     let _ = build::main(
         Options {
-            root_target_support: TargetSupport::Enforced,
             warnings_as_errors,
             codegen: Codegen::All,
             mode: Mode::Dev,
@@ -565,7 +546,7 @@ fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
     ProjectPaths::new(current_dir)
 }
 
-fn download_dependencies() -> Result<()> {
+fn download_dependencies() -> Result<(), Error> {
     let paths = find_project_paths()?;
     _ = dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
     Ok(())

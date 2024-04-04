@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/inline_var_action.rs
+expression: "\n    import list\n\n    fn main() {\n      let x = 1\n      let y = 2\n      [1, y, 3]\n    }\n            "
+---
+No codeaction produced, check if mark is hit...

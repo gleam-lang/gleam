@@ -4,7 +4,6 @@ use super::*;
 use crate::{
     build::module_loader::SourceFingerprint,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
-    line_numbers,
     parse::extra::ModuleExtra,
     warning::NullWarningEmitterIO,
     Warning,
@@ -29,14 +28,12 @@ fn write_src(fs: &InMemoryFileSystem, path: &str, seconds: u64, src: &str) {
 }
 
 fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<EcoString>, src: &str) {
-    let line_numbers = line_numbers::LineNumbers::new(src);
     let mtime = SystemTime::UNIX_EPOCH + Duration::from_secs(seconds);
     let cache_metadata = CacheMetadata {
         mtime,
         codegen_performed: true,
         dependencies: deps,
         fingerprint: SourceFingerprint::new(src),
-        line_numbers: line_numbers.clone(),
     };
     let path = Utf8Path::new("/artefact").join(format!("{name}.cache_meta"));
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
@@ -51,7 +48,6 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<EcoS
         accessors: Default::default(),
         unused_imports: Vec::new(),
         contains_todo: false,
-        line_numbers: line_numbers.clone(),
     };
     let path = Utf8Path::new("/artefact").join(format!("{name}.cache"));
     fs.write_bytes(
@@ -237,46 +233,6 @@ fn invalid_nested_module_name() {
         loaded.warnings,
         vec![Warning::InvalidSource {
             path: Utf8PathBuf::from("/src/1/one.gleam"),
-        }],
-    );
-}
-
-#[test]
-fn invalid_module_name_in_test() {
-    let fs = InMemoryFileSystem::new();
-    let root = Utf8Path::new("/");
-    let artefact = Utf8Path::new("/artefact");
-
-    // Cache is stale
-    write_src(&fs, "/test/One.gleam", 1, TEST_SOURCE_2);
-
-    let loaded = run_loader(fs, root, artefact);
-    assert!(loaded.to_compile.is_empty());
-    assert!(loaded.cached.is_empty());
-    assert_eq!(
-        loaded.warnings,
-        vec![Warning::InvalidSource {
-            path: Utf8PathBuf::from("/test/One.gleam"),
-        }],
-    );
-}
-
-#[test]
-fn invalid_nested_module_name_in_test() {
-    let fs = InMemoryFileSystem::new();
-    let root = Utf8Path::new("/");
-    let artefact = Utf8Path::new("/artefact");
-
-    // Cache is stale
-    write_src(&fs, "/test/1/one.gleam", 1, TEST_SOURCE_2);
-
-    let loaded = run_loader(fs, root, artefact);
-    assert!(loaded.to_compile.is_empty());
-    assert!(loaded.cached.is_empty());
-    assert_eq!(
-        loaded.warnings,
-        vec![Warning::InvalidSource {
-            path: Utf8PathBuf::from("/test/1/one.gleam"),
         }],
     );
 }

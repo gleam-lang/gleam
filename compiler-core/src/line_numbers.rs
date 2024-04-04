@@ -1,7 +1,7 @@
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct LineNumbers {
-    pub line_starts: Vec<u32>,
-    pub length: u32,
+    line_starts: Vec<u32>,
+    length: u32,
 }
 
 impl LineNumbers {

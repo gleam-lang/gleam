@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use crate::analyse::TargetSupport;
 use crate::build::Target;
-use crate::line_numbers::LineNumbers;
-use crate::type_::expression::FunctionDefinition;
+use crate::type_::expression::Implementations;
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{SrcSpan, TypedExpr},
@@ -16,7 +15,7 @@ use crate::{
     warning::TypeWarningEmitter,
 };
 
-use super::{Publicity, Statement, TypedModule, TypedStatement};
+use super::{Statement, TypedModule, TypedStatement};
 
 fn compile_module(src: &str) -> TypedModule {
     use crate::type_::build_prelude;
@@ -29,7 +28,6 @@ fn compile_module(src: &str) -> TypedModule {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    let line_numbers = LineNumbers::new(src);
     crate::analyse::infer_module::<()>(
         Target::Erlang,
         &ids,
@@ -40,7 +38,6 @@ fn compile_module(src: &str) -> TypedModule {
         &TypeWarningEmitter::null(),
         &std::collections::HashMap::new(),
         TargetSupport::Enforced,
-        line_numbers,
     )
     .expect("should successfully infer")
 }
@@ -77,7 +74,7 @@ fn compile_expression(src: &str) -> TypedStatement {
 
     // Insert a cat record to use in the tests
     let cat_type = Arc::new(Type::Named {
-        publicity: Publicity::Public,
+        public: true,
         package: "mypackage".into(),
         module: "mymod".into(),
         name: "Cat".into(),
@@ -100,14 +97,14 @@ fn compile_expression(src: &str) -> TypedStatement {
         "Cat".into(),
         variant,
         type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),
-        Publicity::Public,
+        true,
         Deprecation::NotDeprecated,
     );
 
     environment.insert_accessors(
         "Cat".into(),
         AccessorsMap {
-            publicity: Publicity::Public,
+            public: true,
             type_: cat_type,
             accessors: [
                 (
@@ -132,10 +129,10 @@ fn compile_expression(src: &str) -> TypedStatement {
     );
     ExprTyper::new(
         &mut environment,
-        FunctionDefinition {
-            has_body: true,
-            has_erlang_external: false,
-            has_javascript_external: false,
+        Implementations {
+            gleam: false,
+            uses_erlang_externals: false,
+            uses_javascript_externals: false,
         },
     )
     .infer_statements(ast)
@@ -206,7 +203,7 @@ wibble}"#,
         location: SrcSpan { start: 16, end: 22 },
         constructor: ValueConstructor {
             deprecation: Deprecation::NotDeprecated,
-            publicity: Publicity::Private,
+            public: false,
             variant: ValueConstructorVariant::LocalVariable {
                 location: SrcSpan { start: 5, end: 11 },
             },
@@ -232,6 +229,13 @@ fn find_node_sequence() {
     assert!(block.find_node(5).is_none());
     assert!(block.find_node(6).is_some());
     assert!(block.find_node(7).is_none());
+}
+
+#[test]
+fn find_node_sequence_early_exit() {
+    let block = compile_expression(r#"{ 1 2 3 }"#);
+    cov_mark::check!(early_exit_block);
+    assert!(block.find_node(1).is_none());
 }
 
 #[test]
@@ -268,6 +272,15 @@ fn find_node_list() {
 }
 
 #[test]
+fn find_node_list_early_exit() {
+    let statement = compile_expression(r#"[1, 2, 3]"#);
+    let list = get_bare_expression(&statement);
+
+    cov_mark::check!(early_exit_tuple_list);
+    assert_eq!(list.find_node(2), Some(Located::Expression(list)));
+}
+
+#[test]
 fn find_node_tuple() {
     let statement = compile_expression(r#"#(1, 2, 3)"#);
     let tuple = get_bare_expression(&statement);
@@ -299,6 +312,15 @@ fn find_node_tuple() {
     assert_eq!(tuple.find_node(8), Some(Located::Expression(&int3)));
     assert_eq!(tuple.find_node(9), Some(Located::Expression(tuple)));
     assert_eq!(tuple.find_node(10), None);
+}
+
+#[test]
+fn find_node_tuple_early_exit() {
+    let statement = compile_expression(r#"#(1, 2, 3)"#);
+    let tuple = get_bare_expression(&statement);
+
+    cov_mark::check!(early_exit_tuple_list);
+    assert_eq!(tuple.find_node(3), Some(Located::Expression(tuple)));
 }
 
 #[test]
@@ -476,6 +498,7 @@ case 1, 2 {
 
     assert_eq!(case.find_node(1), Some(Located::Expression(case)));
     assert_eq!(case.find_node(6), Some(Located::Expression(&int1)));
+    assert_eq!(case.find_node(7), Some(Located::Expression(case)));
     assert_eq!(case.find_node(9), Some(Located::Expression(&int2)));
     assert_eq!(case.find_node(23), Some(Located::Expression(&int3)));
     assert_eq!(case.find_node(25), Some(Located::Expression(case)));
@@ -491,7 +514,7 @@ fn find_node_bool() {
         location: SrcSpan { start: 1, end: 5 },
         constructor: ValueConstructor {
             deprecation: Deprecation::NotDeprecated,
-            publicity: Publicity::Public,
+            public: true,
             variant: ValueConstructorVariant::Record {
                 documentation: None,
                 constructors_count: 2,
@@ -569,4 +592,95 @@ use x <- fn(f) { f(1) }
     assert!(use_.find_node(23).is_some());
 
     assert!(use_.find_node(26).is_some()); // The int
+}
+
+#[test]
+fn find_node_pipeline() {
+    let module = compile_module(
+        r#"
+        pub fn main(){
+          let x = [1,2,3]
+          let result =
+          x
+          |> reverse()
+          |> fn(a) { let int1 = 1 a}
+        }
+
+        pub fn reverse(xs: List(a)) -> List(a) {
+            do_reverse(xs)
+        }
+
+        fn do_reverse(list) {
+            do_reverse_acc(list, [])
+        }
+
+        fn do_reverse_acc(remaining, accumulator) {
+            case remaining {
+                [] -> accumulator
+                [item, ..rest] -> do_reverse_acc(rest, [item, ..accumulator])
+            }
+        }
+        "#,
+    );
+
+    let int1 = TypedExpr::Int {
+        location: SrcSpan {
+            start: 140,
+            end: 141,
+        },
+        typ: type_::int(),
+        value: "1".into(),
+    };
+
+    assert_eq!(module.find_node(140), Some(Located::Expression(&int1)));
+}
+
+#[test]
+fn find_node_with_pruning_typeddefinition() {
+    let module = compile_module(
+        r#"
+pub fn main() {
+    1
+}
+
+fn test1() {
+    2
+}
+
+fn i_am_here(){
+    3
+}
+        "#,
+    );
+
+    let int3 = TypedExpr::Int {
+        location: SrcSpan { start: 68, end: 69 },
+        typ: type_::int(),
+        value: "3".into(),
+    };
+
+    cov_mark::check!(prune_function_definition);
+    assert_eq!(module.find_node(68), Some(Located::Expression(&int3)));
+}
+
+#[test]
+fn find_node_with_pruning_statement() {
+    let module = compile_module(
+        r#"
+pub fn main() {
+    let s1 = 1
+    let s2 = 2
+    let s3 = 3
+}
+        "#,
+    );
+
+    let int3 = TypedExpr::Int {
+        location: SrcSpan { start: 60, end: 61 },
+        typ: type_::int(),
+        value: "3".into(),
+    };
+
+    cov_mark::check!(prune_statement);
+    assert_eq!(module.find_node(60), Some(Located::Expression(&int3)));
 }

@@ -855,13 +855,13 @@ impl ConstructorSpecialiser {
     fn specialise_type(&self, type_: &Type) -> Arc<Type> {
         Arc::new(match type_ {
             Type::Named {
-                publicity,
+                public,
                 package,
                 module,
                 name,
                 args,
             } => Type::Named {
-                publicity: *publicity,
+                public: *public,
                 package: package.clone(),
                 module: module.clone(),
                 name: name.clone(),

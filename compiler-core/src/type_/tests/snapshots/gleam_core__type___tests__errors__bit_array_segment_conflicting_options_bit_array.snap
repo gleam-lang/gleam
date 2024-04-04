@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 74
 expression: "case <<1>> { <<1:bits-bytes>> -> 1 }"
 ---
 error: Invalid bit array segment
@@ -10,4 +9,5 @@ error: Invalid bit array segment
   │                       ^^^^^ This is an extra type specifier
 
 Hint: This segment already has the type bits.
-See: https://tour.gleam.run/data-types/bit-arrays/
+See: https://gleam.run/book/tour/bit-arrays.html
+

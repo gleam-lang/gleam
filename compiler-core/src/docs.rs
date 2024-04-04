@@ -7,14 +7,13 @@ use std::time::SystemTime;
 use camino::Utf8PathBuf;
 
 use crate::{
-    ast::{
-        CustomType, Definition, Function, ModuleConstant, Publicity, TypeAlias, TypedDefinition,
-    },
+    ast::{CustomType, Definition, Function, ModuleConstant, TypeAlias, TypedDefinition},
     build::{Module, Package},
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
     format,
-    io::{Content, FileSystemReader, OutputFile},
+    io::Content,
+    io::OutputFile,
     package_interface::PackageInterface,
     paths::ProjectPaths,
     pretty,
@@ -29,12 +28,11 @@ use serde_json::to_string as serde_to_string;
 
 const MAX_COLUMNS: isize = 65;
 
-pub fn generate_html<IO: FileSystemReader>(
+pub fn generate_html(
     paths: &ProjectPaths,
     config: &PackageConfig,
     analysed: &[Module],
     docs_pages: &[DocsPage],
-    fs: IO,
     rendering_timestamp: SystemTime,
 ) -> Vec<OutputFile> {
     let modules = analysed
@@ -67,12 +65,7 @@ pub fn generate_html<IO: FileSystemReader>(
         path,
     });
 
-    let package_link = Link {
-        name: "Hex".into(),
-        path: format!("https://hex.pm/packages/{0}", config.name).to_string(),
-    };
-
-    let links: Vec<_> = doc_links.chain(repo_link).chain([package_link]).collect();
+    let links: Vec<_> = doc_links.chain(repo_link).collect();
 
     let mut files = vec![];
 
@@ -92,8 +85,8 @@ pub fn generate_html<IO: FileSystemReader>(
 
     // Generate user-supplied (or README) pages
     for page in docs_pages {
-        let content = fs.read(&page.source).unwrap_or_default();
-        let rendered_content = render_markdown(&content, MarkdownSource::Standalone);
+        let content = std::fs::read_to_string(&page.source).unwrap_or_default();
+        let rendered_content = render_markdown(&content);
         let unnest = page_unnest(&page.path);
 
         let page_path_without_ext = page.path.split('.').next().unwrap_or("");
@@ -144,14 +137,12 @@ pub fn generate_html<IO: FileSystemReader>(
         let source_links = SourceLinker::new(paths, config, module);
 
         let documentation_content = module.ast.documentation.iter().join("\n");
-        let rendered_documentation =
-            render_markdown(&documentation_content.clone(), MarkdownSource::Comment);
+        let rendered_documentation = render_markdown(&documentation_content.clone());
 
         let functions: Vec<DocsFunction<'_>> = module
             .ast
             .definitions
             .iter()
-            .filter(|statement| !statement.is_internal())
             .flat_map(|statement| function(&source_links, statement))
             .sorted()
             .collect();
@@ -160,7 +151,6 @@ pub fn generate_html<IO: FileSystemReader>(
             .ast
             .definitions
             .iter()
-            .filter(|statement| !statement.is_internal())
             .flat_map(|statement| type_(&source_links, statement))
             .sorted()
             .collect();
@@ -169,7 +159,6 @@ pub fn generate_html<IO: FileSystemReader>(
             .ast
             .definitions
             .iter()
-            .filter(|statement| !statement.is_internal())
             .flat_map(|statement| constant(&source_links, statement))
             .sorted()
             .collect();
@@ -505,7 +494,7 @@ fn function<'a>(
 
     match statement {
         Definition::Function(Function {
-            publicity: Publicity::Public,
+            public: true,
             name,
             documentation: doc,
             arguments: args,
@@ -519,7 +508,7 @@ fn function<'a>(
             text_documentation: text_documentation(doc),
             signature: print(
                 formatter
-                    .docs_fn_signature(Publicity::Public, name, args, ret.clone())
+                    .docs_fn_signature(true, name, args, ret.clone())
                     .group(),
             ),
             source_url: source_links.url(*location),
@@ -544,31 +533,16 @@ fn text_documentation(doc: &Option<EcoString>) -> String {
 }
 
 fn markdown_documentation(doc: &Option<EcoString>) -> String {
-    doc.as_deref()
-        .map(|doc| render_markdown(doc, MarkdownSource::Comment))
-        .unwrap_or_default()
+    doc.as_deref().map(render_markdown).unwrap_or_default()
 }
 
-/// An enum to represent the source of a Markdown string to render.
-enum MarkdownSource {
-    /// A Markdown string that comes from the documentation of a
-    /// definition/module. This means that each line is going to be preceded by
-    /// a whitespace.
-    Comment,
-    /// A Markdown string coming from a standalone file like a README.md.
-    Standalone,
-}
-
-fn render_markdown(text: &str, source: MarkdownSource) -> String {
-    let text = match source {
-        MarkdownSource::Standalone => text.into(),
-        // Doc comments start with "///\s", which can confuse the markdown parser
-        // and prevent tables from rendering correctly, so remove that first space.
-        MarkdownSource::Comment => text
-            .split('\n')
-            .map(|s| s.strip_prefix(' ').unwrap_or(s))
-            .join("\n"),
-    };
+fn render_markdown(text: &str) -> String {
+    // Doc comments start with "///\s", which can confuse the markdown parser
+    // and prevent tables from rendering correctly, so remove that first space.
+    let text = text
+        .split('\n')
+        .map(|s| s.strip_prefix(' ').unwrap_or(s))
+        .join("\n");
 
     let mut s = String::with_capacity(text.len() * 3 / 2);
     let p = pulldown_cmark::Parser::new_ext(&text, pulldown_cmark::Options::all());
@@ -580,7 +554,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
     let mut formatter = format::Formatter::new();
 
     match statement {
-        Definition::CustomType(ct) if ct.publicity.is_importable() && !ct.opaque => Some(Type {
+        Definition::CustomType(ct) if ct.public && !ct.opaque => Some(Type {
             name: &ct.name,
             // TODO: Don't use the same printer for docs as for the formatter.
             // We are not interested in showing the exact implementation in the
@@ -612,11 +586,10 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
                 })
                 .collect(),
             source_url: source_links.url(ct.location),
-            opaque: ct.opaque,
         }),
 
         Definition::CustomType(CustomType {
-            publicity: Publicity::Public,
+            public: true,
             opaque: true,
             name,
             parameters,
@@ -628,7 +601,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             name,
             definition: print(
                 formatter
-                    .docs_opaque_custom_type(Publicity::Public, name, parameters, location)
+                    .docs_opaque_custom_type(true, name, parameters, location)
                     .group(),
             ),
             documentation: markdown_documentation(doc),
@@ -639,11 +612,10 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
                 Deprecation::NotDeprecated => "".to_string(),
                 Deprecation::Deprecated { message } => message.to_string(),
             },
-            opaque: true,
         }),
 
         Definition::TypeAlias(TypeAlias {
-            publicity: Publicity::Public,
+            public: true,
             alias: name,
             type_ast: typ,
             documentation: doc,
@@ -655,7 +627,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             name,
             definition: print(
                 formatter
-                    .type_alias(Publicity::Public, name, args, typ, deprecation)
+                    .type_alias(true, name, args, typ, deprecation)
                     .group(),
             ),
             documentation: markdown_documentation(doc),
@@ -666,7 +638,6 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
                 Deprecation::NotDeprecated => "".to_string(),
                 Deprecation::Deprecated { message } => message.to_string(),
             },
-            opaque: false,
         }),
 
         _ => None,
@@ -680,7 +651,7 @@ fn constant<'a>(
     let mut formatter = format::Formatter::new();
     match statement {
         Definition::ModuleConstant(ModuleConstant {
-            publicity: Publicity::Public,
+            public: true,
             documentation: doc,
             name,
             value,
@@ -688,7 +659,7 @@ fn constant<'a>(
             ..
         }) => Some(Constant {
             name,
-            definition: print(formatter.docs_const_expr(Publicity::Public, name, value)),
+            definition: print(formatter.docs_const_expr(true, name, value)),
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
             source_url: source_links.url(*location),
@@ -741,7 +712,6 @@ struct Type<'a> {
     text_documentation: String,
     source_url: String,
     deprecation_message: String,
-    opaque: bool,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]

@@ -98,7 +98,6 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         let parsed = crate::parse::parse_module(dep_src).expect("dep syntax error");
         let mut ast = parsed.module;
         ast.name = (*dep_name).into();
-        let line_numbers = LineNumbers::new(dep_src);
         let dep = crate::analyse::infer_module::<()>(
             Target::JavaScript,
             &ids,
@@ -109,7 +108,6 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
             &TypeWarningEmitter::null(),
             &std::collections::HashMap::new(),
             TargetSupport::Enforced,
-            line_numbers,
         )
         .expect("should successfully infer");
         let _ = modules.insert((*dep_name).into(), dep.type_info);
@@ -119,7 +117,6 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
     let parsed = crate::parse::parse_module(src).expect("syntax error");
     let mut ast = parsed.module;
     ast.name = "my/mod".into();
-    let line_numbers = LineNumbers::new(src);
     crate::analyse::infer_module::<()>(
         Target::JavaScript,
         &ids,
@@ -129,8 +126,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         &modules,
         &TypeWarningEmitter::null(),
         &direct_dependencies,
-        TargetSupport::NotEnforced,
-        line_numbers,
+        TargetSupport::Enforced,
     )
     .expect("should successfully infer")
 }
@@ -138,15 +134,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
 pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
-    module(
-        &ast,
-        &line_numbers,
-        Utf8Path::new(""),
-        &"".into(),
-        TargetSupport::NotEnforced,
-        TypeScriptDeclarations::None,
-    )
-    .unwrap()
+    module(&ast, &line_numbers, Utf8Path::new(""), &"".into()).unwrap()
 }
 
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> String {

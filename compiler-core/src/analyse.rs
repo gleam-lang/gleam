@@ -5,20 +5,18 @@ mod tests;
 use crate::{
     ast::{
         self, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
-        GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
-        RecordConstructorArg, SrcSpan, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn,
-        TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedModule, UntypedArg,
-        UntypedModule, UntypedStatement,
+        GroupedStatements, Import, ModuleConstant, RecordConstructor, RecordConstructorArg,
+        SrcSpan, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple,
+        TypeAstVar, TypedDefinition, TypedModule, UntypedArg, UntypedModule, UntypedStatement,
     },
     build::{Origin, Target},
     call_graph::{into_dependency_order, CallGraphNode},
     dep_tree,
-    line_numbers::LineNumbers,
     type_::{
         self,
         environment::*,
         error::{convert_unify_error, Error, MissingAnnotation},
-        expression::{ExprTyper, FunctionDefinition},
+        expression::{ExprTyper, Implementations},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
@@ -78,34 +76,10 @@ impl Inferred<PatternConstructor> {
     }
 }
 
-/// How the compiler should treat target support.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TargetSupport {
-    /// Target support is enfored, meaning if a function is found to not have an implementation for
-    /// the current target then an error is emitted and compilation halts.
-    ///
-    /// This is used when compiling the root package, with the exception of when using
-    /// `gleam run --module $module` to run a module from a dependency package, in which case we do
-    /// not want to error as the root package code isn't going to be run.
     Enforced,
-    /// Target support is enfored, meaning if a function is found to not have an implementation for
-    /// the current target it will continue onwards and not generate any code for this function.
-    ///
-    /// This is used when compiling dependencies.
     NotEnforced,
-}
-
-impl TargetSupport {
-    /// Returns `true` if the target support is [`Enforced`].
-    ///
-    /// [`Enforced`]: TargetSupport::Enforced
-    #[must_use]
-    pub fn is_enforced(&self) -> bool {
-        match self {
-            Self::Enforced => true,
-            Self::NotEnforced => false,
-        }
-    }
 }
 
 // TODO: This takes too many arguments.
@@ -123,7 +97,6 @@ pub fn infer_module<A>(
     warnings: &TypeWarningEmitter,
     direct_dependencies: &HashMap<EcoString, A>,
     target_support: TargetSupport,
-    line_numbers: LineNumbers,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
@@ -238,12 +211,11 @@ pub fn infer_module<A>(
     // server, but are filtered out when type checking to prevent using private
     // items.
     env.module_types.retain(|_, info| info.module == name);
-    env.accessors
-        .retain(|_, accessors| accessors.publicity.is_importable());
+    env.accessors.retain(|_, accessors| accessors.public);
 
     // Ensure no exported values have private types in their type signature
     for value in env.module_values.values() {
-        if value.publicity.is_private() {
+        if !value.public {
             continue;
         }
         if let Some(leaked) = value.type_.find_private_type() {
@@ -277,7 +249,6 @@ pub fn infer_module<A>(
             package: package.clone(),
             unused_imports,
             contains_todo,
-            line_numbers,
         },
     })
 }
@@ -305,13 +276,12 @@ fn register_type_alias(
 ) -> Result<(), Error> {
     let TypeAlias {
         location,
-        publicity,
+        public,
         parameters: args,
         alias: name,
         type_ast: resolved_type,
         deprecation,
-        type_: _,
-        documentation: _,
+        ..
     } = t;
 
     // A type alias must not have the same name as any other type in the module.
@@ -330,10 +300,10 @@ fn register_type_alias(
         TypeConstructor {
             origin: *location,
             module: module.clone(),
+            public: *public,
             parameters,
             typ,
             deprecation: deprecation.clone(),
-            publicity: *publicity,
         },
     )?;
 
@@ -345,7 +315,7 @@ fn register_type_alias(
     }
 
     // Register the type for detection of dead code.
-    if publicity.is_private() {
+    if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
     };
     Ok(())
@@ -360,12 +330,10 @@ fn register_types_from_custom_type<'a>(
 ) -> Result<(), Error> {
     let CustomType {
         name,
-        publicity,
+        public,
         parameters,
         location,
         deprecation,
-        opaque,
-        constructors,
         ..
     } = t;
     assert_unique_type_name(names, name, *location)?;
@@ -375,7 +343,7 @@ fn register_types_from_custom_type<'a>(
     hydrator.clear_ridgid_type_names();
 
     let typ = Arc::new(Type::Named {
-        publicity: *publicity,
+        public: *public,
         package: environment.current_package.clone(),
         module: module.to_owned(),
         name: name.clone(),
@@ -387,22 +355,13 @@ fn register_types_from_custom_type<'a>(
         TypeConstructor {
             origin: *location,
             module: module.clone(),
+            public: *public,
             deprecation: deprecation.clone(),
             parameters,
-            publicity: *publicity,
             typ,
         },
     )?;
-
-    if *opaque && constructors.is_empty() {
-        environment
-            .warnings
-            .emit(type_::Warning::OpaqueExternalType {
-                location: *location,
-            });
-    }
-
-    if publicity.is_private() {
+    if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
     };
     Ok(())
@@ -418,14 +377,13 @@ fn register_values_from_custom_type(
 ) -> Result<(), Error> {
     let CustomType {
         location,
-        publicity,
+        public,
         opaque,
         name,
         constructors,
         deprecation,
         ..
     } = t;
-
     let mut hydrator = hydrators
         .remove(name)
         .expect("Could not find hydrator for register_values custom type");
@@ -438,11 +396,7 @@ fn register_values_from_custom_type(
         .clone();
     if let Some(accessors) = custom_type_accessors(constructors, &mut hydrator, environment)? {
         let map = AccessorsMap {
-            publicity: if *opaque {
-                Publicity::Private
-            } else {
-                *publicity
-            },
+            public: (*public && !*opaque),
             accessors,
             // TODO: improve the ownership here so that we can use the
             // `return_type_constructor` below rather than looking it up twice.
@@ -497,25 +451,17 @@ fn register_values_from_custom_type(
             constructor_index: index as u16,
         };
 
-        // If the contructor belongs to an opaque type then it's going to be
-        // considered as private.
-        let value_constructor_publicity = if *opaque {
-            Publicity::Private
-        } else {
-            *publicity
-        };
-
         environment.insert_module_value(
             constructor.name.clone(),
             ValueConstructor {
-                publicity: value_constructor_publicity,
                 deprecation: deprecation.clone(),
+                public: *public && !opaque,
                 type_: typ.clone(),
                 variant: constructor_info.clone(),
             },
         );
 
-        if value_constructor_publicity.is_private() {
+        if !public {
             environment.init_usage(
                 constructor.name.clone(),
                 EntityKind::PrivateTypeConstructor(name.clone()),
@@ -531,7 +477,7 @@ fn register_values_from_custom_type(
             constructor.name.clone(),
             constructor_info,
             typ,
-            value_constructor_publicity,
+            *public,
             deprecation.clone(),
         );
     }
@@ -557,7 +503,7 @@ fn register_value_from_function(
         arguments: args,
         location,
         return_annotation,
-        publicity,
+        public,
         documentation,
         external_erlang,
         external_javascript,
@@ -601,8 +547,8 @@ fn register_value_from_function(
         location: *location,
         implementations: *implementations,
     };
-    environment.insert_variable(name.clone(), variant, typ, *publicity, deprecation.clone());
-    if publicity.is_private() {
+    environment.insert_variable(name.clone(), variant, typ, *public, deprecation.clone());
+    if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
     };
     Ok(())
@@ -655,7 +601,7 @@ fn infer_function(
         documentation: doc,
         location,
         name,
-        publicity,
+        public,
         arguments,
         body,
         return_annotation,
@@ -666,7 +612,6 @@ fn infer_function(
         return_type: (),
         implementations: _,
     } = f;
-    let target = environment.target;
     let preregistered_fn = environment
         .get_variable(&name)
         .expect("Could not find preregistered type for function");
@@ -677,7 +622,8 @@ fn infer_function(
         .expect("Preregistered type for fn was not a fn");
 
     // Find the external implementation for the current target, if one has been given.
-    let external = target_function_implementation(target, &external_erlang, &external_javascript);
+    let external =
+        target_function_implementation(environment.target, &external_erlang, &external_javascript);
     let (impl_module, impl_function) = implementation_names(external, module_name, &name);
 
     // The function must have at least one implementation somewhere.
@@ -691,10 +637,10 @@ fn infer_function(
         ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
     }
 
-    let definition = FunctionDefinition {
-        has_body: !body.first().is_placeholder(),
-        has_erlang_external: external_erlang.is_some(),
-        has_javascript_external: external_javascript.is_some(),
+    let external_implementations = Implementations {
+        gleam: false,
+        uses_erlang_externals: external_erlang.is_some(),
+        uses_javascript_externals: external_javascript.is_some(),
     };
 
     // Infer the type using the preregistered args + return types as a starting point
@@ -704,7 +650,7 @@ fn infer_function(
             .zip(&args_types)
             .map(|(a, t)| a.set_type(t.clone()))
             .collect();
-        let mut expr_typer = ExprTyper::new(environment, definition);
+        let mut expr_typer = ExprTyper::new(environment, external_implementations);
         expr_typer.hydrator = hydrators
             .remove(&name)
             .expect("Could not find hydrator for fn");
@@ -718,20 +664,6 @@ fn infer_function(
 
     // Assert that the inferred type matches the type of any recursive call
     unify(preregistered_type, type_.clone()).map_err(|e| convert_unify_error(e, location))?;
-
-    // Ensure that the current target has an implementation for the function.
-    // This is done at the expression level while inferring the function body, but we do it again
-    // here as externally implemented functions may not have a Gleam body.
-    if publicity.is_importable()
-        && environment.target_support.is_enforced()
-        && !implementations.supports(target)
-    {
-        return Err(Error::UnsupportedPublicFunctionTarget {
-            name: name.clone(),
-            target,
-            location,
-        });
-    }
 
     let variant = ValueConstructorVariant::ModuleFn {
         documentation: doc.clone(),
@@ -747,7 +679,7 @@ fn infer_function(
         name.clone(),
         variant,
         type_.clone(),
-        publicity,
+        public,
         deprecation.clone(),
     );
 
@@ -755,7 +687,7 @@ fn infer_function(
         documentation: doc,
         location,
         name,
-        publicity,
+        public,
         deprecation,
         arguments: args,
         end_position: end_location,
@@ -770,7 +702,7 @@ fn infer_function(
     }))
 }
 
-/// Returns the module name and function name of the implementation of a
+/// Returns the the module name and function name of the implementation of a
 /// function. If the function is implemented as a Gleam function then it is the
 /// same as the name of the module and function. If the function has an external
 /// implementation then it is the name of the external module and function.
@@ -837,7 +769,7 @@ fn insert_type_alias(
     let TypeAlias {
         documentation: doc,
         location,
-        publicity,
+        public,
         alias,
         parameters: args,
         type_ast: resolved_type,
@@ -852,7 +784,7 @@ fn insert_type_alias(
     Ok(Definition::TypeAlias(TypeAlias {
         documentation: doc,
         location,
-        publicity,
+        public,
         alias,
         parameters: args,
         type_ast: resolved_type,
@@ -869,7 +801,7 @@ fn infer_custom_type(
         documentation: doc,
         location,
         end_position,
-        publicity,
+        public,
         opaque,
         name,
         parameters,
@@ -937,7 +869,7 @@ fn infer_custom_type(
         documentation: doc,
         location,
         end_position,
-        publicity,
+        public,
         opaque,
         name,
         parameters,
@@ -1009,7 +941,7 @@ fn infer_module_constant(
         location,
         name,
         annotation,
-        publicity,
+        public,
         value,
         deprecation,
         ..
@@ -1017,10 +949,10 @@ fn infer_module_constant(
 
     let mut expr_typer = ExprTyper::new(
         environment,
-        FunctionDefinition {
-            has_body: true,
-            has_erlang_external: false,
-            has_javascript_external: false,
+        Implementations {
+            gleam: false,
+            uses_erlang_externals: false,
+            uses_javascript_externals: false,
         },
     );
     let typed_expr = expr_typer.infer_const(&annotation, *value)?;
@@ -1028,7 +960,7 @@ fn infer_module_constant(
     let implementations = expr_typer.implementations;
 
     let variant = ValueConstructor {
-        publicity,
+        public,
         deprecation: deprecation.clone(),
         variant: ValueConstructorVariant::ModuleConstant {
             documentation: doc.clone(),
@@ -1044,12 +976,12 @@ fn infer_module_constant(
         name.clone(),
         variant.variant.clone(),
         type_.clone(),
-        publicity,
+        public,
         Deprecation::NotDeprecated,
     );
     environment.insert_module_value(name.clone(), variant);
 
-    if publicity.is_private() {
+    if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
     }
 
@@ -1058,7 +990,7 @@ fn infer_module_constant(
         location,
         name,
         annotation,
-        publicity,
+        public,
         value: Box::new(typed_expr),
         type_,
         deprecation,
@@ -1140,7 +1072,7 @@ fn generalise_module_constant(
         location,
         name,
         annotation,
-        publicity,
+        public,
         value,
         type_,
         deprecation,
@@ -1159,14 +1091,14 @@ fn generalise_module_constant(
         name.clone(),
         variant.clone(),
         type_.clone(),
-        publicity,
+        public,
         deprecation.clone(),
     );
 
     environment.insert_module_value(
         name.clone(),
         ValueConstructor {
-            publicity,
+            public,
             variant,
             deprecation: deprecation.clone(),
             type_: type_.clone(),
@@ -1178,7 +1110,7 @@ fn generalise_module_constant(
         location,
         name,
         annotation,
-        publicity,
+        public,
         value,
         type_,
         deprecation,
@@ -1195,7 +1127,7 @@ fn generalise_function(
         documentation: doc,
         location,
         name,
-        publicity,
+        public,
         deprecation,
         arguments: args,
         body,
@@ -1234,13 +1166,13 @@ fn generalise_function(
         name.clone(),
         variant.clone(),
         type_.clone(),
-        publicity,
+        public,
         deprecation.clone(),
     );
     environment.insert_module_value(
         name.clone(),
         ValueConstructor {
-            publicity,
+            public,
             deprecation: deprecation.clone(),
             type_,
             variant,
@@ -1251,7 +1183,7 @@ fn generalise_function(
         documentation: doc,
         location,
         name,
-        publicity,
+        public,
         deprecation,
         arguments: args,
         end_position: end_location,

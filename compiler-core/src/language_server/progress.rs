@@ -4,7 +4,11 @@ use lsp_types::{
     WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
 };
 
+const COMPILING_TOKEN: &str = "compiling-gleam";
+const CREATE_COMPILING_TOKEN: &str = "create-compiling-gleam";
+
 const DOWNLOADING_TOKEN: &str = "downloading-dependencies";
+const CREATE_DOWNLOADING_TOKEN: &str = "create-downloading-dependencies";
 
 pub trait ProgressReporter {
     fn compilation_started(&self);
@@ -29,7 +33,8 @@ impl<'a> ConnectionProgressReporter<'a> {
         // would fail.
         _initialise_params: &InitializeParams,
     ) -> Self {
-        create_token(DOWNLOADING_TOKEN, connection);
+        create_token(CREATE_COMPILING_TOKEN, connection);
+        create_token(CREATE_DOWNLOADING_TOKEN, connection);
         Self {
             connection: connection.into(),
         }
@@ -53,13 +58,12 @@ impl<'a> ConnectionProgressReporter<'a> {
 
 impl<'a> ProgressReporter for ConnectionProgressReporter<'a> {
     fn compilation_started(&self) {
-        // Do nothing. This is only used for tests currently.
-        // In future we could make this emit a message to the client if compilation is taking a
-        // long time.
+        let title = "Compiling Gleam";
+        self.send_notification(COMPILING_TOKEN, begin_message(title));
     }
 
     fn compilation_finished(&self) {
-        // Do nothing. This is only used for tests currently.
+        self.send_notification(COMPILING_TOKEN, end_message());
     }
 
     fn dependency_downloading_started(&self) {
@@ -85,12 +89,12 @@ fn begin_message(title: &str) -> WorkDoneProgress {
     })
 }
 
-fn create_token(token: &str, connection: &lsp_server::Connection) {
+fn create_token(create_token: &str, connection: &lsp_server::Connection) {
     let params = WorkDoneProgressCreateParams {
-        token: NumberOrString::String(token.into()),
+        token: NumberOrString::String(create_token.into()),
     };
     let request = lsp_server::Request {
-        id: format!("create-token--{token}").into(),
+        id: CREATE_COMPILING_TOKEN.to_string().into(),
         method: "window/workDoneProgress/create".into(),
         params: serde_json::to_value(params).expect("WorkDoneProgressCreateParams json"),
     };

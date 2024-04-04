@@ -50,7 +50,6 @@ pub struct Options {
     pub target: Option<Target>,
     pub codegen: Codegen,
     pub warnings_as_errors: bool,
-    pub root_target_support: TargetSupport,
 }
 
 #[derive(Debug)]
@@ -61,13 +60,9 @@ pub struct Built {
 }
 
 impl Built {
-    pub fn get_main_function(
-        &self,
-        module: &EcoString,
-        target: Target,
-    ) -> Result<ModuleFunction, Error> {
+    pub fn get_main_function(&self, module: &EcoString) -> Result<ModuleFunction, Error> {
         match self.module_interfaces.get(module) {
-            Some(module_data) => module_data.get_main_function(target),
+            Some(module_data) => module_data.get_main_function(),
             None => Err(Error::ModuleDoesNotExist {
                 module: module.clone(),
                 suggestion: None,
@@ -231,14 +226,6 @@ where
         }
 
         Ok(modules)
-    }
-
-    pub fn get_build_dir_for_module(&self, package: &str, module: &str) -> Utf8PathBuf {
-        self.paths
-            .build_packages_package(package)
-            .join("src")
-            .join(module)
-            .with_extension("gleam")
     }
 
     fn write_prelude(&self) -> Result<()> {
@@ -500,6 +487,23 @@ where
         self.compile_gleam_package(&config, false, package_root)
     }
 
+    fn load_cached_package(
+        &mut self,
+        build_dir: Utf8PathBuf,
+        package: &ManifestPackage,
+    ) -> Result<(), Error> {
+        for path in self.io.gleam_cache_files(&build_dir) {
+            let reader = BufReader::new(self.io.reader(&path)?);
+            let module = metadata::ModuleDecoder::new(self.ids.clone()).read(reader)?;
+            let _ = self
+                .importable_modules
+                .insert(module.name.clone(), module)
+                .ok_or(())
+                .expect_err("Metadata loaded for already loaded module");
+        }
+        Ok(())
+    }
+
     fn compile_gleam_package(
         &mut self,
         config: &PackageConfig,
@@ -537,7 +541,6 @@ where
                 prelude_location: Utf8PathBuf::from("../prelude.mjs"),
             },
         };
-
         let mut compiler = PackageCompiler::new(
             config,
             mode,
@@ -553,20 +556,9 @@ where
         compiler.perform_codegen = self.options.codegen.should_codegen(is_root);
         compiler.compile_beam_bytecode = self.options.codegen.should_codegen(is_root);
         compiler.subprocess_stdio = self.subprocess_stdio;
-        compiler.target_support = if is_root {
-            // When compiling the root package it is context specific as to whether we need to
-            // enforce that all functions have an implementation for the current target.
-            // Typically we do, but if we are using `gleam run -m $module` to run a module that
-            // belongs to a dependency we don't need to enforce this as we don't want to fail
-            // compilation. It's impossible for a dependecy module to call functions from the root
-            // package, so it's OK if they could not be compiled.
-            self.options.root_target_support
-        } else {
-            // When compiling dependencies we don't enforce that all functions have an
-            // implementation for the current target. It is OK if they have APIs that are
-            // unaccessible so long as they are not used by the root package.
-            TargetSupport::NotEnforced
-        };
+        if is_root {
+            compiler.target_support = TargetSupport::Enforced;
+        }
 
         // Compile project to Erlang or JavaScript source code
         let compiled = compiler.compile(
@@ -626,7 +618,6 @@ pub(crate) fn usable_build_tools(package: &ManifestPackage) -> Result<Vec<BuildT
     for tool in &package.build_tools {
         match tool.as_str() {
             "gleam" => return Ok(vec![BuildTool::Gleam]),
-            "rebar" => rebar3_present = true,
             "rebar3" => rebar3_present = true,
             "mix" => mix_present = true,
             _ => (),

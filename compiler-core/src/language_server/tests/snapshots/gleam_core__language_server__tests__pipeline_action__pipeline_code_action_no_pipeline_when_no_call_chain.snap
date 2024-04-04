@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/pipeline_action.rs
+expression: "\npub fn main() {\n  get_one()\n}\n\nfn get_one() -> Int{\n  1\n}\n\n"
+---
+No codeaction produced...

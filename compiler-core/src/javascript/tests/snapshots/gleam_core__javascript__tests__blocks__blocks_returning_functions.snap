@@ -1,9 +1,0 @@
----
-source: compiler-core/src/javascript/tests/blocks.rs
-expression: "\nfn b() {\n  {\n    fn(cb) { cb(1) }\n  }\n  {\n    fn(cb) { cb(2) }\n  }\n  3\n}\n"
----
-function b() {
-  ((cb) => { return cb(1); });
-  ((cb) => { return cb(2); });
-  return 3;
-}

@@ -1,18 +1,19 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 225
 expression: "./cases/javascript_import"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
-<57 byte binary>
+<29 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<72 byte binary>
+<44 byte binary>
 
 //// /out/lib/the_package/gleam.d.mts
 export * from "../prelude.d.mts";
@@ -31,7 +32,6 @@ export type A$ = A;
 
 
 //// /out/lib/the_package/one/two.mjs
-/// <reference types="./two.d.mts" />
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class A extends $CustomType {}
@@ -44,7 +44,9 @@ export const x: $two.A$;
 
 
 //// /out/lib/the_package/two.mjs
-/// <reference types="./two.d.mts" />
 import * as $two from "./one/two.mjs";
 
 export const x = new $two.A();
+
+
+

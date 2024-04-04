@@ -1,6 +1,5 @@
 use camino::Utf8PathBuf;
 use gleam_core::{
-    analyse::TargetSupport,
     build::{Codegen, Mode, Options, Target},
     Result,
 };
@@ -42,7 +41,6 @@ pub(crate) fn erlang_shipment() -> Result<()> {
     // Build project in production mode
     let built = crate::build::main(
         Options {
-            root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
             codegen: Codegen::All,
             mode,
@@ -128,20 +126,23 @@ pub fn typescript_prelude() -> Result<()> {
 }
 
 pub fn package_interface(path: Utf8PathBuf) -> Result<()> {
+    // Reset the build directory so we know the state of the project
+    let paths = crate::find_project_paths()?;
+    let config = crate::config::root_config()?;
+    crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
+
     // Build the project
-    let mut built = crate::build::main(
+    let built = crate::build::main(
         Options {
             mode: Mode::Prod,
             target: None,
             codegen: Codegen::All,
             warnings_as_errors: false,
-            root_target_support: TargetSupport::Enforced,
         },
         crate::build::download_dependencies()?,
     )?;
-    built.root_package.attach_doc_and_module_comments();
 
     let out = gleam_core::docs::generate_json_package_interface(path, &built.root_package);
-    crate::fs::write_outputs_under(&[out], crate::find_project_paths()?.root())?;
+    crate::fs::write_outputs_under(&[out], paths.root())?;
     Ok(())
 }

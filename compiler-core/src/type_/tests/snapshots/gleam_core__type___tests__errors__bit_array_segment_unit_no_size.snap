@@ -10,4 +10,5 @@ error: Invalid bit array segment
   │             ^^^^^^^ This needs an explicit size
 
 Hint: If you specify unit() you must also specify size().
-See: https://tour.gleam.run/data-types/bit-arrays/
+See: https://gleam.run/book/tour/bit-arrays.html
+

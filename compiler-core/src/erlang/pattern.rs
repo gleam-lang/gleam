@@ -7,16 +7,6 @@ pub(super) fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a
     to_doc(p, &mut vars, env)
 }
 
-pub(super) fn requires_guard(p: &TypedPattern) -> bool {
-    match p {
-        Pattern::StringPrefix {
-            left_side_assignment: Some(_),
-            ..
-        } => true,
-        _ => false,
-    }
-}
-
 fn print<'a>(
     p: &'a TypedPattern,
     vars: &mut Vec<&'a str>,
@@ -93,56 +83,31 @@ fn print<'a>(
         ),
 
         Pattern::StringPrefix {
-            left_side_string,
-            right_side_assignment,
+            left_side_string: left,
+            right_side_assignment: right,
             left_side_assignment,
             ..
         } => {
-            let right = match right_side_assignment {
+            let right = match right {
                 AssignName::Variable(right) if define_variables => env.next_local_var_name(right),
                 AssignName::Variable(_) | AssignName::Discard(_) => "_".to_doc(),
             };
 
-            match left_side_assignment {
-                Some((left_name, _)) => {
-                    // "foo" as prefix <> rest
-                    //       ^^^^^^^^^ In case the left prefix of the pattern matching is given an alias
-                    //                 we bind it to a local variable so that it can be correctly
-                    //                 referenced inside the case branch.
-                    //
-                    // <<Prefix:3/binary, Rest/binary>> when Prefix =:= <<"foo">>
-                    //   ^^^^^^^^                       ^^^^^^^^^^^^^^^^^^^^^^^^^
-                    //   since erlang's binary pattern matching doesn't allow direct string assignment
-                    //   to variables within the pattern, we first match the expected prefix length in
-                    //   bytes, then use a guard clause to verify the content.
-                    //
-                    let name = env.next_local_var_name(left_name);
-                    docvec![
-                        "<<",
-                        name.clone(),
-                        ":",
-                        left_side_string.len(),
-                        "/binary",
-                        ", ",
-                        right,
-                        "/binary>>",
-                        " when ",
-                        name,
-                        " =:= ",
-                        "<<\"",
-                        left_side_string,
-                        "\">>"
-                    ]
-                }
-                None => docvec![
-                    "<<\"",
-                    left_side_string,
-                    "\"/utf8",
-                    ", ",
-                    right,
-                    "/binary>>"
-                ],
-            }
+            let left = docvec!["\"", left, "\"/utf8"];
+            let left = if let Some((left_name, _)) = left_side_assignment {
+                // "foo" as prefix <> rest
+                //       ^^^^^^^^^ In case the left prefix of the pattern matching is given an alias
+                //                 we bind it to a local variable so that it can be correctly
+                //                 referenced inside the case branch.
+                // <<"foo"/utf8 = Prefix, rest/binary>>
+                //              ^^^^^^^^ this is the piece we're adding here
+                left.append(" = ")
+                    .append(env.next_local_var_name(left_name))
+            } else {
+                left
+            };
+
+            docvec!["<<", left, ", ", right, "/binary>>"]
         }
     }
 }
@@ -222,12 +187,12 @@ fn pattern_list<'a>(
     define_variables: bool,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let elements = join(
+    let elements = concat(Itertools::intersperse(
         elements
             .iter()
             .map(|e| print(e, vars, define_variables, env)),
         break_(",", ", "),
-    );
+    ));
     let tail = tail.map(|tail| print(tail, vars, define_variables, env));
     list(elements, tail)
 }

@@ -154,9 +154,8 @@ impl Warning {
         match self {
             Warning::InvalidSource { path } => Diagnostic {
                 title: "Invalid module name".into(),
-                text: "\
-Module names must begin with a lowercase letter and contain
-only lowercase alphanumeric characters or underscores."
+                text: "Module names must begin with a lowercase letter and contain\
+ only lowercase alphanumeric characters or underscores."
                     .into(),
                 level: diagnostic::Level::Warning,
                 location: None,
@@ -599,57 +598,6 @@ the same values.\n"
                         }),
                     }
                 }
-
-                type_::Warning::CaseMatchOnLiteralTuple { location } => Diagnostic {
-                    title: "Redundant tuple".into(),
-                    text: "Case expressions can take multiple subjects directly.".into(),
-                    hint: Some(
-                        "You can pass the contents of the tuple directly, separated by commas."
-                            .into(),
-                    ),
-                    level: diagnostic::Level::Warning,
-                    location: Some(Location {
-                        src: src.clone(),
-                        path: path.to_path_buf(),
-                        label: diagnostic::Label {
-                            text: Some("You can remove this tuple wrapper".into()),
-                            span: *location,
-                        },
-                        extra_labels: Vec::new(),
-                    }),
-                },
-
-                type_::Warning::OpaqueExternalType { location } => Diagnostic {
-                    title: "Opaque external type".into(),
-                    text: "This type has no constructors so making it opaque is redundant.".into(),
-                    hint: Some("Remove the `opaque` qualifier from the type definition.".into()),
-                    level: diagnostic::Level::Warning,
-                    location: Some(Location {
-                        src: src.clone(),
-                        path: path.to_path_buf(),
-                        label: diagnostic::Label {
-                            text: None,
-                            span: *location,
-                        },
-                        extra_labels: Vec::new(),
-                    }),
-                },
-
-                type_::Warning::UnusedValue { location } => Diagnostic {
-                    title: "Unused value".into(),
-                    text: "".into(),
-                    hint: None,
-                    level: diagnostic::Level::Warning,
-                    location: Some(Location {
-                        path: path.to_path_buf(),
-                        src: src.clone(),
-                        label: diagnostic::Label {
-                            text: Some("This value is never used".into()),
-                            span: *location,
-                        },
-                        extra_labels: Vec::new(),
-                    }),
-                },
             },
         }
     }

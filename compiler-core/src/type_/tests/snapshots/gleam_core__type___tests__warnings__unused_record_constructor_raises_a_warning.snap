@@ -1,9 +1,0 @@
----
-source: compiler-core/src/type_/tests/warnings.rs
-expression: "\npub type Thing {\n  Thing(value: Int)\n}\n\npub fn main() {\n  Thing(1)\n  1\n}\n"
----
-warning: Unused value
-  ┌─ /src/warning/wrn.gleam:7:3
-  │
-7 │   Thing(1)
-  │   ^^^^^^^^ This value is never used

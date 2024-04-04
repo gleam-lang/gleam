@@ -2,7 +2,7 @@
 
 # This Cap'n Proto schema is compiled into Rust code for use in the compiler.
 #
-# We don't want the compiler build to depend on the Cap'n Proto compiler so
+# We don't want the compiler build to depend on the Cap'n Proto compiler so 
 # the Cap'n Proto to Rust build step is commented out in `build.rs`.
 #
 # This schema is not considered a stable API and may change at any time.
@@ -28,7 +28,6 @@ struct Module {
   typesConstructors @5 :List(Property(TypesVariantConstructors));
   unusedImports @6 :List(SrcSpan);
   containsTodo @7 :Bool;
-  lineNumbers @8 :LineNumbers;
 }
 
 struct TypesVariantConstructors {
@@ -47,12 +46,12 @@ struct TypeValueConstructorParameter {
 
 struct TypeConstructor {
   type @0 :Type;
-  # TODO: convert this to an int as we only need to reconstruct type vars,
+  # TODO: convert this to an int as we only need to reconstruct type vars, 
   # not other types
   # TODO: test
-  parameters @1 :List(Type);
+  parameters @1 :List(Type); 
   module @2 :Text;
-  publicity @3 :Publicity;
+  public @3 :Bool;
   deprecated @4 :Text;
 }
 
@@ -94,22 +93,14 @@ struct Type {
 struct ValueConstructor {
   type @0 :Type;
   variant @1 :ValueConstructorVariant;
-  publicity @2 :Publicity;
+  public @2 :Bool;
   deprecated @3 :Text;
-}
-
-enum Publicity {
-  public @0;
-  private @1;
-  internal @2;
 }
 
 struct Implementations {
   gleam @0 :Bool;
-  usesErlangExternals @1 :Bool;
-  usesJavascriptExternals @2 :Bool;
-  canRunOnErlang @3 :Bool;
-  canRunOnJavascript @4 :Bool;
+  erlang @1 :Bool;
+  javascript @2 :Bool;
 }
 
 struct ValueConstructorVariant {
@@ -242,9 +233,4 @@ struct BitArraySegmentOption {
       shortForm @18 :Bool;
     }
   }
-}
-
-struct LineNumbers {
-  lineStarts @0 :List(UInt32);
-  length @1 :UInt32;
 }

@@ -2,146 +2,8 @@
 
 ## Unreleased
 
-### Compiler
-
-- Prepending to lists in JavaScript (`[x, ..xs]` syntax) has been optimised.
-- Function stubs are no longer generated for functions that do not have an
-  implementation for the current targeting being compiled for.
-- Fixed a bug where some functions would not result in a compile error when
-  compiled for a target that they do not support.
-- Fixed a bug where sometimes a warning would not be emitted when a result is
-  discarded.
-- Fixed a bug with JavaScript code generation of pattern matching guards.
-- URLs in error messages have been updated for the new language tour.
-- Improved error message when erroneously trying to append items to a list using
-  the spread syntax (like `[..rest, last]`).
-- Generate [type references](https://www.typescriptlang.org/docs/handbook/triple-slash-directives.html#-reference-types-)
-  when compiling to JavaScript with TypeScript definitions enabled.
-- Fix a bug where JavaScript code generation would not properly return the
-  result of nested blocks.
-- Fix a bug where JavaScript code generation would not properly handle functions
-  returned by blocks.
-- Fix a bug where Erlang code generation would not properly handle list case patterns
-  with no head and a spread tail.
-- The compiler will now raise a warning if you're pattern matching on tuple
-  literals and suggest you use multiple subjects instead.
-- Fixed a bug where JavaScript code generation would incorrectly parenthesise a
-  return statement.
-- Added support for the [Bun](https://bun.sh/) runtime when compiling to
-  JavaScript by using `gleam run --target javascript --runtime bun`
-- Fixed a bug where `tuple.0.1` was not recognised as a nested tuple access
-  expression
-- Error messages are more clear about expecting values instead of types.
-- Fixed a bug where pattern matching on a string would cause the program to
-  crash on the JavaScript target.
-- Allow compilation of packages that require `"rebar"` using the rebar3 compiler.
-- A warning is now emitted when defining an opaque external type.
-- Improve error message when using incorrect quotes (`'`) to define a string
-- Fixed a bug where an imported module named `prepend` would conflict with the
-  `prepend` function imported from the prelude in the JavaScript target.
-- Fixed a bug where Erlang string prefix patterns could generate invalid Erlang.
-- Fixed string prefix matching producing wrong results on the JavaScript target
-  when the prefix had a Unicode codepoint escape sequence (`\u{...}`).
-- Improved error message for wrong patterns using constructors from other
-  modules.
-- Fixed a bug on the JavaScript target where variables bound by patterns, if used
-  within a bit array literal inside a `case` clause's guard, would be used before they
-  were defined, leading to a runtime error when evaluating the `case` expression.
-- Improved error messages when failing to parse a series of things.
-- A warning is now raised for unused binary operations, records, record access
-  and record updates.
-- Fixed a bug when using constant as the size option parameter
-  for `BitArray` caused unknown variable exception.
-- Improved recommendations on error messages.
-
-### Formatter
-
-- The formatting of case expressions with multiple subjects has been improved.
-- Fixed a bug where the formatter would move comments from the end of bounded
-  expressions like lists, tuples, case expressions or function calls.
-- Fixed a bug where a record update's arguments would not be indented correctly.
-- Fixed a bug where function call arguments, tuple items and list items would be
-  needlessly indented if preceded by a comment.
-- Line endings other than `\n` are now handled by the formatter, preserving
-  blank lines and converting them to `\n`.
-
-### Build tool
-
-- A warning is now emitted if there is a `.gleam` file with a path that would be
-  invalid as a module name.
-- The `~> x.y` version constraint syntax has been dropped in favour of
-  `> x.y.z and <= xx.0.0` syntax in `gleam add` and `gleam new`, for clarity.
-- New projects are created with the GitHub `actions/checkout` v4 action.
-- Fixed a bug where bit arrays would break syntax highlighting in the generated
-  HTML documentation.
-- Dependencies that use Erlang-only bit options can now compile on JavaScript,
-  though the functions that use them will not be available for use in the root
-  package.
-- The output format of the command line help messages have been changed
-  slightly.
-- The command line help text now lists valid targets and runtimes.
-- Generated documentation no longer exposes the constructors of opaque types,
-  no longer exposes the values of constants, and indicates which types are
-  opaque.
-- Generated HTML documentation now includes a link to the package on Hex.
-- Terminal colors can now be forced by setting the `FORCE_COLOR` environment
-  variable to any non-empty value.
-- Rust's Reqwest's `webpki-roots` are now used for TLS verification.
-- Update Deno config to allow passing `--location` runtime flag.
-- Fixed a bug with dependency resolution of exact versions of RC releases.
-- Fixed a bug where the documentation of a labelled record constructor could be
-  assigned to the wrong definition in the doc site.
-- Fixed a bug where the code blocks in the generated documentation's site would
-  have a wrong indentation.
-- Fixed a bug where on windows local packages had absolute paths in the manifest
-  instead of relative.
-- The `gleam publish` command now asks for confirmation if the package repository
-  URL doesn't return a successful status code.
-
-### Language Server
-
-- The `Compiling Gleam` message is no longer emitted each time code is compiled.
-  This is to reduce noise in editors that show this message prominently such as
-  Neovim.
-- Fixed a bug where hovering over an expression in the middle of a pipe would
-  give the wrong node.
-- Go to definition now works for values in dependency Gleam modules.
-- Completions are now provided for module imports.
-
-## v1.0.0 - 2024-03-04
-
 ### Language changes
 
-- Comments have been added to the JavaScript prelude to indicate which members
-  are in the public API and which are internal.
-
-### Build tool
-
-- Fixed a bug where the exported package interface would not have a module's
-  documentation.
-- Fixed a bug where the `export package interface` command would always
-  recompile the project ignoring the cache.
-
-## v1.0.0-rc2 - 2024-02-14
-
-### Bug fixes
-
-- Fixed a bug where the exhaustiveness checker could crash for some generic
-  types.
-
-### Formatter
-
-- The format used by the formatter has been improved in some niche cases.
-- Improved the formatting of long case guards.
-- The formatter can now format groups of imports alphabetically.
-
-## v1.0.0-rc1 - 2024-02-10
-
-### Language changes
-
-- The `@internal` attribute can now be used to annotate definitions.
-  This will hide those definitions from the generated docuentation,
-  autocompletions and the exported module interface.
 - Using a reserved word is now a compile error, not a warning.
 - Inexhaustive matches are now compile errors, not warnings.
 - The warning for an unused module alias now shows how to not assign a name to
@@ -160,6 +22,7 @@
 
 - If a package contains a `todo` expression then the build tool will now refuse
   to publish it to Hex.
+- The search bar in generated docs now has a darker background color.
 - `gleam export` now takes a `package-interface` option to export a json file
   containing metadata about the root package.
 - `gleam docs build` now creates a json file containing metadata about the root
@@ -168,19 +31,15 @@
 - The search bar in generated docs now has a darker background color.
 - The generated docs no longer shows whether an argument is discarded or
   not in a function signature.
-- It is now possible to use `gleam run -m` to run a dependency module even if
-  that dependency uses a compile target that your project does not support.
+
 
 ### Bug fixes
 
-- Fixed a bug the build tool could be make to attempt to run a main function
-  that does not support the current target in some circumstances.
 - Fixed a bug where the exhaustiveness checker could crash when checking nested
   values inserted into the parent type using type parameters.
 - Fixed a bug where `functionname(_name)` would incorrectly parse as a function
   capture instead of a syntax error.
-- Fixed a bug where external only functions would "successfully" compile for a
-  target they do not support, leading to a runtime error.
+
 
 ## v0.34.1 - 2023-01-17
 
@@ -194,6 +53,7 @@
   format incorrectly.
 - The `@deprecated` attribute can now be used to annotate module constants.
   This will cause a warning to be emitted when the constant is used.
+
 
 ## v0.34.0 - 2023-01-16
 
@@ -212,6 +72,7 @@
 - Fixed a bug where function heads would go over the line limit in the
   formatter.
 
+
 ## v0.34.0-rc2 - 2023-01-11
 
 ### Bug fixes
@@ -221,6 +82,7 @@
 - Fixed a bug where the compiler would in some cases fail to error when an
   application uses functions that do not support the current compilation
   target.
+
 
 ## v0.34.0-rc1 - 2024-01-07
 
@@ -251,7 +113,7 @@
 
 - The `gleam new` command now accepts any existing path, as long as there are
   no conflicts with already existing files. Examples: `gleam new .`, `gleam new
-..`, `gleam new ~/projects/test`.
+  ..`, `gleam new ~/projects/test`.
 - The format for the README created by `gleam new` has been altered.
 - The `gleam.toml` created by `gleam new` now has a link to the full reference
   for its available options.
@@ -285,6 +147,7 @@
   "Type 'Result' is not generic".
 - Not providing a definition after some attributes is now a parse error.
 
+
 ## v0.33.0 - 2023-12-18
 
 ## v0.33.0-rc4 - 2023-12-17
@@ -294,6 +157,7 @@
 - The deprecated `BitString` type has been removed.
 - The deprecated `inspect` functions and `BitString` type has been removed from
   the JavaScript prelude.
+
 
 ## v0.33.0-rc3 - 2023-12-17
 
@@ -308,6 +172,7 @@
 - Fixed a bug where string prefix aliases defined in alternative case branches
   would all be bound to the same constant.
 
+
 ## v0.33.0-rc2 - 2023-12-07
 
 ### Language changes
@@ -320,6 +185,7 @@
 
 - Fixed a bug where the `\u` string escape sequence would not work with
   on Erlang on the right hand side of a string concatenation.
+
 
 ## v0.33.0-rc1 - 2023-12-06
 
@@ -390,6 +256,7 @@
 - Fixed a bug where using a string prefix pattern in `let assert` would generate
   incorrect JavaScript.
 
+
 ## v0.32.4 - 2023-11-09
 
 ### Build tool changes
@@ -404,6 +271,7 @@
   argument has the same name as the module function.
 - Fixed the `target` property of `gleam.toml` being ignored for local path
   dependencies by `gleam run -m module/name`
+
 
 ## v0.32.3 - 2023-11-07
 
@@ -422,6 +290,7 @@
 
 - Fixed a bug where some nested pipelines could fail to type check.
 
+
 ## v0.32.2 - 2023-11-03
 
 ### Build tool changes
@@ -437,6 +306,7 @@
 - Fixed a bug where aliased unqualified types and values of the same name could
   produce an incorrect error.
 
+
 ## v0.32.1 - 2023-11-02
 
 ### Bug fixes
@@ -446,12 +316,14 @@
 - Fixed a bug where incorrect JavaScript could be generated due to backwards
   compatibility with the deprecated import syntax.
 
+
 ## v0.32.0 - 2023-11-01
 
 ### Bug fixes
 
 - Fixed a bug where running `gleam fix` multiple times could produce incorrect
   results.
+
 
 ## v0.32.0-rc3 - 2023-10-26
 
@@ -460,12 +332,14 @@
 - Fixed a bug where `gleam fix` would fail to update the deprecated type import
   syntax for aliased unqualified types.
 
+
 ## v0.32.0-rc2 - 2023-10-26
 
 ### Bug fixes
 
 - Fixed a bug where the backward compatibility for the deprecated import syntax
   could result in an import error with some valid imports.
+
 
 ## v0.32.0-rc1 - 2023-10-25
 

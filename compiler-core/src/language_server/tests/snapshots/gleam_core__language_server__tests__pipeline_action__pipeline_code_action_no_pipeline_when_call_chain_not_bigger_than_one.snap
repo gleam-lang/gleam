@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/pipeline_action.rs
+expression: "\nimport list\n\nfn main() {\n  list.reverse([1, 2, 3, 4, 5])\n}\n"
+---
+No codeaction produced, check if mark is hit...

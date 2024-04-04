@@ -6,7 +6,7 @@ expression: "./cases/imported_external_fns"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<53 byte binary>
+<29 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -23,7 +23,7 @@ thing() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<303 byte binary>
+<51 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
@@ -65,10 +65,10 @@ fn_call_unqualified_aliased() ->
 
 -spec the_consts() -> nil.
 the_consts() ->
-    _ = fun thing:new/0,
-    _ = fun thing:new/0,
-    _ = fun thing:new/0,
-    _ = fun thing:new/0,
+    fun thing:new/0,
+    fun thing:new/0,
+    fun thing:new/0,
+    fun thing:new/0,
     thing:new(),
     thing:new(),
     thing:new(),
@@ -84,3 +84,6 @@ the_consts() ->
                two]},
     {registered, []}
 ]}.
+
+
+

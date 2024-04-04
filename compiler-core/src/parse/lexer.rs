@@ -93,12 +93,10 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         // Collapse \r\n into \n
-        if let Some((i, '\r')) = self.chr0 {
+        while let Some((i, '\r')) = self.chr0 {
             if let Some((_, '\n')) = self.chr1 {
                 // Transform windows EOL into \n
                 let _ = self.shift();
-                // using the position from the \r
-                self.chr0 = Some((i, '\n'))
             } else {
                 // Transform MAC EOL into \n
                 self.chr0 = Some((i, '\n'))
@@ -152,7 +150,6 @@ where
                 check_for_minus = true;
                 let name = self.lex_name()?;
                 self.emit(name);
-                self.maybe_lex_dot_access();
             } else if self.is_number_start(c, self.chr1) {
                 check_for_minus = true;
                 let num = self.lex_number()?;
@@ -431,23 +428,28 @@ where
             '#' => {
                 self.eat_single_char(Token::Hash);
             }
-            '\n' | ' ' | '\t' | '\x0C' => {
-                // Skip whitespaces and consume empty lines
-
-                // Add one, so the empty line does not overlap with previous token's end
-                let tok_start = self.get_pos() + 1;
-
-                let mut newlines = 0;
-                while let Some('\n' | ' ' | '\t' | '\x0C') = self.chr0 {
-                    if self.next_char() == Some('\n') {
-                        newlines += 1;
+            '\n' => {
+                let _ = self.next_char();
+                let tok_start = self.get_pos();
+                while let Some(c) = self.chr0 {
+                    match c {
+                        ' ' | '\t' | '\x0C' => {
+                            let _ = self.next_char();
+                        }
+                        '\n' => {
+                            let tok_end = self.get_pos();
+                            self.emit((tok_start, Token::EmptyLine, tok_end));
+                            break;
+                        }
+                        _ => break,
                     }
                 }
-                if newlines > 1 {
-                    let tok_end = self.get_pos();
-                    self.emit((tok_start, Token::EmptyLine, tok_end));
-                }
             }
+            ' ' | '\t' | '\x0C' => {
+                // Skip whitespaces
+                let _ = self.next_char();
+            }
+
             c => {
                 let location = self.get_pos();
                 return Err(LexicalError {
@@ -617,14 +619,6 @@ where
     // Lex a normal number, that is, no octal, hex or binary number.
     // This function cannot be reached without the head of the stream being either 0-9 or '-', 0-9
     fn lex_decimal_number(&mut self) -> Spanned {
-        self.lex_decimal_or_int_number(true)
-    }
-
-    fn lex_int_number(&mut self) -> Spanned {
-        self.lex_decimal_or_int_number(false)
-    }
-
-    fn lex_decimal_or_int_number(&mut self, can_lex_decimal: bool) -> Spanned {
         let start_pos = self.get_pos();
         let mut value = String::new();
         // consume negative sign
@@ -635,7 +629,7 @@ where
         value.push_str(&self.radix_run(10));
 
         // If float:
-        if can_lex_decimal && self.chr0 == Some('.') {
+        if self.chr0 == Some('.') {
             value.push(self.next_char().expect("lex_normal_number float"));
             value.push_str(&self.radix_run(10));
 
@@ -667,20 +661,6 @@ where
                 },
                 end_pos,
             )
-        }
-    }
-
-    // Maybe lex dot access that comes after name token.
-    fn maybe_lex_dot_access(&mut self) {
-        // It can be nested like: `tuple.1.2.3.4`
-        loop {
-            if Some('.') == self.chr0 && matches!(self.chr1, Some('0'..='9')) {
-                self.eat_single_char(Token::Dot);
-                let number = self.lex_int_number();
-                self.emit(number);
-            } else {
-                break;
-            }
         }
     }
 

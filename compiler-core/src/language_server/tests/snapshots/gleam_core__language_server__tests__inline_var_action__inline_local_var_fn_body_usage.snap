@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/language_server/tests/inline_var_action.rs
+expression: "\nimport list\n\nfn main() {\n  let y = 2\n  let func = fn(x) { x + y }\n  list.map([1, 2, 3], func)\n}\n        "
+---
+
+import list
+
+fn main() {
+  
+  let func = fn(x) { x + 2 }
+  list.map([1, 2, 3], func)
+}
+        

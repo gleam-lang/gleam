@@ -2,7 +2,7 @@ use ecow::EcoString;
 
 use crate::{
     ast::{
-        Constant, Publicity, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
+        Constant, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
         TypedConstantBitArraySegmentOption,
     },
     schema_capnp::{self as schema, *},
@@ -46,20 +46,9 @@ impl<'a> ModuleEncoder<'a> {
         self.set_module_accessors(&mut module);
         self.set_module_types_constructors(&mut module);
         self.set_unused_imports(&mut module);
-        self.set_line_numbers(&mut module);
 
         capnp::serialize_packed::write_message(&mut buffer, &message).expect("capnp encode");
         Ok(buffer)
-    }
-
-    fn set_line_numbers(&mut self, module: &mut module::Builder<'_>) {
-        let mut line_numbers = module.reborrow().init_line_numbers();
-        line_numbers.set_length(self.data.line_numbers.length);
-        let line_starts =
-            line_numbers.init_line_starts(self.data.line_numbers.line_starts.len() as u32);
-        for (i, l) in self.data.line_numbers.line_starts.iter().enumerate() {
-            line_starts.reborrow().set(i as u32, *l);
-        }
     }
 
     fn set_unused_imports(&mut self, module: &mut module::Builder<'_>) {
@@ -140,8 +129,7 @@ impl<'a> ModuleEncoder<'a> {
                 .reborrow()
                 .init_type_parameters_ids(data.type_parameters_ids.len() as u32);
             for (i, id) in data.type_parameters_ids.iter().enumerate() {
-                let id = self.get_or_insert_type_var_id(*id);
-                builder.set(i as u32, id as u16);
+                builder.set(i as u32, *id as u16);
             }
         }
         let mut builder = builder.init_variants(data.variants.len() as u32);
@@ -165,12 +153,12 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: type_constructor::Builder<'_>,
         constructor: &TypeConstructor,
     ) {
+        builder.set_public(constructor.public);
         builder.set_module(&constructor.module);
         builder.set_deprecated(match &constructor.deprecation {
             Deprecation::NotDeprecated => "",
             Deprecation::Deprecated { message } => message,
         });
-        builder.set_publicity(self.publicity(constructor.publicity));
         let type_builder = builder.reborrow().init_type();
         self.build_type(type_builder, &constructor.typ);
         self.build_types(
@@ -209,21 +197,13 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: value_constructor::Builder<'_>,
         constructor: &ValueConstructor,
     ) {
+        builder.set_public(constructor.public);
         builder.set_deprecated(match &constructor.deprecation {
             Deprecation::NotDeprecated => "",
             Deprecation::Deprecated { message } => message,
         });
-        builder.set_publicity(self.publicity(constructor.publicity));
         self.build_type(builder.reborrow().init_type(), &constructor.type_);
         self.build_value_constructor_variant(builder.init_variant(), &constructor.variant);
-    }
-
-    fn publicity(&self, publicity: Publicity) -> crate::schema_capnp::Publicity {
-        match publicity {
-            Publicity::Public => crate::schema_capnp::Publicity::Public,
-            Publicity::Private => crate::schema_capnp::Publicity::Private,
-            Publicity::Internal => crate::schema_capnp::Publicity::Internal,
-        }
     }
 
     fn build_src_span(&mut self, mut builder: src_span::Builder<'_>, span: SrcSpan) {
@@ -497,12 +477,7 @@ impl<'a> ModuleEncoder<'a> {
     }
 
     fn build_type_var(&mut self, mut builder: schema::type_::var::Builder<'_>, id: u64) {
-        let serialised_id = self.get_or_insert_type_var_id(id);
-        builder.set_id(serialised_id);
-    }
-
-    fn get_or_insert_type_var_id(&mut self, id: u64) -> u64 {
-        match self.type_var_id_map.get(&id) {
+        let serialised_id = match self.type_var_id_map.get(&id) {
             Some(&id) => id,
             None => {
                 let new_id = self.next_type_var_id;
@@ -510,7 +485,8 @@ impl<'a> ModuleEncoder<'a> {
                 let _ = self.type_var_id_map.insert(id, new_id);
                 new_id
             }
-        }
+        };
+        builder.set_id(serialised_id);
     }
 
     fn build_implementations(
@@ -519,9 +495,7 @@ impl<'a> ModuleEncoder<'a> {
         implementations: Implementations,
     ) {
         builder.set_gleam(implementations.gleam);
-        builder.set_uses_erlang_externals(implementations.uses_erlang_externals);
-        builder.set_uses_javascript_externals(implementations.uses_javascript_externals);
-        builder.set_can_run_on_erlang(implementations.can_run_on_erlang);
-        builder.set_can_run_on_javascript(implementations.can_run_on_javascript);
+        builder.set_erlang(implementations.uses_erlang_externals);
+        builder.set_javascript(implementations.uses_javascript_externals);
     }
 }

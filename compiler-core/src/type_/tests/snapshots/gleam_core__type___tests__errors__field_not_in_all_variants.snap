@@ -6,7 +6,7 @@ error: Unknown record field
   ┌─ /src/one/two.gleam:6:42
   │
 6 │ pub fn get_title(person: Person) { person.title }
-  │                                          ^^^^^^ This field does not exist
+  │                                          ^^^^^^ Did you mean `age`?
 
 The value being accessed has this type:
 
@@ -17,7 +17,3 @@ It has these fields:
     .age
     .name
 
-Note: The field you are trying to access might not be consistently present
-or positioned across the custom type's variants, preventing reliable
-access. Ensure the field exists in the same position and has the same type
-in all variants to enable direct accessor syntax.

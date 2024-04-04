@@ -1,5 +1,4 @@
 use camino::{Utf8Path, Utf8PathBuf};
-use clap::ValueEnum;
 use gleam_core::{
     erlang,
     error::{Error, FileIoAction, FileKind, InvalidProjectNameReason},
@@ -8,22 +7,20 @@ use gleam_core::{
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::{env, io::Write};
-use strum::{Display, EnumIter, EnumString, IntoEnumIterator, VariantNames};
+use strum::{Display, EnumIter, EnumString, EnumVariantNames, IntoEnumIterator};
 
 #[cfg(test)]
 mod tests;
 
-use crate::{fs::get_current_directory, NewOptions};
+use crate::NewOptions;
 
-const GLEAM_STDLIB_REQUIREMENT: &str = ">= 0.34.0 and < 2.0.0";
-const GLEEUNIT_REQUIREMENT: &str = ">= 1.0.0 and < 2.0.0";
+const GLEAM_STDLIB_REQUIREMENT: &str = "~> 0.34 or ~> 1.0";
+const GLEEUNIT_VERSION: &str = "1.0";
 const ERLANG_OTP_VERSION: &str = "26.0.2";
 const REBAR3_VERSION: &str = "3";
 const ELIXIR_VERSION: &str = "1.15.4";
 
-#[derive(
-    Debug, Serialize, Deserialize, Display, EnumString, VariantNames, ValueEnum, Clone, Copy,
-)]
+#[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
 #[strum(serialize_all = "kebab_case")]
 pub enum Template {
     Lib,
@@ -153,13 +150,13 @@ version = "1.0.0"
 # links = [{{ title = "Website", href = "https://gleam.run" }}]
 #
 # For a full reference of all the available options, you can have a look at
-# https://gleam.run/writing-gleam/gleam-toml/.
+# https://gleam.run/writing-gleam/gleam-toml/. 
 
 [dependencies]
 gleam_stdlib = "{GLEAM_STDLIB_REQUIREMENT}"
 
 [dev-dependencies]
-gleeunit = "{GLEEUNIT_REQUIREMENT}"
+gleeunit = "~> {GLEEUNIT_VERSION}"
 "#,
             )),
 
@@ -177,7 +174,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "{ERLANG_OTP_VERSION}"
@@ -206,7 +203,7 @@ impl Creator {
 
         validate_name(&project_name)?;
 
-        let root = get_current_directory()?.join(&options.project_root);
+        let root = Utf8PathBuf::from(&options.project_root);
         let src = root.join("src");
         let test = root.join("test");
         let github = root.join(".github");

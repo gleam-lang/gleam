@@ -1,9 +1,0 @@
----
-source: compiler-core/src/type_/tests/warnings.rs
-expression: "\npub fn main() {\n  !True\n  1\n}\n"
----
-warning: Unused value
-  ┌─ /src/warning/wrn.gleam:3:3
-  │
-3 │   !True
-  │   ^^^^^ This value is never used

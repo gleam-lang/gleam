@@ -1,9 +1,0 @@
----
-source: compiler-core/src/type_/tests/warnings.rs
-expression: "\npub type Wibble(a) { Wibble(a) }\npub fn wibble(a) { a }\n\npub fn main() {\n  1 |> wibble |> Wibble\n  1\n}\n"
----
-warning: Unused value
-  ┌─ /src/warning/wrn.gleam:6:3
-  │
-6 │   1 |> wibble |> Wibble
-  │   ^^^^^^^^^^^^^^^^^^^^^ This value is never used

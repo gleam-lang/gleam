@@ -171,7 +171,7 @@ impl UntypedExpr {
         }
     }
 
-    pub fn bin_op_precedence(&self) -> u8 {
+    pub fn binop_precedence(&self) -> u8 {
         match self {
             Self::BinOp { name, .. } => name.precedence(),
             Self::PipeLine { .. } => 5,
@@ -179,7 +179,7 @@ impl UntypedExpr {
         }
     }
 
-    pub fn bin_op_name(&self) -> Option<&BinOp> {
+    pub fn binop_name(&self) -> Option<&BinOp> {
         match self {
             UntypedExpr::BinOp { name, .. } => Some(name),
             _ => None,
@@ -191,13 +191,6 @@ impl UntypedExpr {
             self,
             Self::String { .. } | Self::Int { .. } | Self::Float { .. }
         )
-    }
-
-    pub fn is_tuple(&self) -> bool {
-        match self {
-            UntypedExpr::Tuple { .. } => true,
-            _ => false,
-        }
     }
 
     /// Returns `true` if the untyped expr is [`Call`].

@@ -1,9 +1,0 @@
----
-source: compiler-core/src/parse/tests.rs
-expression: "\nfn main() {\n    use fn <- result.try(get_username())\n}\n"
----
-error: Syntax error
-  ┌─ /src/parse/error.gleam:3:9
-  │
-3 │     use fn <- result.try(get_username())
-  │         ^ I was expecting a pattern after this

@@ -150,8 +150,11 @@ pub enum TypedExpr {
 }
 
 impl TypedExpr {
-    // This could be optimised in places to exit early if the first of a series
-    // of expressions is after the byte index.
+    // Not inclusive for end, see contains method:
+    //
+    // pub fn contains(&self, byte_index: u32) -> bool {
+    //     byte_index >= self.start && byte_index < self.end
+    // }
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             Self::Var { .. }
@@ -162,40 +165,103 @@ impl TypedExpr {
             | Self::String { .. }
             | Self::ModuleSelect { .. } => self.self_if_contains_location(byte_index),
 
+            //Skip searching for node in assignments on Pipeline in case byte_index is beyond.
+            //Node should be found in the finally.
             Self::Pipeline {
                 assignments,
                 finally,
                 ..
-            } => assignments
-                .iter()
-                .find_map(|e| e.find_node(byte_index))
-                .or_else(|| finally.find_node(byte_index)),
+            } => {
+                if assignments
+                    .first()
+                    .is_some_and(|a| byte_index >= a.location.start)
+                    && assignments
+                        .last()
+                        .is_some_and(|a| byte_index < a.location.end)
+                {
+                    if let Some(located) = assignments.iter().find_map(|a| a.find_node(byte_index))
+                    {
+                        return Some(located);
+                    }
 
-            Self::Block { statements, .. } => {
-                statements.iter().find_map(|e| e.find_node(byte_index))
+                    return None;
+                }
+
+                finally.find_node(byte_index)
             }
 
+            //Early exit possible
+            Self::Block { statements, .. } => {
+                for statement in statements {
+                    if statement.location().start > byte_index {
+                        cov_mark::hit!(early_exit_block);
+                        break;
+                    }
+
+                    if let Some(located) = statement.find_node(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                None
+            }
+
+            // In case [1, 2, 3] and byte search 2
+            // then you should get the list back, and not an element from the list.
             Self::Tuple {
                 elems: expressions, ..
             }
             | Self::List {
                 elements: expressions,
                 ..
-            } => expressions
-                .iter()
-                .find_map(|e| e.find_node(byte_index))
-                .or_else(|| self.self_if_contains_location(byte_index)),
+            } => {
+                for expression in expressions {
+                    if expression.location().start > byte_index {
+                        cov_mark::hit!(early_exit_tuple_list);
+                        break;
+                    }
+
+                    if let Some(located) = expression.find_node(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                self.self_if_contains_location(byte_index)
+            }
 
             Self::NegateBool { value, .. } | Self::NegateInt { value, .. } => value
                 .find_node(byte_index)
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
-            Self::Fn { body, args, .. } => args
-                .iter()
-                .find_map(|arg| arg.find_node(byte_index))
-                .or_else(|| body.iter().find_map(|s| s.find_node(byte_index)))
-                .or_else(|| self.self_if_contains_location(byte_index)),
+            //Skip searching for node in fn parameters in case byteindex is beyond.
+            //Same goes for the body of the fn.
+            //If the node is not considered an expression inside the arguments or body, return fn it self.
+            Self::Fn { body, args, .. } => {
+                if args.first().is_some_and(|a| byte_index >= a.location.start)
+                    && args.last().is_some_and(|a| byte_index < a.location.end)
+                {
+                    if let Some(located) = args.iter().find_map(|arg| arg.find_node(byte_index)) {
+                        return Some(located);
+                    }
 
+                    return None;
+                }
+
+                if byte_index >= body.first().location().start
+                    && byte_index < body.last().location().end
+                {
+                    if let Some(located) = body.iter().find_map(|s| s.find_node(byte_index)) {
+                        return Some(located);
+                    }
+                    return None;
+                }
+
+                self.self_if_contains_location(byte_index)
+            }
+
+            //Not able to find optimization due to failing hover tests...
+            //In case the byte index corresponds with the ',' between 1 and 2 in the args: (1, 2)
+            //break, and you could possibly immediately return the result self.self_if_contains_location()
             Self::Call { fun, args, .. } => args
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
@@ -208,11 +274,22 @@ impl TypedExpr {
 
             Self::Case {
                 subjects, clauses, ..
-            } => subjects
-                .iter()
-                .find_map(|subject| subject.find_node(byte_index))
-                .or_else(|| clauses.iter().find_map(|c| c.find_node(byte_index)))
-                .or_else(|| self.self_if_contains_location(byte_index)),
+            } => {
+                if subjects
+                    .last()
+                    .is_some_and(|s| byte_index < s.location().end)
+                {
+                    return subjects
+                        .iter()
+                        .find_map(|subject| subject.find_node(byte_index))
+                        .or_else(|| self.self_if_contains_location(byte_index));
+                }
+
+                clauses
+                    .iter()
+                    .find_map(|c| c.find_node(byte_index))
+                    .or_else(|| self.self_if_contains_location(byte_index))
+            }
 
             Self::RecordAccess {
                 record: expression, ..
@@ -376,15 +453,15 @@ impl TypedExpr {
     }
 
     pub fn is_literal(&self) -> bool {
-        match self {
+        matches!(
+            self,
             Self::Int { .. }
-            | Self::List { .. }
-            | Self::Float { .. }
-            | Self::Tuple { .. }
-            | Self::String { .. }
-            | Self::BitArray { .. } => true,
-            _ => false,
-        }
+                | Self::List { .. }
+                | Self::Float { .. }
+                | Self::Tuple { .. }
+                | Self::String { .. }
+                | Self::BitArray { .. }
+        )
     }
 
     /// Returns `true` if the typed expr is [`Var`].
@@ -392,10 +469,7 @@ impl TypedExpr {
     /// [`Var`]: TypedExpr::Var
     #[must_use]
     pub fn is_var(&self) -> bool {
-        match self {
-            Self::Var { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Var { .. })
     }
 
     pub(crate) fn get_documentation(&self) -> Option<&str> {
@@ -430,10 +504,7 @@ impl TypedExpr {
     /// [`Case`]: TypedExpr::Case
     #[must_use]
     pub fn is_case(&self) -> bool {
-        match self {
-            Self::Case { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Case { .. })
     }
 
     /// Returns `true` if the typed expr is [`Pipeline`].
@@ -441,58 +512,112 @@ impl TypedExpr {
     /// [`Pipeline`]: TypedExpr::Pipeline
     #[must_use]
     pub fn is_pipeline(&self) -> bool {
-        match self {
-            Self::Pipeline { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Pipeline { .. })
     }
 
-    pub fn is_pure_value_constructor(&self) -> bool {
+    pub fn to_string(&self) -> Option<EcoString> {
         match self {
-            TypedExpr::Int { .. }
-            | TypedExpr::Float { .. }
-            | TypedExpr::String { .. }
-            | TypedExpr::List { .. }
-            | TypedExpr::Tuple { .. }
-            | TypedExpr::BitArray { .. }
-            | TypedExpr::Var { .. }
-            | TypedExpr::BinOp { .. }
-            | TypedExpr::RecordAccess { .. }
-            | TypedExpr::TupleIndex { .. }
-            | TypedExpr::RecordUpdate { .. }
-            | TypedExpr::ModuleSelect { .. }
-            | TypedExpr::Fn { .. } => true,
+            TypedExpr::Int { value, .. } => Some(value.clone()),
+            TypedExpr::Float { value, .. } => Some(value.clone()),
+            TypedExpr::String { value, .. } => Some(value.clone()),
+            TypedExpr::Var { name, .. } => Some(name.clone()),
+            TypedExpr::List {
+                location: _,
+                typ: _,
+                elements,
+                tail,
+            } => {
+                let mut result = EcoString::from("[");
 
-            TypedExpr::NegateBool { value, .. } | TypedExpr::NegateInt { value, .. } => {
-                value.is_pure_value_constructor()
+                for (i, element) in elements.iter().enumerate() {
+                    if i > 0 {
+                        result.push_str(", ");
+                    }
+                    result.push_str(&element.to_string()?);
+                }
+
+                if let Some(tail_expr) = tail {
+                    result.push_str(", ");
+                    result.push_str(&tail_expr.to_string()?);
+                }
+
+                result.push_str("]");
+                Some(result)
             }
+            TypedExpr::Call {
+                location: _,
+                typ: _,
+                fun,
+                args,
+            } => {
+                let mut fun_str = fun.to_string()?;
 
-            // A pipeline is a pure value constructor if its last step is a record builder.
-            // For example `wibble() |> wobble() |> Ok`
-            TypedExpr::Pipeline { finally, .. } => finally.is_record_builder(),
+                //Init with opening parenthesis
+                let mut args_str = EcoString::from("(");
 
-            // A function call is a pure record constructor if it is a record builder.
-            // For example `Ok(wobble(wibble()))`
-            TypedExpr::Call { fun, .. } => fun.as_ref().is_record_builder(),
+                for (i, arg) in args.iter().enumerate() {
+                    if let Some(arg_string) = arg.value.to_string() {
+                        if i > 0 {
+                            args_str.push_str(", ");
+                        }
+                        args_str.push_str(&arg_string);
+                    } else {
+                        return None;
+                    }
+                }
 
-            // Blocks and Cases are not considered pure value constructors for now,
-            // in the future we might want to do something a bit smarter and inspect
-            // their content to see if they end up returning something that is a
-            // pure value constructor and raise a warning for those as well.
-            TypedExpr::Block { .. } | TypedExpr::Case { .. } => false,
+                //Append closing parenthesis
+                args_str.push(')');
 
-            // `panic` and `todo` are never considered pure value constructors,
-            // we don't want to raise a warning for an unused value if it's one
-            // of those two.
-            TypedExpr::Todo { .. } | TypedExpr::Panic { .. } => false,
-        }
-    }
+                fun_str.push_str(&args_str);
+                Some(fun_str)
+            }
+            TypedExpr::BinOp {
+                location: _,
+                typ: _,
+                name,
+                left,
+                right,
+            } => match (left.to_string(), right.to_string()) {
+                (Some(left_str), Some(right_str)) => Some(EcoString::from(format!(
+                    "{} {} {}",
+                    left_str,
+                    name.name(),
+                    right_str
+                ))),
+                _ => None,
+            },
+            TypedExpr::ModuleSelect {
+                location: _,
+                typ: _,
+                label,
+                module_name: _,
+                module_alias,
+                constructor: _,
+            } => Some(EcoString::from(format!("{}.{}", module_alias, label))),
+            TypedExpr::Tuple { elems, .. } => {
+                //Opening parenthesis tuple
+                let mut res = EcoString::from("#(");
 
-    pub fn is_record_builder(&self) -> bool {
-        match self {
-            TypedExpr::Call { fun, .. } => fun.is_record_builder(),
-            TypedExpr::Var { constructor, .. } => constructor.variant.is_record(),
-            _ => false,
+                for (i, elem) in elems.iter().enumerate() {
+                    if i > 0 {
+                        res.push_str(", ");
+                    }
+
+                    if let Some(elem_str) = elem.to_string() {
+                        res.push_str(&elem_str);
+                    } else {
+                        return None;
+                    }
+                }
+
+                //Closing parenthesis tuple
+                res.push(')');
+                Some(res)
+            }
+            TypedExpr::NegateBool { value, .. } => value.to_string(),
+            TypedExpr::NegateInt { value, .. } => value.to_string(),
+            _ => None,
         }
     }
 }

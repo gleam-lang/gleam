@@ -20,14 +20,12 @@ use serde::Serialize;
 
 use crate::{
     ast::{
-        ArgNames, BitArraySegment, CallArg, Constant, DefinitionLocation, Pattern, Publicity,
-        SrcSpan, TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment,
-        TypedRecordUpdateArg, UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
+        ArgNames, BitArraySegment, CallArg, Constant, DefinitionLocation, Pattern, SrcSpan,
+        TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment, TypedRecordUpdateArg,
+        UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
     },
     bit_array,
-    build::{Origin, Target},
-    line_numbers::LineNumbers,
-    type_::expression::Implementations,
+    build::Origin,
 };
 use error::*;
 use hydrator::Hydrator;
@@ -38,6 +36,8 @@ use std::{
     ops::Deref,
     sync::Arc,
 };
+
+use self::expression::Implementations;
 
 pub trait HasType {
     fn type_(&self) -> Arc<Type>;
@@ -54,7 +54,7 @@ pub enum Type {
     /// that defines the type.
     ///
     Named {
-        publicity: Publicity,
+        public: bool,
         package: EcoString,
         module: EcoString,
         name: EcoString,
@@ -83,44 +83,25 @@ impl Type {
     pub fn is_result_constructor(&self) -> bool {
         match self {
             Type::Fn { retrn, .. } => retrn.is_result(),
-            Type::Var { type_ } => type_.borrow().is_result(),
             _ => false,
         }
     }
 
     pub fn is_result(&self) -> bool {
-        match self {
-            Self::Named { name, module, .. } => "Result" == name && is_prelude_module(module),
-            Self::Var { type_ } => type_.borrow().is_result(),
-            _ => false,
-        }
+        matches!(self, Self::Named { name, module, .. } if "Result" == name && is_prelude_module(module))
     }
 
     pub fn is_unbound(&self) -> bool {
-        match self {
-            Self::Var { type_: typ } => typ.borrow().is_unbound(),
-            _ => false,
-        }
+        matches!(self, Self::Var { type_: typ } if typ.borrow().is_unbound())
     }
 
     pub fn is_variable(&self) -> bool {
-        match self {
-            Self::Var { type_: typ } => typ.borrow().is_variable(),
-            _ => false,
-        }
-    }
-
-    pub fn is_type_variable(&self) -> bool {
-        match self {
-            Self::Var { type_: typ } => typ.borrow().is_variable(),
-            _ => false,
-        }
+        matches!(self, Self::Var { type_: typ } if typ.borrow().is_variable())
     }
 
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
             Self::Fn { retrn, .. } => Some(retrn.clone()),
-            Type::Var { type_ } => type_.borrow().return_type(),
             _ => None,
         }
     }
@@ -128,7 +109,6 @@ impl Type {
     pub fn fn_types(&self) -> Option<(Vec<Arc<Self>>, Arc<Self>)> {
         match self {
             Self::Fn { args, retrn, .. } => Some((args.clone(), retrn.clone())),
-            Self::Var { type_ } => type_.borrow().fn_types(),
             _ => None,
         }
     }
@@ -203,7 +183,7 @@ impl Type {
     // TODO: specialise this to just List.
     pub fn get_app_args(
         &self,
-        publicity: Publicity,
+        public: bool,
         package: &str,
         module: &str,
         name: &str,
@@ -227,14 +207,7 @@ impl Type {
             Self::Var { type_: typ } => {
                 let args: Vec<_> = match typ.borrow().deref() {
                     TypeVar::Link { type_: typ } => {
-                        return typ.get_app_args(
-                            publicity,
-                            package,
-                            module,
-                            name,
-                            arity,
-                            environment,
-                        );
+                        return typ.get_app_args(public, package, module, name, arity, environment);
                     }
 
                     TypeVar::Unbound { .. } => {
@@ -252,7 +225,7 @@ impl Type {
                         package: package.into(),
                         module: module.into(),
                         args: args.clone(),
-                        publicity,
+                        public,
                     }),
                 };
                 Some(args)
@@ -264,10 +237,7 @@ impl Type {
 
     pub fn find_private_type(&self) -> Option<Self> {
         match self {
-            Self::Named {
-                publicity: Publicity::Private,
-                ..
-            } => Some(self.clone()),
+            Self::Named { public: false, .. } => Some(self.clone()),
 
             Self::Named { args, .. } => args.iter().find_map(|t| t.find_private_type()),
 
@@ -306,7 +276,7 @@ pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AccessorsMap {
-    pub publicity: Publicity,
+    pub public: bool,
     pub type_: Arc<Type>,
     pub accessors: HashMap<EcoString, RecordAccessor>,
 }
@@ -449,21 +419,12 @@ impl ValueConstructorVariant {
         matches!(self, Self::ModuleFn { .. })
     }
 
-    pub fn is_record(&self) -> bool {
-        match self {
-            Self::Record { .. } => true,
-            _ => false,
-        }
-    }
-
     pub fn implementations(&self) -> Implementations {
         match self {
             ValueConstructorVariant::Record { .. }
             | ValueConstructorVariant::LocalConstant { .. }
             | ValueConstructorVariant::LocalVariable { .. } => Implementations {
                 gleam: true,
-                can_run_on_erlang: true,
-                can_run_on_javascript: true,
                 uses_javascript_externals: false,
                 uses_erlang_externals: false,
             },
@@ -550,7 +511,6 @@ pub struct ModuleInterface {
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
     pub contains_todo: bool,
-    pub line_numbers: LineNumbers,
 }
 
 /// Information on the constructors of a custom type.
@@ -579,6 +539,8 @@ impl TypeVariantConstructors {
         type_parameters: &[EcoString],
         hydrator: Hydrator,
     ) -> TypeVariantConstructors {
+        let error =
+            "The hydrator should not store any types other than generic type variables here";
         let named_types = hydrator.named_type_variables();
         let type_parameters = type_parameters
             .iter()
@@ -586,7 +548,6 @@ impl TypeVariantConstructors {
                 let t = named_types
                     .get(p)
                     .expect("Type parameter not found in hydrator");
-                let error = "Hydrator must not store non generic types here";
                 match t.type_.as_ref() {
                     Type::Var { type_: typ } => match typ.borrow().deref() {
                         TypeVar::Generic { id } => *id,
@@ -616,12 +577,7 @@ pub struct TypeValueConstructorField {
 }
 
 impl ModuleInterface {
-    pub fn new(
-        name: EcoString,
-        origin: Origin,
-        package: EcoString,
-        line_numbers: LineNumbers,
-    ) -> Self {
+    pub fn new(name: EcoString, origin: Origin, package: EcoString) -> Self {
         Self {
             name,
             origin,
@@ -632,13 +588,12 @@ impl ModuleInterface {
             accessors: Default::default(),
             unused_imports: Default::default(),
             contains_todo: false,
-            line_numbers,
         }
     }
 
     pub fn get_public_value(&self, name: &str) -> Option<&ValueConstructor> {
         let value = self.values.get(name)?;
-        if value.publicity.is_importable() {
+        if value.public {
             Some(value)
         } else {
             None
@@ -647,35 +602,38 @@ impl ModuleInterface {
 
     pub fn get_public_type(&self, name: &str) -> Option<&TypeConstructor> {
         let type_ = self.types.get(name)?;
-        if type_.publicity.is_importable() {
+        if type_.public {
             Some(type_)
         } else {
             None
         }
     }
 
-    pub fn get_main_function(&self, target: Target) -> Result<ModuleFunction, crate::Error> {
-        let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
-            module: self.name.clone(),
-        };
-
-        // Module must have a value with the name "main"
-        let value = self
-            .values
-            .get(&EcoString::from("main"))
-            .ok_or_else(not_found)?;
-
-        assert_suitable_main_function(value, &self.name, target)?;
-
-        Ok(ModuleFunction {
-            package: self.package.clone(),
-        })
+    pub fn get_main_function(&self) -> Result<ModuleFunction, crate::Error> {
+        match self.values.get(&EcoString::from("main")) {
+            Some(ValueConstructor {
+                variant: ValueConstructorVariant::ModuleFn { arity: 0, .. },
+                ..
+            }) => Ok(ModuleFunction {
+                package: self.package.clone(),
+            }),
+            Some(ValueConstructor {
+                variant: ValueConstructorVariant::ModuleFn { arity, .. },
+                ..
+            }) => Err(crate::Error::MainFunctionHasWrongArity {
+                module: self.name.clone(),
+                arity: *arity,
+            }),
+            _ => Err(crate::Error::ModuleDoesNotHaveMainFunction {
+                module: self.name.clone(),
+            }),
+        }
     }
 
     pub fn public_value_names(&self) -> Vec<EcoString> {
         self.values
             .iter()
-            .filter(|(_, v)| v.publicity.is_importable())
+            .filter(|(_, v)| v.public)
             .map(|(k, _)| k)
             .cloned()
             .collect_vec()
@@ -684,7 +642,7 @@ impl ModuleInterface {
     pub fn public_type_names(&self) -> Vec<EcoString> {
         self.types
             .iter()
-            .filter(|(_, v)| v.publicity.is_importable())
+            .filter(|(_, v)| v.public)
             .map(|(k, _)| k)
             .cloned()
             .collect_vec()
@@ -743,86 +701,59 @@ pub enum TypeVar {
 
 impl TypeVar {
     pub fn is_unbound(&self) -> bool {
-        match self {
-            Self::Unbound { .. } => true,
-            Self::Link { .. } | Self::Generic { .. } => false,
-        }
+        matches!(self, Self::Unbound { .. })
     }
 
     pub fn is_variable(&self) -> bool {
-        match self {
-            Self::Unbound { .. } | Self::Generic { .. } => true,
-            Self::Link { type_ } => type_.is_type_variable(),
-        }
-    }
-
-    pub fn return_type(&self) -> Option<Arc<Type>> {
-        match self {
-            Self::Link { type_ } => type_.return_type(),
-            Self::Unbound { .. } | Self::Generic { .. } => None,
-        }
-    }
-
-    pub fn is_result(&self) -> bool {
-        match self {
-            Self::Link { type_ } => type_.is_result(),
-            Self::Unbound { .. } | Self::Generic { .. } => false,
-        }
-    }
-
-    pub fn fn_types(&self) -> Option<(Vec<Arc<Type>>, Arc<Type>)> {
-        match self {
-            Self::Link { type_ } => type_.fn_types(),
-            Self::Unbound { .. } | Self::Generic { .. } => None,
-        }
+        matches!(self, Self::Unbound { .. } | Self::Generic { .. })
     }
 
     pub fn is_nil(&self) -> bool {
         match self {
             Self::Link { type_ } => type_.is_nil(),
-            Self::Unbound { .. } | Self::Generic { .. } => false,
+            _ => false,
         }
     }
 
     pub fn is_bool(&self) -> bool {
         match self {
             Self::Link { type_ } => type_.is_bool(),
-            Self::Unbound { .. } | Self::Generic { .. } => false,
+            _ => false,
         }
     }
 
     pub fn is_int(&self) -> bool {
         match self {
             Self::Link { type_ } => type_.is_int(),
-            Self::Unbound { .. } | Self::Generic { .. } => false,
+            _ => false,
         }
     }
 
     pub fn is_float(&self) -> bool {
         match self {
             Self::Link { type_ } => type_.is_float(),
-            Self::Unbound { .. } | Self::Generic { .. } => false,
+            _ => false,
         }
     }
 
     pub fn is_string(&self) -> bool {
         match self {
             Self::Link { type_ } => type_.is_string(),
-            Self::Unbound { .. } | Self::Generic { .. } => false,
+            _ => false,
         }
     }
 
     pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
         match self {
             Self::Link { type_ } => type_.named_type_name(),
-            Self::Unbound { .. } | Self::Generic { .. } => None,
+            _ => None,
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeConstructor {
-    pub publicity: Publicity,
+    pub public: bool,
     pub origin: SrcSpan,
     pub module: EcoString,
     pub parameters: Vec<Arc<Type>>,
@@ -838,7 +769,7 @@ impl TypeConstructor {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValueConstructor {
-    pub publicity: Publicity,
+    pub public: bool,
     pub deprecation: Deprecation,
     pub variant: ValueConstructorVariant,
     pub type_: Arc<Type>,
@@ -912,7 +843,7 @@ impl ValueConstructor {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAliasConstructor {
-    pub publicity: Publicity,
+    pub public: bool,
     pub module: EcoString,
     pub type_: Type,
     pub arity: usize,
@@ -1047,7 +978,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
         },
 
         Type::Named {
-            publicity,
+            public,
             module,
             package,
             name,
@@ -1055,7 +986,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
         } => {
             let args = args.iter().map(|t| generalise(t.clone())).collect();
             Arc::new(Type::Named {
-                publicity: *publicity,
+                public: *public,
                 module: module.clone(),
                 package: package.clone(),
                 name: name.clone(),
@@ -1078,43 +1009,4 @@ pub enum FieldAccessUsage {
     MethodCall,
     /// Used as `thing.field`
     Other,
-}
-
-/// Verify that a value is suitable to be used as a main function.
-fn assert_suitable_main_function(
-    value: &ValueConstructor,
-    module_name: &EcoString,
-    target: Target,
-) -> Result<(), crate::Error> {
-    let not_found = || crate::Error::ModuleDoesNotHaveMainFunction {
-        module: module_name.clone(),
-    };
-
-    // The value must be a module function
-    let ValueConstructorVariant::ModuleFn {
-        arity,
-        implementations,
-        ..
-    } = &value.variant
-    else {
-        return Err(not_found());
-    };
-
-    // The target must be supported
-    if !implementations.supports(target) {
-        return Err(crate::Error::MainFunctionDoesNotSupportTarget {
-            module: module_name.clone(),
-            target,
-        });
-    }
-
-    // The function must be zero arity
-    if *arity != 0 {
-        return Err(crate::Error::MainFunctionHasWrongArity {
-            module: module_name.clone(),
-            arity: *arity,
-        });
-    }
-
-    Ok(())
 }

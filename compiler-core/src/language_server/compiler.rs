@@ -3,7 +3,6 @@ use ecow::EcoString;
 use itertools::Itertools;
 
 use crate::{
-    analyse::TargetSupport,
     build::{self, Mode, Module, NullTelemetry, ProjectCompiler},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
@@ -70,7 +69,6 @@ where
             mode: build::Mode::Lsp,
             target: None,
             codegen: build::Codegen::None,
-            root_target_support: TargetSupport::Enforced,
         };
         let mut project_compiler = ProjectCompiler::new(
             config,
@@ -105,33 +103,6 @@ where
         self.project_compiler.check_gleam_version()?;
 
         let compiled_dependencies = self.project_compiler.compile_dependencies()?;
-
-        // Store the compiled dependency module information
-        for module in &compiled_dependencies {
-            let path = module.input_path.as_os_str().to_string_lossy().to_string();
-            let line_numbers = LineNumbers::new(&module.code);
-            let source = ModuleSourceInformation { path, line_numbers };
-            _ = self.sources.insert(module.name.clone(), source);
-        }
-
-        // Since cached modules are not recompiled we need to manually add them
-        for (name, module) in self.project_compiler.get_importable_modules() {
-            // It we already have the source for an importable module it means
-            // that we already have all the information we are adding here, so
-            // we can skip past to to avoid doing extra work for no gain.
-            if self.sources.contains_key(name) || name == "gleam" {
-                continue;
-            }
-            // Get the build path for the module
-            let build_path = self
-                .project_compiler
-                .get_build_dir_for_module(&module.package, &module.name);
-            // Create the source information
-            let path = build_path.to_string();
-            let line_numbers = module.line_numbers.clone();
-            let source = ModuleSourceInformation { path, line_numbers };
-            _ = self.sources.insert(name.clone(), source);
-        }
 
         // Warnings from dependencies are not fixable by the programmer so
         // we don't bother them with diagnostics for them.

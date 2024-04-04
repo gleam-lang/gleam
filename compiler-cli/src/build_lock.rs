@@ -62,11 +62,7 @@ impl BuildLock {
 }
 
 #[derive(Debug)]
-pub(crate) struct Guard(
-    // False positive. This is used in `drop`. Presumably the lint error is a
-    // bug in clippy.
-    #[allow(dead_code)] fslock::LockFile,
-);
+pub(crate) struct Guard(fslock::LockFile);
 
 #[test]
 fn locking_global() {

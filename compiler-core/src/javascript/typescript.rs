@@ -27,7 +27,7 @@ use ecow::EcoString;
 use itertools::Itertools;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use super::{import::Imports, join, line, lines, wrap_args, Output, INDENT};
+use super::{concat, import::Imports, line, lines, wrap_args, Output, INDENT};
 
 /// When rendering a type variable to an TypeScript type spec we need all type
 /// variables with the same id to end up with the same name in the generated
@@ -78,7 +78,7 @@ fn name_with_generics<'a>(
 ///
 ///   Examples:
 ///     fn(a) -> String       // `a` is `any`
-///     `fn()` -> Result(a, b)  // `a` and `b` are `any`
+///     fn() -> Result(a, b)  // `a` and `b` are `any`
 ///     fn(a) -> a            // `a` is a generic
 fn collect_generic_usages<'a>(
     mut ids: HashMap<u64, u64>,
@@ -122,7 +122,10 @@ fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
 ///
 fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
     break_("", "")
-        .append(join(elems, break_(",", ", ")))
+        .append(concat(Itertools::intersperse(
+            elems.into_iter(),
+            break_(",", ", "),
+        )))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("[", "]")
@@ -134,7 +137,10 @@ where
     I: IntoIterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(join(args, break_(",", ", ")))
+        .append(concat(Itertools::intersperse(
+            args.into_iter(),
+            break_(",", ", "),
+        )))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("<", ">")
@@ -294,43 +300,41 @@ impl<'a> TypeScriptGenerator<'a> {
         match statement {
             Definition::TypeAlias(TypeAlias {
                 alias,
-                publicity,
+                public,
                 type_,
                 ..
-            }) if publicity.is_importable() => vec![self.type_alias(alias, type_)],
+            }) if *public => vec![self.type_alias(alias, type_)],
             Definition::TypeAlias(TypeAlias { .. }) => vec![],
 
             Definition::Import(Import { .. }) => vec![],
 
             Definition::CustomType(CustomType {
-                publicity,
+                public,
                 constructors,
                 opaque,
                 name,
                 typed_parameters,
                 ..
-            }) if publicity.is_importable() => {
+            }) if *public => {
                 self.custom_type_definition(name, typed_parameters, constructors, *opaque)
             }
             Definition::CustomType(CustomType { .. }) => vec![],
 
             Definition::ModuleConstant(ModuleConstant {
-                publicity,
+                public,
                 name,
                 value,
                 ..
-            }) if publicity.is_importable() => vec![self.module_constant(name, value)],
+            }) if *public => vec![self.module_constant(name, value)],
             Definition::ModuleConstant(ModuleConstant { .. }) => vec![],
 
             Definition::Function(Function {
                 arguments,
                 name,
-                publicity,
+                public,
                 return_type,
                 ..
-            }) if publicity.is_importable() => {
-                vec![self.module_function(name, arguments, return_type)]
-            }
+            }) if *public => vec![self.module_function(name, arguments, return_type)],
             Definition::Function(Function { .. }) => vec![],
         }
     }
@@ -374,7 +378,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     x.arguments.iter().map(|a| &a.type_),
                 )
             });
-            join(constructors, break_("| ", " | "))
+            concat(Itertools::intersperse(constructors, break_("| ", " | ")))
         };
 
         definitions.push(Ok(docvec![
@@ -429,7 +433,7 @@ impl<'a> TypeScriptGenerator<'a> {
             line(),
             line(),
             // Then add each field to the class
-            join(
+            concat(Itertools::intersperse(
                 constructor.arguments.iter().enumerate().map(|(i, arg)| {
                     let name = arg
                         .label
@@ -444,7 +448,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     ]
                 }),
                 line(),
-            ),
+            )),
         ]
         .nest(INDENT);
 

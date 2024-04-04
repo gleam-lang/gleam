@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/pipeline_action.rs
+expression: "\nimport list\n\nfn main() {\n  let result = list.reverse(list.zip(list.reverse([1,2,3]), list.reverse([4,5,6])))\n}\n"
+---
+
+import list
+
+fn main() {
+  let result = [1, 2, 3] 
+               |> list.reverse()
+               |> list.zip(list.reverse([4, 5, 6]))
+               |> list.reverse()
+
+}
+

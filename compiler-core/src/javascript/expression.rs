@@ -141,17 +141,16 @@ impl<'module> Generator<'module> {
             TypedExpr::Int { value, .. } => Ok(int(value)),
             TypedExpr::Float { value, .. } => Ok(float(value)),
 
-            TypedExpr::List { elements, tail, .. } => self.not_in_tail_position(|gen| match tail {
-                Some(tail) => {
-                    gen.tracker.prepend_used = true;
-                    let tail = gen.wrap_expression(tail)?;
-                    prepend(elements.iter().map(|e| gen.wrap_expression(e)), tail)
-                }
-                None => {
-                    gen.tracker.list_used = true;
-                    list(elements.iter().map(|e| gen.wrap_expression(e)))
-                }
-            }),
+            TypedExpr::List { elements, tail, .. } => {
+                self.tracker.list_used = true;
+                self.not_in_tail_position(|gen| {
+                    let tail = match tail {
+                        Some(tail) => Some(gen.wrap_expression(tail)?),
+                        None => None,
+                    };
+                    list(elements.iter().map(|e| gen.wrap_expression(e)), tail)
+                })
+            }
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
@@ -265,7 +264,7 @@ impl<'module> Generator<'module> {
         Ok(docvec!["toBitArray(", segments_array, ")"])
     }
 
-    pub fn wrap_return<'a>(&mut self, document: Document<'a>) -> Document<'a> {
+    pub fn wrap_return<'a>(&self, document: Document<'a>) -> Document<'a> {
         if self.scope_position.is_tail() {
             docvec!["return ", document, ";"]
         } else {
@@ -309,19 +308,14 @@ impl<'module> Generator<'module> {
     /// being an operator or a function literal.
     pub fn child_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {}
-            TypedExpr::Fn { .. } => {}
+            TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {
+                Ok(docvec!("(", self.expression(expression)?, ")"))
+            }
 
-            _ => return self.wrap_expression(expression),
+            TypedExpr::Fn { .. } => Ok(docvec!("(", self.expression(expression)?, ")")),
+
+            _ => self.wrap_expression(expression),
         }
-
-        let document = self.expression(expression)?;
-        Ok(if self.scope_position.is_tail() {
-            // Here the document is a return statement: `return <expr>;`
-            document
-        } else {
-            docvec!("(", document, ")")
-        })
     }
 
     /// Wrap an expression in an immediately involked function expression
@@ -348,8 +342,7 @@ impl<'module> Generator<'module> {
         self.scope_position = scope_position;
 
         // Wrap in iife document
-        let doc = self.immediately_involked_function_expression_document(result?);
-        Ok(self.wrap_return(doc))
+        Ok(self.immediately_involked_function_expression_document(result?))
     }
 
     /// Wrap a document in an immediately involked function expression
@@ -1073,7 +1066,7 @@ impl<'module> Generator<'module> {
 
     fn pattern_assignments_doc(assignments: Vec<Assignment<'_>>) -> Document<'_> {
         let assignments = assignments.into_iter().map(pattern::Assignment::into_doc);
-        join(assignments, line())
+        concat(Itertools::intersperse(assignments, line()))
     }
 
     fn pattern_take_assignments_doc<'a>(
@@ -1107,17 +1100,12 @@ impl<'module> Generator<'module> {
             break_(" ||", " || ")
         };
 
-        let checks_len = checks.len();
-        join(
-            checks.into_iter().map(|check| {
-                if checks_len > 1 && check.may_require_wrapping() {
-                    docvec!["(", check.into_doc(match_desired), ")"]
-                } else {
-                    check.into_doc(match_desired)
-                }
-            }),
+        concat(Itertools::intersperse(
+            checks
+                .into_iter()
+                .map(|check| check.into_doc(match_desired)),
             operator,
-        )
+        ))
         .group()
     }
 }
@@ -1191,6 +1179,7 @@ pub(crate) fn guard_constant_expression<'a>(
                 elements
                     .iter()
                     .map(|e| guard_constant_expression(assignments, tracker, e)),
+                None,
             )
         }
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
@@ -1222,16 +1211,11 @@ pub(crate) fn guard_constant_expression<'a>(
             Ok(construct_record(module.as_deref(), tag, field_values))
         }
 
-        Constant::BitArray { segments, .. } => bit_array(tracker, segments, |tracker, constant| {
-            guard_constant_expression(assignments, tracker, constant)
-        }),
-
         Constant::Var { name, .. } => Ok(assignments
             .iter()
             .find(|assignment| assignment.name == name)
             .map(|assignment| assignment.subject.clone().append(assignment.path.clone()))
             .unwrap_or_else(|| name.to_doc())),
-
         expression => constant_expression(tracker, expression),
     }
 }
@@ -1250,7 +1234,10 @@ pub(crate) fn constant_expression<'a>(
 
         Constant::List { elements, .. } => {
             tracker.list_used = true;
-            list(elements.iter().map(|e| constant_expression(tracker, e)))
+            list(
+                elements.iter().map(|e| constant_expression(tracker, e)),
+                None,
+            )
         }
 
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
@@ -1282,7 +1269,7 @@ pub(crate) fn constant_expression<'a>(
             Ok(construct_record(module.as_deref(), tag, field_values))
         }
 
-        Constant::BitArray { segments, .. } => bit_array(tracker, segments, constant_expression),
+        Constant::BitArray { segments, .. } => bit_array(tracker, segments),
 
         Constant::Var { name, module, .. } => Ok({
             match module {
@@ -1296,14 +1283,13 @@ pub(crate) fn constant_expression<'a>(
 fn bit_array<'a>(
     tracker: &mut UsageTracker,
     segments: &'a [BitArraySegment<TypedConstant, Arc<Type>>],
-    mut constant_expr_fun: impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
-) -> Output<'a> {
+) -> Result<Document<'a>, Error> {
     tracker.bit_array_literal_used = true;
 
     use BitArrayOption as Opt;
 
     let segments_array = array(segments.iter().map(|segment| {
-        let value = constant_expr_fun(tracker, &segment.value)?;
+        let value = constant_expression(tracker, &segment.value)?;
         match segment.options.as_slice() {
             // Ints
             [] | [Opt::Int { .. }] => Ok(value),
@@ -1311,7 +1297,7 @@ fn bit_array<'a>(
             // Sized ints
             [Opt::Size { value: size, .. }] => {
                 tracker.sized_integer_segment_used = true;
-                let size = constant_expr_fun(tracker, size)?;
+                let size = constant_expression(tracker, size)?;
                 Ok(docvec!["sizedInt(", value, ", ", size, ")"])
             }
 
@@ -1368,22 +1354,20 @@ pub fn array<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) 
     .group())
 }
 
-fn list<'a, I: IntoIterator<Item = Output<'a>>>(elements: I) -> Output<'a>
+fn list<'a, I: IntoIterator<Item = Output<'a>>>(
+    elements: I,
+    tail: Option<Document<'a>>,
+) -> Output<'a>
 where
     I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
 {
     let array = array(elements);
-    Ok(docvec!["toList(", array?, ")"])
-}
-
-fn prepend<'a, I: IntoIterator<Item = Output<'a>>>(elements: I, tail: Document<'a>) -> Output<'a>
-where
-    I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
-{
-    elements.into_iter().rev().try_fold(tail, |tail, element| {
-        let args = call_arguments([element, Ok(tail)])?;
-        Ok(docvec!["listPrepend", args])
-    })
+    if let Some(tail) = tail {
+        let args = [array, Ok(tail)];
+        Ok(docvec!["toList", call_arguments(args)?])
+    } else {
+        Ok(docvec!["toList(", array?, ")"])
+    }
 }
 
 fn call_arguments<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
@@ -1408,13 +1392,13 @@ fn construct_record<'a>(
     arguments: impl IntoIterator<Item = Document<'a>>,
 ) -> Document<'a> {
     let mut any_arguments = false;
-    let arguments = join(
+    let arguments = concat(Itertools::intersperse(
         arguments.into_iter().map(|a| {
             any_arguments = true;
             a
         }),
         break_(",", ", "),
-    );
+    ));
     let arguments = docvec![break_("", ""), arguments].nest(INDENT);
     let name = if let Some(module) = module {
         docvec!["$", module, ".", name]
@@ -1508,14 +1492,14 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::NegateBool { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::RecordAccess { .. }
-            | TypedExpr::ModuleSelect { .. }
-            | TypedExpr::Block { .. },
+            | TypedExpr::ModuleSelect { .. },
         ) => true,
 
         Statement::Expression(
             TypedExpr::Todo { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::Panic { .. }
+            | TypedExpr::Block { .. }
             | TypedExpr::Pipeline { .. },
         ) => false,
 

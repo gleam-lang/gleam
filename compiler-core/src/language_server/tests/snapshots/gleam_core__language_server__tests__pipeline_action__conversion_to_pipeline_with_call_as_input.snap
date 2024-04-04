@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/pipeline_action.rs
+expression: "\nimport list\n\nfn main() {\n  let result = list.reverse(list.map(buildlist(), add1))\n}\n\nfn buildlist() -> List(Int) {\n    [1, 2, 3]\n}\n\nfn add1(i: Int) -> Int{\n    i + 1\n}\n"
+---
+
+import list
+
+fn main() {
+  let result = buildlist() 
+               |> list.map(add1)
+               |> list.reverse()
+
+}
+
+fn buildlist() -> List(Int) {
+    [1, 2, 3]
+}
+
+fn add1(i: Int) -> Int{
+    i + 1
+}
+

@@ -48,7 +48,7 @@ fn module_types() {
         &[(
             "name",
             Arc::new(type_::Type::Named {
-                publicity: Publicity::Public,
+                public: true,
                 package: "package".into(),
                 module: module_name,
                 name: "my_type".into(),

@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/language_server/tests/inline_var_action.rs
+expression: "\nimport list\n\nfn main() {\n  let x = 2\n  let y = [1, x, 3]\n}\n        "
+---
+
+import list
+
+fn main() {
+  
+  let y = [1, 2, 3]
+}
+        

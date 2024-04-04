@@ -6,7 +6,7 @@ expression: "./cases/imported_constants"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<89 byte binary>
+<29 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -27,7 +27,7 @@ expression: "./cases/imported_constants"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<316 byte binary>
+<40 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
@@ -94,3 +94,6 @@ aliased_fn_b() ->
 
 //// /out/lib/the_package/include/one_User.hrl
 -record(user, {name :: binary(), score :: integer()}).
+
+
+

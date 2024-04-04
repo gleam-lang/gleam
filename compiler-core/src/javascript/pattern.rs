@@ -406,8 +406,8 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 if let AssignName::Variable(right) = right_side_assignment {
                     self.push_string_prefix_slice(utf16_no_escape_len(left_side_string));
                     self.push_assignment(subject.clone(), right);
-                    // After pushing the assignment we need to pop the prefix slicing we used to
-                    // check the condition.
+                    // We remove the string slicing that was needed to push the correct assignment
+                    // this way the following assignments will only be sliced if necessary.
                     self.pop();
                 }
                 if let Some((left, _)) = left_side_assignment {
@@ -420,6 +420,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     //                     the case branch gets translated into.
                     self.push_assignment(super::expression::string(left_side_string), left);
                 }
+                self.pop();
                 Ok(())
             }
 
@@ -807,19 +808,6 @@ impl<'a> Check<'a> {
             }
         }
     }
-
-    pub(crate) fn may_require_wrapping(&self) -> bool {
-        match self {
-            Check::Result { .. }
-            | Check::Variant { .. }
-            | Check::Equal { .. }
-            | Check::ListLength { .. }
-            | Check::BitArrayLength { .. }
-            | Check::StringPrefix { .. }
-            | Check::Booly { .. } => false,
-            Check::Guard { .. } => true,
-        }
-    }
 }
 
 pub(crate) fn assign_subject<'a>(
@@ -859,54 +847,14 @@ pub(crate) fn assign_subjects<'a>(
 /// Calculates the length of str as utf16 without escape characters.
 fn utf16_no_escape_len(str: &EcoString) -> usize {
     let mut filtered_str = String::new();
-    let mut str_iter = str.chars().peekable();
+    let mut str_iter = str.chars();
     loop {
         match str_iter.next() {
             Some('\\') => match str_iter.next() {
-                // Check for Unicode escape sequence, e.g. \u{00012FF}
-                Some('u') => {
-                    if str_iter.peek() != Some(&'{') {
-                        // Invalid Unicode escape sequence
-                        filtered_str.push('u');
-                        continue;
-                    }
-
-                    // Consume the left brace after peeking
-                    let _ = str_iter.next();
-
-                    let codepoint_str = str_iter
-                        .peeking_take_while(char::is_ascii_hexdigit)
-                        .collect::<String>();
-
-                    if codepoint_str.is_empty() || str_iter.peek() != Some(&'}') {
-                        // Invalid Unicode escape sequence
-                        filtered_str.push_str("u{");
-                        filtered_str.push_str(&codepoint_str);
-                        continue;
-                    }
-
-                    let codepoint = u32::from_str_radix(&codepoint_str, 16)
-                        .ok()
-                        .and_then(char::from_u32);
-
-                    if let Some(codepoint) = codepoint {
-                        // Consume the right brace after peeking
-                        let _ = str_iter.next();
-
-                        // Consider this codepoint's length instead of
-                        // that of the Unicode escape sequence itself
-                        filtered_str.push(codepoint);
-                    } else {
-                        // Invalid Unicode escape sequence
-                        // (codepoint value not in base 16 or too large)
-                        filtered_str.push_str("u{");
-                        filtered_str.push_str(&codepoint_str);
-                    }
-                }
-                Some(c) => filtered_str.push(c),
+                Some(c) => filtered_str.push_str(c.to_string().as_str()),
                 None => break,
             },
-            Some(c) => filtered_str.push(c),
+            Some(c) => filtered_str.push_str(c.to_string().as_str()),
             None => break,
         }
     }

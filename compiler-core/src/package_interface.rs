@@ -8,7 +8,7 @@ use serde::Serialize;
 mod tests;
 
 use crate::{
-    ast::{CustomType, Definition, Function, ModuleConstant, Publicity, TypeAlias},
+    ast::{CustomType, Definition, Function, ModuleConstant, TypeAlias},
     io::ordered_map,
     type_::{expression::Implementations, Deprecation, Type, TypeVar},
 };
@@ -174,8 +174,6 @@ pub struct ImplementationsInterface {
     /// ```json
     /// {
     ///   gleam: true,
-    ///   can_run_on_erlang: true,
-    ///   can_run_on_javascript: true,
     ///   uses_erlang_externals: true,
     ///   uses_javascript_externals: false,
     /// }
@@ -183,10 +181,6 @@ pub struct ImplementationsInterface {
     ///
     /// - `gleam: true` means that the function has a pure Gleam implementation
     ///   and thus it can be used on all Gleam targets with no problems.
-    /// - `can_run_on_erlang: false` the function can be called on the Erlang
-    ///   target.
-    /// - `can_run_on_javascript: true` the function can be called on the JavaScript
-    ///   target.
     /// - `uses_erlang_externals: true` means that the function will use Erlang
     ///   external code when compiled to the Erlang target.
     /// - `uses_javascript_externals: false` means that the function won't use
@@ -214,8 +208,6 @@ pub struct ImplementationsInterface {
     /// ```json
     /// {
     ///   gleam: false,
-    ///   can_run_on_erlang: false,
-    ///   can_run_on_javascript: true,
     ///   uses_erlang_externals: false,
     ///   uses_javascript_externals: true,
     /// }
@@ -224,23 +216,13 @@ pub struct ImplementationsInterface {
     /// - `gleam: false` means that the function doesn't have a pure Gleam
     ///   implementations. This means that the function is only defined using
     ///   externals and can only be used on some targets.
-    /// - `can_run_on_erlang: false` the function cannot be called on the Erlang
-    ///   target.
-    /// - `can_run_on_javascript: true` the function can be called on the JavaScript
-    ///   target.
     /// - `uses_erlang_externals: false` the function is not using external
-    ///   Erlang code.
+    ///   Erlang code. So, since the function doesn't have a fallback pure Gleam
+    ///   implementation, you won't be able to compile it on this target.
     /// - `uses_javascript_externals: true` the function is using JavaScript
-    ///   external code.
+    ///   external code. This means that you will be able to use it on the
+    ///   JavaScript target with no problems.
     uses_javascript_externals: bool,
-    /// Whether the function can be called on the Erlang target, either due to a
-    /// pure Gleam implementation or an implementation that uses some Erlang
-    /// externals.
-    can_run_on_erlang: bool,
-    /// Whether the function can be called on the JavaScript target, either due
-    /// to a pure Gleam implementation or an implementation that uses some
-    /// JavaScript externals.
-    can_run_on_javascript: bool,
 }
 
 impl ImplementationsInterface {
@@ -258,17 +240,12 @@ impl ImplementationsInterface {
             gleam,
             uses_erlang_externals,
             uses_javascript_externals,
-
-            can_run_on_erlang,
-            can_run_on_javascript,
         } = implementations;
 
         ImplementationsInterface {
             gleam: *gleam,
             uses_erlang_externals: *uses_erlang_externals,
             uses_javascript_externals: *uses_javascript_externals,
-            can_run_on_erlang: *can_run_on_erlang,
-            can_run_on_javascript: *can_run_on_javascript,
         }
     }
 }
@@ -383,7 +360,7 @@ impl ModuleInterface {
             match statement {
                 // A public type definition.
                 Definition::CustomType(CustomType {
-                    publicity: Publicity::Public,
+                    public: true,
                     name,
                     constructors,
                     documentation,
@@ -436,7 +413,7 @@ impl ModuleInterface {
 
                 // A public type alias definition
                 Definition::TypeAlias(TypeAlias {
-                    publicity: Publicity::Public,
+                    public: true,
                     alias,
                     parameters,
                     type_,
@@ -458,7 +435,7 @@ impl ModuleInterface {
 
                 // A public module constant.
                 Definition::ModuleConstant(ModuleConstant {
-                    publicity: Publicity::Public,
+                    public: true,
                     name,
                     type_,
                     documentation,
@@ -483,7 +460,7 @@ impl ModuleInterface {
 
                 // A public top-level function.
                 Definition::Function(Function {
-                    publicity: Publicity::Public,
+                    public: true,
                     name,
                     arguments,
                     deprecation,
@@ -518,7 +495,7 @@ impl ModuleInterface {
                     );
                 }
 
-                // Private or internal definitions are not included.
+                // Private definitions are not included.
                 Definition::Function(_) => {}
                 Definition::CustomType(_) => {}
                 Definition::ModuleConstant(_) => {}

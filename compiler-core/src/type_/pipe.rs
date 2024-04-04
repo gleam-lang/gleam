@@ -144,7 +144,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             location: self.argument_location,
             name: PIPE_VARIABLE.into(),
             constructor: ValueConstructor {
-                publicity: Publicity::Public,
+                public: true,
                 deprecation: Deprecation::NotDeprecated,
                 type_: self.argument_type.clone(),
                 variant: ValueConstructorVariant::LocalVariable {

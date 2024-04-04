@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/inline_var_action.rs
+expression: "\nimport list\n\nfn main() {\n  let x = [1,2,3]\n  let y = list.reverse(x)\n  let z = list.reverse(x)\n  let u = list.reverse(x)\n  let v = list.reverse(x)\n}\n    "
+---
+
+import list
+
+fn main() {
+  
+  let y = list.reverse([1, 2, 3])
+  let z = list.reverse([1, 2, 3])
+  let u = list.reverse([1, 2, 3])
+  let v = list.reverse([1, 2, 3])
+}
+    

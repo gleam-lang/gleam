@@ -1,10 +1,6 @@
 hljs.registerLanguage("gleam", function (hljs) {
-  const KEYWORDS = {
-    className: "keyword",
-    beginKeywords:
-      "as assert auto case const delegate derive echo else fn if " +
-      "implement import let macro opaque panic pub test todo type use",
-  };
+  const KEYWORDS =
+    "as assert case const fn if import let panic use opaque pub todo type";
   const STRING = {
     className: "string",
     variants: [{ begin: /"/, end: /"/ }],
@@ -89,7 +85,10 @@ hljs.registerLanguage("gleam", function (hljs) {
         end: "\\(",
         excludeEnd: true,
       },
-      KEYWORDS,
+      {
+        className: "keyword",
+        beginKeywords: KEYWORDS,
+      },
       {
         // Type names and constructors
         className: "title",

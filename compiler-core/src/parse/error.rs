@@ -46,7 +46,7 @@ impl ParseError {
             ParseErrorType::ExpectedPattern => ("I was expecting a pattern after this", vec![]),
             ParseErrorType::ExpectedType => (
                 "I was expecting a type after this",
-                vec!["See: https://tour.gleam.run/basics/assignments/".into()],
+                vec!["See: https://gleam.run/book/tour/let-bindings.html".into()],
             ),
             ParseErrorType::ExpectedUpName => ("I was expecting a type name here", vec![]),
             ParseErrorType::ExpectedValue => ("I was expecting a value after this", vec![]),
@@ -87,14 +87,14 @@ contain a-z, A-Z, or 0-9.",
                         "bits, bytes, int, float, utf8, utf16, utf32, utf8_codepoint, \
 utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, unit.",
                     ),
-                    "See: https://tour.gleam.run/data-types/bit-arrays/".into(),
+                    "See: https://gleam.run/book/tour/bit-strings".into(),
                 ],
             ),
             ParseErrorType::InvalidBitArrayUnit => (
                 "This is not a valid BitArray unit value",
                 vec![
                     "Hint: unit must be an integer literal >= 1 and <= 256.".into(),
-                    "See: https://tour.gleam.run/data-types/bit-arrays/".into(),
+                    "See: https://gleam.run/book/tour/bit-strings".into(),
                 ],
             ),
             ParseErrorType::InvalidTailPattern => (
@@ -112,11 +112,11 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ParseErrorType::NestedBitArrayPattern => ("BitArray patterns cannot be nested", vec![]),
             ParseErrorType::NoCaseClause => (
                 "This case expression has no clauses",
-                vec!["See: https://tour.gleam.run/flow-control/case-expressions/".into()],
+                vec!["See: https://gleam.run/book/tour/case-expressions".into()],
             ),
             ParseErrorType::NotConstType => (
                 "This type is not allowed in module constants",
-                vec!["See: https://tour.gleam.run/basics/constants/".into()],
+                vec!["See: https://gleam.run/book/tour/constants".into()],
             ),
             ParseErrorType::NoExpression => (
                 "There must be an expression in here",
@@ -126,7 +126,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "There must be a 'let' to bind variable to value",
                 vec![
                     "Hint: Use let for binding.".into(),
-                    "See: https://tour.gleam.run/basics/assignments/".into(),
+                    "See: https://gleam.run/book/tour/let-bindings".into(),
                 ],
             ),
             ParseErrorType::NoValueAfterEqual => (
@@ -135,7 +135,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ),
             ParseErrorType::OpaqueTypeAlias => (
                 "Type Aliases cannot be opaque",
-                vec!["See: https://tour.gleam.run/basics/type-aliases/".into()],
+                vec!["See: https://gleam.run/book/tour/type-aliases".into()],
             ),
             ParseErrorType::OpNakedRight => (
                 "This operator has no value on its right side",
@@ -145,7 +145,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "There is more than 1 argument hole in this function call",
                 vec![
                     "Hint: Function calls can have at most one argument hole.".into(),
-                    "See: https://tour.gleam.run/functions/functions/".into(),
+                    "See: https://gleam.run/book/tour/functions".into(),
                 ],
             ),
             ParseErrorType::UnexpectedEof => ("The module ended unexpectedly", vec![]),
@@ -153,28 +153,21 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "This spread does nothing",
                 vec![
                     "Hint: Try prepending some elements [1, 2, ..list].".into(),
-                    "See: https://tour.gleam.run/basics/lists/".into(),
-                ],
-            ),
-            ParseErrorType::ListSpreadFollowedByElements => (
-                "I wasn't expecting elements after this spread",
-                vec![
-                    "A spread can only be used to prepend elements to lists like this: `[first, ..rest]`.\n"
-                        .into(),
-                    "Hint: If you need to append elements to a list you can use `list.append`."
-                        .into(),
-                    "See: https://hexdocs.pm/gleam_stdlib/gleam/list.html#append".into(),
+                    "See: https://gleam.run/book/tour/lists.html".into(),
                 ],
             ),
             ParseErrorType::UnexpectedReservedWord => (
                 "This is a reserved word",
-                vec!["Hint: I was expecting to see a name here.".into()],
+                vec![
+                    "Hint: I was expecting to see a name here.".into(),
+                    "See: https://gleam.run/book/tour/reserved-words".into(),
+                ],
             ),
             ParseErrorType::LowcaseBooleanPattern => (
                 "Did you want a Bool instead of a variable?",
                 vec![
                     "Hint: In Gleam boolean literals are `True` and `False`.".into(),
-                    "See: https://tour.gleam.run/basics/bools/".into(),
+                    "See: https://gleam.run/book/tour/bools.html".into(),
                 ],
             ),
             ParseErrorType::UnexpectedLabel => (
@@ -210,7 +203,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 vec![],
             ),
             ParseErrorType::ListSpreadWithoutTail => (
-                "I was expecting a value after this spread",
+                "I was expecting a value here",
                 vec!["If a list expression has a spread then a tail must also be given.".into()],
             ),
             ParseErrorType::UnknownAttribute => (
@@ -223,18 +216,6 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ),
             ParseErrorType::UnknownTarget => ("I don't know what this attribute is", vec![]),
             ParseErrorType::ExpectedFunctionBody => ("This function does not have a body", vec![]),
-            ParseErrorType::RedundantInternalAttribute => ("Redundant internal attribute", vec![
-                format!("Only a public definition can be annotated as internal."),
-                "Hint: remove the `@internal` annotation.".into()
-            ]),
-            ParseErrorType::InvalidModuleTypePattern => (
-                "Invalid pattern", vec![
-                    "I'm expecting a pattern here".into(),
-                    "Hint: A pattern can be a constructor name, a literal value".into(),
-                    "or a variable to bind a value to, etc.".into(),
-                    "See: https://tour.gleam.run/flow-control/case-expressions/".into(),
-                ],
-            ),
         }
     }
 }
@@ -262,8 +243,8 @@ pub enum ParseErrorType {
     LexError {
         error: LexicalError,
     },
-    NestedBitArrayPattern,        // <<<<1>>, 2>>, <<1>> is not allowed in there
-    NoCaseClause,                 // a case with no clauses
+    NestedBitArrayPattern,     // <<<<1>>, 2>>, <<1>> is not allowed in there
+    NoCaseClause,              // a case with no clauses
     NoExpression, // between "{" and "}" in expression position, there must be an expression
     NoLetBinding, // Bindings and rebinds always require let and must always bind to a value.
     NoValueAfterEqual, // = <something other than a value>
@@ -275,7 +256,6 @@ pub enum ParseErrorType {
     UnknownAttribute, // an attribute was used that is not known
     UnknownTarget, // an unknown target was used
     ListSpreadWithoutElements, // Pointless spread: `[..xs]`
-    ListSpreadFollowedByElements, // trying to append something after the spread: `[..xs, x]`
     LowcaseBooleanPattern, // most likely user meant True or False in patterns
     UnexpectedLabel, // argument labels were provided, but are not supported in this context
     UnexpectedEof,
@@ -288,10 +268,8 @@ pub enum ParseErrorType {
     UnexpectedFunction, // a function was used called outside of another function
     // A variable was assigned or discarded on the left hand side of a <> pattern
     ConcatPatternVariableLeftHandSide,
-    ListSpreadWithoutTail,      // let x = [1, ..]
-    ExpectedFunctionBody,       // let x = fn()
-    RedundantInternalAttribute, // for a private definition marked as internal
-    InvalidModuleTypePattern,   // for patterns that have a dot like: `name.thing`
+    ListSpreadWithoutTail, // let x = [1, ..]
+    ExpectedFunctionBody,  // let x = fn()
 }
 
 impl LexicalError {
@@ -301,7 +279,7 @@ impl LexicalError {
                 "I don't understand this escape code",
                 vec![
                     "Hint: Add another backslash before it.".into(),
-                    "See: https://tour.gleam.run/basics/strings".into(),
+                    "See: https://gleam.run/book/tour/strings.html#escape-sequences".into(),
                 ],
             ),
             LexicalErrorType::DigitOutOfRadix => {
@@ -321,10 +299,6 @@ impl LexicalError {
                     "Hint: Semicolons used to be whitespace and did nothing.".into(),
                     "You can safely remove them without your program changing.".into(),
                 ],
-            ),
-            LexicalErrorType::UnrecognizedToken { tok } if *tok == '\'' => (
-                "Unexpected single quote",
-                vec!["Hint: Strings are written with double quotes.".into()],
             ),
             LexicalErrorType::UnrecognizedToken { .. } => (
                 "I can't figure out what to do with this character",

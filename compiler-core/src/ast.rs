@@ -52,6 +52,19 @@ impl TypedModule {
             .iter()
             .find_map(|statement| statement.find_node(byte_index))
     }
+
+    pub fn find_containing_definition_for_node(
+        &self,
+        byte_index: u32,
+    ) -> Option<&Definition<Arc<Type>, TypedExpr, EcoString, EcoString>> {
+        self.definitions.iter().find(|def| {
+            if let Definition::Function(f) = def {
+                f.full_location().contains(byte_index)
+            } else {
+                def.location().contains(byte_index)
+            }
+        })
+    }
 }
 
 /// The `@target(erlang)` and `@target(javascript)` attributes can be used to
@@ -349,36 +362,6 @@ impl TypeAst {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Publicity {
-    Public,
-    Private,
-    Internal,
-}
-
-impl Publicity {
-    pub fn is_private(&self) -> bool {
-        match self {
-            Self::Private => true,
-            Self::Public | Self::Internal => false,
-        }
-    }
-
-    pub fn is_internal(&self) -> bool {
-        match self {
-            Self::Internal => true,
-            Self::Public | Self::Private => false,
-        }
-    }
-
-    pub fn is_importable(&self) -> bool {
-        match self {
-            Self::Internal | Self::Public => true,
-            Self::Private => false,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A function definition
 ///
@@ -396,7 +379,7 @@ pub struct Function<T, Expr> {
     pub name: EcoString,
     pub arguments: Vec<Arg<T>>,
     pub body: Vec1<Statement<T, Expr>>,
-    pub publicity: Publicity,
+    pub public: bool,
     pub deprecation: Deprecation,
     pub return_annotation: Option<TypeAst>,
     pub return_type: T,
@@ -466,7 +449,7 @@ pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 pub struct ModuleConstant<T, ConstantRecordTag> {
     pub documentation: Option<EcoString>,
     pub location: SrcSpan,
-    pub publicity: Publicity,
+    pub public: bool,
     pub name: EcoString,
     pub annotation: Option<TypeAst>,
     pub value: Box<Constant<T, ConstantRecordTag>>,
@@ -497,7 +480,7 @@ pub struct CustomType<T> {
     pub location: SrcSpan,
     pub end_position: u32,
     pub name: EcoString,
-    pub publicity: Publicity,
+    pub public: bool,
     pub constructors: Vec<RecordConstructor<T>>,
     pub documentation: Option<EcoString>,
     pub deprecation: Deprecation,
@@ -535,7 +518,7 @@ pub struct TypeAlias<T> {
     pub parameters: Vec<EcoString>,
     pub type_ast: TypeAst,
     pub type_: T,
-    pub publicity: Publicity,
+    pub public: bool,
     pub documentation: Option<EcoString>,
     pub deprecation: Deprecation,
 }
@@ -560,33 +543,37 @@ impl TypedDefinition {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             Definition::Function(function) => {
-                if let Some(found) = function.body.iter().find_map(|s| s.find_node(byte_index)) {
-                    return Some(found);
-                };
+                if function.full_location().contains(byte_index) {
+                    if let Some(found) = function.body.iter().find_map(|s| s.find_node(byte_index))
+                    {
+                        return Some(found);
+                    };
 
-                if let Some(found_arg) = function
-                    .arguments
-                    .iter()
-                    .find(|arg| arg.location.contains(byte_index))
-                {
-                    return Some(Located::Arg(found_arg));
-                };
+                    if let Some(found_arg) = function
+                        .arguments
+                        .iter()
+                        .find(|arg| arg.location.contains(byte_index))
+                    {
+                        return Some(Located::Arg(found_arg));
+                    };
 
-                if let Some(found_statement) = function
-                    .body
-                    .iter()
-                    .find(|statement| statement.location().contains(byte_index))
-                {
-                    return Some(Located::Statement(found_statement));
-                };
+                    if let Some(found_statement) = function
+                        .body
+                        .iter()
+                        .find(|statement| statement.location().contains(byte_index))
+                    {
+                        return Some(Located::Statement(found_statement));
+                    };
 
-                // Note that the fn `.location` covers the function head, not
-                // the entire statement.
-                if function.location.contains(byte_index) {
-                    Some(Located::ModuleStatement(self))
-                } else if function.full_location().contains(byte_index) {
+                    // Note that the fn `.location` covers the function head, not
+                    // the entire statement.
+                    if function.location.contains(byte_index) {
+                        return Some(Located::ModuleStatement(self));
+                    }
+
                     Some(Located::FunctionBody(function))
                 } else {
+                    cov_mark::hit!(prune_function_definition);
                     None
                 }
             }
@@ -657,17 +644,6 @@ impl<A, B, C, E> Definition<A, B, C, E> {
             }) => {
                 let _ = std::mem::replace(doc, Some(new_doc));
             }
-        }
-    }
-
-    pub fn is_internal(&self) -> bool {
-        match self {
-            Definition::Function(Function { publicity, .. })
-            | Definition::CustomType(CustomType { publicity, .. })
-            | Definition::ModuleConstant(ModuleConstant { publicity, .. })
-            | Definition::TypeAlias(TypeAlias { publicity, .. }) => publicity.is_internal(),
-
-            Definition::Import(_) => false,
         }
     }
 }
@@ -1081,33 +1057,27 @@ impl<A, B> ClauseGuard<A, B> {
 
     pub fn precedence(&self) -> u8 {
         // Ensure that this matches the other precedence function for guards
-        match self.bin_op_name() {
-            Some(name) => name.precedence(),
-            None => u8::MAX,
-        }
-    }
-
-    pub fn bin_op_name(&self) -> Option<BinOp> {
         match self {
-            ClauseGuard::Or { .. } => Some(BinOp::Or),
-            ClauseGuard::And { .. } => Some(BinOp::And),
-            ClauseGuard::Equals { .. } => Some(BinOp::Eq),
-            ClauseGuard::NotEquals { .. } => Some(BinOp::NotEq),
-            ClauseGuard::GtInt { .. } => Some(BinOp::GtInt),
-            ClauseGuard::GtEqInt { .. } => Some(BinOp::GtEqInt),
-            ClauseGuard::LtInt { .. } => Some(BinOp::LtInt),
-            ClauseGuard::LtEqInt { .. } => Some(BinOp::LtEqInt),
-            ClauseGuard::GtFloat { .. } => Some(BinOp::GtFloat),
-            ClauseGuard::GtEqFloat { .. } => Some(BinOp::GtEqFloat),
-            ClauseGuard::LtFloat { .. } => Some(BinOp::LtFloat),
-            ClauseGuard::LtEqFloat { .. } => Some(BinOp::LtEqFloat),
+            ClauseGuard::Or { .. } => 1,
+            ClauseGuard::And { .. } => 2,
+
+            ClauseGuard::Equals { .. } | ClauseGuard::NotEquals { .. } => 3,
+
+            ClauseGuard::GtInt { .. }
+            | ClauseGuard::GtEqInt { .. }
+            | ClauseGuard::LtInt { .. }
+            | ClauseGuard::LtEqInt { .. }
+            | ClauseGuard::GtFloat { .. }
+            | ClauseGuard::GtEqFloat { .. }
+            | ClauseGuard::LtFloat { .. }
+            | ClauseGuard::LtEqFloat { .. } => 4,
 
             ClauseGuard::Constant(_)
             | ClauseGuard::Var { .. }
             | ClauseGuard::Not { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
-            | ClauseGuard::ModuleSelect { .. } => None,
+            | ClauseGuard::ModuleSelect { .. } => 5,
         }
     }
 }
@@ -1375,13 +1345,6 @@ impl TypedPattern {
     fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         if !self.location().contains(byte_index) {
             return None;
-        }
-
-        if let Pattern::Variable { name, .. } = self {
-            // For pipes the pattern can't be pointed to
-            if name.as_str().eq(PIPE_VARIABLE) {
-                return None;
-            }
         }
 
         match self {
@@ -1728,16 +1691,23 @@ impl TypedStatement {
     }
 
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        match self {
-            Statement::Use(_) => None,
-            Statement::Expression(expression) => expression.find_node(byte_index),
-            Statement::Assignment(assignment) => assignment.find_node(byte_index).or_else(|| {
-                if assignment.location.contains(byte_index) {
-                    Some(Located::Statement(self))
-                } else {
-                    None
+        if self.location().contains(byte_index) {
+            match self {
+                Statement::Use(_) => None,
+                Statement::Expression(expression) => expression.find_node(byte_index),
+                Statement::Assignment(assignment) => {
+                    assignment.find_node(byte_index).or_else(|| {
+                        if assignment.location.contains(byte_index) {
+                            Some(Located::Statement(self))
+                        } else {
+                            None
+                        }
+                    })
                 }
-            }),
+            }
+        } else {
+            cov_mark::hit!(prune_statement);
+            None
         }
     }
 
@@ -1764,9 +1734,7 @@ pub type UntypedAssignment = Assignment<(), UntypedExpr>;
 
 impl TypedAssignment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.pattern
-            .find_node(byte_index)
-            .or_else(|| self.value.find_node(byte_index))
+        self.value.find_node(byte_index)
     }
 
     pub fn type_(&self) -> Arc<Type> {

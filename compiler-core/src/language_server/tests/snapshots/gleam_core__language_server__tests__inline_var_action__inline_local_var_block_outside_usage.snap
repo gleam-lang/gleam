@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/language_server/tests/inline_var_action.rs
+expression: "\nimport list\n\nfn main() {\n  let x = [1, 2, 3]\n  { list.reverse(x) }\n}\n    "
+---
+
+import list
+
+fn main() {
+  
+  { list.reverse([1, 2, 3]) }
+}
+    

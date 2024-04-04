@@ -92,11 +92,8 @@ impl<'comments> Formatter<'comments> {
     fn any_comments(&self, limit: u32) -> bool {
         self.comments
             .first()
-            .is_some_and(|comment| comment.start < limit)
-    }
-
-    fn any_empty_lines(&self, limit: u32) -> bool {
-        self.empty_lines.first().is_some_and(|line| *line < limit)
+            .map(|comment| comment.start < limit)
+            .unwrap_or(false)
     }
 
     /// Pop comments that occur before a byte-index in the source, consuming
@@ -153,30 +150,21 @@ impl<'comments> Formatter<'comments> {
 
     pub(crate) fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
         let mut documents = vec![];
-        let mut previous_was_a_definition = false;
+        let mut previous_was_import = false;
 
-        // Here we take consecutive groups of imports so that they can be sorted
-        // alphabetically.
-        for (is_import_group, definitions) in &module
-            .definitions
-            .iter()
-            .group_by(|definition| definition.definition.is_import())
-        {
-            if is_import_group {
-                if previous_was_a_definition {
-                    documents.push(lines(2));
-                }
-                documents.append(&mut self.imports(definitions.collect_vec()));
-                previous_was_a_definition = false;
+        for definition in &module.definitions {
+            let is_import = definition.definition.is_import();
+
+            if documents.is_empty() {
+                // We don't insert empty lines before the first definition
+            } else if previous_was_import && is_import {
+                documents.push(lines(1));
             } else {
-                for definition in definitions {
-                    if !documents.is_empty() {
-                        documents.push(lines(2));
-                    }
-                    documents.push(self.targeted_definition(definition));
-                }
-                previous_was_a_definition = true;
-            }
+                documents.push(lines(2));
+            };
+
+            documents.push(self.targeted_definition(definition));
+            previous_was_import = is_import;
         }
 
         let definitions = concat(documents);
@@ -216,100 +204,6 @@ impl<'comments> Formatter<'comments> {
         join(non_empty, line()).append(line())
     }
 
-    /// Separates the imports in groups delimited by comments or empty lines and
-    /// sorts each group alphabetically.
-    ///
-    fn imports<'a>(&mut self, imports: Vec<&'a TargetedDefinition>) -> Vec<Document<'a>> {
-        // The formatter needs to play nicely with import groups defined by the
-        // programmer. If one puts a comment before an import then that's a clue
-        // for the formatter that it has run into a gorup of related imports.
-        //
-        // So we can't just sort `imports` and format each one, we have to be a
-        // bit smarter and see if each import is preceded by a comment.
-        // Once we find a comment we know we're done with the current import
-        // group and a new one has started.
-        //
-        // ```gleam
-        // // This is an import group.
-        // import gleam/int
-        // import gleam/string
-        //
-        // // This marks the beginning of a new import group that can't
-        // // be mushed together with the previous one!
-        // import wibble
-        // import wobble
-        // ```
-        let mut documents = vec![];
-        let mut current_group = vec![];
-        let mut group_comments = None;
-
-        for import in imports {
-            let start = import.definition.location().start;
-            // If the import is preceded by a comment then we want to put it
-            // into a new group and we can print the current one.
-            if !current_group.is_empty()
-                && (self.any_comments(start) || self.any_empty_lines(start))
-            {
-                documents.append(&mut self.sorted_import_group(&mut current_group, group_comments));
-                documents.push(lines(2));
-                // We pop the comment introducing the group and save it for
-                // later for when the group is over and we can actually print
-                // it.
-                // We have to immediately pop the comment as soon as we start
-                // with a new group or it would still be present in
-                // `self.comments` messing up `self.any_comments` for the next
-                // imports in the group.
-                group_comments = printed_comments(self.pop_comments(start), false);
-            }
-            let _ = self.pop_empty_lines(start);
-            current_group.push(import);
-        }
-
-        // Let's not forget about the last import group!
-        if !current_group.is_empty() {
-            documents.append(&mut self.sorted_import_group(&mut current_group, group_comments));
-        }
-
-        documents
-    }
-
-    /// Prints the imports as a single sorted group of import statements
-    /// draining the given vector.
-    ///
-    /// `group_comment` is the comment preceding the current group.
-    /// It might be missing since a group could also be defined by simply having
-    /// an empty line between imports.
-    ///
-    fn sorted_import_group<'a>(
-        &mut self,
-        imports: &mut Vec<&'a TargetedDefinition>,
-        group_comment: Option<Document<'a>>,
-    ) -> Vec<Document<'a>> {
-        let mut documents = Vec::with_capacity(imports.len() * 2);
-
-        // If the group is defined with a single comment we print it as the
-        // first thing.
-        if let Some(comment) = group_comment {
-            documents.push(comment)
-        };
-
-        imports.sort_by(|one, other| match (&one.definition, &other.definition) {
-            (Definition::Import(one), Definition::Import(other)) => one.module.cmp(&other.module),
-            // It shouldn't really be possible for a non import to be here so
-            // we just return a default value.
-            _ => std::cmp::Ordering::Equal,
-        });
-
-        for import in imports.iter() {
-            if !documents.is_empty() {
-                documents.push(lines(1))
-            }
-            documents.push(self.targeted_definition(import));
-        }
-        imports.clear();
-        documents
-    }
-
     fn definition<'a>(&mut self, statement: &'a UntypedDefinition) -> Document<'a> {
         match statement {
             Definition::Function(function) => self.statement_fn(function),
@@ -318,10 +212,10 @@ impl<'comments> Formatter<'comments> {
                 alias,
                 parameters: args,
                 type_ast: resolved_type,
-                publicity,
+                public,
                 deprecation,
                 ..
-            }) => self.type_alias(*publicity, alias, args, resolved_type, deprecation),
+            }) => self.type_alias(*public, alias, args, resolved_type, deprecation),
 
             Definition::CustomType(ct) => self.custom_type(ct),
 
@@ -343,12 +237,12 @@ impl<'comments> Formatter<'comments> {
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
                         .map(|e| e.to_doc());
-                    let unqualified = join(
+                    let unqualified = Itertools::intersperse(
                         unqualified_types.chain(unqualified_values),
                         flex_break(",", ", "),
                     );
                     let unqualified = break_("", "")
-                        .append(unqualified)
+                        .append(concat(unqualified))
                         .nest(INDENT)
                         .append(break_(",", ""))
                         .group();
@@ -364,13 +258,13 @@ impl<'comments> Formatter<'comments> {
             }
 
             Definition::ModuleConstant(ModuleConstant {
-                publicity,
+                public,
                 name,
                 annotation,
                 value,
                 ..
             }) => {
-                let head = pub_(*publicity).append("const ").append(name.as_str());
+                let head = pub_(*public).append("const ").append(name.as_str());
                 let head = match annotation {
                     None => head,
                     Some(t) => head.append(": ").append(self.type_ast(t)),
@@ -472,17 +366,19 @@ impl<'comments> Formatter<'comments> {
 
     pub fn docs_const_expr<'a>(
         &mut self,
-        publicity: Publicity,
+        public: bool,
         name: &'a str,
         value: &'a TypedConstant,
     ) -> Document<'a> {
         let mut printer = type_::pretty::Printer::new();
 
-        pub_(publicity)
+        pub_(public)
             .append("const ")
             .append(name)
             .append(": ")
             .append(printer.print(&value.type_()))
+            .append(" = ")
+            .append(self.const_expr(value))
     }
 
     fn documented_definition<'a>(&mut self, s: &'a UntypedDefinition) -> Document<'a> {
@@ -561,7 +457,7 @@ impl<'comments> Formatter<'comments> {
 
     pub fn type_alias<'a>(
         &mut self,
-        publicity: Publicity,
+        public: bool,
         name: &'a str,
         args: &'a [EcoString],
         typ: &'a TypeAst,
@@ -570,7 +466,7 @@ impl<'comments> Formatter<'comments> {
         // @deprecated attribute
         let head = self.deprecation_attr(deprecation);
 
-        let head = head.append(pub_(publicity)).append("type ").append(name);
+        let head = head.append(pub_(public)).append("type ").append(name);
 
         let head = if args.is_empty() {
             head
@@ -622,7 +518,7 @@ impl<'comments> Formatter<'comments> {
         };
 
         // Fn name and args
-        let signature = pub_(function.publicity)
+        let signature = pub_(function.public)
             .append("fn ")
             .append(&function.name)
             .append(wrap_args(function.arguments.iter().map(|e| self.fn_arg(e))));
@@ -799,28 +695,21 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => self.expr_fn(args, return_annotation.as_ref(), body),
 
-            UntypedExpr::List {
-                elements,
-                tail,
-                location,
-            } => self.list(elements, tail.as_deref(), location),
+            UntypedExpr::List { elements, tail, .. } => self.list(elements, tail.as_deref()),
 
             UntypedExpr::Call {
                 fun,
                 arguments: args,
-                location,
                 ..
-            } => self.call(fun, args, location),
+            } => self.call(fun, args),
 
             UntypedExpr::BinOp {
                 name, left, right, ..
             } => self.bin_op(name, left, right),
 
             UntypedExpr::Case {
-                subjects,
-                clauses,
-                location,
-            } => self.case(subjects, clauses, location),
+                subjects, clauses, ..
+            } => self.case(subjects, clauses),
 
             UntypedExpr::FieldAccess {
                 label, container, ..
@@ -832,7 +721,7 @@ impl<'comments> Formatter<'comments> {
             .append(".")
             .append(label.as_str()),
 
-            UntypedExpr::Tuple { elems, location } => self.tuple(elems, location),
+            UntypedExpr::Tuple { elems, .. } => self.tuple(elems),
 
             UntypedExpr::BitArray { segments, .. } => bit_array(
                 segments
@@ -986,12 +875,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn call<'a>(
-        &mut self,
-        fun: &'a UntypedExpr,
-        args: &'a [CallArg<UntypedExpr>],
-        location: &SrcSpan,
-    ) -> Document<'a> {
+    fn call<'a>(&mut self, fun: &'a UntypedExpr, args: &'a [CallArg<UntypedExpr>]) -> Document<'a> {
         let expr = match fun {
             UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
 
@@ -1022,17 +906,15 @@ impl<'comments> Formatter<'comments> {
         self.append_inlinable_wrapped_args(
             expr,
             args,
-            location,
             |arg| &arg.value,
             |self_, arg| self_.call_arg(arg, arity),
         )
     }
 
-    fn tuple<'a>(&mut self, elements: &'a [UntypedExpr], location: &SrcSpan) -> Document<'a> {
+    fn tuple<'a>(&mut self, elements: &'a [UntypedExpr]) -> Document<'a> {
         self.append_inlinable_wrapped_args(
             "#".to_doc(),
             elements,
-            location,
             |e| e,
             |self_, e| {
                 // If there's more than one item in the tuple and there's a
@@ -1040,14 +922,7 @@ impl<'comments> Formatter<'comments> {
                 // make it easier to tell where one item ends and the other
                 // starts.
                 if elements.len() > 1 && (e.is_binop() || e.is_pipeline()) {
-                    // We pop the comments ourselves without relying on the default
-                    // `expression` way of commenting stuff. That's because we want to
-                    // avoid the comment block (and its newline) being indented by the
-                    // formatter. This way the comments gets added _after_ we increase
-                    // the nesting level.
-                    let comments = self_.pop_comments(e.start_byte_index());
-                    let doc = self_.expr(e).group().nest(INDENT);
-                    commented(doc, comments)
+                    self_.expr(e).group().nest(INDENT)
                 } else {
                     self_.expr(e).group()
                 }
@@ -1064,7 +939,6 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         doc: Document<'a>,
         values: &'a [T],
-        location: &SrcSpan,
         to_expr: ToExpr,
         to_doc: ToDoc,
     ) -> Document<'a>
@@ -1082,22 +956,21 @@ impl<'comments> Formatter<'comments> {
                     .group()
                     .next_break_fits(NextBreakFitsMode::Enabled);
 
-                let docs = initial_values
-                    .iter()
-                    .map(|value| to_doc(self, value))
-                    .chain(std::iter::once(last_value_doc))
-                    .collect_vec();
-
-                doc.append(self.wrap_function_call_args(docs, location))
-                    .next_break_fits(NextBreakFitsMode::Disabled)
-                    .group()
+                doc.append(wrap_function_call_args(
+                    initial_values
+                        .iter()
+                        .map(|value| to_doc(self, value))
+                        .chain(std::iter::once(last_value_doc)),
+                ))
+                .next_break_fits(NextBreakFitsMode::Disabled)
+                .group()
             }
 
-            Some(_) | None => {
-                let docs = values.iter().map(|value| to_doc(self, value)).collect_vec();
-                doc.append(self.wrap_function_call_args(docs, location))
-                    .group()
-            }
+            Some(_) | None => doc
+                .append(wrap_function_call_args(
+                    values.iter().map(|value| to_doc(self, value)),
+                ))
+                .group(),
         }
     }
 
@@ -1105,7 +978,6 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         subjects: &'a [UntypedExpr],
         clauses: &'a [UntypedClause],
-        location: &'a SrcSpan,
     ) -> Document<'a> {
         let subjects_doc = break_("case", "case ")
             .append(join(
@@ -1124,19 +996,10 @@ impl<'comments> Formatter<'comments> {
                 .map(|(i, c)| self.clause(c, i as u32)),
         );
 
-        // We get all remaining comments that come before the case's closing
-        // bracket. If there's any we add those before the closing bracket
-        // instead of moving those out of the case expression.
-        // Otherwise those would be moved out of the case expression.
-        let comments = self.pop_comments(location.end);
-        let closing_bracket = match printed_comments(comments, false) {
-            None => docvec!(line(), "}"),
-            Some(comment) => docvec!(line().nest(INDENT), comment, line(), "}"),
-        };
-
         subjects_doc
             .append(line().append(clauses_doc).nest(INDENT))
-            .append(closing_bracket)
+            .append(line())
+            .append("}")
             .force_break()
     }
 
@@ -1161,19 +1024,19 @@ impl<'comments> Formatter<'comments> {
         left: &'a UntypedExpr,
         right: &'a UntypedExpr,
     ) -> Document<'a> {
-        self.bin_op_side(name, left)
+        self.binop_side(name, left)
             .append(break_("", " "))
             .append(name)
             .append(" ")
-            .append(self.bin_op_side(name, right))
+            .append(self.binop_side(name, right))
     }
 
-    fn bin_op_side<'a>(&mut self, operator: &'a BinOp, side: &'a UntypedExpr) -> Document<'a> {
+    fn binop_side<'a>(&mut self, operator: &'a BinOp, side: &'a UntypedExpr) -> Document<'a> {
         let side_doc = match side {
             UntypedExpr::String { value, .. } => self.bin_op_string(value),
             _ => self.expr(side),
         };
-        match side.bin_op_name() {
+        match side.binop_name() {
             // In case the other side is a binary operation as well and it can
             // be grouped together with the current binary operation, the two
             // docs are simply concatenated, so that they will end up in the
@@ -1187,7 +1050,7 @@ impl<'comments> Formatter<'comments> {
             _ => self.operator_side(
                 side_doc.group(),
                 operator.precedence(),
-                side.bin_op_precedence(),
+                side.binop_precedence(),
             ),
         }
     }
@@ -1203,7 +1066,7 @@ impl<'comments> Formatter<'comments> {
     fn pipeline<'a>(&mut self, expressions: &'a Vec1<UntypedExpr>) -> Document<'a> {
         let mut docs = Vec::with_capacity(expressions.len() * 3);
         let first = expressions.first();
-        let first_precedence = first.bin_op_precedence();
+        let first_precedence = first.binop_precedence();
         let first = self.expr(first).group();
         docs.push(self.operator_side(first, 5, first_precedence));
 
@@ -1228,7 +1091,7 @@ impl<'comments> Formatter<'comments> {
             };
             docs.push(line());
             docs.push(commented("|> ".to_doc(), comments));
-            docs.push(self.operator_side(doc, 4, expr.bin_op_precedence()));
+            docs.push(self.operator_side(doc, 4, expr.binop_precedence()));
         }
 
         docs.to_doc().force_break()
@@ -1348,7 +1211,7 @@ impl<'comments> Formatter<'comments> {
         let doc = self.deprecation_attr(&ct.deprecation);
 
         let doc = doc
-            .append(pub_(ct.publicity))
+            .append(pub_(ct.public))
             .to_doc()
             .append(if ct.opaque { "opaque type " } else { "type " })
             .append(if ct.parameters.is_empty() {
@@ -1386,13 +1249,13 @@ impl<'comments> Formatter<'comments> {
 
     pub fn docs_opaque_custom_type<'a>(
         &mut self,
-        publicity: Publicity,
+        public: bool,
         name: &'a str,
         args: &'a [EcoString],
         location: &'a SrcSpan,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(location.start);
-        pub_(publicity)
+        pub_(public)
             .to_doc()
             .append("opaque type ")
             .append(if args.is_empty() {
@@ -1405,14 +1268,14 @@ impl<'comments> Formatter<'comments> {
 
     pub fn docs_fn_signature<'a>(
         &mut self,
-        publicity: Publicity,
+        public: bool,
         name: &'a str,
         args: &'a [TypedArg],
         return_type: Arc<Type>,
     ) -> Document<'a> {
         let mut printer = type_::pretty::Printer::new();
 
-        pub_(publicity)
+        pub_(public)
             .append("fn ")
             .append(name)
             .append(self.docs_fn_args(args, &mut printer))
@@ -1460,14 +1323,7 @@ impl<'comments> Formatter<'comments> {
             // make it easier to tell where one item ends and the other
             // starts.
             if arity > 1 && (arg.value.is_binop() || arg.value.is_pipeline()) {
-                // We pop the comments ourselves without relying on the default
-                // `expression` way of commenting stuff. That's because we want to
-                // avoid the comment block (and its newline) being indented by the
-                // formatter. This way the comments gets added _after_ we increase
-                // the nesting level.
-                let comments = self.pop_comments(arg.value.start_byte_index());
-                let doc = self.expr(&arg.value).group().nest(INDENT);
-                commented(doc, comments)
+                self.expr(&arg.value).group().nest(INDENT)
             } else {
                 self.expr(&arg.value).group()
             },
@@ -1482,12 +1338,7 @@ impl<'comments> Formatter<'comments> {
             .to_doc()
             .append(": ")
             .append(self.expr(&arg.value));
-
-        if arg.value.is_binop() || arg.value.is_pipeline() {
-            commented(doc, comments).nest(INDENT)
-        } else {
-            commented(doc, comments)
-        }
+        commented(doc, comments)
     }
 
     fn tuple_index<'a>(&mut self, tuple: &'a UntypedExpr, index: u64) -> Document<'a> {
@@ -1530,42 +1381,20 @@ impl<'comments> Formatter<'comments> {
     fn clause<'a>(&mut self, clause: &'a UntypedClause, index: u32) -> Document<'a> {
         let space_before = self.pop_empty_lines(clause.location.start);
         let comments = self.pop_comments(clause.location.start);
+        let clause_doc = join(
+            std::iter::once(&clause.pattern)
+                .chain(&clause.alternative_patterns)
+                .map(|p| join(p.iter().map(|p| self.pattern(p)), ", ".to_doc())),
+            break_("", " ").append("| "),
+        )
+        .group();
 
         let clause_doc = match &clause.guard {
-            None => self.alternative_patterns(clause),
-            Some(guard) => self
-                .alternative_patterns(clause)
-                .append(break_("", " ").nest(INDENT))
-                .append("if ")
-                .append(self.clause_guard(guard).group().nest(INDENT)),
-        };
-
-        let clause_doc = match printed_comments(comments, false) {
-            Some(comments) => comments.append(line()).append(clause_doc),
             None => clause_doc,
+            Some(guard) => clause_doc.append(" if ").append(self.clause_guard(guard)),
         };
 
-        // In case there's a guard or multiple subjects, if we decide to break
-        // the patterns on multiple lines we also want the arrow to end up on
-        // its own line to improve legibility.
-        //
-        // This looks like this:
-        // ```gleam
-        // case wibble, wobble {
-        //   Wibble(_),  // pretend this goes over the line limit
-        //     Wobble(_)
-        //   -> todo
-        //   // Notice how the arrow is broken on its own line, the same goes
-        //   // for patterns with `if` guards.
-        // }
-        // ```
-        let has_guard = clause.guard.is_some();
-        let has_multiple_subjects = clause.pattern.len() > 1;
-        let arrow_break = if has_guard || has_multiple_subjects {
-            break_("", " ")
-        } else {
-            " ".to_doc()
-        };
+        let clause_doc = commented(clause_doc, comments);
 
         if index == 0 {
             clause_doc
@@ -1574,65 +1403,14 @@ impl<'comments> Formatter<'comments> {
         } else {
             lines(1).append(clause_doc)
         }
-        .append(arrow_break)
-        .group()
-        .append("->")
+        .append(" ->")
         .append(self.case_clause_value(&clause.then))
-    }
-
-    fn alternative_patterns<'a>(&mut self, clause: &'a UntypedClause) -> Document<'a> {
-        let has_guard = clause.guard.is_some();
-        let has_multiple_subjects = clause.pattern.len() > 1;
-
-        // In case there's an `if` guard but no multiple subjects we want to add
-        // additional indentation before the vartical bar separating alternative
-        // patterns `|`.
-        // We're not adding the indentation if there's multiple subjects as that
-        // would make things harder to read, aligning the vertical bar with the
-        // different subjects:
-        // ```
-        // case wibble, wobble {
-        //   Wibble,
-        //     Wobble
-        //     | Wibble, // <- we don't want this indentation!
-        //     Wobble -> todo
-        // }
-        // ```
-        let alternatives_separator = if has_guard && !has_multiple_subjects {
-            break_("", " ").nest(INDENT).append("| ")
-        } else {
-            break_("", " ").append("| ")
-        };
-
-        let alternative_patterns = std::iter::once(&clause.pattern)
-            .chain(&clause.alternative_patterns)
-            .map(|p| {
-                // Here `p` is a single pattern that can be comprised of
-                // multiple subjects.
-                // ```gleam
-                // case wibble, wobble {
-                //   True, False
-                // //^^^^^^^^^^^ This is a single pattern with multiple subjects
-                //   | _, _ -> todo
-                // }
-                // ```
-                //
-                // We turn each subject pattern into a document and join those
-                // with a breakable comma (that's also going to be nested).
-                // Then we make sure that the formatter tries to keep each
-                // alternative on a single line by making it a group!
-                let patterns = p.iter().map(|p| self.pattern(p));
-                join(patterns, break_(",", ", ")).group().nest(INDENT)
-            });
-
-        join(alternative_patterns, alternatives_separator).group()
     }
 
     fn list<'a>(
         &mut self,
         elements: &'a [UntypedExpr],
         tail: Option<&'a UntypedExpr>,
-        location: &SrcSpan,
     ) -> Document<'a> {
         if elements.is_empty() {
             return match tail {
@@ -1660,14 +1438,7 @@ impl<'comments> Formatter<'comments> {
                 // make it easier to tell where one item ends and the other
                 // starts.
                 if list_size > 1 && (e.is_binop() || e.is_pipeline()) {
-                    // We pop the comments ourselves without relying on the default
-                    // `expression` way of commenting stuff. That's because we want to
-                    // avoid the comment block (and its newline) being indented by the
-                    // formatter. This way the comments gets added _after_ we increase
-                    // the nesting level.
-                    let comments = self.pop_comments(e.start_byte_index());
-                    let doc = self.expr(e).group().nest(INDENT);
-                    commented(doc, comments)
+                    self.expr(e).group().nest(INDENT)
                 } else {
                     self.expr(e).group()
                 }
@@ -1677,41 +1448,21 @@ impl<'comments> Formatter<'comments> {
         .next_break_fits(NextBreakFitsMode::Disabled);
 
         let doc = break_("[", "[").append(elements);
-        // We need to keep the last break aside and do not add it immediately
-        // because in case there's a final comment before the closing square
-        // bracket we want to add indentation (to just that break). Otherwise,
-        // the final comment would be less indented than list's elements.
-        let (doc, last_break) = match tail {
-            None => (doc.nest(INDENT), break_(",", "")),
+
+        match tail {
+            None => doc.nest(INDENT).append(break_(",", "")),
 
             Some(tail) => {
                 let comments = self.pop_comments(tail.location().start);
                 let tail = commented(docvec!["..", self.expr(tail)], comments);
-                (
-                    doc.append(break_(",", ", ")).append(tail).nest(INDENT),
-                    break_("", ""),
-                )
+                doc.append(break_(",", ", "))
+                    .append(tail)
+                    .nest(INDENT)
+                    .append(break_("", ""))
             }
-        };
-
-        // We get all remaining comments that come before the list's closing
-        // square bracket.
-        // If there's any we add those before the closing square bracket instead
-        // of moving those out of the list.
-        // Otherwise those would be moved out of the list.
-        let comments = self.pop_comments(location.end);
-        match printed_comments(comments, false) {
-            None => doc.append(last_break).append("]").group(),
-            Some(comment) => doc
-                .append(last_break.nest(INDENT))
-                // ^ See how here we're adding the missing indentation to the
-                //   final break so that the final comment is as indented as the
-                //   list's items.
-                .append(comment)
-                .append(line())
-                .append("]")
-                .force_break(),
         }
+        .append("]")
+        .group()
     }
 
     fn pattern<'a>(&mut self, pattern: &'a UntypedPattern) -> Document<'a> {
@@ -1819,82 +1570,60 @@ impl<'comments> Formatter<'comments> {
 
     pub fn clause_guard_bin_op<'a>(
         &mut self,
-        name: &'a BinOp,
+        name: &'a str,
+        name_precedence: u8,
         left: &'a UntypedClauseGuard,
         right: &'a UntypedClauseGuard,
     ) -> Document<'a> {
-        self.clause_guard_bin_op_side(name, left, left.precedence())
-            .append(break_("", " "))
-            .append(name.to_doc())
-            .append(" ")
-            .append(self.clause_guard_bin_op_side(name, right, right.precedence() - 1))
-    }
-
-    fn clause_guard_bin_op_side<'a>(
-        &mut self,
-        name: &BinOp,
-        side: &'a UntypedClauseGuard,
-        // As opposed to `bin_op_side`, here we take the side precedence as an
-        // argument instead of computing it ourselves. That's because
-        // `clause_guard_bin_op` will reduce the precedence of any right side to
-        // make sure the formatter doesn't remove any needed curly bracket.
-        side_precedence: u8,
-    ) -> Document<'a> {
-        let side_doc = self.clause_guard(side);
-        match side.bin_op_name() {
-            // In case the other side is a binary operation as well and it can
-            // be grouped together with the current binary operation, the two
-            // docs are simply concatenated, so that they will end up in the
-            // same group and the formatter will try to keep those on a single
-            // line.
-            Some(side_name) if side_name.can_be_grouped_with(name) => {
-                self.operator_side(side_doc, name.precedence(), side_precedence)
-            }
-            // In case the binary operations cannot be grouped together the
-            // other side is treated as a group on its own so that it can be
-            // broken independently of other pieces of the binary operations
-            // chain.
-            _ => self.operator_side(side_doc.group(), name.precedence(), side_precedence),
-        }
+        let left_precedence = left.precedence();
+        let right_precedence = right.precedence();
+        let left = self.clause_guard(left);
+        let right = self.clause_guard(right);
+        self.operator_side(left, name_precedence, left_precedence)
+            .append(name)
+            .append(self.operator_side(right, name_precedence, right_precedence - 1))
     }
 
     fn clause_guard<'a>(&mut self, clause_guard: &'a UntypedClauseGuard) -> Document<'a> {
         match clause_guard {
             ClauseGuard::And { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::And, left, right)
+                self.clause_guard_bin_op(" && ", clause_guard.precedence(), left, right)
             }
             ClauseGuard::Or { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::Or, left, right)
+                self.clause_guard_bin_op(" || ", clause_guard.precedence(), left, right)
             }
             ClauseGuard::Equals { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::Eq, left, right)
+                self.clause_guard_bin_op(" == ", clause_guard.precedence(), left, right)
             }
+
             ClauseGuard::NotEquals { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::NotEq, left, right)
+                self.clause_guard_bin_op(" != ", clause_guard.precedence(), left, right)
             }
             ClauseGuard::GtInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::GtInt, left, right)
+                self.clause_guard_bin_op(" > ", clause_guard.precedence(), left, right)
             }
+
             ClauseGuard::GtEqInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::GtEqInt, left, right)
+                self.clause_guard_bin_op(" >= ", clause_guard.precedence(), left, right)
             }
             ClauseGuard::LtInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::LtInt, left, right)
+                self.clause_guard_bin_op(" < ", clause_guard.precedence(), left, right)
             }
+
             ClauseGuard::LtEqInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::LtEqInt, left, right)
+                self.clause_guard_bin_op(" <= ", clause_guard.precedence(), left, right)
             }
             ClauseGuard::GtFloat { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::GtFloat, left, right)
+                self.clause_guard_bin_op(" >. ", clause_guard.precedence(), left, right)
             }
             ClauseGuard::GtEqFloat { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::GtEqFloat, left, right)
+                self.clause_guard_bin_op(" >=. ", clause_guard.precedence(), left, right)
             }
             ClauseGuard::LtFloat { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::LtFloat, left, right)
+                self.clause_guard_bin_op(" <. ", clause_guard.precedence(), left, right)
             }
             ClauseGuard::LtEqFloat { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::LtEqFloat, left, right)
+                self.clause_guard_bin_op(" <=. ", clause_guard.precedence(), left, right)
             }
 
             ClauseGuard::Var { name, .. } => name.to_doc(),
@@ -2042,35 +1771,6 @@ impl<'comments> Formatter<'comments> {
             block_doc.group()
         }
     }
-
-    pub fn wrap_function_call_args<'a, I>(&mut self, args: I, location: &SrcSpan) -> Document<'a>
-    where
-        I: IntoIterator<Item = Document<'a>>,
-    {
-        let mut args = args.into_iter().peekable();
-        if args.peek().is_none() {
-            return "()".to_doc();
-        }
-
-        let args_doc = break_("", "")
-            .append(join(args, break_(",", ", ")))
-            .nest_if_broken(INDENT);
-
-        // We get all remaining comments that come before the call's closing
-        // parenthesis.
-        // If there's any we add those before the closing parenthesis instead
-        // of moving those out of the call.
-        // Otherwise those would be moved out of the call.
-        let comments = self.pop_comments(location.end);
-        let closing_parens = match printed_comments(comments, false) {
-            None => docvec!(break_(",", ""), ")"),
-            Some(comment) => {
-                docvec!(break_(",", "").nest(INDENT), comment, line(), ")").force_break()
-            }
-        };
-
-        "(".to_doc().append(args_doc).append(closing_parens).group()
-    }
 }
 
 fn init_and_last<T>(vec: &[T]) -> Option<(&[T], &T)> {
@@ -2094,10 +1794,11 @@ impl<'a> Documentable<'a> for &'a ArgNames {
     }
 }
 
-fn pub_(publicity: Publicity) -> Document<'static> {
-    match publicity {
-        Publicity::Public => "pub ".to_doc(),
-        Publicity::Private | Publicity::Internal => nil(),
+fn pub_(public: bool) -> Document<'static> {
+    if public {
+        "pub ".to_doc()
+    } else {
+        nil()
     }
 }
 
@@ -2185,6 +1886,26 @@ where
         .append(break_(",", ", "))
         .append("..")
         .nest(INDENT)
+        .append(break_(",", ""))
+        .append(")")
+        .group()
+}
+
+pub fn wrap_function_call_args<'a, I>(args: I) -> Document<'a>
+where
+    I: IntoIterator<Item = Document<'a>>,
+{
+    let mut args = args.into_iter().peekable();
+    if args.peek().is_none() {
+        return "()".to_doc();
+    }
+
+    let args_doc = break_("", "")
+        .append(join(args, break_(",", ", ")))
+        .nest_if_broken(INDENT);
+
+    "(".to_doc()
+        .append(args_doc)
         .append(break_(",", ""))
         .append(")")
         .group()

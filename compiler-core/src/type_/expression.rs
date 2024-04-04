@@ -1,6 +1,6 @@
 use super::{pipe::PipeTyper, *};
 use crate::{
-    analyse::infer_bit_array_option,
+    analyse::{infer_bit_array_option, TargetSupport},
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan, Statement,
@@ -36,8 +36,6 @@ pub struct Implementations {
     /// is added - say a WASM target - `func` wouldn't support it! On the other
     /// hand, a pure Gleam function will support all future targets.
     pub gleam: bool,
-    pub can_run_on_erlang: bool,
-    pub can_run_on_javascript: bool,
     /// Wether the function has an implementation that uses external erlang
     /// code.
     pub uses_erlang_externals: bool,
@@ -46,63 +44,22 @@ pub struct Implementations {
     pub uses_javascript_externals: bool,
 }
 
-/// Tracking whether the function being currently type checked has externals
-/// implementations or not.
-/// This is used to determine whether an error should be raised in the case when
-/// a value is used that does not have an implementation for the current target.
-#[derive(Clone, Copy, Debug)]
-pub struct FunctionDefinition {
-    /// The function has { ... } after the function head
-    pub has_body: bool,
-    /// The function has @external(erlang, "...", "...")
-    pub has_erlang_external: bool,
-    /// The function has @external(JavaScript, "...", "...")
-    pub has_javascript_external: bool,
-}
-
-impl FunctionDefinition {
-    pub fn has_external_for_target(&self, target: Target) -> bool {
-        match target {
-            Target::Erlang => self.has_erlang_external,
-            Target::JavaScript => self.has_javascript_external,
-        }
-    }
-}
-
 impl Implementations {
     /// Given the implementations of a function update those with taking into
     /// account the `implementations` of another function (or constant) used
     /// inside its body.
-    pub fn update_from_use(
-        &mut self,
-        implementations: &Implementations,
-        current_function_definition: &FunctionDefinition,
-    ) {
+    pub fn update_from_use(&mut self, implementations: &Implementations) {
         // With this pattern matching we won't forget to deal with new targets
         // when those are added :)
         let Implementations {
             gleam,
-            uses_erlang_externals: other_uses_erlang_externals,
-            uses_javascript_externals: other_uses_javascript_externals,
-            can_run_on_erlang: other_can_run_on_erlang,
-            can_run_on_javascript: other_can_run_on_javascript,
+            uses_erlang_externals,
+            uses_javascript_externals,
         } = implementations;
-        let FunctionDefinition {
-            has_body: _,
-            has_erlang_external,
-            has_javascript_external,
-        } = current_function_definition;
 
         // If a pure-Gleam function uses a function that doesn't have a pure
         // Gleam implementation, then it's no longer pure-Gleam.
         self.gleam = self.gleam && *gleam;
-
-        // A function can run on a target if the code that it uses can run on on
-        // the same target,
-        self.can_run_on_erlang = *has_erlang_external
-            || (self.can_run_on_erlang && (*gleam || *other_can_run_on_erlang));
-        self.can_run_on_javascript = *has_javascript_external
-            || (self.can_run_on_javascript && (*gleam || *other_can_run_on_javascript));
 
         // If a function uses a function that relies on external code (be it
         // javascript or erlang) then it's considered as using external code as
@@ -122,9 +79,9 @@ impl Implementations {
         // `Implementations { gleam: true, uses_erlang_externals: true, uses_javascript_externals: false}`.
         // They have a pure gleam implementation and an erlang specific external
         // implementation.
-        self.uses_erlang_externals = self.uses_erlang_externals || *other_uses_erlang_externals;
+        self.uses_erlang_externals = self.uses_erlang_externals || *uses_erlang_externals;
         self.uses_javascript_externals =
-            self.uses_javascript_externals || *other_uses_javascript_externals;
+            self.uses_javascript_externals || *uses_javascript_externals;
     }
 
     /// Returns true if the current target is supported by the given
@@ -134,8 +91,8 @@ impl Implementations {
     pub fn supports(&self, target: Target) -> bool {
         self.gleam
             || match target {
-                Target::Erlang => self.can_run_on_erlang,
-                Target::JavaScript => self.can_run_on_javascript,
+                Target::Erlang => self.uses_erlang_externals,
+                Target::JavaScript => self.uses_javascript_externals,
             }
     }
 }
@@ -145,33 +102,28 @@ pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) environment: &'a mut Environment<'b>,
 
     pub(crate) implementations: Implementations,
-    pub(crate) current_function_definition: FunctionDefinition,
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>, definition: FunctionDefinition) -> Self {
+    pub fn new(
+        environment: &'a mut Environment<'b>,
+        mut external_implementations: Implementations,
+    ) -> Self {
         let mut hydrator = Hydrator::new();
 
-        let implementations = Implementations {
-            // We start assuming the function is pure Gleam and narrow it down
-            // if we run into functions/constants that have only external
-            // implementations for some of the targets.
-            gleam: definition.has_body,
-            can_run_on_erlang: definition.has_body || definition.has_erlang_external,
-            can_run_on_javascript: definition.has_body || definition.has_javascript_external,
-            uses_erlang_externals: definition.has_erlang_external,
-            uses_javascript_externals: definition.has_javascript_external,
-        };
+        // We start assuming the function is pure Gleam and narrow it down
+        // if we run into functions/constants that have only external
+        // implementations for some of the targets.
+        external_implementations.gleam = true;
 
         hydrator.permit_holes(true);
         Self {
             hydrator,
             environment,
-            implementations,
-            current_function_definition: definition,
+            implementations: external_implementations,
         }
     }
 
@@ -415,16 +367,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.environment.warnings.emit(Warning::UnusedLiteral {
                 location: discarded.location(),
             });
-        } else if discarded.type_().is_result() {
+        }
+        if discarded.type_().is_result() {
             self.environment
                 .warnings
                 .emit(Warning::ImplicitlyDiscardedResult {
                     location: discarded.location(),
                 });
-        } else if discarded.is_pure_value_constructor() {
-            self.environment.warnings.emit(Warning::UnusedValue {
-                location: discarded.location(),
-            })
         }
     }
 
@@ -738,18 +687,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         self.implementations
-            .update_from_use(variant_implementations, &self.current_function_definition);
+            .update_from_use(variant_implementations);
 
-        if self.environment.target_support.is_enforced()
+        let fail_if_current_target_is_not_supported =
+            self.environment.target_support == TargetSupport::Enforced;
+
+        if fail_if_current_target_is_not_supported
             // If the value used doesn't have an implementation that can be used
             // for the current target...
             && !variant_implementations.supports(self.environment.target)
             // ... and there is not an external implementation for it
             && !self
-                    .current_function_definition
-                    .has_external_for_target(self.environment.target)
+                    .implementations
+                    .supports(self.environment.target)
         {
-            Err(Error::UnsupportedExpressionTarget {
+            Err(Error::UnsupportedTarget {
                 target: self.environment.target,
                 location,
             })
@@ -1081,17 +1033,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         clauses: Vec<UntypedClause>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        subjects
-            .iter()
-            .filter(|untyped_expr| untyped_expr.is_tuple())
-            .for_each(|literal_tuple| {
-                self.environment
-                    .warnings
-                    .emit(Warning::CaseMatchOnLiteralTuple {
-                        location: literal_tuple.location(),
-                    });
-            });
-
         let subjects_count = subjects.len();
         let mut typed_subjects = Vec::with_capacity(subjects_count);
         let mut subject_types = Vec::with_capacity(subjects_count);
@@ -1712,29 +1653,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location: record_location,
             });
         }
-
-        let has_variants = match &*record_type {
-            Type::Named { name, .. } => self
-                .environment
-                .module_types_constructors
-                .get(name)
-                .map_or(RecordVariants::NoVariants, |type_variant_constructors| {
-                    if type_variant_constructors.variants.len() > 1 {
-                        RecordVariants::HasVariants
-                    } else {
-                        RecordVariants::NoVariants
-                    }
-                }),
-            _ => RecordVariants::NoVariants,
-        };
-
         let unknown_field = |fields| Error::UnknownRecordField {
             usage,
             typ: record_type.clone(),
             location,
             label: label.clone(),
             fields,
-            variants: has_variants,
         };
         let accessors = match collapse_links(record_type.clone()).as_ref() {
             // A type in the current module which may have fields
@@ -1914,11 +1838,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             location: *location,
                             name: name.clone(),
                             variables: self.environment.local_value_names(),
-                            type_with_name_in_scope: self
-                                .environment
-                                .module_types
-                                .keys()
-                                .any(|typ| typ == name),
                         })?;
 
                 // Register the value as seen for detection of unused values
@@ -1957,7 +1876,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         let ValueConstructor {
-            publicity,
+            public,
             variant,
             type_: typ,
             deprecation,
@@ -1977,7 +1896,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Instantiate generic variables into unbound variables for this usage
         let typ = self.instantiate(typ, &mut hashmap![]);
         Ok(ValueConstructor {
-            publicity,
+            public,
             deprecation,
             variant,
             type_: typ,

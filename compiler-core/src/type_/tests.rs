@@ -4,7 +4,7 @@ use crate::{
     ast::{TypedModule, TypedStatement, UntypedExpr, UntypedModule},
     build::{Origin, Target},
     error::Error,
-    type_::{build_prelude, expression::FunctionDefinition, pretty::Printer},
+    type_::{build_prelude, pretty::Printer},
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, VectorWarningEmitterIO, WarningEmitter, WarningEmitterIO},
 };
@@ -21,13 +21,12 @@ mod conditional_compilation;
 mod custom_types;
 mod errors;
 mod exhaustiveness;
-mod externals;
+mod expression;
 mod functions;
 mod guards;
 mod imports;
 mod pipes;
 mod pretty;
-mod target_implementations;
 mod type_alias;
 mod use_;
 mod warnings;
@@ -79,11 +78,8 @@ macro_rules! assert_module_infer {
 #[macro_export]
 macro_rules! assert_js_module_infer {
     ($src:expr, $module:expr $(,)?) => {{
-        let constructors = $crate::type_::tests::infer_module_with_target(
-            $src,
-            vec![],
-            $crate::build::Target::JavaScript,
-        );
+        let constructors =
+            $crate::type_::tests::infer_module_with_target($src, vec![], Target::JavaScript);
         let expected = $crate::type_::tests::stringify_tuple_strs($module);
         assert_eq!(($src, constructors), ($src, expected));
     }};
@@ -100,11 +96,8 @@ macro_rules! assert_module_error {
 #[macro_export]
 macro_rules! assert_js_module_error {
     ($src:expr) => {
-        let output = $crate::type_::tests::module_error_with_target(
-            $src,
-            vec![],
-            $crate::build::Target::JavaScript,
-        );
+        let output =
+            $crate::type_::tests::module_error_with_target($src, vec![], Target::JavaScript);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -267,10 +260,10 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
             &TypeWarningEmitter::null(),
             TargetSupport::Enforced,
         ),
-        FunctionDefinition {
-            has_body: true,
-            has_erlang_external: false,
-            has_javascript_external: false,
+        Implementations {
+            gleam: false,
+            uses_erlang_externals: false,
+            uses_javascript_externals: false,
         },
     )
     .infer_statements(ast)
@@ -306,12 +299,12 @@ pub fn infer_module_with_target(
     dep: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> Vec<(EcoString, String)> {
-    let ast = compile_module_with_target(src, None, dep, target, TargetSupport::NotEnforced)
-        .expect("should successfully infer");
+    let ast =
+        compile_module_with_target(src, None, dep, target).expect("should successfully infer");
     ast.type_info
         .values
         .iter()
-        .filter(|(_, v)| v.publicity.is_importable())
+        .filter(|(_, v)| v.public)
         .map(|(k, v)| {
             let mut printer = Printer::new();
             (k.clone(), printer.pretty_print(&v.type_, 0))
@@ -325,13 +318,7 @@ pub fn compile_module(
     warnings: Option<Arc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
 ) -> Result<TypedModule, crate::type_::Error> {
-    compile_module_with_target(
-        src,
-        warnings,
-        dep,
-        Target::Erlang,
-        TargetSupport::NotEnforced,
-    )
+    compile_module_with_target(src, warnings, dep, Target::Erlang)
 }
 
 pub fn compile_module_with_target(
@@ -339,7 +326,6 @@ pub fn compile_module_with_target(
     warnings: Option<Arc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
     target: Target,
-    target_support: TargetSupport,
 ) -> Result<TypedModule, crate::type_::Error> {
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
@@ -362,7 +348,6 @@ pub fn compile_module_with_target(
         let parsed = crate::parse::parse_module(module_src).expect("syntax error");
         let mut ast = parsed.module;
         ast.name = name.into();
-        let line_numbers = LineNumbers::new(module_src);
         let module = crate::analyse::infer_module::<()>(
             target,
             &ids,
@@ -372,8 +357,7 @@ pub fn compile_module_with_target(
             &modules,
             &warnings,
             &std::collections::HashMap::from_iter(vec![]),
-            target_support,
-            line_numbers,
+            TargetSupport::NotEnforced,
         )
         .expect("should successfully infer");
         let _ = modules.insert(name.into(), module.type_info);
@@ -395,7 +379,6 @@ pub fn compile_module_with_target(
         &warnings,
         &direct_dependencies,
         TargetSupport::Enforced,
-        LineNumbers::new(src),
     )
 }
 
@@ -408,8 +391,8 @@ pub fn module_error_with_target(
     deps: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> String {
-    let error = compile_module_with_target(src, None, deps, target, TargetSupport::NotEnforced)
-        .expect_err("should infer an error");
+    let error =
+        compile_module_with_target(src, None, deps, target).expect_err("should infer an error");
     let error = Error::Type {
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
@@ -586,7 +569,6 @@ fn infer_module_type_retention_test() {
         &TypeWarningEmitter::null(),
         &direct_dependencies,
         TargetSupport::Enforced,
-        LineNumbers::new(""),
     )
     .expect("Should infer OK");
 
@@ -650,7 +632,6 @@ fn infer_module_type_retention_test() {
             values: HashMap::new(),
             accessors: HashMap::new(),
             unused_imports: Vec::new(),
-            line_numbers: LineNumbers::new(""),
         }
     );
 }
@@ -1983,6 +1964,214 @@ fn block_maths() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/2324
+#[test]
+fn javascript_only_function_used_by_erlang_module() {
+    let module = r#"@external(javascript, "foo", "bar")
+pub fn js_only() -> Int
+
+pub fn main() {
+  js_only()
+}
+"#;
+    assert_module_error!(module);
+    assert_js_module_infer!(
+        module,
+        vec![("js_only", "fn() -> Int"), ("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn erlang_only_function_used_by_javascript_module() {
+    let module = r#"@external(erlang, "foo", "bar")
+pub fn erlang_only() -> Int
+
+pub fn main() {
+  erlang_only()
+}
+"#;
+    assert_js_module_error!(module);
+    assert_module_infer!(
+        module,
+        vec![("erlang_only", "fn() -> Int"), ("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn unused_javascript_only_function_is_not_rejected_on_erlang_target() {
+    assert_module_infer!(
+        r#"@external(javascript, "foo", "bar")
+pub fn js_only() -> Int
+
+pub fn main() {
+  10
+}
+"#,
+        vec![("js_only", "fn() -> Int"), ("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn unused_erlang_only_function_is_not_rejected_on_javascript_target() {
+    assert_js_module_infer!(
+        r#"@external(erlang, "foo", "bar")
+pub fn erlang_only() -> Int
+
+pub fn main() {
+  10
+}
+"#,
+        vec![("erlang_only", "fn() -> Int"), ("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn erlang_only_function_with_javascript_external() {
+    let module = r#"
+@external(erlang, "foo", "bar")
+pub fn erlang_only() -> Int
+
+@external(javascript, "foo", "bar")
+pub fn all_targets() -> Int {
+  erlang_only()
+}
+
+pub fn main() {
+  all_targets()
+}
+    "#;
+
+    let expected = vec![
+        ("all_targets", "fn() -> Int"),
+        ("erlang_only", "fn() -> Int"),
+        ("main", "fn() -> Int"),
+    ];
+
+    assert_module_infer!(module, expected.clone());
+    assert_js_module_infer!(module, expected);
+}
+
+#[test]
+fn javascript_only_function_with_erlang_external() {
+    let module = r#"
+@external(javascript, "foo", "bar")
+pub fn javascript_only() -> Int
+
+@external(erlang, "foo", "bar")
+pub fn all_targets() -> Int {
+  javascript_only()
+}
+
+pub fn main() {
+  all_targets()
+}
+    "#;
+
+    let expected = vec![
+        ("all_targets", "fn() -> Int"),
+        ("javascript_only", "fn() -> Int"),
+        ("main", "fn() -> Int"),
+    ];
+
+    assert_module_infer!(module, expected.clone());
+    assert_js_module_infer!(module, expected);
+}
+
+#[test]
+fn javascript_only_function_with_javascript_external() {
+    let module = r#"@external(javascript, "foo", "bar")
+pub fn javascript_only() -> Int
+
+@external(javascript, "foo", "bar")
+pub fn uh_oh() -> Int {
+  javascript_only()
+}
+"#;
+    assert_js_module_infer!(
+        module,
+        vec![("javascript_only", "fn() -> Int"), ("uh_oh", "fn() -> Int")]
+    );
+    assert_module_error!(module);
+}
+
+#[test]
+fn erlang_only_function_with_erlang_external() {
+    let module = r#"@external(erlang, "foo", "bar")
+pub fn erlang_only() -> Int
+
+@external(erlang, "foo", "bar")
+pub fn uh_oh() -> Int {
+  erlang_only()
+}
+"#;
+    assert_js_module_error!(module);
+    assert_module_infer!(
+        module,
+        vec![("erlang_only", "fn() -> Int"), ("uh_oh", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn erlang_targeted_function_cant_contain_javascript_only_function() {
+    let module = r#"@target(erlang)
+pub fn erlang_only() -> Int {
+  javascript_only()
+}
+
+@external(javascript, "foo", "bar")
+pub fn javascript_only() -> Int
+    "#;
+    assert_js_module_infer!(module, vec![("javascript_only", "fn() -> Int")]);
+    assert_module_error!(module);
+}
+
+#[test]
+fn javascript_targeted_function_cant_contain_erlang_only_function() {
+    let module = r#"@target(javascript)
+pub fn javascript_only() -> Int {
+  erlang_only()
+}
+
+@external(erlang, "foo", "bar")
+pub fn erlang_only() -> Int
+    "#;
+    assert_module_infer!(module, vec![("erlang_only", "fn() -> Int")]);
+    assert_js_module_error!(module);
+}
+
+#[test]
+fn imported_javascript_only_function() {
+    assert_with_module_error!(
+        (
+            "module",
+            r#"@external(javascript, "foo", "bar")
+pub fn javascript_only() -> Int"#
+        ),
+        "import module
+pub fn main() {
+  module.javascript_only()
+}",
+    );
+}
+
+#[test]
+fn javascript_only_constant() {
+    assert_with_module_error!(
+        (
+            "module",
+            r#"@external(javascript, "foo", "bar")
+fn javascript_only() -> Int
+const constant = javascript_only
+pub const javascript_only_constant = constant 
+"#
+        ),
+        "import module
+pub fn main() {
+  module.javascript_only_constant()
+}",
+    );
+}
+
 #[test]
 fn contains_todo_true() {
     let module = compile_module("pub fn main() { 1 }", None, vec![]).unwrap();
@@ -1993,130 +2182,4 @@ fn contains_todo_true() {
 fn contains_todo_false() {
     let module = compile_module("pub fn main() { todo }", None, vec![]).unwrap();
     assert!(module.type_info.contains_todo);
-}
-
-#[test]
-fn assert_suitable_main_function_not_module_function() {
-    let value = ValueConstructor {
-        publicity: Publicity::Public,
-        deprecation: Deprecation::NotDeprecated,
-        type_: fn_(vec![], int()),
-        variant: ValueConstructorVariant::ModuleConstant {
-            documentation: None,
-            location: Default::default(),
-            module: "module".into(),
-            literal: Constant::Int {
-                location: Default::default(),
-                value: "1".into(),
-            },
-            implementations: Implementations {
-                gleam: true,
-                uses_erlang_externals: false,
-                uses_javascript_externals: false,
-                can_run_on_erlang: true,
-                can_run_on_javascript: true,
-            },
-        },
-    };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
-}
-
-#[test]
-fn assert_suitable_main_function_wrong_arity() {
-    let value = ValueConstructor {
-        publicity: Publicity::Public,
-        deprecation: Deprecation::NotDeprecated,
-        type_: fn_(vec![], int()),
-        variant: ValueConstructorVariant::ModuleFn {
-            name: "name".into(),
-            field_map: None,
-            arity: 1,
-            documentation: None,
-            location: Default::default(),
-            module: "module".into(),
-            implementations: Implementations {
-                gleam: true,
-                uses_erlang_externals: false,
-                uses_javascript_externals: false,
-                can_run_on_erlang: true,
-                can_run_on_javascript: true,
-            },
-        },
-    };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
-}
-
-#[test]
-fn assert_suitable_main_function_ok() {
-    let value = ValueConstructor {
-        publicity: Publicity::Public,
-        deprecation: Deprecation::NotDeprecated,
-        type_: fn_(vec![], int()),
-        variant: ValueConstructorVariant::ModuleFn {
-            name: "name".into(),
-            field_map: None,
-            arity: 0,
-            documentation: None,
-            location: Default::default(),
-            module: "module".into(),
-            implementations: Implementations {
-                gleam: true,
-                uses_erlang_externals: false,
-                uses_javascript_externals: false,
-                can_run_on_erlang: true,
-                can_run_on_javascript: true,
-            },
-        },
-    };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_ok(),);
-}
-
-#[test]
-fn assert_suitable_main_function_erlang_not_supported() {
-    let value = ValueConstructor {
-        publicity: Publicity::Public,
-        deprecation: Deprecation::NotDeprecated,
-        type_: fn_(vec![], int()),
-        variant: ValueConstructorVariant::ModuleFn {
-            name: "name".into(),
-            field_map: None,
-            arity: 0,
-            documentation: None,
-            location: Default::default(),
-            module: "module".into(),
-            implementations: Implementations {
-                gleam: false,
-                uses_erlang_externals: true,
-                uses_javascript_externals: true,
-                can_run_on_erlang: false,
-                can_run_on_javascript: true,
-            },
-        },
-    };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
-}
-
-#[test]
-fn assert_suitable_main_function_javascript_not_supported() {
-    let value = ValueConstructor {
-        publicity: Publicity::Public,
-        deprecation: Deprecation::NotDeprecated,
-        type_: fn_(vec![], int()),
-        variant: ValueConstructorVariant::ModuleFn {
-            name: "name".into(),
-            field_map: None,
-            arity: 0,
-            documentation: None,
-            location: Default::default(),
-            module: "module".into(),
-            implementations: Implementations {
-                gleam: false,
-                uses_erlang_externals: true,
-                uses_javascript_externals: true,
-                can_run_on_erlang: true,
-                can_run_on_javascript: false,
-            },
-        },
-    };
-    assert!(assert_suitable_main_function(&value, &"module".into(), Target::JavaScript).is_err(),);
 }

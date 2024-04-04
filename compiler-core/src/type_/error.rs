@@ -20,12 +20,6 @@ pub struct UnknownType {
     pub name: EcoString,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
-pub enum RecordVariants {
-    HasVariants,
-    NoVariants,
-}
-
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Error {
     SrcImportingTest {
@@ -49,7 +43,6 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
         variables: Vec<EcoString>,
-        type_with_name_in_scope: bool,
     },
 
     UnknownType {
@@ -97,7 +90,6 @@ pub enum Error {
         label: EcoString,
         fields: Vec<EcoString>,
         usage: FieldAccessUsage,
-        variants: RecordVariants,
     },
 
     IncorrectArity {
@@ -292,7 +284,7 @@ pub enum Error {
 
     /// A function/constant that is used doesn't have an implementation for the
     /// current compilation target.
-    UnsupportedExpressionTarget {
+    UnsupportedTarget {
         location: SrcSpan,
         target: Target,
     },
@@ -354,22 +346,6 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
     },
-
-    /// A public function doesn't have an implementation for the current target.
-    /// This is only raised when compiling a package with `TargetSupport::Enforced`, which is
-    /// typically the root package, deps not being enforced.
-    ///
-    /// For example, if compiling to Erlang:
-    ///
-    /// ```gleam
-    /// @external(javascript, "one", "two")
-    /// pub fn wobble() -> Int
-    /// ```
-    UnsupportedPublicFunctionTarget {
-        target: Target,
-        name: EcoString,
-        location: SrcSpan,
-    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -403,10 +379,6 @@ pub enum Warning {
     },
 
     UnusedLiteral {
-        location: SrcSpan,
-    },
-
-    UnusedValue {
         location: SrcSpan,
     },
 
@@ -489,37 +461,6 @@ pub enum Warning {
     UnreachableCaseClause {
         location: SrcSpan,
     },
-
-    /// This happens when someone tries to write a case expression where one of
-    /// the subjects is a literal tuple, for example:
-    ///
-    /// ```gleam
-    /// case #(wibble, wobble) { ... }
-    /// ```
-    ///
-    /// The tuple is redundant since we could do this:
-    ///
-    /// ```gleam
-    /// case wibble, wobble { ... }
-    /// ```
-    ///
-    CaseMatchOnLiteralTuple {
-        location: SrcSpan,
-    },
-
-    /// This happens when someone defines an external type (with no
-    /// constructors) and marks it as opqaue:
-    ///
-    /// ```gleam
-    /// opaque type External
-    /// ```
-    ///
-    /// Since an external type already has no constructors, marking it as
-    /// opaque is redundant.
-    ///
-    OpaqueExternalType {
-        location: SrcSpan,
-    },
 }
 
 impl Error {
@@ -564,7 +505,6 @@ pub enum UnknownValueConstructorError {
     Variable {
         name: EcoString,
         variables: Vec<EcoString>,
-        type_with_name_in_scope: bool,
     },
 
     Module {
@@ -584,15 +524,10 @@ pub fn convert_get_value_constructor_error(
     location: SrcSpan,
 ) -> Error {
     match e {
-        UnknownValueConstructorError::Variable {
-            name,
-            variables,
-            type_with_name_in_scope,
-        } => Error::UnknownVariable {
+        UnknownValueConstructorError::Variable { name, variables } => Error::UnknownVariable {
             location,
             name,
             variables,
-            type_with_name_in_scope,
         },
 
         UnknownValueConstructorError::Module {
