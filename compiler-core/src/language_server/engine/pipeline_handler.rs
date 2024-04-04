@@ -4,12 +4,12 @@ use crate::{ast::SrcSpan, language_server::code_action::ActionId};
 
 use super::*;
 
-pub fn convert_to_pipeline<'a>(
+pub fn convert_to_pipeline<>(
     module: &Module,
     params: &lsp::CodeActionParams,
     actions: &mut Vec<CodeAction>,
     strategy: ResolveStrategy,
-    nodes: &Vec<Located<'a>>
+    nodes: &[Located<'_>]
 ) {
     //let before = Instant::now();
 
@@ -71,7 +71,7 @@ fn extract_call_expression<'a>(node: &Located<'a>) -> Option<CallExpression<'a>>
         },
         Located::Statement(Statement::Assignment(assign)) =>{
             if let TypedExpr::Call {..} = *assign.value{
-                Some(CallExpression{ expression: &*assign.value, location: assign.value.location().start })
+                Some(CallExpression{ expression: &assign.value, location: assign.value.location().start })
             } else{
                 None
             }
@@ -117,9 +117,9 @@ fn convert_call_chain_to_pipeline(mut call_chain: Vec<&TypedExpr>) -> Option<Pip
                     fun,
                     args,
                 } if !args.is_empty() => {
-                    let args = args[1..].to_vec();
+                    let args = args.get(1..).unwrap_or(&[]).to_vec();
                     Some(TypedExpr::Call {
-                        location: location.clone(),
+                        location: *location,
                         typ: typ.clone(),
                         fun: fun.clone(),
                         args,
@@ -180,7 +180,7 @@ fn create_edit(
     }
 
     Some(lsp::TextEdit {
-        range: src_span_to_lsp_range(pipeline_parts.location, &line_numbers),
+        range: src_span_to_lsp_range(pipeline_parts.location, line_numbers),
         new_text: edit_str.to_string(),
     })
 }

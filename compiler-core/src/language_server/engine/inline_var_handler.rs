@@ -7,7 +7,7 @@ pub fn inline_local_variable(
     module: &Module,
     params: &lsp::CodeActionParams,
     actions: &mut Vec<CodeAction>,
-    nodes: &Vec<Located<'_>>
+    nodes: &[Located<'_>]
 ) {
     let uri = &params.text_document.uri;
     let line_numbers = LineNumbers::new(&module.code);
@@ -19,7 +19,7 @@ pub fn inline_local_variable(
             Located::Statement(Statement::Assignment(assignment))
                 if matches!(assignment.pattern, Pattern::Variable { .. }) =>
             {
-                inline_let(&assignment, &line_numbers, module, byte_index)
+                inline_let(assignment, &line_numbers, module, byte_index)
             }
             _ => None,
         }
@@ -40,45 +40,43 @@ fn inline_usage(
     module: &Module,
     byte_index: u32,
 ) -> Option<Vec<lsp_types::TextEdit>> {
-    if let Some(let_loc) = expression
+    if let Some(Located::Statement(Statement::Assignment(let_assignment))) = expression
         .definition_location()
         .and_then(|def_loc| module.find_node(def_loc.span.start))
     {
-        if let Located::Statement(Statement::Assignment(let_assignment)) = let_loc {
-            let let_val = &*let_assignment.value;
-            let let_val_str = let_val.to_string()?;
+        let let_val = &*let_assignment.value;
+        let let_val_str = let_val.to_string()?;
 
-            if let Some(Definition::Function(f)) =
-                module.ast.find_containing_definition_for_node(byte_index)
-            {
-                let usages: Vec<_> = f
-                    .body
-                    .iter()
-                    .filter_map(|statement| match statement {
-                        Statement::Expression(e) => usage_search(&let_assignment.pattern, e),
-                        Statement::Assignment(a) => usage_search(&let_assignment.pattern, &a.value),
-                        Statement::Use(_) => None,
-                    })
-                    .collect();
+        if let Some(Definition::Function(f)) =
+            module.ast.find_containing_definition_for_node(byte_index)
+        {
+            let usages: Vec<_> = f
+                .body
+                .iter()
+                .filter_map(|statement| match statement {
+                    Statement::Expression(e) => usage_search(&let_assignment.pattern, e),
+                    Statement::Assignment(a) => usage_search(&let_assignment.pattern, &a.value),
+                    Statement::Use(_) => None,
+                })
+                .collect();
 
-                let delete_let = usages.len() == 1;
+            let delete_let = usages.len() == 1;
 
-                let mut edits: Vec<lsp_types::TextEdit> = if delete_let {
-                    vec![lsp_types::TextEdit {
-                        range: src_span_to_lsp_range(let_assignment.location, &line_numbers),
-                        new_text: "".into(),
-                    }]
-                } else {
-                    cov_mark::hit!(do_not_delete_let);
-                    vec![]
-                };
+            let mut edits: Vec<lsp_types::TextEdit> = if delete_let {
+                vec![lsp_types::TextEdit {
+                    range: src_span_to_lsp_range(let_assignment.location, line_numbers),
+                    new_text: "".into(),
+                }]
+            } else {
+                cov_mark::hit!(do_not_delete_let);
+                vec![]
+            };
 
-                edits.push(lsp_types::TextEdit {
-                    range: src_span_to_lsp_range(expression.location(), &line_numbers),
-                    new_text: let_val_str.to_string(),
-                });
-                return Some(edits);
-            }
+            edits.push(lsp_types::TextEdit {
+                range: src_span_to_lsp_range(expression.location(), line_numbers),
+                new_text: let_val_str.to_string(),
+            });
+            return Some(edits);
         }
     }
 
@@ -113,12 +111,12 @@ fn inline_let(
 
             let mut edits: Vec<lsp_types::TextEdit> = Vec::with_capacity(usages.len() + 1);
             edits.push(lsp_types::TextEdit {
-                range: src_span_to_lsp_range(assignment.location, &line_numbers),
+                range: src_span_to_lsp_range(assignment.location, line_numbers),
                 new_text: "".into(),
             });
 
             edits.extend(usages.iter().map(|usage| lsp_types::TextEdit {
-                range: src_span_to_lsp_range(usage.location(), &line_numbers),
+                range: src_span_to_lsp_range(usage.location(), line_numbers),
                 new_text: let_val_str.to_string(),
             }));
 
@@ -162,7 +160,7 @@ fn usage_search<'a>(
                 }
             }
 
-            if let Some(usages) = usage_search(pattern, &*finally) {
+            if let Some(usages) = usage_search(pattern, finally) {
                 res.extend(usages);
             }
             if res.is_empty() {

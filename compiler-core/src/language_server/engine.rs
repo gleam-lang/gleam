@@ -833,11 +833,11 @@ fn get_hexdocs_link_section(
     Some(format!("\nView on [HexDocs]({link})"))
 }
 
-fn collect_statement_and_expression_nodes_from_ast<'a>(
+fn collect_statement_and_expression_nodes_from_ast<>(
     start: u32,
     end: u32,
-    module: &'a Module,
-) -> Vec<Located<'a>> {
+    module: & Module,
+) -> Vec<Located<'_>> {
     let mut nodes = Vec::new();
     let mut i = start;
 
@@ -854,7 +854,7 @@ fn collect_statement_and_expression_nodes_from_ast<'a>(
                             nodes.push(located);
                             i = assignment.location.end
                         }
-                        _ => {},
+                        Statement::Use(_) => {},
                     }
                 },
                 Located::Expression(expr) => {

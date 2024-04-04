@@ -47,13 +47,10 @@ pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> R
 }
 
 pub fn determine_resolve_strategy(params: &CodeActionParams) -> ResolveStrategy {
-    if let Some(trigger_kind) = params.context.trigger_kind{
-        if let CodeActionTriggerKind::INVOKED = trigger_kind {
-            ResolveStrategy::Eager
-        } else {
-            ResolveStrategy::Lazy
-        }
-    } else{
+    if let Some(CodeActionTriggerKind::INVOKED) = params.context.trigger_kind{
+        ResolveStrategy::Eager
+    }
+    else{
        ResolveStrategy::Lazy
     }
 }
