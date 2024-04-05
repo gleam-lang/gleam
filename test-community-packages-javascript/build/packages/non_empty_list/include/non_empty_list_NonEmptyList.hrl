@@ -1,1 +1,0 @@
--record(non_empty_list, {first :: any(), rest :: list(any())}).

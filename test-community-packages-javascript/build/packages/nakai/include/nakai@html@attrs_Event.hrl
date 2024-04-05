@@ -1,1 +1,0 @@
--record(event, {name :: binary(), action :: any()}).

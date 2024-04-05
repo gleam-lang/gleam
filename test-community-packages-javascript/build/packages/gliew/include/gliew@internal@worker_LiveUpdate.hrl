@@ -1,1 +1,0 @@
--record(live_update, {markup :: binary()}).

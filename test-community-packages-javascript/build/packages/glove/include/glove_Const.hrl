@@ -1,1 +1,0 @@
--record(const, {value :: integer()}).
