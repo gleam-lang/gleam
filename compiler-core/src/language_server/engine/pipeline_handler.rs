@@ -1,5 +1,3 @@
-//use std::time::Instant;
-
 use crate::{ast::SrcSpan, language_server::code_action::ActionId};
 
 use super::*;
@@ -11,8 +9,6 @@ pub fn convert_to_pipeline<>(
     strategy: ResolveStrategy,
     nodes: &[Located<'_>]
 ) {
-    //let before = Instant::now();
-
     let uri = &params.text_document.uri;
     let line_numbers = LineNumbers::new(&module.code);
 
@@ -37,8 +33,6 @@ pub fn convert_to_pipeline<>(
                 None => return,
             };
     
-            //location is where the original call expression started
-            //this is also the place where we want to insert the piped conversion
             let indent = line_numbers.line_and_column_number(call.location).column - 1;
     
             if let Some(edit) = create_edit(pipeline_parts, &line_numbers, indent) {
@@ -142,9 +136,6 @@ fn convert_call_chain_to_pipeline(mut call_chain: Vec<&TypedExpr>) -> Option<Pip
 
     Some(PipelineParts {
         input,
-        //Pipeline conversion should be placed on top of the nested call expression.
-        //the range of that call chain is captured in the location of the initial call.
-        //Because of reverse() the initial call of the chain is moved to the last spot in the vec.
         location: call_chain.last()?.location(),
         calls: modified_chain,
     })

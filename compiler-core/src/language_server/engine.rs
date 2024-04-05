@@ -283,10 +283,6 @@ where
         })
     }
 
-    //The matched code action handler will revalidate the code action for the provided params.
-    //There can possibly be more code actions returned for the provided params.
-    //So to find the correct code action, 
-    //check that the location of the lazy resolved code action corresponds to the location of the now fully resolved code action.
     pub fn resolve_action(&mut self, params: CodeActionData) -> Response<Option<CodeAction>> {
         self.respond(|this| {
             let module = this
