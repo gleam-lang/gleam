@@ -2195,7 +2195,7 @@ int, float, utf16 and utf32 types.")],
                         ),
                         bit_array::ErrorType::TypeDoesNotAllowSize { typ } => (
                             "Size cannot be specified here",
-                            vec![format!("Hint: {typ} segments have an autoatic size.")],
+                            vec![format!("Hint: {typ} segments have an automatic size.")],
                         ),
                         bit_array::ErrorType::TypeDoesNotAllowUnit { typ } => (
                             "Unit cannot be specified here",
