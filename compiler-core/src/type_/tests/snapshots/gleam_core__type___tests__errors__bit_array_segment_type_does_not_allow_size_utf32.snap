@@ -9,5 +9,5 @@ error: Invalid bit array segment
 1 │ case <<1>> { <<1:utf32-size(5)>> -> a }
   │                  ^^^^^ Size cannot be specified here
 
-Hint: utf32 segments have an autoatic size.
+Hint: utf32 segments have an automatic size.
 See: https://tour.gleam.run/data-types/bit-arrays/
