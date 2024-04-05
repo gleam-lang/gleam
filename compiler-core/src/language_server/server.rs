@@ -96,7 +96,7 @@ where
             Message::Notification(notification) => self.handle_notification(notification),
         }
     }
-   
+
     fn handle_request(&mut self, id: lsp_server::RequestId, request: Request) {
         let (payload, feedback) = match request {
             Request::Format(param) => self.format(param),
@@ -361,8 +361,11 @@ where
     }
 
     fn code_action_resolve(&mut self, params: lsp::CodeAction) -> (Json, Feedback) {
-        let code_action_params = params.data.expect("Valid params in order to resolve code action");
-        let params = serde_json::from_value::<CodeActionData>(code_action_params).expect("CodeActionData should be the result of a lazy resolved code action");
+        let code_action_params = params
+            .data
+            .expect("Valid params in order to resolve code action");
+        let params = serde_json::from_value::<CodeActionData>(code_action_params)
+            .expect("CodeActionData should be the result of a lazy resolved code action");
         let path = super::path(&params.code_action_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.resolve_action(params))
     }

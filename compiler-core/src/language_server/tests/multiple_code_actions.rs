@@ -1,5 +1,6 @@
 use lsp_types::{
-    CodeActionContext, CodeActionParams, CodeActionTriggerKind, PartialResultParams, Position, Range, TextDocumentIdentifier, Url, WorkDoneProgressParams, WorkspaceEdit
+    CodeActionContext, CodeActionParams, CodeActionTriggerKind, PartialResultParams, Position,
+    Range, TextDocumentIdentifier, Url, WorkDoneProgressParams, WorkspaceEdit,
 };
 
 use crate::line_numbers::LineNumbers;
@@ -8,15 +9,9 @@ use super::*;
 
 macro_rules! assert_code_action {
     ($src:expr, $position_start:expr, $position_end:expr) => {
-
-        let result = return_multiple_code_actions(
-            $src,
-            $position_start,
-            $position_end,
-        );
+        let result = return_multiple_code_actions($src, $position_start, $position_end);
         insta::assert_snapshot!(insta::internals::AutoName, result, $src);
     };
-    
 }
 
 fn return_multiple_code_actions(
@@ -107,14 +102,13 @@ fn return_multiple_code_actions(
     };
 
     let codeactions = engine.action(params).result.unwrap().unwrap();
-    
+
     let mut source = src.to_owned();
-    for action in codeactions{
+    for action in codeactions {
         source = apply_code_action(&source, &url, &action).clone();
     }
-    
+
     source.to_owned()
-       
 }
 
 fn apply_code_action(src: &str, url: &Url, action: &lsp_types::CodeAction) -> String {
@@ -167,7 +161,6 @@ fn adjust_code_for_offset(start: u32, end: u32, offset: i32) -> std::ops::Range<
 
     adjusted_start..adjusted_end
 }
-
 
 #[test]
 fn test_multiple_code_actions_in_range() {

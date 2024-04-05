@@ -1,10 +1,10 @@
 mod compilation;
 mod completion;
-mod pipeline_action;
 mod definition;
 mod hover;
 mod inline_var_action;
 mod multiple_code_actions;
+mod pipeline_action;
 
 use std::{
     collections::HashMap,
@@ -18,13 +18,20 @@ use camino::{Utf8Path, Utf8PathBuf};
 use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url, WorkspaceEdit};
 
 use crate::{
-    config::PackageConfig, io::{
+    config::PackageConfig,
+    io::{
         memory::InMemoryFileSystem, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
         WrappedReader,
-    }, language_server::{
+    },
+    language_server::{
         engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
         DownloadDependencies, LockGuard, Locker, MakeLocker,
-    }, line_numbers::LineNumbers, manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource}, paths::ProjectPaths, requirement::Requirement, Result
+    },
+    line_numbers::LineNumbers,
+    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
+    paths::ProjectPaths,
+    requirement::Requirement,
+    Result,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

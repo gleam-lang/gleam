@@ -2,82 +2,84 @@ use crate::{ast::SrcSpan, language_server::code_action::ActionId};
 
 use super::*;
 
-pub fn convert_to_pipeline<>(
+pub fn convert_to_pipeline(
     module: &Module,
     params: &lsp::CodeActionParams,
     actions: &mut Vec<CodeAction>,
     strategy: ResolveStrategy,
-    nodes: &[Located<'_>]
+    nodes: &[Located<'_>],
 ) {
     let uri = &params.text_document.uri;
     let line_numbers = LineNumbers::new(&module.code);
 
     nodes
-    .iter()
-    .filter_map(|node| extract_call_expression(node))
-    .for_each(|call| {
-        let mut call_chain: Vec<&TypedExpr> = Vec::new();
+        .iter()
+        .filter_map(|node| extract_call_expression(node))
+        .for_each(|call| {
+            let mut call_chain: Vec<&TypedExpr> = Vec::new();
 
-        detect_call_chain(call.expression, &mut call_chain);
+            detect_call_chain(call.expression, &mut call_chain);
 
-        if call_chain.is_empty() {
-            cov_mark::hit!(chain_is_empty);
-            return;
-        }
+            if call_chain.is_empty() {
+                cov_mark::hit!(chain_is_empty);
+                return;
+            }
 
-        if strategy.is_eager() {
-            let pipeline_parts = match convert_call_chain_to_pipeline(call_chain) {
-                Some(parts) => parts,
-                //input for pipeline cannot be stringified
-                //so no code action to be suggested
-                None => return,
-            };
-    
-            let indent = line_numbers.line_and_column_number(call.location).column - 1;
-    
-            if let Some(edit) = create_edit(pipeline_parts, &line_numbers, indent) {
+            if strategy.is_eager() {
+                let pipeline_parts = match convert_call_chain_to_pipeline(call_chain) {
+                    Some(parts) => parts,
+                    //input for pipeline cannot be stringified
+                    //so no code action to be suggested
+                    None => return,
+                };
+
+                let indent = line_numbers.line_and_column_number(call.location).column - 1;
+
+                if let Some(edit) = create_edit(pipeline_parts, &line_numbers, indent) {
+                    CodeActionBuilder::new("Apply Pipeline Rewrite")
+                        .kind(lsp_types::CodeActionKind::REFACTOR_REWRITE)
+                        .changes(uri.clone(), vec![edit])
+                        .data(ActionId::Pipeline, params.clone(), call.location)
+                        .preferred(true)
+                        .push_to(actions);
+                }
+            } else {
                 CodeActionBuilder::new("Apply Pipeline Rewrite")
                     .kind(lsp_types::CodeActionKind::REFACTOR_REWRITE)
-                    .changes(uri.clone(), vec![edit])
                     .data(ActionId::Pipeline, params.clone(), call.location)
                     .preferred(true)
                     .push_to(actions);
             }
-        } else {
-            CodeActionBuilder::new("Apply Pipeline Rewrite")
-                .kind(lsp_types::CodeActionKind::REFACTOR_REWRITE)
-                .data(ActionId::Pipeline, params.clone(), call.location)
-                .preferred(true)
-                .push_to(actions);
-        }
-    });
-
+        });
 }
 
 fn extract_call_expression<'a>(node: &Located<'a>) -> Option<CallExpression<'a>> {
-    match node{
+    match node {
         Located::Expression(expr) => {
             if let TypedExpr::Call { .. } = expr {
-                Some(CallExpression{ expression: expr, location: expr.location().start })
-            } else{
-                None
-            }
-        },
-        Located::Statement(Statement::Assignment(assign)) =>{
-            if let TypedExpr::Call {..} = *assign.value{
-                Some(CallExpression{ expression: &assign.value, location: assign.value.location().start })
-            } else{
+                Some(CallExpression {
+                    expression: expr,
+                    location: expr.location().start,
+                })
+            } else {
                 None
             }
         }
-        _ => None
+        Located::Statement(Statement::Assignment(assign)) => {
+            if let TypedExpr::Call { .. } = *assign.value {
+                Some(CallExpression {
+                    expression: &assign.value,
+                    location: assign.value.location().start,
+                })
+            } else {
+                None
+            }
+        }
+        _ => None,
     }
 }
 
-fn detect_call_chain<'a>(
-    call_expression: &'a TypedExpr,
-    call_chain: &mut Vec<&'a TypedExpr>,
-) {
+fn detect_call_chain<'a>(call_expression: &'a TypedExpr, call_chain: &mut Vec<&'a TypedExpr>) {
     if let TypedExpr::Call { args, .. } = call_expression {
         if let Some(arg) = args.first() {
             if let TypedExpr::Var { name, .. } = &arg.value {
@@ -88,7 +90,7 @@ fn detect_call_chain<'a>(
             }
 
             call_chain.push(call_expression);
-            
+
             // Recurse on its first argument to detect the full call chain
             if let TypedExpr::Call { .. } = &arg.value {
                 detect_call_chain(&arg.value, call_chain);
@@ -103,24 +105,22 @@ fn convert_call_chain_to_pipeline(mut call_chain: Vec<&TypedExpr>) -> Option<Pip
     //remove the first argument in order to convert the chain to its piped equivalent.
     let modified_chain: Vec<_> = call_chain
         .iter()
-        .filter_map(|expr| {
-            match expr {
-                TypedExpr::Call {
-                    location,
-                    typ,
-                    fun,
+        .filter_map(|expr| match expr {
+            TypedExpr::Call {
+                location,
+                typ,
+                fun,
+                args,
+            } if !args.is_empty() => {
+                let args = args.get(1..).unwrap_or(&[]).to_vec();
+                Some(TypedExpr::Call {
+                    location: *location,
+                    typ: typ.clone(),
+                    fun: fun.clone(),
                     args,
-                } if !args.is_empty() => {
-                    let args = args.get(1..).unwrap_or(&[]).to_vec();
-                    Some(TypedExpr::Call {
-                        location: *location,
-                        typ: typ.clone(),
-                        fun: fun.clone(),
-                        args,
-                    })
-                }
-                _ => None,
+                })
             }
+            _ => None,
         })
         .collect();
 
@@ -182,7 +182,7 @@ struct PipelineParts {
     calls: Vec<TypedExpr>,
 }
 
-struct CallExpression<'a>{
+struct CallExpression<'a> {
     expression: &'a TypedExpr,
-    location: u32
+    location: u32,
 }

@@ -138,8 +138,6 @@ fn inline_variable_refactor(
     }
 }
 
-
-
 //Inline Let
 #[test]
 fn test_inline_local_var_into_multiple_call_let() {
@@ -496,4 +494,3 @@ fn test_inline_local_var_do_not_inline_unused_var() {
         false
     );
 }
-

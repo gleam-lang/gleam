@@ -7,32 +7,33 @@ pub fn inline_local_variable(
     module: &Module,
     params: &lsp::CodeActionParams,
     actions: &mut Vec<CodeAction>,
-    nodes: &[Located<'_>]
+    nodes: &[Located<'_>],
 ) {
     let uri = &params.text_document.uri;
     let line_numbers = LineNumbers::new(&module.code);
     let byte_index = line_numbers.byte_index(params.range.start.line, params.range.start.character);
 
-    nodes.iter().filter_map(|node| {
-        match node {
-            Located::Expression(expression) => inline_usage(expression, &line_numbers, module, byte_index),
+    nodes
+        .iter()
+        .filter_map(|node| match node {
+            Located::Expression(expression) => {
+                inline_usage(expression, &line_numbers, module, byte_index)
+            }
             Located::Statement(Statement::Assignment(assignment))
                 if matches!(assignment.pattern, Pattern::Variable { .. }) =>
             {
                 inline_let(assignment, &line_numbers, module, byte_index)
             }
             _ => None,
-        }
-    })
-    .for_each(|text_edit| {
-        CodeActionBuilder::new("Inline Variable Refactor")
-            .kind(lsp_types::CodeActionKind::REFACTOR_INLINE)
-            .changes(uri.clone(), text_edit)
-            .preferred(true)
-            .push_to(actions);
-    });
+        })
+        .for_each(|text_edit| {
+            CodeActionBuilder::new("Inline Variable Refactor")
+                .kind(lsp_types::CodeActionKind::REFACTOR_INLINE)
+                .changes(uri.clone(), text_edit)
+                .preferred(true)
+                .push_to(actions);
+        });
 }
-
 
 fn inline_usage(
     expression: &TypedExpr,

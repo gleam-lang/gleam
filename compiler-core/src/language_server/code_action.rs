@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct CodeActionData {
     pub id: ActionId,
     pub code_action_params: lsp_types::CodeActionParams,
-    pub location: u32
+    pub location: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -14,7 +14,6 @@ pub enum ActionId {
     InlineLocalVar,
     UnusedImports,
 }
-
 
 #[derive(Debug)]
 pub struct CodeActionBuilder {
@@ -57,11 +56,16 @@ impl CodeActionBuilder {
         self
     }
 
-    pub fn data(mut self, id: ActionId, code_action_params: lsp_types::CodeActionParams, location: u32) -> Self {
+    pub fn data(
+        mut self,
+        id: ActionId,
+        code_action_params: lsp_types::CodeActionParams,
+        location: u32,
+    ) -> Self {
         let code_action_data = CodeActionData {
             id,
             code_action_params,
-            location
+            location,
         };
         let js = serde_json::to_value(code_action_data).unwrap_or_default();
         self.action.data = Some(js);
@@ -71,5 +75,4 @@ impl CodeActionBuilder {
     pub fn push_to(self, actions: &mut Vec<CodeAction>) {
         actions.push(self.action);
     }
-
 }

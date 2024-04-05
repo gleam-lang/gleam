@@ -1,7 +1,7 @@
-
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, Statement, TypedDefinition, TypedExpr, TypedPattern, Publicity,
+        Arg, Definition, Function, Import, ModuleConstant, Publicity, Statement, TypedDefinition,
+        TypedExpr, TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -22,7 +22,9 @@ use std::sync::Arc;
 use strum::IntoEnumIterator;
 
 use super::{
-    code_action::{CodeActionBuilder, CodeActionData}, determine_resolve_strategy, src_span_to_lsp_range, DownloadDependencies, MakeLocker, ResolveStrategy
+    code_action::{CodeActionBuilder, CodeActionData},
+    determine_resolve_strategy, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+    ResolveStrategy,
 };
 
 mod inline_var_handler;
@@ -266,14 +268,21 @@ where
             };
 
             let line_numbers = LineNumbers::new(&module.code);
-            let start: u32 = line_numbers.byte_index(params.range.start.line, params.range.start.character);
+            let start: u32 =
+                line_numbers.byte_index(params.range.start.line, params.range.start.character);
             let end = line_numbers.byte_index(params.range.end.line, params.range.end.character);
 
             let nodes = collect_statement_and_expression_nodes_from_ast(start, end, module);
 
             code_action_unused_imports(module, &params, &mut actions);
             inline_var_handler::inline_local_variable(module, &params, &mut actions, &nodes);
-            pipeline_handler::convert_to_pipeline(module, &params, &mut actions,  resolve_strategy, &nodes,);
+            pipeline_handler::convert_to_pipeline(
+                module,
+                &params,
+                &mut actions,
+                resolve_strategy,
+                &nodes,
+            );
 
             Ok(if actions.is_empty() {
                 None
@@ -294,37 +303,43 @@ where
             let codeaction_params = &params.code_action_params;
             let location_to_be_resolved = params.location;
 
-            let start = line_numbers.byte_index(codeaction_params.range.start.line, codeaction_params.range.start.character);
-            let end = line_numbers.byte_index(codeaction_params.range.end.line, codeaction_params.range.end.character);
+            let start = line_numbers.byte_index(
+                codeaction_params.range.start.line,
+                codeaction_params.range.start.character,
+            );
+            let end = line_numbers.byte_index(
+                codeaction_params.range.end.line,
+                codeaction_params.range.end.character,
+            );
 
             let nodes = collect_statement_and_expression_nodes_from_ast(start, end, module);
 
             let mut actions = vec![];
-            match params.id{
+            match params.id {
                 super::code_action::ActionId::Pipeline => pipeline_handler::convert_to_pipeline(
-                            module,
-                            codeaction_params,
-                            &mut actions,
-                            ResolveStrategy::Eager,
-                            &nodes
-                        ),
-                _ => return Ok(None)
+                    module,
+                    codeaction_params,
+                    &mut actions,
+                    ResolveStrategy::Eager,
+                    &nodes,
+                ),
+                _ => return Ok(None),
             }
 
             let action = actions
-            .into_iter()
-            .find_map(|mut action| {
-                if let Some(data) = action.data.take() {
-                    match serde_json::from_value::<CodeActionData>(data) {
-                        Ok(data) if data.location == location_to_be_resolved => Some(action),
-                        _ => None,
+                .into_iter()
+                .find_map(|mut action| {
+                    if let Some(data) = action.data.take() {
+                        match serde_json::from_value::<CodeActionData>(data) {
+                            Ok(data) if data.location == location_to_be_resolved => Some(action),
+                            _ => None,
+                        }
+                    } else {
+                        None
                     }
-                } else {
-                    None
-                }
-            })
-            .expect("Could not resolve code action requested by the resolve request.");
-        
+                })
+                .expect("Could not resolve code action requested by the resolve request.");
+
             Ok(Some(action))
         })
     }
@@ -829,10 +844,10 @@ fn get_hexdocs_link_section(
     Some(format!("\nView on [HexDocs]({link})"))
 }
 
-fn collect_statement_and_expression_nodes_from_ast<>(
+fn collect_statement_and_expression_nodes_from_ast(
     start: u32,
     end: u32,
-    module: & Module,
+    module: &Module,
 ) -> Vec<Located<'_>> {
     let mut nodes = Vec::new();
     let mut i = start;
@@ -840,23 +855,21 @@ fn collect_statement_and_expression_nodes_from_ast<>(
     while i <= end {
         if let Some(located) = module.find_node(i) {
             match located {
-                Located::Statement(statement) => {
-                    match statement {
-                        Statement::Expression(expr) => {
-                            nodes.push(located);
-                            i = expr.location().end
-                        }
-                        Statement::Assignment(assignment) => {
-                            nodes.push(located);
-                            i = assignment.location.end
-                        }
-                        Statement::Use(_) => {},
+                Located::Statement(statement) => match statement {
+                    Statement::Expression(expr) => {
+                        nodes.push(located);
+                        i = expr.location().end
                     }
+                    Statement::Assignment(assignment) => {
+                        nodes.push(located);
+                        i = assignment.location.end
+                    }
+                    Statement::Use(_) => {}
                 },
                 Located::Expression(expr) => {
                     nodes.push(located);
                     i = expr.location().end
-                },
+                }
                 _ => {}
             }
         }

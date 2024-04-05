@@ -1,5 +1,6 @@
 use lsp_types::{
-    CodeActionContext, CodeActionParams, CodeActionTriggerKind, PartialResultParams, Position, Range, TextDocumentIdentifier, Url, WorkDoneProgressParams
+    CodeActionContext, CodeActionParams, CodeActionTriggerKind, PartialResultParams, Position,
+    Range, TextDocumentIdentifier, Url, WorkDoneProgressParams,
 };
 
 use super::*;

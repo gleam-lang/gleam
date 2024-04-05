@@ -17,8 +17,8 @@ use crate::{
     ast::SrcSpan, build::Target, line_numbers::LineNumbers, manifest::Manifest,
     paths::ProjectPaths, Result,
 };
-use lsp_types::{CodeActionParams, CodeActionTriggerKind, Position, Range,Url};
 use camino::Utf8PathBuf;
+use lsp_types::{CodeActionParams, CodeActionTriggerKind, Position, Range, Url};
 use std::any::Any;
 
 #[derive(Debug)]
@@ -47,18 +47,17 @@ pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> R
 }
 
 pub fn determine_resolve_strategy(params: &CodeActionParams) -> ResolveStrategy {
-    if let Some(CodeActionTriggerKind::INVOKED) = params.context.trigger_kind{
+    if let Some(CodeActionTriggerKind::INVOKED) = params.context.trigger_kind {
         ResolveStrategy::Eager
-    }
-    else{
-       ResolveStrategy::Lazy
+    } else {
+        ResolveStrategy::Lazy
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ResolveStrategy{
+pub enum ResolveStrategy {
     Eager,
-    Lazy
+    Lazy,
 }
 
 impl ResolveStrategy {
