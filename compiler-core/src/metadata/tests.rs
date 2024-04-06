@@ -31,6 +31,7 @@ fn roundtrip(input: &ModuleInterface) -> ModuleInterface {
 fn constant_module(constant: TypedConstant) -> ModuleInterface {
     ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -84,6 +85,7 @@ fn bit_array_segment_option_module(option: TypedConstantBitArraySegmentOption) -
 fn empty_module() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "one/two".into(),
@@ -102,6 +104,7 @@ fn empty_module() {
 fn with_line_numbers() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "one/two".into(),
@@ -124,6 +127,7 @@ fn with_line_numbers() {
 fn module_with_private_type() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -153,6 +157,7 @@ fn module_with_private_type() {
 fn module_with_unused_import() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -174,6 +179,7 @@ fn module_with_unused_import() {
 fn module_with_app_type() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -203,6 +209,7 @@ fn module_with_app_type() {
 fn module_with_fn_type() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -232,6 +239,7 @@ fn module_with_fn_type() {
 fn module_with_tuple_type() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -267,6 +275,7 @@ fn module_with_generic_type() {
     fn make(t1: Arc<Type>, t2: Arc<Type>) -> ModuleInterface {
         ModuleInterface {
             contains_todo: false,
+            leaks_internal_types: false,
             package: "some_package".into(),
             origin: Origin::Src,
             name: "a/b".into(),
@@ -302,6 +311,7 @@ fn module_with_type_links() {
     fn make(type_: Arc<Type>) -> ModuleInterface {
         ModuleInterface {
             contains_todo: false,
+            leaks_internal_types: false,
             package: "some_package".into(),
             origin: Origin::Src,
             name: "a".into(),
@@ -333,6 +343,7 @@ fn module_with_type_links() {
 fn module_type_to_constructors_mapping() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -362,6 +373,7 @@ fn module_type_to_constructors_mapping() {
 fn module_fn_value() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -406,6 +418,7 @@ fn module_fn_value() {
 fn deprecated_module_fn_value() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -452,6 +465,7 @@ fn deprecated_module_fn_value() {
 fn private_module_fn_value() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -498,6 +512,7 @@ fn private_module_fn_value() {
 fn module_fn_value_regression() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b/c".into(),
@@ -543,6 +558,7 @@ fn module_fn_value_regression() {
 fn module_fn_value_with_field_map() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -590,6 +606,7 @@ fn record_value() {
 
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -632,6 +649,7 @@ fn record_value_with_field_map() {
 
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -675,6 +693,7 @@ fn record_value_with_field_map() {
 fn accessors() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -888,6 +907,7 @@ fn constant_var() {
 
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -1107,6 +1127,7 @@ fn constant_bit_array_native() {
 fn deprecated_type() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -1139,6 +1160,26 @@ fn contains_todo() {
     let module = ModuleInterface {
         contains_todo: true,
         //             ^^^^ It does, it does!
+        leaks_internal_types: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b".into(),
+        types: [].into(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        unused_imports: Vec::new(),
+        accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+    };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn leaks_internal_types() {
+    let module = ModuleInterface {
+        contains_todo: false,
+        leaks_internal_types: true,
+        //                    ^^^^ It does, it does!
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -1157,6 +1198,7 @@ fn contains_todo() {
 fn module_fn_value_with_external_implementations() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b/c".into(),
@@ -1202,6 +1244,7 @@ fn module_fn_value_with_external_implementations() {
 fn internal_module_fn() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b/c".into(),
@@ -1248,6 +1291,7 @@ fn internal_module_fn() {
 fn type_variable_ids_in_constructors_are_shared() {
     let module = ModuleInterface {
         contains_todo: false,
+        leaks_internal_types: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b/c".into(),
