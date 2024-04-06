@@ -408,12 +408,15 @@ fn register_types_from_custom_type<'a>(
 
     hydrator.clear_ridgid_type_names();
 
-    // If the type comes from an internal module we change it's publicity to
-    // `Internal`.
-    let publicity = if config.is_internal_module(module) {
-        Publicity::Internal
-    } else {
-        *publicity
+    // We check is the type comes from an internal module and restrict its
+    // publicity.
+    let publicity = match publicity {
+        // It's important we only restrict the publicity of public types.
+        Publicity::Public if config.is_internal_module(module) => Publicity::Internal,
+        // If a type is private we don't want to make it internal just because
+        // it comes from an internal module, so in that case the publicity is
+        // left unchanged.
+        Publicity::Public | Publicity::Private | Publicity::Internal => *publicity,
     };
 
     let typ = Arc::new(Type::Named {

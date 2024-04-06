@@ -81,6 +81,7 @@ macro_rules! assert_module_infer {
 macro_rules! assert_js_module_infer {
     ($src:expr, $module:expr $(,)?) => {{
         let constructors = $crate::type_::tests::infer_module_with_target(
+            "test_module",
             $src,
             vec![],
             $crate::build::Target::JavaScript,
@@ -165,7 +166,7 @@ macro_rules! assert_with_module_error {
 
 fn get_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> Vec<Warning> {
     let warnings = VectorWarningEmitterIO::default();
-    _ = compile_module(src, Some(Arc::new(warnings.clone())), deps).unwrap();
+    _ = compile_module("test_module", src, Some(Arc::new(warnings.clone())), deps).unwrap();
     warnings
         .take()
         .into_iter()
@@ -308,16 +309,24 @@ pub fn stringify_tuple_strs(module: Vec<(&str, &str)>) -> Vec<(EcoString, String
 type DependencyModule<'a> = (&'a str, &'a str, &'a str);
 
 pub fn infer_module(src: &str, dep: Vec<DependencyModule<'_>>) -> Vec<(EcoString, String)> {
-    infer_module_with_target(src, dep, Target::Erlang)
+    infer_module_with_target("test_module", src, dep, Target::Erlang)
 }
 
 pub fn infer_module_with_target(
+    module_name: &str,
     src: &str,
     dep: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> Vec<(EcoString, String)> {
-    let ast = compile_module_with_target(src, None, dep, target, TargetSupport::NotEnforced)
-        .expect("should successfully infer");
+    let ast = compile_module_with_opts(
+        module_name,
+        src,
+        None,
+        dep,
+        target,
+        TargetSupport::NotEnforced,
+    )
+    .expect("should successfully infer");
     ast.type_info
         .values
         .iter()
@@ -331,11 +340,13 @@ pub fn infer_module_with_target(
 }
 
 pub fn compile_module(
+    module_name: &str,
     src: &str,
     warnings: Option<Arc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
 ) -> Result<TypedModule, crate::type_::Error> {
-    compile_module_with_target(
+    compile_module_with_opts(
+        module_name,
         src,
         warnings,
         dep,
@@ -344,7 +355,8 @@ pub fn compile_module(
     )
 }
 
-pub fn compile_module_with_target(
+pub fn compile_module_with_opts(
+    module_name: &str,
     src: &str,
     warnings: Option<Arc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
@@ -400,7 +412,9 @@ pub fn compile_module_with_target(
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
     let parsed = crate::parse::parse_module(src).expect("syntax error");
-    let ast = parsed.module;
+    let mut ast = parsed.module;
+    ast.name = module_name.into();
+
     crate::analyse::infer_module(
         target,
         &ids,
@@ -426,8 +440,15 @@ pub fn module_error_with_target(
     deps: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> String {
-    let error = compile_module_with_target(src, None, deps, target, TargetSupport::NotEnforced)
-        .expect_err("should infer an error");
+    let error = compile_module_with_opts(
+        "themodule",
+        src,
+        None,
+        deps,
+        target,
+        TargetSupport::NotEnforced,
+    )
+    .expect_err("should infer an error");
     let error = Error::Type {
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
@@ -2007,14 +2028,40 @@ fn block_maths() {
 
 #[test]
 fn contains_todo_true() {
-    let module = compile_module("pub fn main() { 1 }", None, vec![]).unwrap();
+    let module = compile_module("test_module", "pub fn main() { 1 }", None, vec![]).unwrap();
     assert!(!module.type_info.contains_todo);
 }
 
 #[test]
 fn contains_todo_false() {
-    let module = compile_module("pub fn main() { todo }", None, vec![]).unwrap();
+    let module = compile_module("test_module", "pub fn main() { todo }", None, vec![]).unwrap();
     assert!(module.type_info.contains_todo);
+}
+
+#[test]
+fn public_type_from_internal_module_has_internal_publicity() {
+    let module = compile_module("thepackage/internal", "pub type Wibble", None, vec![]).unwrap();
+    let type_ = module.type_info.get_public_type("Wibble").unwrap();
+    assert!(type_.publicity.is_internal());
+}
+
+#[test]
+fn internal_type_from_internal_module_has_internal_publicity() {
+    let module = compile_module(
+        "thepackage/internal",
+        "@internal pub type Wibble",
+        None,
+        vec![],
+    )
+    .unwrap();
+    let type_ = module.type_info.get_public_type("Wibble").unwrap();
+    assert!(type_.publicity.is_internal());
+}
+
+#[test]
+fn private_type_from_internal_module_is_not_exposed_as_internal() {
+    let module = compile_module("thepackage/internal", "type Wibble", None, vec![]).unwrap();
+    assert!(module.type_info.get_public_type("Wibble").is_none());
 }
 
 #[test]

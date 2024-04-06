@@ -901,7 +901,7 @@ pub fn main() {
   x
 }"#;
     let warnings = VectorWarningEmitterIO::default();
-    _ = compile_module(src, Some(Arc::new(warnings.clone())), vec![]).unwrap_err();
+    _ = compile_module("test_module", src, Some(Arc::new(warnings.clone())), vec![]).unwrap_err();
     assert!(warnings.take().is_empty());
 }
 
