@@ -28,9 +28,10 @@ struct Module {
   typesConstructors @5 :List(Property(TypesVariantConstructors));
   unusedImports @6 :List(SrcSpan);
   containsTodo @7 :Bool;
-  leaksInternalTypes @10 :Bool;
   lineNumbers @8 :LineNumbers;
   srcPath @9 :Text;
+  isInternal @10 :Bool;
+  leaksInternalTypes @11 :Bool;
 }
 
 struct TypesVariantConstructors {

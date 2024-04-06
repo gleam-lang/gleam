@@ -1255,3 +1255,44 @@ pub fn main() {
         }]
     );
 }
+
+#[test]
+fn internal_modules_are_not_included() {
+    let code = "import gleam
+
+pub fn main() {
+  0
+}";
+    let dep_code = "";
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code)
+                // Not included
+                .add_dep_module("dep/internal", dep_code)
+                // Not included
+                .add_dep_module("dep/internal/other", dep_code)
+                // Included
+                .add_dep_module("dep/not_internal", dep_code),
+            Position::new(0, 0)
+        ),
+        vec![CompletionItem {
+            label: "dep/not_internal".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 13
+                    }
+                },
+                new_text: "dep/not_internal".into()
+            })),
+            ..Default::default()
+        }]
+    );
+}

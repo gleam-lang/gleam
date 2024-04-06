@@ -490,21 +490,31 @@ where
 
     fn complete_modules_for_import<'b>(
         &'b self,
-        module: &'b Module,
+        current_module: &'b Module,
         start: lsp::Position,
         end: lsp::Position,
     ) -> Vec<lsp::CompletionItem> {
         let already_imported: std::collections::HashSet<EcoString> =
-            std::collections::HashSet::from_iter(module.dependencies_list());
+            std::collections::HashSet::from_iter(current_module.dependencies_list());
         self.compiler
             .project_compiler
             .get_importable_modules()
             .iter()
-            .filter(|(name, m)| {
-                *name != &module.name
-                    && !already_imported.contains(*name)
-                    && (m.origin.is_src() || !module.origin.is_src())
-            })
+            //
+            // You cannot import yourself
+            .filter(|(name, _)| *name != &current_module.name)
+            //
+            // You cannot import a module twice
+            .filter(|(name, _)| !already_imported.contains(*name))
+            //
+            // src/ cannot import test/
+            .filter(|(_, module)| module.origin.is_src() || !current_module.origin.is_src())
+            //
+            // It is possible to import internal modules from other packages,
+            // but it's not recommended so we don't include them in completions
+            .filter(|(_, module)| module.package == self.root_package_name() || !module.is_internal)
+            //
+            // Everything else we suggest as a completion
             .map(|(name, _)| lsp::CompletionItem {
                 label: name.to_string(),
                 kind: Some(lsp::CompletionItemKind::MODULE),

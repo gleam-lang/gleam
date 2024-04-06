@@ -112,20 +112,21 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
             &std::collections::HashMap::new(),
             TargetSupport::Enforced,
             line_numbers,
-            "".into(),
             &dep_config,
+            "".into(),
         )
         .expect("should successfully infer");
         let _ = modules.insert((*dep_name).into(), dep.type_info);
         let _ = direct_dependencies.insert((*dep_package).into(), ());
     });
 
-    let mut config = PackageConfig::default();
-    config.name = "thepackage".into();
     let parsed = crate::parse::parse_module(src).expect("syntax error");
     let mut ast = parsed.module;
     ast.name = "my/mod".into();
     let line_numbers = LineNumbers::new(src);
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
+
     crate::analyse::infer_module::<()>(
         Target::JavaScript,
         &ids,
@@ -136,8 +137,8 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         &direct_dependencies,
         TargetSupport::NotEnforced,
         line_numbers,
-        "".into(),
         &config,
+        "".into(),
     )
     .expect("should successfully infer")
 }

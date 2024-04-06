@@ -58,8 +58,8 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
             &std::collections::HashMap::new(),
             TargetSupport::NotEnforced,
             line_numbers,
-            "".into(),
             &dep_config,
+            "".into(),
         )
         .expect("should successfully infer dep Erlang");
         let _ = modules.insert(dep_name.into(), dep.type_info);
@@ -81,8 +81,8 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         &direct_dependencies,
         TargetSupport::NotEnforced,
         line_numbers,
-        "".into(),
         &config,
+        "".into(),
     )
     .expect("should successfully infer root Erlang");
     let line_numbers = LineNumbers::new(src);

@@ -433,8 +433,8 @@ fn analyse(
             &direct_dependencies,
             target_support,
             line_numbers,
-            path.as_str().into(),
             package_config,
+            path.clone(),
         )
         .map_err(|error| Error::Type {
             path: path.clone(),

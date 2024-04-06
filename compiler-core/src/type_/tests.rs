@@ -381,12 +381,12 @@ pub fn compile_module_with_opts(
     let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
 
     for (package, name, module_src) in dep {
-        let mut dep_config = PackageConfig::default();
-        dep_config.name = package.into();
         let parsed = crate::parse::parse_module(module_src).expect("syntax error");
         let mut ast = parsed.module;
         ast.name = name.into();
         let line_numbers = LineNumbers::new(module_src);
+        let mut config = crate::config::PackageConfig::default();
+        config.name = package.into();
         let module = crate::analyse::infer_module::<()>(
             target,
             &ids,
@@ -397,8 +397,8 @@ pub fn compile_module_with_opts(
             &std::collections::HashMap::from_iter(vec![]),
             target_support,
             line_numbers,
+            &config,
             "".into(),
-            &dep_config,
         )
         .expect("should successfully infer");
         let _ = modules.insert(name.into(), module.type_info);
@@ -408,12 +408,11 @@ pub fn compile_module_with_opts(
         }
     }
 
-    let mut config = PackageConfig::default();
-    config.name = "thepackage".into();
     let parsed = crate::parse::parse_module(src).expect("syntax error");
     let mut ast = parsed.module;
     ast.name = module_name.into();
-
+    let mut config = crate::config::PackageConfig::default();
+    config.name = "thepackage".into();
     crate::analyse::infer_module(
         target,
         &ids,
@@ -424,8 +423,8 @@ pub fn compile_module_with_opts(
         &direct_dependencies,
         TargetSupport::Enforced,
         LineNumbers::new(src),
-        "".into(),
         &config,
+        "".into(),
     )
 }
 
@@ -615,7 +614,6 @@ fn infer_module_type_retention_test() {
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
-
     let module = crate::analyse::infer_module::<()>(
         Target::Erlang,
         &ids,
@@ -626,8 +624,8 @@ fn infer_module_type_retention_test() {
         &direct_dependencies,
         TargetSupport::Enforced,
         LineNumbers::new(""),
-        "".into(),
         &config,
+        "".into(),
     )
     .expect("Should infer OK");
 
@@ -639,6 +637,7 @@ fn infer_module_type_retention_test() {
             origin: Origin::Src,
             package: "thepackage".into(),
             name: "ok".into(),
+            is_internal: false,
             // Core type constructors like String and Int are not included
             types: HashMap::new(),
             types_value_constructors: HashMap::from([

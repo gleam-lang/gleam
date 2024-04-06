@@ -498,8 +498,12 @@ pub mod module {
       !self.reader.get_pointer_field(8).is_null()
     }
     #[inline]
-    pub fn get_leaks_internal_types(self) -> bool {
+    pub fn get_is_internal(self) -> bool {
       self.reader.get_bool_field(1)
+    }
+    #[inline]
+    pub fn get_leaks_internal_types(self) -> bool {
+      self.reader.get_bool_field(2)
     }
   }
 
@@ -704,12 +708,20 @@ pub mod module {
       !self.builder.get_pointer_field(8).is_null()
     }
     #[inline]
-    pub fn get_leaks_internal_types(self) -> bool {
+    pub fn get_is_internal(self) -> bool {
       self.builder.get_bool_field(1)
     }
     #[inline]
-    pub fn set_leaks_internal_types(&mut self, value: bool)  {
+    pub fn set_is_internal(&mut self, value: bool)  {
       self.builder.set_bool_field(1, value);
+    }
+    #[inline]
+    pub fn get_leaks_internal_types(self) -> bool {
+      self.builder.get_bool_field(2)
+    }
+    #[inline]
+    pub fn set_leaks_internal_types(&mut self, value: bool)  {
+      self.builder.set_bool_field(2, value);
     }
   }
 
