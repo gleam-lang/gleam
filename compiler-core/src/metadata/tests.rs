@@ -1170,6 +1170,7 @@ fn contains_todo() {
         unused_imports: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
     };
     assert_eq!(roundtrip(&module), module);
 }
