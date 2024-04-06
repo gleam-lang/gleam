@@ -1257,27 +1257,25 @@ pub fn main() {
 }
 
 #[test]
-fn internal_modules_are_not_included() {
+fn internal_modules_from_same_package_are_included() {
     let code = "import gleam
 
 pub fn main() {
   0
 }";
-    let dep_code = "";
+    let internal_name = format!("{}/internal", LSP_TEST_ROOT_PACKAGE_NAME);
 
     assert_eq!(
         completion(
             TestProject::for_source(code)
                 // Not included
-                .add_dep_module("dep/internal", dep_code)
-                // Not included
-                .add_dep_module("dep/internal/other", dep_code)
+                .add_dep_module("dep/internal", "")
                 // Included
-                .add_dep_module("dep/not_internal", dep_code),
+                .add_module(&internal_name, ""),
             Position::new(0, 0)
         ),
         vec![CompletionItem {
-            label: "dep/not_internal".into(),
+            label: internal_name.clone(),
             kind: Some(CompletionItemKind::MODULE),
             text_edit: Some(CompletionTextEdit::Edit(TextEdit {
                 range: Range {
@@ -1290,9 +1288,9 @@ pub fn main() {
                         character: 13
                     }
                 },
-                new_text: "dep/not_internal".into()
+                new_text: internal_name.clone(),
             })),
             ..Default::default()
-        }]
+        },]
     );
 }
