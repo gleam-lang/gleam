@@ -428,7 +428,6 @@ fn analyse(
             ids,
             ast,
             origin,
-            &package_config.name,
             module_types,
             &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
             &direct_dependencies,

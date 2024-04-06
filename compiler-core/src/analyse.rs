@@ -120,7 +120,6 @@ pub fn infer_module<A>(
     ids: &UniqueIdGenerator,
     mut module: UntypedModule,
     origin: Origin,
-    package: &EcoString,
     modules: &im::HashMap<EcoString, ModuleInterface>,
     warnings: &TypeWarningEmitter,
     direct_dependencies: &HashMap<EcoString, A>,
@@ -131,6 +130,7 @@ pub fn infer_module<A>(
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
+    let package = config.name.clone();
     let env = Environment::new(
         ids.clone(),
         package.clone(),
@@ -195,7 +195,7 @@ pub fn infer_module<A>(
     for i in statements.imports {
         let statement = record_imported_items_for_use_detection(
             i,
-            package,
+            package.as_str(),
             direct_dependencies,
             warnings,
             &env,
