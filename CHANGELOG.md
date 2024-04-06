@@ -111,6 +111,8 @@
   repository URL doesn't return a successful status code.
 - `gleam publish` can now optionally use a Hex API key to authorise publishing
   and retiring packages, set via the environment variable `HEXPM_API_KEY`.
+- `gleam publish` will now refuse to publish placeholder packages, to prevent
+  name squatting which is against the Hex terms of service.
 - If a package leaks an internal type in its public API, then the build tool
   will now refuse to publish it to Hex.
 
