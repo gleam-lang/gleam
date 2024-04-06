@@ -83,7 +83,6 @@ fn compile_expression(src: &str) -> TypedStatement {
     // Insert a cat record to use in the tests
     let cat_type = Arc::new(Type::Named {
         publicity: Publicity::Public,
-        from_internal_module: false,
         package: "mypackage".into(),
         module: "mymod".into(),
         name: "Cat".into(),

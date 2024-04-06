@@ -860,14 +860,12 @@ impl ConstructorSpecialiser {
                 module,
                 name,
                 args,
-                from_internal_module,
             } => Type::Named {
                 publicity: *publicity,
                 package: package.clone(),
                 module: module.clone(),
                 name: name.clone(),
                 args: args.iter().map(|a| self.specialise_type(a)).collect(),
-                from_internal_module: *from_internal_module,
             },
 
             Type::Fn { args, retrn } => Type::Fn {

@@ -14,7 +14,6 @@ fn print(type_: Arc<Type>) -> String {
 
 fn custom_bool() -> Arc<Type> {
     Arc::new(Type::Named {
-        from_internal_module: false,
         publicity: Publicity::Public,
         package: "foo".into(),
         module: "one/two".into(),

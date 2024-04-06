@@ -255,7 +255,6 @@ fn pretty_print_test() {
 
     assert_string!(
         Type::Named {
-            from_internal_module: false,
             module: "whatever".into(),
             package: "whatever".into(),
             name: "Int".into(),
@@ -266,14 +265,12 @@ fn pretty_print_test() {
     );
     assert_string!(
         Type::Named {
-            from_internal_module: false,
             module: "themodule".into(),
             package: "whatever".into(),
             name: "Pair".into(),
             publicity: Publicity::Public,
             args: vec![
                 Arc::new(Type::Named {
-                    from_internal_module: false,
                     module: "whatever".into(),
                     package: "whatever".into(),
                     name: "Int".into(),
@@ -281,7 +278,6 @@ fn pretty_print_test() {
                     args: vec![],
                 }),
                 Arc::new(Type::Named {
-                    from_internal_module: false,
                     module: "whatever".into(),
                     package: "whatever".into(),
                     name: "Bool".into(),
@@ -296,7 +292,6 @@ fn pretty_print_test() {
         Type::Fn {
             args: vec![
                 Arc::new(Type::Named {
-                    from_internal_module: false,
                     args: vec![],
                     module: "whatever".into(),
                     package: "whatever".into(),
@@ -304,7 +299,6 @@ fn pretty_print_test() {
                     publicity: Publicity::Public,
                 }),
                 Arc::new(Type::Named {
-                    from_internal_module: false,
                     args: vec![],
                     module: "whatever".into(),
                     package: "whatever".into(),
@@ -313,7 +307,6 @@ fn pretty_print_test() {
                 }),
             ],
             retrn: Arc::new(Type::Named {
-                from_internal_module: false,
                 args: vec![],
                 module: "whatever".into(),
                 package: "whatever".into(),
@@ -327,7 +320,6 @@ fn pretty_print_test() {
         Type::Var {
             type_: Arc::new(RefCell::new(TypeVar::Link {
                 type_: Arc::new(Type::Named {
-                    from_internal_module: false,
                     args: vec![],
                     module: "whatever".into(),
                     package: "whatever".into(),

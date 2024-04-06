@@ -408,9 +408,16 @@ fn register_types_from_custom_type<'a>(
 
     hydrator.clear_ridgid_type_names();
 
+    // If the type comes from an internal module we change it's publicity to
+    // `Internal`.
+    let publicity = if config.is_internal_module(module) {
+        Publicity::Internal
+    } else {
+        *publicity
+    };
+
     let typ = Arc::new(Type::Named {
-        publicity: *publicity,
-        from_internal_module: config.is_internal_module(module),
+        publicity,
         package: environment.current_package.clone(),
         module: module.to_owned(),
         name: name.clone(),
@@ -424,7 +431,7 @@ fn register_types_from_custom_type<'a>(
             module: module.clone(),
             deprecation: deprecation.clone(),
             parameters,
-            publicity: *publicity,
+            publicity,
             typ,
         },
     )?;
