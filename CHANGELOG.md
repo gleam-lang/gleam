@@ -54,6 +54,8 @@
   for `BitArray` caused unknown variable exception.
 - Improved recommendations on error messages.
 - Improved error message for `BitArray` segment sizes.
+- A warning is now raised when an internal type is accidentally exposed in a
+  package's public API.
 
 ### Formatter
 
