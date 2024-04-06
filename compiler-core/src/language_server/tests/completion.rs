@@ -1229,9 +1229,10 @@ pub fn main() {
     let dep = "";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_dep_module("dep", dep)
-            .at(Position::new(0, 2)),
+        completion(
+            TestRunner::for_source(code).add_dep_module("dep", dep),
+            Position::new(0, 2)
+        ),
         vec![CompletionItem {
             label: "dep".into(),
             kind: Some(CompletionItemKind::MODULE),

@@ -30,6 +30,7 @@ use crate::{
     warning::TypeWarningEmitter,
     GLEAM_CORE_PACKAGE_NAME,
 };
+use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
 use std::{
@@ -124,7 +125,7 @@ pub fn infer_module<A>(
     direct_dependencies: &HashMap<EcoString, A>,
     target_support: TargetSupport,
     line_numbers: LineNumbers,
-    src_path: EcoString,
+    src_path: Utf8PathBuf,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);

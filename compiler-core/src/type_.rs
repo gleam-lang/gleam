@@ -10,6 +10,7 @@ pub mod pretty;
 #[cfg(test)]
 pub mod tests;
 
+use camino::Utf8PathBuf;
 use ecow::EcoString;
 pub use environment::*;
 pub use error::{Error, UnifyErrorSituation, Warning};
@@ -553,7 +554,7 @@ pub struct ModuleInterface {
     /// Used for mapping to original source locations on disk
     pub line_numbers: LineNumbers,
     /// Used for determining the source path of the module on disk
-    pub src_path: EcoString,
+    pub src_path: Utf8PathBuf,
 }
 
 /// Information on the constructors of a custom type.
@@ -624,7 +625,7 @@ impl ModuleInterface {
         origin: Origin,
         package: EcoString,
         line_numbers: LineNumbers,
-        src_path: EcoString,
+        src_path: Utf8PathBuf,
     ) -> Self {
         Self {
             name,
