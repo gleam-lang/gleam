@@ -256,6 +256,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("The modules {unfinished:?} contain internal types in their public API so cannot be published")]
     CannotPublishLeakedInternalType { unfinished: Vec<EcoString> },
+
+    #[error("Publishing packages to reserve names is not permitted")]
+    HexPackageSquatting,
 }
 
 impl Error {
@@ -619,6 +622,23 @@ impl Error {
     pub fn to_diagnostic(&self) -> Diagnostic {
         use crate::type_::Error as TypeError;
         match self {
+            Error::HexPackageSquatting => {
+                let text =
+                    "You appear to be attempting to reserve a name on Hex rather than publishing a
+working package. This is against the Hex terms of service and can result in
+package deletion or account suspension.
+"
+                    .into();
+
+                Diagnostic {
+                    title: "Invalid Hex package".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                    hint: None,
+                }
+            }
+
             Error::MetadataDecodeError { error } => {
                 let mut text = "A problem was encountered when decoding the metadata for one \
 of the Gleam dependency modules."
@@ -3007,12 +3027,12 @@ package to Hex.\n"
                 text.push_str(if *description_missing && *licence_missing {
                     r#"Add the licences and description fields to your gleam.toml file.
 
-description = "A Gleam library"
+description = ""
 licences = ["Apache-2.0"]"#
                 } else if *description_missing {
                     r#"Add the description field to your gleam.toml file.
 
-description = "A Gleam library""#
+description = """#
                 } else {
                     r#"Add the licences field to your gleam.toml file.
 
