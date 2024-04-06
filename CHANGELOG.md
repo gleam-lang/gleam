@@ -21,7 +21,8 @@
   result of nested blocks.
 - Fix a bug where JavaScript code generation would not properly handle functions
   returned by blocks.
-- Fix a bug where Erlang code generation would not properly handle list case patterns
+- Fix a bug where Erlang code generation would not properly handle list case
+  patterns
   with no head and a spread tail.
 - The compiler will now raise a warning if you're pattern matching on tuple
   literals and suggest you use multiple subjects instead.
@@ -34,7 +35,8 @@
 - Error messages are more clear about expecting values instead of types.
 - Fixed a bug where pattern matching on a string would cause the program to
   crash on the JavaScript target.
-- Allow compilation of packages that require `"rebar"` using the rebar3 compiler.
+- Allow compilation of packages that require `"rebar"` using the rebar3
+  compiler.
 - A warning is now emitted when defining an opaque external type.
 - Improve error message when using incorrect quotes (`'`) to define a string
 - Fixed a bug where an imported module named `prepend` would conflict with the
@@ -44,9 +46,10 @@
   when the prefix had a Unicode codepoint escape sequence (`\u{...}`).
 - Improved error message for wrong patterns using constructors from other
   modules.
-- Fixed a bug on the JavaScript target where variables bound by patterns, if used
-  within a bit array literal inside a `case` clause's guard, would be used before they
-  were defined, leading to a runtime error when evaluating the `case` expression.
+- Fixed a bug on the JavaScript target where variables bound by patterns, if
+  used within a bit array literal inside a `case` clause's guard, would be used
+  before they were defined, leading to a runtime error when evaluating the
+  `case` expression.
 - Improved error messages when failing to parse a series of things.
 - A warning is now raised for unused binary operations, records, record access
   and record updates.
@@ -96,15 +99,18 @@
   assigned to the wrong definition in the doc site.
 - Fixed a bug where the code blocks in the generated documentation's site would
   have a wrong indentation.
-- Fixed a bug where the compiler would panic when it cannot get current directory.
+- Fixed a bug where the compiler would panic when it cannot get current
+  directory.
 - Improved error message for non-UTF-8 paths encountered during Gleam commands.
   Now includes the path that caused the error for better diagnostics.
 - Fixed a bug where on windows local packages had absolute paths in the manifest
   instead of relative.
-- The `gleam publish` command now asks for confirmation if the package repository
-  URL doesn't return a successful status code.
+- The `gleam publish` command now asks for confirmation if the package
+  repository URL doesn't return a successful status code.
 - `gleam publish` can now optionally use a Hex API key to authorise publishing
   and retiring packages, set via the environment variable `HEXPM_API_KEY`.
+- If a package leaks an internal type in its public API, then the build tool
+  will now refuse to publish it to Hex.
 
 ### Language Server
 
