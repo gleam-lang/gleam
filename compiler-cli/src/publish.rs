@@ -95,7 +95,6 @@ fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
     }
 
     let Some(module) = package.modules.first() else {
-        println!("{invalid_message}");
         return Err(Error::HexPackageSquatting);
     };
 
@@ -116,7 +115,6 @@ fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
     };
 
     if main.body.first().is_println() {
-        println!("{invalid_message}");
         return Err(Error::HexPackageSquatting);
     }
 
