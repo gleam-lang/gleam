@@ -2,7 +2,7 @@ use lsp_types::{GotoDefinitionParams, Location, Position, Range, Url};
 
 use super::*;
 
-fn definition<'a>(tester: TestProject<'a>, position: Position) -> Option<Location> {
+fn definition(tester: TestProject<'_>, position: Position) -> Option<Location> {
     tester.at(position, |engine, param, _| {
         let params = GotoDefinitionParams {
             text_document_position_params: param,

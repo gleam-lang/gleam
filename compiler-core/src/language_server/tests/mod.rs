@@ -437,7 +437,7 @@ impl<'a> TestProject<'a> {
             _ = io.hex_dep_module("indirect_hex", name, code);
         });
 
-        let mut engine = setup_engine(&io);
+        let mut engine = setup_engine(io);
 
         // Add an external dependency and all its modules
         add_path_dep(&mut engine, "dep");
