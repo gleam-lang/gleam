@@ -253,6 +253,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("The modules {unfinished:?} contain todo expressions and so cannot be published")]
     CannotPublishTodo { unfinished: Vec<EcoString> },
+
+    #[error("The modules {unfinished:?} contain internal types in their public API so cannot be published")]
+    CannotPublishLeakedInternalType { unfinished: Vec<EcoString> },
 }
 
 impl Error {
@@ -768,6 +771,25 @@ If you want to overwrite these files, delete them and run the command again.
 {}
 
 Please remove them and try again.
+",
+                    unfinished
+                        .iter()
+                        .map(|name| format!("  - {}", name.as_str()))
+                        .join("\n")
+                ),
+                level: Level::Error,
+                hint: None,
+                location: None,
+            },
+
+            Error::CannotPublishLeakedInternalType { unfinished } => Diagnostic {
+                title: "Cannot publish unfinished code".into(),
+                text: format!(
+                    "These modules leak internal types in their public API and cannot be published:
+
+{}
+
+Please make sure internal types do not appear in public functions and try again.
 ",
                     unfinished
                         .iter()
