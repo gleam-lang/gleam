@@ -564,6 +564,13 @@ pub enum Definition<T, Expr, ConstantRecordTag, PackageName> {
 }
 
 impl TypedDefinition {
+    pub fn main_function(&self) -> Option<&TypedFunction> {
+        match self {
+            Definition::Function(f) if f.name == "main" => Some(f),
+            _ => None,
+        }
+    }
+
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             Definition::Function(function) => {
@@ -1703,6 +1710,14 @@ impl UntypedStatement {
 }
 
 impl TypedStatement {
+    pub fn is_println(&self) -> bool {
+        match self {
+            Statement::Expression(e) => e.is_println(),
+            Statement::Assignment(_) => false,
+            Statement::Use(_) => false,
+        }
+    }
+
     pub fn is_non_pipe_expression(&self) -> bool {
         match self {
             Statement::Expression(expression) => !expression.is_pipeline(),

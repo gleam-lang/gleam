@@ -53,6 +53,8 @@ impl PublishCommand {
             generated_files_added,
         } = do_build_hex_tarball(&paths, &config)?;
 
+        check_for_name_squatting(&compile_result)?;
+
         // Build HTML documentation
         let docs_tarball =
             fs::create_tar_archive(docs::build_documentation(&config, &mut compile_result)?)?;
@@ -86,6 +88,41 @@ impl PublishCommand {
     }
 }
 
+fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
+    if package.modules.len() > 1 {
+        println!("more than 1");
+        return Ok(());
+    }
+
+    let Some(module) = package.modules.first() else {
+        println!("{invalid_message}");
+        return Err(Error::HexPackageSquatting);
+    };
+
+    if module.dependencies.len() > 1 {
+        println!("more than 1");
+        return Ok(());
+    }
+
+    let definitions = &module.ast.definitions;
+
+    if definitions.len() > 2 {
+        println!("more than 2");
+        return Ok(());
+    }
+
+    let Some(main) = definitions.iter().find_map(|d| d.main_function()) else {
+        return Ok(());
+    };
+
+    if main.body.first().is_println() {
+        println!("{invalid_message}");
+        return Err(Error::HexPackageSquatting);
+    }
+
+    Ok(())
+}
+
 fn check_repo_url(config: &PackageConfig, i_am_sure: bool) -> Result<bool, Error> {
     let Some(url) = config.repository.url() else {
         return Ok(true);
@@ -99,10 +136,8 @@ fn check_repo_url(config: &PackageConfig, i_am_sure: bool) -> Result<bool, Error
     }
 
     println!(
-        "The repository configuration in your `gleam.toml` file does not appear to be valid.
-
-The repository URL {} returned status {}
-",
+        "The repository configuration in your `gleam.toml` file does not appear to be
+valid, {} returned status {}",
         &url,
         response.status()
     );

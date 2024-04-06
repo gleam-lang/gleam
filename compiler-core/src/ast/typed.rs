@@ -150,6 +150,20 @@ pub enum TypedExpr {
 }
 
 impl TypedExpr {
+    pub fn is_println(&self) -> bool {
+        let fun = match self {
+            TypedExpr::Call { fun, args, .. } if args.len() == 1 => fun.as_ref(),
+            _ => return false,
+        };
+
+        match fun {
+            TypedExpr::ModuleSelect {
+                label, module_name, ..
+            } => label == "println" && module_name == "gleam/io",
+            _ => false,
+        }
+    }
+
     // This could be optimised in places to exit early if the first of a series
     // of expressions is after the byte index.
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
