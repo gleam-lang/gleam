@@ -349,40 +349,24 @@ impl<'a> TestProject<'a> {
         }
     }
 
-    pub fn add_module(self, name: &'a str, src: &'a str) -> Self {
-        let mut root_package_modules = self.root_package_modules;
-        root_package_modules.push((name, src));
-        TestProject {
-            root_package_modules,
-            ..self
-        }
+    pub fn add_module(mut self, name: &'a str, src: &'a str) -> Self {
+        self.root_package_modules.push((name, src));
+        self
     }
 
-    pub fn add_dep_module(self, name: &'a str, src: &'a str) -> Self {
-        let mut dependency_modules = self.dependency_modules;
-        dependency_modules.push((name, src));
-        TestProject {
-            dependency_modules,
-            ..self
-        }
+    pub fn add_dep_module(mut self, name: &'a str, src: &'a str) -> Self {
+        self.dependency_modules.push((name, src));
+        self
     }
 
-    pub fn add_test_module(self, name: &'a str, src: &'a str) -> Self {
-        let mut test_modules = self.test_modules;
-        test_modules.push((name, src));
-        TestProject {
-            test_modules,
-            ..self
-        }
+    pub fn add_test_module(mut self, name: &'a str, src: &'a str) -> Self {
+        self.test_modules.push((name, src));
+        self
     }
 
-    pub fn add_hex_module(self, name: &'a str, src: &'a str) -> Self {
-        let mut hex_modules = self.hex_modules;
-        hex_modules.push((name, src));
-        TestProject {
-            hex_modules,
-            ..self
-        }
+    pub fn add_hex_module(mut self, name: &'a str, src: &'a str) -> Self {
+        self.hex_modules.push((name, src));
+        self
     }
 
     pub fn build_engine(

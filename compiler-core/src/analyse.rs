@@ -125,15 +125,15 @@ pub fn infer_module<A>(
     direct_dependencies: &HashMap<EcoString, A>,
     target_support: TargetSupport,
     line_numbers: LineNumbers,
+    package_config: &PackageConfig,
     src_path: Utf8PathBuf,
-    config: &PackageConfig,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
-    let package = config.name.clone();
+    let package = package_config.name.clone();
     let env = Environment::new(
         ids.clone(),
-        package.clone(),
+        package_config.name.clone(),
         name.clone(),
         target,
         modules,
@@ -162,7 +162,7 @@ pub fn infer_module<A>(
             &mut type_names,
             &mut env,
             &name,
-            config,
+            package_config,
             &mut hydrators,
         )?;
     }
@@ -273,7 +273,7 @@ pub fn infer_module<A>(
         }
         // We also don't want to raise a warning if we're inside an internal
         // module ourselves, the type wouldn't actually be publicly exposed.
-        if config.is_internal_module(name.as_str()) {
+        if package_config.is_internal_module(name.as_str()) {
             continue;
         }
         if let Some(leaked) = value.type_.find_internal_type() {
@@ -294,6 +294,8 @@ pub fn infer_module<A>(
         ..
     } = env;
 
+    let is_internal = package_config.is_internal_module(name.as_str());
+
     Ok(ast::Module {
         documentation,
         name: name.clone(),
@@ -305,7 +307,8 @@ pub fn infer_module<A>(
             values,
             accessors,
             origin,
-            package: package.clone(),
+            package: package_config.name.clone(),
+            is_internal,
             unused_imports,
             contains_todo,
             leaks_internal_types: leaked_internal_type_encountered,

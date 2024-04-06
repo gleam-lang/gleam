@@ -33,6 +33,8 @@ fn compile_module(src: &str) -> TypedModule {
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let line_numbers = LineNumbers::new(src);
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
     crate::analyse::infer_module::<()>(
         Target::Erlang,
         &ids,
@@ -43,8 +45,8 @@ fn compile_module(src: &str) -> TypedModule {
         &std::collections::HashMap::new(),
         TargetSupport::Enforced,
         line_numbers,
-        "".into(),
         &config,
+        "".into(),
     )
     .expect("should successfully infer")
 }

@@ -68,12 +68,12 @@ pub fn compile_package(
     );
     let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
     if let Some((dep_package, dep_name, dep_src)) = dep {
-        let mut dep_config = PackageConfig::default();
-        dep_config.name = dep_package.into();
         let parsed = crate::parse::parse_module(dep_src).expect("dep syntax error");
         let mut ast = parsed.module;
         ast.name = dep_name.into();
         let line_numbers = LineNumbers::new(dep_src);
+        let mut config = PackageConfig::default();
+        config.name = dep_package.into();
         let dep = crate::analyse::infer_module::<()>(
             Target::Erlang,
             &ids,
@@ -84,8 +84,8 @@ pub fn compile_package(
             &std::collections::HashMap::new(),
             TargetSupport::Enforced,
             line_numbers,
+            &config,
             "".into(),
-            &dep_config,
         )
         .expect("should successfully infer");
         let _ = modules.insert(dep_name.into(), dep.type_info);
@@ -93,15 +93,14 @@ pub fn compile_package(
     }
     let parsed = crate::parse::parse_module(src).expect("syntax error");
 
-    let mut config = PackageConfig::default();
-    config.name = "my_package".into();
-
     let mut ast = parsed.module;
     let module_name = module_name
         .map(EcoString::from)
         .unwrap_or("my/module".into());
 
     ast.name = module_name.clone();
+    let mut config = PackageConfig::default();
+    config.name = "my_package".into();
     let ast = crate::analyse::infer_module::<()>(
         Target::Erlang,
         &ids,
@@ -112,8 +111,8 @@ pub fn compile_package(
         &direct_dependencies,
         TargetSupport::Enforced,
         LineNumbers::new(src),
-        "".into(),
         &config,
+        "".into(),
     )
     .expect("should successfully infer");
 

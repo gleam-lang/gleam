@@ -575,6 +575,10 @@ pub struct ModuleInterface {
     pub line_numbers: LineNumbers,
     /// Used for determining the source path of the module on disk
     pub src_path: Utf8PathBuf,
+    // Whether the module is internal or not. Internal modules are technically
+    // importable by other packages but to do so is violating the contract of
+    // the package and as such is not recommended.
+    pub is_internal: bool,
 }
 
 /// Information on the constructors of a custom type.
@@ -658,6 +662,7 @@ impl ModuleInterface {
             unused_imports: Default::default(),
             contains_todo: false,
             leaks_internal_types: false,
+            is_internal: false,
             line_numbers,
             src_path,
         }
