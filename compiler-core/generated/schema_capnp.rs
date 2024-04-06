@@ -1876,6 +1876,7 @@ pub mod type_ {
       self.builder.get_pointer_field(1).clear();
       self.builder.get_pointer_field(2).clear();
       self.builder.get_pointer_field(3).clear();
+      self.builder.set_bool_field(64, false);
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
@@ -2025,6 +2026,10 @@ pub mod type_ {
       pub fn has_package(&self) -> bool {
         !self.reader.get_pointer_field(3).is_null()
       }
+      #[inline]
+      pub fn get_from_internal_module(self) -> bool {
+        self.reader.get_bool_field(64)
+      }
     }
 
     pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -2138,6 +2143,14 @@ pub mod type_ {
       #[inline]
       pub fn has_package(&self) -> bool {
         !self.builder.get_pointer_field(3).is_null()
+      }
+      #[inline]
+      pub fn get_from_internal_module(self) -> bool {
+        self.builder.get_bool_field(64)
+      }
+      #[inline]
+      pub fn set_from_internal_module(&mut self, value: bool)  {
+        self.builder.set_bool_field(64, value);
       }
     }
 

@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::analyse::TargetSupport;
 use crate::build::Target;
+use crate::config::PackageConfig;
 use crate::line_numbers::LineNumbers;
 use crate::type_::expression::FunctionDefinition;
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
@@ -23,6 +24,8 @@ fn compile_module(src: &str) -> TypedModule {
     let parsed = crate::parse::parse_module(src).expect("syntax error");
     let ast = parsed.module;
     let ids = UniqueIdGenerator::new();
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
     let mut modules = im::HashMap::new();
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better
@@ -42,6 +45,7 @@ fn compile_module(src: &str) -> TypedModule {
         TargetSupport::Enforced,
         line_numbers,
         "".into(),
+        &config,
     )
     .expect("should successfully infer")
 }
@@ -79,6 +83,7 @@ fn compile_expression(src: &str) -> TypedStatement {
     // Insert a cat record to use in the tests
     let cat_type = Arc::new(Type::Named {
         publicity: Publicity::Public,
+        from_internal_module: false,
         package: "mypackage".into(),
         module: "mymod".into(),
         name: "Cat".into(),

@@ -1,6 +1,7 @@
 use crate::{
     analyse::TargetSupport,
     build::{Origin, Target},
+    config::PackageConfig,
     javascript::*,
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
@@ -95,6 +96,8 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
     let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
 
     deps.iter().for_each(|(dep_package, dep_name, dep_src)| {
+        let mut dep_config = PackageConfig::default();
+        dep_config.name = (*dep_package).into();
         let parsed = crate::parse::parse_module(dep_src).expect("dep syntax error");
         let mut ast = parsed.module;
         ast.name = (*dep_name).into();
@@ -111,12 +114,15 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
             TargetSupport::Enforced,
             line_numbers,
             "".into(),
+            &dep_config,
         )
         .expect("should successfully infer");
         let _ = modules.insert((*dep_name).into(), dep.type_info);
         let _ = direct_dependencies.insert((*dep_package).into(), ());
     });
 
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
     let parsed = crate::parse::parse_module(src).expect("syntax error");
     let mut ast = parsed.module;
     ast.name = "my/mod".into();
@@ -133,6 +139,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         TargetSupport::NotEnforced,
         line_numbers,
         "".into(),
+        &config,
     )
     .expect("should successfully infer")
 }

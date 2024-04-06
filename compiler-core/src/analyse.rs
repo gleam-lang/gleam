@@ -12,6 +12,7 @@ use crate::{
     },
     build::{Origin, Target},
     call_graph::{into_dependency_order, CallGraphNode},
+    config::PackageConfig,
     dep_tree,
     line_numbers::LineNumbers,
     type_::{
@@ -126,6 +127,7 @@ pub fn infer_module<A>(
     target_support: TargetSupport,
     line_numbers: LineNumbers,
     src_path: Utf8PathBuf,
+    config: &PackageConfig,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
@@ -155,7 +157,14 @@ pub fn infer_module<A>(
     // Register types so they can be used in constructors and functions
     // earlier in the module.
     for t in &statements.custom_types {
-        register_types_from_custom_type(t, &mut type_names, &mut env, &name, &mut hydrators)?;
+        register_types_from_custom_type(
+            t,
+            &mut type_names,
+            &mut env,
+            &name,
+            config,
+            &mut hydrators,
+        )?;
     }
     // TODO: Extract a Type alias class to perform this.
     let sorted_aliases = sorted_type_aliases(&statements.type_aliases)?;
@@ -253,6 +262,23 @@ pub fn infer_module<A>(
                 location: value.variant.definition_location(),
                 leaked,
             });
+        }
+
+        // We also want to make sure that no public type exposes internal ones
+        // in their type signature.
+        if !value.publicity.is_public() {
+            continue;
+        }
+        // We also don't want to raise a warning if we're inside an internal
+        // module ourselves, the type wouldn't actually be publicly exposed.
+        if config.is_internal_module(name.as_str()) {
+            continue;
+        }
+        if let Some(leaked) = value.type_.find_internal_type() {
+            env.warnings.emit(type_::Warning::InternalTypeLeak {
+                location: value.variant.definition_location(),
+                leaked,
+            })
         }
     }
 
@@ -359,6 +385,7 @@ fn register_types_from_custom_type<'a>(
     names: &mut HashMap<EcoString, SrcSpan>,
     environment: &mut Environment<'a>,
     module: &'a EcoString,
+    config: &PackageConfig,
     hydrators: &mut HashMap<EcoString, Hydrator>,
 ) -> Result<(), Error> {
     let CustomType {
@@ -379,6 +406,7 @@ fn register_types_from_custom_type<'a>(
 
     let typ = Arc::new(Type::Named {
         publicity: *publicity,
+        from_internal_module: config.is_internal_module(module),
         package: environment.current_package.clone(),
         module: module.to_owned(),
         name: name.clone(),

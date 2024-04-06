@@ -62,6 +62,7 @@ impl PreludeType {
 
 pub fn int() -> Arc<Type> {
     Arc::new(Type::Named {
+        from_internal_module: false,
         publicity: Publicity::Public,
         name: INT.into(),
         module: PRELUDE_MODULE_NAME.into(),
@@ -72,6 +73,7 @@ pub fn int() -> Arc<Type> {
 
 pub fn float() -> Arc<Type> {
     Arc::new(Type::Named {
+        from_internal_module: false,
         args: vec![],
         publicity: Publicity::Public,
         name: FLOAT.into(),
@@ -82,6 +84,7 @@ pub fn float() -> Arc<Type> {
 
 pub fn bool() -> Arc<Type> {
     Arc::new(Type::Named {
+        from_internal_module: false,
         args: vec![],
         publicity: Publicity::Public,
         name: BOOL.into(),
@@ -92,6 +95,7 @@ pub fn bool() -> Arc<Type> {
 
 pub fn string() -> Arc<Type> {
     Arc::new(Type::Named {
+        from_internal_module: false,
         args: vec![],
         publicity: Publicity::Public,
         name: STRING.into(),
@@ -102,6 +106,7 @@ pub fn string() -> Arc<Type> {
 
 pub fn nil() -> Arc<Type> {
     Arc::new(Type::Named {
+        from_internal_module: false,
         args: vec![],
         publicity: Publicity::Public,
         name: NIL.into(),
@@ -112,6 +117,7 @@ pub fn nil() -> Arc<Type> {
 
 pub fn list(t: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Named {
+        from_internal_module: false,
         publicity: Publicity::Public,
         name: LIST.into(),
         module: PRELUDE_MODULE_NAME.into(),
@@ -122,6 +128,7 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
 
 pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Named {
+        from_internal_module: false,
         publicity: Publicity::Public,
         name: RESULT.into(),
         module: PRELUDE_MODULE_NAME.into(),
@@ -146,6 +153,7 @@ pub fn named(
     args: Vec<Arc<Type>>,
 ) -> Arc<Type> {
     Arc::new(Type::Named {
+        from_internal_module: false,
         publicity,
         package: package.into(),
         module: module.into(),
@@ -156,6 +164,7 @@ pub fn named(
 
 pub fn bits() -> Arc<Type> {
     Arc::new(Type::Named {
+        from_internal_module: false,
         args: vec![],
         publicity: Publicity::Public,
         name: BIT_ARRAY.into(),
@@ -166,6 +175,7 @@ pub fn bits() -> Arc<Type> {
 
 pub fn utf_codepoint() -> Arc<Type> {
     Arc::new(Type::Named {
+        from_internal_module: false,
         args: vec![],
         publicity: Publicity::Public,
         name: UTF_CODEPOINT.into(),
