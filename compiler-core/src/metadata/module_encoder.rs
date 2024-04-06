@@ -465,14 +465,12 @@ impl<'a> ModuleEncoder<'a> {
                 args,
                 module,
                 package,
-                from_internal_module,
                 ..
             } => {
                 let mut app = builder.init_app();
                 app.set_name(name);
                 app.set_module(module);
                 app.set_package(package);
-                app.set_from_internal_module(*from_internal_module);
                 self.build_types(app.reborrow().init_parameters(args.len() as u32), args);
             }
 

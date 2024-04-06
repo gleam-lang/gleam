@@ -56,7 +56,6 @@ pub enum Type {
     ///
     Named {
         publicity: Publicity,
-        from_internal_module: bool,
         package: EcoString,
         module: EcoString,
         name: EcoString,
@@ -250,7 +249,6 @@ impl Type {
                 // to the desired type.
                 *typ.borrow_mut() = TypeVar::Link {
                     type_: Arc::new(Self::Named {
-                        from_internal_module: false,
                         name: name.into(),
                         package: package.into(),
                         module: module.into(),
@@ -292,11 +290,7 @@ impl Type {
 
     pub fn find_internal_type(&self) -> Option<Self> {
         match self {
-            Self::Named {
-                publicity,
-                from_internal_module,
-                ..
-            } if publicity.is_internal() || *from_internal_module => Some(self.clone()),
+            Self::Named { publicity, .. } if publicity.is_internal() => Some(self.clone()),
 
             Self::Named { args, .. } => args.iter().find_map(|t| t.find_internal_type()),
 
@@ -1080,7 +1074,6 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
         },
 
         Type::Named {
-            from_internal_module,
             publicity,
             module,
             package,
@@ -1089,7 +1082,6 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
         } => {
             let args = args.iter().map(|t| generalise(t.clone())).collect();
             Arc::new(Type::Named {
-                from_internal_module: *from_internal_module,
                 publicity: *publicity,
                 module: module.clone(),
                 package: package.clone(),

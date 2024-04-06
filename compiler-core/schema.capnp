@@ -76,7 +76,6 @@ struct Type {
       module @1 :Text;
       parameters @2 :List(Type);
       package @7 :Text;
-      fromInternalModule @8 :Bool;
     }
 
     fn :group {
