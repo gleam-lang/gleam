@@ -471,9 +471,7 @@ where
         let end_of_line = line_num.byte_index(params.position.line + 1, 0);
 
         // Drop all lines before the line the cursor is on
-        let Some(src) = &src.get(start_of_line as usize..) else {
-            return None;
-        };
+        let src = &src.get(start_of_line as usize..)?;
 
         // If this isn't an import line then we don't offer import completions
         if !src.trim_start().starts_with("import") {
