@@ -5,7 +5,7 @@ use crate::{
     analyse::TargetSupport, assert_module_error, build::Target, type_::expression::Implementations,
 };
 
-use super::compile_module_with_target;
+use super::compile_module_with_opts;
 
 macro_rules! assert_targets {
     ($src:expr, $implementations:expr $(,)?) => {
@@ -19,7 +19,8 @@ macro_rules! assert_targets {
 }
 
 pub fn implementations(src: &str) -> Vec<(EcoString, Implementations)> {
-    compile_module_with_target(
+    compile_module_with_opts(
+        "test_module",
         src,
         None,
         vec![],
@@ -312,8 +313,14 @@ pub fn no_valid_erlang_impl() {
   javascript_only()
 }
 "#;
-    let out =
-        compile_module_with_target(src, None, vec![], Target::Erlang, TargetSupport::Enforced);
+    let out = compile_module_with_opts(
+        "test_module",
+        src,
+        None,
+        vec![],
+        Target::Erlang,
+        TargetSupport::Enforced,
+    );
     assert!(out.is_err());
 }
 
@@ -332,7 +339,8 @@ pub fn no_valid_javascript_impl() {
   erlang_only()
 }
 "#;
-    let out = compile_module_with_target(
+    let out = compile_module_with_opts(
+        "test_module",
         src,
         None,
         vec![],
@@ -357,8 +365,14 @@ pub fn no_valid_erlang_impl() {
   both_external()
 }
 "#;
-    let out =
-        compile_module_with_target(src, None, vec![], Target::Erlang, TargetSupport::Enforced);
+    let out = compile_module_with_opts(
+        "test_module",
+        src,
+        None,
+        vec![],
+        Target::Erlang,
+        TargetSupport::Enforced,
+    );
     assert!(out.is_err());
 }
 
@@ -377,7 +391,8 @@ pub fn no_valid_javascript_impl() {
   both_external()
 }
 "#;
-    let out = compile_module_with_target(
+    let out = compile_module_with_opts(
+        "test_module",
         src,
         None,
         vec![],
@@ -398,8 +413,14 @@ pub fn no_valid_erlang_impl() {
   javascript_only()
 }
 "#;
-    let out =
-        compile_module_with_target(src, None, vec![], Target::Erlang, TargetSupport::Enforced);
+    let out = compile_module_with_opts(
+        "test_module",
+        src,
+        None,
+        vec![],
+        Target::Erlang,
+        TargetSupport::Enforced,
+    );
     assert!(out.is_err());
 }
 
@@ -414,7 +435,8 @@ pub fn no_valid_javascript_impl() {
   erlang_only()
 }
 "#;
-    let out = compile_module_with_target(
+    let out = compile_module_with_opts(
+        "test_module",
         src,
         None,
         vec![],
