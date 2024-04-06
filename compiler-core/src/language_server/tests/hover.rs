@@ -2,7 +2,7 @@ use lsp_types::{Hover, HoverContents, HoverParams, MarkedString, Position, Range
 
 use super::*;
 
-fn hover<'a>(tester: TestRunner<'a>, position: Position) -> Option<Hover> {
+fn hover<'a>(tester: TestProject<'a>, position: Position) -> Option<Hover> {
     tester.at(position, |engine, param, _| {
         let params = HoverParams {
             text_document_position_params: param,
@@ -23,7 +23,7 @@ fn add_2(x) {
 ";
 
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(1, 3)),
+        hover(TestProject::for_source(code), Position::new(1, 3)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -59,7 +59,7 @@ fn main() {
 ";
 
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(6, 3)),
+        hover(TestProject::for_source(code), Position::new(6, 3)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -101,7 +101,7 @@ pub fn main() {
 ";
 
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(6, 3)),
+        hover(TestProject::for_source(code), Position::new(6, 3)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -123,7 +123,7 @@ fn(Int) -> Int
         })
     );
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(9, 7)),
+        hover(TestProject::for_source(code), Position::new(9, 7)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -145,7 +145,7 @@ fn(Int) -> Int
         })
     );
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(10, 7)),
+        hover(TestProject::for_source(code), Position::new(10, 7)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -167,7 +167,7 @@ fn(Int) -> Int
         })
     );
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(11, 7)),
+        hover(TestProject::for_source(code), Position::new(11, 7)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -201,7 +201,7 @@ fn main() {
 
     // hovering over "my_fn"
     let hover = hover(
-        TestRunner::for_source(code).add_module("example_module", "pub fn my_fn() { Nil }"),
+        TestProject::for_source(code).add_module("example_module", "pub fn my_fn() { Nil }"),
         Position::new(3, 19),
     )
     .unwrap();
@@ -219,7 +219,7 @@ fn main() {
 
     // hovering over "my_fn"
     let hover = hover(
-        TestRunner::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
+        TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
         Position::new(3, 19),
     )
     .unwrap();
@@ -237,7 +237,7 @@ fn main() {
 
     // hovering over "my_fn"
     let hover = hover(
-        TestRunner::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
+        TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
         Position::new(3, 5),
     )
     .unwrap();
@@ -255,7 +255,7 @@ fn main() {
 
     // hovering over "my_fn"
     let hover = hover(
-        TestRunner::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
+        TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
         Position::new(3, 22),
     )
     .unwrap();
@@ -273,7 +273,7 @@ fn main() {
 
     // hovering over "my_fn"
     let hover = hover(
-        TestRunner::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
+        TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
         Position::new(3, 6),
     )
     .unwrap();
@@ -292,7 +292,7 @@ fn main() {
 
     // hovering over "my_fn"
     let hover = hover(
-        TestRunner::for_source(code)
+        TestProject::for_source(code)
             .add_hex_module("my/nested/example_module", "pub fn my_fn() { Nil }"),
         Position::new(3, 22),
     )
@@ -311,7 +311,7 @@ fn main() {
 
     // hovering over "my_fn"
     let hover = hover(
-        TestRunner::for_source(code).add_hex_module(
+        TestProject::for_source(code).add_hex_module(
             "example_module",
             r#"
 @external(erlang, "my_mod_ffi", "renamed_fn")
@@ -335,7 +335,7 @@ fn main() {
 
     // hovering over "my_const"
     let hover = hover(
-        TestRunner::for_source(code).add_hex_module("example_module", "pub const my_const = 42"),
+        TestProject::for_source(code).add_hex_module("example_module", "pub const my_const = 42"),
         Position::new(3, 19),
     )
     .unwrap();
@@ -353,7 +353,7 @@ fn main() {
 
     // hovering over "my_const"
     let hover = hover(
-        TestRunner::for_source(code).add_hex_module("example_module", "pub const my_const = 42"),
+        TestProject::for_source(code).add_hex_module("example_module", "pub const my_const = 42"),
         Position::new(3, 5),
     )
     .unwrap();
@@ -372,7 +372,7 @@ fn main() {
 
     // hovering over "my_const"
     let hover = hover(
-        TestRunner::for_source(code)
+        TestProject::for_source(code)
             .add_hex_module("a/example_module", "pub const my_const = 42")
             .add_hex_module("b/example_module", "pub const my_const = 42"),
         Position::new(4, 22),
@@ -393,7 +393,7 @@ fn main() {
 
     // hovering over "my_const"
     let hover = hover(
-        TestRunner::for_source(code)
+        TestProject::for_source(code)
             .add_hex_module("a/example_module", "pub const my_const = 42")
             .add_hex_module("b/example_module", "pub const my_const = 42"),
         Position::new(4, 8),
@@ -413,7 +413,7 @@ fn append(x, y) {
 ";
 
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(3, 3)),
+        hover(TestProject::for_source(code), Position::new(3, 3)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -449,7 +449,7 @@ fn append(x, y) {
 ";
 
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(3, 10)),
+        hover(TestProject::for_source(code), Position::new(3, 10)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam\nString\n```".to_string()
@@ -479,7 +479,7 @@ fn append(x, y) {
 ";
 
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(4, 1)),
+        hover(TestProject::for_source(code), Position::new(4, 1)),
         None
     );
 }
@@ -493,7 +493,7 @@ fn append(x, y) {
 ";
 
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(2, 2)),
+        hover(TestProject::for_source(code), Position::new(2, 2)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -525,7 +525,7 @@ const one = 1
 ";
 
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(3, 6)),
+        hover(TestProject::for_source(code), Position::new(3, 6)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -567,7 +567,7 @@ fn do_stuff() {
 
     // hover over `a`
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(8, 6)),
+        hover(TestProject::for_source(code), Position::new(8, 6)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String("```gleam\nInt\n```".to_string())),
             range: Some(Range::new(Position::new(8, 6), Position::new(8, 7))),
@@ -576,7 +576,7 @@ fn do_stuff() {
 
     // hover over `b`
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(8, 11)),
+        hover(TestProject::for_source(code), Position::new(8, 11)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam\nfn(fn(Int) -> String) -> String\n```\n".to_string()
@@ -587,7 +587,7 @@ fn do_stuff() {
 
     // hover over `c`
     assert_eq!(
-        hover(TestRunner::for_source(code), Position::new(9, 2)),
+        hover(TestProject::for_source(code), Position::new(9, 2)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam\nString\n```\nA locally defined variable.".to_string()

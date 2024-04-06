@@ -6,7 +6,7 @@ use lsp_types::{
 
 use super::*;
 
-fn completion<'a>(tester: TestRunner<'a>, position: Position) -> Vec<CompletionItem> {
+fn completion<'a>(tester: TestProject<'a>, position: Position) -> Vec<CompletionItem> {
     tester.at(position, |engine, param, src| {
         let response = engine.completion(param, src);
 
@@ -16,9 +16,9 @@ fn completion<'a>(tester: TestRunner<'a>, position: Position) -> Vec<CompletionI
     })
 }
 
-fn completion_at_default_position<'a>(tester: TestRunner<'a>) -> Vec<CompletionItem> {
+fn completion_at_default_position<'a>(tester: TestProject<'a>) -> Vec<CompletionItem> {
     let src = &format!("fn typing_in_here() {{\n  0\n}}\n {}", tester.src);
-    let tester = TestRunner { src, ..tester };
+    let tester = TestProject { src, ..tester };
     completion(tester, Position::new(1, 0))
         .into_iter()
         .filter(|c| c.label != "typing_in_here")
@@ -102,7 +102,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        completion(TestRunner::for_source(code), Position::new(0, 0)),
+        completion(TestProject::for_source(code), Position::new(0, 0)),
         vec![]
     );
 }
@@ -115,7 +115,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code)),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![CompletionItem {
             label: "main".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -135,7 +135,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code)),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![CompletionItem {
             label: "main".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -159,7 +159,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code)),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -189,7 +189,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code)),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![CompletionItem {
             label: "Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -215,7 +215,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code)),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -250,7 +250,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code)),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![CompletionItem {
             label: "Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -273,7 +273,7 @@ pub fn wobble() {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code).add_module("dep", dep)),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![CompletionItem {
             label: "dep.wobble".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -297,7 +297,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code).add_module("dep", dep)),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![
             CompletionItem {
                 label: "dep.Left".into(),
@@ -329,7 +329,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code).add_module("dep", dep)),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![CompletionItem {
             label: "dep.Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -352,7 +352,7 @@ pub fn wobble() {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code).add_module("dep", dep)),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![
             CompletionItem {
                 label: "dep.wobble".into(),
@@ -385,7 +385,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code).add_module("dep", dep)),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -424,7 +424,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code).add_module("dep", dep)),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![
             CompletionItem {
                 label: "Box".into(),
@@ -454,7 +454,7 @@ fn private() {
     let dep = "";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code).add_module("dep", dep)),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![CompletionItem {
             label: "private".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -475,7 +475,7 @@ type Wibble {
     let dep = "";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code).add_module("dep", dep)),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![CompletionItem {
             label: "Wobble".into(),
             kind: Some(CompletionItemKind::ENUM_MEMBER),
@@ -496,7 +496,7 @@ pub opaque type Wibble {
     let dep = "";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code).add_module("dep", dep)),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![CompletionItem {
             label: "Wobble".into(),
             kind: Some(CompletionItemKind::ENUM_MEMBER),
@@ -517,7 +517,7 @@ fn private() {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code).add_module("dep", dep)),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![]
     );
 }
@@ -532,7 +532,7 @@ type Wibble {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code).add_module("dep", dep)),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![]
     );
 }
@@ -547,7 +547,7 @@ type Wibble {
 ";
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code).add_module("dep", dep)),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![]
     );
 }
@@ -560,7 +560,7 @@ pub type Wibble {
 }";
 
     assert_eq!(
-        completion(TestRunner::for_source(code), Position::new(2, 0)),
+        completion(TestProject::for_source(code), Position::new(2, 0)),
         [
             prelude_type_completions(),
             vec![CompletionItem {
@@ -585,7 +585,7 @@ pub type Wibble = Result(
 ";
 
     assert_eq!(
-        completion(TestRunner::for_source(code), Position::new(2, 0)),
+        completion(TestProject::for_source(code), Position::new(2, 0)),
         [
             prelude_type_completions(),
             vec![CompletionItem {
@@ -611,7 +611,7 @@ pub fn wibble(
 ";
 
     assert_eq!(
-        completion(TestRunner::for_source(code), Position::new(2, 0)),
+        completion(TestProject::for_source(code), Position::new(2, 0)),
         prelude_type_completions(),
     );
 }
@@ -633,7 +633,7 @@ pub fn wibble(
 
     assert_eq!(
         completion(
-            TestRunner::for_source(code).add_module("dep", dep),
+            TestProject::for_source(code).add_module("dep", dep),
             Position::new(3, 0)
         ),
         [
@@ -667,7 +667,7 @@ pub fn wibble(
 
     assert_eq!(
         completion(
-            TestRunner::for_source(code).add_module("dep", dep),
+            TestProject::for_source(code).add_module("dep", dep),
             Position::new(3, 0)
         ),
         [
@@ -706,7 +706,7 @@ pub fn wibble(
 ";
 
     assert_eq!(
-        completion(TestRunner::for_source(code), Position::new(4, 0)),
+        completion(TestProject::for_source(code), Position::new(4, 0)),
         [
             prelude_type_completions(),
             vec![CompletionItem {
@@ -732,7 +732,9 @@ fn internal_values_from_root_package_are_in_the_completions() {
 "#;
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source("import dep").add_module("dep", dep)),
+        completion_at_default_position(
+            TestProject::for_source("import dep").add_module("dep", dep)
+        ),
         vec![
             CompletionItem {
                 label: "dep.Bar".into(),
@@ -804,7 +806,7 @@ pub fn wibble(
 
     assert_eq!(
         completion(
-            TestRunner::for_source(code).add_module("dep", dep),
+            TestProject::for_source(code).add_module("dep", dep),
             Position::new(3, 0)
         ),
         expected_completions,
@@ -822,7 +824,7 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
 "#;
 
     assert_eq!(
-        completion_at_default_position(TestRunner::for_source(code)),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![
             CompletionItem {
                 label: "Bar".into(),
@@ -870,7 +872,7 @@ fn internal_types_from_the_same_module_are_in_the_completions() {
 ";
 
     assert_eq!(
-        completion(TestRunner::for_source(code), Position::new(3, 0)),
+        completion(TestProject::for_source(code), Position::new(3, 0)),
         [
             vec![
                 CompletionItem {
@@ -911,7 +913,7 @@ pub fn wibble(
 
     assert_eq!(
         completion(
-            TestRunner::for_source(code).add_dep_module("dep", dep),
+            TestProject::for_source(code).add_dep_module("dep", dep),
             Position::new(3, 0)
         ),
         prelude_type_completions(),
@@ -930,7 +932,7 @@ fn internal_values_from_a_dependency_are_ignored() {
 
     assert_eq!(
         completion_at_default_position(
-            TestRunner::for_source("import dep").add_dep_module("dep", dep)
+            TestProject::for_source("import dep").add_dep_module("dep", dep)
         ),
         vec![]
     );
@@ -947,7 +949,7 @@ pub fn main() {
 
     assert_eq!(
         completion(
-            TestRunner::for_source(code).add_module("dep", dep),
+            TestProject::for_source(code).add_module("dep", dep),
             Position::new(0, 10)
         ),
         vec![CompletionItem {
@@ -988,7 +990,7 @@ pub fn main() {
 
     assert_eq!(
         completion(
-            TestRunner::for_source(code).add_test_module("my_tests", test),
+            TestProject::for_source(code).add_test_module("my_tests", test),
             Position::new(0, 10)
         ),
         vec![]
@@ -1015,7 +1017,7 @@ pub fn test_helper() {
 }
 ";
 
-    let (mut engine, position_param) = TestRunner::for_source(code)
+    let (mut engine, position_param) = TestProject::for_source(code)
         .add_test_module("my_test", test)
         .add_test_module("test_helper", test_helper)
         .positioned_with_io_in_test(Position::new(0, 10), "my_test");
@@ -1083,7 +1085,7 @@ pub fn main() { 1 }
 
     assert_eq!(
         completion(
-            TestRunner::for_source(code).add_dep_module("dep", dep),
+            TestProject::for_source(code).add_dep_module("dep", dep),
             Position::new(0, 10)
         ),
         vec![CompletionItem {
@@ -1118,7 +1120,7 @@ pub fn main() {
 
     assert_eq!(
         completion(
-            TestRunner::for_source(code).add_hex_module("example_module", dep),
+            TestProject::for_source(code).add_hex_module("example_module", dep),
             Position::new(0, 10)
         ),
         vec![CompletionItem {
@@ -1160,7 +1162,7 @@ pub fn main() { 1 }
 
     assert_eq!(
         completion(
-            TestRunner::for_source(code).add_hex_module("example_module", dep),
+            TestProject::for_source(code).add_hex_module("example_module", dep),
             Position::new(3, 10)
         ),
         vec![CompletionItem {
@@ -1195,7 +1197,7 @@ pub fn main() {
 
     assert_eq!(
         completion(
-            TestRunner::for_source(code).add_dep_module("dep", dep),
+            TestProject::for_source(code).add_dep_module("dep", dep),
             Position::new(0, 0)
         ),
         vec![CompletionItem {
@@ -1230,7 +1232,7 @@ pub fn main() {
 
     assert_eq!(
         completion(
-            TestRunner::for_source(code).add_dep_module("dep", dep),
+            TestProject::for_source(code).add_dep_module("dep", dep),
             Position::new(0, 2)
         ),
         vec![CompletionItem {

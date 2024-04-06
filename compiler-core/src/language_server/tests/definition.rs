@@ -2,7 +2,7 @@ use lsp_types::{GotoDefinitionParams, Location, Position, Range, Url};
 
 use super::*;
 
-fn definition<'a>(tester: TestRunner<'a>, position: Position) -> Option<Location> {
+fn definition<'a>(tester: TestProject<'a>, position: Position) -> Option<Location> {
     tester.at(position, |engine, param, _| {
         let params = GotoDefinitionParams {
             text_document_position_params: param,
@@ -24,7 +24,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        definition(TestRunner::for_source(code), Position::new(3, 2)),
+        definition(TestProject::for_source(code), Position::new(3, 2)),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\app.gleam"
@@ -56,7 +56,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        definition(TestRunner::for_source(code), Position::new(4, 2)),
+        definition(TestProject::for_source(code), Position::new(4, 2)),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\app.gleam"
@@ -90,7 +90,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        definition(TestRunner::for_source(code), Position::new(6, 3)),
+        definition(TestProject::for_source(code), Position::new(6, 3)),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\app.gleam"
@@ -126,7 +126,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        definition(TestRunner::for_source(code), Position::new(7, 11)),
+        definition(TestProject::for_source(code), Position::new(7, 11)),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
                 r"\\?\C:\src\app.gleam"
@@ -159,7 +159,7 @@ fn main() {
 
     assert_eq!(
         definition(
-            TestRunner::for_source(code).add_module("example_module", "pub const my_num = 1"),
+            TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
             Position::new(3, 19)
         ),
         Some(Location {
@@ -194,7 +194,7 @@ fn main() {
 
     assert_eq!(
         definition(
-            TestRunner::for_source(code).add_module("example_module", "pub const my_num = 1"),
+            TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
             Position::new(3, 3)
         ),
         Some(Location {
@@ -229,7 +229,7 @@ fn main() {
 
     assert_eq!(
         definition(
-            TestRunner::for_source(code).add_module("example_module", "pub fn my_fn() { Nil }"),
+            TestProject::for_source(code).add_module("example_module", "pub fn my_fn() { Nil }"),
             Position::new(3, 19)
         ),
         Some(Location {
@@ -270,7 +270,7 @@ fn main() {
 
     assert_eq!(
         definition(
-            TestRunner::for_source(code).add_module("example_module", dep_src),
+            TestProject::for_source(code).add_module("example_module", dep_src),
             Position::new(3, 20)
         ),
         Some(Location {
@@ -311,7 +311,7 @@ fn main() {
 
     assert_eq!(
         definition(
-            TestRunner::for_source(code).add_module("example_module", dep_src),
+            TestProject::for_source(code).add_module("example_module", dep_src),
             Position::new(3, 3)
         ),
         Some(Location {
@@ -346,7 +346,7 @@ fn main() {
 
     assert_eq!(
         definition(
-            TestRunner::for_source(code).add_hex_module("example_module", "pub const my_num = 1"),
+            TestProject::for_source(code).add_hex_module("example_module", "pub const my_num = 1"),
             Position::new(3, 20)
         ),
         Some(Location {
@@ -381,7 +381,8 @@ fn main() {
 
     assert_eq!(
         definition(
-            TestRunner::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
+            TestProject::for_source(code)
+                .add_hex_module("example_module", "pub fn my_fn() { Nil }"),
             Position::new(3, 20)
         ),
         Some(Location {
@@ -415,7 +416,7 @@ fn main() {
 }
 ";
 
-    let (mut engine, position_param) = TestRunner::for_source(code)
+    let (mut engine, position_param) = TestProject::for_source(code)
         .add_hex_module("example_module", dep)
         .positioned_with_io(Position::new(3, 20));
 
@@ -489,7 +490,7 @@ fn main() {
 }
 ";
 
-    let (mut engine, position_param) = TestRunner::for_source(code)
+    let (mut engine, position_param) = TestProject::for_source(code)
         .add_dep_module("example_module", dep)
         .positioned_with_io(Position::new(3, 20));
 
@@ -572,7 +573,7 @@ fn main() {
 
     assert_eq!(
         definition(
-            TestRunner::for_source(code).add_hex_module("example_module", hex_src),
+            TestProject::for_source(code).add_hex_module("example_module", hex_src),
             Position::new(3, 20)
         ),
         Some(Location {
@@ -607,7 +608,8 @@ fn main() {
 
     assert_eq!(
         definition(
-            TestRunner::for_source(code).add_dep_module("example_module", "pub fn my_fn() { Nil }"),
+            TestProject::for_source(code)
+                .add_dep_module("example_module", "pub fn my_fn() { Nil }"),
             Position::new(3, 20)
         ),
         Some(Location {

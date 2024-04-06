@@ -330,7 +330,7 @@ fn setup_engine(
     .unwrap()
 }
 
-struct TestRunner<'a> {
+struct TestProject<'a> {
     src: &'a str,
     root_package_modules: Vec<(&'a str, &'a str)>,
     dependency_modules: Vec<(&'a str, &'a str)>,
@@ -338,9 +338,9 @@ struct TestRunner<'a> {
     hex_modules: Vec<(&'a str, &'a str)>,
 }
 
-impl<'a> TestRunner<'a> {
+impl<'a> TestProject<'a> {
     pub fn for_source(src: &'a str) -> Self {
-        TestRunner {
+        TestProject {
             src,
             root_package_modules: vec![],
             dependency_modules: vec![],
@@ -352,7 +352,7 @@ impl<'a> TestRunner<'a> {
     pub fn add_module(self, name: &'a str, src: &'a str) -> Self {
         let mut root_package_modules = self.root_package_modules;
         root_package_modules.push((name, src));
-        TestRunner {
+        TestProject {
             root_package_modules,
             ..self
         }
@@ -361,7 +361,7 @@ impl<'a> TestRunner<'a> {
     pub fn add_dep_module(self, name: &'a str, src: &'a str) -> Self {
         let mut dependency_modules = self.dependency_modules;
         dependency_modules.push((name, src));
-        TestRunner {
+        TestProject {
             dependency_modules,
             ..self
         }
@@ -370,7 +370,7 @@ impl<'a> TestRunner<'a> {
     pub fn add_test_module(self, name: &'a str, src: &'a str) -> Self {
         let mut test_modules = self.test_modules;
         test_modules.push((name, src));
-        TestRunner {
+        TestProject {
             test_modules,
             ..self
         }
@@ -379,7 +379,7 @@ impl<'a> TestRunner<'a> {
     pub fn add_hex_module(self, name: &'a str, src: &'a str) -> Self {
         let mut hex_modules = self.hex_modules;
         hex_modules.push((name, src));
-        TestRunner {
+        TestProject {
             hex_modules,
             ..self
         }
