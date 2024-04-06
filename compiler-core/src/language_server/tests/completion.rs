@@ -1145,6 +1145,68 @@ pub fn main() {
 }
 
 #[test]
+fn completions_for_an_import_not_from_indirect_dependency() {
+    let code = "import gleam
+
+pub fn main() {
+  0
+}";
+    let dep = "";
+
+    let (mut engine, position_param) = TestProject::for_source(code)
+        .add_hex_module("example_module", dep)
+        .positioned_with_io(Position::new(0, 10));
+
+    // Manually add an indirect dependency to the project
+    let compiler = &mut engine.compiler.project_compiler;
+    let package = ManifestPackage {
+        name: "indirect_package".into(),
+        source: ManifestPackageSource::Hex {
+            outer_checksum: Base16Checksum(vec![]),
+        },
+        build_tools: vec!["gleam".into()],
+        ..Default::default()
+    };
+    let toml = format!(
+        r#"name = "{}"
+    version = "1.0.0""#,
+        package.name
+    );
+    let toml_path = engine.paths.build_packages_package_config(&package.name);
+    _ = compiler
+        .packages
+        .insert(package.name.clone().into(), package);
+    compiler.io.write(toml_path.as_path(), &toml).unwrap();
+
+    let response = engine.completion(position_param, code.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+
+    assert_eq!(
+        completions,
+        vec![CompletionItem {
+            label: "example_module".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 13
+                    }
+                },
+                new_text: "example_module".into()
+            })),
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
 fn completions_for_an_import_from_dependency_with_docs() {
     let code = "//// Main package
 //// documentation!
