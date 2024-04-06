@@ -52,6 +52,7 @@ Parsed {
                 target: None,
             },
         ],
+        overridden_publicities: {},
     },
     extra: ModuleExtra {
         module_comments: [],
