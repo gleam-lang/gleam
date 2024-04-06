@@ -520,6 +520,23 @@ pub enum Warning {
     OpaqueExternalType {
         location: SrcSpan,
     },
+
+    /// This happens when an internal type is accidentally exposed in the public
+    /// API. Since internal types are excluded from documentation, completions
+    /// and the package interface, this would lead to poor developer experience.
+    ///
+    /// ```gleam
+    /// @internal type Wibble
+    ///
+    /// pub fn wibble(thing: Wibble) { todo }
+    /// //            ^^^^^^^^^^^^^ There would be no documentation
+    /// //                          explaining what `Wibble` is in the
+    /// //                          package's doc site.
+    /// ```
+    InternalTypeLeak {
+        location: SrcSpan,
+        leaked: Type,
+    },
 }
 
 impl Error {

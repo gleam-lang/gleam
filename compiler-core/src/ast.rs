@@ -371,6 +371,13 @@ impl Publicity {
         }
     }
 
+    pub fn is_public(&self) -> bool {
+        match self {
+            Self::Public => true,
+            Self::Internal | Self::Private => false,
+        }
+    }
+
     pub fn is_importable(&self) -> bool {
         match self {
             Self::Internal | Self::Public => true,

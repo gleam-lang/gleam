@@ -435,6 +435,7 @@ fn analyse(
             target_support,
             line_numbers,
             path.as_str().into(),
+            package_config,
         )
         .map_err(|error| Error::Type {
             path: path.clone(),

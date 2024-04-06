@@ -1360,3 +1360,100 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn internal_type_in_public_function_return() {
+    assert_warning!(
+        "
+@internal
+pub type Wibble {
+  Wibble
+}
+
+pub fn wibble() -> Wibble { Wibble }
+"
+    );
+}
+
+#[test]
+fn type_from_internal_module_in_public_function_return() {
+    assert_warning!(
+        ("thepackage/internal", "pub type Wibble { Wibble }"),
+        "
+import thepackage/internal.{type Wibble, Wibble}
+
+pub fn wibble() -> Wibble {
+  Wibble
+}"
+    );
+}
+
+#[test]
+fn internal_type_in_public_function_argument() {
+    assert_warning!(
+        "
+@internal
+pub type Wibble {
+  Wibble
+}
+
+pub fn wibble(_wibble: Wibble) -> Int { 1 }
+"
+    );
+}
+
+#[test]
+fn type_from_internal_module_in_public_function_argument() {
+    assert_warning!(
+        ("thepackage/internal", "pub type Wibble { Wibble }"),
+        "
+import thepackage/internal.{type Wibble}
+
+pub fn wibble(_wibble: Wibble) -> Int {
+  1
+}
+"
+    );
+}
+
+#[test]
+fn internal_type_in_public_constructor() {
+    assert_warning!(
+        "
+@internal
+pub type Wibble {
+  Wibble
+}
+
+pub type Wobble {
+    Wobble(Wibble)
+}
+"
+    );
+}
+
+#[test]
+fn type_from_internal_module_in_public_constructor() {
+    assert_warning!(
+        ("thepackage/internal", "pub type Wibble { Wibble }"),
+        "
+import thepackage/internal.{type Wibble}
+
+pub type Wobble {
+  Wobble(Wibble)
+}"
+    );
+}
+
+#[test]
+fn type_from_internal_module_dependency_in_public_constructor() {
+    assert_warning!(
+        ("dep", "dep/internal", "pub type Wibble { Wibble }"),
+        "
+import dep/internal.{type Wibble}
+
+pub type Wobble {
+  Wobble(Wibble)
+}"
+    );
+}

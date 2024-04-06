@@ -4467,18 +4467,18 @@ fn negation_block() {
 #[test]
 fn empty_lines_work_with_trailing_space() {
     let src = "pub fn main() {
-  let inc = fn(a) { a + 1 } 
+  let inc = fn(a) { a + 1 }
 
 
-  pair.map_first(#(1, 2), inc)  
-  |> should.equal(#(2, 2)) 
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
 
   // Comment
 
-  1  
+  1
 
 
-  // Comment 
+  // Comment
 
 
   2
@@ -4494,7 +4494,7 @@ fn empty_lines_work_with_trailing_space() {
 
   1
 
-  // Comment 
+  // Comment
 
   2
 }
@@ -4548,11 +4548,11 @@ fn empty_lines_work_with_eol_normalisation() {
 #[test]
 fn empty_lines_work_with_trailing_space_and_eol_normalisation() {
     let src = "pub fn main() {
-  let inc = fn(a) { a + 1 } 
+  let inc = fn(a) { a + 1 }
 
 
   pair.map_first(#(1, 2), inc)
-  |> should.equal(#(2, 2)) 
+  |> should.equal(#(2, 2))
 
   // Comment
 

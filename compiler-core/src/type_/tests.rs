@@ -3,6 +3,7 @@ use crate::{
     analyse::TargetSupport,
     ast::{TypedModule, TypedStatement, UntypedExpr, UntypedModule},
     build::{Origin, Target},
+    config::PackageConfig,
     error::Error,
     type_::{build_prelude, expression::FunctionDefinition, pretty::Printer},
     uid::UniqueIdGenerator,
@@ -208,6 +209,15 @@ macro_rules! assert_warning {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
+    ($(($name:expr, $module_src:literal)),+, $src:expr) => {
+        let output = $crate::type_::tests::get_printed_warnings(
+            $src,
+            vec![$(("thepackage", $name, $module_src)),*]
+        );
+        assert!(!output.is_empty());
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr) => {
         let output = $crate::type_::tests::get_printed_warnings(
             $src,
@@ -359,6 +369,8 @@ pub fn compile_module_with_target(
     let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
 
     for (package, name, module_src) in dep {
+        let mut dep_config = PackageConfig::default();
+        dep_config.name = package.into();
         let parsed = crate::parse::parse_module(module_src).expect("syntax error");
         let mut ast = parsed.module;
         ast.name = name.into();
@@ -375,6 +387,7 @@ pub fn compile_module_with_target(
             target_support,
             line_numbers,
             "".into(),
+            &dep_config,
         )
         .expect("should successfully infer");
         let _ = modules.insert(name.into(), module.type_info);
@@ -384,6 +397,8 @@ pub fn compile_module_with_target(
         }
     }
 
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
     let parsed = crate::parse::parse_module(src).expect("syntax error");
     let ast = parsed.module;
     crate::analyse::infer_module(
@@ -398,6 +413,7 @@ pub fn compile_module_with_target(
         TargetSupport::Enforced,
         LineNumbers::new(src),
         "".into(),
+        &config,
     )
 }
 
@@ -590,6 +606,7 @@ fn infer_module_type_retention_test() {
         TargetSupport::Enforced,
         LineNumbers::new(""),
         "".into(),
+        &PackageConfig::default(),
     )
     .expect("Should infer OK");
 

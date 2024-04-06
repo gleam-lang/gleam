@@ -68,6 +68,8 @@ pub fn compile_package(
     );
     let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
     if let Some((dep_package, dep_name, dep_src)) = dep {
+        let mut dep_config = PackageConfig::default();
+        dep_config.name = dep_package.into();
         let parsed = crate::parse::parse_module(dep_src).expect("dep syntax error");
         let mut ast = parsed.module;
         ast.name = dep_name.into();
@@ -84,12 +86,16 @@ pub fn compile_package(
             TargetSupport::Enforced,
             line_numbers,
             "".into(),
+            &dep_config,
         )
         .expect("should successfully infer");
         let _ = modules.insert(dep_name.into(), dep.type_info);
         let _ = direct_dependencies.insert(dep_package.into(), ());
     }
     let parsed = crate::parse::parse_module(src).expect("syntax error");
+
+    let mut config = PackageConfig::default();
+    config.name = "my_package".into();
 
     let mut ast = parsed.module;
     let module_name = module_name
@@ -109,6 +115,7 @@ pub fn compile_package(
         TargetSupport::Enforced,
         LineNumbers::new(src),
         "".into(),
+        &config,
     )
     .expect("should successfully infer");
 

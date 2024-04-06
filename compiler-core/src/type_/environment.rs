@@ -436,6 +436,7 @@ impl<'a> Environment<'a> {
     ) -> Arc<Type> {
         match t.deref() {
             Type::Named {
+                from_internal_module,
                 publicity,
                 name,
                 package,
@@ -447,6 +448,7 @@ impl<'a> Environment<'a> {
                     .map(|t| self.instantiate(t.clone(), ids, hydrator))
                     .collect();
                 Arc::new(Type::Named {
+                    from_internal_module: *from_internal_module,
                     publicity: *publicity,
                     name: name.clone(),
                     package: package.clone(),
