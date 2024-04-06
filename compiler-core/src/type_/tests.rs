@@ -10,6 +10,7 @@ use crate::{
     warning::{TypeWarningEmitter, VectorWarningEmitterIO, WarningEmitter, WarningEmitterIO},
 };
 use ecow::EcoString;
+use im::HashSet;
 use itertools::Itertools;
 use std::sync::Arc;
 use vec1::Vec1;
@@ -608,6 +609,7 @@ fn infer_module_type_retention_test() {
         name: "ok".into(),
         definitions: vec![],
         type_info: (),
+        overridden_publicities: HashSet::new(),
     };
     let direct_dependencies = HashMap::from_iter(vec![]);
     let ids = UniqueIdGenerator::new();

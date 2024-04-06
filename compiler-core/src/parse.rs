@@ -71,6 +71,7 @@ use crate::type_::expression::Implementations;
 use crate::type_::Deprecation;
 use ecow::EcoString;
 use error::{LexicalError, ParseError, ParseErrorType};
+use im::HashSet;
 use lexer::{LexResult, Spanned};
 use std::cmp::Ordering;
 use std::collections::VecDeque;
@@ -205,6 +206,7 @@ where
             documentation: vec![],
             type_info: (),
             definitions,
+            overridden_publicities: HashSet::new(),
         };
         Ok(Parsed {
             module,
