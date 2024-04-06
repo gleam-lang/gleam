@@ -2,7 +2,7 @@ use lsp_types::{Hover, HoverContents, HoverParams, MarkedString, Position, Range
 
 use super::*;
 
-fn hover<'a>(tester: TestProject<'a>, position: Position) -> Option<Hover> {
+fn hover(tester: TestProject<'_>, position: Position) -> Option<Hover> {
     tester.at(position, |engine, param, _| {
         let params = HoverParams {
             text_document_position_params: param,

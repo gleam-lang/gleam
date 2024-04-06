@@ -6,7 +6,7 @@ use lsp_types::{
 
 use super::*;
 
-fn completion<'a>(tester: TestProject<'a>, position: Position) -> Vec<CompletionItem> {
+fn completion(tester: TestProject<'_>, position: Position) -> Vec<CompletionItem> {
     tester.at(position, |engine, param, src| {
         let response = engine.completion(param, src);
 
@@ -16,7 +16,7 @@ fn completion<'a>(tester: TestProject<'a>, position: Position) -> Vec<Completion
     })
 }
 
-fn completion_at_default_position<'a>(tester: TestProject<'a>) -> Vec<CompletionItem> {
+fn completion_at_default_position(tester: TestProject<'_>) -> Vec<CompletionItem> {
     let src = &format!("fn typing_in_here() {{\n  0\n}}\n {}", tester.src);
     let tester = TestProject { src, ..tester };
     completion(tester, Position::new(1, 0))
