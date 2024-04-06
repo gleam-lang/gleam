@@ -32,6 +32,8 @@ use crate::{
     Result,
 };
 
+pub const LSP_TEST_ROOT_PACKAGE_NAME: &'static str = "app";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Action {
     CompilationStarted,
@@ -321,8 +323,10 @@ version = "1.0.0""#
 fn setup_engine(
     io: &LanguageServerTestIO,
 ) -> LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO> {
+    let mut config = PackageConfig::default();
+    config.name = LSP_TEST_ROOT_PACKAGE_NAME.into();
     LanguageServerEngine::new(
-        PackageConfig::default(),
+        config,
         io.clone(),
         FileSystemProxy::new(io.clone()),
         io.paths.clone(),
