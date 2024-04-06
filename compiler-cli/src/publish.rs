@@ -165,7 +165,7 @@ updates that would normally be safe."
 
 /// Ask for confirmation if the package name if `gleam_*`
 fn check_for_gleam_prefix(config: &PackageConfig, i_am_sure: bool) -> Result<bool, Error> {
-    if !(config.name.starts_with("gleam_") && !config.name.starts_with("gleam_community_")) {
+    if !config.name.starts_with("gleam_") || config.name.starts_with("gleam_community_") {
         return Ok(true);
     }
 
