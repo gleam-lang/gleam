@@ -392,7 +392,6 @@ pub fn compile_module_with_opts(
             &ids,
             ast,
             Origin::Src,
-            &package.into(),
             &modules,
             &warnings,
             &std::collections::HashMap::from_iter(vec![]),
@@ -420,7 +419,6 @@ pub fn compile_module_with_opts(
         &ids,
         ast,
         Origin::Src,
-        &"thepackage".into(),
         &modules,
         &warnings,
         &direct_dependencies,
@@ -615,19 +613,21 @@ fn infer_module_type_retention_test() {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
+
     let module = crate::analyse::infer_module::<()>(
         Target::Erlang,
         &ids,
         module,
         Origin::Src,
-        &"thepackage".into(),
         &modules,
         &TypeWarningEmitter::null(),
         &direct_dependencies,
         TargetSupport::Enforced,
         LineNumbers::new(""),
         "".into(),
-        &PackageConfig::default(),
+        &config,
     )
     .expect("Should infer OK");
 

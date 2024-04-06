@@ -38,7 +38,6 @@ fn compile_module(src: &str) -> TypedModule {
         &ids,
         ast,
         crate::build::Origin::Src,
-        &"thepackage".into(),
         &modules,
         &TypeWarningEmitter::null(),
         &std::collections::HashMap::new(),
