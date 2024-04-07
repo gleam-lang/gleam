@@ -1216,6 +1216,208 @@ pub fn main() {
 }
 
 #[test]
+fn completions_for_an_import_not_from_dev_dependency() {
+    let code = "import gleam
+
+pub fn main() {
+  0
+}";
+    let dep = "";
+
+    let mut io = LanguageServerTestIO::new();
+    let _ = io.hex_dep_module("indirect_package", "indirect_module", "");
+    let test_project = TestProject::for_source(code).add_hex_module("example_module", dep);
+    let mut engine = test_project.build_engine(&mut io);
+
+    // Manually add an indirect dependency to the project
+    let compiler = &mut engine.compiler.project_compiler;
+    let package = ManifestPackage {
+        name: "indirect_package".into(),
+        source: ManifestPackageSource::Hex {
+            outer_checksum: Base16Checksum(vec![]),
+        },
+        build_tools: vec!["gleam".into()],
+        ..Default::default()
+    };
+    let package_name = package.name.clone();
+    let toml = format!(
+        r#"name = "{}"
+    version = "1.0.0""#,
+        package.name
+    );
+    let toml_path = engine.paths.build_packages_package_config(&package.name);
+    _ = compiler
+        .packages
+        .insert(package_name.clone().into(), package);
+    _ = compiler.config.dev_dependencies.insert(
+        package_name,
+        Requirement::Hex {
+            version: hexpm::version::Range::new("1.0.0".into()),
+        },
+    );
+    compiler.io.write(toml_path.as_path(), &toml).unwrap();
+
+    _ = io.src_module("app", code);
+
+    let response = engine.compile_please();
+    assert!(response.result.is_ok());
+
+    let position = Position::new(0, 10);
+    let position_param = test_project.build_path(position);
+
+    let response = engine.completion(position_param, code.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+
+    assert_eq!(
+        completions,
+        vec![CompletionItem {
+            label: "example_module".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 13
+                    }
+                },
+                new_text: "example_module".into()
+            })),
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
+fn completions_for_an_import_not_from_dev_dependency_in_test() {
+    let code = "import gleam
+
+pub fn main() {
+  0
+}";
+    let test = "import gleam
+
+pub fn main() {
+  0
+}
+";
+    let dep = "";
+
+    let mut io = LanguageServerTestIO::new();
+    let _ = io.hex_dep_module("indirect_package", "indirect_module", "");
+    let test_project = TestProject::for_source(code)
+        .add_test_module("my_test", test)
+        .add_hex_module("example_module", dep);
+    let mut engine = test_project.build_engine(&mut io);
+
+    // Manually add an indirect dependency to the project
+    let compiler = &mut engine.compiler.project_compiler;
+    let package = ManifestPackage {
+        name: "indirect_package".into(),
+        source: ManifestPackageSource::Hex {
+            outer_checksum: Base16Checksum(vec![]),
+        },
+        build_tools: vec!["gleam".into()],
+        ..Default::default()
+    };
+    let package_name = package.name.clone();
+    let toml = format!(
+        r#"name = "{}"
+    version = "1.0.0""#,
+        package.name
+    );
+    let toml_path = engine.paths.build_packages_package_config(&package.name);
+    _ = compiler
+        .packages
+        .insert(package_name.clone().into(), package);
+    _ = compiler.config.dev_dependencies.insert(
+        package_name,
+        Requirement::Hex {
+            version: hexpm::version::Range::new("1.0.0".into()),
+        },
+    );
+    compiler.io.write(toml_path.as_path(), &toml).unwrap();
+
+    _ = io.src_module("app", code);
+
+    let response = engine.compile_please();
+    assert!(response.result.is_ok());
+
+    let position = Position::new(0, 10);
+    let position_param = test_project.build_test_path(position, "my_test");
+
+    let response = engine.completion(position_param, code.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+
+    assert_eq!(
+        completions,
+        vec![
+            CompletionItem {
+                label: "app".into(),
+                kind: Some(CompletionItemKind::MODULE),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 0,
+                            character: 7
+                        },
+                        end: Position {
+                            line: 0,
+                            character: 13
+                        }
+                    },
+                    new_text: "app".into()
+                })),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "example_module".into(),
+                kind: Some(CompletionItemKind::MODULE),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 0,
+                            character: 7
+                        },
+                        end: Position {
+                            line: 0,
+                            character: 13
+                        }
+                    },
+                    new_text: "example_module".into()
+                })),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "indirect_module".into(),
+                kind: Some(CompletionItemKind::MODULE),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 0,
+                            character: 7
+                        },
+                        end: Position {
+                            line: 0,
+                            character: 13
+                        }
+                    },
+                    new_text: "indirect_module".into()
+                })),
+                ..Default::default()
+            }
+        ]
+    );
+}
+
+#[test]
 fn completions_for_an_import_from_dependency_with_docs() {
     let code = "//// Main package
 //// documentation!
