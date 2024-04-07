@@ -6,6 +6,5 @@ import { makeError } from "../gleam.mjs";
 
 function go() {
   let x = "wibble";
-  throw makeError("todo", "my/mod", 4, "go", x, {})
+  throw makeError("panic", "my/mod", 4, "go", x, {})
 }
-
