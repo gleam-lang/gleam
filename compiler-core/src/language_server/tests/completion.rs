@@ -1153,47 +1153,13 @@ pub fn main() {
 }";
     let dep = "";
 
-    let mut io = LanguageServerTestIO::new();
-    let _ = io.hex_dep_module("indirect_package", "indirect_module", "");
-    let test_project = TestProject::for_source(code).add_hex_module("example_module", dep);
-    let mut engine = test_project.build_engine(&mut io);
-
-    // Manually add an indirect dependency to the project
-    let compiler = &mut engine.compiler.project_compiler;
-    let package = ManifestPackage {
-        name: "indirect_package".into(),
-        source: ManifestPackageSource::Hex {
-            outer_checksum: Base16Checksum(vec![]),
-        },
-        build_tools: vec!["gleam".into()],
-        ..Default::default()
-    };
-    let toml = format!(
-        r#"name = "{}"
-    version = "1.0.0""#,
-        package.name
-    );
-    let toml_path = engine.paths.build_packages_package_config(&package.name);
-    _ = compiler
-        .packages
-        .insert(package.name.clone().into(), package);
-    compiler.io.write(toml_path.as_path(), &toml).unwrap();
-
-    _ = io.src_module("app", code);
-
-    let response = engine.compile_please();
-    assert!(response.result.is_ok());
-
-    let position = Position::new(0, 10);
-    let position_param = test_project.build_path(position);
-
-    let response = engine.completion(position_param, code.into());
-
-    let mut completions = response.result.unwrap().unwrap_or_default();
-    completions.sort_by(|a, b| a.label.cmp(&b.label));
-
     assert_eq!(
-        completions,
+        completion(
+            TestProject::for_source(code)
+                .add_hex_module("example_module", dep)
+                .add_indirect_hex_module("indirect_module", ""),
+            Position::new(0, 10)
+        ),
         vec![CompletionItem {
             label: "example_module".into(),
             kind: Some(CompletionItemKind::MODULE),
