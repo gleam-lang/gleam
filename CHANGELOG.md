@@ -61,6 +61,9 @@
   package's public API.
 - Fixed the error message when using `panic` on the JavaScript target: it now
   correctly identifies the error variant as a `panic` instead of a `todo`.
+- Fixed a bug on the JavaScript target where empty lists with little space
+  available could compile to a conversion from the array `[ , ]`, causing them
+  to wrongly have a length of one (the array has a single `undefined` element).
 
 ### Formatter
 
