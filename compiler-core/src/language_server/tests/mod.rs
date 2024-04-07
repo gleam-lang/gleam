@@ -459,10 +459,11 @@ impl<'a> TestProject<'a> {
             add_package_from_manifest(&mut engine, toml_path, package.clone());
         }
 
-        let dev_dep_toml_path = engine.paths.build_packages_package_config("indirect_hex");
+        // Add an indirect dependency manifest
+        let toml_path = engine.paths.build_packages_package_config("indirect_hex");
         write_toml_from_manifest(
             &mut engine,
-            dev_dep_toml_path,
+            toml_path,
             ManifestPackage {
                 name: "indirect_hex".into(),
                 source: ManifestPackageSource::Hex {
@@ -472,10 +473,12 @@ impl<'a> TestProject<'a> {
                 ..Default::default()
             },
         );
-        let dev_dep_toml_path = engine.paths.build_packages_package_config("dev_hex");
+
+        // Add a dev dependency
+        let toml_path = engine.paths.build_packages_package_config("dev_hex");
         add_dev_package_from_manifest(
             &mut engine,
-            dev_dep_toml_path,
+            toml_path,
             ManifestPackage {
                 name: "dev_hex".into(),
                 source: ManifestPackageSource::Hex {
