@@ -596,3 +596,96 @@ fn do_stuff() {
         })
     );
 }
+
+#[test]
+fn hover_function_arg_annotation() {
+    let code = "
+/// Exciting documentation
+/// Maybe even multiple lines
+fn append(x: String, y: String) -> String {
+  x <> y
+}
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(3, 17)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nString\n```".to_string()
+            )),
+            range: Some(Range::new(Position::new(3, 13), Position::new(3, 19))),
+        })
+    );
+}
+
+#[test]
+fn hover_function_return_annotation() {
+    let code = "
+/// Exciting documentation
+/// Maybe even multiple lines
+fn append(x: String, y: String) -> String {
+  x <> y
+}
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(3, 39)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nString\n```".to_string()
+            )),
+            range: Some(Range::new(Position::new(3, 35), Position::new(3, 41))),
+        })
+    );
+}
+
+#[test]
+fn hover_module_constant_annotation() {
+    let code = "
+/// Exciting documentation
+/// Maybe even multiple lines
+const one: Int = 1
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(3, 13)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String("```gleam\nInt\n```".to_string())),
+            range: Some(Range::new(Position::new(3, 11), Position::new(3, 14))),
+        })
+    );
+}
+
+#[test]
+fn hover_type_constructor_annotation() {
+    let code = "
+type Wibble {
+    Wibble(arg: String)
+}
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(2, 20)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nString\n```".to_string()
+            )),
+            range: Some(Range::new(Position::new(2, 16), Position::new(2, 22))),
+        })
+    );
+}
+
+#[test]
+fn hover_type_alias_annotation() {
+    let code = "
+type Wibble = Int
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(1, 15)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String("```gleam\nInt\n```".to_string())),
+            range: Some(Range::new(Position::new(1, 14), Position::new(1, 17))),
+        })
+    );
+}

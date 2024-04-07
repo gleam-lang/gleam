@@ -1275,6 +1275,14 @@ pub mod type_constructor {
     pub fn has_deprecated(&self) -> bool {
       !self.reader.get_pointer_field(3).is_null()
     }
+    #[inline]
+    pub fn get_origin(self) -> ::capnp::Result<crate::schema_capnp::src_span::Reader<'a>> {
+      ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(4), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn has_origin(&self) -> bool {
+      !self.reader.get_pointer_field(4).is_null()
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -1397,6 +1405,22 @@ pub mod type_constructor {
     pub fn has_deprecated(&self) -> bool {
       !self.builder.get_pointer_field(3).is_null()
     }
+    #[inline]
+    pub fn get_origin(self) -> ::capnp::Result<crate::schema_capnp::src_span::Builder<'a>> {
+      ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(4), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn set_origin(&mut self, value: crate::schema_capnp::src_span::Reader<'_>) -> ::capnp::Result<()> {
+      ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(4), value, false)
+    }
+    #[inline]
+    pub fn init_origin(self, ) -> crate::schema_capnp::src_span::Builder<'a> {
+      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(4), 0)
+    }
+    #[inline]
+    pub fn has_origin(&self) -> bool {
+      !self.builder.get_pointer_field(4).is_null()
+    }
   }
 
   pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -1409,10 +1433,13 @@ pub mod type_constructor {
     pub fn get_type(&self) -> crate::schema_capnp::type_::Pipeline {
       ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(0))
     }
+    pub fn get_origin(&self) -> crate::schema_capnp::src_span::Pipeline {
+      ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(4))
+    }
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 4 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 5 };
     pub const TYPE_ID: u64 = 0xb1fb_6d62_e00b_6d7a;
   }
 }

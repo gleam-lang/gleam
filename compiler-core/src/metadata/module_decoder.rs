@@ -98,7 +98,7 @@ impl ModuleDecoder {
         };
         Ok(TypeConstructor {
             publicity: self.publicity(reader.get_publicity()?),
-            origin: Default::default(),
+            origin: self.src_span(&reader.get_origin()?)?,
             module: reader.get_module()?.into(),
             parameters: read_vec!(reader.get_parameters()?, self, type_),
             typ: type_,

@@ -589,6 +589,12 @@ impl TypedDefinition {
                     .iter()
                     .find(|arg| arg.location.contains(byte_index))
                 {
+                    // Check if location is within the arg annotation.
+                    if let Some(annotation) = &found_arg.annotation {
+                        if annotation.location().contains(byte_index) {
+                            return Some(Located::Annotation(annotation, &found_arg.type_));
+                        }
+                    }
                     return Some(Located::Arg(found_arg));
                 };
 
@@ -598,6 +604,15 @@ impl TypedDefinition {
                     .find(|statement| statement.location().contains(byte_index))
                 {
                     return Some(Located::Statement(found_statement));
+                };
+
+                // Check if location is within the return annotation.
+                if let Some(annotation) = function
+                    .return_annotation
+                    .iter()
+                    .find(|a| a.location().contains(byte_index))
+                {
+                    return Some(Located::Annotation(annotation, &function.return_type));
                 };
 
                 // Note that the fn `.location` covers the function head, not
@@ -612,6 +627,24 @@ impl TypedDefinition {
             }
 
             Definition::CustomType(custom) => {
+                // Check if location is within the type of one of the arguments of a constructor.
+                if let Some(annotation) = custom
+                    .constructors
+                    .iter()
+                    .find(|constructor| constructor.location.contains(byte_index))
+                    .map(|constructor| {
+                        constructor
+                            .arguments
+                            .iter()
+                            .find(|arg| arg.location.contains(byte_index))
+                    })
+                    .flatten()
+                    .filter(|arg| arg.location.contains(byte_index))
+                    .map(|arg| Some(Located::Annotation(&arg.ast, &arg.type_)))
+                {
+                    return annotation;
+                }
+
                 // Note that the custom type `.location` covers the function
                 // head, not the entire statement.
                 if custom.full_location().contains(byte_index) {
@@ -621,7 +654,35 @@ impl TypedDefinition {
                 }
             }
 
-            Definition::TypeAlias(_) | Definition::Import(_) | Definition::ModuleConstant(_) => {
+            Definition::TypeAlias(alias) => {
+                // Check if location is within the type being aliased.
+                if alias.type_ast.location().contains(byte_index) {
+                    return Some(Located::Annotation(&alias.type_ast, &alias.type_));
+                }
+
+                if alias.location.contains(byte_index) {
+                    Some(Located::ModuleStatement(self))
+                } else {
+                    None
+                }
+            }
+
+            Definition::ModuleConstant(constant) => {
+                // Check if location is within the annotation.
+                if let Some(annotation) = &constant.annotation {
+                    if annotation.location().contains(byte_index) {
+                        return Some(Located::Annotation(annotation, &constant.type_));
+                    }
+                }
+
+                if constant.location.contains(byte_index) {
+                    Some(Located::ModuleStatement(self))
+                } else {
+                    None
+                }
+            }
+
+            Definition::Import(_) => {
                 if self.location().contains(byte_index) {
                     Some(Located::ModuleStatement(self))
                 } else {

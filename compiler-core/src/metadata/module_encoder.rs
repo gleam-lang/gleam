@@ -181,6 +181,7 @@ impl<'a> ModuleEncoder<'a> {
                 .init_parameters(constructor.parameters.len() as u32),
             &constructor.parameters,
         );
+        self.build_src_span(builder.reborrow().init_origin(), constructor.origin);
     }
 
     fn build_type_value_constructor(

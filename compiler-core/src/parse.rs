@@ -1896,13 +1896,16 @@ where
                         let _ = Parser::next_tok(p);
                         let doc = p.take_documentation(start);
                         match Parser::parse_type(p)? {
-                            Some(type_ast) => Ok(Some(RecordConstructorArg {
-                                label: Some(name),
-                                ast: type_ast,
-                                location: SrcSpan { start, end },
-                                type_: (),
-                                doc,
-                            })),
+                            Some(type_ast) => {
+                                let end = type_ast.location().end;
+                                Ok(Some(RecordConstructorArg {
+                                    label: Some(name),
+                                    ast: type_ast,
+                                    location: SrcSpan { start, end },
+                                    type_: (),
+                                    doc,
+                                }))
+                            }
                             None => {
                                 parse_error(ParseErrorType::ExpectedType, SrcSpan { start, end })
                             }
