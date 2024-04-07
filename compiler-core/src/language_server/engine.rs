@@ -499,6 +499,7 @@ where
                 self.compiler.project_compiler.config.dependencies.keys(),
             );
         if !current_module.origin.is_src() {
+            // In tests we can import direct dev dependencies
             direct_dep_packages.extend(
                 self.compiler
                     .project_compiler
