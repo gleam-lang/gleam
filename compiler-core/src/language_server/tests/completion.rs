@@ -1153,9 +1153,12 @@ pub fn main() {
 }";
     let dep = "";
 
-    let (mut engine, position_param) = TestProject::for_source(code)
+    let position = Position::new(0, 10);
+    let mut io = LanguageServerTestIO::new();
+    let _ = io.hex_dep_module("indirect_package", "indirect_module", "");
+    let mut engine = TestProject::for_source(code)
         .add_hex_module("example_module", dep)
-        .positioned_with_io(Position::new(0, 10));
+        .build_engine(&mut io);
 
     // Manually add an indirect dependency to the project
     let compiler = &mut engine.compiler.project_compiler;
@@ -1177,6 +1180,22 @@ pub fn main() {
         .packages
         .insert(package.name.clone().into(), package);
     compiler.io.write(toml_path.as_path(), &toml).unwrap();
+
+    _ = io.src_module("app", code);
+
+    let response = engine.compile_please();
+    assert!(response.result.is_ok());
+
+    let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
+        r"\\?\C:\src\app.gleam"
+    } else {
+        "/src/app.gleam"
+    });
+
+    let url = Url::from_file_path(path).unwrap();
+
+    let position_param =
+        TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position);
 
     let response = engine.completion(position_param, code.into());
 
