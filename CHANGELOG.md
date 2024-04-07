@@ -72,6 +72,7 @@
   needlessly indented if preceded by a comment.
 - Line endings other than `\n` are now handled by the formatter, preserving
   blank lines and converting them to `\n`.
+- The formatter can now format groups of imports alphabetically.
 
 ### Build tool
 
@@ -151,7 +152,6 @@
 
 - The format used by the formatter has been improved in some niche cases.
 - Improved the formatting of long case guards.
-- The formatter can now format groups of imports alphabetically.
 
 ## v1.0.0-rc1 - 2024-02-10
 

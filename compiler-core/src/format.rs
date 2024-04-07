@@ -219,95 +219,95 @@ impl<'comments> Formatter<'comments> {
     /// Separates the imports in groups delimited by comments or empty lines and
     /// sorts each group alphabetically.
     ///
+    /// The formatter needs to play nicely with import groups defined by the
+    /// programmer. If one puts a comment before an import then that's a clue
+    /// for the formatter that it has run into a gorup of related imports.
+    ///
+    /// So we can't just sort `imports` and format each one, we have to be a
+    /// bit smarter and see if each import is preceded by a comment.
+    /// Once we find a comment we know we're done with the current import
+    /// group and a new one has started.
+    ///
+    /// ```gleam
+    /// // This is an import group.
+    /// import gleam/int
+    /// import gleam/string
+    ///
+    /// // This marks the beginning of a new import group that can't
+    /// // be mushed together with the previous one!
+    /// import wibble
+    /// import wobble
+    /// ```
     fn imports<'a>(&mut self, imports: Vec<&'a TargetedDefinition>) -> Vec<Document<'a>> {
-        // The formatter needs to play nicely with import groups defined by the
-        // programmer. If one puts a comment before an import then that's a clue
-        // for the formatter that it has run into a gorup of related imports.
-        //
-        // So we can't just sort `imports` and format each one, we have to be a
-        // bit smarter and see if each import is preceded by a comment.
-        // Once we find a comment we know we're done with the current import
-        // group and a new one has started.
-        //
-        // ```gleam
-        // // This is an import group.
-        // import gleam/int
-        // import gleam/string
-        //
-        // // This marks the beginning of a new import group that can't
-        // // be mushed together with the previous one!
-        // import wibble
-        // import wobble
-        // ```
-        let mut documents = vec![];
+        let mut import_groups_docs = vec![];
         let mut current_group = vec![];
-        let mut group_comments = None;
+        let mut current_group_delimiter = docvec!();
 
         for import in imports {
             let start = import.definition.location().start;
-            // If the import is preceded by a comment then we want to put it
-            // into a new group and we can print the current one.
-            if !current_group.is_empty()
-                && (self.any_comments(start) || self.any_empty_lines(start))
-            {
-                documents.append(&mut self.sorted_import_group(&mut current_group, group_comments));
-                documents.push(lines(2));
-                // We pop the comment introducing the group and save it for
-                // later for when the group is over and we can actually print
-                // it.
-                // We have to immediately pop the comment as soon as we start
-                // with a new group or it would still be present in
-                // `self.comments` messing up `self.any_comments` for the next
-                // imports in the group.
-                group_comments = printed_comments(self.pop_comments(start), false);
+
+            // We need to start a new group if the `import` is preceded by one or
+            // more empty lines or a `//` comment.
+            let start_new_group = self.any_comments(start) || self.any_empty_lines(start);
+            if start_new_group {
+                // First we print the previous group and clear it out to start a
+                // new empty group containing the import we've just ran into.
+                if !current_group.is_empty() {
+                    import_groups_docs.push(docvec![
+                        current_group_delimiter,
+                        self.sorted_import_group(&current_group)
+                    ]);
+                    current_group.clear();
+                }
+
+                // Now that we've taken care of the previous group we can start
+                // the new one. We know it's preceded either by an empty line or
+                // some comments se we have to be a bit more precise and save the
+                // actual delimiter that we're going to put at the top of this
+                // group.
+
+                let comments = self.pop_comments(start);
+                let _ = self.pop_empty_lines(start);
+                current_group_delimiter = printed_comments(comments, true).unwrap_or(docvec!());
             }
-            let _ = self.pop_empty_lines(start);
+            // Lastly we add the import to the group.
             current_group.push(import);
         }
 
         // Let's not forget about the last import group!
         if !current_group.is_empty() {
-            documents.append(&mut self.sorted_import_group(&mut current_group, group_comments));
+            import_groups_docs.push(docvec![
+                current_group_delimiter,
+                self.sorted_import_group(&current_group)
+            ]);
         }
 
-        documents
+        // We want all consecutive import groups to be separated by an empty line.
+        // This should really be `.intersperse(line())` but I can't do that
+        // because of https://github.com/rust-lang/rust/issues/48919.
+        Itertools::intersperse(import_groups_docs.into_iter(), lines(2)).collect_vec()
     }
 
-    /// Prints the imports as a single sorted group of import statements
-    /// draining the given vector.
+    /// Prints the imports as a single sorted group of import statements.
     ///
-    /// `group_comment` is the comment preceding the current group.
-    /// It might be missing since a group could also be defined by simply having
-    /// an empty line between imports.
-    ///
-    fn sorted_import_group<'a>(
-        &mut self,
-        imports: &mut Vec<&'a TargetedDefinition>,
-        group_comment: Option<Document<'a>>,
-    ) -> Vec<Document<'a>> {
-        let mut documents = Vec::with_capacity(imports.len() * 2);
+    fn sorted_import_group<'a>(&mut self, imports: &Vec<&'a TargetedDefinition>) -> Document<'a> {
+        let imports = imports
+            .iter()
+            .sorted_by(|one, other| match (&one.definition, &other.definition) {
+                (Definition::Import(one), Definition::Import(other)) => {
+                    one.module.cmp(&other.module)
+                }
+                // It shouldn't really be possible for a non import to be here so
+                // we just return a default value.
+                _ => std::cmp::Ordering::Equal,
+            })
+            .map(|import| self.targeted_definition(import));
 
-        // If the group is defined with a single comment we print it as the
-        // first thing.
-        if let Some(comment) = group_comment {
-            documents.push(comment)
-        };
-
-        imports.sort_by(|one, other| match (&one.definition, &other.definition) {
-            (Definition::Import(one), Definition::Import(other)) => one.module.cmp(&other.module),
-            // It shouldn't really be possible for a non import to be here so
-            // we just return a default value.
-            _ => std::cmp::Ordering::Equal,
-        });
-
-        for import in imports.iter() {
-            if !documents.is_empty() {
-                documents.push(lines(1))
-            }
-            documents.push(self.targeted_definition(import));
-        }
-        imports.clear();
-        documents
+        // This should really be `.intersperse(line())` but I can't do that
+        // because of https://github.com/rust-lang/rust/issues/48919.
+        Itertools::intersperse(imports, line())
+            .collect_vec()
+            .to_doc()
     }
 
     fn definition<'a>(&mut self, statement: &'a UntypedDefinition) -> Document<'a> {
