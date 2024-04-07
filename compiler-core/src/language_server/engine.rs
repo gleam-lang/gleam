@@ -519,7 +519,7 @@ where
             // but it's not recommended so we don't include them in completions
             .filter(|(_, module)| {
                 let is_root_or_prelude =
-                    module.package == self.root_package_name() || module.package == "";
+                    module.package == self.root_package_name() || module.package.is_empty();
                 is_root_or_prelude || direct_dep_packages.contains(&module.package)
             })
             //
