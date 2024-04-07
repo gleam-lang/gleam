@@ -1,0 +1,110 @@
+---
+source: compiler-core/src/javascript/tests/lists.rs
+expression: "\nfn go(func) {\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  use _ <- func(1, 2)\n  case [] {\n    [] -> []\n    _ -> []\n  }\n}\n"
+---
+import { toList } from "../gleam.mjs";
+
+function go(func) {
+  return func(
+    1,
+    2,
+    (_) => {
+      return func(
+        1,
+        2,
+        (_) => {
+          return func(
+            1,
+            2,
+            (_) => {
+              return func(
+                1,
+                2,
+                (_) => {
+                  return func(
+                    1,
+                    2,
+                    (_) => {
+                      return func(
+                        1,
+                        2,
+                        (_) => {
+                          return func(
+                            1,
+                            2,
+                            (_) => {
+                              return func(
+                                1,
+                                2,
+                                (_) => {
+                                  return func(
+                                    1,
+                                    2,
+                                    (_) => {
+                                      return func(
+                                        1,
+                                        2,
+                                        (_) => {
+                                          return func(
+                                            1,
+                                            2,
+                                            (_) => {
+                                              return func(
+                                                1,
+                                                2,
+                                                (_) => {
+                                                  return func(
+                                                    1,
+                                                    2,
+                                                    (_) => {
+                                                      return func(
+                                                        1,
+                                                        2,
+                                                        (_) => {
+                                                          return func(
+                                                            1,
+                                                            2,
+                                                            (_) => {
+                                                              return func(
+                                                                1,
+                                                                2,
+                                                                (_) => {
+                                                                  let $ = toList([]);
+                                                                  if ($.hasLength(0)) {
+                                                                    return toList([]);
+                                                                  } else {
+                                                                    return toList([]);
+                                                                  }
+                                                                },
+                                                              );
+                                                            },
+                                                          );
+                                                        },
+                                                      );
+                                                    },
+                                                  );
+                                                },
+                                              );
+                                            },
+                                          );
+                                        },
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          );
+        },
+      );
+    },
+  );
+}

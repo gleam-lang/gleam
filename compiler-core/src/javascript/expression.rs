@@ -1357,12 +1357,16 @@ pub fn string(value: &str) -> Document<'_> {
 
 pub fn array<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
     let elements = Itertools::intersperse(elements.into_iter(), Ok(break_(",", ", ")))
-        .collect::<Result<Vec<_>, _>>()?
-        .to_doc();
+        .collect::<Result<Vec<_>, _>>()?;
+    let (initial_break, trailing_comma) = if elements.is_empty() {
+        (nil(), nil())
+    } else {
+        (break_("", ""), break_(",", ""))
+    };
     Ok(docvec![
         "[",
-        docvec![break_("", ""), elements].nest(INDENT),
-        break_(",", ""),
+        docvec![initial_break, elements].nest(INDENT),
+        trailing_comma,
         "]"
     ]
     .group())
