@@ -410,6 +410,34 @@ impl<'a> TestProject<'a> {
         engine
     }
 
+    pub fn build_path(&self, position: Position) -> TextDocumentPositionParams {
+        let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
+            r"\\?\C:\src\app.gleam"
+        } else {
+            "/src/app.gleam"
+        });
+
+        let url = Url::from_file_path(path).unwrap();
+
+        TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position)
+    }
+
+    pub fn build_test_path(
+        &self,
+        position: Position,
+        test_name: &str,
+    ) -> TextDocumentPositionParams {
+        let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
+            format!(r"\\?\C:\test\{}.gleam", test_name)
+        } else {
+            format!("/test/{}.gleam", test_name)
+        });
+
+        let url = Url::from_file_path(path).unwrap();
+
+        TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position)
+    }
+
     pub fn positioned_with_io(
         &self,
         position: Position,
@@ -426,18 +454,9 @@ impl<'a> TestProject<'a> {
         let response = engine.compile_please();
         assert!(response.result.is_ok());
 
-        let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-            r"\\?\C:\src\app.gleam"
-        } else {
-            "/src/app.gleam"
-        });
+        let param = self.build_path(position);
 
-        let url = Url::from_file_path(path).unwrap();
-
-        (
-            engine,
-            TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position),
-        )
+        (engine, param)
     }
 
     pub fn positioned_with_io_in_test(
@@ -457,18 +476,9 @@ impl<'a> TestProject<'a> {
         let response = engine.compile_please();
         assert!(response.result.is_ok());
 
-        let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-            format!(r"\\?\C:\test\{}.gleam", test_name)
-        } else {
-            format!("/test/{}.gleam", test_name)
-        });
+        let param = self.build_test_path(position, test_name);
 
-        let url = Url::from_file_path(path).unwrap();
-
-        (
-            engine,
-            TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position),
-        )
+        (engine, param)
     }
 
     pub fn at<T>(
