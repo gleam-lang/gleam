@@ -302,7 +302,7 @@ where
                 Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
                 Located::FunctionBody(_) => None,
                 Located::Annotation(annotation, type_) => {
-                    Some(hover_for_annotation(annotation, type_, lines))
+                    Some(hover_for_annotation(annotation, &type_, lines))
                 }
             })
         })

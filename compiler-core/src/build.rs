@@ -296,7 +296,7 @@ pub enum Located<'a> {
     ModuleStatement(&'a TypedDefinition),
     FunctionBody(&'a TypedFunction),
     Arg(&'a TypedArg),
-    Annotation(&'a TypeAst, &'a type_::Type),
+    Annotation(&'a TypeAst, std::sync::Arc<type_::Type>),
 }
 
 impl<'a> Located<'a> {
@@ -314,14 +314,14 @@ impl<'a> Located<'a> {
                 span: statement.location(),
             }),
             Self::Arg(_) => None,
-            Self::Annotation(_, type_) => match type_ {
+            Self::Annotation(_, type_) => match type_.as_ref() {
                 // For type annotations, we need to look up the type location
                 // From the module interface.
                 type_::Type::Named { name, module, .. } => importable_modules
                     .get(module)
                     .and_then(|i| i.types.get(name))
                     .map(|t| DefinitionLocation {
-                        module: Some(module),
+                        module: Some(&module),
                         span: t.origin,
                     }),
                 _ => None,
