@@ -109,6 +109,12 @@ where
         // Store the compiled dependency module information
         for module in &compiled_dependencies {
             let path = module.input_path.as_os_str().to_string_lossy().to_string();
+            // strip canonicalised windows prefix
+            #[cfg(target_family = "windows")]
+            let path = path
+                .strip_prefix(r"\\?\")
+                .map(|s| s.to_string())
+                .unwrap_or(path);
             let line_numbers = LineNumbers::new(&module.code);
             let source = ModuleSourceInformation { path, line_numbers };
             _ = self.sources.insert(module.name.clone(), source);
@@ -124,6 +130,12 @@ where
             }
             // Create the source information
             let path = module.src_path.to_string();
+            // strip canonicalised windows prefix
+            #[cfg(target_family = "windows")]
+            let path = path
+                .strip_prefix(r"\\?\")
+                .map(|s| s.to_string())
+                .unwrap_or(path);
             let line_numbers = module.line_numbers.clone();
             let source = ModuleSourceInformation { path, line_numbers };
             _ = self.sources.insert(name.clone(), source);
