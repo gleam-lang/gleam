@@ -1224,18 +1224,13 @@ pub fn main() {
 }";
     let dep = "";
 
-    let (mut engine, position_param) = TestProject::for_source(code)
-        .add_hex_module("example_module", dep)
-        .add_dev_hex_module("indirect_module", "")
-        .positioned_with_io(Position::new(0, 10));
-
-    let response = engine.completion(position_param, code.into());
-
-    let mut completions = response.result.unwrap().unwrap_or_default();
-    completions.sort_by(|a, b| a.label.cmp(&b.label));
-
     assert_eq!(
-        completions,
+        completion(
+            TestProject::for_source(code)
+                .add_hex_module("example_module", dep)
+                .add_dev_hex_module("indirect_module", ""),
+            Position::new(0, 10)
+        ),
         vec![CompletionItem {
             label: "example_module".into(),
             kind: Some(CompletionItemKind::MODULE),
