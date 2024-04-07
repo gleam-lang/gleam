@@ -259,6 +259,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("Publishing packages to reserve names is not permitted")]
     HexPackageSquatting,
+
+    #[error("Corrupt manifest.toml")]
+    CorruptManifest,
 }
 
 impl Error {
@@ -3147,6 +3150,13 @@ but you are using v{gleam_version}.",
                 level: Level::Error,
                 location: None,
                 hint: None,
+            },
+            Error::CorruptManifest => Diagnostic {
+                title: "Corrupt manifest.toml".into(),
+                text: "The `manifest.toml` file is corrupt.".into(),
+                level: Level::Error,
+                location: None,
+                hint: Some("Please run `gleam update` to fix it.".into()),
             },
         }
     }
