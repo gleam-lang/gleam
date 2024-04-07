@@ -90,7 +90,6 @@ impl PublishCommand {
 
 fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
     if package.modules.len() > 1 {
-        println!("more than 1");
         return Ok(());
     }
 
@@ -99,14 +98,12 @@ fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
     };
 
     if module.dependencies.len() > 1 {
-        println!("more than 1");
         return Ok(());
     }
 
     let definitions = &module.ast.definitions;
 
     if definitions.len() > 2 {
-        println!("more than 2");
         return Ok(());
     }
 
