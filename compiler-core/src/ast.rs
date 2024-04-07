@@ -632,13 +632,12 @@ impl TypedDefinition {
                     .constructors
                     .iter()
                     .find(|constructor| constructor.location.contains(byte_index))
-                    .map(|constructor| {
+                    .and_then(|constructor| {
                         constructor
                             .arguments
                             .iter()
                             .find(|arg| arg.location.contains(byte_index))
                     })
-                    .flatten()
                     .filter(|arg| arg.location.contains(byte_index))
                     .map(|arg| Some(Located::Annotation(&arg.ast, &arg.type_)))
                 {

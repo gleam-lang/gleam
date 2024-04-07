@@ -319,8 +319,7 @@ impl<'a> Located<'a> {
                 // From the module interface.
                 type_::Type::Named { name, module, .. } => importable_modules
                     .get(module)
-                    .map(|i| i.types.get(name))
-                    .flatten()
+                    .and_then(|i| i.types.get(name))
                     .map(|t| DefinitionLocation {
                         module: Some(module),
                         span: t.origin,
