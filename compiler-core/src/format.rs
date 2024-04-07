@@ -290,7 +290,7 @@ impl<'comments> Formatter<'comments> {
 
     /// Prints the imports as a single sorted group of import statements.
     ///
-    fn sorted_import_group<'a>(&mut self, imports: &Vec<&'a TargetedDefinition>) -> Document<'a> {
+    fn sorted_import_group<'a>(&mut self, imports: &[&'a TargetedDefinition]) -> Document<'a> {
         let imports = imports
             .iter()
             .sorted_by(|one, other| match (&one.definition, &other.definition) {
