@@ -297,14 +297,7 @@ fn add_package_from_manifest<B>(
             },
         },
     );
-    let toml = format!(
-        r#"name = "{}"
-    version = "{}""#,
-        &package.name, &package.version
-    );
-
-    _ = compiler.packages.insert(package.name.to_string(), package);
-    compiler.io.write(toml_path.as_path(), &toml).unwrap();
+    write_toml_from_manifest(engine, toml_path, package);
 }
 
 fn add_dev_package_from_manifest<B>(
@@ -325,6 +318,15 @@ fn add_dev_package_from_manifest<B>(
             },
         },
     );
+    write_toml_from_manifest(engine, toml_path, package);
+}
+
+fn write_toml_from_manifest<B>(
+    engine: &mut LanguageServerEngine<LanguageServerTestIO, B>,
+    toml_path: Utf8PathBuf,
+    package: ManifestPackage,
+) {
+    let compiler = &mut engine.compiler.project_compiler;
     let toml = format!(
         r#"name = "{}"
     version = "{}""#,
@@ -372,6 +374,7 @@ struct TestProject<'a> {
     test_modules: Vec<(&'a str, &'a str)>,
     hex_modules: Vec<(&'a str, &'a str)>,
     dev_hex_modules: Vec<(&'a str, &'a str)>,
+    indirect_hex_modules: Vec<(&'a str, &'a str)>,
 }
 
 impl<'a> TestProject<'a> {
@@ -383,6 +386,7 @@ impl<'a> TestProject<'a> {
             test_modules: vec![],
             hex_modules: vec![],
             dev_hex_modules: vec![],
+            indirect_hex_modules: vec![],
         }
     }
 
@@ -411,6 +415,11 @@ impl<'a> TestProject<'a> {
         self
     }
 
+    pub fn add_indirect_hex_module(mut self, name: &'a str, src: &'a str) -> Self {
+        self.indirect_hex_modules.push((name, src));
+        self
+    }
+
     pub fn build_engine(
         &self,
         io: &mut LanguageServerTestIO,
@@ -422,6 +431,10 @@ impl<'a> TestProject<'a> {
 
         self.dev_hex_modules.iter().for_each(|(name, code)| {
             _ = io.hex_dep_module("dev_hex", name, code);
+        });
+
+        self.indirect_hex_modules.iter().for_each(|(name, code)| {
+            _ = io.hex_dep_module("indirect_hex", name, code);
         });
 
         let mut engine = setup_engine(&io);
@@ -446,6 +459,19 @@ impl<'a> TestProject<'a> {
             add_package_from_manifest(&mut engine, toml_path, package.clone());
         }
 
+        let dev_dep_toml_path = engine.paths.build_packages_package_config("indirect_hex");
+        write_toml_from_manifest(
+            &mut engine,
+            dev_dep_toml_path,
+            ManifestPackage {
+                name: "indirect_hex".into(),
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![]),
+                },
+                build_tools: vec!["gleam".into()],
+                ..Default::default()
+            },
+        );
         let dev_dep_toml_path = engine.paths.build_packages_package_config("dev_hex");
         add_dev_package_from_manifest(
             &mut engine,
