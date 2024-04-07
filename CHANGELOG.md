@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Build tool
+
+- A helpful error message is now shown if the `manifest.toml` file has been
+  edited to be invalid in some way.
+  ```
+  error: Corrupt manifest.toml
+
+  The `manifest.toml` file is corrupt.
+
+  Hint: Please fun `gleam update` to fix it.
+  ```
+
 ### Compiler
 
 - The compiler will now raise a warning for `let assert` assignments where the
