@@ -592,7 +592,7 @@ impl TypedDefinition {
                     // Check if location is within the arg annotation.
                     if let Some(annotation) = &found_arg.annotation {
                         if annotation.location().contains(byte_index) {
-                            return Some(Located::Annotation(annotation, &found_arg.type_));
+                            return Some(Located::Annotation(annotation, found_arg.type_.clone()));
                         }
                     }
                     return Some(Located::Arg(found_arg));
@@ -612,7 +612,10 @@ impl TypedDefinition {
                     .iter()
                     .find(|a| a.location().contains(byte_index))
                 {
-                    return Some(Located::Annotation(annotation, &function.return_type));
+                    return Some(Located::Annotation(
+                        annotation,
+                        function.return_type.clone(),
+                    ));
                 };
 
                 // Note that the fn `.location` covers the function head, not
@@ -639,7 +642,7 @@ impl TypedDefinition {
                             .find(|arg| arg.location.contains(byte_index))
                     })
                     .filter(|arg| arg.location.contains(byte_index))
-                    .map(|arg| Some(Located::Annotation(&arg.ast, &arg.type_)))
+                    .map(|arg| Some(Located::Annotation(&arg.ast, arg.type_.clone())))
                 {
                     return annotation;
                 }
@@ -656,7 +659,7 @@ impl TypedDefinition {
             Definition::TypeAlias(alias) => {
                 // Check if location is within the type being aliased.
                 if alias.type_ast.location().contains(byte_index) {
-                    return Some(Located::Annotation(&alias.type_ast, &alias.type_));
+                    return Some(Located::Annotation(&alias.type_ast, alias.type_.clone()));
                 }
 
                 if alias.location.contains(byte_index) {
@@ -670,7 +673,7 @@ impl TypedDefinition {
                 // Check if location is within the annotation.
                 if let Some(annotation) = &constant.annotation {
                     if annotation.location().contains(byte_index) {
-                        return Some(Located::Annotation(annotation, &constant.type_));
+                        return Some(Located::Annotation(annotation, constant.type_.clone()));
                     }
                 }
 
@@ -1848,6 +1851,11 @@ pub type UntypedAssignment = Assignment<(), UntypedExpr>;
 
 impl TypedAssignment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if let Some(annotation) = &self.annotation {
+            if annotation.location().contains(byte_index) {
+                return Some(Located::Annotation(annotation, self.pattern.type_()));
+            }
+        }
         self.pattern
             .find_node(byte_index)
             .or_else(|| self.value.find_node(byte_index))

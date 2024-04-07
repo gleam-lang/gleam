@@ -689,3 +689,21 @@ type Wibble = Int
         })
     );
 }
+
+#[test]
+fn hover_assignment_annotation() {
+    let code = "
+fn wibble() {
+    let wobble: Int = 7
+    wobble
+}
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(2, 18)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String("```gleam\nInt\n```".to_string())),
+            range: Some(Range::new(Position::new(2, 16), Position::new(2, 19))),
+        })
+    );
+}
