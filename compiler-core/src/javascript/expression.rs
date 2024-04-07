@@ -1358,18 +1358,18 @@ pub fn string(value: &str) -> Document<'_> {
 pub fn array<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
     let elements = Itertools::intersperse(elements.into_iter(), Ok(break_(",", ", ")))
         .collect::<Result<Vec<_>, _>>()?;
-    let (initial_break, trailing_comma) = if elements.is_empty() {
-        (nil(), nil())
+    if elements.is_empty() {
+        // Do not add a trailing comma since that adds an 'undefined' element
+        Ok("[]".to_doc())
     } else {
-        (break_("", ""), break_(",", ""))
-    };
-    Ok(docvec![
-        "[",
-        docvec![initial_break, elements].nest(INDENT),
-        trailing_comma,
-        "]"
-    ]
-    .group())
+        Ok(docvec![
+            "[",
+            docvec![break_("", ""), elements].nest(INDENT),
+            break_(",", ""),
+            "]"
+        ]
+        .group())
+    }
 }
 
 fn list<'a, I: IntoIterator<Item = Output<'a>>>(elements: I) -> Output<'a>

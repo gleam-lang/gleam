@@ -105,26 +105,7 @@ fn tight_empty_list() {
     assert_js!(
         r#"
 fn go(func) {
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  use _ <- func(1, 2)
-  case [] {
-    [] -> []
-    _ -> []
-  }
+  let huuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuge_variable = []
 }
 "#,
     );
