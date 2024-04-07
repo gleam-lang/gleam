@@ -134,6 +134,28 @@ impl Type {
         }
     }
 
+    pub fn tuple_types(&self) -> Option<Vec<Arc<Self>>> {
+        match self {
+            Self::Tuple { elems } => Some(elems.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn constructor_types(&self) -> Option<Vec<Arc<Self>>> {
+        match self {
+            Self::Named { args, .. } => Some(args.clone()),
+            Self::Var { type_, .. } => type_.borrow().constructor_types(),
+            _ => None,
+        }
+    }
+
+    pub fn nested_type(&self) -> Option<Arc<Self>> {
+        match self {
+            Self::Var { type_, .. } => type_.borrow().nested_type(),
+            _ => Some(Arc::new(self.clone())),
+        }
+    }
+
     pub fn is_nil(&self) -> bool {
         match self {
             Self::Named { module, name, .. } if "Nil" == name && is_prelude_module(module) => true,
@@ -793,6 +815,13 @@ impl TypeVar {
         }
     }
 
+    pub fn constructor_types(&self) -> Option<Vec<Arc<Type>>> {
+        match self {
+            Self::Link { type_ } => type_.constructor_types(),
+            Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
     pub fn is_result(&self) -> bool {
         match self {
             Self::Link { type_ } => type_.is_result(),
@@ -845,6 +874,13 @@ impl TypeVar {
     pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
         match self {
             Self::Link { type_ } => type_.named_type_name(),
+            Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
+    pub fn nested_type(&self) -> Option<Arc<Type>> {
+        match self {
+            Self::Link { type_ } => type_.nested_type(),
             Self::Unbound { .. } | Self::Generic { .. } => None,
         }
     }

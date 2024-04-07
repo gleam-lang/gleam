@@ -300,9 +300,30 @@ pub enum Located<'a> {
 }
 
 impl<'a> Located<'a> {
+    fn type_location(
+        &self,
+        importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
+        type_: std::sync::Arc<type_::Type>,
+    ) -> Option<DefinitionLocation<'_>> {
+        match type_.as_ref() {
+            type_::Type::Named { name, module, .. } => importable_modules
+                .get(module)
+                .and_then(|i| i.types.get(name))
+                .map(|t| DefinitionLocation {
+                    module: Some(&t.module),
+                    span: t.origin,
+                }),
+            type_::Type::Var { type_, .. } => type_
+                .borrow()
+                .nested_type()
+                .and_then(|v| self.type_location(importable_modules, v)),
+            _ => None,
+        }
+    }
+
     pub fn definition_location(
         &self,
-        importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+        importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
     ) -> Option<DefinitionLocation<'_>> {
         match self {
             Self::Pattern(pattern) => pattern.definition_location(),
@@ -314,18 +335,7 @@ impl<'a> Located<'a> {
                 span: statement.location(),
             }),
             Self::Arg(_) => None,
-            Self::Annotation(_, type_) => match type_.as_ref() {
-                // For type annotations, we need to look up the type location
-                // From the module interface.
-                type_::Type::Named { name, module, .. } => importable_modules
-                    .get(module)
-                    .and_then(|i| i.types.get(name))
-                    .map(|t| DefinitionLocation {
-                        module: Some(&module),
-                        span: t.origin,
-                    }),
-                _ => None,
-            },
+            Self::Annotation(_, type_) => self.type_location(importable_modules, type_.clone()),
         }
     }
 }

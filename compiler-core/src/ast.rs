@@ -347,6 +347,63 @@ impl TypeAst {
             },
         }
     }
+
+    pub fn find_node(&self, byte_index: u32, type_: Arc<Type>) -> Option<Located<'_>> {
+        if !self.location().contains(byte_index) {
+            return None;
+        }
+
+        match self {
+            TypeAst::Fn(TypeAstFn {
+                arguments, return_, ..
+            }) => type_
+                .fn_types()
+                .and_then(|(arg_types, ret_type)| {
+                    if let Some(arg) = arguments
+                        .iter()
+                        .zip(arg_types)
+                        .find_map(|(arg, arg_type)| arg.find_node(byte_index, arg_type.clone()))
+                    {
+                        return Some(arg);
+                    }
+                    if let Some(ret) = return_.find_node(byte_index, ret_type) {
+                        return Some(ret);
+                    }
+
+                    None
+                })
+                .or(Some(Located::Annotation(self, type_))),
+            TypeAst::Constructor(TypeAstConstructor { arguments, .. }) => type_
+                .constructor_types()
+                .and_then(|arg_types| {
+                    if let Some(arg) = arguments
+                        .iter()
+                        .zip(arg_types)
+                        .find_map(|(arg, arg_type)| arg.find_node(byte_index, arg_type.clone()))
+                    {
+                        return Some(arg);
+                    }
+
+                    None
+                })
+                .or(Some(Located::Annotation(self, type_))),
+            TypeAst::Tuple(TypeAstTuple { elems, .. }) => type_
+                .tuple_types()
+                .and_then(|elem_types| {
+                    if let Some(e) = elems
+                        .iter()
+                        .zip(elem_types)
+                        .find_map(|(e, e_type)| e.find_node(byte_index, e_type.clone()))
+                    {
+                        return Some(e);
+                    }
+
+                    None
+                })
+                .or(Some(Located::Annotation(self, type_))),
+            TypeAst::Var(_) | TypeAst::Hole(_) => Some(Located::Annotation(self, type_)),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -590,10 +647,10 @@ impl TypedDefinition {
                     .find(|arg| arg.location.contains(byte_index))
                 {
                     // Check if location is within the arg annotation.
-                    if let Some(annotation) = &found_arg.annotation {
-                        if annotation.location().contains(byte_index) {
-                            return Some(Located::Annotation(annotation, found_arg.type_.clone()));
-                        }
+                    if let Some(a) = &found_arg.annotation {
+                        return a
+                            .find_node(byte_index, found_arg.type_.clone())
+                            .or(Some(Located::Arg(found_arg)));
                     }
                     return Some(Located::Arg(found_arg));
                 };
@@ -607,15 +664,12 @@ impl TypedDefinition {
                 };
 
                 // Check if location is within the return annotation.
-                if let Some(annotation) = function
+                if let Some(l) = function
                     .return_annotation
                     .iter()
-                    .find(|a| a.location().contains(byte_index))
+                    .find_map(|a| a.find_node(byte_index, function.return_type.clone()))
                 {
-                    return Some(Located::Annotation(
-                        annotation,
-                        function.return_type.clone(),
-                    ));
+                    return Some(l);
                 };
 
                 // Note that the fn `.location` covers the function head, not
@@ -642,9 +696,9 @@ impl TypedDefinition {
                             .find(|arg| arg.location.contains(byte_index))
                     })
                     .filter(|arg| arg.location.contains(byte_index))
-                    .map(|arg| Some(Located::Annotation(&arg.ast, arg.type_.clone())))
+                    .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
                 {
-                    return annotation;
+                    return Some(annotation);
                 }
 
                 // Note that the custom type `.location` covers the function
@@ -658,8 +712,8 @@ impl TypedDefinition {
 
             Definition::TypeAlias(alias) => {
                 // Check if location is within the type being aliased.
-                if alias.type_ast.location().contains(byte_index) {
-                    return Some(Located::Annotation(&alias.type_ast, alias.type_.clone()));
+                if let Some(l) = alias.type_ast.find_node(byte_index, alias.type_.clone()) {
+                    return Some(l);
                 }
 
                 if alias.location.contains(byte_index) {
@@ -672,8 +726,8 @@ impl TypedDefinition {
             Definition::ModuleConstant(constant) => {
                 // Check if location is within the annotation.
                 if let Some(annotation) = &constant.annotation {
-                    if annotation.location().contains(byte_index) {
-                        return Some(Located::Annotation(annotation, constant.type_.clone()));
+                    if let Some(l) = annotation.find_node(byte_index, constant.type_.clone()) {
+                        return Some(l);
                     }
                 }
 
@@ -1852,8 +1906,8 @@ pub type UntypedAssignment = Assignment<(), UntypedExpr>;
 impl TypedAssignment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         if let Some(annotation) = &self.annotation {
-            if annotation.location().contains(byte_index) {
-                return Some(Located::Annotation(annotation, self.pattern.type_()));
+            if let Some(l) = annotation.find_node(byte_index, self.pattern.type_()) {
+                return Some(l);
             }
         }
         self.pattern
