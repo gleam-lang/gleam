@@ -59,6 +59,8 @@
 - Improved error message for `BitArray` segment sizes.
 - A warning is now raised when an internal type is accidentally exposed in a
   package's public API.
+- Fixed the error message when using `panic` on the JavaScript target: it now
+  correctly identifies the error variant as a `panic` instead of a `todo`.
 
 ### Formatter
 

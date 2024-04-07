@@ -965,7 +965,7 @@ impl<'module> Generator<'module> {
             Some(m) => self.expression(m)?,
             None => string("panic expression evaluated"),
         };
-        let doc = self.throw_error("todo", &message, *location, vec![]);
+        let doc = self.throw_error("panic", &message, *location, vec![]);
 
         // Reset tail position so later values are returned as needed. i.e.
         // following clauses in a case expression.

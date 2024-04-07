@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 198
 expression: "pub fn negate(x) {\n  !panic\n}"
 ---
 import { makeError } from "../gleam.mjs";
@@ -8,7 +7,7 @@ import { makeError } from "../gleam.mjs";
 export function negate(x) {
   return !(() => {
     throw makeError(
-      "todo",
+      "panic",
       "my/mod",
       2,
       "negate",
@@ -17,4 +16,3 @@ export function negate(x) {
     )
   })();
 }
-
