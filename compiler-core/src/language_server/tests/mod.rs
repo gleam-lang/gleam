@@ -530,7 +530,7 @@ impl<'a> TestProject<'a> {
         _ = io.src_module("app", self.src);
 
         let response = engine.compile_please();
-        assert!(response.result.is_ok());
+        response.result.expect("failed to compile");
 
         let param = self.build_path(position);
 

@@ -17,7 +17,7 @@ pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
-    CustomType, DefinitionLocation, TypedArg, TypedDefinition, TypedExpr, TypedFunction,
+    CustomType, DefinitionLocation, TypeAst, TypedArg, TypedDefinition, TypedExpr, TypedFunction,
     TypedPattern, TypedStatement,
 };
 use crate::{
@@ -296,10 +296,14 @@ pub enum Located<'a> {
     ModuleStatement(&'a TypedDefinition),
     FunctionBody(&'a TypedFunction),
     Arg(&'a TypedArg),
+    Annotation(&'a TypeAst, &'a type_::Type),
 }
 
 impl<'a> Located<'a> {
-    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+    pub fn definition_location(
+        &self,
+        importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+    ) -> Option<DefinitionLocation<'_>> {
         match self {
             Self::Pattern(pattern) => pattern.definition_location(),
             Self::Statement(statement) => statement.definition_location(),
@@ -310,6 +314,19 @@ impl<'a> Located<'a> {
                 span: statement.location(),
             }),
             Self::Arg(_) => None,
+            Self::Annotation(_, type_) => match type_ {
+                // For type annotations, we need to look up the type location
+                // From the module interface.
+                type_::Type::Named { name, module, .. } => importable_modules
+                    .get(module)
+                    .map(|i| i.types.get(name))
+                    .flatten()
+                    .map(|t| DefinitionLocation {
+                        module: Some(module),
+                        span: t.origin,
+                    }),
+                _ => None,
+            },
         }
     }
 }

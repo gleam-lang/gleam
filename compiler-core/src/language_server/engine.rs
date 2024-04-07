@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, Publicity, SrcSpan, TypedDefinition,
-        TypedExpr, TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, Publicity, SrcSpan, TypeAst,
+        TypedDefinition, TypedExpr, TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -154,7 +154,9 @@ where
                 None => return Ok(None),
             };
 
-            let location = match node.definition_location() {
+            let location = match node
+                .definition_location(this.compiler.project_compiler.get_importable_modules())
+            {
                 Some(location) => location,
                 None => return Ok(None),
             };
@@ -225,6 +227,8 @@ where
                 }
 
                 Located::Arg(_) => None,
+
+                Located::Annotation(_, _) => Some(this.completion_types(module)),
             };
 
             Ok(completions)
@@ -297,6 +301,9 @@ where
                 }
                 Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
                 Located::FunctionBody(_) => None,
+                Located::Annotation(annotation, type_) => {
+                    Some(hover_for_annotation(annotation, type_, lines))
+                }
             })
         })
     }
@@ -671,6 +678,19 @@ fn hover_for_function_argument(argument: &Arg<Arc<Type>>, line_numbers: LineNumb
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(argument.location, &line_numbers)),
+    }
+}
+
+fn hover_for_annotation(
+    annotation: &TypeAst,
+    annotation_type: &Type,
+    line_numbers: LineNumbers,
+) -> Hover {
+    let type_ = Printer::new().pretty_print(annotation_type, 0);
+    let contents = format!("```gleam\n{type_}\n```");
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(annotation.location(), &line_numbers)),
     }
 }
 

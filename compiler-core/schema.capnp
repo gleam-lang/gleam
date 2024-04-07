@@ -56,6 +56,7 @@ struct TypeConstructor {
   module @2 :Text;
   publicity @3 :Publicity;
   deprecated @4 :Text;
+  origin @5 :SrcSpan;
 }
 
 struct AccessorsMap {
