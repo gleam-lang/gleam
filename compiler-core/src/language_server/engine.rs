@@ -494,15 +494,20 @@ where
         start: lsp::Position,
         end: lsp::Position,
     ) -> Vec<lsp::CompletionItem> {
-        let direct_dep_packages: std::collections::HashSet<&EcoString> =
+        let mut direct_dep_packages: std::collections::HashSet<&EcoString> =
             std::collections::HashSet::from_iter(
+                self.compiler.project_compiler.config.dependencies.keys(),
+            );
+        if !current_module.origin.is_src() {
+            direct_dep_packages.extend(
                 self.compiler
                     .project_compiler
                     .config
-                    .dependencies
-                    .iter()
-                    .map(|(name, _)| name),
-            );
+                    .dev_dependencies
+                    .keys(),
+            )
+        }
+
         let already_imported: std::collections::HashSet<EcoString> =
             std::collections::HashSet::from_iter(current_module.dependencies_list());
         self.compiler
