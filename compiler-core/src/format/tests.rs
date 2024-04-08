@@ -11,6 +11,7 @@ mod external_types;
 mod function;
 mod guards;
 mod imports;
+mod pipeline;
 mod record_update;
 mod tuple;
 mod use_;

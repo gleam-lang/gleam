@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 646
 expression: "import wibble.{type Wobble, Wobble, type Wabble}"
 ---
 Parsed {
@@ -59,5 +58,6 @@ Parsed {
         doc_comments: [],
         comments: [],
         empty_lines: [],
+        new_lines: {},
     },
 }

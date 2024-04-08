@@ -2891,6 +2891,9 @@ where
                 Some(Ok((start, Token::CommentModule, end))) => {
                     self.extra.module_comments.push(SrcSpan { start, end });
                 }
+                Some(Ok((start, Token::NewLine, _))) => {
+                    let _ = self.extra.new_lines.insert(start);
+                }
 
                 // die on lex error
                 Some(Err(err)) => {
@@ -3442,7 +3445,8 @@ fn is_reserved_word(tok: Token) -> bool {
         | Token::EndOfFile
         | Token::CommentNormal
         | Token::CommentModule
-        | Token::EmptyLine => false,
+        | Token::EmptyLine
+        | Token::NewLine => false,
     }
 }
 
