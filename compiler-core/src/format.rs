@@ -16,7 +16,7 @@ use crate::{
 };
 use ecow::EcoString;
 use itertools::Itertools;
-use std::sync::Arc;
+use std::{collections::BTreeSet, sync::Arc};
 use vec1::Vec1;
 
 use crate::type_::Deprecation;
@@ -41,6 +41,7 @@ pub(crate) struct Intermediate<'a> {
     doc_comments: Vec<Comment<'a>>,
     module_comments: Vec<Comment<'a>>,
     empty_lines: &'a [u32],
+    new_lines: &'a BTreeSet<u32>,
 }
 
 impl<'a> Intermediate<'a> {
@@ -62,6 +63,7 @@ impl<'a> Intermediate<'a> {
                 .iter()
                 .map(|span| Comment::from((span, src)))
                 .collect(),
+            new_lines: &extra.new_lines,
         }
     }
 }
@@ -73,6 +75,7 @@ pub struct Formatter<'a> {
     doc_comments: &'a [Comment<'a>],
     module_comments: &'a [Comment<'a>],
     empty_lines: &'a [u32],
+    new_lines: Option<&'a BTreeSet<u32>>,
 }
 
 impl<'comments> Formatter<'comments> {
@@ -86,6 +89,7 @@ impl<'comments> Formatter<'comments> {
             doc_comments: &extra.doc_comments,
             module_comments: &extra.module_comments,
             empty_lines: extra.empty_lines,
+            new_lines: Some(extra.new_lines),
         }
     }
 
@@ -1342,6 +1346,21 @@ impl<'comments> Formatter<'comments> {
         let first = self.expr(first).group();
         docs.push(self.operator_side(first, 5, first_precedence));
 
+        let try_to_keep_on_one_line = if let Some(new_lines) = self.new_lines {
+            let pipeline_start = expressions.first().location().start;
+            let pipeline_end = expressions.last().location().end;
+            // If there's any newline between the pipeline start and end
+            // then we want to force the pipeline to be split on multiple lines.
+            new_lines
+                .range(pipeline_start..pipeline_end)
+                .next()
+                .is_none()
+        } else {
+            // If we are not keeping track of newlines in the source code then
+            // we split the pipeline by default.
+            false
+        };
+
         for expr in expressions.iter().skip(1) {
             let comments = self.pop_comments(expr.location().start);
             let doc = match expr {
@@ -1362,13 +1381,22 @@ impl<'comments> Formatter<'comments> {
                 _ => self.expr(expr),
             };
 
-            let pipe = line().append(commented("|> ".to_doc(), comments));
+            let space = if try_to_keep_on_one_line {
+                break_("", " ")
+            } else {
+                line()
+            };
+            let pipe = space.append(commented("|> ".to_doc(), comments));
             let pipe = if nest_pipe { pipe.nest(INDENT) } else { pipe };
             docs.push(pipe);
             docs.push(self.operator_side(doc, 4, expr.bin_op_precedence()));
         }
 
-        docs.to_doc().force_break()
+        if try_to_keep_on_one_line {
+            docs.to_doc()
+        } else {
+            docs.to_doc().force_break()
+        }
     }
 
     fn pipe_capture_right_hand_side<'a>(&mut self, fun: &'a UntypedExpr) -> Document<'a> {

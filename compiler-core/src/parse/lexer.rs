@@ -437,9 +437,15 @@ where
                 // Add one, so the empty line does not overlap with previous token's end
                 let tok_start = self.get_pos() + 1;
 
+                // We want to emit newline tokens
+                if c == '\n' {
+                    self.emit((tok_start, Token::NewLine, tok_start));
+                }
+
                 let mut newlines = 0;
                 while let Some('\n' | ' ' | '\t' | '\x0C') = self.chr0 {
                     if self.next_char() == Some('\n') {
+                        self.emit((self.get_pos(), Token::NewLine, self.get_pos()));
                         newlines += 1;
                     }
                 }
