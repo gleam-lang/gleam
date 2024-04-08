@@ -315,7 +315,7 @@ impl<'a> Located<'a> {
                 }),
             type_::Type::Var { type_, .. } => type_
                 .borrow()
-                .nested_type()
+                .inner_type()
                 .and_then(|v| self.type_location(importable_modules, v)),
             _ => None,
         }

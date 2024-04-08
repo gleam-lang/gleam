@@ -711,6 +711,48 @@ fn make_var() -> example_module.Rec {
 }
 
 #[test]
+fn goto_definition_type_in_path_dep() {
+    let dep = "
+pub type Rec {
+  Var1(Int)
+  Var2(Int, Int)
+}
+";
+
+    let code = "
+import example_module
+fn make_var() -> example_module.Rec {
+  example_module.Var1(1)
+}
+";
+
+    assert_eq!(
+        definition(
+            TestProject::for_source(code).add_dep_module("example_module", dep),
+            Position::new(2, 33)
+        ),
+        Some(Location {
+            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
+                r"\\?\C:\dep\src\example_module.gleam"
+            } else {
+                "/dep/src/example_module.gleam"
+            }))
+            .unwrap(),
+            range: Range {
+                start: Position {
+                    line: 1,
+                    character: 0
+                },
+                end: Position {
+                    line: 1,
+                    character: 12
+                }
+            }
+        })
+    )
+}
+
+#[test]
 fn goto_definition_deep_type_in_module() {
     let hex_src = "
 pub type Wobble {
