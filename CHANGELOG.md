@@ -22,14 +22,11 @@
 - Fix a bug where JavaScript code generation would not properly handle functions
   returned by blocks.
 - Fix a bug where Erlang code generation would not properly handle list case
-  patterns
-  with no head and a spread tail.
+  patterns with no head and a spread tail.
 - The compiler will now raise a warning if you're pattern matching on tuple
   literals and suggest you use multiple subjects instead.
 - Fixed a bug where JavaScript code generation would incorrectly parenthesise a
   return statement.
-- Added support for the [Bun](https://bun.sh/) runtime when compiling to
-  JavaScript by using `gleam run --target javascript --runtime bun`
 - Fixed a bug where `tuple.0.1` was not recognised as a nested tuple access
   expression
 - Error messages are more clear about expecting values instead of types.
@@ -80,6 +77,8 @@
 
 ### Build tool
 
+- Added support for the [Bun](https://bun.sh/) runtime when compiling to
+  JavaScript by using `gleam run --target javascript --runtime bun`
 - A warning is now emitted if there is a `.gleam` file with a path that would be
   invalid as a module name.
 - The `~> x.y` version constraint syntax has been dropped in favour of
