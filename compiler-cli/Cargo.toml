@@ -36,7 +36,7 @@ fslock = "0.2.1"
 # Provides a way to determine if two files are the same using filesystem node ids
 same-file = "1.0.6"
 # Open generated docs in browser
-opener = "0.6"
+opener = "0.7"
 camino = { workspace = true, features = ["serde1"] }
 async-trait.workspace = true
 base16.workspace = true
