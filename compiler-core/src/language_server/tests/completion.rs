@@ -1,156 +1,28 @@
 use itertools::Itertools;
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionTextEdit, Documentation, MarkupContent,
-    MarkupKind, Position, Range, TextDocumentPositionParams, TextEdit,
+    MarkupKind, Position, Range, TextEdit,
 };
 
 use super::*;
 
-struct Completions<'a> {
-    src: &'a str,
-    root_package_modules: Vec<(&'a str, &'a str)>,
-    dependency_modules: Vec<(&'a str, &'a str)>,
-    test_modules: Vec<(&'a str, &'a str)>,
-    hex_modules: Vec<(&'a str, &'a str)>,
-}
-
-impl<'a> Completions<'a> {
-    pub fn for_source(src: &'a str) -> Self {
-        Completions {
-            src,
-            root_package_modules: vec![],
-            dependency_modules: vec![],
-            test_modules: vec![],
-            hex_modules: vec![],
-        }
-    }
-
-    pub fn add_module(self, name: &'a str, src: &'a str) -> Self {
-        let mut root_package_modules = self.root_package_modules;
-        root_package_modules.push((name, src));
-        Completions {
-            root_package_modules,
-            ..self
-        }
-    }
-
-    pub fn add_dep_module(self, name: &'a str, src: &'a str) -> Self {
-        let mut dependency_modules = self.dependency_modules;
-        dependency_modules.push((name, src));
-        Completions {
-            dependency_modules,
-            ..self
-        }
-    }
-
-    pub fn add_test_module(self, name: &'a str, src: &'a str) -> Self {
-        let mut test_modules = self.test_modules;
-        test_modules.push((name, src));
-        Completions {
-            test_modules,
-            ..self
-        }
-    }
-
-    pub fn add_hex_module(self, name: &'a str, src: &'a str) -> Self {
-        let mut hex_modules = self.hex_modules;
-        hex_modules.push((name, src));
-        Completions {
-            hex_modules,
-            ..self
-        }
-    }
-
-    pub fn at(self, position: Position) -> Vec<CompletionItem> {
-        let mut io = LanguageServerTestIO::new();
-        let mut engine = setup_engine(&io);
-
-        // Add an external dependency and all its modules
-        add_path_dep(&mut engine, "dep");
-        self.dependency_modules.iter().for_each(|(name, code)| {
-            let _ = io.path_dep_module("dep", name, code);
-        });
-
-        // Add all the modules belonging to the root package
-        self.root_package_modules.iter().for_each(|(name, code)| {
-            let _ = io.src_module(name, code);
-        });
-
-        // Add all the test modules
-        self.test_modules.iter().for_each(|(name, code)| {
-            let _ = io.test_module(name, code);
-        });
-
-        io.add_hex_package("hex");
-        self.hex_modules.iter().for_each(|(name, code)| {
-            _ = io.hex_dep_module("hex", name, code);
-        });
-        for package in &io.manifest.packages {
-            add_package_from_manifest(&mut engine, package.clone());
-        }
-
-        // Add the final module we're going to be positioning the cursor in.
-        _ = io.src_module("app", self.src);
-
-        let response = engine.compile_please();
-        assert!(response.result.is_ok());
-
-        let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-            r"\\?\C:\src\app.gleam"
-        } else {
-            "/src/app.gleam"
-        });
-
-        let url = Url::from_file_path(path).unwrap();
-
-        let response = engine.completion(
-            TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position),
-            self.src.into(),
-        );
+fn completion(tester: TestProject<'_>, position: Position) -> Vec<CompletionItem> {
+    tester.at(position, |engine, param, src| {
+        let response = engine.completion(param, src);
 
         let mut completions = response.result.unwrap().unwrap_or_default();
         completions.sort_by(|a, b| a.label.cmp(&b.label));
         completions
-    }
-
-    pub fn at_default_position(self) -> Vec<CompletionItem> {
-        let src = &format!("fn typing_in_here() {{\n  0\n}}\n {}", self.src);
-        let completions = Completions { src, ..self };
-        completions
-            .at(Position::new(1, 0))
-            .into_iter()
-            .filter(|c| c.label != "typing_in_here")
-            .collect_vec()
-    }
+    })
 }
 
-fn positioned_with_io_completions_in_test(
-    src: &str,
-    test: &str,
-    position: Position,
-    io: &LanguageServerTestIO,
-) -> Vec<CompletionItem> {
-    _ = io.test_module("my_test", test);
-    let (mut engine, position_param) = positioned_with_io(src, position, io);
-
-    let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-        r"\\?\C:\test\my_test.gleam"
-    } else {
-        "/test/my_test.gleam"
-    });
-
-    let url = Url::from_file_path(path).unwrap();
-
-    let document = TextDocumentIdentifier { uri: url };
-
-    let response = engine.completion(
-        TextDocumentPositionParams::new(document, position_param.position),
-        src.into(),
-    );
-
-    let mut completions = response.result.unwrap().unwrap_or_default();
-    completions.sort_by(|a, b| a.label.cmp(&b.label));
-    completions
+fn completion_at_default_position(tester: TestProject<'_>) -> Vec<CompletionItem> {
+    let src = &format!("fn typing_in_here() {{\n  0\n}}\n {}", tester.src);
+    let tester = TestProject { src, ..tester };
+    completion(tester, Position::new(1, 0))
+        .into_iter()
+        .filter(|c| c.label != "typing_in_here")
+        .collect_vec()
 }
 
 fn prelude_type_completions() -> Vec<CompletionItem> {
@@ -230,7 +102,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        Completions::for_source(code).at(Position::new(0, 0)),
+        completion(TestProject::for_source(code), Position::new(0, 0)),
         vec![]
     );
 }
@@ -243,7 +115,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        Completions::for_source(code).at_default_position(),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![CompletionItem {
             label: "main".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -263,7 +135,7 @@ pub fn main() {
 }";
 
     assert_eq!(
-        Completions::for_source(code).at_default_position(),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![CompletionItem {
             label: "main".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -287,7 +159,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        Completions::for_source(code).at_default_position(),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -317,7 +189,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        Completions::for_source(code).at_default_position(),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![CompletionItem {
             label: "Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -343,7 +215,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        Completions::for_source(code).at_default_position(),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -378,7 +250,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        Completions::for_source(code).at_default_position(),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![CompletionItem {
             label: "Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -401,9 +273,7 @@ pub fn wobble() {
 ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![CompletionItem {
             label: "dep.wobble".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -427,9 +297,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![
             CompletionItem {
                 label: "dep.Left".into(),
@@ -461,9 +329,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![CompletionItem {
             label: "dep.Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
@@ -486,9 +352,7 @@ pub fn wobble() {
 ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![
             CompletionItem {
                 label: "dep.wobble".into(),
@@ -521,9 +385,7 @@ pub type Direction {
 ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![
             CompletionItem {
                 label: "Left".into(),
@@ -562,9 +424,7 @@ pub type Box {
 ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![
             CompletionItem {
                 label: "Box".into(),
@@ -594,9 +454,7 @@ fn private() {
     let dep = "";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![CompletionItem {
             label: "private".into(),
             kind: Some(CompletionItemKind::FUNCTION),
@@ -617,9 +475,7 @@ type Wibble {
     let dep = "";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![CompletionItem {
             label: "Wobble".into(),
             kind: Some(CompletionItemKind::ENUM_MEMBER),
@@ -640,9 +496,7 @@ pub opaque type Wibble {
     let dep = "";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![CompletionItem {
             label: "Wobble".into(),
             kind: Some(CompletionItemKind::ENUM_MEMBER),
@@ -663,9 +517,7 @@ fn private() {
 ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![]
     );
 }
@@ -680,9 +532,7 @@ type Wibble {
 ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![]
     );
 }
@@ -697,9 +547,7 @@ type Wibble {
 ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
         vec![]
     );
 }
@@ -712,7 +560,7 @@ pub type Wibble {
 }";
 
     assert_eq!(
-        Completions::for_source(code).at(Position::new(2, 0)),
+        completion(TestProject::for_source(code), Position::new(2, 0)),
         [
             prelude_type_completions(),
             vec![CompletionItem {
@@ -737,7 +585,7 @@ pub type Wibble = Result(
 ";
 
     assert_eq!(
-        Completions::for_source(code).at(Position::new(2, 0)),
+        completion(TestProject::for_source(code), Position::new(2, 0)),
         [
             prelude_type_completions(),
             vec![CompletionItem {
@@ -763,7 +611,7 @@ pub fn wibble(
 ";
 
     assert_eq!(
-        Completions::for_source(code).at(Position::new(2, 0)),
+        completion(TestProject::for_source(code), Position::new(2, 0)),
         prelude_type_completions(),
     );
 }
@@ -784,9 +632,10 @@ pub fn wibble(
 ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at(Position::new(3, 0)),
+        completion(
+            TestProject::for_source(code).add_module("dep", dep),
+            Position::new(3, 0)
+        ),
         [
             prelude_type_completions(),
             vec![CompletionItem {
@@ -817,9 +666,10 @@ pub fn wibble(
 ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at(Position::new(3, 0)),
+        completion(
+            TestProject::for_source(code).add_module("dep", dep),
+            Position::new(3, 0)
+        ),
         [
             prelude_type_completions(),
             vec![
@@ -856,7 +706,7 @@ pub fn wibble(
 ";
 
     assert_eq!(
-        Completions::for_source(code).at(Position::new(4, 0)),
+        completion(TestProject::for_source(code), Position::new(4, 0)),
         [
             prelude_type_completions(),
             vec![CompletionItem {
@@ -882,9 +732,9 @@ fn internal_values_from_root_package_are_in_the_completions() {
 "#;
 
     assert_eq!(
-        Completions::for_source("import dep")
-            .add_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(
+            TestProject::for_source("import dep").add_module("dep", dep)
+        ),
         vec![
             CompletionItem {
                 label: "dep.Bar".into(),
@@ -955,9 +805,10 @@ pub fn wibble(
     ]);
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_module("dep", dep)
-            .at(Position::new(3, 0)),
+        completion(
+            TestProject::for_source(code).add_module("dep", dep),
+            Position::new(3, 0)
+        ),
         expected_completions,
     );
 }
@@ -973,7 +824,7 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
 "#;
 
     assert_eq!(
-        Completions::for_source(code).at_default_position(),
+        completion_at_default_position(TestProject::for_source(code)),
         vec![
             CompletionItem {
                 label: "Bar".into(),
@@ -1021,7 +872,7 @@ fn internal_types_from_the_same_module_are_in_the_completions() {
 ";
 
     assert_eq!(
-        Completions::for_source(code).at(Position::new(3, 0)),
+        completion(TestProject::for_source(code), Position::new(3, 0)),
         [
             vec![
                 CompletionItem {
@@ -1061,9 +912,10 @@ pub fn wibble(
 "#;
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_dep_module("dep", dep)
-            .at(Position::new(3, 0)),
+        completion(
+            TestProject::for_source(code).add_dep_module("dep", dep),
+            Position::new(3, 0)
+        ),
         prelude_type_completions(),
     );
 }
@@ -1079,9 +931,9 @@ fn internal_values_from_a_dependency_are_ignored() {
 "#;
 
     assert_eq!(
-        Completions::for_source("import dep")
-            .add_dep_module("dep", dep)
-            .at_default_position(),
+        completion_at_default_position(
+            TestProject::for_source("import dep").add_dep_module("dep", dep)
+        ),
         vec![]
     );
 }
@@ -1096,9 +948,10 @@ pub fn main() {
     let dep = "";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_dep_module("dep", dep)
-            .at(Position::new(0, 10)),
+        completion(
+            TestProject::for_source(code).add_module("dep", dep),
+            Position::new(0, 10)
+        ),
         vec![CompletionItem {
             label: "gleam".into(),
             kind: Some(CompletionItemKind::MODULE),
@@ -1136,9 +989,10 @@ pub fn main() {
 ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_test_module("my_tests", test)
-            .at(Position::new(0, 10)),
+        completion(
+            TestProject::for_source(code).add_test_module("my_tests", test),
+            Position::new(0, 10)
+        ),
         vec![]
     );
 }
@@ -1163,11 +1017,18 @@ pub fn test_helper() {
 }
 ";
 
-    let io = LanguageServerTestIO::new();
-    _ = io.test_module("test_helper", test_helper);
+    let (mut engine, position_param) = TestProject::for_source(code)
+        .add_test_module("my_test", test)
+        .add_test_module("test_helper", test_helper)
+        .positioned_with_io_in_test(Position::new(0, 10), "my_test");
+
+    let response = engine.completion(position_param, code.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
 
     assert_eq!(
-        positioned_with_io_completions_in_test(code, test, Position::new(0, 10), &io),
+        completions,
         vec![
             CompletionItem {
                 label: "app".into(),
@@ -1223,9 +1084,10 @@ pub fn main() { 1 }
     ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_dep_module("dep", dep)
-            .at(Position::new(0, 10)),
+        completion(
+            TestProject::for_source(code).add_dep_module("dep", dep),
+            Position::new(0, 10)
+        ),
         vec![CompletionItem {
             label: "dep".into(),
             kind: Some(CompletionItemKind::MODULE),
@@ -1257,9 +1119,10 @@ pub fn main() {
     let dep = "";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_hex_module("example_module", dep)
-            .at(Position::new(0, 10)),
+        completion(
+            TestProject::for_source(code).add_hex_module("example_module", dep),
+            Position::new(0, 10)
+        ),
         vec![CompletionItem {
             label: "example_module".into(),
             kind: Some(CompletionItemKind::MODULE),
@@ -1282,6 +1145,167 @@ pub fn main() {
 }
 
 #[test]
+fn completions_for_an_import_not_from_indirect_dependency() {
+    let code = "import gleam
+
+pub fn main() {
+  0
+}";
+    let dep = "";
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code)
+                .add_hex_module("example_module", dep)
+                .add_indirect_hex_module("indirect_module", ""),
+            Position::new(0, 10)
+        ),
+        vec![CompletionItem {
+            label: "example_module".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 13
+                    }
+                },
+                new_text: "example_module".into()
+            })),
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
+fn completions_for_an_import_not_from_dev_dependency() {
+    let code = "import gleam
+
+pub fn main() {
+  0
+}";
+    let dep = "";
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code)
+                .add_hex_module("example_module", dep)
+                .add_dev_hex_module("indirect_module", ""),
+            Position::new(0, 10)
+        ),
+        vec![CompletionItem {
+            label: "example_module".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 13
+                    }
+                },
+                new_text: "example_module".into()
+            })),
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
+fn completions_for_an_import_not_from_dev_dependency_in_test() {
+    let code = "import gleam
+
+pub fn main() {
+  0
+}";
+    let test = "import gleam
+
+pub fn main() {
+  0
+}
+";
+    let dep = "";
+
+    let (mut engine, position_param) = TestProject::for_source(code)
+        .add_test_module("my_test", test)
+        .add_hex_module("example_module", dep)
+        .add_dev_hex_module("indirect_module", "")
+        .positioned_with_io_in_test(Position::new(0, 10), "my_test");
+
+    let response = engine.completion(position_param, code.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+
+    assert_eq!(
+        completions,
+        vec![
+            CompletionItem {
+                label: "app".into(),
+                kind: Some(CompletionItemKind::MODULE),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 0,
+                            character: 7
+                        },
+                        end: Position {
+                            line: 0,
+                            character: 13
+                        }
+                    },
+                    new_text: "app".into()
+                })),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "example_module".into(),
+                kind: Some(CompletionItemKind::MODULE),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 0,
+                            character: 7
+                        },
+                        end: Position {
+                            line: 0,
+                            character: 13
+                        }
+                    },
+                    new_text: "example_module".into()
+                })),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "indirect_module".into(),
+                kind: Some(CompletionItemKind::MODULE),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 0,
+                            character: 7
+                        },
+                        end: Position {
+                            line: 0,
+                            character: 13
+                        }
+                    },
+                    new_text: "indirect_module".into()
+                })),
+                ..Default::default()
+            }
+        ]
+    );
+}
+
+#[test]
 fn completions_for_an_import_from_dependency_with_docs() {
     let code = "//// Main package
 //// documentation!
@@ -1298,9 +1322,10 @@ pub fn main() { 1 }
     ";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_hex_module("example_module", dep)
-            .at(Position::new(3, 10)),
+        completion(
+            TestProject::for_source(code).add_hex_module("example_module", dep),
+            Position::new(3, 10)
+        ),
         vec![CompletionItem {
             label: "example_module".into(),
             kind: Some(CompletionItemKind::MODULE),
@@ -1332,9 +1357,10 @@ pub fn main() {
     let dep = "";
 
     assert_eq!(
-        Completions::for_source(code)
-            .add_dep_module("dep", dep)
-            .at(Position::new(0, 0)),
+        completion(
+            TestProject::for_source(code).add_dep_module("dep", dep),
+            Position::new(0, 0)
+        ),
         vec![CompletionItem {
             label: "dep".into(),
             kind: Some(CompletionItemKind::MODULE),
@@ -1353,5 +1379,79 @@ pub fn main() {
             })),
             ..Default::default()
         }]
+    );
+}
+
+#[test]
+fn completions_for_an_import_preceeding_whitespace() {
+    let code = " import gleam
+
+pub fn main() {
+  0
+}";
+    let dep = "";
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code).add_dep_module("dep", dep),
+            Position::new(0, 2)
+        ),
+        vec![CompletionItem {
+            label: "dep".into(),
+            kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 14
+                    }
+                },
+                new_text: "dep".into()
+            })),
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
+fn internal_modules_from_same_package_are_included() {
+    let code = "import gleam
+
+pub fn main() {
+  0
+}";
+    let internal_name = format!("{}/internal", LSP_TEST_ROOT_PACKAGE_NAME);
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code)
+                // Not included
+                .add_dep_module("dep/internal", "")
+                // Included
+                .add_module(&internal_name, ""),
+            Position::new(0, 0)
+        ),
+        vec![CompletionItem {
+            label: internal_name.clone(),
+            kind: Some(CompletionItemKind::MODULE),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 7
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 13
+                    }
+                },
+                new_text: internal_name.clone(),
+            })),
+            ..Default::default()
+        },]
     );
 }

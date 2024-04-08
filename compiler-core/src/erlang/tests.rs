@@ -1,4 +1,5 @@
 use crate::analyse::TargetSupport;
+use crate::config::PackageConfig;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     build::{Origin, Target},
@@ -41,6 +42,8 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
     );
     let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
     if let Some((dep_package, dep_name, dep_src)) = dep {
+        let mut dep_config = PackageConfig::default();
+        dep_config.name = dep_package.into();
         let parsed = crate::parse::parse_module(dep_src).expect("dep syntax error");
         let mut ast = parsed.module;
         ast.name = dep_name.into();
@@ -50,18 +53,21 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
             &ids,
             ast,
             Origin::Src,
-            &dep_package.into(),
             &modules,
             &TypeWarningEmitter::null(),
             &std::collections::HashMap::new(),
             TargetSupport::NotEnforced,
             line_numbers,
+            &dep_config,
+            "".into(),
         )
         .expect("should successfully infer dep Erlang");
         let _ = modules.insert(dep_name.into(), dep.type_info);
         let _ = direct_dependencies.insert(dep_package.into(), ());
     }
     let parsed = crate::parse::parse_module(src).expect("syntax error");
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
     let mut ast = parsed.module;
     ast.name = "my/mod".into();
     let line_numbers = LineNumbers::new(src);
@@ -70,12 +76,13 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         &ids,
         ast,
         Origin::Src,
-        &"thepackage".into(),
         &modules,
         &TypeWarningEmitter::null(),
         &direct_dependencies,
         TargetSupport::NotEnforced,
         line_numbers,
+        &config,
+        "".into(),
     )
     .expect("should successfully infer root Erlang");
     let line_numbers = LineNumbers::new(src);
@@ -502,9 +509,9 @@ fn operator_pipe_right_hand_side() {
         "fn id(x) {
   x
 }
-        
+
 pub fn bool_expr(x, y) {
-  y || x |> id 
+  y || x |> id
 }"
     );
 }
@@ -599,7 +606,7 @@ fn inline_const_pattern_option() {
               _ -> <<>>
             }
           }
-          
+
           pub const sixteen = 16"
     )
 }

@@ -10,6 +10,7 @@ pub mod pretty;
 #[cfg(test)]
 pub mod tests;
 
+use camino::Utf8PathBuf;
 use ecow::EcoString;
 pub use environment::*;
 pub use error::{Error, UnifyErrorSituation, Warning};
@@ -287,6 +288,25 @@ impl Type {
         }
     }
 
+    pub fn find_internal_type(&self) -> Option<Self> {
+        match self {
+            Self::Named { publicity, .. } if publicity.is_internal() => Some(self.clone()),
+
+            Self::Named { args, .. } => args.iter().find_map(|t| t.find_internal_type()),
+
+            Self::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_internal_type()),
+
+            Self::Fn { retrn, args, .. } => retrn
+                .find_internal_type()
+                .or_else(|| args.iter().find_map(|t| t.find_internal_type())),
+
+            Self::Var { type_: typ, .. } => match typ.borrow().deref() {
+                TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
+                TypeVar::Link { type_: typ, .. } => typ.find_internal_type(),
+            },
+        }
+    }
+
     pub fn fn_arity(&self) -> Option<usize> {
         match self {
             Self::Fn { args, .. } => Some(args.len()),
@@ -550,7 +570,15 @@ pub struct ModuleInterface {
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
     pub contains_todo: bool,
+    pub leaks_internal_types: bool,
+    /// Used for mapping to original source locations on disk
     pub line_numbers: LineNumbers,
+    /// Used for determining the source path of the module on disk
+    pub src_path: Utf8PathBuf,
+    // Whether the module is internal or not. Internal modules are technically
+    // importable by other packages but to do so is violating the contract of
+    // the package and as such is not recommended.
+    pub is_internal: bool,
 }
 
 /// Information on the constructors of a custom type.
@@ -621,6 +649,7 @@ impl ModuleInterface {
         origin: Origin,
         package: EcoString,
         line_numbers: LineNumbers,
+        src_path: Utf8PathBuf,
     ) -> Self {
         Self {
             name,
@@ -632,7 +661,10 @@ impl ModuleInterface {
             accessors: Default::default(),
             unused_imports: Default::default(),
             contains_todo: false,
+            leaks_internal_types: false,
+            is_internal: false,
             line_numbers,
+            src_path,
         }
     }
 

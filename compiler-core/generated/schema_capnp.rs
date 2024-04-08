@@ -489,6 +489,22 @@ pub mod module {
     pub fn has_line_numbers(&self) -> bool {
       !self.reader.get_pointer_field(7).is_null()
     }
+    #[inline]
+    pub fn get_src_path(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
+      ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(8), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn has_src_path(&self) -> bool {
+      !self.reader.get_pointer_field(8).is_null()
+    }
+    #[inline]
+    pub fn get_is_internal(self) -> bool {
+      self.reader.get_bool_field(1)
+    }
+    #[inline]
+    pub fn get_leaks_internal_types(self) -> bool {
+      self.reader.get_bool_field(2)
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -675,6 +691,38 @@ pub mod module {
     pub fn has_line_numbers(&self) -> bool {
       !self.builder.get_pointer_field(7).is_null()
     }
+    #[inline]
+    pub fn get_src_path(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
+      ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(8), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn set_src_path(&mut self, value: ::capnp::text::Reader<'_>)  {
+      self.builder.get_pointer_field(8).set_text(value);
+    }
+    #[inline]
+    pub fn init_src_path(self, size: u32) -> ::capnp::text::Builder<'a> {
+      self.builder.get_pointer_field(8).init_text(size)
+    }
+    #[inline]
+    pub fn has_src_path(&self) -> bool {
+      !self.builder.get_pointer_field(8).is_null()
+    }
+    #[inline]
+    pub fn get_is_internal(self) -> bool {
+      self.builder.get_bool_field(1)
+    }
+    #[inline]
+    pub fn set_is_internal(&mut self, value: bool)  {
+      self.builder.set_bool_field(1, value);
+    }
+    #[inline]
+    pub fn get_leaks_internal_types(self) -> bool {
+      self.builder.get_bool_field(2)
+    }
+    #[inline]
+    pub fn set_leaks_internal_types(&mut self, value: bool)  {
+      self.builder.set_bool_field(2, value);
+    }
   }
 
   pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -690,7 +738,7 @@ pub mod module {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 8 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 9 };
     pub const TYPE_ID: u64 = 0x9a52_9544_50db_0581;
   }
 }

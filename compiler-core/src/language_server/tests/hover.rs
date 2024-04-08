@@ -2,24 +2,16 @@ use lsp_types::{Hover, HoverContents, HoverParams, MarkedString, Position, Range
 
 use super::*;
 
-fn positioned_with_io_hover(
-    src: &str,
-    position: Position,
-    io: &LanguageServerTestIO,
-) -> Option<Hover> {
-    let (mut engine, position_param) = positioned_with_io(src, position, io);
+fn hover(tester: TestProject<'_>, position: Position) -> Option<Hover> {
+    tester.at(position, |engine, param, _| {
+        let params = HoverParams {
+            text_document_position_params: param,
+            work_done_progress_params: Default::default(),
+        };
+        let response = engine.hover(params);
 
-    let params = HoverParams {
-        text_document_position_params: position_param,
-        work_done_progress_params: Default::default(),
-    };
-    let response = engine.hover(params);
-
-    response.result.unwrap()
-}
-
-fn positioned_hover(src: &str, position: Position) -> Option<Hover> {
-    positioned_with_io_hover(src, position, &LanguageServerTestIO::new())
+        response.result.unwrap()
+    })
 }
 
 #[test]
@@ -31,7 +23,7 @@ fn add_2(x) {
 ";
 
     assert_eq!(
-        positioned_hover(code, Position::new(1, 3)),
+        hover(TestProject::for_source(code), Position::new(1, 3)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -67,7 +59,7 @@ fn main() {
 ";
 
     assert_eq!(
-        positioned_hover(code, Position::new(6, 3)),
+        hover(TestProject::for_source(code), Position::new(6, 3)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -109,7 +101,7 @@ pub fn main() {
 ";
 
     assert_eq!(
-        positioned_hover(code, Position::new(6, 3)),
+        hover(TestProject::for_source(code), Position::new(6, 3)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -131,7 +123,7 @@ fn(Int) -> Int
         })
     );
     assert_eq!(
-        positioned_hover(code, Position::new(9, 7)),
+        hover(TestProject::for_source(code), Position::new(9, 7)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -153,7 +145,7 @@ fn(Int) -> Int
         })
     );
     assert_eq!(
-        positioned_hover(code, Position::new(10, 7)),
+        hover(TestProject::for_source(code), Position::new(10, 7)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -175,7 +167,7 @@ fn(Int) -> Int
         })
     );
     assert_eq!(
-        positioned_hover(code, Position::new(11, 7)),
+        hover(TestProject::for_source(code), Position::new(11, 7)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -200,9 +192,6 @@ fn(Int) -> Int
 
 #[test]
 fn hover_imported_function() {
-    let io = LanguageServerTestIO::new();
-    _ = io.src_module("example_module", "pub fn my_fn() { Nil }");
-
     let code = "
 import example_module
 fn main() {
@@ -211,16 +200,16 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_io_hover(code, Position::new(3, 19), &io).unwrap();
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub fn my_fn() { Nil }"),
+        Position::new(3, 19),
+    )
+    .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_function() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
-
     let code = "
 import example_module
 fn main() {
@@ -229,16 +218,16 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_io_hover(code, Position::new(3, 19), &io).unwrap();
+    let hover = hover(
+        TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
+        Position::new(3, 19),
+    )
+    .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_unqualified_function() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
-
     let code = "
 import example_module.{my_fn}
 fn main() {
@@ -247,16 +236,16 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_io_hover(code, Position::new(3, 5), &io).unwrap();
+    let hover = hover(
+        TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
+        Position::new(3, 5),
+    )
+    .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_function_renamed_module() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
-
     let code = "
 import example_module as renamed_module
 fn main() {
@@ -265,16 +254,16 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_io_hover(code, Position::new(3, 22), &io).unwrap();
+    let hover = hover(
+        TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
+        Position::new(3, 22),
+    )
+    .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_unqualified_imported_function_renamed_module() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module("my_dep", "example_module", "pub fn my_fn() { Nil }");
-
     let code = "
 import example_module.{my_fn} as renamed_module
 fn main() {
@@ -283,20 +272,16 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_io_hover(code, Position::new(3, 6), &io).unwrap();
+    let hover = hover(
+        TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
+        Position::new(3, 6),
+    )
+    .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_function_nested_module() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module(
-        "my_dep",
-        "my/nested/example_module",
-        "pub fn my_fn() { Nil }",
-    );
-
     // Example of HexDocs link with nested modules: https://hexdocs.pm/lustre/lustre/element/svg.html
     let code = "
 import my/nested/example_module
@@ -306,23 +291,17 @@ fn main() {
 ";
 
     // hovering over "my_fn"
-    let hover = positioned_with_io_hover(code, Position::new(3, 22), &io).unwrap();
+    let hover = hover(
+        TestProject::for_source(code)
+            .add_hex_module("my/nested/example_module", "pub fn my_fn() { Nil }"),
+        Position::new(3, 22),
+    )
+    .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_ffi_renamed_function() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module(
-        "my_dep",
-        "example_module",
-        r#"
-@external(erlang, "my_mod_ffi", "renamed_fn")
-pub fn my_fn() -> Nil
-"#,
-    );
-
     let code = r#"
 import example_module
 fn main() {
@@ -331,16 +310,22 @@ fn main() {
 "#;
 
     // hovering over "my_fn"
-    let hover = positioned_with_io_hover(code, Position::new(3, 22), &io).unwrap();
+    let hover = hover(
+        TestProject::for_source(code).add_hex_module(
+            "example_module",
+            r#"
+@external(erlang, "my_mod_ffi", "renamed_fn")
+pub fn my_fn() -> Nil
+"#,
+        ),
+        Position::new(3, 22),
+    )
+    .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_constants() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module("my_dep", "example_module", "pub const my_const = 42");
-
     let code = "
 import example_module
 fn main() {
@@ -349,16 +334,16 @@ fn main() {
 ";
 
     // hovering over "my_const"
-    let hover = positioned_with_io_hover(code, Position::new(3, 19), &io).unwrap();
+    let hover = hover(
+        TestProject::for_source(code).add_hex_module("example_module", "pub const my_const = 42"),
+        Position::new(3, 19),
+    )
+    .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_imported_unqualified_constants() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module("my_dep", "example_module", "pub const my_const = 42");
-
     let code = "
 import example_module.{my_const}
 fn main() {
@@ -367,17 +352,16 @@ fn main() {
 ";
 
     // hovering over "my_const"
-    let hover = positioned_with_io_hover(code, Position::new(3, 5), &io).unwrap();
+    let hover = hover(
+        TestProject::for_source(code).add_hex_module("example_module", "pub const my_const = 42"),
+        Position::new(3, 5),
+    )
+    .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_value_with_two_modules_same_name() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module("my_dep", "a/example_module", "pub const my_const = 42");
-    _ = io.hex_dep_module("my_dep", "b/example_module", "pub const my_const = 42");
-
     let code = "
 import a/example_module as _
 import b/example_module
@@ -387,17 +371,18 @@ fn main() {
 ";
 
     // hovering over "my_const"
-    let hover = positioned_with_io_hover(code, Position::new(4, 22), &io).unwrap();
+    let hover = hover(
+        TestProject::for_source(code)
+            .add_hex_module("a/example_module", "pub const my_const = 42")
+            .add_hex_module("b/example_module", "pub const my_const = 42"),
+        Position::new(4, 22),
+    )
+    .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
 #[test]
 fn hover_external_function_with_another_value_same_name() {
-    let mut io = LanguageServerTestIO::new();
-    io.add_hex_package("my_dep");
-    _ = io.hex_dep_module("my_dep", "a/example_module", "pub const my_const = 42");
-    _ = io.hex_dep_module("my_dep", "b/example_module", "pub const my_const = 42");
-
     let code = "
 import a/example_module.{my_const as discarded}
 import b/example_module.{my_const} as _
@@ -407,7 +392,13 @@ fn main() {
 ";
 
     // hovering over "my_const"
-    let hover = positioned_with_io_hover(code, Position::new(4, 8), &io).unwrap();
+    let hover = hover(
+        TestProject::for_source(code)
+            .add_hex_module("a/example_module", "pub const my_const = 42")
+            .add_hex_module("b/example_module", "pub const my_const = 42"),
+        Position::new(4, 8),
+    )
+    .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
 
@@ -422,7 +413,7 @@ fn append(x, y) {
 ";
 
     assert_eq!(
-        positioned_hover(code, Position::new(3, 3)),
+        hover(TestProject::for_source(code), Position::new(3, 3)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -458,7 +449,7 @@ fn append(x, y) {
 ";
 
     assert_eq!(
-        positioned_hover(code, Position::new(3, 10)),
+        hover(TestProject::for_source(code), Position::new(3, 10)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam\nString\n```".to_string()
@@ -487,7 +478,10 @@ fn append(x, y) {
 }
 ";
 
-    assert_eq!(positioned_hover(code, Position::new(4, 1)), None);
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(4, 1)),
+        None
+    );
 }
 
 #[test]
@@ -499,7 +493,7 @@ fn append(x, y) {
 ";
 
     assert_eq!(
-        positioned_hover(code, Position::new(2, 2)),
+        hover(TestProject::for_source(code), Position::new(2, 2)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -531,7 +525,7 @@ const one = 1
 ";
 
     assert_eq!(
-        positioned_hover(code, Position::new(3, 6)),
+        hover(TestProject::for_source(code), Position::new(3, 6)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam
@@ -573,7 +567,7 @@ fn do_stuff() {
 
     // hover over `a`
     assert_eq!(
-        positioned_hover(code, Position::new(8, 6)),
+        hover(TestProject::for_source(code), Position::new(8, 6)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String("```gleam\nInt\n```".to_string())),
             range: Some(Range::new(Position::new(8, 6), Position::new(8, 7))),
@@ -582,7 +576,7 @@ fn do_stuff() {
 
     // hover over `b`
     assert_eq!(
-        positioned_hover(code, Position::new(8, 11)),
+        hover(TestProject::for_source(code), Position::new(8, 11)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam\nfn(fn(Int) -> String) -> String\n```\n".to_string()
@@ -593,7 +587,7 @@ fn do_stuff() {
 
     // hover over `c`
     assert_eq!(
-        positioned_hover(code, Position::new(9, 2)),
+        hover(TestProject::for_source(code), Position::new(9, 2)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
                 "```gleam\nString\n```\nA locally defined variable.".to_string()

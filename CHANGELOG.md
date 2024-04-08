@@ -21,38 +21,42 @@
   result of nested blocks.
 - Fix a bug where JavaScript code generation would not properly handle functions
   returned by blocks.
-- Fix a bug where Erlang code generation would not properly handle list case patterns
-  with no head and a spread tail.
+- Fix a bug where Erlang code generation would not properly handle list case
+  patterns with no head and a spread tail.
 - The compiler will now raise a warning if you're pattern matching on tuple
   literals and suggest you use multiple subjects instead.
 - Fixed a bug where JavaScript code generation would incorrectly parenthesise a
   return statement.
-- Added support for the [Bun](https://bun.sh/) runtime when compiling to
-  JavaScript by using `gleam run --target javascript --runtime bun`
 - Fixed a bug where `tuple.0.1` was not recognised as a nested tuple access
   expression
 - Error messages are more clear about expecting values instead of types.
 - Fixed a bug where pattern matching on a string would cause the program to
   crash on the JavaScript target.
-- Allow compilation of packages that require `"rebar"` using the rebar3 compiler.
 - A warning is now emitted when defining an opaque external type.
 - Improve error message when using incorrect quotes (`'`) to define a string
-- Fixed a bug where an imported module named `prepend` would conflict with the
-  `prepend` function imported from the prelude in the JavaScript target.
 - Fixed a bug where Erlang string prefix patterns could generate invalid Erlang.
 - Fixed string prefix matching producing wrong results on the JavaScript target
   when the prefix had a Unicode codepoint escape sequence (`\u{...}`).
 - Improved error message for wrong patterns using constructors from other
   modules.
-- Fixed a bug on the JavaScript target where variables bound by patterns, if used
-  within a bit array literal inside a `case` clause's guard, would be used before they
-  were defined, leading to a runtime error when evaluating the `case` expression.
+- Fixed a bug on the JavaScript target where variables bound by patterns, if
+  used within a bit array literal inside a `case` clause's guard, would be used
+  before they were defined, leading to a runtime error when evaluating the
+  `case` expression.
 - Improved error messages when failing to parse a series of things.
 - A warning is now raised for unused binary operations, records, record access
   and record updates.
 - Fixed a bug when using constant as the size option parameter
   for `BitArray` caused unknown variable exception.
 - Improved recommendations on error messages.
+- Improved error message for `BitArray` segment sizes.
+- A warning is now raised when an internal type is accidentally exposed in a
+  package's public API.
+- Fixed the error message when using `panic` on the JavaScript target: it now
+  correctly identifies the error variant as a `panic` instead of a `todo`.
+- Fixed a bug on the JavaScript target where empty lists with little space
+  available could compile to a conversion from the array `[ , ]`, causing them
+  to wrongly have a length of one (the array has a single `undefined` element).
 
 ### Formatter
 
@@ -64,9 +68,18 @@
   needlessly indented if preceded by a comment.
 - Line endings other than `\n` are now handled by the formatter, preserving
   blank lines and converting them to `\n`.
+- The formatter can now format groups of imports alphabetically.
+- Fixed a bug where comments would be moved out of an empty list.
+- Fixed a bug where pipes and binary operations in function calls would be
+  nested more than necessary.
+- Improved formatting of comments in binary operation chains.
 
 ### Build tool
 
+- Added support for the [Bun](https://bun.sh/) runtime when compiling to
+  JavaScript by using `gleam run --target javascript --runtime bun`
+- Allow compilation of packages that require `"rebar"` using the rebar3
+  compiler.
 - A warning is now emitted if there is a `.gleam` file with a path that would be
   invalid as a module name.
 - The `~> x.y` version constraint syntax has been dropped in favour of
@@ -93,10 +106,22 @@
   assigned to the wrong definition in the doc site.
 - Fixed a bug where the code blocks in the generated documentation's site would
   have a wrong indentation.
+- Fixed a bug where the compiler would panic when it cannot get current
+  directory.
+- Improved error message for non-UTF-8 paths encountered during Gleam commands.
+  Now includes the path that caused the error for better diagnostics.
 - Fixed a bug where on windows local packages had absolute paths in the manifest
   instead of relative.
-- The `gleam publish` command now asks for confirmation if the package repository
-  URL doesn't return a successful status code.
+- The `gleam publish` command now asks for confirmation if the package
+  repository URL doesn't return a successful status code.
+- `gleam publish` can now optionally use a Hex API key to authorise publishing
+  and retiring packages, set via the environment variable `HEXPM_API_KEY`.
+- `gleam publish` will now refuse to publish placeholder packages, to prevent
+  name squatting which is against the Hex terms of service.
+- If a package leaks an internal type in its public API, then the build tool
+  will now refuse to publish it to Hex.
+- Monospaced links in the generated documentation now have the same color as
+  common links.
 
 ### Language Server
 
@@ -133,7 +158,6 @@
 
 - The format used by the formatter has been improved in some niche cases.
 - Improved the formatting of long case guards.
-- The formatter can now format groups of imports alphabetically.
 
 ## v1.0.0-rc1 - 2024-02-10
 

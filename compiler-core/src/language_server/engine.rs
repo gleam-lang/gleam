@@ -188,32 +188,11 @@ where
                 None => return Ok(None),
             };
 
-            // Check current file contents if the user is writing an import
+            // Check current filercontents if the user is writing an import
             // and handle separately from the rest of the completion flow
             // Check if an import is being written
-            {
-                let line_num = LineNumbers::new(src.as_str());
-                let start_of_line = line_num.byte_index(params.position.line, 0);
-                let end_of_line = line_num.byte_index(params.position.line + 1, 0);
-
-                // Check if the line starts with "import"
-                let from_ind = &src.get(start_of_line as usize..end_of_line as usize);
-                if let Some(from_ind) = from_ind {
-                    if from_ind.starts_with("import") {
-                        // Find where to start and end the import completion
-                        let start = line_num.line_and_column_number(start_of_line);
-                        let end = line_num.line_and_column_number(end_of_line - 1);
-                        let start = lsp::Position {
-                            line: start.line - 1,
-                            character: start.column + 6,
-                        };
-                        let end = lsp::Position {
-                            line: end.line - 1,
-                            character: end.column,
-                        };
-                        return Ok(Some(this.completion_imports(module, start, end)));
-                    }
-                }
+            if let Some(value) = this.import_completions(src, &params, module) {
+                return value;
             }
 
             let line_numbers = LineNumbers::new(&module.code);
@@ -481,23 +460,84 @@ where
         completions
     }
 
-    fn completion_imports<'b>(
+    fn import_completions<'b>(
         &'b self,
+        src: EcoString,
+        params: &lsp::TextDocumentPositionParams,
         module: &'b Module,
+    ) -> Option<Result<Option<Vec<lsp::CompletionItem>>>> {
+        let line_num = LineNumbers::new(src.as_str());
+        let start_of_line = line_num.byte_index(params.position.line, 0);
+        let end_of_line = line_num.byte_index(params.position.line + 1, 0);
+
+        // Drop all lines before the line the cursor is on
+        let src = &src.get(start_of_line as usize..)?;
+
+        // If this isn't an import line then we don't offer import completions
+        if !src.trim_start().starts_with("import") {
+            return None;
+        }
+
+        // Find where to start and end the import completion
+        let start = line_num.line_and_column_number(start_of_line);
+        let end = line_num.line_and_column_number(end_of_line - 1);
+        let start = lsp::Position::new(start.line - 1, start.column + 6);
+        let end = lsp::Position::new(end.line - 1, end.column);
+        let completions = self.complete_modules_for_import(module, start, end);
+
+        Some(Ok(Some(completions)))
+    }
+
+    fn complete_modules_for_import<'b>(
+        &'b self,
+        current_module: &'b Module,
         start: lsp::Position,
         end: lsp::Position,
     ) -> Vec<lsp::CompletionItem> {
+        let mut direct_dep_packages: std::collections::HashSet<&EcoString> =
+            std::collections::HashSet::from_iter(
+                self.compiler.project_compiler.config.dependencies.keys(),
+            );
+        if !current_module.origin.is_src() {
+            // In tests we can import direct dev dependencies
+            direct_dep_packages.extend(
+                self.compiler
+                    .project_compiler
+                    .config
+                    .dev_dependencies
+                    .keys(),
+            )
+        }
+
         let already_imported: std::collections::HashSet<EcoString> =
-            std::collections::HashSet::from_iter(module.dependencies_list());
+            std::collections::HashSet::from_iter(current_module.dependencies_list());
         self.compiler
             .project_compiler
             .get_importable_modules()
             .iter()
-            .filter(|(name, m)| {
-                *name != &module.name
-                    && !already_imported.contains(*name)
-                    && (m.origin.is_src() || !module.origin.is_src())
+            //
+            // It is possible to import modules from dependencies of dependencies
+            // but it's not recommended so we don't include them in completions
+            .filter(|(_, module)| {
+                let is_root_or_prelude =
+                    module.package == self.root_package_name() || module.package.is_empty();
+                is_root_or_prelude || direct_dep_packages.contains(&module.package)
             })
+            //
+            // src/ cannot import test/
+            .filter(|(_, module)| module.origin.is_src() || !current_module.origin.is_src())
+            //
+            // It is possible to import internal modules from other packages,
+            // but it's not recommended so we don't include them in completions
+            .filter(|(_, module)| module.package == self.root_package_name() || !module.is_internal)
+            //
+            // You cannot import a module twice
+            .filter(|(name, _)| !already_imported.contains(*name))
+            //
+            // You cannot import yourself
+            .filter(|(name, _)| *name != &current_module.name)
+            //
+            // Everything else we suggest as a completion
             .map(|(name, _)| lsp::CompletionItem {
                 label: name.to_string(),
                 kind: Some(lsp::CompletionItemKind::MODULE),

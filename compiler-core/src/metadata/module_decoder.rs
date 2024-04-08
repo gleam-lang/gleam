@@ -68,7 +68,9 @@ impl ModuleDecoder {
         Ok(ModuleInterface {
             name: reader.get_name()?.into(),
             package: reader.get_package()?.into(),
+            is_internal: reader.get_is_internal(),
             contains_todo: reader.get_contains_todo(),
+            leaks_internal_types: reader.get_leaks_internal_types(),
             origin: Origin::Src,
             values: read_hashmap!(reader.get_values()?, self, value_constructor),
             types: read_hashmap!(reader.get_types()?, self, type_constructor),
@@ -80,6 +82,7 @@ impl ModuleDecoder {
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
             unused_imports: read_vec!(reader.get_unused_imports()?, self, src_span),
             line_numbers: self.line_numbers(&reader.get_line_numbers()?)?,
+            src_path: reader.get_src_path()?.into(),
         })
     }
 

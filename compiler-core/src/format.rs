@@ -219,95 +219,95 @@ impl<'comments> Formatter<'comments> {
     /// Separates the imports in groups delimited by comments or empty lines and
     /// sorts each group alphabetically.
     ///
+    /// The formatter needs to play nicely with import groups defined by the
+    /// programmer. If one puts a comment before an import then that's a clue
+    /// for the formatter that it has run into a gorup of related imports.
+    ///
+    /// So we can't just sort `imports` and format each one, we have to be a
+    /// bit smarter and see if each import is preceded by a comment.
+    /// Once we find a comment we know we're done with the current import
+    /// group and a new one has started.
+    ///
+    /// ```gleam
+    /// // This is an import group.
+    /// import gleam/int
+    /// import gleam/string
+    ///
+    /// // This marks the beginning of a new import group that can't
+    /// // be mushed together with the previous one!
+    /// import wibble
+    /// import wobble
+    /// ```
     fn imports<'a>(&mut self, imports: Vec<&'a TargetedDefinition>) -> Vec<Document<'a>> {
-        // The formatter needs to play nicely with import groups defined by the
-        // programmer. If one puts a comment before an import then that's a clue
-        // for the formatter that it has run into a gorup of related imports.
-        //
-        // So we can't just sort `imports` and format each one, we have to be a
-        // bit smarter and see if each import is preceded by a comment.
-        // Once we find a comment we know we're done with the current import
-        // group and a new one has started.
-        //
-        // ```gleam
-        // // This is an import group.
-        // import gleam/int
-        // import gleam/string
-        //
-        // // This marks the beginning of a new import group that can't
-        // // be mushed together with the previous one!
-        // import wibble
-        // import wobble
-        // ```
-        let mut documents = vec![];
+        let mut import_groups_docs = vec![];
         let mut current_group = vec![];
-        let mut group_comments = None;
+        let mut current_group_delimiter = docvec!();
 
         for import in imports {
             let start = import.definition.location().start;
-            // If the import is preceded by a comment then we want to put it
-            // into a new group and we can print the current one.
-            if !current_group.is_empty()
-                && (self.any_comments(start) || self.any_empty_lines(start))
-            {
-                documents.append(&mut self.sorted_import_group(&mut current_group, group_comments));
-                documents.push(lines(2));
-                // We pop the comment introducing the group and save it for
-                // later for when the group is over and we can actually print
-                // it.
-                // We have to immediately pop the comment as soon as we start
-                // with a new group or it would still be present in
-                // `self.comments` messing up `self.any_comments` for the next
-                // imports in the group.
-                group_comments = printed_comments(self.pop_comments(start), false);
+
+            // We need to start a new group if the `import` is preceded by one or
+            // more empty lines or a `//` comment.
+            let start_new_group = self.any_comments(start) || self.any_empty_lines(start);
+            if start_new_group {
+                // First we print the previous group and clear it out to start a
+                // new empty group containing the import we've just ran into.
+                if !current_group.is_empty() {
+                    import_groups_docs.push(docvec![
+                        current_group_delimiter,
+                        self.sorted_import_group(&current_group)
+                    ]);
+                    current_group.clear();
+                }
+
+                // Now that we've taken care of the previous group we can start
+                // the new one. We know it's preceded either by an empty line or
+                // some comments se we have to be a bit more precise and save the
+                // actual delimiter that we're going to put at the top of this
+                // group.
+
+                let comments = self.pop_comments(start);
+                let _ = self.pop_empty_lines(start);
+                current_group_delimiter = printed_comments(comments, true).unwrap_or(docvec!());
             }
-            let _ = self.pop_empty_lines(start);
+            // Lastly we add the import to the group.
             current_group.push(import);
         }
 
         // Let's not forget about the last import group!
         if !current_group.is_empty() {
-            documents.append(&mut self.sorted_import_group(&mut current_group, group_comments));
+            import_groups_docs.push(docvec![
+                current_group_delimiter,
+                self.sorted_import_group(&current_group)
+            ]);
         }
 
-        documents
+        // We want all consecutive import groups to be separated by an empty line.
+        // This should really be `.intersperse(line())` but I can't do that
+        // because of https://github.com/rust-lang/rust/issues/48919.
+        Itertools::intersperse(import_groups_docs.into_iter(), lines(2)).collect_vec()
     }
 
-    /// Prints the imports as a single sorted group of import statements
-    /// draining the given vector.
+    /// Prints the imports as a single sorted group of import statements.
     ///
-    /// `group_comment` is the comment preceding the current group.
-    /// It might be missing since a group could also be defined by simply having
-    /// an empty line between imports.
-    ///
-    fn sorted_import_group<'a>(
-        &mut self,
-        imports: &mut Vec<&'a TargetedDefinition>,
-        group_comment: Option<Document<'a>>,
-    ) -> Vec<Document<'a>> {
-        let mut documents = Vec::with_capacity(imports.len() * 2);
+    fn sorted_import_group<'a>(&mut self, imports: &[&'a TargetedDefinition]) -> Document<'a> {
+        let imports = imports
+            .iter()
+            .sorted_by(|one, other| match (&one.definition, &other.definition) {
+                (Definition::Import(one), Definition::Import(other)) => {
+                    one.module.cmp(&other.module)
+                }
+                // It shouldn't really be possible for a non import to be here so
+                // we just return a default value.
+                _ => std::cmp::Ordering::Equal,
+            })
+            .map(|import| self.targeted_definition(import));
 
-        // If the group is defined with a single comment we print it as the
-        // first thing.
-        if let Some(comment) = group_comment {
-            documents.push(comment)
-        };
-
-        imports.sort_by(|one, other| match (&one.definition, &other.definition) {
-            (Definition::Import(one), Definition::Import(other)) => one.module.cmp(&other.module),
-            // It shouldn't really be possible for a non import to be here so
-            // we just return a default value.
-            _ => std::cmp::Ordering::Equal,
-        });
-
-        for import in imports.iter() {
-            if !documents.is_empty() {
-                documents.push(lines(1))
-            }
-            documents.push(self.targeted_definition(import));
-        }
-        imports.clear();
-        documents
+        // This should really be `.intersperse(line())` but I can't do that
+        // because of https://github.com/rust-lang/rust/issues/48919.
+        Itertools::intersperse(imports, line())
+            .collect_vec()
+            .to_doc()
     }
 
     fn definition<'a>(&mut self, statement: &'a UntypedDefinition) -> Document<'a> {
@@ -762,7 +762,7 @@ impl<'comments> Formatter<'comments> {
                 message: Some(l), ..
             } => docvec!["todo as ", self.expr(l)],
 
-            UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions),
+            UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions, false),
 
             UntypedExpr::Int { value, .. } => self.int(value),
 
@@ -814,7 +814,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::BinOp {
                 name, left, right, ..
-            } => self.bin_op(name, left, right),
+            } => self.bin_op(name, left, right, false),
 
             UntypedExpr::Case {
                 subjects,
@@ -1034,24 +1034,7 @@ impl<'comments> Formatter<'comments> {
             elements,
             location,
             |e| e,
-            |self_, e| {
-                // If there's more than one item in the tuple and there's a
-                // pipeline or long binary chain, we want to indent those to
-                // make it easier to tell where one item ends and the other
-                // starts.
-                if elements.len() > 1 && (e.is_binop() || e.is_pipeline()) {
-                    // We pop the comments ourselves without relying on the default
-                    // `expression` way of commenting stuff. That's because we want to
-                    // avoid the comment block (and its newline) being indented by the
-                    // formatter. This way the comments gets added _after_ we increase
-                    // the nesting level.
-                    let comments = self_.pop_comments(e.start_byte_index());
-                    let doc = self_.expr(e).group().nest(INDENT);
-                    commented(doc, comments)
-                } else {
-                    self_.expr(e).group()
-                }
-            },
+            |self_, e| self_.comma_separated_item(e, elements.len()),
         )
     }
 
@@ -1160,17 +1143,36 @@ impl<'comments> Formatter<'comments> {
         name: &'a BinOp,
         left: &'a UntypedExpr,
         right: &'a UntypedExpr,
+        nest_steps: bool,
     ) -> Document<'a> {
-        self.bin_op_side(name, left)
-            .append(break_("", " "))
-            .append(name)
+        let left_side = self.bin_op_side(name, left, nest_steps);
+
+        let comments = self.pop_comments(right.start_byte_index());
+        let name_doc = break_("", " ").append(commented(name.to_doc(), comments));
+
+        let right_side = self.bin_op_side(name, right, nest_steps);
+
+        left_side
+            .append(if nest_steps {
+                name_doc.nest(INDENT)
+            } else {
+                name_doc
+            })
             .append(" ")
-            .append(self.bin_op_side(name, right))
+            .append(right_side)
     }
 
-    fn bin_op_side<'a>(&mut self, operator: &'a BinOp, side: &'a UntypedExpr) -> Document<'a> {
+    fn bin_op_side<'a>(
+        &mut self,
+        operator: &'a BinOp,
+        side: &'a UntypedExpr,
+        nest_steps: bool,
+    ) -> Document<'a> {
         let side_doc = match side {
             UntypedExpr::String { value, .. } => self.bin_op_string(value),
+            UntypedExpr::BinOp {
+                name, left, right, ..
+            } => self.bin_op(name, left, right, nest_steps),
             _ => self.expr(side),
         };
         match side.bin_op_name() {
@@ -1200,7 +1202,11 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn pipeline<'a>(&mut self, expressions: &'a Vec1<UntypedExpr>) -> Document<'a> {
+    fn pipeline<'a>(
+        &mut self,
+        expressions: &'a Vec1<UntypedExpr>,
+        nest_pipe: bool,
+    ) -> Document<'a> {
         let mut docs = Vec::with_capacity(expressions.len() * 3);
         let first = expressions.first();
         let first_precedence = first.bin_op_precedence();
@@ -1226,8 +1232,10 @@ impl<'comments> Formatter<'comments> {
 
                 _ => self.expr(expr),
             };
-            docs.push(line());
-            docs.push(commented("|> ".to_doc(), comments));
+
+            let pipe = line().append(commented("|> ".to_doc(), comments));
+            let pipe = if nest_pipe { pipe.nest(INDENT) } else { pipe };
+            docs.push(pipe);
             docs.push(self.operator_side(doc, 4, expr.bin_op_precedence()));
         }
 
@@ -1454,24 +1462,7 @@ impl<'comments> Formatter<'comments> {
             ),
             None => nil(),
         }
-        .append(
-            // If there's more than one item in the tuple and there's a
-            // pipeline or long binary chain, we want to indent those to
-            // make it easier to tell where one item ends and the other
-            // starts.
-            if arity > 1 && (arg.value.is_binop() || arg.value.is_pipeline()) {
-                // We pop the comments ourselves without relying on the default
-                // `expression` way of commenting stuff. That's because we want to
-                // avoid the comment block (and its newline) being indented by the
-                // formatter. This way the comments gets added _after_ we increase
-                // the nesting level.
-                let comments = self.pop_comments(arg.value.start_byte_index());
-                let doc = self.expr(&arg.value).group().nest(INDENT);
-                commented(doc, comments)
-            } else {
-                self.expr(&arg.value).group()
-            },
-        )
+        .append(self.comma_separated_item(&arg.value, arity))
     }
 
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
@@ -1637,7 +1628,22 @@ impl<'comments> Formatter<'comments> {
         if elements.is_empty() {
             return match tail {
                 Some(tail) => self.expr(tail),
-                None => "[]".to_doc(),
+                // We take all comments that come _before_ the end of the list,
+                // that is all comments that are inside "[" and "]", if there's
+                // any comment we want to put it inside the empty list!
+                None => match printed_comments(self.pop_comments(location.end), false) {
+                    None => "[]".to_doc(),
+                    Some(comments) => "["
+                        .to_doc()
+                        .append(break_("", "").nest(INDENT))
+                        .append(comments)
+                        .append(break_("", ""))
+                        .append("]")
+                        // vvv We want to make sure the comments are on a separate
+                        //     line from the opening and closing brackets so we
+                        //     force the breaks to be split on newlines.
+                        .force_break(),
+                },
             };
         }
 
@@ -1654,24 +1660,9 @@ impl<'comments> Formatter<'comments> {
             };
 
         let elements = join(
-            elements.iter().map(|e|
-                // If there's more than one item in the tuple and there's a
-                // pipeline or long binary chain, we want to indent those to
-                // make it easier to tell where one item ends and the other
-                // starts.
-                if list_size > 1 && (e.is_binop() || e.is_pipeline()) {
-                    // We pop the comments ourselves without relying on the default
-                    // `expression` way of commenting stuff. That's because we want to
-                    // avoid the comment block (and its newline) being indented by the
-                    // formatter. This way the comments gets added _after_ we increase
-                    // the nesting level.
-                    let comments = self.pop_comments(e.start_byte_index());
-                    let doc = self.expr(e).group().nest(INDENT);
-                    commented(doc, comments)
-                } else {
-                    self.expr(e).group()
-                }
-            ),
+            elements
+                .iter()
+                .map(|e| self.comma_separated_item(e, list_size)),
             comma,
         )
         .next_break_fits(NextBreakFitsMode::Disabled);
@@ -1711,6 +1702,34 @@ impl<'comments> Formatter<'comments> {
                 .append(line())
                 .append("]")
                 .force_break(),
+        }
+    }
+
+    /// Pretty prints an expression to be used in a comma separated list; for
+    /// example as a list item, a tuple item or as an argument of a function call.
+    fn comma_separated_item<'a>(
+        &mut self,
+        expression: &'a UntypedExpr,
+        siblings: usize,
+    ) -> Document<'a> {
+        // If there's more than one item in the comma separated list and there's a
+        // pipeline or long binary chain, we want to indent those to make it
+        // easier to tell where one item ends and the other starts.
+        // Othewise we just print the expression as a normal expr.
+        match expression {
+            UntypedExpr::BinOp {
+                name, left, right, ..
+            } if siblings > 1 => {
+                let comments = self.pop_comments(expression.start_byte_index());
+                let doc = self.bin_op(name, left, right, true).group();
+                commented(doc, comments)
+            }
+            UntypedExpr::PipeLine { expressions } if siblings > 1 => {
+                let comments = self.pop_comments(expression.start_byte_index());
+                let doc = self.pipeline(expressions, true).group();
+                commented(doc, comments)
+            }
+            _ => self.expr(expression).group(),
         }
     }
 

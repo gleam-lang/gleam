@@ -99,3 +99,14 @@ fn go(xs) {
 "#,
     );
 }
+
+#[test]
+fn tight_empty_list() {
+    assert_js!(
+        r#"
+fn go(func) {
+  let huuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuge_variable = []
+}
+"#,
+    );
+}

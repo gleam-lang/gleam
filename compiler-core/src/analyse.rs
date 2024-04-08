@@ -12,6 +12,7 @@ use crate::{
     },
     build::{Origin, Target},
     call_graph::{into_dependency_order, CallGraphNode},
+    config::PackageConfig,
     dep_tree,
     line_numbers::LineNumbers,
     type_::{
@@ -30,6 +31,7 @@ use crate::{
     warning::TypeWarningEmitter,
     GLEAM_CORE_PACKAGE_NAME,
 };
+use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
 use std::{
@@ -118,18 +120,20 @@ pub fn infer_module<A>(
     ids: &UniqueIdGenerator,
     mut module: UntypedModule,
     origin: Origin,
-    package: &EcoString,
     modules: &im::HashMap<EcoString, ModuleInterface>,
     warnings: &TypeWarningEmitter,
     direct_dependencies: &HashMap<EcoString, A>,
     target_support: TargetSupport,
     line_numbers: LineNumbers,
+    package_config: &PackageConfig,
+    src_path: Utf8PathBuf,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
+    let package = package_config.name.clone();
     let env = Environment::new(
         ids.clone(),
-        package.clone(),
+        package_config.name.clone(),
         name.clone(),
         target,
         modules,
@@ -153,7 +157,14 @@ pub fn infer_module<A>(
     // Register types so they can be used in constructors and functions
     // earlier in the module.
     for t in &statements.custom_types {
-        register_types_from_custom_type(t, &mut type_names, &mut env, &name, &mut hydrators)?;
+        register_types_from_custom_type(
+            t,
+            &mut type_names,
+            &mut env,
+            &name,
+            package_config,
+            &mut hydrators,
+        )?;
     }
     // TODO: Extract a Type alias class to perform this.
     let sorted_aliases = sorted_type_aliases(&statements.type_aliases)?;
@@ -184,7 +195,7 @@ pub fn infer_module<A>(
     for i in statements.imports {
         let statement = record_imported_items_for_use_detection(
             i,
-            package,
+            package.as_str(),
             direct_dependencies,
             warnings,
             &env,
@@ -241,6 +252,8 @@ pub fn infer_module<A>(
     env.accessors
         .retain(|_, accessors| accessors.publicity.is_importable());
 
+    let mut leaked_internal_type_encountered = false;
+
     // Ensure no exported values have private types in their type signature
     for value in env.module_values.values() {
         if value.publicity.is_private() {
@@ -251,6 +264,24 @@ pub fn infer_module<A>(
                 location: value.variant.definition_location(),
                 leaked,
             });
+        }
+
+        // We also want to make sure that no public type exposes internal ones
+        // in their type signature.
+        if !value.publicity.is_public() {
+            continue;
+        }
+        // We also don't want to raise a warning if we're inside an internal
+        // module ourselves, the type wouldn't actually be publicly exposed.
+        if package_config.is_internal_module(name.as_str()) {
+            continue;
+        }
+        if let Some(leaked) = value.type_.find_internal_type() {
+            leaked_internal_type_encountered = true;
+            env.warnings.emit(type_::Warning::InternalTypeLeak {
+                location: value.variant.definition_location(),
+                leaked,
+            })
         }
     }
 
@@ -263,6 +294,8 @@ pub fn infer_module<A>(
         ..
     } = env;
 
+    let is_internal = package_config.is_internal_module(name.as_str());
+
     Ok(ast::Module {
         documentation,
         name: name.clone(),
@@ -274,10 +307,13 @@ pub fn infer_module<A>(
             values,
             accessors,
             origin,
-            package: package.clone(),
+            package: package_config.name.clone(),
+            is_internal,
             unused_imports,
             contains_todo,
+            leaks_internal_types: leaked_internal_type_encountered,
             line_numbers,
+            src_path,
         },
     })
 }
@@ -356,6 +392,7 @@ fn register_types_from_custom_type<'a>(
     names: &mut HashMap<EcoString, SrcSpan>,
     environment: &mut Environment<'a>,
     module: &'a EcoString,
+    config: &PackageConfig,
     hydrators: &mut HashMap<EcoString, Hydrator>,
 ) -> Result<(), Error> {
     let CustomType {
@@ -374,8 +411,19 @@ fn register_types_from_custom_type<'a>(
 
     hydrator.clear_ridgid_type_names();
 
+    // We check is the type comes from an internal module and restrict its
+    // publicity.
+    let publicity = match publicity {
+        // It's important we only restrict the publicity of public types.
+        Publicity::Public if config.is_internal_module(module) => Publicity::Internal,
+        // If a type is private we don't want to make it internal just because
+        // it comes from an internal module, so in that case the publicity is
+        // left unchanged.
+        Publicity::Public | Publicity::Private | Publicity::Internal => *publicity,
+    };
+
     let typ = Arc::new(Type::Named {
-        publicity: *publicity,
+        publicity,
         package: environment.current_package.clone(),
         module: module.to_owned(),
         name: name.clone(),
@@ -389,7 +437,7 @@ fn register_types_from_custom_type<'a>(
             module: module.clone(),
             deprecation: deprecation.clone(),
             parameters,
-            publicity: *publicity,
+            publicity,
             typ,
         },
     )?;

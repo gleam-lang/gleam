@@ -555,7 +555,7 @@ fn initialise_logger() {
 }
 
 fn find_project_paths() -> Result<ProjectPaths> {
-    let current_dir = get_current_directory().expect("Failed to get current directory");
+    let current_dir = get_current_directory()?;
     get_project_root(current_dir).map(ProjectPaths::new)
 }
 

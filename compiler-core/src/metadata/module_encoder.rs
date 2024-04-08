@@ -41,6 +41,9 @@ impl<'a> ModuleEncoder<'a> {
         module.set_name(&self.data.name);
         module.set_package(&self.data.package);
         module.set_contains_todo(self.data.contains_todo);
+        module.set_src_path(self.data.src_path.as_str());
+        module.set_leaks_internal_types(self.data.leaks_internal_types);
+        module.set_is_internal(self.data.is_internal);
         self.set_module_types(&mut module);
         self.set_module_values(&mut module);
         self.set_module_accessors(&mut module);

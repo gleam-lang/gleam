@@ -72,17 +72,20 @@ pub fn compile_package(
         let mut ast = parsed.module;
         ast.name = dep_name.into();
         let line_numbers = LineNumbers::new(dep_src);
+        let mut config = PackageConfig::default();
+        config.name = dep_package.into();
         let dep = crate::analyse::infer_module::<()>(
             Target::Erlang,
             &ids,
             ast,
             Origin::Src,
-            &dep_package.into(),
             &modules,
             &TypeWarningEmitter::null(),
             &std::collections::HashMap::new(),
             TargetSupport::Enforced,
             line_numbers,
+            &config,
+            "".into(),
         )
         .expect("should successfully infer");
         let _ = modules.insert(dep_name.into(), dep.type_info);
@@ -96,17 +99,20 @@ pub fn compile_package(
         .unwrap_or("my/module".into());
 
     ast.name = module_name.clone();
+    let mut config = PackageConfig::default();
+    config.name = "my_package".into();
     let ast = crate::analyse::infer_module::<()>(
         Target::Erlang,
         &ids,
         ast,
         Origin::Src,
-        &"my_package".into(),
         &modules,
         &TypeWarningEmitter::null(),
         &direct_dependencies,
         TargetSupport::Enforced,
         LineNumbers::new(src),
+        &config,
+        "".into(),
     )
     .expect("should successfully infer");
 

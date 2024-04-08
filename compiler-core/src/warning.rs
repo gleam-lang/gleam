@@ -2,7 +2,7 @@ use crate::{
     ast::TodoKind,
     diagnostic::{self, Diagnostic, Location},
     error::wrap,
-    type_,
+    type_::{self, pretty::Printer},
 };
 use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
@@ -650,6 +650,40 @@ the same values.\n"
                         extra_labels: Vec::new(),
                     }),
                 },
+
+                type_::Warning::InternalTypeLeak { location, leaked } => {
+                    let mut printer = Printer::new();
+
+                    // TODO: be more precise.
+                    // - is being returned by this public function
+                    // - is taken as an argument by this public function
+                    // - is taken as an argument by this public enum constructor
+                    // etc
+                    let text = format!(
+                        "The following type is internal, but is being used by this public export.
+
+{}
+
+Internal types should not be used in a public facing function since they are
+hidden from the package's documentation.",
+                        printer.pretty_print(leaked, 4),
+                    );
+                    Diagnostic {
+                        title: "Internal type used in public interface".into(),
+                        text,
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
             },
         }
     }

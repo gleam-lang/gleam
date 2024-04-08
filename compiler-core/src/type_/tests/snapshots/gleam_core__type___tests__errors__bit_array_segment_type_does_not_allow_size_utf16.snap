@@ -9,5 +9,5 @@ error: Invalid bit array segment
 1 │ let x = <<1:utf16-size(5)>> x
   │             ^^^^^ Size cannot be specified here
 
-Hint: utf16 segments have an autoatic size.
+Hint: utf16 segments have an automatic size.
 See: https://tour.gleam.run/data-types/bit-arrays/
