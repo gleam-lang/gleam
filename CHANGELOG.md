@@ -116,6 +116,8 @@
   name squatting which is against the Hex terms of service.
 - If a package leaks an internal type in its public API, then the build tool
   will now refuse to publish it to Hex.
+- Monospaced links in the generated documentation now have the same color as
+  common links.
 
 ### Language Server
 
