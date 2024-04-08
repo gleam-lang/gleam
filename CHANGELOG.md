@@ -32,8 +32,6 @@
 - Error messages are more clear about expecting values instead of types.
 - Fixed a bug where pattern matching on a string would cause the program to
   crash on the JavaScript target.
-- Allow compilation of packages that require `"rebar"` using the rebar3
-  compiler.
 - A warning is now emitted when defining an opaque external type.
 - Improve error message when using incorrect quotes (`'`) to define a string
 - Fixed a bug where Erlang string prefix patterns could generate invalid Erlang.
@@ -77,6 +75,8 @@
 
 - Added support for the [Bun](https://bun.sh/) runtime when compiling to
   JavaScript by using `gleam run --target javascript --runtime bun`
+- Allow compilation of packages that require `"rebar"` using the rebar3
+  compiler.
 - A warning is now emitted if there is a `.gleam` file with a path that would be
   invalid as a module name.
 - The `~> x.y` version constraint syntax has been dropped in favour of
