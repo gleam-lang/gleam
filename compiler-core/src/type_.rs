@@ -134,6 +134,7 @@ impl Type {
         }
     }
 
+    /// Gets the types inside of a tuple. Returns `None` if the type is not a tuple.
     pub fn tuple_types(&self) -> Option<Vec<Arc<Self>>> {
         match self {
             Self::Tuple { elems } => Some(elems.clone()),
@@ -141,6 +142,8 @@ impl Type {
         }
     }
 
+    /// Gets the argument types for a type constructor. Returns `None` if the type
+    /// does not lead to a type constructor.
     pub fn constructor_types(&self) -> Option<Vec<Arc<Self>>> {
         match self {
             Self::Named { args, .. } => Some(args.clone()),
@@ -149,9 +152,11 @@ impl Type {
         }
     }
 
-    pub fn nested_type(&self) -> Option<Arc<Self>> {
+    /// Gets the inner type following any var links. Returns a pointer to self
+    /// if the type is not a var.
+    pub fn inner_type(&self) -> Option<Arc<Self>> {
         match self {
-            Self::Var { type_, .. } => type_.borrow().nested_type(),
+            Self::Var { type_, .. } => type_.borrow().inner_type(),
             _ => Some(Arc::new(self.clone())),
         }
     }
@@ -878,9 +883,9 @@ impl TypeVar {
         }
     }
 
-    pub fn nested_type(&self) -> Option<Arc<Type>> {
+    pub fn inner_type(&self) -> Option<Arc<Type>> {
         match self {
-            Self::Link { type_ } => type_.nested_type(),
+            Self::Link { type_ } => type_.inner_type(),
             Self::Unbound { .. } | Self::Generic { .. } => None,
         }
     }
