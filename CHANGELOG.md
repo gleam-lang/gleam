@@ -4,6 +4,9 @@
 
 ### Compiler
 
+- The `@internal` attribute can now be used to annotate definitions.
+  This will hide those definitions from the generated docuentation,
+  autocompletions and the exported module interface.
 - Prepending to lists in JavaScript (`[x, ..xs]` syntax) has been optimised.
 - Function stubs are no longer generated for functions that do not have an
   implementation for the current targeting being compiled for.
@@ -122,6 +125,8 @@
   will now refuse to publish it to Hex.
 - Monospaced links in the generated documentation now have the same color as
   common links.
+- Fixed a bug where the `export package interface` command would always
+  recompile the project ignoring the cache.
 
 ### Language Server
 
@@ -148,8 +153,6 @@
 
 - Fixed a bug where the exported package interface would not have a module's
   documentation.
-- Fixed a bug where the `export package interface` command would always
-  recompile the project ignoring the cache.
 
 ## v1.0.0-rc2 - 2024-02-14
 
@@ -167,9 +170,6 @@
 
 ### Language changes
 
-- The `@internal` attribute can now be used to annotate definitions.
-  This will hide those definitions from the generated docuentation,
-  autocompletions and the exported module interface.
 - Using a reserved word is now a compile error, not a warning.
 - Inexhaustive matches are now compile errors, not warnings.
 - The warning for an unused module alias now shows how to not assign a name to
