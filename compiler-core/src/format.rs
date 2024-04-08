@@ -1637,7 +1637,22 @@ impl<'comments> Formatter<'comments> {
         if elements.is_empty() {
             return match tail {
                 Some(tail) => self.expr(tail),
-                None => "[]".to_doc(),
+                // We take all comments that come _before_ the end of the list,
+                // that is all comments that are inside "[" and "]", if there's
+                // any comment we want to put it inside the empty list!
+                None => match printed_comments(self.pop_comments(location.end), false) {
+                    None => "[]".to_doc(),
+                    Some(comments) => "["
+                        .to_doc()
+                        .append(break_("", "").nest(INDENT))
+                        .append(comments)
+                        .append(break_("", ""))
+                        .append("]")
+                        // vvv We want to make sure the comments are on a separate
+                        //     line from the opening and closing brackets so we
+                        //     force the breaks to be split on newlines.
+                        .force_break(),
+                },
             };
         }
 
