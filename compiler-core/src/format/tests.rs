@@ -5789,3 +5789,35 @@ fn list_items_after_comment_are_not_indented() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2990
+#[test]
+fn comments_are_not_moved_out_of_empty_list() {
+    assert_format!(
+        r#"pub fn main() {
+  // This is an empty list!
+  [
+    // Nothing here...
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn empty_lists_with_comment_inside_are_indented_properly() {
+    assert_format!(
+        r#"pub fn main() {
+  fun(
+    [
+      // Nothing here...
+    ],
+    wibble_wobble_wibble_wobble_wibble_wobble_wibble_wobble,
+    [
+      // Nothing here as well!
+    ],
+  )
+}
+"#
+    );
+}
