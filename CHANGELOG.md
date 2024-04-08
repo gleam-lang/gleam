@@ -5,6 +5,8 @@
 ### Formatter
 
 - Fixed a bug where the `@internal` annotation wouldn't be displayed.
+- Fixed a bug where a record update's arguments would be incorrectly split on
+  multiple lines.
 
 ## v1.1.0-rc2 - 2024-04-10
 

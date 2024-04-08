@@ -1149,7 +1149,7 @@ impl<'comments> Formatter<'comments> {
         let constructor_doc = self.expr(constructor);
         let comments = self.pop_comments(spread.base.location().start);
         let spread_doc = commented("..".to_doc().append(self.expr(&spread.base)), comments);
-        let arg_docs = args.iter().map(|a| self.record_update_arg(a));
+        let arg_docs = args.iter().map(|a| self.record_update_arg(a).group());
         let all_arg_docs = once(spread_doc).chain(arg_docs);
         constructor_doc.append(wrap_args(all_arg_docs)).group()
     }
