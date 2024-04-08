@@ -263,7 +263,7 @@ p code {
 }
 
 p a code {
-    color: var(--links);
+  color: var(--links);
 }
 
 /* Page layout */
