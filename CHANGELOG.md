@@ -125,6 +125,10 @@
 
 ### Language Server
 
+- Update messages from the client are now batched to avoid doing excess
+  compilation work in the language server, improving performance. This makes a
+  large difference in low power machines where the language server could
+  struggle to keep up with the edits from the client.
 - The `Compiling Gleam` message is no longer emitted each time code is compiled.
   This is to reduce noise in editors that show this message prominently such as
   Neovim.
