@@ -19,7 +19,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 # HTTP types
 url = "2.2"
-http = "0.2"
+http = "1.0"
 # Complex static values
 lazy_static = "1.4"
 # Text parsing with regular expressions
@@ -43,7 +43,7 @@ base16 = { version = "0.2", features = ["alloc"] }
 
 [dev-dependencies]
 # HTTP client
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.12", features = ["json"] }
 # HTTP mock server
 mockito = "0.30"
 # Async runtime
