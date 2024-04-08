@@ -762,7 +762,7 @@ impl<'comments> Formatter<'comments> {
                 message: Some(l), ..
             } => docvec!["todo as ", self.expr(l)],
 
-            UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions),
+            UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions, false),
 
             UntypedExpr::Int { value, .. } => self.int(value),
 
@@ -814,7 +814,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::BinOp {
                 name, left, right, ..
-            } => self.bin_op(name, left, right),
+            } => self.bin_op(name, left, right, false),
 
             UntypedExpr::Case {
                 subjects,
@@ -1034,24 +1034,7 @@ impl<'comments> Formatter<'comments> {
             elements,
             location,
             |e| e,
-            |self_, e| {
-                // If there's more than one item in the tuple and there's a
-                // pipeline or long binary chain, we want to indent those to
-                // make it easier to tell where one item ends and the other
-                // starts.
-                if elements.len() > 1 && (e.is_binop() || e.is_pipeline()) {
-                    // We pop the comments ourselves without relying on the default
-                    // `expression` way of commenting stuff. That's because we want to
-                    // avoid the comment block (and its newline) being indented by the
-                    // formatter. This way the comments gets added _after_ we increase
-                    // the nesting level.
-                    let comments = self_.pop_comments(e.start_byte_index());
-                    let doc = self_.expr(e).group().nest(INDENT);
-                    commented(doc, comments)
-                } else {
-                    self_.expr(e).group()
-                }
-            },
+            |self_, e| self_.comma_separated_item(e, elements.len()),
         )
     }
 
@@ -1160,17 +1143,36 @@ impl<'comments> Formatter<'comments> {
         name: &'a BinOp,
         left: &'a UntypedExpr,
         right: &'a UntypedExpr,
+        nest_steps: bool,
     ) -> Document<'a> {
-        self.bin_op_side(name, left)
-            .append(break_("", " "))
-            .append(name)
+        let left_side = self.bin_op_side(name, left, nest_steps);
+
+        let comments = self.pop_comments(right.start_byte_index());
+        let name_doc = break_("", " ").append(commented(name.to_doc(), comments));
+
+        let right_side = self.bin_op_side(name, right, nest_steps);
+
+        left_side
+            .append(if nest_steps {
+                name_doc.nest(INDENT)
+            } else {
+                name_doc
+            })
             .append(" ")
-            .append(self.bin_op_side(name, right))
+            .append(right_side)
     }
 
-    fn bin_op_side<'a>(&mut self, operator: &'a BinOp, side: &'a UntypedExpr) -> Document<'a> {
+    fn bin_op_side<'a>(
+        &mut self,
+        operator: &'a BinOp,
+        side: &'a UntypedExpr,
+        nest_steps: bool,
+    ) -> Document<'a> {
         let side_doc = match side {
             UntypedExpr::String { value, .. } => self.bin_op_string(value),
+            UntypedExpr::BinOp {
+                name, left, right, ..
+            } => self.bin_op(name, left, right, nest_steps),
             _ => self.expr(side),
         };
         match side.bin_op_name() {
@@ -1200,7 +1202,11 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn pipeline<'a>(&mut self, expressions: &'a Vec1<UntypedExpr>) -> Document<'a> {
+    fn pipeline<'a>(
+        &mut self,
+        expressions: &'a Vec1<UntypedExpr>,
+        nest_pipe: bool,
+    ) -> Document<'a> {
         let mut docs = Vec::with_capacity(expressions.len() * 3);
         let first = expressions.first();
         let first_precedence = first.bin_op_precedence();
@@ -1226,8 +1232,10 @@ impl<'comments> Formatter<'comments> {
 
                 _ => self.expr(expr),
             };
-            docs.push(line());
-            docs.push(commented("|> ".to_doc(), comments));
+
+            let pipe = line().append(commented("|> ".to_doc(), comments));
+            let pipe = if nest_pipe { pipe.nest(INDENT) } else { pipe };
+            docs.push(pipe);
             docs.push(self.operator_side(doc, 4, expr.bin_op_precedence()));
         }
 
@@ -1454,24 +1462,7 @@ impl<'comments> Formatter<'comments> {
             ),
             None => nil(),
         }
-        .append(
-            // If there's more than one item in the tuple and there's a
-            // pipeline or long binary chain, we want to indent those to
-            // make it easier to tell where one item ends and the other
-            // starts.
-            if arity > 1 && (arg.value.is_binop() || arg.value.is_pipeline()) {
-                // We pop the comments ourselves without relying on the default
-                // `expression` way of commenting stuff. That's because we want to
-                // avoid the comment block (and its newline) being indented by the
-                // formatter. This way the comments gets added _after_ we increase
-                // the nesting level.
-                let comments = self.pop_comments(arg.value.start_byte_index());
-                let doc = self.expr(&arg.value).group().nest(INDENT);
-                commented(doc, comments)
-            } else {
-                self.expr(&arg.value).group()
-            },
-        )
+        .append(self.comma_separated_item(&arg.value, arity))
     }
 
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
@@ -1669,24 +1660,9 @@ impl<'comments> Formatter<'comments> {
             };
 
         let elements = join(
-            elements.iter().map(|e|
-                // If there's more than one item in the tuple and there's a
-                // pipeline or long binary chain, we want to indent those to
-                // make it easier to tell where one item ends and the other
-                // starts.
-                if list_size > 1 && (e.is_binop() || e.is_pipeline()) {
-                    // We pop the comments ourselves without relying on the default
-                    // `expression` way of commenting stuff. That's because we want to
-                    // avoid the comment block (and its newline) being indented by the
-                    // formatter. This way the comments gets added _after_ we increase
-                    // the nesting level.
-                    let comments = self.pop_comments(e.start_byte_index());
-                    let doc = self.expr(e).group().nest(INDENT);
-                    commented(doc, comments)
-                } else {
-                    self.expr(e).group()
-                }
-            ),
+            elements
+                .iter()
+                .map(|e| self.comma_separated_item(e, list_size)),
             comma,
         )
         .next_break_fits(NextBreakFitsMode::Disabled);
@@ -1726,6 +1702,34 @@ impl<'comments> Formatter<'comments> {
                 .append(line())
                 .append("]")
                 .force_break(),
+        }
+    }
+
+    /// Pretty prints an expression to be used in a comma separated list; for
+    /// example as a list item, a tuple item or as an argument of a function call.
+    fn comma_separated_item<'a>(
+        &mut self,
+        expression: &'a UntypedExpr,
+        siblings: usize,
+    ) -> Document<'a> {
+        // If there's more than one item in the comma separated list and there's a
+        // pipeline or long binary chain, we want to indent those to make it
+        // easier to tell where one item ends and the other starts.
+        // Othewise we just print the expression as a normal expr.
+        match expression {
+            UntypedExpr::BinOp {
+                name, left, right, ..
+            } if siblings > 1 => {
+                let comments = self.pop_comments(expression.start_byte_index());
+                let doc = self.bin_op(name, left, right, true).group();
+                commented(doc, comments)
+            }
+            UntypedExpr::PipeLine { expressions } if siblings > 1 => {
+                let comments = self.pop_comments(expression.start_byte_index());
+                let doc = self.pipeline(expressions, true).group();
+                commented(doc, comments)
+            }
+            _ => self.expr(expression).group(),
         }
     }
 

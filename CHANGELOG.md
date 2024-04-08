@@ -77,6 +77,9 @@
   blank lines and converting them to `\n`.
 - The formatter can now format groups of imports alphabetically.
 - Fixed a bug where comments would be moved out of an empty list.
+- Fixed a bug where pipes and binary operations in function calls would be
+  nested more than necessary.
+- Improved formatting of comments in binary operation chains.
 
 ### Build tool
 
