@@ -164,8 +164,6 @@ impl TypedExpr {
         }
     }
 
-    // This could be optimised in places to exit early if the first of a series
-    // of expressions is after the byte index.
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             Self::Var { .. }
@@ -186,7 +184,18 @@ impl TypedExpr {
                 .or_else(|| finally.find_node(byte_index)),
 
             Self::Block { statements, .. } => {
-                statements.iter().find_map(|e| e.find_node(byte_index))
+                for statement in statements {
+                    if statement.location().start > byte_index {
+                        cov_mark::hit!(early_exit_block);
+                        break;
+                    }
+
+                    if let Some(located) = statement.find_node(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                None
             }
 
             Self::Tuple {
@@ -195,10 +204,20 @@ impl TypedExpr {
             | Self::List {
                 elements: expressions,
                 ..
-            } => expressions
-                .iter()
-                .find_map(|e| e.find_node(byte_index))
-                .or_else(|| self.self_if_contains_location(byte_index)),
+            } => {
+                for expression in expressions {
+                    if expression.location().start > byte_index {
+                        cov_mark::hit!(early_exit_tuple_list);
+                        break;
+                    }
+
+                    if let Some(located) = expression.find_node(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                self.self_if_contains_location(byte_index)
+            }
 
             Self::NegateBool { value, .. } | Self::NegateInt { value, .. } => value
                 .find_node(byte_index)

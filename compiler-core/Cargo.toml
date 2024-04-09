@@ -42,6 +42,8 @@ pubgrub = "0.2"
 pathdiff = { version = "0.2.1", features = ["camino"] }
 # Memory arena using ids rather than references
 id-arena = "2.1"
+# Assert certain code path executions
+cov-mark = "2.0.0-pre.1"
 async-trait.workspace = true
 base16.workspace = true
 bytes.workspace = true
