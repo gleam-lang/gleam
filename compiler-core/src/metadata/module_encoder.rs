@@ -182,6 +182,13 @@ impl<'a> ModuleEncoder<'a> {
             &constructor.parameters,
         );
         self.build_src_span(builder.reborrow().init_origin(), constructor.origin);
+        builder.set_documentation(
+            constructor
+                .documentation
+                .as_ref()
+                .map(EcoString::as_str)
+                .unwrap_or_default(),
+        );
     }
 
     fn build_type_value_constructor(

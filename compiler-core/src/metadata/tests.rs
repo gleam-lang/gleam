@@ -140,6 +140,7 @@ fn module_with_private_type() {
                 module: "the/module".into(),
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
+                documentation: None,
             },
         )]
         .into(),
@@ -192,6 +193,7 @@ fn module_with_app_type() {
                 module: "the/module".into(),
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
+                documentation: None,
             },
         )]
         .into(),
@@ -222,6 +224,7 @@ fn module_with_fn_type() {
                 module: "the/module".into(),
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
+                documentation: None,
             },
         )]
         .into(),
@@ -252,6 +255,7 @@ fn module_with_tuple_type() {
                 module: "the/module".into(),
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
+                documentation: None,
             },
         )]
         .into(),
@@ -288,6 +292,7 @@ fn module_with_generic_type() {
                     module: "the/module".into(),
                     parameters: vec![t1, t2],
                     deprecation: Deprecation::NotDeprecated,
+                    documentation: None,
                 },
             )]
             .into(),
@@ -324,6 +329,7 @@ fn module_with_type_links() {
                     module: "a".into(),
                     parameters: vec![],
                     deprecation: Deprecation::NotDeprecated,
+                    documentation: Some("documentation".into()),
                 },
             )]
             .into(),
@@ -1142,6 +1148,7 @@ fn deprecated_type() {
                 deprecation: Deprecation::Deprecated {
                     message: "oh no".into(),
                 },
+                documentation: None,
             },
         )]
         .into(),

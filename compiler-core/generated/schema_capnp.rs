@@ -1283,6 +1283,14 @@ pub mod type_constructor {
     pub fn has_origin(&self) -> bool {
       !self.reader.get_pointer_field(4).is_null()
     }
+    #[inline]
+    pub fn get_documentation(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
+      ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(5), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn has_documentation(&self) -> bool {
+      !self.reader.get_pointer_field(5).is_null()
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -1421,6 +1429,22 @@ pub mod type_constructor {
     pub fn has_origin(&self) -> bool {
       !self.builder.get_pointer_field(4).is_null()
     }
+    #[inline]
+    pub fn get_documentation(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
+      ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(5), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn set_documentation(&mut self, value: ::capnp::text::Reader<'_>)  {
+      self.builder.get_pointer_field(5).set_text(value);
+    }
+    #[inline]
+    pub fn init_documentation(self, size: u32) -> ::capnp::text::Builder<'a> {
+      self.builder.get_pointer_field(5).init_text(size)
+    }
+    #[inline]
+    pub fn has_documentation(&self) -> bool {
+      !self.builder.get_pointer_field(5).is_null()
+    }
   }
 
   pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -1439,7 +1463,7 @@ pub mod type_constructor {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 5 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 6 };
     pub const TYPE_ID: u64 = 0xb1fb_6d62_e00b_6d7a;
   }
 }

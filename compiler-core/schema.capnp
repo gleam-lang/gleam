@@ -57,6 +57,7 @@ struct TypeConstructor {
   publicity @3 :Publicity;
   deprecated @4 :Text;
   origin @5 :SrcSpan;
+  documentation @6 :Text;
 }
 
 struct AccessorsMap {

@@ -611,7 +611,7 @@ fn append(x: String, y: String) -> String {
         hover(TestProject::for_source(code), Position::new(3, 17)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nString\n```".to_string()
+                "```gleam\nString\n```\n".to_string()
             )),
             range: Some(Range::new(Position::new(3, 13), Position::new(3, 19))),
         })
@@ -632,7 +632,7 @@ fn append(x: String, y: String) -> String {
         hover(TestProject::for_source(code), Position::new(3, 39)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nString\n```".to_string()
+                "```gleam\nString\n```\n".to_string()
             )),
             range: Some(Range::new(Position::new(3, 35), Position::new(3, 41))),
         })
@@ -650,7 +650,9 @@ const one: Int = 1
     assert_eq!(
         hover(TestProject::for_source(code), Position::new(3, 13)),
         Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String("```gleam\nInt\n```".to_string())),
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nInt\n```\n".to_string()
+            )),
             range: Some(Range::new(Position::new(3, 11), Position::new(3, 14))),
         })
     );
@@ -668,7 +670,7 @@ type Wibble {
         hover(TestProject::for_source(code), Position::new(2, 20)),
         Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nString\n```".to_string()
+                "```gleam\nString\n```\n".to_string()
             )),
             range: Some(Range::new(Position::new(2, 16), Position::new(2, 22))),
         })
@@ -684,7 +686,9 @@ type Wibble = Int
     assert_eq!(
         hover(TestProject::for_source(code), Position::new(1, 15)),
         Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String("```gleam\nInt\n```".to_string())),
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nInt\n```\n".to_string()
+            )),
             range: Some(Range::new(Position::new(1, 14), Position::new(1, 17))),
         })
     );
@@ -702,8 +706,36 @@ fn wibble() {
     assert_eq!(
         hover(TestProject::for_source(code), Position::new(2, 18)),
         Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String("```gleam\nInt\n```".to_string())),
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nInt\n```\n".to_string()
+            )),
             range: Some(Range::new(Position::new(2, 16), Position::new(2, 19))),
+        })
+    );
+}
+
+#[test]
+fn hover_function_arg_annotation_with_documentation() {
+    let code = "
+/// Exciting documentation
+/// Maybe even multiple lines
+type Wibble {
+    Wibble(arg: String)
+}
+
+fn identity(x: Wibble) -> Wibble {
+  x
+}
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(7, 20)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nWibble\n```\n Exciting documentation\n Maybe even multiple lines\n"
+                    .to_string()
+            )),
+            range: Some(Range::new(Position::new(7, 15), Position::new(7, 21))),
         })
     );
 }
