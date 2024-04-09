@@ -395,12 +395,20 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elements.iter().map(|e| self.const_expr(e))))
                 .group(),
 
-            Constant::BitArray { segments, .. } => bit_array(
-                segments
+            Constant::BitArray {
+                segments, location, ..
+            } => {
+                let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.const_expr(e))),
-                segments.iter().all(|s| s.value.is_simple()),
-            ),
+                    .map(|s| bit_array_segment(s, |e| self.const_expr(e)))
+                    .collect::<Vec<_>>();
+
+                self.bit_array(
+                    segment_docs,
+                    segments.iter().all(|s| s.value.is_simple()),
+                    location,
+                )
+            }
 
             Constant::Record {
                 name,
@@ -834,12 +842,20 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::Tuple { elems, location } => self.tuple(elems, location),
 
-            UntypedExpr::BitArray { segments, .. } => bit_array(
-                segments
+            UntypedExpr::BitArray {
+                segments, location, ..
+            } => {
+                let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.bit_array_segment_expr(e))),
-                segments.iter().all(|s| s.value.is_simple_constant()),
-            ),
+                    .map(|s| bit_array_segment(s, |e| self.bit_array_segment_expr(e)))
+                    .collect::<Vec<_>>();
+
+                self.bit_array(
+                    segment_docs,
+                    segments.iter().all(|s| s.value.is_simple_constant()),
+                    location,
+                )
+            }
             UntypedExpr::RecordUpdate {
                 constructor,
                 spread,
@@ -1767,12 +1783,16 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elems.iter().map(|e| self.pattern(e))))
                 .group(),
 
-            Pattern::BitArray { segments, .. } => bit_array(
-                segments
+            Pattern::BitArray {
+                segments, location, ..
+            } => {
+                let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.pattern(e))),
-                false,
-            ),
+                    .map(|s| bit_array_segment(s, |e| self.pattern(e)))
+                    .collect::<Vec<_>>();
+
+                self.bit_array(segment_docs, false, location)
+            }
 
             Pattern::StringPrefix {
                 left_side_string: left,
@@ -1997,6 +2017,45 @@ impl<'comments> Formatter<'comments> {
         commented(doc, comments)
     }
 
+    fn bit_array<'a>(
+        &mut self,
+        segments: Vec<Document<'a>>,
+        is_simple: bool,
+        location: &SrcSpan,
+    ) -> Document<'a> {
+        // Avoid adding illegal comma in empty bit array by explicitly handling it
+        if segments.is_empty() {
+            // We take all comments that come _before_ the end of the bit array,
+            // that is all comments that are inside "<<" and ">>", if there's
+            // any comment we want to put it inside the empty bit array!
+            // Refer to the `list` function for a similar procedure.
+            return match printed_comments(self.pop_comments(location.end), false) {
+                None => "<<>>".to_doc(),
+                Some(comments) => "<<"
+                    .to_doc()
+                    .append(break_("", "").nest(INDENT))
+                    .append(comments)
+                    .append(break_("", ""))
+                    .append(">>")
+                    // vvv We want to make sure the comments are on a separate
+                    //     line from the opening and closing angle brackets so
+                    //     we force the breaks to be split on newlines.
+                    .force_break(),
+            };
+        }
+        let comma = if is_simple {
+            flex_break(",", ", ")
+        } else {
+            break_(",", ", ")
+        };
+        break_("<<", "<<")
+            .append(join(segments, comma))
+            .nest(INDENT)
+            .append(break_(",", ""))
+            .append(">>")
+            .group()
+    }
+
     fn bit_array_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
             UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
@@ -2206,28 +2265,6 @@ where
         .nest(INDENT)
         .append(break_(",", ""))
         .append(")")
-        .group()
-}
-
-fn bit_array<'a>(
-    segments: impl IntoIterator<Item = Document<'a>>,
-    is_simple: bool,
-) -> Document<'a> {
-    let mut segments = segments.into_iter().peekable();
-    if segments.peek().is_none() {
-        // Avoid adding illegal comma in empty bit array
-        return "<<>>".to_doc();
-    }
-    let comma = if is_simple {
-        flex_break(",", ", ")
-    } else {
-        break_(",", ", ")
-    };
-    break_("<<", "<<")
-        .append(join(segments, comma))
-        .nest(INDENT)
-        .append(break_(",", ""))
-        .append(">>")
         .group()
 }
 
