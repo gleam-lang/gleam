@@ -1,8 +1,0 @@
-{application, non_empty_list, [
-    {vsn, "1.0.0"},
-    {applications, [glacier,
-                    gleam_stdlib]},
-    {description, "Non-empty lists in Gleam"},
-    {modules, [non_empty_list]},
-    {registered, []}
-]}.

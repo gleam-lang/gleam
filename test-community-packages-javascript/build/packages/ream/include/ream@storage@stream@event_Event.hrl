@@ -1,1 +1,0 @@
--record(event, {offset :: integer(), data :: bitstring()}).

@@ -1,8 +1,0 @@
-{application, trie_again, [
-    {vsn, "1.1.1"},
-    {applications, [gleam_stdlib,
-                    gleeunit]},
-    {description, "Tries in Gleam"},
-    {modules, [trie]},
-    {registered, []}
-]}.

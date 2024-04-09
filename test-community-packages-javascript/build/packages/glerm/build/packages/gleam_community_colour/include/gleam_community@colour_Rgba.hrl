@@ -1,1 +1,0 @@
--record(rgba, {r :: float(), g :: float(), b :: float(), a :: float()}).
