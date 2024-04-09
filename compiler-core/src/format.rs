@@ -1613,7 +1613,8 @@ impl<'comments> Formatter<'comments> {
 
         let alternative_patterns = std::iter::once(&clause.pattern)
             .chain(&clause.alternative_patterns)
-            .map(|p| {
+            .enumerate()
+            .map(|(alternative_index, p)| {
                 // Here `p` is a single pattern that can be comprised of
                 // multiple subjects.
                 // ```gleam
@@ -1623,15 +1624,31 @@ impl<'comments> Formatter<'comments> {
                 //   | _, _ -> todo
                 // }
                 // ```
-                //
-                // We turn each subject pattern into a document and join those
-                // with a breakable comma (that's also going to be nested).
-                // Then we make sure that the formatter tries to keep each
-                // alternative on a single line by making it a group!
-                let patterns = p.iter().map(|p| self.pattern(p));
-                join(patterns, break_(",", ", ")).group().nest(INDENT)
+                let is_first_alternative = alternative_index == 0;
+                let subject_docs = p.iter().enumerate().map(|(subject_index, subject)| {
+                    // There's a small catch in turning each subject into a document.
+                    // Sadly we can't simply call `self.pattern` on each subject and
+                    // then nest each one in case it gets broken.
+                    // The first ever pattern that appears in a case clause (that is
+                    // the first subject of the first alternative) must not be nested
+                    // further; otherwise, when broken, it would have 2 extra spaces
+                    // of indentation: https://github.com/gleam-lang/gleam/issues/2940.
+                    let is_first_subject = subject_index == 0;
+                    let is_first_pattern_of_clause = is_first_subject && is_first_alternative;
+                    let subject_doc = self.pattern(subject);
+                    if is_first_pattern_of_clause {
+                        subject_doc
+                    } else {
+                        subject_doc.nest(INDENT)
+                    }
+                });
+                // We join all subjects with a breakable comma (that's also
+                // going to be nested) and make the subjects into a group to
+                // make sure the formatter tries to keep them on a single line.
+                join(subject_docs, break_(",", ", ").nest(INDENT)).group()
             });
-
+        // Last, we make sure that the formatter tries to keep each
+        // alternative on a single line by making it a group!
         join(alternative_patterns, alternatives_separator).group()
     }
 

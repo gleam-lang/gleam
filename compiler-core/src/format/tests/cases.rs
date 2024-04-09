@@ -89,3 +89,19 @@ fn multiple_patterns_and_alternative_patterns_mixed_together() {
 "#
     );
 }
+
+#[test]
+fn case_pattern_split_on_multiple_lines_is_not_needlessly_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  case thing {
+    CannotSaveNewSnapshot(
+      reason: reason,
+      title: title,
+      destination: destination,
+    ) -> todo
+  }
+}
+"#
+    );
+}
