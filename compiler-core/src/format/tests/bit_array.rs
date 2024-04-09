@@ -54,6 +54,59 @@ fn tight_empty() {
 }
 
 #[test]
+fn comments_are_not_moved_out_of_empty_bit_array() {
+    assert_format!(
+        r#"pub fn main() {
+  // This is an empty bit array!
+  <<
+    // Nothing here...
+  >>
+}
+"#
+    );
+}
+
+#[test]
+fn empty_bit_arrays_with_comment_inside_are_indented_properly() {
+    assert_format!(
+        r#"pub fn main() {
+  fun(
+    <<
+      // Nothing here...
+    >>,
+    wibble_wobble_wibble_wobble_wibble_wobble_wibble_wobble,
+    <<
+      // Nothing here as well!
+    >>,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn comments_inside_non_empty_bit_arrays_are_not_moved() {
+    assert_format!(
+        r#"pub fn main() {
+  fun(
+    <<
+      // One is below me.
+      1, 2,
+      // Three is below me.
+      3,
+    >>,
+    wibble_wobble_wibble_wobble_wibble_wobble_wibble_wobble,
+    <<
+      // Three is below me.
+      3,
+    >>,
+  )
+}
+"#
+    );
+}
+
+#[test]
 fn concise_wrapping_of_simple_bit_arrays() {
     assert_format!(
         "pub fn main() {
