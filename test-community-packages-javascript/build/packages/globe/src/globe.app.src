@@ -1,8 +1,0 @@
-{application, globe, [
-    {vsn, "0.1.0"},
-    {applications, [gleam_stdlib,
-                    gleeunit]},
-    {description, "Gleam Compiler Backend"},
-    {modules, [globe]},
-    {registered, []}
-]}.

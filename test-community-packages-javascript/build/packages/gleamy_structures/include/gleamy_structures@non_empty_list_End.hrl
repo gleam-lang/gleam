@@ -1,1 +1,0 @@
--record('end', {first :: any()}).

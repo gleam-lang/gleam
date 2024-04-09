@@ -1,1 +1,0 @@
--record(textdata, {inner :: binary()}).

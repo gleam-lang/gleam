@@ -1,1 +1,0 @@
--record(global, {name :: binary()}).

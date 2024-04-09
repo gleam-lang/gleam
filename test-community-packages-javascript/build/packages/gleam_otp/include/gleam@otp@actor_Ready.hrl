@@ -1,1 +1,0 @@
--record(ready, {state :: any(), selector :: gleam@erlang@process:selector(any())}).

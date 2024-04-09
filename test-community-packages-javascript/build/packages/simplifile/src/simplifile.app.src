@@ -1,8 +1,0 @@
-{application, simplifile, [
-    {vsn, "0.1.4"},
-    {applications, [gleam_stdlib,
-                    gleeunit]},
-    {description, "Basic file operations that work on all targets"},
-    {modules, [simplifile]},
-    {registered, []}
-]}.

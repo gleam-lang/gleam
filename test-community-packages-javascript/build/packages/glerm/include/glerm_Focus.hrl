@@ -1,1 +1,0 @@
--record(focus, {event :: glerm:focus_event()}).

@@ -1,1 +1,0 @@
--record(attr, {name :: binary(), value :: binary()}).
