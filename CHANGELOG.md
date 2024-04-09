@@ -1,5 +1,12 @@
 # Changelog
 
+### Unreleased
+
+## Formatter
+
+- Fixed a bug where the first subject of a case expression clause would be
+  indented more than necessary.
+
 ## v1.1.0-rc3 - 2024-04-12
 
 ### Formatter
