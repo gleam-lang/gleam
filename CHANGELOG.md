@@ -5,7 +5,7 @@
 ### Compiler
 
 - The `@internal` attribute can now be used to annotate definitions.
-  This will hide those definitions from the generated docuentation,
+  This will hide those definitions from the generated documentation,
   autocompletions and the exported module interface.
 - Prepending to lists in JavaScript (`[x, ..xs]` syntax) has been optimised.
 - Function stubs are no longer generated for functions that do not have an
