@@ -7,6 +7,13 @@
 - Fixed a bug on the JavaScript target where variables named `debugger`, which
   is a JavaScript keyword, were not being renamed, leading to runtime errors.
 
+### Formatter
+
+- Fixed a bug where comments would be moved out of an empty bit array.
+- Fixed a bug where the formatter could add a trailing comma inside empty
+  bit arrays, generating invalid syntax.
+
+
 ## v1.1.0-rc1 - 2024-04-08
 
 ### Compiler
