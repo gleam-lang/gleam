@@ -228,6 +228,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     module: PRELUDE_MODULE_NAME.into(),
                     publicity: Publicity::Public,
                     deprecation: NotDeprecated,
+                    documentation: None,
                 };
                 let _ = prelude.types.insert(BIT_ARRAY.into(), v.clone());
             }
@@ -290,6 +291,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         module: PRELUDE_MODULE_NAME.into(),
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
+                        documentation: None,
                     },
                 );
             }
@@ -304,6 +306,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         module: PRELUDE_MODULE_NAME.into(),
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
+                        documentation: None,
                     },
                 );
             }
@@ -318,6 +321,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         module: PRELUDE_MODULE_NAME.into(),
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
+                        documentation: None,
                     },
                 );
             }
@@ -333,6 +337,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         module: PRELUDE_MODULE_NAME.into(),
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
+                        documentation: None,
                     },
                 );
             }
@@ -363,6 +368,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         module: PRELUDE_MODULE_NAME.into(),
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
+                        documentation: None,
                     },
                 );
                 let _ = prelude.types_value_constructors.insert(
@@ -391,6 +397,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         module: PRELUDE_MODULE_NAME.into(),
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
+                        documentation: None,
                     },
                 );
                 let _ = prelude.types_value_constructors.insert(
@@ -461,6 +468,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         module: PRELUDE_MODULE_NAME.into(),
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
+                        documentation: None,
                     },
                 );
             }
@@ -475,6 +483,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         module: PRELUDE_MODULE_NAME.into(),
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
+                        documentation: None,
                     },
                 );
             }

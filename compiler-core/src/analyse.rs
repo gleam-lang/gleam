@@ -369,7 +369,7 @@ fn register_type_alias(
         type_ast: resolved_type,
         deprecation,
         type_: _,
-        documentation: _,
+        documentation,
     } = t;
 
     // A type alias must not have the same name as any other type in the module.
@@ -392,6 +392,7 @@ fn register_type_alias(
             typ,
             deprecation: deprecation.clone(),
             publicity: *publicity,
+            documentation: documentation.clone(),
         },
     )?;
 
@@ -425,6 +426,7 @@ fn register_types_from_custom_type<'a>(
         deprecation,
         opaque,
         constructors,
+        documentation,
         ..
     } = t;
     assert_unique_type_name(names, name, *location)?;
@@ -461,6 +463,7 @@ fn register_types_from_custom_type<'a>(
             parameters,
             publicity,
             typ,
+            documentation: documentation.clone(),
         },
     )?;
 

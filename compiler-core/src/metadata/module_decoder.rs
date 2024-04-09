@@ -103,6 +103,7 @@ impl ModuleDecoder {
             parameters: read_vec!(reader.get_parameters()?, self, type_),
             typ: type_,
             deprecation,
+            documentation: self.optional_string(reader.get_documentation()?),
         })
     }
 

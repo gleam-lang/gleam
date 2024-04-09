@@ -899,6 +899,7 @@ pub struct TypeConstructor {
     pub parameters: Vec<Arc<Type>>,
     pub typ: Arc<Type>,
     pub deprecation: Deprecation,
+    pub documentation: Option<EcoString>,
 }
 impl TypeConstructor {
     pub(crate) fn with_location(mut self, location: SrcSpan) -> Self {
