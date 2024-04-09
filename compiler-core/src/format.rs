@@ -2213,6 +2213,11 @@ fn bit_array<'a>(
     segments: impl IntoIterator<Item = Document<'a>>,
     is_simple: bool,
 ) -> Document<'a> {
+    let mut segments = segments.into_iter().peekable();
+    if segments.peek().is_none() {
+        // Avoid adding illegal comma in empty bit array
+        return "<<>>".to_doc();
+    }
     let comma = if is_simple {
         flex_break(",", ", ")
     } else {

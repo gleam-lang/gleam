@@ -41,6 +41,18 @@ fn long() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/2932
+#[test]
+fn tight_empty() {
+    assert_format!(
+        "fn main() {
+  let some_really_really_really_really_really_really_really_long_variable_name_to_force_wrapping = <<>>
+  some_really_really_really_really_really_really_really_long_variable_name_to_force_wrapping
+}
+"
+    );
+}
+
 #[test]
 fn concise_wrapping_of_simple_bit_arrays() {
     assert_format!(
