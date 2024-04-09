@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Compiler
+
+- Fixed a bug on the JavaScript target where variables named `debugger`, which
+  is a JavaScript keyword, were not being renamed, leading to runtime errors.
+
 ## v1.1.0-rc1 - 2024-04-08
 
 ### Compiler
