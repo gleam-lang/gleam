@@ -240,6 +240,15 @@ fn find_node_sequence() {
     assert!(block.find_node(7).is_none());
 }
 
+// The function exits early when attempting to find the AST node for a specific index,
+// if the remaining elements have indices beyond the search index, returning none.
+#[test]
+fn find_node_sequence_early_exit() {
+    let block = compile_expression(r#"{ 1 2 3 }"#);
+    cov_mark::check!(early_exit_block);
+    assert!(block.find_node(1).is_none());
+}
+
 #[test]
 fn find_node_list() {
     let statement = compile_expression(r#"[1, 2, 3]"#);
@@ -271,6 +280,17 @@ fn find_node_list() {
     assert_eq!(list.find_node(7), Some(Located::Expression(&int3)));
     assert_eq!(list.find_node(8), Some(Located::Expression(list)));
     assert_eq!(list.find_node(9), None);
+}
+
+// The function exits early when attempting to find the AST node for a specific index,
+// if the remaining elements have indices beyond the search index, returning the list itself.
+#[test]
+fn find_node_list_early_exit() {
+    let statement = compile_expression(r#"[1, 2, 3]"#);
+    let list = get_bare_expression(&statement);
+
+    cov_mark::check!(early_exit_tuple_list);
+    assert_eq!(list.find_node(2), Some(Located::Expression(list)));
 }
 
 #[test]
@@ -305,6 +325,17 @@ fn find_node_tuple() {
     assert_eq!(tuple.find_node(8), Some(Located::Expression(&int3)));
     assert_eq!(tuple.find_node(9), Some(Located::Expression(tuple)));
     assert_eq!(tuple.find_node(10), None);
+}
+
+// The function exits early when attempting to find the AST node for a specific index,
+// if the remaining elements have indices beyond the search index, returning the tuple itself.
+#[test]
+fn find_node_tuple_early_exit() {
+    let statement = compile_expression(r#"#(1, 2, 3)"#);
+    let tuple = get_bare_expression(&statement);
+
+    cov_mark::check!(early_exit_tuple_list);
+    assert_eq!(tuple.find_node(3), Some(Located::Expression(tuple)));
 }
 
 #[test]
@@ -575,4 +606,56 @@ use x <- fn(f) { f(1) }
     assert!(use_.find_node(23).is_some());
 
     assert!(use_.find_node(26).is_some()); // The int
+}
+
+// Check that the AST tree gets pruned at the definition level.
+#[test]
+fn find_node_with_pruning_definition() {
+    let module = compile_module(
+        r#"
+pub fn main() {
+    1
+}
+
+fn test1() {
+    2
+}
+
+fn i_am_here(){
+    3
+}
+        "#,
+    );
+
+    let int3 = TypedExpr::Int {
+        location: SrcSpan { start: 68, end: 69 },
+        typ: type_::int(),
+        value: "3".into(),
+    };
+
+    cov_mark::check!(prune_function_definition); //main() and test1() should be pruned
+    assert_eq!(module.find_node(68), Some(Located::Expression(&int3)));
+}
+
+// Check that the AST tree gets pruned at the statement level.
+#[test]
+fn find_node_with_pruning_statement() {
+    let module = compile_module(
+        r#"
+pub fn main() {
+    let s1 = 1
+    let s2 = 2
+    let s3 = 3
+}
+        "#,
+    );
+
+    let int3 = TypedExpr::Int {
+        location: SrcSpan { start: 60, end: 61 },
+        typ: type_::int(),
+        value: "3".into(),
+    };
+
+    cov_mark::check!(prune_statement); //let s1 and let s2 should be pruned
+    assert_eq!(module.find_node(60), Some(Located::Expression(&int3)));
 }

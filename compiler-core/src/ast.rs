@@ -574,33 +574,37 @@ impl TypedDefinition {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             Definition::Function(function) => {
-                if let Some(found) = function.body.iter().find_map(|s| s.find_node(byte_index)) {
-                    return Some(found);
-                };
+                if function.full_location().contains(byte_index) {
+                    if let Some(found) = function.body.iter().find_map(|s| s.find_node(byte_index))
+                    {
+                        return Some(found);
+                    };
 
-                if let Some(found_arg) = function
-                    .arguments
-                    .iter()
-                    .find(|arg| arg.location.contains(byte_index))
-                {
-                    return Some(Located::Arg(found_arg));
-                };
+                    if let Some(found_arg) = function
+                        .arguments
+                        .iter()
+                        .find(|arg| arg.location.contains(byte_index))
+                    {
+                        return Some(Located::Arg(found_arg));
+                    };
 
-                if let Some(found_statement) = function
-                    .body
-                    .iter()
-                    .find(|statement| statement.location().contains(byte_index))
-                {
-                    return Some(Located::Statement(found_statement));
-                };
+                    if let Some(found_statement) = function
+                        .body
+                        .iter()
+                        .find(|statement| statement.location().contains(byte_index))
+                    {
+                        return Some(Located::Statement(found_statement));
+                    };
 
-                // Note that the fn `.location` covers the function head, not
-                // the entire statement.
-                if function.location.contains(byte_index) {
-                    Some(Located::ModuleStatement(self))
-                } else if function.full_location().contains(byte_index) {
+                    // Note that the fn `.location` covers the function head, not
+                    // the entire statement.
+                    if function.location.contains(byte_index) {
+                        return Some(Located::ModuleStatement(self));
+                    }
+
                     Some(Located::FunctionBody(function))
                 } else {
+                    cov_mark::hit!(prune_function_definition);
                     None
                 }
             }
@@ -1750,16 +1754,23 @@ impl TypedStatement {
     }
 
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        match self {
-            Statement::Use(_) => None,
-            Statement::Expression(expression) => expression.find_node(byte_index),
-            Statement::Assignment(assignment) => assignment.find_node(byte_index).or_else(|| {
-                if assignment.location.contains(byte_index) {
-                    Some(Located::Statement(self))
-                } else {
-                    None
+        if self.location().contains(byte_index) {
+            match self {
+                Statement::Use(_) => None,
+                Statement::Expression(expression) => expression.find_node(byte_index),
+                Statement::Assignment(assignment) => {
+                    assignment.find_node(byte_index).or_else(|| {
+                        if assignment.location.contains(byte_index) {
+                            Some(Located::Statement(self))
+                        } else {
+                            None
+                        }
+                    })
                 }
-            }),
+            }
+        } else {
+            cov_mark::hit!(prune_statement);
+            None
         }
     }
 
