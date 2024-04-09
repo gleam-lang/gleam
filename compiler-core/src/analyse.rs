@@ -276,12 +276,18 @@ pub fn infer_module<A>(
         if package_config.is_internal_module(name.as_str()) {
             continue;
         }
-        if let Some(leaked) = value.type_.find_internal_type() {
+        if let Some(_leaked) = value.type_.find_internal_type() {
             leaked_internal_type_encountered = true;
-            env.warnings.emit(type_::Warning::InternalTypeLeak {
-                location: value.variant.definition_location(),
-                leaked,
-            })
+            // TODO: This is commented out until we figure out a better way to
+            //       deal with reexports of internal types.
+            //       As things stand it would break both Lustre and Mist.
+            //       You can see the thread starting around here for more
+            //       context: https://discord.com/channels/768594524158427167/768594524158427170/1227250677734969386
+            //
+            // env.warnings.emit(type_::Warning::InternalTypeLeak {
+            //     location: value.variant.definition_location(),
+            //     leaked,
+            // })
         }
     }
 
