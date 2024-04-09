@@ -184,3 +184,16 @@ pub fn main() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2931
+#[test]
+fn keyword_assignment() {
+    assert_js!(
+        r#"
+pub fn main() {
+  let class = 10
+  let debugger = 50
+}
+"#
+    );
+}
