@@ -845,9 +845,11 @@ where
 
     // An assignment, with `Let` already consumed
     fn parse_assignment(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
-        let kind = if let Some((_, Token::Assert, _)) = self.tok0 {
+        let kind = if let Some((assert_start, Token::Assert, assert_end)) = self.tok0 {
             _ = self.next_tok();
-            AssignmentKind::Assert
+            AssignmentKind::Assert {
+                location: SrcSpan::new(assert_start, assert_end),
+            }
         } else {
             AssignmentKind::Let
         };

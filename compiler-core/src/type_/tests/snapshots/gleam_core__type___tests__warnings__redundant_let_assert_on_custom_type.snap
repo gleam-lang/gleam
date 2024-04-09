@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub type Wibble {\n    Wibble(Int, Bool)\n}\n\npub fn main() {\n  let assert Wibble(_, bool) = Wibble(1, True)\n  bool\n}\n"
+---
+warning: Redundant assertion
+  ┌─ /src/warning/wrn.gleam:7:7
+  │
+7 │   let assert Wibble(_, bool) = Wibble(1, True)
+  │       ^^^^^^ You can remove this
+
+This assertion is redundant since the pattern covers all possibilities.
