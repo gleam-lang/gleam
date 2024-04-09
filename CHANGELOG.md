@@ -12,7 +12,13 @@
 - Fixed a bug where comments would be moved out of an empty bit array.
 - Fixed a bug where the formatter could add a trailing comma inside empty
   bit arrays, generating invalid syntax.
+- Revert the warning about internal types being exposed in a package's public
+  API.
 
+### Build tool
+
+- Revert the change that would make the build tool refuse to publish a package
+  that exposes an internal type in its public API.
 
 ## v1.1.0-rc1 - 2024-04-08
 

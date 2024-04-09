@@ -275,19 +275,26 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
         return Err(Error::CannotPublishTodo { unfinished });
     }
 
+    // TODO: This is commented out until we figure out a better way to
+    //       deal with reexports of internal types.
+    //       As things stand it would break both Lustre and Mist.
+    //       You can see the thread starting around here for more
+    //       context: https://discord.com/channels/768594524158427167/768594524158427170/1227250677734969386
+    //
+    //
     // If any of the modules in the package contain a leaked internal type then
     // refuse to publish as the package is not yet finished.
-    let unfinished = built
-        .root_package
-        .modules
-        .iter()
-        .filter(|module| module.ast.type_info.leaks_internal_types)
-        .map(|module| module.name.clone())
-        .sorted()
-        .collect_vec();
-    if !unfinished.is_empty() {
-        return Err(Error::CannotPublishLeakedInternalType { unfinished });
-    }
+    // let unfinished = built
+    //     .root_package
+    //     .modules
+    //     .iter()
+    //     .filter(|module| module.ast.type_info.leaks_internal_types)
+    //     .map(|module| module.name.clone())
+    //     .sorted()
+    //     .collect_vec();
+    // if !unfinished.is_empty() {
+    //     return Err(Error::CannotPublishLeakedInternalType { unfinished });
+    // }
 
     // Collect all the files we want to include in the tarball
     let generated_files = match target {
