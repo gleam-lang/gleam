@@ -401,7 +401,7 @@ impl<'comments> Formatter<'comments> {
                 let segment_docs = segments
                     .iter()
                     .map(|s| bit_array_segment(s, |e| self.const_expr(e)))
-                    .collect::<Vec<_>>();
+                    .collect_vec();
 
                 self.bit_array(
                     segment_docs,
@@ -848,7 +848,7 @@ impl<'comments> Formatter<'comments> {
                 let segment_docs = segments
                     .iter()
                     .map(|s| bit_array_segment(s, |e| self.bit_array_segment_expr(e)))
-                    .collect::<Vec<_>>();
+                    .collect_vec();
 
                 self.bit_array(
                     segment_docs,
@@ -1789,7 +1789,7 @@ impl<'comments> Formatter<'comments> {
                 let segment_docs = segments
                     .iter()
                     .map(|s| bit_array_segment(s, |e| self.pattern(e)))
-                    .collect::<Vec<_>>();
+                    .collect_vec();
 
                 self.bit_array(segment_docs, false, location)
             }
