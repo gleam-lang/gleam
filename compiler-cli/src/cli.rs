@@ -4,7 +4,7 @@ use gleam_core::{
 };
 use hexpm::version::Version;
 use std::{
-    io::Write,
+    io::{IsTerminal, Write},
     time::{Duration, Instant},
 };
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
@@ -195,7 +195,7 @@ fn colour_forced() -> bool {
 fn color_choice() -> ColorChoice {
     if colour_forced() {
         termcolor::ColorChoice::Always
-    } else if atty::is(atty::Stream::Stderr) {
+    } else if std::io::stderr().is_terminal() {
         termcolor::ColorChoice::Auto
     } else {
         termcolor::ColorChoice::Never

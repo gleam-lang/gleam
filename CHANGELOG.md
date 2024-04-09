@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Compiler
+
+- Fix [RUSTSEC-2021-0145](https://rustsec.org/advisories/RUSTSEC-2021-0145) by
+  using Rust's `std::io::IsTerminal` instead of the `atty` library.
+
 ## v1.1.0 - 2024-04-16
 
 ### Formatter

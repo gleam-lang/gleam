@@ -14,8 +14,6 @@ ctrlc = { version = "3.2.1", features = ["termination"] }
 clap = { version = "4.5.4", features = ["derive"] }
 # Recursively traversing directories
 ignore = "0.4.22"
-# Check for tty
-atty = "0.2.14"
 # Allow user to type in sensitive information without showing it in the shell
 rpassword = "5.0.1"
 # Async runtime
