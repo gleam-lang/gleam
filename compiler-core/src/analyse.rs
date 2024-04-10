@@ -252,8 +252,6 @@ pub fn infer_module<A>(
     env.accessors
         .retain(|_, accessors| accessors.publicity.is_importable());
 
-    let mut leaked_internal_type_encountered = false;
-
     // Ensure no exported values have private types in their type signature
     for value in env.module_values.values() {
         if value.publicity.is_private() {
@@ -275,19 +273,6 @@ pub fn infer_module<A>(
         // module ourselves, the type wouldn't actually be publicly exposed.
         if package_config.is_internal_module(name.as_str()) {
             continue;
-        }
-        if let Some(_leaked) = value.type_.find_internal_type() {
-            leaked_internal_type_encountered = true;
-            // TODO: This is commented out until we figure out a better way to
-            //       deal with reexports of internal types.
-            //       As things stand it would break both Lustre and Mist.
-            //       You can see the thread starting around here for more
-            //       context: https://discord.com/channels/768594524158427167/768594524158427170/1227250677734969386
-            //
-            // env.warnings.emit(type_::Warning::InternalTypeLeak {
-            //     location: value.variant.definition_location(),
-            //     leaked,
-            // })
         }
     }
 
@@ -317,7 +302,6 @@ pub fn infer_module<A>(
             is_internal,
             unused_imports,
             contains_todo,
-            leaks_internal_types: leaked_internal_type_encountered,
             line_numbers,
             src_path,
         },
