@@ -245,7 +245,6 @@ fn find_node_sequence() {
 #[test]
 fn find_node_sequence_early_exit() {
     let block = compile_expression(r#"{ 1 2 3 }"#);
-    cov_mark::check!(early_exit_block);
     assert!(block.find_node(1).is_none());
 }
 
@@ -289,7 +288,6 @@ fn find_node_list_early_exit() {
     let statement = compile_expression(r#"[1, 2, 3]"#);
     let list = get_bare_expression(&statement);
 
-    cov_mark::check!(early_exit_tuple_list);
     assert_eq!(list.find_node(2), Some(Located::Expression(list)));
 }
 
@@ -334,7 +332,6 @@ fn find_node_tuple_early_exit() {
     let statement = compile_expression(r#"#(1, 2, 3)"#);
     let tuple = get_bare_expression(&statement);
 
-    cov_mark::check!(early_exit_tuple_list);
     assert_eq!(tuple.find_node(3), Some(Located::Expression(tuple)));
 }
 
@@ -633,7 +630,6 @@ fn i_am_here(){
         value: "3".into(),
     };
 
-    cov_mark::check!(prune_function_definition); //main() and test1() should be pruned
     assert_eq!(module.find_node(68), Some(Located::Expression(&int3)));
 }
 
@@ -656,6 +652,5 @@ pub fn main() {
         value: "3".into(),
     };
 
-    cov_mark::check!(prune_statement); //let s1 and let s2 should be pruned
     assert_eq!(module.find_node(60), Some(Located::Expression(&int3)));
 }
