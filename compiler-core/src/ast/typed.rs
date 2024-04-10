@@ -183,10 +183,11 @@ impl TypedExpr {
                 .find_map(|e| e.find_node(byte_index))
                 .or_else(|| finally.find_node(byte_index)),
 
+            // Exit the search and return None if during iteration a statement
+            // is found with a start index beyond the index under search.
             Self::Block { statements, .. } => {
                 for statement in statements {
                     if statement.location().start > byte_index {
-                        cov_mark::hit!(early_exit_block);
                         break;
                     }
 
@@ -198,6 +199,9 @@ impl TypedExpr {
                 None
             }
 
+            // Exit the search and return the encompassing type (e.g., list or tuple)
+            // if during iteration, an element is encountered with a start index
+            // beyond the index under search.
             Self::Tuple {
                 elems: expressions, ..
             }
@@ -207,7 +211,6 @@ impl TypedExpr {
             } => {
                 for expression in expressions {
                     if expression.location().start > byte_index {
-                        cov_mark::hit!(early_exit_tuple_list);
                         break;
                     }
 

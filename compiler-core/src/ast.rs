@@ -574,6 +574,9 @@ impl TypedDefinition {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             Definition::Function(function) => {
+
+                // Search for the corresponding node inside the function
+                // only if the index falls within the function's full location.
                 if function.full_location().contains(byte_index) {
                     if let Some(found) = function.body.iter().find_map(|s| s.find_node(byte_index))
                     {
@@ -604,7 +607,6 @@ impl TypedDefinition {
 
                     Some(Located::FunctionBody(function))
                 } else {
-                    cov_mark::hit!(prune_function_definition);
                     None
                 }
             }
@@ -1754,6 +1756,9 @@ impl TypedStatement {
     }
 
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+
+        // Search for the corresponding node inside the statement
+        // only if the index falls within the statement's location.
         if self.location().contains(byte_index) {
             match self {
                 Statement::Use(_) => None,
@@ -1769,7 +1774,6 @@ impl TypedStatement {
                 }
             }
         } else {
-            cov_mark::hit!(prune_statement);
             None
         }
     }
