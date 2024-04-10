@@ -31,7 +31,6 @@ struct Module {
   lineNumbers @8 :LineNumbers;
   srcPath @9 :Text;
   isInternal @10 :Bool;
-  leaksInternalTypes @11 :Bool;
 }
 
 struct TypesVariantConstructors {
