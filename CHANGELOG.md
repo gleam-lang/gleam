@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.2.0 - 2024-04-10
+
+- Updated for latest version of Reqwest.
+
 ## v2.1.1 - 2023-11-02
 
 - Fixed a bug where the package name validation regex was too strict.
