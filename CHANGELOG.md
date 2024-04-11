@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a typo when attempting to publish non hex dependencies
+
 ## v1.1.0-rc2 - 2024-04-10
 
 ### Compiler
