@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Formatter
+
+- Fixed a bug where the `@internal` annotation wouldn't be displayed.
+
 ## v1.1.0-rc2 - 2024-04-10
 
 ### Compiler

@@ -5905,3 +5905,32 @@ fn comments_inside_binop_chain() {
 "#
     );
 }
+
+#[test]
+fn internal_attribute_on_function() {
+    assert_format!(
+        r#"@internal
+pub fn main() {
+  todo
+}
+"#
+    );
+}
+
+#[test]
+fn internal_attribute_on_type() {
+    assert_format!(
+        r#"@internal
+pub type Type
+"#
+    );
+}
+
+#[test]
+fn internal_attribute_on_const() {
+    assert_format!(
+        r#"@internal
+pub const wibble = 1
+"#
+    );
+}
