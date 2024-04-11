@@ -543,6 +543,69 @@ pub enum Warning {
 }
 
 impl Error {
+    // Location where the error started
+    pub fn start_location(&self) -> u32 {
+        match self {
+            Error::SrcImportingTest { location, .. }
+            | Error::BitArraySegmentError { location, .. }
+            | Error::UnknownVariable { location, .. }
+            | Error::UnknownType { location, .. }
+            | Error::UnknownModule { location, .. }
+            | Error::UnknownModuleType { location, .. }
+            | Error::UnknownModuleValue { location, .. }
+            | Error::UnknownModuleField { location, .. }
+            | Error::NotFn { location, .. }
+            | Error::UnknownRecordField { location, .. }
+            | Error::IncorrectArity { location, .. }
+            | Error::UpdateMultiConstructorType { location, .. }
+            | Error::UnnecessarySpreadOperator { location, .. }
+            | Error::IncorrectTypeArity { location, .. }
+            | Error::CouldNotUnify { location, .. }
+            | Error::RecursiveType { location, .. }
+            | Error::DuplicateName {
+                location_a: location,
+                ..
+            }
+            | Error::DuplicateImport { location, .. }
+            | Error::DuplicateTypeName { location, .. }
+            | Error::DuplicateArgument { location, .. }
+            | Error::DuplicateField { location, .. }
+            | Error::PrivateTypeLeak { location, .. }
+            | Error::UnexpectedLabelledArg { location, .. }
+            | Error::PositionalArgumentAfterLabelled { location, .. }
+            | Error::IncorrectNumClausePatterns { location, .. }
+            | Error::NonLocalClauseGuardVariable { location, .. }
+            | Error::ExtraVarInAlternativePattern { location, .. }
+            | Error::MissingVarInAlternativePattern { location, .. }
+            | Error::DuplicateVarInPattern { location, .. }
+            | Error::OutOfBoundsTupleIndex { location, .. }
+            | Error::NotATuple { location, .. }
+            | Error::NotATupleUnbound { location, .. }
+            | Error::RecordAccessUnknownType { location, .. }
+            | Error::RecordUpdateInvalidConstructor { location, .. }
+            | Error::UnexpectedTypeHole { location, .. }
+            | Error::NotExhaustivePatternMatch { location, .. }
+            | Error::ArgumentNameAlreadyUsed { location, .. }
+            | Error::UnlabelledAfterlabelled { location, .. }
+            | Error::RecursiveTypeAlias { location, .. }
+            | Error::ExternalMissingAnnotation { location, .. }
+            | Error::NoImplementation { location, .. }
+            | Error::UnsupportedExpressionTarget { location, .. }
+            | Error::InvalidExternalJavascriptModule { location, .. }
+            | Error::InvalidExternalJavascriptFunction { location, .. }
+            | Error::InexhaustiveCaseExpression { location, .. }
+            | Error::InexhaustiveLetAssignment { location, .. }
+            | Error::UnusedTypeAliasParameter { location, .. }
+            | Error::DuplicateTypeParameter { location, .. }
+            | Error::UnsupportedPublicFunctionTarget { location, .. } => location.start,
+            Error::UnknownLabels { unknown, .. } => {
+                unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
+            }
+            Error::ReservedModuleName { .. } => 0,
+            Error::KeywordInModuleName { .. } => 0,
+        }
+    }
+
     pub fn with_unify_error_situation(mut self, new_situation: UnifyErrorSituation) -> Self {
         match self {
             Error::CouldNotUnify {

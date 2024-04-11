@@ -53,6 +53,8 @@
 - Empty case expressions are no longer parse errors and will instead be
   exhaustiveness errors. ([Race Williams](https://github.com/raquentin))
 
+- Initial support for type analysis returning multiple errors. ([Ameen Radwan](https://github.com/Acepie))
+
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.

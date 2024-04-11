@@ -110,6 +110,35 @@ impl TargetSupport {
     }
 }
 
+#[derive(Debug)]
+pub struct InferenceResult {
+    // Right now this is an option because we don't complete the module typing on error
+    // Once we add proper type holes and always return a module this should not be an option
+    pub ast: Option<TypedModule>,
+    // All the inference errors that occurred during type inference
+    pub errors: Vec<Error>,
+}
+
+impl InferenceResult {
+    // Used to create InferenceResults from a singe error.
+    // Should not be needed once we start actually collecting all the errors.
+    pub fn from_error(error: Error) -> Self {
+        Self {
+            ast: None,
+            errors: vec![error],
+        }
+    }
+
+    // Used by tests to get the underlying ast.
+    // Panics if there are type errors.
+    pub fn expect(self, message: &str) -> TypedModule {
+        if !self.errors.is_empty() {
+            panic!("Inference contains errors: {}", message);
+        }
+        self.ast.expect(message)
+    }
+}
+
 // TODO: This takes too many arguments.
 #[allow(clippy::too_many_arguments)]
 /// Crawl the AST, annotating each node with the inferred type or
@@ -127,7 +156,8 @@ pub fn infer_module<A>(
     line_numbers: LineNumbers,
     package_config: &PackageConfig,
     src_path: Utf8PathBuf,
-) -> Result<TypedModule, Error> {
+) -> InferenceResult {
+    let mut errors = Vec::new();
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
     let package = package_config.name.clone();
@@ -140,7 +170,9 @@ pub fn infer_module<A>(
         warnings,
         target_support,
     );
-    validate_module_name(&name)?;
+    if let Err(e) = validate_module_name(&name) {
+        return InferenceResult::from_error(e);
+    }
 
     let mut type_names = HashMap::with_capacity(module.definitions.len());
     let mut value_names = HashMap::with_capacity(module.definitions.len());
@@ -152,42 +184,63 @@ pub fn infer_module<A>(
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
-    let mut env = imports::Importer::run(origin, env, &statements.imports)?;
+    let env = imports::Importer::run(origin, env, &statements.imports);
+    let mut env = match env {
+        Err(e) => return InferenceResult::from_error(e),
+        Ok(env) => env,
+    };
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
     for t in &statements.custom_types {
-        register_types_from_custom_type(
+        if let Err(e) = register_types_from_custom_type(
             t,
             &mut type_names,
             &mut env,
             &name,
             package_config,
             &mut hydrators,
-        )?;
+        ) {
+            return InferenceResult::from_error(e);
+        }
     }
     // TODO: Extract a Type alias class to perform this.
-    let sorted_aliases = sorted_type_aliases(&statements.type_aliases)?;
+    let sorted_aliases = sorted_type_aliases(&statements.type_aliases);
+    let sorted_aliases = match sorted_aliases {
+        Err(e) => return InferenceResult::from_error(e),
+        Ok(sorted_aliases) => sorted_aliases,
+    };
+
     for t in sorted_aliases {
-        register_type_alias(t, &mut type_names, &mut env, &name)?;
+        if let Err(e) = register_type_alias(t, &mut type_names, &mut env, &name) {
+            return InferenceResult::from_error(e);
+        }
     }
 
     // Register values so they can be used in functions earlier in the module.
     for c in &statements.constants {
-        assert_unique_name(&mut value_names, &c.name, c.location)?;
+        if let Err(e) = assert_unique_name(&mut value_names, &c.name, c.location) {
+            return InferenceResult::from_error(e);
+        }
     }
     for f in &statements.functions {
-        register_value_from_function(f, &mut value_names, &mut env, &mut hydrators, &name)?;
+        if let Err(e) =
+            register_value_from_function(f, &mut value_names, &mut env, &mut hydrators, &name)
+        {
+            return InferenceResult::from_error(e);
+        }
     }
     for t in &statements.custom_types {
-        register_values_from_custom_type(
+        if let Err(e) = register_values_from_custom_type(
             t,
             &mut hydrators,
             &mut env,
             &mut value_names,
             &name,
             &t.parameters,
-        )?;
+        ) {
+            return InferenceResult::from_error(e);
+        }
     }
 
     // Infer the types of each statement in the module
@@ -199,22 +252,38 @@ pub fn infer_module<A>(
             direct_dependencies,
             warnings,
             &env,
-        )?;
+        );
+        let statement = match statement {
+            Err(e) => return InferenceResult::from_error(e),
+            Ok(statement) => statement,
+        };
         typed_statements.push(statement);
     }
     for t in statements.custom_types {
-        let statement = infer_custom_type(t, &mut env)?;
+        let statement = infer_custom_type(t, &mut env);
+        let statement = match statement {
+            Err(e) => return InferenceResult::from_error(e),
+            Ok(statement) => statement,
+        };
         typed_statements.push(statement);
     }
     for t in statements.type_aliases {
-        let statement = insert_type_alias(t, &mut env)?;
+        let statement = insert_type_alias(t, &mut env);
+        let statement = match statement {
+            Err(e) => return InferenceResult::from_error(e),
+            Ok(statement) => statement,
+        };
         typed_statements.push(statement);
     }
 
     // Sort functions and constants into dependency order for inference. Definitions that do
     // not depend on other definitions are inferred first, then ones that depend
     // on those, etc.
-    let definition_groups = into_dependency_order(statements.functions, statements.constants)?;
+    let definition_groups = into_dependency_order(statements.functions, statements.constants);
+    let definition_groups = match definition_groups {
+        Err(e) => return InferenceResult::from_error(e),
+        Ok(definition_groups) => definition_groups,
+    };
     let mut working_group = vec![];
 
     for group in definition_groups {
@@ -224,11 +293,19 @@ pub fn infer_module<A>(
         for definition in group {
             match definition {
                 CallGraphNode::Function(f) => {
-                    let statement = infer_function(f, &mut env, &mut hydrators, &name)?;
+                    let statement = infer_function(f, &mut env, &mut hydrators, &name);
+                    let statement = match statement {
+                        Err(e) => return InferenceResult::from_error(e),
+                        Ok(statement) => statement,
+                    };
                     working_group.push(statement);
                 }
                 CallGraphNode::ModuleConstant(c) => {
-                    let statement = infer_module_constant(c, &mut env, &name)?;
+                    let statement = infer_module_constant(c, &mut env, &name);
+                    let statement = match statement {
+                        Err(e) => return InferenceResult::from_error(e),
+                        Ok(statement) => statement,
+                    };
                     working_group.push(statement);
                 }
             }
@@ -258,7 +335,7 @@ pub fn infer_module<A>(
             continue;
         }
         if let Some(leaked) = value.type_.find_private_type() {
-            return Err(Error::PrivateTypeLeak {
+            errors.push(Error::PrivateTypeLeak {
                 location: value.variant.definition_location(),
                 leaked,
             });
@@ -287,25 +364,31 @@ pub fn infer_module<A>(
 
     let is_internal = package_config.is_internal_module(name.as_str());
 
-    Ok(ast::Module {
-        documentation,
-        name: name.clone(),
-        definitions: typed_statements,
-        type_info: ModuleInterface {
-            name,
-            types,
-            types_value_constructors: types_constructors,
-            values,
-            accessors,
-            origin,
-            package: package_config.name.clone(),
-            is_internal,
-            unused_imports,
-            contains_todo,
-            line_numbers,
-            src_path,
-        },
-    })
+    // Sort the errors by location so that they are easier to debug.
+    errors.sort_by_key(|e| e.start_location());
+
+    InferenceResult {
+        ast: Some(ast::Module {
+            documentation,
+            name: name.clone(),
+            definitions: typed_statements,
+            type_info: ModuleInterface {
+                name,
+                types,
+                types_value_constructors: types_constructors,
+                values,
+                accessors,
+                origin,
+                package: package_config.name.clone(),
+                is_internal,
+                unused_imports,
+                contains_todo,
+                line_numbers,
+                src_path,
+            },
+        }),
+        errors,
+    }
 }
 
 fn validate_module_name(name: &EcoString) -> Result<(), Error> {
