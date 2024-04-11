@@ -109,10 +109,4 @@ impl Diagnostic {
             .set_color(&ColorSpec::new())
             .expect("write_title_reset");
     }
-
-    pub fn pretty_string(&self) -> String {
-        let mut nocolor = Buffer::no_color();
-        self.write(&mut nocolor);
-        String::from_utf8(nocolor.into_inner()).expect("Error printing produced invalid utf8")
-    }
 }

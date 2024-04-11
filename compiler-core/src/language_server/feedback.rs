@@ -116,20 +116,22 @@ impl FeedbackBookKeeper {
         compilation: Compilation,
         warnings: Vec<Warning>,
     ) -> Feedback {
-        let diagnostic = error.to_diagnostic();
+        let diagnostics = error.to_diagnostics();
         let mut feedback = self.response(compilation, warnings);
 
         // A new error means that any existing errors are no longer valid. Unset them.
         self.unset_errors(&mut feedback);
 
-        match diagnostic.location.as_ref().map(|l| l.path.clone()) {
-            Some(path) => {
-                _ = self.files_with_errors.insert(path.clone());
-                feedback.append_diagnostic(path, diagnostic);
-            }
+        for diagnostic in diagnostics {
+            match diagnostic.location.as_ref().map(|l| l.path.clone()) {
+                Some(path) => {
+                    _ = self.files_with_errors.insert(path.clone());
+                    feedback.append_diagnostic(path, diagnostic);
+                }
 
-            None => {
-                feedback.append_message(diagnostic);
+                None => {
+                    feedback.append_message(diagnostic);
+                }
             }
         }
 
@@ -249,7 +251,7 @@ mod tests {
         assert_eq!(
             Feedback {
                 diagnostics: HashMap::from([(file1, vec![warning1.to_diagnostic()])]),
-                messages: vec![locationless_error.to_diagnostic()],
+                messages: locationless_error.to_diagnostics(),
             },
             feedback
         );
@@ -290,7 +292,7 @@ mod tests {
             Feedback {
                 diagnostics: HashMap::from([
                     (file1, vec![warning1.to_diagnostic()]),
-                    (file3.clone(), vec![error.to_diagnostic()]),
+                    (file3.clone(), error.to_diagnostics()),
                 ]),
                 messages: vec![],
             },
@@ -345,7 +347,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: HashMap::from([(file1.clone(), vec![error.to_diagnostic()])]),
+                diagnostics: HashMap::from([(file1.clone(), error.to_diagnostics())]),
                 messages: vec![],
             },
             feedback
@@ -386,7 +388,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: HashMap::from([(file1.clone(), vec![error(&file1).to_diagnostic()])]),
+                diagnostics: HashMap::from([(file1.clone(), error(&file1).to_diagnostics())]),
                 messages: vec![],
             },
             feedback
@@ -401,7 +403,7 @@ mod tests {
                     // Unset the previous error
                     (file1, vec![]),
                     // Set the new one
-                    (file2.clone(), vec![error(&file2).to_diagnostic()]),
+                    (file2.clone(), error(&file2).to_diagnostics()),
                 ]),
                 messages: vec![],
             },
@@ -429,7 +431,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: HashMap::from([(file1, vec![error.to_diagnostic()])]),
+                diagnostics: HashMap::from([(file1, error.to_diagnostics())]),
                 messages: vec![],
             },
             feedback

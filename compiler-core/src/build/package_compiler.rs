@@ -1,4 +1,4 @@
-use crate::analyse::TargetSupport;
+use crate::analyse::{infer_module, InferenceResult, TargetSupport};
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
@@ -423,7 +423,7 @@ fn analyse(
         tracing::debug!(module = ?name, "Type checking");
 
         let line_numbers = LineNumbers::new(&code);
-        let ast = crate::analyse::infer_module(
+        let InferenceResult { ast, errors } = infer_module(
             target,
             ids,
             ast,
@@ -435,12 +435,28 @@ fn analyse(
             line_numbers,
             package_config,
             path.clone(),
-        )
-        .map_err(|error| Error::Type {
-            path: path.clone(),
-            src: code.clone(),
-            error,
-        })?;
+        );
+
+        if let Ok(error) = vec1::Vec1::try_from_vec(errors) {
+            return Err(Error::Type {
+                path: path.clone(),
+                src: code.clone(),
+                error,
+            });
+        }
+
+        // TODO: Once we are guaranteed to get an AST back we should change this
+        // so that instead of returning immediately we bubble up and
+        // do the error check prior to code generation.
+        let ast = match ast {
+            Some(ast) => ast,
+            None => {
+                // This should never happen, but if it does then we should immediately error
+                return Err(Error::TypeNotGenerated {
+                    module: name.clone(),
+                });
+            }
+        };
 
         // Register the types from this module so they can be imported into
         // other modules.

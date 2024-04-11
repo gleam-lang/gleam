@@ -1763,3 +1763,26 @@ fn list() {
 fn mismatched_list_tail() {
     assert_error!("[\"foo\", ..[1, 2]]");
 }
+
+#[test]
+fn leak_multiple_private_types() {
+    assert_module_error!(
+        "
+        type Private {
+            Private
+        }
+
+        pub fn ret_private() -> Private {
+            Private
+        }
+
+        pub fn ret_private2() -> Private {
+            Private
+        }
+
+        pub fn main() {
+            ret_private()
+        }
+        "
+    );
+}
