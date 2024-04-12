@@ -4,6 +4,12 @@
 
 ### Compiler
 
+- Empty case expressions are no longer parse errors and will instead be
+  exhaustiveness errors, resulting in a better error message that shows what the
+  missing patterns are.
+
+#### Bug Fixes
+
 - Fixed [RUSTSEC-2021-0145](https://rustsec.org/advisories/RUSTSEC-2021-0145) by
   using Rust's `std::io::IsTerminal` instead of the `atty` library.
 - Fixed the generated `mod` property in the Erlang application file when using
@@ -20,7 +26,8 @@
 
 ### Compiler
 
-- Fixed empty case expressions being rejected by the parser. Empty case expressions are now parsed successfully but rejected later during exhaustiveness checking with an appropriate error message.
+
+## v1.1.0-rc3 - 2024-04-12
 
 ### Formatter
 
