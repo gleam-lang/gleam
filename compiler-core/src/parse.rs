@@ -628,8 +628,6 @@ where
                         ParseErrorType::ExpectedExpr,
                         SrcSpan { start, end: case_e },
                     );
-                } else if clauses.is_empty() {
-                    return parse_error(ParseErrorType::NoCaseClause, SrcSpan { start, end });
                 } else {
                     UntypedExpr::Case {
                         location: SrcSpan { start, end },
