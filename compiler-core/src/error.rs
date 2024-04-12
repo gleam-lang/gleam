@@ -2572,6 +2572,26 @@ The missing patterns are:\n"
                     }
                 }
 
+                TypeError::EmptyCaseExpression { location } => {
+                    let text: String = "This case expression has no clauses.".into();
+
+                    Diagnostic {
+                        title: "Empty case expression".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
                 TypeError::InexhaustiveCaseExpression { location, missing } => {
                     let mut text: String =
                         "This case expression does not have a pattern for all possible values.
