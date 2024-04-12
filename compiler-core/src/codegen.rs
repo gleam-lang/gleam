@@ -102,7 +102,7 @@ impl<'a> ErlangApp<'a> {
             .erlang
             .application_start_module
             .as_ref()
-            .map(|module| tuple("mod", &format!("'{}'", module.replace("/", "@"))))
+            .map(|module| tuple("mod", &format!("{{'{}', []}}", module.replace("/", "@"))))
             .unwrap_or_default();
 
         let modules = modules

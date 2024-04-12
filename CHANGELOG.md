@@ -4,8 +4,10 @@
 
 ### Compiler
 
-- Fix [RUSTSEC-2021-0145](https://rustsec.org/advisories/RUSTSEC-2021-0145) by
+- Fixed [RUSTSEC-2021-0145](https://rustsec.org/advisories/RUSTSEC-2021-0145) by
   using Rust's `std::io::IsTerminal` instead of the `atty` library.
+- Fixed the generated `mod` property in the Erlang application file when using
+  the `application_start_module` property in `gleam.toml`
 
 ## v1.1.0 - 2024-04-16
 
