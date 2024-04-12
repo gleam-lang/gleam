@@ -18,6 +18,10 @@
 
 ## v1.1.0-rc3 - 2024-04-12
 
+### Compiler
+
+- Fixed empty case expressions being rejected by the parser. Empty case expressions are now parsed successfully but rejected later during exhaustiveness checking with an appropriate error message.
+
 ### Formatter
 
 - Fixed a bug where the `@internal` annotation wouldn't be displayed.
