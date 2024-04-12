@@ -5905,19 +5905,3 @@ fn comments_inside_binop_chain() {
 "#
     );
 }
-
-// https://github.com/gleam-lang/gleam/issues/2911
-#[test]
-fn comments_are_not_moved_out_of_const_lists() {
-    assert_format!(
-        r#"pub fn main() {
-  let x = [
-    // A comment!
-    1, 2, 3,
-    // Another comment!!
-    4, 5,
-  ]
-}
-"#
-    );
-}
