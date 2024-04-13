@@ -347,6 +347,7 @@ fn locked_no_changes() {
     .into();
     let manifest = Manifest {
         requirements: config.all_dependencies(&config.patch).unwrap(),
+        patch: HashMap::new(),
         packages: vec![
             manifest_package("prod1", "1.1.0", &[]),
             manifest_package("prod2", "1.2.0", &[]),
@@ -372,7 +373,8 @@ fn locked_some_removed() {
     config.dependencies = [("prod1".into(), Requirement::hex("~> 1.0"))].into();
     config.dev_dependencies = [("dev2".into(), Requirement::hex("~> 2.0"))].into();
     let manifest = Manifest {
-        requirements: config.all_dependencies(&config.patch).unwrap(),
+        requirements: config.all_dependencies(&Default::default()).unwrap(),
+        patch: HashMap::new(),
         packages: vec![
             manifest_package("prod1", "1.1.0", &[]),
             manifest_package("prod2", "1.2.0", &[]), // Not in config
@@ -413,6 +415,7 @@ fn locked_some_changed() {
             ("dev2".into(), Requirement::hex("~> 2.0")),
         ]
         .into(),
+        patch: HashMap::new(),
         packages: vec![
             manifest_package("prod1", "1.1.0", &[]),
             manifest_package("prod2", "1.2.0", &[]),
@@ -447,6 +450,7 @@ fn locked_nested_are_removed_too() {
             ("2".into(), Requirement::hex("~> 1.0")),
         ]
         .into(),
+        patch: HashMap::new(),
         packages: vec![
             manifest_package("1", "1.1.0", &["1.1", "1.2"]),
             manifest_package("1.1", "1.1.0", &["1.1.1", "1.1.2"]),
@@ -499,6 +503,7 @@ fn locked_unlock_new() {
             ("2".into(), Requirement::hex("~> 1.0")),
         ]
         .into(),
+        patch: HashMap::new(),
         packages: vec![
             manifest_package("1", "1.1.0", &["3"]),
             manifest_package("2", "1.1.0", &["3"]),

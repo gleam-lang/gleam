@@ -61,6 +61,7 @@ impl LanguageServerTestIO {
             paths: ProjectPaths::at_filesystem_root(),
             manifest: Manifest {
                 requirements: HashMap::new(),
+                patch: HashMap::new(),
                 packages: vec![],
             },
         }

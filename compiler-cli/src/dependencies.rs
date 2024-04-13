@@ -64,6 +64,7 @@ fn list_manifest_format() {
     let mut buffer = vec![];
     let manifest = Manifest {
         requirements: HashMap::new(),
+        patch: HashMap::new(),
         packages: vec![
             ManifestPackage {
                 name: "root".into(),
@@ -364,6 +365,7 @@ impl LocalPackages {
 fn missing_local_packages() {
     let manifest = Manifest {
         requirements: HashMap::new(),
+        patch: HashMap::new(),
         packages: vec![
             ManifestPackage {
                 name: "root".into(),
@@ -445,6 +447,7 @@ fn extra_local_packages() {
     }
     .extra_local_packages(&Manifest {
         requirements: HashMap::new(),
+        patch: HashMap::new(),
         packages: vec![
             ManifestPackage {
                 name: "local1".into(),
@@ -507,13 +510,17 @@ fn get_manifest<Telem: Telemetry>(
 
     let manifest = read_manifest_from_disc(paths)?;
 
+    let requirements_unchanged = is_same_requirements(
+        &manifest.requirements,
+        &config.all_dependencies(&Default::default())?,
+        paths.root(),
+    )?;
+
+    let patch_unchanged = is_same_requirements(&manifest.patch, &config.patch, paths.root())?;
+
     // If the config has unchanged since the manifest was written then it is up
     // to date so we can return it unmodified.
-    if is_same_requirements(
-        &manifest.requirements,
-        &config.all_dependencies(&config.patch)?,
-        paths.root(),
-    )? {
+    if requirements_unchanged && patch_unchanged {
         tracing::debug!("manifest_up_to_date");
         Ok((false, manifest))
     } else {
@@ -732,7 +739,8 @@ fn resolve_versions<Telem: Telemetry>(
 
     let manifest = Manifest {
         packages: manifest_packages,
-        requirements: config.all_dependencies(&config.patch)?,
+        requirements: config.all_dependencies(&Default::default())?,
+        patch: config.patch.clone(),
     };
 
     Ok(manifest)

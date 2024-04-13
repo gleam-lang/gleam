@@ -12,6 +12,9 @@ use itertools::Itertools;
 pub struct Manifest {
     #[serde(serialize_with = "ordered_map")]
     pub requirements: HashMap<EcoString, Requirement>,
+    // Store patches as well so the manifest is updated when patches change
+    #[serde(default, serialize_with = "ordered_map")]
+    pub patch: HashMap<EcoString, Requirement>,
     #[serde(serialize_with = "sorted_vec")]
     pub packages: Vec<ManifestPackage>,
 }
@@ -25,6 +28,7 @@ impl Manifest {
         let mut buffer = String::new();
         let Self {
             requirements,
+            patch,
             packages,
         } = self;
 
@@ -105,6 +109,18 @@ impl Manifest {
         // Requirements
         buffer.push_str("[requirements]\n");
         for (name, requirement) in requirements.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+            buffer.push_str(name);
+            buffer.push_str(" = ");
+            buffer.push_str(&requirement.to_toml(root_path));
+            buffer.push('\n');
+        }
+
+        // Patches
+        if patch.is_empty() {
+            return buffer;
+        }
+        buffer.push_str("\n[patch]\n");
+        for (name, requirement) in patch.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
             buffer.push_str(name);
             buffer.push_str(" = ");
             buffer.push_str(&requirement.to_toml(root_path));
@@ -241,6 +257,7 @@ mod tests {
                 ("gleeunit".into(), Requirement::hex("~> 0.1")),
             ]
             .into(),
+            patch: [("bbb".into(), Requirement::hex("> 0.1.0"))].into(),
             packages: vec![
                 ManifestPackage {
                     name: "gleam_stdlib".into(),
@@ -328,6 +345,9 @@ awsome_local2 = { git = "https://github.com/gleam-lang/gleam.git" }
 gleam_stdlib = { version = "~> 0.17" }
 gleeunit = { version = "~> 0.1" }
 zzz = { version = "> 0.0.0" }
+
+[patch]
+bbb = { version = "> 0.1.0" }
 "#
         );
     }
@@ -351,6 +371,7 @@ zzz = { version = "> 0.0.0" }
                 ("gleeunit".into(), Requirement::hex("~> 0.1")),
             ]
             .into(),
+            patch: [("bbb".into(), Requirement::hex("> 0.1.0"))].into(),
             packages: vec![
                 ManifestPackage {
                     name: "gleam_stdlib".into(),
@@ -438,6 +459,9 @@ awsome_local2 = { git = "https://github.com/gleam-lang/gleam.git" }
 gleam_stdlib = { version = "~> 0.17" }
 gleeunit = { version = "~> 0.1" }
 zzz = { version = "> 0.0.0" }
+
+[patch]
+bbb = { version = "> 0.1.0" }
 "#
         );
     }
