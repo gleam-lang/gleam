@@ -2,6 +2,7 @@ use std::{borrow::Borrow, cell::RefCell, collections::HashMap, error::Error as S
 
 use crate::{Error, Result};
 
+use crate::requirement::Requirement;
 use ecow::EcoString;
 use hexpm::{
     version::{Range, Version},
@@ -19,10 +20,11 @@ pub type ResolutionError = PubGrubError<String, Version>;
 
 type PubgrubRange = pubgrub::range::Range<Version>;
 
-pub fn resolve_versions<Requirements>(
-    package_fetcher: Box<dyn PackageFetcher>,
+pub fn resolve_versions<'a, Requirements>(
+    package_fetcher: Box<dyn PackageFetcher + 'a>,
     provided_packages: HashMap<EcoString, hexpm::Package>,
     root_name: EcoString,
+    root_patch: &crate::config::Dependencies,
     dependencies: Requirements,
     locked: &HashMap<EcoString, Version>,
 ) -> Result<PackageVersions>
@@ -31,8 +33,8 @@ where
 {
     tracing::info!("resolving_versions");
     let root_version = Version::new(0, 0, 0);
-    let requirements =
-        root_dependencies(dependencies, locked).map_err(Error::dependency_resolution_failed)?;
+    let requirements = root_dependencies(dependencies, locked, root_patch)
+        .map_err(Error::dependency_resolution_failed)?;
 
     // Creating a map of all the required packages that have exact versions specified
     let exact_deps = &requirements
@@ -53,8 +55,17 @@ where
         }],
     };
 
+    let dependency_provider = DependencyProvider::new(
+        package_fetcher,
+        provided_packages,
+        root,
+        root_patch,
+        locked,
+        exact_deps,
+    );
+
     let packages = pubgrub::solver::resolve(
-        &DependencyProvider::new(package_fetcher, provided_packages, root, locked, exact_deps),
+        &dependency_provider,
         root_name.as_str().into(),
         root_version,
     )
@@ -88,6 +99,7 @@ fn parse_exact_version(ver: &str) -> Option<Version> {
 fn root_dependencies<Requirements>(
     base_requirements: Requirements,
     locked: &HashMap<EcoString, Version>,
+    root_patch: &crate::config::Dependencies,
 ) -> Result<HashMap<String, Dependency>, ResolutionError>
 where
     Requirements: Iterator<Item = (EcoString, Range)>,
@@ -124,6 +136,11 @@ where
                 );
             }
 
+            // If the package was already locked and its version was set
+            // through a patch in the root configuration, don't check for
+            // version incompatibilities.
+            Some(_) if root_patch.contains_key(&name) => {}
+
             // If the version was locked we verify that the requirement is
             // compatible with the locked version.
             Some(locked_version) => {
@@ -148,24 +165,32 @@ but it is locked to {version}, which is incompatible.",
 }
 
 pub trait PackageFetcher {
+    /// Fetch a dependency from Hex.
+    /// Assumes the [`PackageFetcher`] implementation is aware of patches by the root
+    /// configuration, and thus switches to providing a package locally or through Git
+    /// instead if it detects the need to do so.
     fn get_dependencies(&self, package: &str) -> Result<hexpm::Package, Box<dyn StdError>>;
 }
 
 struct DependencyProvider<'a> {
     packages: RefCell<HashMap<EcoString, hexpm::Package>>,
-    remote: Box<dyn PackageFetcher>,
+    remote: Box<dyn PackageFetcher + 'a>,
     locked: &'a HashMap<EcoString, Version>,
     // Map of packages where an exact version was requested
     // We need this because by default pubgrub checks exact version by checking if a version is between the exact
     // and the version 1 bump ahead. That default breaks on prerelease builds since a bump includes the whole patch
     exact_only: &'a HashMap<String, Version>,
+    /// Any patches specified by the root project.
+    /// Versions must respect them.
+    root_patch: &'a crate::config::Dependencies,
 }
 
 impl<'a> DependencyProvider<'a> {
     fn new(
-        remote: Box<dyn PackageFetcher>,
+        remote: Box<dyn PackageFetcher + 'a>,
         mut packages: HashMap<EcoString, hexpm::Package>,
         root: hexpm::Package,
+        root_patch: &'a crate::config::Dependencies,
         locked: &'a HashMap<EcoString, Version>,
         exact_only: &'a HashMap<String, Version>,
     ) -> Self {
@@ -175,6 +200,7 @@ impl<'a> DependencyProvider<'a> {
             locked,
             remote,
             exact_only,
+            root_patch,
         }
     }
 
@@ -222,9 +248,20 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
                 Ok(pair)
             })
             .collect::<Result<_, _>>()?;
+        let hex_patches = self
+            .root_patch
+            .iter()
+            .filter_map(|(name, value)| match value {
+                Requirement::Hex { version } => {
+                    Some(version.to_pubgrub().map(|version| (name.clone(), version)))
+                }
+                _ => None,
+            })
+            .collect::<Result<HashMap<EcoString, PubgrubRange>, _>>()?;
         let list_available_versions = |name: &String| {
             let name = name.as_str();
             let exact_package = self.exact_only.get(name);
+            let patched_version = hex_patches.get(name);
             self.packages
                 .borrow()
                 .get(name)
@@ -233,10 +270,13 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
                 .flat_map(move |p| {
                     p.releases
                         .into_iter()
-                        // if an exact version of a package is specified then we only want to allow that version as available
-                        .filter(move |release| match exact_package {
-                            Some(ver) => ver == &release.version,
-                            _ => true,
+                        // Ensure only the patched version is available
+                        // Without a patch, if an exact version of a package is specified then
+                        // we only want to allow that version as available
+                        .filter(move |release| match (patched_version, exact_package) {
+                            (Some(patched_ver), _) => patched_ver.contains(&release.version),
+                            (_, Some(exact_ver)) => exact_ver == &release.version,
+                            (_, _) => true,
                         })
                 })
                 .map(|p| p.version)
@@ -271,8 +311,14 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
 
         let mut deps: Map<String, PubgrubRange> = Default::default();
         for (name, d) in &release.requirements {
-            let range = d.requirement.to_pubgrub()?;
-            let _ = deps.insert(name.clone(), range);
+            let patched_range = match self.root_patch.get(&**name) {
+                Some(Requirement::Hex { version }) => version.to_pubgrub()?,
+                None => d.requirement.to_pubgrub()?,
+                // Accept any version, as the patch will ensure we always get the
+                // same package (local or git)
+                _ => PubgrubRange::higher_than(Version::new(0, 0, 0)),
+            };
+            let _ = deps.insert(name.clone(), patched_range);
         }
         Ok(Dependencies::Known(deps))
     }
@@ -443,6 +489,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![locked_stdlib].into_iter().collect(),
         )
@@ -461,6 +508,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -474,6 +522,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -492,6 +541,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![("gleam_otp".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -513,6 +563,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![("gleam_otp".into(), Range::new("~> 0.1.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -534,6 +585,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -556,6 +608,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
             &vec![("package_with_retired".into(), Version::new(0, 2, 0))]
                 .into_iter()
@@ -580,6 +633,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![("gleam_otp".into(), Range::new("~> 0.3.0-rc1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -601,6 +655,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![("gleam_otp".into(), Range::new("0.3.0-rc1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -622,6 +677,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![("unknown".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -634,6 +690,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![("gleam_stdlib".into(), Range::new("~> 99.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -646,6 +703,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1.0".into()))].into_iter(),
             &vec![("gleam_stdlib".into(), Version::new(0, 2, 0))]
                 .into_iter()
@@ -668,6 +726,7 @@ mod tests {
             make_remote(),
             HashMap::new(),
             "app".into(),
+            &Default::default(),
             vec![("gleam_stdlib".into(), Range::new("0.1.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )

@@ -153,6 +153,7 @@ fn package_from_module(module: Module) -> Package {
             documentation: Docs { pages: vec![] },
             dependencies: std::collections::HashMap::new(),
             dev_dependencies: std::collections::HashMap::new(),
+            patch: std::collections::HashMap::new(),
             repository: Repository::default(),
             links: vec![],
             erlang: ErlangConfig::default(),

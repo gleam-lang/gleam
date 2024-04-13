@@ -33,6 +33,34 @@ fn default_javascript_runtime() -> Runtime {
 
 pub type Dependencies = HashMap<EcoString, Requirement>;
 
+#[derive(Debug)]
+pub struct PatchedDependencies(Dependencies);
+
+impl PatchedDependencies {
+    /// Patches dependencies by overriding them with those in the patch
+    /// dictionary.
+    pub fn apply_patch(
+        dependencies: impl IntoIterator<Item = (EcoString, Requirement)>,
+        patch: &Dependencies,
+    ) -> Self {
+        let patched_dependencies = dependencies
+            .into_iter()
+            .map(|(name, value)| {
+                let new_value = patch.get(&name).cloned().unwrap_or(value);
+
+                (name, new_value)
+            })
+            .collect();
+
+        Self(patched_dependencies)
+    }
+
+    /// Take the resulting dependencies after patching.
+    pub fn take(self) -> Dependencies {
+        self.0
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SpdxLicense {
     pub licence: String,
@@ -86,6 +114,8 @@ pub struct PackageConfig {
     #[serde(default, rename = "dev-dependencies")]
     pub dev_dependencies: Dependencies,
     #[serde(default)]
+    pub patch: Dependencies,
+    #[serde(default)]
     pub repository: Repository,
     #[serde(default)]
     pub links: Vec<Link>,
@@ -100,14 +130,16 @@ pub struct PackageConfig {
 }
 
 impl PackageConfig {
-    pub fn dependencies_for(&self, mode: Mode) -> Result<Dependencies> {
+    pub fn dependencies_for(&self, mode: Mode, patch: &Dependencies) -> Result<Dependencies> {
         match mode {
-            Mode::Dev | Mode::Lsp => self.all_dependencies(),
-            Mode::Prod => Ok(self.dependencies.clone()),
+            Mode::Dev | Mode::Lsp => self.all_dependencies(patch),
+            Mode::Prod => {
+                Ok(PatchedDependencies::apply_patch(self.dependencies.clone(), patch).take())
+            }
         }
     }
 
-    pub fn all_dependencies(&self) -> Result<Dependencies> {
+    pub fn all_dependencies(&self, patch: &Dependencies) -> Result<Dependencies> {
         let mut deps =
             HashMap::with_capacity(self.dependencies.len() + self.dev_dependencies.len());
         for (name, requirement) in self.dependencies.iter().chain(&self.dev_dependencies) {
@@ -116,7 +148,7 @@ impl PackageConfig {
                 return Err(Error::DuplicateDependency(name.clone()));
             }
         }
-        Ok(deps)
+        Ok(PatchedDependencies::apply_patch(deps, patch).take())
     }
 
     pub fn read<FS: FileSystemReader, P: AsRef<Utf8Path>>(
@@ -144,12 +176,15 @@ impl PackageConfig {
     /// outdated deps are removed from the manifest and not locked to the
     /// previously selected versions.
     ///
+    /// Assumes this is the root configuration, such that this config's patch
+    /// will be used as appropriate to determine final dependency versions.
     pub fn locked(&self, manifest: Option<&Manifest>) -> Result<HashMap<EcoString, Version>> {
         Ok(match manifest {
             None => HashMap::new(),
-            Some(manifest) => {
-                StalePackageRemover::fresh_and_locked(&self.all_dependencies()?, manifest)
-            }
+            Some(manifest) => StalePackageRemover::fresh_and_locked(
+                &self.all_dependencies(&self.patch)?,
+                manifest,
+            ),
         })
     }
 
@@ -311,7 +346,7 @@ fn locked_no_changes() {
     ]
     .into();
     let manifest = Manifest {
-        requirements: config.all_dependencies().unwrap(),
+        requirements: config.all_dependencies(&config.patch).unwrap(),
         packages: vec![
             manifest_package("prod1", "1.1.0", &[]),
             manifest_package("prod2", "1.2.0", &[]),
@@ -337,7 +372,7 @@ fn locked_some_removed() {
     config.dependencies = [("prod1".into(), Requirement::hex("~> 1.0"))].into();
     config.dev_dependencies = [("dev2".into(), Requirement::hex("~> 2.0"))].into();
     let manifest = Manifest {
-        requirements: config.all_dependencies().unwrap(),
+        requirements: config.all_dependencies(&config.patch).unwrap(),
         packages: vec![
             manifest_package("prod1", "1.1.0", &[]),
             manifest_package("prod2", "1.2.0", &[]), // Not in config
@@ -614,6 +649,7 @@ impl Default for PackageConfig {
             javascript: Default::default(),
             repository: Default::default(),
             dev_dependencies: Default::default(),
+            patch: Default::default(),
             licences: Default::default(),
             links: Default::default(),
             internal_modules: Default::default(),

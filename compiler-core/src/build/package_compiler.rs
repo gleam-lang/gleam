@@ -399,7 +399,12 @@ fn analyse(
     target_support: TargetSupport,
 ) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
-    let direct_dependencies = package_config.dependencies_for(mode).expect("Package deps");
+    // We don't have to use the root config patch here,
+    // as we only use the dependencies' names, not their
+    // versions, when analysing.
+    let direct_dependencies = package_config
+        .dependencies_for(mode, &Default::default())
+        .expect("Package deps");
 
     // Insert the prelude
     // DUPE: preludeinsertion

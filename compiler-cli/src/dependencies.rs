@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::{
     collections::{HashMap, HashSet},
     time::Instant,
@@ -510,7 +511,7 @@ fn get_manifest<Telem: Telemetry>(
     // to date so we can return it unmodified.
     if is_same_requirements(
         &manifest.requirements,
-        &config.all_dependencies()?,
+        &config.all_dependencies(&config.patch)?,
         paths.root(),
     )? {
         tracing::debug!("manifest_up_to_date");
@@ -683,11 +684,11 @@ fn resolve_versions<Telem: Telemetry>(
     telemetry: &Telem,
 ) -> Result<Manifest, Error> {
     telemetry.resolving_package_versions();
-    let dependencies = config.dependencies_for(mode)?;
+    let dependencies = config.dependencies_for(mode, &config.patch)?;
     let locked = config.locked(manifest)?;
 
-    // Packages which are provided directly instead of downloaded from hex
-    let mut provided_packages = HashMap::new();
+    // Provides local packages and Git packages directly instead of downloading from hex
+    let mut package_provider = PackageProvider::new(project_paths, config);
     // The version requires of the current project
     let mut root_requirements = HashMap::new();
 
@@ -695,187 +696,198 @@ fn resolve_versions<Telem: Telemetry>(
     for (name, requirement) in dependencies.into_iter() {
         let version = match requirement {
             Requirement::Hex { version } => version,
-            Requirement::Path { path } => provide_local_package(
+            Requirement::Path { path } => package_provider.provide_local_package(
                 name.clone(),
                 &path,
                 project_paths.root(),
-                project_paths,
-                &mut provided_packages,
                 &mut vec![],
             )?,
-            Requirement::Git { git } => {
-                provide_git_package(name.clone(), &git, project_paths, &mut provided_packages)?
-            }
+            Requirement::Git { git } => package_provider.provide_git_package(name.clone(), &git)?,
         };
         let _ = root_requirements.insert(name, version);
     }
 
     // Convert provided packages into hex packages for pub-grub resolve
-    let provided_hex_packages = provided_packages
+    let provided_hex_packages = package_provider
+        .provided_packages
         .iter()
         .map(|(name, package)| (name.clone(), package.to_hex_package(name)))
         .collect();
 
+    let fetcher = PackageFetcher::boxed(runtime.clone(), &mut package_provider);
+
     let resolved = dependency::resolve_versions(
-        PackageFetcher::boxed(runtime.clone()),
+        fetcher,
         provided_hex_packages,
         config.name.clone(),
+        &config.patch,
         root_requirements.into_iter(),
         &locked,
     )?;
 
     // Convert the hex packages and local packages into manifest packages
-    let manifest_packages = runtime.block_on(future::try_join_all(
-        resolved
-            .into_iter()
-            .map(|(name, version)| lookup_package(name, version, &provided_packages)),
-    ))?;
+    let manifest_packages = runtime.block_on(future::try_join_all(resolved.into_iter().map(
+        |(name, version)| lookup_package(name, version, &package_provider.provided_packages),
+    )))?;
 
     let manifest = Manifest {
         packages: manifest_packages,
-        requirements: config.all_dependencies()?,
+        requirements: config.all_dependencies(&config.patch)?,
     };
 
     Ok(manifest)
 }
 
-/// Provide a package from a local project
-fn provide_local_package(
-    package_name: EcoString,
-    package_path: &Utf8Path,
-    parent_path: &Utf8Path,
-    project_paths: &ProjectPaths,
-    provided: &mut HashMap<EcoString, ProvidedPackage>,
-    parents: &mut Vec<EcoString>,
-) -> Result<hexpm::version::Range> {
-    let package_path = if package_path.is_absolute() {
-        package_path.to_path_buf()
-    } else {
-        fs::canonicalise(&parent_path.join(package_path))?
-    };
-    let package_source = ProvidedPackageSource::Local {
-        path: package_path.clone(),
-    };
-    provide_package(
-        package_name,
-        package_path,
-        package_source,
-        project_paths,
-        provided,
-        parents,
-    )
+/// Responsible for providing packages which are not fetched through Hex.
+#[derive(Debug)]
+struct PackageProvider<'a> {
+    /// Packages which are provided directly instead of downloaded from hex
+    provided_packages: HashMap<EcoString, ProvidedPackage>,
+    project_paths: &'a ProjectPaths,
+    root_config: &'a PackageConfig,
 }
 
-/// Provide a package from a git repository
-fn provide_git_package(
-    _package_name: EcoString,
-    _repo: &str,
-    _project_paths: &ProjectPaths,
-    _provided: &mut HashMap<EcoString, ProvidedPackage>,
-) -> Result<hexpm::version::Range> {
-    let _git = ProvidedPackageSource::Git {
-        repo: "repo".into(),
-        commit: "commit".into(),
-    };
-    Err(Error::GitDependencyUnsupported)
-}
-
-/// Adds a gleam project located at a specific path to the list of "provided packages"
-fn provide_package(
-    package_name: EcoString,
-    package_path: Utf8PathBuf,
-    package_source: ProvidedPackageSource,
-    project_paths: &ProjectPaths,
-    provided: &mut HashMap<EcoString, ProvidedPackage>,
-    parents: &mut Vec<EcoString>,
-) -> Result<hexpm::version::Range> {
-    // Return early if a package cycle is detected
-    if parents.contains(&package_name) {
-        let mut last_cycle = parents
-            .split(|p| p == &package_name)
-            .last()
-            .unwrap_or_default()
-            .to_vec();
-        last_cycle.push(package_name);
-        return Err(Error::PackageCycle {
-            packages: last_cycle,
-        });
-    }
-    // Check that we do not have a cached version of this package already
-    match provided.get(&package_name) {
-        Some(package) if package.source == package_source => {
-            // This package has already been provided from this source, return the version
-            let version = hexpm::version::Range::new(format!("== {}", &package.version));
-            return Ok(version);
+impl<'a> PackageProvider<'a> {
+    fn new(project_paths: &'a ProjectPaths, root_config: &'a PackageConfig) -> PackageProvider<'a> {
+        Self {
+            provided_packages: Default::default(),
+            project_paths,
+            root_config,
         }
-        Some(package) => {
-            // This package has already been provided from a different source which conflicts
-            return Err(Error::ProvidedDependencyConflict {
-                package: package_name.into(),
-                source_1: package_source.to_toml(),
-                source_2: package.source.to_toml(),
+    }
+
+    /// Provide a package from a local project
+    fn provide_local_package(
+        &mut self,
+        package_name: EcoString,
+        package_path: &Utf8Path,
+        parent_path: &Utf8Path,
+        parents: &mut Vec<EcoString>,
+    ) -> Result<hexpm::version::Range> {
+        let package_path = if package_path.is_absolute() {
+            package_path.to_path_buf()
+        } else {
+            fs::canonicalise(&parent_path.join(package_path))?
+        };
+        let package_source = ProvidedPackageSource::Local {
+            path: package_path.clone(),
+        };
+        self.provide_package(package_name, package_path, package_source, parents)
+    }
+
+    /// Provide a package from a git repository
+    fn provide_git_package(
+        &mut self,
+        _package_name: EcoString,
+        _repo: &str,
+    ) -> Result<hexpm::version::Range> {
+        let _git = ProvidedPackageSource::Git {
+            repo: "repo".into(),
+            commit: "commit".into(),
+        };
+        Err(Error::GitDependencyUnsupported)
+    }
+
+    /// Adds a gleam project located at a specific path to the list of "provided packages"
+    fn provide_package(
+        &mut self,
+        package_name: EcoString,
+        package_path: Utf8PathBuf,
+        package_source: ProvidedPackageSource,
+        parents: &mut Vec<EcoString>,
+    ) -> Result<hexpm::version::Range> {
+        // Return early if a package cycle is detected
+        if parents.contains(&package_name) {
+            let mut last_cycle = parents
+                .split(|p| p == &package_name)
+                .last()
+                .unwrap_or_default()
+                .to_vec();
+            last_cycle.push(package_name);
+            return Err(Error::PackageCycle {
+                packages: last_cycle,
             });
         }
-        None => (),
-    }
-    // Load the package
-    let config = crate::config::read(package_path.join("gleam.toml"))?;
-    // Check that we are loading the correct project
-    if config.name != package_name {
-        return Err(Error::WrongDependencyProvided {
-            expected: package_name.into(),
-            path: package_path.to_path_buf(),
-            found: config.name.into(),
-        });
-    };
-    // Walk the requirements of the package
-    let mut requirements = HashMap::new();
-    parents.push(package_name);
-    for (name, requirement) in config.dependencies.into_iter() {
-        let version = match requirement {
-            Requirement::Hex { version } => version,
-            Requirement::Path { path } => {
-                // Recursively walk local packages
-                provide_local_package(
-                    name.clone(),
-                    &path,
-                    &package_path,
-                    project_paths,
-                    provided,
-                    parents,
-                )?
+        // Check that we do not have a cached version of this package already
+        match self.provided_packages.get(&package_name) {
+            Some(package) if package.source == package_source => {
+                // This package has already been provided from this source, return the version
+                let version = hexpm::version::Range::new(format!("== {}", &package.version));
+                return Ok(version);
             }
-            Requirement::Git { git } => {
-                provide_git_package(name.clone(), &git, project_paths, provided)?
+            Some(package) => {
+                // This package has already been provided from a different source which conflicts
+                return Err(Error::ProvidedDependencyConflict {
+                    package: package_name.into(),
+                    source_1: package_source.to_toml(),
+                    source_2: package.source.to_toml(),
+                });
             }
+            None => (),
+        }
+        // Load the package
+        let config = crate::config::read(package_path.join("gleam.toml"))?;
+        // Check that we are loading the correct project
+        if config.name != package_name {
+            return Err(Error::WrongDependencyProvided {
+                expected: package_name.into(),
+                path: package_path.to_path_buf(),
+                found: config.name.into(),
+            });
         };
-        let _ = requirements.insert(name, version);
+        // Walk the requirements of the package
+        let mut requirements = HashMap::new();
+        parents.push(package_name);
+        for (name, requirement) in config.dependencies.into_iter() {
+            // Apply the root config's patch to the dependency.
+            let requirement = self
+                .root_config
+                .patch
+                .get(&name)
+                .cloned()
+                .unwrap_or(requirement);
+            let version = match requirement {
+                Requirement::Hex { version } => version,
+                Requirement::Path { path } => {
+                    let parent_path = if self.root_config.patch.contains_key(&name) {
+                        // If this requirement was overridden by the root package,
+                        // its path must be relative to the root package.
+                        self.project_paths.root()
+                    } else {
+                        &package_path
+                    };
+                    // Recursively walk local packages
+                    self.provide_local_package(name.clone(), &path, parent_path, parents)?
+                }
+                Requirement::Git { git } => self.provide_git_package(name.clone(), &git)?,
+            };
+            let _ = requirements.insert(name, version);
+        }
+        let _ = parents.pop();
+        // Add the package to the provided packages dictionary
+        let version = hexpm::version::Range::new(format!("== {}", &config.version));
+        let _ = self.provided_packages.insert(
+            config.name,
+            ProvidedPackage {
+                version: config.version,
+                source: package_source,
+                requirements,
+            },
+        );
+        // Return the version
+        Ok(version)
     }
-    let _ = parents.pop();
-    // Add the package to the provided packages dictionary
-    let version = hexpm::version::Range::new(format!("== {}", &config.version));
-    let _ = provided.insert(
-        config.name,
-        ProvidedPackage {
-            version: config.version,
-            source: package_source,
-            requirements,
-        },
-    );
-    // Return the version
-    Ok(version)
 }
 
 #[test]
 fn provide_wrong_package() {
-    let mut provided = HashMap::new();
     let project_paths = crate::project_paths_at_current_directory_without_toml();
-    let result = provide_local_package(
+    let root_config = PackageConfig::default();
+    let mut package_provider = PackageProvider::new(&project_paths, &root_config);
+    let result = package_provider.provide_local_package(
         "wrong_name".into(),
         Utf8Path::new("./test/hello_world"),
         Utf8Path::new("./"),
-        &project_paths,
-        &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
     if let Err(Error::WrongDependencyProvided {
@@ -891,25 +903,21 @@ fn provide_wrong_package() {
 
 #[test]
 fn provide_existing_package() {
-    let mut provided = HashMap::new();
     let project_paths = crate::project_paths_at_current_directory_without_toml();
-
-    let result = provide_local_package(
+    let root_config = PackageConfig::default();
+    let mut package_provider = PackageProvider::new(&project_paths, &root_config);
+    let result = package_provider.provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
         Utf8Path::new("./"),
-        &project_paths,
-        &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
     assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
 
-    let result = provide_local_package(
+    let result = package_provider.provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
         Utf8Path::new("./"),
-        &project_paths,
-        &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
     assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
@@ -917,26 +925,23 @@ fn provide_existing_package() {
 
 #[test]
 fn provide_conflicting_package() {
-    let mut provided = HashMap::new();
     let project_paths = crate::project_paths_at_current_directory_without_toml();
-    let result = provide_local_package(
+    let root_config = PackageConfig::default();
+    let mut package_provider = PackageProvider::new(&project_paths, &root_config);
+    let result = package_provider.provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
         Utf8Path::new("./"),
-        &project_paths,
-        &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
     assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
 
-    let result = provide_package(
+    let result = package_provider.provide_package(
         "hello_world".into(),
         Utf8PathBuf::from("./test/other"),
         ProvidedPackageSource::Local {
             path: Utf8Path::new("./test/other").to_path_buf(),
         },
-        &project_paths,
-        &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
     if let Err(Error::ProvidedDependencyConflict { package, .. }) = result {
@@ -948,18 +953,21 @@ fn provide_conflicting_package() {
 
 #[test]
 fn provided_is_absolute() {
-    let mut provided = HashMap::new();
     let project_paths = crate::project_paths_at_current_directory_without_toml();
-    let result = provide_local_package(
+    let root_config = PackageConfig::default();
+    let mut package_provider = PackageProvider::new(&project_paths, &root_config);
+    let result = package_provider.provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
         Utf8Path::new("./"),
-        &project_paths,
-        &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
     assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
-    let package = provided.get("hello_world").unwrap().clone();
+    let package = package_provider
+        .provided_packages
+        .get("hello_world")
+        .unwrap()
+        .clone();
     if let ProvidedPackageSource::Local { path } = package.source {
         assert!(path.is_absolute())
     } else {
@@ -969,14 +977,13 @@ fn provided_is_absolute() {
 
 #[test]
 fn provided_recursive() {
-    let mut provided = HashMap::new();
     let project_paths = crate::project_paths_at_current_directory_without_toml();
-    let result = provide_local_package(
+    let root_config = PackageConfig::default();
+    let mut package_provider = PackageProvider::new(&project_paths, &root_config);
+    let result = package_provider.provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
         Utf8Path::new("./"),
-        &project_paths,
-        &mut provided,
         &mut vec!["root".into(), "hello_world".into(), "subpackage".into()],
     );
     assert_eq!(
@@ -1024,16 +1031,26 @@ async fn lookup_package(
     }
 }
 
-struct PackageFetcher {
+struct PackageFetcher<'a, 'b> {
     runtime: tokio::runtime::Handle,
     http: HttpClient,
+    // Use a RefCell here as the PackageFetcher trait
+    // calls us with a shared reference.
+    // We don't recursively borrow the package provider mutably
+    // as we do not call the trait method ourselves, therefore
+    // this RefCell should not lead to any panics.
+    package_provider: RefCell<&'a mut PackageProvider<'b>>,
 }
 
-impl PackageFetcher {
-    pub fn boxed(runtime: tokio::runtime::Handle) -> Box<Self> {
+impl<'a, 'b> PackageFetcher<'a, 'b> {
+    pub fn boxed(
+        runtime: tokio::runtime::Handle,
+        package_provider: &'a mut PackageProvider<'b>,
+    ) -> Box<Self> {
         Box::new(Self {
             runtime,
             http: HttpClient::new(),
+            package_provider: RefCell::new(package_provider),
         })
     }
 }
@@ -1064,11 +1081,49 @@ impl TarUnpacker for Untar {
     }
 }
 
-impl dependency::PackageFetcher for PackageFetcher {
+impl dependency::PackageFetcher for PackageFetcher<'_, '_> {
     fn get_dependencies(
         &self,
         package: &str,
     ) -> Result<hexpm::Package, Box<dyn std::error::Error>> {
+        {
+            let mut package_provider = self.package_provider.borrow_mut();
+            match package_provider.root_config.patch.get(package) {
+                Some(Requirement::Path { path }) => {
+                    let package = EcoString::from(package);
+                    let root_path = package_provider.project_paths.root();
+                    // Relative to the root path, given we're using a patch from the root
+                    // config.
+                    let _ = package_provider.provide_local_package(
+                        package.clone(),
+                        path,
+                        root_path,
+                        &mut vec![],
+                    )?;
+                    let provided = package_provider
+                        .provided_packages
+                        .get(&package)
+                        .expect("Provided local package");
+                    return Ok(provided.to_hex_package(&package));
+                }
+                Some(Requirement::Git { git }) => {
+                    let package = EcoString::from(package);
+                    let _ = package_provider.provide_git_package(package.clone(), git)?;
+                    let provided = package_provider
+                        .provided_packages
+                        .get(&package)
+                        .expect("Provided Git package");
+                    return Ok(provided.to_hex_package(&package));
+                }
+                // Hex version patch is handled by the dependency resolver at the core
+                Some(Requirement::Hex { .. }) | None => {}
+            }
+            if let Some(provided_package) = package_provider.provided_packages.get(package) {
+                // We already fetched this package locally before (probably due to a patch).
+                // Return it.
+                return Ok(provided_package.to_hex_package(&package.into()));
+            }
+        }
         tracing::debug!(package = package, "looking_up_hex_package");
         let config = hexpm::Config::new();
         let request = hexpm::get_package_request(package, None, &config);
