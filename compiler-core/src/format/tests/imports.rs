@@ -25,6 +25,12 @@ fn discarded_import_with_unqualified() {
 }
 
 #[test]
+fn redundant_as_name_is_removed() {
+    assert_format_rewrite!("import wibble/wobble as wobble", "import wibble/wobble\n");
+    assert_format_rewrite!("import wibble as wibble", "import wibble\n");
+}
+
+#[test]
 fn imports_are_sorted_alphabetically() {
     assert_format_rewrite!(
         "import c import a/a import a/c import b import a/ab import a",
