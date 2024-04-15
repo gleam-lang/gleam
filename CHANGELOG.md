@@ -24,11 +24,6 @@
 
 ## v1.1.0-rc3 - 2024-04-12
 
-### Compiler
-
-
-## v1.1.0-rc3 - 2024-04-12
-
 ### Formatter
 
 - Fixed a bug where the `@internal` annotation wouldn't be displayed.
