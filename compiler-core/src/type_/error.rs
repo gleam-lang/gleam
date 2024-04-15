@@ -313,11 +313,6 @@ pub enum Error {
         name: EcoString,
     },
 
-    /// A case expression contains no clauses.
-    EmptyCaseExpression {
-        location: SrcSpan,
-    },
-
     /// A case expression is missing one or more patterns to match all possible
     /// values of the type.
     InexhaustiveCaseExpression {

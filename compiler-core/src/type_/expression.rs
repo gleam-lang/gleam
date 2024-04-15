@@ -2551,11 +2551,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<(), Error> {
         use exhaustiveness::{Body, Column, Compiler, PatternArena, Row};
 
-        // Error for empty clauses, must be caught before full exhaustiveness check
-        if clauses.is_empty() {
-            return Err(Error::EmptyCaseExpression { location });
-        }
-
         let mut compiler = Compiler::new(self.environment, Arena::new());
         let mut arena = PatternArena::new();
 
