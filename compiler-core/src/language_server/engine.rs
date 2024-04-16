@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, Publicity, TypedDefinition, TypedExpr,
-        TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, Publicity, SrcSpan, TypedDefinition,
+        TypedExpr, TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -740,8 +740,24 @@ fn code_action_unused_imports(
     let mut hovered = false;
     let mut edits = Vec::with_capacity(unused.len());
 
-    for unused in unused {
-        let range = src_span_to_lsp_range(*unused, &line_numbers);
+    for unused_span in unused {
+        let SrcSpan { start, end } = *unused_span;
+
+        // Determine if the removal corresponds to the start index of a line.
+        // For imports, deletion aligns with line start indices, while alias removals do not.
+        let delete_line = module
+            .ast
+            .type_info
+            .line_numbers
+            .line_starts
+            .iter()
+            .any(|line_start| *line_start == start);
+
+        // If removing an unused alias, don't backspace
+        // Otherwise, adjust the start position by 1 to ensure the entire line is deleted with the import.
+        let adjusted_start = if delete_line { start - 1 } else { start };
+
+        let range = src_span_to_lsp_range(SrcSpan::new(adjusted_start, end), &line_numbers);
         // Keep track of whether any unused import has is where the cursor is
         hovered = hovered || range_includes(&params.range, &range);
 
