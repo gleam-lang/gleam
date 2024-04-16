@@ -1,8 +1,8 @@
 # Changelog
 
-### Unreleased
+## v1.1.0 - 2024-04-16
 
-## Formatter
+### Formatter
 
 - Fixed a bug where the first subject of a case expression clause would be
   indented more than necessary.
