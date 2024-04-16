@@ -740,22 +740,16 @@ fn code_action_unused_imports(
     let mut hovered = false;
     let mut edits = Vec::with_capacity(unused.len());
 
-    for unused_span in unused {
-        let SrcSpan { start, end } = *unused_span;
-
-        // Determine if the removal corresponds to the start index of a line.
-        // For imports, deletion aligns with line start indices, while alias removals do not.
-        let delete_line = module
-            .ast
-            .type_info
-            .line_numbers
-            .line_starts
-            .iter()
-            .any(|line_start| *line_start == start);
+    for unused in unused {
+        let SrcSpan { start, end } = *unused;
 
         // If removing an unused alias, don't backspace
         // Otherwise, adjust the start position by 1 to ensure the entire line is deleted with the import.
-        let adjusted_start = if delete_line { start - 1 } else { start };
+        let adjusted_start = if delete_line(unused, &line_numbers) {
+            start - 1
+        } else {
+            start
+        };
 
         let range = src_span_to_lsp_range(SrcSpan::new(adjusted_start, end), &line_numbers);
         // Keep track of whether any unused import has is where the cursor is
@@ -778,6 +772,13 @@ fn code_action_unused_imports(
         .changes(uri.clone(), edits)
         .preferred(true)
         .push_to(actions);
+}
+
+// Check if the edit empties a whole line; if so, delete the line.
+fn delete_line(span: &SrcSpan, line_numbers: &LineNumbers) -> bool {
+    line_numbers.line_starts.iter().any(|&line_start| {
+        line_start == span.start && line_numbers.line_starts.contains(&(span.end + 1))
+    })
 }
 
 fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoString)> {
