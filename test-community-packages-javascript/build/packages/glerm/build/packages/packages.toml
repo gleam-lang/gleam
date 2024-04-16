@@ -1,7 +1,0 @@
-[packages]
-gleam_community_ansi = "1.2.0"
-gleam_otp = "0.8.0"
-gleam_erlang = "0.23.1"
-gleam_community_colour = "1.2.0"
-gleam_stdlib = "0.33.1"
-gleeunit = "0.11.0"

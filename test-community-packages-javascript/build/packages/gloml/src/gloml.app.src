@@ -1,9 +1,0 @@
-{application, gloml, [
-    {vsn, "0.1.2"},
-    {applications, [gleam_stdlib,
-                    gleeunit,
-                    toml]},
-    {description, "A gleam library for parsing toml."},
-    {modules, [gloml]},
-    {registered, []}
-]}.

@@ -1,1 +1,0 @@
--record(located, {row :: integer(), col :: integer(), context :: any()}).

@@ -1,1 +1,0 @@
--record(doctype, {content :: binary()}).
