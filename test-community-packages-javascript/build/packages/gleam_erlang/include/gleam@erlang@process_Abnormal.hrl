@@ -1,1 +1,0 @@
--record(abnormal, {reason :: binary()}).

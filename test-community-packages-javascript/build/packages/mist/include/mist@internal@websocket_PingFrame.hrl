@@ -1,1 +1,0 @@
--record(ping_frame, {payload_length :: integer(), payload :: bitstring()}).

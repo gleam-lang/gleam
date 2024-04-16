@@ -1,1 +1,0 @@
--record(unread, {rest :: bitstring(), socket :: glisten@socket:socket()}).

@@ -1,1 +1,0 @@
--record(comment, {content :: binary()}).

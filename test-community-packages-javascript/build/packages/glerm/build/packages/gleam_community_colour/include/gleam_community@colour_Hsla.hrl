@@ -1,1 +1,0 @@
--record(hsla, {h :: float(), s :: float(), l :: float(), a :: float()}).
