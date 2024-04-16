@@ -362,7 +362,7 @@ impl<'comments> Formatter<'comments> {
                     // used anyways we won't render it. For example:
                     // ```gleam
                     // import gleam/int as int
-                    //                  ^^^^^^ this is redundand and removed
+                    //                  ^^^^^^ this is redundant and removed
                     // ```
                     (Some(module_name), Some((AssignName::Variable(name), _)))
                         if &module_name == name =>
