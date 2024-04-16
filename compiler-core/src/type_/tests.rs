@@ -633,7 +633,6 @@ fn infer_module_type_retention_test() {
         module.type_info,
         ModuleInterface {
             contains_todo: false,
-            leaks_internal_types: false,
             origin: Origin::Src,
             package: "thepackage".into(),
             name: "ok".into(),

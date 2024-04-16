@@ -1361,6 +1361,14 @@ pub fn main() {
     );
 }
 
+/*
+
+TODO: These tests are commented out until we figure out a better way to deal
+      with reexports of internal types and reintroduce the warning.
+      As things stand it would break both Lustre and Mist.
+      You can see the thread starting around here for more context:
+      https://discord.com/channels/768594524158427167/768594524158427170/1227250677734969386
+
 #[test]
 fn internal_type_in_public_function_return() {
     assert_warning!(
@@ -1457,3 +1465,5 @@ pub type Wobble {
 }"
     );
 }
+
+*/

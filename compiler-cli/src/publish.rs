@@ -275,19 +275,10 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
         return Err(Error::CannotPublishTodo { unfinished });
     }
 
-    // If any of the modules in the package contain a leaked internal type then
+    // TODO: If any of the modules in the package contain a leaked internal type then
     // refuse to publish as the package is not yet finished.
-    let unfinished = built
-        .root_package
-        .modules
-        .iter()
-        .filter(|module| module.ast.type_info.leaks_internal_types)
-        .map(|module| module.name.clone())
-        .sorted()
-        .collect_vec();
-    if !unfinished.is_empty() {
-        return Err(Error::CannotPublishLeakedInternalType { unfinished });
-    }
+    // We need to move aliases in to the type system first.
+    // context: https://discord.com/channels/768594524158427167/768594524158427170/1227250677734969386
 
     // Collect all the files we want to include in the tarball
     let generated_files = match target {

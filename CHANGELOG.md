@@ -1,9 +1,47 @@
 # Changelog
 
-## Unreleased
+### Unreleased
+
+## Formatter
+
+- Fixed a bug where the first subject of a case expression clause would be
+  indented more than necessary.
+
+## v1.1.0-rc3 - 2024-04-12
+
+### Formatter
+
+- Fixed a bug where the `@internal` annotation wouldn't be displayed.
+- Fixed a bug where a record update's arguments would be incorrectly split on
+  multiple lines.
+
+## v1.1.0-rc2 - 2024-04-10
 
 ### Compiler
 
+- Fixed a bug on the JavaScript target where variables named `debugger`, which
+  is a JavaScript keyword, were not being renamed, leading to runtime errors.
+
+### Formatter
+
+- Fixed a bug where comments would be moved out of an empty bit array.
+- Fixed a bug where the formatter could add a trailing comma inside empty
+  bit arrays, generating invalid syntax.
+- Revert the warning about internal types being exposed in a package's public
+  API.
+
+### Build tool
+
+- Revert the change that would make the build tool refuse to publish a package
+  that exposes an internal type in its public API.
+
+## v1.1.0-rc1 - 2024-04-08
+
+### Compiler
+
+- The `@internal` attribute can now be used to annotate definitions.
+  This will hide those definitions from the generated documentation,
+  autocompletions and the exported module interface.
 - Prepending to lists in JavaScript (`[x, ..xs]` syntax) has been optimised.
 - Function stubs are no longer generated for functions that do not have an
   implementation for the current targeting being compiled for.
@@ -122,9 +160,15 @@
   will now refuse to publish it to Hex.
 - Monospaced links in the generated documentation now have the same color as
   common links.
+- Fixed a bug where the `export package interface` command would always
+  recompile the project ignoring the cache.
 
 ### Language Server
 
+- Update messages from the client are now batched to avoid doing excess
+  compilation work in the language server, improving performance. This makes a
+  large difference in low power machines where the language server could
+  struggle to keep up with the edits from the client.
 - The `Compiling Gleam` message is no longer emitted each time code is compiled.
   This is to reduce noise in editors that show this message prominently such as
   Neovim.
@@ -144,8 +188,6 @@
 
 - Fixed a bug where the exported package interface would not have a module's
   documentation.
-- Fixed a bug where the `export package interface` command would always
-  recompile the project ignoring the cache.
 
 ## v1.0.0-rc2 - 2024-02-14
 
@@ -163,9 +205,6 @@
 
 ### Language changes
 
-- The `@internal` attribute can now be used to annotate definitions.
-  This will hide those definitions from the generated docuentation,
-  autocompletions and the exported module interface.
 - Using a reserved word is now a compile error, not a warning.
 - Inexhaustive matches are now compile errors, not warnings.
 - The warning for an unused module alias now shows how to not assign a name to

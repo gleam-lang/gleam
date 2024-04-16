@@ -41,6 +41,71 @@ fn long() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/2932
+#[test]
+fn tight_empty() {
+    assert_format!(
+        "fn main() {
+  let some_really_really_really_really_really_really_really_long_variable_name_to_force_wrapping = <<>>
+  some_really_really_really_really_really_really_really_long_variable_name_to_force_wrapping
+}
+"
+    );
+}
+
+#[test]
+fn comments_are_not_moved_out_of_empty_bit_array() {
+    assert_format!(
+        r#"pub fn main() {
+  // This is an empty bit array!
+  <<
+    // Nothing here...
+  >>
+}
+"#
+    );
+}
+
+#[test]
+fn empty_bit_arrays_with_comment_inside_are_indented_properly() {
+    assert_format!(
+        r#"pub fn main() {
+  fun(
+    <<
+      // Nothing here...
+    >>,
+    wibble_wobble_wibble_wobble_wibble_wobble_wibble_wobble,
+    <<
+      // Nothing here as well!
+    >>,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn comments_inside_non_empty_bit_arrays_are_not_moved() {
+    assert_format!(
+        r#"pub fn main() {
+  fun(
+    <<
+      // One is below me.
+      1, 2,
+      // Three is below me.
+      3,
+    >>,
+    wibble_wobble_wibble_wobble_wibble_wobble_wibble_wobble,
+    <<
+      // Three is below me.
+      3,
+    >>,
+  )
+}
+"#
+    );
+}
+
 #[test]
 fn concise_wrapping_of_simple_bit_arrays() {
     assert_format!(

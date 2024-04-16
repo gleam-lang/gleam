@@ -5840,6 +5840,21 @@ fn piped_blocks_are_not_needlessly_indented() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/2924
+#[test]
+fn record_update_fields_are_not_needlessly_broken() {
+    assert_format!(
+        r#"pub fn main() {
+  Model(
+    ..model,
+    wibble: wibble_wobble_wibble_wobble + 1,
+    wobble: Some(wibble_wobble_wibble_wobble),
+  )
+}
+"#
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/2890
 #[test]
 fn piped_lists_are_not_needlessly_indented() {
@@ -5902,6 +5917,35 @@ fn comments_inside_binop_chain() {
   // Another comment
   <> wobble
 }
+"#
+    );
+}
+
+#[test]
+fn internal_attribute_on_function() {
+    assert_format!(
+        r#"@internal
+pub fn main() {
+  todo
+}
+"#
+    );
+}
+
+#[test]
+fn internal_attribute_on_type() {
+    assert_format!(
+        r#"@internal
+pub type Type
+"#
+    );
+}
+
+#[test]
+fn internal_attribute_on_const() {
+    assert_format!(
+        r#"@internal
+pub const wibble = 1
 "#
     );
 }

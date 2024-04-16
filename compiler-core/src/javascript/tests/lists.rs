@@ -100,6 +100,7 @@ fn go(xs) {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/2904
 #[test]
 fn tight_empty_list() {
     assert_js!(

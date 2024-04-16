@@ -665,7 +665,7 @@ fn try_wrap_object<'a>(items: impl IntoIterator<Item = (Document<'a>, Output<'a>
 fn is_usable_js_identifier(word: &str) -> bool {
     !matches!(
         word,
-        // Keywords and reserved works
+        // Keywords and reserved words
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar
         "await"
             | "arguments"
@@ -675,7 +675,7 @@ fn is_usable_js_identifier(word: &str) -> bool {
             | "class"
             | "const"
             | "continue"
-            | "deoh dear"
+            | "debugger"
             | "default"
             | "delete"
             | "do"

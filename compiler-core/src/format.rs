@@ -395,12 +395,20 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elements.iter().map(|e| self.const_expr(e))))
                 .group(),
 
-            Constant::BitArray { segments, .. } => bit_array(
-                segments
+            Constant::BitArray {
+                segments, location, ..
+            } => {
+                let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.const_expr(e))),
-                segments.iter().all(|s| s.value.is_simple()),
-            ),
+                    .map(|s| bit_array_segment(s, |e| self.const_expr(e)))
+                    .collect_vec();
+
+                self.bit_array(
+                    segment_docs,
+                    segments.iter().all(|s| s.value.is_simple()),
+                    location,
+                )
+            }
 
             Constant::Record {
                 name,
@@ -834,12 +842,20 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::Tuple { elems, location } => self.tuple(elems, location),
 
-            UntypedExpr::BitArray { segments, .. } => bit_array(
-                segments
+            UntypedExpr::BitArray {
+                segments, location, ..
+            } => {
+                let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.bit_array_segment_expr(e))),
-                segments.iter().all(|s| s.value.is_simple_constant()),
-            ),
+                    .map(|s| bit_array_segment(s, |e| self.bit_array_segment_expr(e)))
+                    .collect_vec();
+
+                self.bit_array(
+                    segment_docs,
+                    segments.iter().all(|s| s.value.is_simple_constant()),
+                    location,
+                )
+            }
             UntypedExpr::RecordUpdate {
                 constructor,
                 spread,
@@ -1133,7 +1149,7 @@ impl<'comments> Formatter<'comments> {
         let constructor_doc = self.expr(constructor);
         let comments = self.pop_comments(spread.base.location().start);
         let spread_doc = commented("..".to_doc().append(self.expr(&spread.base)), comments);
-        let arg_docs = args.iter().map(|a| self.record_update_arg(a));
+        let arg_docs = args.iter().map(|a| self.record_update_arg(a).group());
         let all_arg_docs = once(spread_doc).chain(arg_docs);
         constructor_doc.append(wrap_args(all_arg_docs)).group()
     }
@@ -1597,7 +1613,8 @@ impl<'comments> Formatter<'comments> {
 
         let alternative_patterns = std::iter::once(&clause.pattern)
             .chain(&clause.alternative_patterns)
-            .map(|p| {
+            .enumerate()
+            .map(|(alternative_index, p)| {
                 // Here `p` is a single pattern that can be comprised of
                 // multiple subjects.
                 // ```gleam
@@ -1607,15 +1624,31 @@ impl<'comments> Formatter<'comments> {
                 //   | _, _ -> todo
                 // }
                 // ```
-                //
-                // We turn each subject pattern into a document and join those
-                // with a breakable comma (that's also going to be nested).
-                // Then we make sure that the formatter tries to keep each
-                // alternative on a single line by making it a group!
-                let patterns = p.iter().map(|p| self.pattern(p));
-                join(patterns, break_(",", ", ")).group().nest(INDENT)
+                let is_first_alternative = alternative_index == 0;
+                let subject_docs = p.iter().enumerate().map(|(subject_index, subject)| {
+                    // There's a small catch in turning each subject into a document.
+                    // Sadly we can't simply call `self.pattern` on each subject and
+                    // then nest each one in case it gets broken.
+                    // The first ever pattern that appears in a case clause (that is
+                    // the first subject of the first alternative) must not be nested
+                    // further; otherwise, when broken, it would have 2 extra spaces
+                    // of indentation: https://github.com/gleam-lang/gleam/issues/2940.
+                    let is_first_subject = subject_index == 0;
+                    let is_first_pattern_of_clause = is_first_subject && is_first_alternative;
+                    let subject_doc = self.pattern(subject);
+                    if is_first_pattern_of_clause {
+                        subject_doc
+                    } else {
+                        subject_doc.nest(INDENT)
+                    }
+                });
+                // We join all subjects with a breakable comma (that's also
+                // going to be nested) and make the subjects into a group to
+                // make sure the formatter tries to keep them on a single line.
+                join(subject_docs, break_(",", ", ").nest(INDENT)).group()
             });
-
+        // Last, we make sure that the formatter tries to keep each
+        // alternative on a single line by making it a group!
         join(alternative_patterns, alternatives_separator).group()
     }
 
@@ -1767,12 +1800,16 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(elems.iter().map(|e| self.pattern(e))))
                 .group(),
 
-            Pattern::BitArray { segments, .. } => bit_array(
-                segments
+            Pattern::BitArray {
+                segments, location, ..
+            } => {
+                let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.pattern(e))),
-                false,
-            ),
+                    .map(|s| bit_array_segment(s, |e| self.pattern(e)))
+                    .collect_vec();
+
+                self.bit_array(segment_docs, false, location)
+            }
 
             Pattern::StringPrefix {
                 left_side_string: left,
@@ -1997,6 +2034,45 @@ impl<'comments> Formatter<'comments> {
         commented(doc, comments)
     }
 
+    fn bit_array<'a>(
+        &mut self,
+        segments: Vec<Document<'a>>,
+        is_simple: bool,
+        location: &SrcSpan,
+    ) -> Document<'a> {
+        // Avoid adding illegal comma in empty bit array by explicitly handling it
+        if segments.is_empty() {
+            // We take all comments that come _before_ the end of the bit array,
+            // that is all comments that are inside "<<" and ">>", if there's
+            // any comment we want to put it inside the empty bit array!
+            // Refer to the `list` function for a similar procedure.
+            return match printed_comments(self.pop_comments(location.end), false) {
+                None => "<<>>".to_doc(),
+                Some(comments) => "<<"
+                    .to_doc()
+                    .append(break_("", "").nest(INDENT))
+                    .append(comments)
+                    .append(break_("", ""))
+                    .append(">>")
+                    // vvv We want to make sure the comments are on a separate
+                    //     line from the opening and closing angle brackets so
+                    //     we force the breaks to be split on newlines.
+                    .force_break(),
+            };
+        }
+        let comma = if is_simple {
+            flex_break(",", ", ")
+        } else {
+            break_(",", ", ")
+        };
+        break_("<<", "<<")
+            .append(join(segments, comma))
+            .nest(INDENT)
+            .append(break_(",", ""))
+            .append(">>")
+            .group()
+    }
+
     fn bit_array_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
             UntypedExpr::Placeholder { .. } => panic!("Placeholders should not be formatted"),
@@ -2116,7 +2192,8 @@ impl<'a> Documentable<'a> for &'a ArgNames {
 fn pub_(publicity: Publicity) -> Document<'static> {
     match publicity {
         Publicity::Public => "pub ".to_doc(),
-        Publicity::Private | Publicity::Internal => nil(),
+        Publicity::Private => nil(),
+        Publicity::Internal => "@internal".to_doc().append(line()).append("pub "),
     }
 }
 
@@ -2206,23 +2283,6 @@ where
         .nest(INDENT)
         .append(break_(",", ""))
         .append(")")
-        .group()
-}
-
-fn bit_array<'a>(
-    segments: impl IntoIterator<Item = Document<'a>>,
-    is_simple: bool,
-) -> Document<'a> {
-    let comma = if is_simple {
-        flex_break(",", ", ")
-    } else {
-        break_(",", ", ")
-    };
-    break_("<<", "<<")
-        .append(join(segments, comma))
-        .nest(INDENT)
-        .append(break_(",", ""))
-        .append(">>")
         .group()
 }
 
