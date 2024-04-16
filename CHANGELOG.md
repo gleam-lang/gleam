@@ -65,8 +65,7 @@
   literals and suggest you use multiple subjects instead.
 - Fixed a bug where JavaScript code generation would incorrectly parenthesise a
   return statement.
-- Fixed a bug where `tuple.0.1` was not recognised as a nested tuple access
-  expression
+- Nested tuple access (`tuple.0.1`) now parses successfully.
 - Error messages are more clear about expecting values instead of types.
 - Fixed a bug where pattern matching on a string would cause the program to
   crash on the JavaScript target.
