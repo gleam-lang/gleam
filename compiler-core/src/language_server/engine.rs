@@ -720,8 +720,8 @@ fn hover_for_expression(
 
 // Check if the inner range is included in the outer range.
 fn range_includes(outer: &lsp_types::Range, inner: &lsp_types::Range) -> bool {
-    (inner.start >= outer.start && inner.start <= outer.end)
-        || (inner.end >= outer.start && outer.end <= inner.end)
+    (outer.start >= inner.start && outer.start <= inner.end)
+        || (outer.end >= inner.start && outer.end <= inner.end)
 }
 
 fn code_action_unused_imports(
