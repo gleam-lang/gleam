@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, Publicity, TypedDefinition, TypedExpr,
-        TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, Publicity, Statement, TypedDefinition,
+        TypedExpr, TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -239,6 +239,7 @@ where
             };
 
             code_action_unused_imports(module, &params, &mut actions);
+            code_action_add_annotation_to_assignment(module, &params, &mut actions);
 
             Ok(if actions.is_empty() {
                 None
@@ -762,6 +763,50 @@ fn code_action_unused_imports(
         .changes(uri.clone(), edits)
         .preferred(true)
         .push_to(actions);
+}
+
+fn code_action_add_annotation_to_assignment(
+    module: &Module,
+    params: &lsp::CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let line_numbers = LineNumbers::new(&module.code);
+    let byte_index = line_numbers.byte_index(params.range.start.line, params.range.start.character);
+    let line_number = line_numbers.line_number(byte_index);
+    let node = module.find_node(byte_index);
+
+    if let Some(Located::Statement(Statement::Assignment(assignment))) = node {
+        // No need to add annotation if it already exists
+        if assignment.annotation.is_some() {
+            return;
+        }
+
+        if !assignment.location.contains(line_number) {
+            return;
+        }
+
+        let annotation = Printer::new().pretty_print(assignment.value.type_().as_ref(), 0);
+        let new_text = format!(": {}", annotation);
+
+        let variable_name_end_position =
+            src_span_to_lsp_range(assignment.pattern.location(), &line_numbers).end;
+
+        let text_edit = lsp_types::TextEdit {
+            range: lsp_types::Range {
+                start: variable_name_end_position,
+                end: variable_name_end_position,
+            },
+            new_text,
+        };
+
+        // Using CodeActionBuilder to build and push the code action
+        CodeActionBuilder::new("Add type annotation to assignment")
+            .kind(lsp_types::CodeActionKind::QUICKFIX)
+            .changes(uri.clone(), vec![text_edit])
+            .preferred(true)
+            .push_to(actions);
+    }
 }
 
 fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoString)> {
