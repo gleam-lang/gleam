@@ -537,6 +537,9 @@ pub enum Warning {
         location: SrcSpan,
         leaked: Type,
     },
+    RedundantAssertAssignment {
+        location: SrcSpan,
+    },
 }
 
 impl Error {

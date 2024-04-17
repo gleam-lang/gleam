@@ -1467,3 +1467,31 @@ pub type Wobble {
 }
 
 */
+
+#[test]
+fn redundant_let_assert() {
+    assert_warning!(
+        "
+pub fn main() {
+  let assert wibble = [1, 2, 3]
+  wibble
+}
+"
+    );
+}
+
+#[test]
+fn redundant_let_assert_on_custom_type() {
+    assert_warning!(
+        "
+pub type Wibble {
+    Wibble(Int, Bool)
+}
+
+pub fn main() {
+  let assert Wibble(_, bool) = Wibble(1, True)
+  bool
+}
+"
+    );
+}

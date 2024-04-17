@@ -684,6 +684,22 @@ hidden from the package's documentation.",
                         }),
                     }
                 }
+                type_::Warning::RedundantAssertAssignment { location } => Diagnostic {
+                    title: "Redundant assertion".into(),
+                    text: "This assertion is redundant since the pattern covers all possibilities."
+                        .into(),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some("You can remove this".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             },
         }
     }

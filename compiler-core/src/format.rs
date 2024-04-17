@@ -748,7 +748,7 @@ impl<'comments> Formatter<'comments> {
 
         let keyword = match kind {
             AssignmentKind::Let => "let ",
-            AssignmentKind::Assert => "let assert ",
+            AssignmentKind::Assert { .. } => "let assert ",
         };
 
         let pattern = self.pattern(pattern);

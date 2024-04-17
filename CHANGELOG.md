@@ -4,6 +4,10 @@
 
 ### Compiler
 
+The compiler will now raise a warning for `let assert` assignments where the
+assertion is redundant.
+([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 Empty case expressions are no longer parse errors and will instead be
 exhaustiveness errors, resulting in a better error message that shows what the
 missing patterns are. ([Race Williams](https://github.com/raquentin))
