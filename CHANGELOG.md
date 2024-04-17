@@ -44,6 +44,10 @@
   import gleam/result
   ```
 
+### Language Server
+
+- New LSP code action for adding type annotations to assignments.
+
 ### Bug Fixes
 
 - Fixed [RUSTSEC-2021-0145](https://rustsec.org/advisories/RUSTSEC-2021-0145) by
