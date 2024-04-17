@@ -5,7 +5,7 @@
 ### Build tool
 
 - A helpful error message is now shown if the `manifest.toml` file has been
-  edited to be invalid in some way.
+  edited to be invalid in some way. ([zahash](https://github.com/zahash))
   ```
   error: Corrupt manifest.toml
 
