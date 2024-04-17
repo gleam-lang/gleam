@@ -1433,23 +1433,19 @@ pub enum AssignmentKind {
     // let x = ...
     Let,
     // let assert x = ...
-    Assert,
+    Assert { location: SrcSpan },
 }
 
 impl AssignmentKind {
-    pub(crate) fn performs_exhaustiveness_check(&self) -> bool {
-        match self {
-            AssignmentKind::Let => true,
-            AssignmentKind::Assert => false,
-        }
-    }
-
     /// Returns `true` if the assignment kind is [`Assert`].
     ///
     /// [`Assert`]: AssignmentKind::Assert
     #[must_use]
     pub fn is_assert(&self) -> bool {
-        matches!(self, Self::Assert)
+        match self {
+            Self::Assert { .. } => true,
+            Self::Let => false,
+        }
     }
 }
 

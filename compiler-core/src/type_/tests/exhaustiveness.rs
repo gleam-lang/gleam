@@ -885,3 +885,33 @@ fn foo(user: Returned(#())) -> Int {
 "#
     );
 }
+
+#[test]
+fn empty_case_of_external() {
+    // This external type has no known constructors, and we want to make sure
+    // that an empty case expression is not valid for it.
+    assert_module_error!(
+        r#"
+type Thingy
+
+pub fn main(x: Thingy) {
+  case x {
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn empty_case_of_generic() {
+    // This generic type has no known constructors, and we want to make sure
+    // that an empty case expression is not valid for it.
+    assert_module_error!(
+        r#"
+pub fn main(x: something) {
+  case x {
+  }
+}
+"#
+    );
+}

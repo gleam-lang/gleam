@@ -145,12 +145,12 @@ impl PackageConfig {
     /// previously selected versions.
     ///
     pub fn locked(&self, manifest: Option<&Manifest>) -> Result<HashMap<EcoString, Version>> {
-        Ok(match manifest {
-            None => HashMap::new(),
+        match manifest {
+            None => Ok(HashMap::new()),
             Some(manifest) => {
                 StalePackageRemover::fresh_and_locked(&self.all_dependencies()?, manifest)
             }
-        })
+        }
     }
 
     /// Determines whether the given module should be hidden in the docs or not
@@ -219,7 +219,7 @@ impl<'a> StalePackageRemover<'a> {
     pub fn fresh_and_locked(
         requirements: &'a HashMap<EcoString, Requirement>,
         manifest: &'a Manifest,
-    ) -> HashMap<EcoString, Version> {
+    ) -> Result<HashMap<EcoString, Version>> {
         let locked = manifest
             .packages
             .iter()
@@ -236,7 +236,7 @@ impl<'a> StalePackageRemover<'a> {
         &mut self,
         requirements: &'a HashMap<EcoString, Requirement>,
         manifest: &'a Manifest,
-    ) -> HashMap<EcoString, Version> {
+    ) -> Result<HashMap<EcoString, Version>> {
         // Record all the requirements that have not changed
         for (name, requirement) in requirements {
             if manifest.requirements.get(name) != Some(requirement) {
@@ -244,12 +244,12 @@ impl<'a> StalePackageRemover<'a> {
             }
 
             // Recursively record the package and its deps as being fresh
-            self.record_tree_fresh(name);
+            self.record_tree_fresh(name)?;
         }
 
         // Return all the previously resolved packages that have not been
         // recorded as fresh
-        manifest
+        Ok(manifest
             .packages
             .iter()
             .filter(|package| {
@@ -263,21 +263,19 @@ impl<'a> StalePackageRemover<'a> {
                 locked
             })
             .map(|package| (package.name.clone(), package.version.clone()))
-            .collect()
+            .collect())
     }
 
-    fn record_tree_fresh(&mut self, name: &'a str) {
+    fn record_tree_fresh(&mut self, name: &'a str) -> Result<()> {
         // Record the top level package
         let _ = self.fresh.insert(name);
 
-        let deps = self
-            .locked
-            .get(name)
-            .expect("Package fresh but not in manifest");
+        let deps = self.locked.get(name).ok_or(Error::CorruptManifest)?;
         // Record each of its deps recursively
         for package in *deps {
-            self.record_tree_fresh(package);
+            self.record_tree_fresh(package)?;
         }
+        Ok(())
     }
 }
 
