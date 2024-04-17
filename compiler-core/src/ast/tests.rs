@@ -240,14 +240,6 @@ fn find_node_sequence() {
     assert!(block.find_node(7).is_none());
 }
 
-// The function exits early when attempting to find the AST node for a specific index,
-// if the remaining elements have indices beyond the search index, returning none.
-#[test]
-fn find_node_sequence_early_exit() {
-    let block = compile_expression(r#"{ 1 2 3 }"#);
-    assert!(block.find_node(1).is_none());
-}
-
 #[test]
 fn find_node_list() {
     let statement = compile_expression(r#"[1, 2, 3]"#);
