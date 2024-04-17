@@ -43,6 +43,10 @@
   ```gleam
   import gleam/result
   ```
+  
+### Language Server
+
+- When removing unused imports, the entire line is removed if it would otherwise be left blank.
 
 ### Bug Fixes
 
