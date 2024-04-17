@@ -720,8 +720,8 @@ fn hover_for_expression(
 
 // Check if the inner range is included in the outer range.
 fn range_includes(outer: &lsp_types::Range, inner: &lsp_types::Range) -> bool {
-    (outer.start >= inner.start && outer.start <= inner.end)
-        || (outer.end >= inner.start && outer.end <= inner.end)
+    (inner.start >= outer.start && inner.start <= outer.end)
+        || (inner.end >= outer.start && outer.end <= inner.end)
 }
 
 fn code_action_unused_imports(
@@ -743,7 +743,7 @@ fn code_action_unused_imports(
 
     for unused in unused {
         let range = src_span_to_lsp_range(*unused, &line_numbers);
-        // Keep track of whether any unused import has is where the cursor is
+        // Keep track of whether any unused import is where the cursor is
         hovered = hovered || range_includes(&params.range, &range);
 
         edits.push(lsp_types::TextEdit {
@@ -772,40 +772,61 @@ fn code_action_add_annotation_to_assignment(
 ) {
     let uri = &params.text_document.uri;
     let line_numbers = LineNumbers::new(&module.code);
-    let byte_index = line_numbers.byte_index(params.range.start.line, params.range.start.character);
-    let line_number = line_numbers.line_number(byte_index);
-    let node = module.find_node(byte_index);
 
-    if let Some(Located::Statement(Statement::Assignment(assignment))) = node {
-        // No need to add annotation if it already exists
-        if assignment.annotation.is_some() {
-            return;
-        }
+    // Calculate the start of the current line
+    let start_line_index = line_numbers.byte_index(params.range.start.line, 0);
 
-        if !assignment.location.contains(line_number) {
-            return;
-        }
+    // Calculate the start of the next line; subtract one to stay on the current line
+    let next_line_index = if params.range.start.line < line_numbers.length - 1 {
+        line_numbers.byte_index(params.range.start.line + 1, 0) - 1
+    } else {
+        line_numbers.byte_index(params.range.start.line, u32::MAX) // Assuming u32::MAX will take us to the end of the line
+    };
 
-        let annotation = Printer::new().pretty_print(assignment.value.type_().as_ref(), 0);
-        let new_text = format!(": {}", annotation);
+    for byte_index in start_line_index..next_line_index {
+        if let Some(Located::Statement(Statement::Assignment(assignment))) =
+            module.find_node(byte_index)
+        {
+            // No need to add annotation if it already exists
+            if assignment.annotation.is_some() {
+                return;
+            }
 
-        let variable_name_end_position =
-            src_span_to_lsp_range(assignment.pattern.location(), &line_numbers).end;
+            let annotation = Printer::new().pretty_print(assignment.value.type_().as_ref(), 0);
+            let new_text = format!(": {}", annotation);
 
-        let text_edit = lsp_types::TextEdit {
-            range: lsp_types::Range {
-                start: variable_name_end_position,
-                end: variable_name_end_position,
-            },
-            new_text,
-        };
+            let variable_name_end_position =
+                src_span_to_lsp_range(assignment.pattern.location(), &line_numbers).end;
 
-        // Using CodeActionBuilder to build and push the code action
-        CodeActionBuilder::new("Add type annotation to assignment")
+            // Handle Option<EcoString>
+            let pattern_name_text = assignment
+                .pattern
+                .name()
+                .map(|name| format!("assignment of {}", name.to_string()))
+                .unwrap_or_else(|| "unnamed assignment".to_string());
+
+            let text_edit = lsp_types::TextEdit {
+                range: lsp_types::Range {
+                    start: variable_name_end_position,
+                    end: variable_name_end_position,
+                },
+                new_text,
+            };
+
+            // Using CodeActionBuilder to build and push the code action
+            CodeActionBuilder::new(&format!(
+                "Add \": {}\" type annotation to {}",
+                annotation, pattern_name_text
+            ))
             .kind(lsp_types::CodeActionKind::QUICKFIX)
             .changes(uri.clone(), vec![text_edit])
             .preferred(true)
             .push_to(actions);
+
+            // Otherwise, we'll duplicate the code action for each node in this
+            // line
+            break;
+        }
     }
 }
 

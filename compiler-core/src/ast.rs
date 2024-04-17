@@ -1421,6 +1421,13 @@ impl TypedPattern {
         }
         .or(Some(Located::Pattern(self)))
     }
+
+    pub fn name(&self) -> Option<&EcoString> {
+        match self {
+            Pattern::Variable { name, .. } => Some(&name),
+            _ => None,
+        }
+    }
 }
 impl<A> HasLocation for Pattern<A> {
     fn location(&self) -> SrcSpan {
