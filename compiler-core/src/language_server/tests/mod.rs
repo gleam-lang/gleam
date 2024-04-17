@@ -32,7 +32,7 @@ use crate::{
     Result,
 };
 
-pub const LSP_TEST_ROOT_PACKAGE_NAME: &'static str = "app";
+pub const LSP_TEST_ROOT_PACKAGE_NAME: &str = "app";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Action {
@@ -293,7 +293,7 @@ fn add_package_from_manifest<B>(
             },
             ManifestPackageSource::Local { ref path } => Requirement::Path { path: path.into() },
             ManifestPackageSource::Git { ref repo, .. } => Requirement::Git {
-                git: repo.clone().into(),
+                git: repo.clone(),
             },
         },
     );
@@ -314,7 +314,7 @@ fn add_dev_package_from_manifest<B>(
             },
             ManifestPackageSource::Local { ref path } => Requirement::Path { path: path.into() },
             ManifestPackageSource::Git { ref repo, .. } => Requirement::Git {
-                git: repo.clone().into(),
+                git: repo.clone(),
             },
         },
     );
