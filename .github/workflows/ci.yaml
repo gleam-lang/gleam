@@ -272,11 +272,7 @@ jobs:
           profile: minimal
           components: rustfmt
 
-      - name: Check formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - run: cargo fmt --all -- --check
 
   validate-deps:
     name: validate-deps
@@ -302,10 +298,7 @@ jobs:
           echo `pwd` >> $GITHUB_PATH
 
       - name: Validate deps
-        uses: actions-rs/cargo@v1
-        with:
-          command: deny
-          args: check
+        run: cargo deny check
 
   lint-build:
     name: lint-build
@@ -330,15 +323,9 @@ jobs:
           key: v1-linux-gnu
 
       - name: Run linter
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --workspace
+        run: cargo clippy --workspace
 
-      - name: Build binary
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
+      - run: cargo build
 
       - name: Upload artifact (Ubuntu)
         uses: actions/upload-artifact@v4
