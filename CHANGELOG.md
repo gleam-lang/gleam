@@ -32,6 +32,9 @@
 - Empty case expressions are no longer parse errors and will instead be
   exhaustiveness errors. ([Race Williams](https://github.com/raquentin))
 
+- Introduced some enhancements to the tree traversal algorithm, such that 
+  less work needs to be done in order to find the correct node.
+
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.
@@ -43,10 +46,6 @@
   ```gleam
   import gleam/result
   ```
-
-### Language Server
-
-- When removing unused imports, the entire line is removed if it would otherwise be left blank.
 
 ### Bug Fixes
 
