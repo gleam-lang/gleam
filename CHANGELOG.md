@@ -22,3 +22,6 @@ using Rust's `std::io::IsTerminal` instead of the `atty` library.
 Fixed the generated `mod` property in the Erlang application file when using the
 `application_start_module` property in `gleam.toml`.
 ([Alex Manning](https://github.com/rawhat))
+
+Fixed a bug where using some reserved keywords would result in confusing error
+messages. ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
