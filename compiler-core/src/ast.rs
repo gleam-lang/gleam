@@ -1422,9 +1422,12 @@ impl TypedPattern {
         .or(Some(Located::Pattern(self)))
     }
 
-    pub fn name(&self) -> Option<&EcoString> {
+    /// Returns the name of the variable if the pattern is a [`Variable`]
+    ///
+    /// [`Variable`]: Pattern::Variable
+    pub fn name_if_self_is_var(&self) -> Option<&EcoString> {
         match self {
-            Pattern::Variable { name, .. } => Some(&name),
+            Pattern::Variable { name, .. } => Some(name),
             _ => None,
         }
     }

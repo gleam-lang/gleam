@@ -7,7 +7,7 @@ use crate::{
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        compiler::LspProjectCompiler, files::FileSystemProxy, progress::ProgressReporter,
+        compiler::LspProjectCompiler, files::FileSystemProxy, progress::ProgressReporter, SrcSpan,
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
@@ -771,60 +771,56 @@ fn code_action_add_annotation_to_assignment(
     actions: &mut Vec<CodeAction>,
 ) {
     let uri = &params.text_document.uri;
+
     let line_numbers = LineNumbers::new(&module.code);
-
-    // Calculate the start of the current line
     let start_line_index = line_numbers.byte_index(params.range.start.line, 0);
-
-    // Calculate the start of the next line; subtract one to stay on the current line
     let next_line_index = if params.range.start.line < line_numbers.length - 1 {
         line_numbers.byte_index(params.range.start.line + 1, 0) - 1
     } else {
-        line_numbers.byte_index(params.range.start.line, u32::MAX) // Assuming u32::MAX will take us to the end of the line
+        // If the cursor is at the last line, we use the last byte index
+        line_numbers.byte_index(params.range.start.line, u32::MAX)
     };
 
-    for byte_index in start_line_index..next_line_index {
-        if let Some(Located::Statement(Statement::Assignment(assignment))) =
-            module.find_node(byte_index)
-        {
+    let range = SrcSpan::new(start_line_index, next_line_index);
+
+    for node in module.find_nodes_in_range(range) {
+        if let Located::Statement(Statement::Assignment(assignment)) = node {
             // No need to add annotation if it already exists
             if assignment.annotation.is_some() {
                 return;
             }
 
-            let annotation = Printer::new().pretty_print(assignment.value.type_().as_ref(), 0);
-            let new_text = format!(": {}", annotation);
-
-            let variable_name_end_position =
-                src_span_to_lsp_range(assignment.pattern.location(), &line_numbers).end;
-
             // Handle Option<EcoString>
             let pattern_name_text = assignment
                 .pattern
-                .name()
-                .map(|name| format!("assignment of {}", name.to_string()))
-                .unwrap_or_else(|| "unnamed assignment".to_string());
+                .name_if_self_is_var()
+                .map(|name| format!("assignment of {}", name))
+                .unwrap_or_else(|| "destructuring assignment".to_string());
 
+            let type_name = Printer::new().pretty_print(assignment.value.type_().as_ref(), 0);
+            let annotation = format!(": {}", type_name);
+
+            let variable_name_end_position =
+                src_span_to_lsp_range(assignment.pattern.location(), &line_numbers).end;
             let text_edit = lsp_types::TextEdit {
                 range: lsp_types::Range {
                     start: variable_name_end_position,
                     end: variable_name_end_position,
                 },
-                new_text,
+                new_text: annotation,
             };
 
             // Using CodeActionBuilder to build and push the code action
             CodeActionBuilder::new(&format!(
                 "Add \": {}\" type annotation to {}",
-                annotation, pattern_name_text
+                type_name, pattern_name_text
             ))
             .kind(lsp_types::CodeActionKind::QUICKFIX)
             .changes(uri.clone(), vec![text_edit])
             .preferred(true)
             .push_to(actions);
 
-            // Otherwise, we'll duplicate the code action for each node in this
-            // line
+            // Break so we don't duplicate the code action for each node
             break;
         }
     }

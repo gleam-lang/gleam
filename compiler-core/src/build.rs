@@ -234,6 +234,10 @@ impl Module {
         self.ast.find_node(byte_index)
     }
 
+    pub fn find_nodes_in_range(&self, range: SrcSpan) -> impl Iterator<Item = Located<'_>> {
+        (range.start..=range.end).filter_map(move |byte_index| self.find_node(byte_index))
+    }
+
     pub fn attach_doc_and_module_comments(&mut self) {
         // Module Comments
         self.ast.documentation = self
