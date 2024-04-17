@@ -67,7 +67,7 @@ pub fn confirm(question: &str) -> Result<bool, Error> {
 
 pub fn ask_password(question: &str) -> Result<String, Error> {
     let prompt = format!("{question} (will not be printed as you type): ");
-    rpassword::read_password_from_tty(Some(&prompt))
+    rpassword::prompt_password(prompt)
         .map_err(|e| Error::StandardIo {
             action: StandardIoAction::Read,
             err: Some(e.kind()),

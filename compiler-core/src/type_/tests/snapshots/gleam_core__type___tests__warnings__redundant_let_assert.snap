@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n  let assert wibble = [1, 2, 3]\n  wibble\n}\n"
+---
+warning: Redundant assertion
+  ┌─ /src/warning/wrn.gleam:3:7
+  │
+3 │   let assert wibble = [1, 2, 3]
+  │       ^^^^^^ You can remove this
+
+This assertion is redundant since the pattern covers all possibilities.

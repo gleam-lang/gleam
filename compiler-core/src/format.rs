@@ -354,12 +354,25 @@ impl<'comments> Formatter<'comments> {
                         .group();
                     ".{".to_doc().append(unqualified).append("}")
                 };
+
                 let doc = docvec!["import ", module.as_str(), second];
-                match as_name {
-                    Some((AssignName::Variable(name) | AssignName::Discard(name), _)) => {
+                let default_module_access_name = module.split('/').last().map(EcoString::from);
+                match (default_module_access_name, as_name) {
+                    // If the `as name` is the same as the module name that would be
+                    // used anyways we won't render it. For example:
+                    // ```gleam
+                    // import gleam/int as int
+                    //                  ^^^^^^ this is redundant and removed
+                    // ```
+                    (Some(module_name), Some((AssignName::Variable(name), _)))
+                        if &module_name == name =>
+                    {
+                        doc
+                    }
+                    (_, None) => doc,
+                    (_, Some((AssignName::Variable(name) | AssignName::Discard(name), _))) => {
                         doc.append(" as ").append(name)
                     }
-                    None => doc,
                 }
             }
 
@@ -735,7 +748,7 @@ impl<'comments> Formatter<'comments> {
 
         let keyword = match kind {
             AssignmentKind::Let => "let ",
-            AssignmentKind::Assert => "let assert ",
+            AssignmentKind::Assert { .. } => "let assert ",
         };
 
         let pattern = self.pattern(pattern);

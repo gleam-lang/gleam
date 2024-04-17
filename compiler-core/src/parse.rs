@@ -845,9 +845,11 @@ where
 
     // An assignment, with `Let` already consumed
     fn parse_assignment(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
-        let kind = if let Some((_, Token::Assert, _)) = self.tok0 {
+        let kind = if let Some((assert_start, Token::Assert, assert_end)) = self.tok0 {
             _ = self.next_tok();
-            AssignmentKind::Assert
+            AssignmentKind::Assert {
+                location: SrcSpan::new(assert_start, assert_end),
+            }
         } else {
             AssignmentKind::Let
         };
@@ -3364,22 +3366,84 @@ fn parse_error<T>(error: ParseErrorType, location: SrcSpan) -> Result<T, ParseEr
 ///
 /// Useful for checking if a user tried to enter a reserved word as a name.
 fn is_reserved_word(tok: Token) -> bool {
-    matches![
-        tok,
+    match tok {
         Token::As
-            | Token::Assert
-            | Token::Case
-            | Token::Const
-            | Token::Fn
-            | Token::If
-            | Token::Import
-            | Token::Let
-            | Token::Opaque
-            | Token::Pub
-            | Token::Todo
-            | Token::Type
-            | Token::Use
-    ]
+        | Token::Assert
+        | Token::Case
+        | Token::Const
+        | Token::Fn
+        | Token::If
+        | Token::Import
+        | Token::Let
+        | Token::Opaque
+        | Token::Pub
+        | Token::Todo
+        | Token::Type
+        | Token::Use
+        | Token::Auto
+        | Token::Delegate
+        | Token::Derive
+        | Token::Echo
+        | Token::Else
+        | Token::Implement
+        | Token::Macro
+        | Token::Panic
+        | Token::Test => true,
+
+        Token::Name { .. }
+        | Token::UpName { .. }
+        | Token::DiscardName { .. }
+        | Token::Int { .. }
+        | Token::Float { .. }
+        | Token::String { .. }
+        | Token::CommentDoc { .. }
+        | Token::LeftParen
+        | Token::RightParen
+        | Token::LeftSquare
+        | Token::RightSquare
+        | Token::LeftBrace
+        | Token::RightBrace
+        | Token::Plus
+        | Token::Minus
+        | Token::Star
+        | Token::Slash
+        | Token::Less
+        | Token::Greater
+        | Token::LessEqual
+        | Token::GreaterEqual
+        | Token::Percent
+        | Token::PlusDot
+        | Token::MinusDot
+        | Token::StarDot
+        | Token::SlashDot
+        | Token::LessDot
+        | Token::GreaterDot
+        | Token::LessEqualDot
+        | Token::GreaterEqualDot
+        | Token::LtGt
+        | Token::Colon
+        | Token::Comma
+        | Token::Hash
+        | Token::Bang
+        | Token::Equal
+        | Token::EqualEqual
+        | Token::NotEqual
+        | Token::Vbar
+        | Token::VbarVbar
+        | Token::AmperAmper
+        | Token::LtLt
+        | Token::GtGt
+        | Token::Pipe
+        | Token::Dot
+        | Token::RArrow
+        | Token::LArrow
+        | Token::DotDot
+        | Token::At
+        | Token::EndOfFile
+        | Token::CommentNormal
+        | Token::CommentModule
+        | Token::EmptyLine => false,
+    }
 }
 
 // Parsing a function call into the appropriate structure
