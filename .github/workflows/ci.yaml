@@ -55,11 +55,11 @@ jobs:
             target: aarch64-unknown-linux-musl
             use-cross: true
             run-integration-tests: false # Cannot run aarch64 binaries on x86_64
-          - os: macos-12  # intel
+          - os: macos-12 # intel
             target: x86_64-apple-darwin
             use-cross: false
             run-integration-tests: true
-          - os: macos-14  # aarch64
+          - os: macos-14 # aarch64
             toolchain: stable
             target: aarch64-apple-darwin
             use-cross: false
@@ -168,7 +168,6 @@ jobs:
         if: ${{ matrix.run-integration-tests }}
         env:
           GLEAM_COMMAND: gleam
-
 
       - name: test/external_only_erlang
         run: ./test.sh
