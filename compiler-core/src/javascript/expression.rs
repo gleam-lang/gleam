@@ -1286,8 +1286,13 @@ pub(crate) fn constant_expression<'a>(
 
         Constant::Var { name, module, .. } => Ok({
             match module {
-                None => name.to_doc(),
-                Some(module) => docvec!["$", module, ".", name],
+                None => maybe_escape_identifier_doc(name),
+                Some(module) => {
+                    // JS keywords can be accessed here, but we must escape anyway
+                    // as we escape when exporting such names in the first place,
+                    // and the imported name has to match the exported name.
+                    docvec!["$", module, ".", maybe_escape_identifier_doc(name)]
+                }
             }
         }),
     }
