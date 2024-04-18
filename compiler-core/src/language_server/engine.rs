@@ -240,6 +240,7 @@ where
 
             code_action_unused_imports(module, &params, &mut actions);
             code_action_add_annotation_to_assignment(module, &params, &mut actions);
+            code_action_add_annotation_to_function(module, &params, &mut actions);
 
             Ok(if actions.is_empty() {
                 None
@@ -820,6 +821,57 @@ fn code_action_add_annotation_to_assignment(
             .preferred(true)
             .push_to(actions);
 
+            // Break so we don't duplicate the code action for each node
+            break;
+        }
+    }
+}
+
+fn code_action_add_annotation_to_function(
+    module: &Module,
+    params: &lsp::CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let line_numbers = LineNumbers::new(&module.code);
+
+    let start_line_index = line_numbers.byte_index(params.range.start.line, 0);
+    let next_line_index = if params.range.start.line < line_numbers.length - 1 {
+        line_numbers.byte_index(params.range.start.line + 1, 0) - 1
+    } else {
+        // If the cursor is at the last line, we use the last byte index
+        line_numbers.byte_index(params.range.start.line, u32::MAX)
+    };
+
+    let range = SrcSpan::new(start_line_index, next_line_index);
+
+    for node in module.find_nodes_in_range(range) {
+        if let Located::ModuleStatement(Definition::Function(fun)) = node {
+            // No need to add annotation if it already exists
+            if fun.return_annotation.is_some() {
+                return;
+            }
+
+            let function_name = fun.name.as_str();
+            let type_name = Printer::new().pretty_print(&fun.return_type, 0);
+            let annotation = format!(" -> {}", type_name);
+            let end_position = src_span_to_lsp_range(fun.location, &line_numbers).end;
+            let text_edit = lsp_types::TextEdit {
+                range: lsp_types::Range {
+                    start: end_position,
+                    end: end_position,
+                },
+                new_text: annotation,
+            };
+            // Using CodeActionBuilder to build and push the code action
+            CodeActionBuilder::new(&format!(
+                "Add \": {}\" type annotation of function {}",
+                type_name, function_name
+            ))
+            .kind(lsp_types::CodeActionKind::QUICKFIX)
+            .changes(uri.clone(), vec![text_edit])
+            .preferred(true)
+            .push_to(actions);
             // Break so we don't duplicate the code action for each node
             break;
         }
