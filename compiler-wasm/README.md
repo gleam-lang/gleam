@@ -8,5 +8,5 @@ cargo install wasm-pack
 wasm-pack build --release --target web
 
 # Make a tarball to attach to a release
-tar -C pkg/ -czvf gleam-v0.34.1-browser.tar.gz .
+tar -C pkg/ -czvf gleam-v1.1.0-browser.tar.gz .
 ```
