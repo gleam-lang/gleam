@@ -32,9 +32,6 @@
 - Empty case expressions are no longer parse errors and will instead be
   exhaustiveness errors. ([Race Williams](https://github.com/raquentin))
 
-- Fixed variables in constant expressions not being escaped correctly when
-  exporting to JavaScript. ([PgBiel](https://github.com/PgBiel))
-
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.
@@ -57,5 +54,8 @@
   `application_start_module` property in `gleam.toml`.
   ([Alex Manning](https://github.com/rawhat))
 
-- Fixed a bug where using some reserved keywords would result in confusing error
-  messages. ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+- Fixed some reserved keywords would resulting in confusing error messages.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed variables in constant expressions not being escaped correctly when
+  exporting to JavaScript. ([PgBiel](https://github.com/PgBiel))
