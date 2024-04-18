@@ -14,6 +14,24 @@
   Hint: Please fun `gleam update` to fix it.
   ```
 
+- The error message shown when unable to find package versions that satisfy all
+  the version constraints specified for a project's dependencies has been
+  greatly improved. ([zahash](https://github.com/zahash))
+  ```
+  error: Dependency resolution failed
+
+  An error occurred while determining what dependency packages and
+  versions should be downloaded.
+  The error from the version resolver library was:
+
+  Unable to find compatible versions for the version constraints in your
+  gleam.toml. The conflicting packages are:
+
+  - hellogleam
+  - lustre_dev_tools
+  - glint
+  ```
+
 ### Compiler
 
 - The compiler will now raise a warning for `let assert` assignments where the
