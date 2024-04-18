@@ -111,9 +111,7 @@ pub fn main() {
 ";
     let expected = "
 // test
-
 import result
-
 
 pub fn main() {
   result.is_ok
@@ -136,7 +134,6 @@ pub fn main() {
     let expected = "
 // test
 import result.{is_ok}%SPACE%
-
 
 pub fn main() {
   is_ok
