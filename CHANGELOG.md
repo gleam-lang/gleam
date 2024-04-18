@@ -32,6 +32,9 @@
 - Empty case expressions are no longer parse errors and will instead be
   exhaustiveness errors. ([Race Williams](https://github.com/raquentin))
 
+- Fixed variables in constant expressions not being escaped correctly when
+  exporting to JavaScript. ([PgBiel](https://github.com/PgBiel))
+
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.
