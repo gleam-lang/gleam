@@ -1422,14 +1422,14 @@ impl TypedPattern {
         .or(Some(Located::Pattern(self)))
     }
 
-    /// Returns the name of the variable if the pattern is a [`Variable`] or ['Discard`].
+    /// Returns the name of the variable if the pattern is a [`Variable`] or [`Discard`].
     ///
     /// [`Variable`]: Pattern::Variable
-    /// ['Discard`]: Pattern::Discard
+    /// [`Discard`]: Pattern::Discard
     pub fn name_if_self_is_var(&self) -> Option<&EcoString> {
         match self {
             Pattern::Variable { name, .. } => Some(name),
-            // Discard is considered a var here for use in LSP type annotations
+            // `Discard` is considered a var here for use in LSP type annotations
             Pattern::Discard { name, .. } => Some(name),
             _ => None,
         }

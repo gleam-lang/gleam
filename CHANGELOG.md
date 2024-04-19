@@ -46,8 +46,7 @@
 
 ### Language Server
 
-- Added new LSP code action for adding type annotations to assignments.
-- Added new LSP code action for adding type annotations to module functions.
+- Added new LSP code action for adding type annotations to assignments and module functions.
 
 ### Bug Fixes
 

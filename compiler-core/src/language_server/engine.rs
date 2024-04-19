@@ -724,7 +724,7 @@ fn range_includes(outer: &lsp_types::Range, inner: &lsp_types::Range) -> bool {
         || (outer.end >= inner.start && outer.end <= inner.end)
 }
 
-/// Returns the SrcSpan of the line where the cursor start is.
+/// Returns the `SrcSpan` of the line where the cursor start is.
 fn cursor_line_src_span(line_numbers: &LineNumbers, start_line: u32) -> SrcSpan {
     let start_index = line_numbers.byte_index(start_line, 0);
     let next_index = if start_line < line_numbers.length - 1 {
@@ -747,7 +747,7 @@ fn code_action_unused_imports(
         return;
     }
 
-    // Convert src spans to lsp range
+    // Convert `SrcSpan` to `LspRange`
     let line_numbers = LineNumbers::new(&module.code);
     let mut hovered = false;
     let mut edits = Vec::with_capacity(unused.len());
