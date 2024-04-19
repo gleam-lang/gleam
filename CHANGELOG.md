@@ -61,10 +61,12 @@
   ```gleam
   import gleam/result
   ```
-  
+
 ### Language Server
 
-- When removing unused imports, the entire line is removed if it would otherwise be left blank.
+- The code action to remove unused imports now removes the entire line is
+  removed if it would otherwise be left blank.
+  ([Milco Kats](https://github.com/katsmil))
 
 ### Bug Fixes
 
