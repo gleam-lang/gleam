@@ -6,6 +6,7 @@
 
 - A helpful error message is now shown if the `manifest.toml` file has been
   edited to be invalid in some way. ([zahash](https://github.com/zahash))
+
   ```
   error: Corrupt manifest.toml
 
@@ -17,6 +18,7 @@
 - The error message shown when unable to find package versions that satisfy all
   the version constraints specified for a project's dependencies has been
   greatly improved. ([zahash](https://github.com/zahash))
+
   ```
   error: Dependency resolution failed
 
@@ -37,6 +39,7 @@
 - The compiler will now raise a warning for `let assert` assignments where the
   assertion is redundant.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
   ```
   warning: Redundant assertion
     ┌─ /home/lucy/src/app/src/app.gleam:4:7
@@ -54,13 +57,31 @@
 
 - Redundant alias names for imported modules are now removed.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
   ```gleam
   import gleam/result as result
   ```
+
   is formatted to
+
   ```gleam
   import gleam/result
   ```
+
+- Comments are no longer moved out of constant lists, constant tuples and empty
+  tuples. You can now write this:
+
+  ```gleam
+  const values = [
+    // This is a comment!
+    1, 2, 3
+    // Another comment...
+    11,
+    // And a final one.
+  ]
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Language Server
 
