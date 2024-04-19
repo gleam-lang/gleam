@@ -62,6 +62,12 @@
   import gleam/result
   ```
 
+### Language Server
+
+- The code action to remove unused imports now removes the entire line is
+  removed if it would otherwise be left blank.
+  ([Milco Kats](https://github.com/katsmil))
+
 ### Bug Fixes
 
 - Fixed [RUSTSEC-2021-0145](https://rustsec.org/advisories/RUSTSEC-2021-0145) by
