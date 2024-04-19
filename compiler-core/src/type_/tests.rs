@@ -413,7 +413,7 @@ pub fn compile_module_with_opts(
     ast.name = module_name.into();
     let mut config = crate::config::PackageConfig::default();
     config.name = "thepackage".into();
-    let crate::analyse::InferenceResult { ast, errors } = crate::analyse::infer_module(
+    let inference_result = crate::analyse::infer_module(
         target,
         &ids,
         ast,
@@ -427,10 +427,9 @@ pub fn compile_module_with_opts(
         "".into(),
     );
 
-    match ast {
-        Some(_) if !errors.is_empty() => Err(errors),
-        None => Err(errors),
-        Some(ast) => Ok(ast),
+    match inference_result {
+        Ok(ast) => Ok(ast),
+        Err(crate::analyse::InferenceFailure { errors, .. }) => Err(errors.to_vec()),
     }
 }
 

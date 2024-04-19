@@ -111,31 +111,22 @@ impl TargetSupport {
 }
 
 #[derive(Debug)]
-pub struct InferenceResult {
+pub struct InferenceFailure {
     // Right now this is an option because we don't complete the module typing on error
     // Once we add proper type holes and always return a module this should not be an option
     pub ast: Option<TypedModule>,
     // All the inference errors that occurred during type inference
-    pub errors: Vec<Error>,
+    pub errors: Vec1<Error>,
 }
 
-impl InferenceResult {
-    // Used to create InferenceResults from a singe error.
+impl From<Error> for InferenceFailure {
+    // Used to create InferenceFailure from a singe error.
     // Should not be needed once we start actually collecting all the errors.
-    pub fn from_error(error: Error) -> Self {
-        Self {
+    fn from(error: Error) -> Self {
+        InferenceFailure {
             ast: None,
-            errors: vec![error],
+            errors: vec1::vec1![error],
         }
-    }
-
-    // Used by tests to get the underlying ast.
-    // Panics if there are type errors.
-    pub fn expect(self, message: &str) -> TypedModule {
-        if !self.errors.is_empty() {
-            panic!("Inference contains errors: {}", message);
-        }
-        self.ast.expect(message)
     }
 }
 
@@ -156,7 +147,7 @@ pub fn infer_module<A>(
     line_numbers: LineNumbers,
     package_config: &PackageConfig,
     src_path: Utf8PathBuf,
-) -> InferenceResult {
+) -> Result<TypedModule, InferenceFailure> {
     let mut errors = Vec::new();
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
@@ -170,9 +161,7 @@ pub fn infer_module<A>(
         warnings,
         target_support,
     );
-    if let Err(e) = validate_module_name(&name) {
-        return InferenceResult::from_error(e);
-    }
+    validate_module_name(&name)?;
 
     let mut type_names = HashMap::with_capacity(module.definitions.len());
     let mut value_names = HashMap::with_capacity(module.definitions.len());
@@ -184,63 +173,42 @@ pub fn infer_module<A>(
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
-    let env = imports::Importer::run(origin, env, &statements.imports);
-    let mut env = match env {
-        Err(e) => return InferenceResult::from_error(e),
-        Ok(env) => env,
-    };
+    let mut env = imports::Importer::run(origin, env, &statements.imports)?;
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
     for t in &statements.custom_types {
-        if let Err(e) = register_types_from_custom_type(
+        register_types_from_custom_type(
             t,
             &mut type_names,
             &mut env,
             &name,
             package_config,
             &mut hydrators,
-        ) {
-            return InferenceResult::from_error(e);
-        }
+        )?;
     }
     // TODO: Extract a Type alias class to perform this.
-    let sorted_aliases = sorted_type_aliases(&statements.type_aliases);
-    let sorted_aliases = match sorted_aliases {
-        Err(e) => return InferenceResult::from_error(e),
-        Ok(sorted_aliases) => sorted_aliases,
-    };
-
+    let sorted_aliases = sorted_type_aliases(&statements.type_aliases)?;
     for t in sorted_aliases {
-        if let Err(e) = register_type_alias(t, &mut type_names, &mut env, &name) {
-            return InferenceResult::from_error(e);
-        }
+        register_type_alias(t, &mut type_names, &mut env, &name)?;
     }
 
     // Register values so they can be used in functions earlier in the module.
     for c in &statements.constants {
-        if let Err(e) = assert_unique_name(&mut value_names, &c.name, c.location) {
-            return InferenceResult::from_error(e);
-        }
+        assert_unique_name(&mut value_names, &c.name, c.location)?;
     }
     for f in &statements.functions {
-        if let Err(e) =
-            register_value_from_function(f, &mut value_names, &mut env, &mut hydrators, &name)
-        {
-            return InferenceResult::from_error(e);
-        }
+        register_value_from_function(f, &mut value_names, &mut env, &mut hydrators, &name)?;
     }
     for t in &statements.custom_types {
-        if let Err(e) = register_values_from_custom_type(
+        register_values_from_custom_type(
             t,
             &mut hydrators,
             &mut env,
             &mut value_names,
             &name,
             &t.parameters,
-        ) {
-            return InferenceResult::from_error(e);
-        }
+        )?;
     }
 
     // Infer the types of each statement in the module
@@ -252,38 +220,22 @@ pub fn infer_module<A>(
             direct_dependencies,
             warnings,
             &env,
-        );
-        let statement = match statement {
-            Err(e) => return InferenceResult::from_error(e),
-            Ok(statement) => statement,
-        };
+        )?;
         typed_statements.push(statement);
     }
     for t in statements.custom_types {
-        let statement = infer_custom_type(t, &mut env);
-        let statement = match statement {
-            Err(e) => return InferenceResult::from_error(e),
-            Ok(statement) => statement,
-        };
+        let statement = infer_custom_type(t, &mut env)?;
         typed_statements.push(statement);
     }
     for t in statements.type_aliases {
-        let statement = insert_type_alias(t, &mut env);
-        let statement = match statement {
-            Err(e) => return InferenceResult::from_error(e),
-            Ok(statement) => statement,
-        };
+        let statement = insert_type_alias(t, &mut env)?;
         typed_statements.push(statement);
     }
 
     // Sort functions and constants into dependency order for inference. Definitions that do
     // not depend on other definitions are inferred first, then ones that depend
     // on those, etc.
-    let definition_groups = into_dependency_order(statements.functions, statements.constants);
-    let definition_groups = match definition_groups {
-        Err(e) => return InferenceResult::from_error(e),
-        Ok(definition_groups) => definition_groups,
-    };
+    let definition_groups = into_dependency_order(statements.functions, statements.constants)?;
     let mut working_group = vec![];
 
     for group in definition_groups {
@@ -293,19 +245,11 @@ pub fn infer_module<A>(
         for definition in group {
             match definition {
                 CallGraphNode::Function(f) => {
-                    let statement = infer_function(f, &mut env, &mut hydrators, &name);
-                    let statement = match statement {
-                        Err(e) => return InferenceResult::from_error(e),
-                        Ok(statement) => statement,
-                    };
+                    let statement = infer_function(f, &mut env, &mut hydrators, &name)?;
                     working_group.push(statement);
                 }
                 CallGraphNode::ModuleConstant(c) => {
-                    let statement = infer_module_constant(c, &mut env, &name);
-                    let statement = match statement {
-                        Err(e) => return InferenceResult::from_error(e),
-                        Ok(statement) => statement,
-                    };
+                    let statement = infer_module_constant(c, &mut env, &name)?;
                     working_group.push(statement);
                 }
             }
@@ -367,27 +311,32 @@ pub fn infer_module<A>(
     // Sort the errors by location so that they are easier to debug.
     errors.sort_by_key(|e| e.start_location());
 
-    InferenceResult {
-        ast: Some(ast::Module {
-            documentation,
-            name: name.clone(),
-            definitions: typed_statements,
-            type_info: ModuleInterface {
-                name,
-                types,
-                types_value_constructors: types_constructors,
-                values,
-                accessors,
-                origin,
-                package: package_config.name.clone(),
-                is_internal,
-                unused_imports,
-                contains_todo,
-                line_numbers,
-                src_path,
-            },
+    let ast = ast::Module {
+        documentation,
+        name: name.clone(),
+        definitions: typed_statements,
+        type_info: ModuleInterface {
+            name,
+            types,
+            types_value_constructors: types_constructors,
+            values,
+            accessors,
+            origin,
+            package: package_config.name.clone(),
+            is_internal,
+            unused_imports,
+            contains_todo,
+            line_numbers,
+            src_path,
+        },
+    };
+
+    match Vec1::try_from_vec(errors) {
+        Err(_) => Ok(ast),
+        Ok(errors) => Err(InferenceFailure {
+            ast: Some(ast),
+            errors,
         }),
-        errors,
     }
 }
 
