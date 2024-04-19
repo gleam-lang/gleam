@@ -717,10 +717,14 @@ fn hover_for_expression(
     }
 }
 
-// Check if the inner range is included in the outer range.
-fn range_includes(outer: &lsp_types::Range, inner: &lsp_types::Range) -> bool {
-    (outer.start >= inner.start && outer.start <= inner.end)
-        || (outer.end >= inner.start && outer.end <= inner.end)
+// Returns true if any part of either range overlaps with the other.
+fn overlaps(a: lsp_types::Range, b: lsp_types::Range) -> bool {
+    within(a.start, b) || within(a.end, b) || within(b.start, a) || within(b.end, a)
+}
+
+// Returns true if a position is within a range
+fn within(position: lsp_types::Position, range: lsp_types::Range) -> bool {
+    position >= range.start && position < range.end
 }
 
 fn code_action_unused_imports(
@@ -753,7 +757,7 @@ fn code_action_unused_imports(
 
         let range = src_span_to_lsp_range(SrcSpan::new(adjusted_start, end), &line_numbers);
         // Keep track of whether any unused import has is where the cursor is
-        hovered = hovered || range_includes(&params.range, &range);
+        hovered = hovered || overlaps(params.range, range);
 
         edits.push(lsp_types::TextEdit {
             range,
