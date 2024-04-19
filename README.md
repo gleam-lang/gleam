@@ -46,6 +46,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/AndreHogberg">AndreHogberg</a> -
   <a href="https://github.com/aaylward">Andy Aylward</a> -
   <a href="https://github.com/anthony-khong">Anthony Khong</a> -
+  <a href="https://github.com/Illbjorn">Anthony Maxwell</a> -
   <a href="https://github.com/amscotti">Anthony Scotti</a> -
   <a href="https://github.com/oz">Arnaud Berthomier</a> -
   <a href="https://github.com/aweagel">Arthur Weagel</a> -
@@ -137,6 +138,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/Ian-GL">Ian González</a> -
   <a href="https://github.com/irumiha">Igor Rumiha</a> -
   <a href="https://github.com/inoas">inoas</a> -
+  <a href="https://github.com/isaacharrisholt">Isaac Harris-Holt</a> -
   <a href="https://github.com/ismaelga">Ismael Abreu</a> -
   <a href="https://github.com/ivarvong">Ivar Vong</a> -
   <a href="https://github.com/m-rinaldi">J. Rinaldi</a> -
@@ -243,7 +245,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/sporto">Sebastian Porto</a> -
   <a href="https://github.com/sekunho">sekun</a> -
   <a href="https://github.com/tehprofessor">Seve Salazar</a> -
-  <a href="https://github.com/isocuda">Shaun McCarthy</a> -
   <a href="https://github.com/honsq90">Shuqian Hon</a> -
   <a href="https://github.com/simonewebdesign">Simone Vittori</a> -
   <a href="https://github.com/syhner">Siraj</a> -
@@ -257,7 +258,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/tsloughter">Tristan Sloughter</a> -
   <a href="https://github.com/sandsower">Vic Valenzuela</a> -
   <a href="https://github.com/rodrigues">Victor Rodrigues</a> -
-  <a href="https://github.com/victorybhg">victorybhg</a> -
   <a href="https://github.com/PerpetualPossum">Viv Verner</a> -
   <a href="https://github.com/yelps">Volker Rabe</a> -
   <a href="https://github.com/weizhliu">Weizheng Liu</a> -

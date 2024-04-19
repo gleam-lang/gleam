@@ -12,9 +12,12 @@ use crate::{
     type_::{pretty::Printer, UnifyErrorSituation},
 };
 use ecow::EcoString;
-use hexpm::version::pubgrub_report::{DefaultStringReporter, Reporter};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
+use pubgrub::package::Package;
+use pubgrub::report::DerivationTree;
+use pubgrub::version::Version;
+use std::collections::HashSet;
 use std::env;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -298,10 +301,43 @@ impl Error {
     }
 
     pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
+        fn collect_conflicting_packages<'dt, P: Package, V: Version>(
+            derivation_tree: &'dt DerivationTree<P, V>,
+            conflicting_packages: &mut HashSet<&'dt P>,
+        ) {
+            match derivation_tree {
+                DerivationTree::External(external) => match external {
+                    pubgrub::report::External::NotRoot(package, _) => {
+                        let _ = conflicting_packages.insert(package);
+                    }
+                    pubgrub::report::External::NoVersions(package, _) => {
+                        let _ = conflicting_packages.insert(package);
+                    }
+                    pubgrub::report::External::UnavailableDependencies(package, _) => {
+                        let _ = conflicting_packages.insert(package);
+                    }
+                    pubgrub::report::External::FromDependencyOf(package, _, dep_package, _) => {
+                        let _ = conflicting_packages.insert(package);
+                        let _ = conflicting_packages.insert(dep_package);
+                    }
+                },
+                DerivationTree::Derived(derived) => {
+                    collect_conflicting_packages(&derived.cause1, conflicting_packages);
+                    collect_conflicting_packages(&derived.cause2, conflicting_packages);
+                }
+            }
+        }
+
         Self::DependencyResolutionFailed(match error {
             ResolutionError::NoSolution(mut derivation_tree) => {
                 derivation_tree.collapse_no_versions();
-                let report = DefaultStringReporter::report(&derivation_tree);
+
+                let mut conflicting_packages = HashSet::new();
+                collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
+
+                let report = format!("{}\n\n{}",
+                    String::from("Unable to find compatible versions for the version constraints in your gleam.toml. The conflicting packages are:"),
+                    conflicting_packages.into_iter().map(|s| format!("- {}", s)).join("\n"));
                 wrap(&report)
             }
 

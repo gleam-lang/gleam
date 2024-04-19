@@ -26,7 +26,7 @@ walkdir = "2.5.0"
 # Enum trait impl macros
 strum = { version = "0.26.2", features = ["derive"] }
 # Hex package manager client
-hexpm = "2.1.1"
+hexpm = "2.2.0"
 # Creation of tar file archives
 tar = "0.4.40"
 # gzip compression
@@ -38,7 +38,7 @@ tracing = "0.1.40"
 # Macro to work around Rust's traits not working with async. Sigh.
 async-trait = "0.1.80"
 # HTTP types
-http = "0.2"
+http = "1.0"
 # Async combinators for futures
 futures = "0.3.30"
 # Little helper to omit fields that cannot be debug printed

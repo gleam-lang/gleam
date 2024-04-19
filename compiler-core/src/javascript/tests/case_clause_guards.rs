@@ -41,6 +41,30 @@ fn bitarray_with_var() {
     )
 }
 
+// https://github.com/gleam-lang/gleam/issues/3004
+#[test]
+fn keyword_var() {
+    assert_js!(
+        r#"
+pub const function = 5
+pub const do = 10
+pub fn main() {
+  let class = 5
+  let while = 10
+  let var = 7
+  case var {
+    _ if class == while -> True
+    _ if [class] == [5] -> True
+    function if #(function) == #(5) -> False
+    _ if do == function -> True
+    while if while > 5 -> False
+    class -> False
+  }
+}
+"#,
+    );
+}
+
 #[test]
 fn operator_wrapping_right() {
     assert_js!(
