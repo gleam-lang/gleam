@@ -836,7 +836,7 @@ fn code_action_add_annotation(
                 };
 
                 CodeActionBuilder::new(&format!(
-                    "Add \": {}\" return type annotation to fn {}",
+                    "Add \"-> {}\" return type annotation to fn {}",
                     type_name, function_name
                 ))
                 .kind(lsp_types::CodeActionKind::QUICKFIX)
