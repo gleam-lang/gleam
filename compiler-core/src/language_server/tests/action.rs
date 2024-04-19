@@ -234,7 +234,13 @@ fn add_annotation_actions(src: &str, lines: Vec<u32>) -> String {
     _ = io.src_module("app", src);
     engine.compile_please().result.expect("compiled");
 
-    let path = Utf8PathBuf::from("/src/app.gleam");
+    // create the code action request
+    let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
+        r"\\?\C:\src\app.gleam"
+    } else {
+        "/src/app.gleam"
+    });
+
     let url = Url::from_file_path(path).unwrap();
 
     let mut result = src.to_string();
