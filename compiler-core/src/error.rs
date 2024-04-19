@@ -63,9 +63,6 @@ pub enum Error {
         error: Vec1<crate::type_::Error>,
     },
 
-    #[error("type checking module {module} produced no results")]
-    TypeNotGenerated { module: Name },
-
     #[error("unknown import {import}")]
     UnknownImport {
         import: EcoString,
@@ -2744,18 +2741,6 @@ Rename or remove one of them.",
             }
                 })
                 .collect_vec(),
-
-            Error::TypeNotGenerated { module } => {
-                let text =
-                    format!("A problem was encountered when type checking the module `{module}`. This is due to a bug in the compiler.");
-                vec![Diagnostic {
-                    title: "Failed to typecheck a module".into(),
-                    text,
-                    hint: None,
-                    location: None,
-                    level: Level::Error,
-                }]
-            }
 
             Error::Parse { path, src, error } => {
                 let (label, extra) = error.details();
