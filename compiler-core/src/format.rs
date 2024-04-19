@@ -394,19 +394,21 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn const_expr<'a, A, B>(&mut self, value: &'a Constant<A, B>) -> Document<'a> {
-        match value {
+        let comments = self.pop_comments(value.location().start);
+        let document = match value {
             Constant::Int { value, .. } => self.int(value),
 
             Constant::Float { value, .. } => self.float(value),
 
             Constant::String { value, .. } => self.string(value),
 
-            Constant::List { elements, .. } => self.const_list(elements),
+            Constant::List {
+                elements, location, ..
+            } => self.const_list(elements, location),
 
-            Constant::Tuple { elements, .. } => "#"
-                .to_doc()
-                .append(wrap_args(elements.iter().map(|e| self.const_expr(e))))
-                .group(),
+            Constant::Tuple {
+                elements, location, ..
+            } => self.const_tuple(elements, location),
 
             Constant::BitArray {
                 segments, location, ..
@@ -468,27 +470,98 @@ impl<'comments> Formatter<'comments> {
                 module: Some(module),
                 ..
             } => docvec![module, ".", name],
+        };
+        commented(document, comments)
+    }
+
+    fn const_list<'a, A, B>(
+        &mut self,
+        elements: &'a [Constant<A, B>],
+        location: &SrcSpan,
+    ) -> Document<'a> {
+        if elements.is_empty() {
+            // We take all comments that come _before_ the end of the list,
+            // that is all comments that are inside "[" and "]", if there's
+            // any comment we want to put it inside the empty list!
+            return match printed_comments(self.pop_comments(location.end), false) {
+                None => "[]".to_doc(),
+                Some(comments) => "["
+                    .to_doc()
+                    .append(break_("", "").nest(INDENT))
+                    .append(comments)
+                    .append(break_("", ""))
+                    .append("]")
+                    // vvv We want to make sure the comments are on a separate
+                    //     line from the opening and closing brackets so we
+                    //     force the breaks to be split on newlines.
+                    .force_break(),
+            };
+        }
+
+        let comma = flex_break(",", ", ");
+        let elements = join(elements.iter().map(|e| self.const_expr(e)), comma);
+
+        let doc = break_("[", "[").append(elements).nest(INDENT);
+
+        // We get all remaining comments that come before the list's closing
+        // square bracket.
+        // If there's any we add those before the closing square bracket instead
+        // of moving those out of the list.
+        // Otherwise those would be moved out of the list.
+        let comments = self.pop_comments(location.end);
+        match printed_comments(comments, false) {
+            None => doc.append(break_(",", "")).append("]").group(),
+            Some(comment) => doc
+                .append(break_(",", "").nest(INDENT))
+                // ^ See how here we're adding the missing indentation to the
+                //   final break so that the final comment is as indented as the
+                //   list's items.
+                .append(comment)
+                .append(line())
+                .append("]")
+                .force_break(),
         }
     }
 
-    fn const_list<'a, A, B>(&mut self, elements: &'a [Constant<A, B>]) -> Document<'a> {
+    pub fn const_tuple<'a, A, B>(
+        &mut self,
+        elements: &'a [Constant<A, B>],
+        location: &SrcSpan,
+    ) -> Document<'a> {
         if elements.is_empty() {
-            return "[]".to_doc();
+            // We take all comments that come _before_ the end of the tuple,
+            // that is all comments that are inside "#(" and ")", if there's
+            // any comment we want to put it inside the empty list!
+            return match printed_comments(self.pop_comments(location.end), false) {
+                None => "#()".to_doc(),
+                Some(comments) => "#("
+                    .to_doc()
+                    .append(break_("", "").nest(INDENT))
+                    .append(comments)
+                    .append(break_("", ""))
+                    .append(")")
+                    // vvv We want to make sure the comments are on a separate
+                    //     line from the opening and closing parentheses so we
+                    //     force the breaks to be split on newlines.
+                    .force_break(),
+            };
         }
 
-        let comma: fn() -> Document<'a> = if elements.iter().all(Constant::is_simple) {
-            || flex_break(",", ", ")
-        } else {
-            || break_(",", ", ")
-        };
-        docvec![
-            break_("[", "["),
-            join(elements.iter().map(|e| self.const_expr(e)), comma())
-        ]
-        .nest(INDENT)
-        .append(break_(",", ""))
-        .append("]")
-        .group()
+        let args_docs = elements.iter().map(|e| self.const_expr(e));
+        let tuple_doc = break_("#(", "#(")
+            .append(join(args_docs, break_(",", ", ")).next_break_fits(NextBreakFitsMode::Disabled))
+            .nest(INDENT);
+
+        let comments = self.pop_comments(location.end);
+        match printed_comments(comments, false) {
+            None => tuple_doc.append(break_(",", "")).append(")"),
+            Some(comments) => tuple_doc
+                .append(break_(",", "").nest(INDENT))
+                .append(comments)
+                .append(line())
+                .append(")")
+                .force_break(),
+        }
     }
 
     pub fn docs_const_expr<'a>(
@@ -1058,6 +1131,25 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn tuple<'a>(&mut self, elements: &'a [UntypedExpr], location: &SrcSpan) -> Document<'a> {
+        if elements.is_empty() {
+            // We take all comments that come _before_ the end of the tuple,
+            // that is all comments that are inside "#(" and ")", if there's
+            // any comment we want to put it inside the empty tuple!
+            return match printed_comments(self.pop_comments(location.end), false) {
+                None => "#()".to_doc(),
+                Some(comments) => "#("
+                    .to_doc()
+                    .append(break_("", "").nest(INDENT))
+                    .append(comments)
+                    .append(break_("", ""))
+                    .append(")")
+                    // vvv We want to make sure the comments are on a separate
+                    //     line from the opening and closing parentheses so we
+                    //     force the breaks to be split on newlines.
+                    .force_break(),
+            };
+        }
+
         self.append_inlinable_wrapped_args(
             "#".to_doc(),
             elements,
