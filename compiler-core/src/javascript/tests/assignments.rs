@@ -197,3 +197,14 @@ pub fn main() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3004
+#[test]
+fn escaped_variables_in_constants() {
+    assert_js!(
+        r#"
+pub const class = 5
+pub const something = class
+"#
+    );
+}

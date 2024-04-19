@@ -14,7 +14,7 @@ expression: "./cases/erlang_app_generation"
 
 //// /out/lib/the_package/ebin/my_erlang_application.app
 {application, my_erlang_application, [
-    {mod, 'my_erlang_application_sup'},
+    {mod, {'my_erlang_application_sup', []}},
     {vsn, "0.1.0"},
     {applications, [gleam_otp,
                     gleam_stdlib,

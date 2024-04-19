@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "\npub const function = 5\npub const do = 10\npub fn main() {\n  let class = 5\n  let while = 10\n  let var = 7\n  case var {\n    _ if class == while -> True\n    _ if [class] == [5] -> True\n    function if #(function) == #(5) -> False\n    _ if do == function -> True\n    while if while > 5 -> False\n    class -> False\n  }\n}\n"
+---
+import { toList, isEqual } from "../gleam.mjs";
+
+export const function$ = 5;
+
+export const do$ = 10;
+
+export function main() {
+  let class$ = 5;
+  let while$ = 10;
+  let var$ = 7;
+  if (class$ === while$) {
+    return true;
+  } else if (isEqual(toList([class$]), toList([5]))) {
+    return true;
+  } else if (isEqual([var$], [5])) {
+    let function$1 = var$;
+    return false;
+  } else if (10 === 5) {
+    return true;
+  } else if (var$ > 5) {
+    let while$1 = var$;
+    return false;
+  } else {
+    let class$1 = var$;
+    return false;
+  }
+}

@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, Publicity, TypedDefinition, TypedExpr,
-        TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, Publicity, SrcSpan, TypedDefinition,
+        TypedExpr, TypedPattern,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -717,10 +717,14 @@ fn hover_for_expression(
     }
 }
 
-// Check if the inner range is included in the outer range.
-fn range_includes(outer: &lsp_types::Range, inner: &lsp_types::Range) -> bool {
-    (outer.start >= inner.start && outer.start <= inner.end)
-        || (outer.end >= inner.start && outer.end <= inner.end)
+// Returns true if any part of either range overlaps with the other.
+fn overlaps(a: lsp_types::Range, b: lsp_types::Range) -> bool {
+    within(a.start, b) || within(a.end, b) || within(b.start, a) || within(b.end, a)
+}
+
+// Returns true if a position is within a range
+fn within(position: lsp_types::Position, range: lsp_types::Range) -> bool {
+    position >= range.start && position < range.end
 }
 
 fn code_action_unused_imports(
@@ -741,9 +745,19 @@ fn code_action_unused_imports(
     let mut edits = Vec::with_capacity(unused.len());
 
     for unused in unused {
-        let range = src_span_to_lsp_range(*unused, &line_numbers);
+        let SrcSpan { start, end } = *unused;
+
+        // If removing an unused alias, don't backspace
+        // Otherwise, adjust the start position by 1 to ensure the entire line is deleted with the import.
+        let adjusted_start = if delete_line(unused, &line_numbers) {
+            start - 1
+        } else {
+            start
+        };
+
+        let range = src_span_to_lsp_range(SrcSpan::new(adjusted_start, end), &line_numbers);
         // Keep track of whether any unused import has is where the cursor is
-        hovered = hovered || range_includes(&params.range, &range);
+        hovered = hovered || overlaps(params.range, range);
 
         edits.push(lsp_types::TextEdit {
             range,
@@ -762,6 +776,13 @@ fn code_action_unused_imports(
         .changes(uri.clone(), edits)
         .preferred(true)
         .push_to(actions);
+}
+
+// Check if the edit empties a whole line; if so, delete the line.
+fn delete_line(span: &SrcSpan, line_numbers: &LineNumbers) -> bool {
+    line_numbers.line_starts.iter().any(|&line_start| {
+        line_start == span.start && line_numbers.line_starts.contains(&(span.end + 1))
+    })
 }
 
 fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoString)> {

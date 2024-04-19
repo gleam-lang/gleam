@@ -32,7 +32,7 @@ use crate::{
     Result,
 };
 
-pub const LSP_TEST_ROOT_PACKAGE_NAME: &'static str = "app";
+pub const LSP_TEST_ROOT_PACKAGE_NAME: &str = "app";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Action {
@@ -292,9 +292,7 @@ fn add_package_from_manifest<B>(
                 version: Range::new("1.0.0".into()),
             },
             ManifestPackageSource::Local { ref path } => Requirement::Path { path: path.into() },
-            ManifestPackageSource::Git { ref repo, .. } => Requirement::Git {
-                git: repo.clone().into(),
-            },
+            ManifestPackageSource::Git { ref repo, .. } => Requirement::Git { git: repo.clone() },
         },
     );
     write_toml_from_manifest(engine, toml_path, package);
@@ -313,9 +311,7 @@ fn add_dev_package_from_manifest<B>(
                 version: Range::new("1.0.0".into()),
             },
             ManifestPackageSource::Local { ref path } => Requirement::Path { path: path.into() },
-            ManifestPackageSource::Git { ref repo, .. } => Requirement::Git {
-                git: repo.clone().into(),
-            },
+            ManifestPackageSource::Git { ref repo, .. } => Requirement::Git { git: repo.clone() },
         },
     );
     write_toml_from_manifest(engine, toml_path, package);
