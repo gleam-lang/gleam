@@ -239,8 +239,7 @@ where
             };
 
             code_action_unused_imports(module, &params, &mut actions);
-            code_action_add_annotation_to_assignment(module, &params, &mut actions);
-            code_action_add_annotation_to_function(module, &params, &mut actions);
+            code_action_add_annotation(module, &params, &mut actions);
 
             Ok(if actions.is_empty() {
                 None
@@ -719,10 +718,21 @@ fn hover_for_expression(
     }
 }
 
-// Check if the inner range is included in the outer range.
+/// Check if the inner range is included in the outer range.
 fn range_includes(outer: &lsp_types::Range, inner: &lsp_types::Range) -> bool {
     (outer.start >= inner.start && outer.start <= inner.end)
         || (outer.end >= inner.start && outer.end <= inner.end)
+}
+
+/// Returns the SrcSpan of the line where the cursor start is.
+fn cursor_line_src_span(line_numbers: &LineNumbers, start_line: u32) -> SrcSpan {
+    let start_index = line_numbers.byte_index(start_line, 0);
+    let next_index = if start_line < line_numbers.length - 1 {
+        line_numbers.byte_index(start_line + 1, 0) - 1
+    } else {
+        line_numbers.byte_index(start_line, u32::MAX)
+    };
+    SrcSpan::new(start_index, next_index)
 }
 
 fn code_action_unused_imports(
@@ -766,114 +776,77 @@ fn code_action_unused_imports(
         .push_to(actions);
 }
 
-fn code_action_add_annotation_to_assignment(
-    module: &Module,
-    params: &lsp::CodeActionParams,
-    actions: &mut Vec<CodeAction>,
-) {
-    let uri = &params.text_document.uri;
-
-    let line_numbers = LineNumbers::new(&module.code);
-    let start_line_index = line_numbers.byte_index(params.range.start.line, 0);
-    let next_line_index = if params.range.start.line < line_numbers.length - 1 {
-        line_numbers.byte_index(params.range.start.line + 1, 0) - 1
-    } else {
-        // If the cursor is at the last line, we use the last byte index
-        line_numbers.byte_index(params.range.start.line, u32::MAX)
-    };
-
-    let range = SrcSpan::new(start_line_index, next_line_index);
-
-    for node in module.find_nodes_in_range(range) {
-        if let Located::Statement(Statement::Assignment(assignment)) = node {
-            // No need to add annotation if it already exists
-            if assignment.annotation.is_some() {
-                return;
-            }
-
-            // Handle Option<EcoString>
-            let pattern_name_text = assignment
-                .pattern
-                .name_if_self_is_var()
-                .map(|name| format!("assignment of {}", name))
-                .unwrap_or_else(|| "destructuring assignment".to_string());
-
-            let type_name = Printer::new().pretty_print(assignment.value.type_().as_ref(), 0);
-            let annotation = format!(": {}", type_name);
-
-            let variable_name_end_position =
-                src_span_to_lsp_range(assignment.pattern.location(), &line_numbers).end;
-            let text_edit = lsp_types::TextEdit {
-                range: lsp_types::Range {
-                    start: variable_name_end_position,
-                    end: variable_name_end_position,
-                },
-                new_text: annotation,
-            };
-
-            // Using CodeActionBuilder to build and push the code action
-            CodeActionBuilder::new(&format!(
-                "Add \": {}\" type annotation to {}",
-                type_name, pattern_name_text
-            ))
-            .kind(lsp_types::CodeActionKind::QUICKFIX)
-            .changes(uri.clone(), vec![text_edit])
-            .preferred(true)
-            .push_to(actions);
-
-            // Break so we don't duplicate the code action for each node
-            break;
-        }
-    }
-}
-
-fn code_action_add_annotation_to_function(
+fn code_action_add_annotation(
     module: &Module,
     params: &lsp::CodeActionParams,
     actions: &mut Vec<CodeAction>,
 ) {
     let uri = &params.text_document.uri;
     let line_numbers = LineNumbers::new(&module.code);
-
-    let start_line_index = line_numbers.byte_index(params.range.start.line, 0);
-    let next_line_index = if params.range.start.line < line_numbers.length - 1 {
-        line_numbers.byte_index(params.range.start.line + 1, 0) - 1
-    } else {
-        // If the cursor is at the last line, we use the last byte index
-        line_numbers.byte_index(params.range.start.line, u32::MAX)
-    };
-
-    let range = SrcSpan::new(start_line_index, next_line_index);
+    let range = cursor_line_src_span(&line_numbers, params.range.start.line);
 
     for node in module.find_nodes_in_range(range) {
-        if let Located::ModuleStatement(Definition::Function(fun)) = node {
-            // No need to add annotation if it already exists
-            if fun.return_annotation.is_some() {
+        match node {
+            Located::Statement(Statement::Assignment(assignment))
+                if assignment.annotation.is_none() =>
+            {
+                let pattern_text = assignment
+                    .pattern
+                    .name_if_self_is_var()
+                    .map(|name| format!("assignment of {}", name))
+                    .unwrap_or_else(|| "destructuring assignment".to_string());
+                let type_name = Printer::new().pretty_print(assignment.value.type_().as_ref(), 0);
+                let annotation = format!(": {}", type_name);
+                let end_position =
+                    src_span_to_lsp_range(assignment.pattern.location(), &line_numbers).end;
+
+                let text_edit = lsp_types::TextEdit {
+                    range: lsp_types::Range {
+                        start: end_position,
+                        end: end_position,
+                    },
+                    new_text: annotation,
+                };
+
+                CodeActionBuilder::new(&format!(
+                    "Add \": {}\" type annotation to {}",
+                    type_name, pattern_text
+                ))
+                .kind(lsp_types::CodeActionKind::QUICKFIX)
+                .changes(uri.clone(), vec![text_edit])
+                .preferred(true)
+                .push_to(actions);
+
                 return;
             }
+            Located::ModuleStatement(Definition::Function(fun))
+                if fun.return_annotation.is_none() =>
+            {
+                let function_name = fun.name.as_str();
+                let type_name = Printer::new().pretty_print(&fun.return_type, 0);
+                let annotation = format!(" -> {}", type_name);
+                let end_position = src_span_to_lsp_range(fun.location, &line_numbers).end;
 
-            let function_name = fun.name.as_str();
-            let type_name = Printer::new().pretty_print(&fun.return_type, 0);
-            let annotation = format!(" -> {}", type_name);
-            let end_position = src_span_to_lsp_range(fun.location, &line_numbers).end;
-            let text_edit = lsp_types::TextEdit {
-                range: lsp_types::Range {
-                    start: end_position,
-                    end: end_position,
-                },
-                new_text: annotation,
-            };
-            // Using CodeActionBuilder to build and push the code action
-            CodeActionBuilder::new(&format!(
-                "Add \": {}\" type annotation of function {}",
-                type_name, function_name
-            ))
-            .kind(lsp_types::CodeActionKind::QUICKFIX)
-            .changes(uri.clone(), vec![text_edit])
-            .preferred(true)
-            .push_to(actions);
-            // Break so we don't duplicate the code action for each node
-            break;
+                let text_edit = lsp_types::TextEdit {
+                    range: lsp_types::Range {
+                        start: end_position,
+                        end: end_position,
+                    },
+                    new_text: annotation,
+                };
+
+                CodeActionBuilder::new(&format!(
+                    "Add \": {}\" return type annotation to fn {}",
+                    type_name, function_name
+                ))
+                .kind(lsp_types::CodeActionKind::QUICKFIX)
+                .changes(uri.clone(), vec![text_edit])
+                .preferred(true)
+                .push_to(actions);
+
+                return;
+            }
+            _ => {}
         }
     }
 }

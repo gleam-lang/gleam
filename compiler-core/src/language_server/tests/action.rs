@@ -6,6 +6,43 @@ use lsp_types::{
 
 use super::*;
 
+// Add the code action to the src
+fn apply_code_action(src: &str, url: &Url, action: &lsp_types::CodeAction) -> String {
+    match &action.edit {
+        Some(WorkspaceEdit { changes, .. }) => match changes {
+            Some(changes) => apply_code_edit(src, url, changes),
+            None => panic!("No text edit found"),
+        },
+        _ => panic!("No workspace edit found"),
+    }
+}
+
+// This function replicates how the text editor applies TextEdit
+fn apply_code_edit(
+    src: &str,
+    url: &Url,
+    changes: &HashMap<Url, Vec<lsp_types::TextEdit>>,
+) -> String {
+    let mut result = src.to_string();
+    let line_numbers = LineNumbers::new(src);
+    let mut offset = 0;
+    for (change_url, change) in changes {
+        if url != change_url {
+            panic!("Unknown url {}", change_url)
+        }
+        for edit in change {
+            let start =
+                line_numbers.byte_index(edit.range.start.line, edit.range.start.character) - offset;
+            let end =
+                line_numbers.byte_index(edit.range.end.line, edit.range.end.character) - offset;
+            let range = (start as usize)..(end as usize);
+            offset += end - start;
+            result.replace_range(range, &edit.new_text);
+        }
+    }
+    result
+}
+
 fn remove_unused_action(src: &str, line: u32) -> String {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
@@ -58,42 +95,6 @@ fn remove_unused_action(src: &str, line: u32) -> String {
     } else {
         panic!("No code action produced by the engine")
     }
-}
-
-fn apply_code_action(src: &str, url: &Url, action: &lsp_types::CodeAction) -> String {
-    match &action.edit {
-        Some(WorkspaceEdit { changes, .. }) => match changes {
-            Some(changes) => apply_code_edit(src, url, changes),
-            None => panic!("No text edit found"),
-        },
-        _ => panic!("No workspace edit found"),
-    }
-}
-
-// This function replicates how the text editor applies TextEdit
-fn apply_code_edit(
-    src: &str,
-    url: &Url,
-    changes: &HashMap<Url, Vec<lsp_types::TextEdit>>,
-) -> String {
-    let mut result = src.to_string();
-    let line_numbers = LineNumbers::new(src);
-    let mut offset = 0;
-    for (change_url, change) in changes {
-        if url != change_url {
-            panic!("Unknown url {}", change_url)
-        }
-        for edit in change {
-            let start =
-                line_numbers.byte_index(edit.range.start.line, edit.range.start.character) - offset;
-            let end =
-                line_numbers.byte_index(edit.range.end.line, edit.range.end.character) - offset;
-            let range = (start as usize)..(end as usize);
-            offset += end - start;
-            result.replace_range(range, &edit.new_text);
-        }
-    }
-    result
 }
 
 #[test]
@@ -225,3 +226,102 @@ pub fn main() {
     assert_eq!(remove_unused_action(code), expected.to_string())
 }
 */
+
+fn add_annotation_actions(src: &str, lines: Vec<u32>) -> String {
+    let io = LanguageServerTestIO::new();
+    let mut engine = setup_engine(&io);
+
+    _ = io.src_module("app", src);
+    engine.compile_please().result.expect("compiled");
+
+    let path = Utf8PathBuf::from("/src/app.gleam");
+    let url = Url::from_file_path(path).unwrap();
+
+    let mut result = src.to_string();
+    for line in lines {
+        let params = CodeActionParams {
+            text_document: TextDocumentIdentifier::new(url.clone()),
+            context: CodeActionContext {
+                diagnostics: vec![],
+                only: None,
+                trigger_kind: None,
+            },
+            range: Range::new(Position::new(line, 0), Position::new(line, std::u32::MAX)),
+            work_done_progress_params: WorkDoneProgressParams {
+                work_done_token: None,
+            },
+            partial_result_params: PartialResultParams {
+                partial_result_token: None,
+            },
+        };
+
+        if let Ok(Some(actions)) = engine.action(params).result {
+            for action in actions {
+                if action.title.contains("annotation") {
+                    result = apply_code_action(&result, &url, &action);
+                    // Assuming each action can be applied without conflict
+                }
+            }
+        }
+    }
+
+    if src == result {
+        panic!("No code action produced by the engine that modifies the source")
+    }
+
+    result
+}
+
+#[test]
+fn test_add_assignment_annotation_simple() {
+    let code = "
+pub fn main() {
+  let n = 1
+}
+";
+    let expected = "
+pub fn main() {
+  let n: Int = 1
+}
+";
+    assert_eq!(add_annotation_actions(code, vec![2]), expected.to_string())
+}
+
+// Kind of just throwing the kitchen sink at this one, better than 10 individual
+// tests
+#[test]
+fn test_add_annotation_complex() {
+    let code = "
+pub type Point {
+  Point(x: Int, y: Int)
+}
+
+pub fn create_point() {
+  let x = 2
+  let y = -8
+  let _data = #(1234, \"Hello\")
+  let _point = Point(x, y)
+  let point2 = Point(y, x)
+  point2
+}
+";
+
+    let expected = "
+pub type Point {
+  Point(x: Int, y: Int)
+}
+
+pub fn create_point() -> Point {
+  let x: Int = 2
+  let y: Int = -8
+  let _data: #(Int, String) = #(1234, \"Hello\")
+  let _point: Point = Point(x, y)
+  let point2: Point = Point(y, x)
+  point2
+}
+";
+    assert_eq!(
+        add_annotation_actions(code, vec![5, 6, 7, 8, 9, 10]),
+        expected.to_string()
+    )
+}
