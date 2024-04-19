@@ -5949,3 +5949,64 @@ pub const wibble = 1
 "#
     );
 }
+
+#[test]
+fn comments_inside_contant_list() {
+    assert_format!(
+        r#"const wibble = [
+  // A comment
+  1, 2,
+  // Another comment
+  3,
+  // One last comment
+]
+"#
+    );
+}
+
+#[test]
+fn comments_inside_contant_empty_list() {
+    assert_format!(
+        r#"const wibble = [
+  // A comment
+]
+"#
+    );
+}
+
+#[test]
+fn comments_inside_contant_tuple() {
+    assert_format!(
+        r#"const wibble = #(
+  // A comment
+  1,
+  2,
+  // Another comment
+  3,
+  // One last comment
+)
+"#
+    );
+}
+
+#[test]
+fn comments_inside_contant_empty_tuple() {
+    assert_format!(
+        r#"const wibble = #(
+  // A comment
+)
+"#
+    );
+}
+
+#[test]
+fn comments_inside_empty_tuple() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    // A comment!
+  )
+}
+"#
+    );
+}
