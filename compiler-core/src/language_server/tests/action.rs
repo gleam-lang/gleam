@@ -121,6 +121,24 @@ pub fn main() {
 }
 
 #[test]
+fn test_remove_unused_start_of_file() {
+    let code = "import option
+import result
+
+pub fn main() {
+  result.is_ok
+}
+";
+    let expected = "import result
+
+pub fn main() {
+  result.is_ok
+}
+";
+    assert_eq!(remove_unused_action(code, 2), expected.to_string())
+}
+
+#[test]
 fn test_remove_unused_alias() {
     let code = "
 // test
