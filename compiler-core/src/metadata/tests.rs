@@ -329,7 +329,44 @@ fn module_with_type_links() {
                     module: "a".into(),
                     parameters: vec![],
                     deprecation: Deprecation::NotDeprecated,
-                    documentation: Some("documentation".into()),
+                    documentation: None,
+                },
+            )]
+            .into(),
+            types_value_constructors: HashMap::new(),
+            values: HashMap::new(),
+            unused_imports: Vec::new(),
+            accessors: HashMap::new(),
+            line_numbers: LineNumbers::new(""),
+            src_path: "some_path".into(),
+        }
+    }
+
+    assert_eq!(roundtrip(&make(linked_type)), make(type_));
+}
+
+#[test]
+fn module_with_type_documentation() {
+    let linked_type = type_::link(type_::int());
+    let type_ = type_::int();
+
+    fn make(type_: Arc<Type>) -> ModuleInterface {
+        ModuleInterface {
+            is_internal: false,
+            contains_todo: false,
+            package: "some_package".into(),
+            origin: Origin::Src,
+            name: "a".into(),
+            types: [(
+                "SomeType".into(),
+                TypeConstructor {
+                    typ: type_,
+                    publicity: Publicity::Public,
+                    origin: Default::default(),
+                    module: "a".into(),
+                    parameters: vec![],
+                    deprecation: Deprecation::NotDeprecated,
+                    documentation: Some("type documentation".into()),
                 },
             )]
             .into(),

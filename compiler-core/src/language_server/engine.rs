@@ -1,9 +1,9 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, Publicity, SrcSpan, TypeAst,
-        TypedDefinition, TypedExpr, TypedPattern,
+        Arg, Definition, Function, Import, ModuleConstant, Publicity, SrcSpan, TypedDefinition,
+        TypedExpr, TypedPattern,
     },
-    build::{Located, Module},
+    build::{type_constructor_from_modules, Located, Module},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
@@ -154,12 +154,9 @@ where
                 None => return Ok(None),
             };
 
-            let location = match node.definition_location(node.annotation_type().and_then(|t| {
-                type_constructor_from_modules(
-                    this.compiler.project_compiler.get_importable_modules(),
-                    t,
-                )
-            })) {
+            let location = match node
+                .definition_location(this.compiler.project_compiler.get_importable_modules())
+            {
                 Some(location) => location,
                 None => return Ok(None),
             };
@@ -694,7 +691,7 @@ fn hover_for_function_argument(argument: &Arg<Arc<Type>>, line_numbers: LineNumb
 }
 
 fn hover_for_annotation(
-    annotation: &TypeAst,
+    location: SrcSpan,
     annotation_type: &Type,
     type_constructor: Option<&TypeConstructor>,
     line_numbers: LineNumbers,
@@ -712,7 +709,7 @@ fn hover_for_annotation(
     );
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
-        range: Some(src_span_to_lsp_range(annotation.location(), &line_numbers)),
+        range: Some(src_span_to_lsp_range(location, &line_numbers)),
     }
 }
 
@@ -868,21 +865,4 @@ fn get_hexdocs_link_section(
 
     let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
     Some(format!("\nView on [HexDocs]({link})"))
-}
-
-// Looks up the type constructor for the given type
-fn type_constructor_from_modules(
-    importable_modules: &im::HashMap<EcoString, crate::type_::ModuleInterface>,
-    type_: Arc<Type>,
-) -> Option<&TypeConstructor> {
-    match type_.as_ref() {
-        Type::Named { name, module, .. } => importable_modules
-            .get(module)
-            .and_then(|i| i.types.get(name)),
-        Type::Var { type_, .. } => type_
-            .borrow()
-            .inner_type()
-            .and_then(|v| type_constructor_from_modules(importable_modules, v)),
-        _ => None,
-    }
 }

@@ -372,7 +372,7 @@ impl TypeAst {
 
                     None
                 })
-                .or(Some(Located::Annotation(self, type_))),
+                .or(Some(Located::Annotation(self.location(), type_))),
             TypeAst::Constructor(TypeAstConstructor { arguments, .. }) => type_
                 .constructor_types()
                 .and_then(|arg_types| {
@@ -386,7 +386,7 @@ impl TypeAst {
 
                     None
                 })
-                .or(Some(Located::Annotation(self, type_))),
+                .or(Some(Located::Annotation(self.location(), type_))),
             TypeAst::Tuple(TypeAstTuple { elems, .. }) => type_
                 .tuple_types()
                 .and_then(|elem_types| {
@@ -400,8 +400,8 @@ impl TypeAst {
 
                     None
                 })
-                .or(Some(Located::Annotation(self, type_))),
-            TypeAst::Var(_) | TypeAst::Hole(_) => Some(Located::Annotation(self, type_)),
+                .or(Some(Located::Annotation(self.location(), type_))),
+            TypeAst::Var(_) | TypeAst::Hole(_) => Some(Located::Annotation(self.location(), type_)),
         }
     }
 }

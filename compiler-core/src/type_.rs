@@ -152,15 +152,6 @@ impl Type {
         }
     }
 
-    /// Gets the inner type following any var links. Returns a pointer to self
-    /// if the type is not a var.
-    pub fn inner_type(&self) -> Option<Arc<Self>> {
-        match self {
-            Self::Var { type_, .. } => type_.borrow().inner_type(),
-            _ => Some(Arc::new(self.clone())),
-        }
-    }
-
     pub fn is_nil(&self) -> bool {
         match self {
             Self::Named { module, name, .. } if "Nil" == name && is_prelude_module(module) => true,
@@ -879,13 +870,6 @@ impl TypeVar {
     pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
         match self {
             Self::Link { type_ } => type_.named_type_name(),
-            Self::Unbound { .. } | Self::Generic { .. } => None,
-        }
-    }
-
-    pub fn inner_type(&self) -> Option<Arc<Type>> {
-        match self {
-            Self::Link { type_ } => type_.inner_type(),
             Self::Unbound { .. } | Self::Generic { .. } => None,
         }
     }
