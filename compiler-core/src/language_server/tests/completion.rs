@@ -1455,3 +1455,66 @@ pub fn main() {
         },]
     );
 }
+
+#[test]
+fn completions_for_a_function_arg_annotation() {
+    let code = "
+pub fn wibble(
+  _: String,
+) -> Nil {
+  Nil
+}
+";
+
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(2, 11)),
+        prelude_type_completions(),
+    );
+}
+
+#[test]
+fn completions_for_a_function_return_annotation() {
+    let code = "
+pub fn wibble(
+  _: String,
+) -> Nil {
+  Nil
+}
+";
+
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(3, 7)),
+        prelude_type_completions(),
+    );
+}
+
+#[test]
+fn completions_for_a_var_annotation() {
+    let code = "
+pub fn main() {
+  let wibble: Int = 7
+}
+";
+
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(2, 16)),
+        prelude_type_completions(),
+    );
+}
+
+#[test]
+fn completions_for_a_const_annotation() {
+    let code = "
+
+const wibble: Int = 7
+
+pub fn main() {
+  let wibble: Int = 7
+}
+";
+
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(2, 16)),
+        prelude_type_completions(),
+    );
+}

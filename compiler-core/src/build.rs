@@ -296,13 +296,25 @@ pub enum Located<'a> {
     ModuleStatement(&'a TypedDefinition),
     FunctionBody(&'a TypedFunction),
     Arg(&'a TypedArg),
-    Annotation(&'a TypeAst, std::sync::Arc<type_::Type>),
+    Annotation(SrcSpan, std::sync::Arc<type_::Type>),
 }
 
 impl<'a> Located<'a> {
+    // Looks up the type constructor for the given type and then create the location.
+    fn type_location(
+        &self,
+        importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
+        type_: std::sync::Arc<type_::Type>,
+    ) -> Option<DefinitionLocation<'_>> {
+        type_constructor_from_modules(importable_modules, type_).map(|t| DefinitionLocation {
+            module: Some(&t.module),
+            span: t.origin,
+        })
+    }
+
     pub fn definition_location(
         &self,
-        type_constructor: Option<&'a type_::TypeConstructor>,
+        importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
     ) -> Option<DefinitionLocation<'_>> {
         match self {
             Self::Pattern(pattern) => pattern.definition_location(),
@@ -314,19 +326,22 @@ impl<'a> Located<'a> {
                 span: statement.location(),
             }),
             Self::Arg(_) => None,
-            Self::Annotation(_, type_) => type_constructor.map(|t| DefinitionLocation {
-                module: Some(&t.module),
-                span: t.origin,
-            }),
+            Self::Annotation(_, type_) => self.type_location(importable_modules, type_.clone()),
         }
     }
+}
 
-    /// Returns the type an annotation is pointing to. Returns `None` if not an annotation
-    pub fn annotation_type(&self) -> Option<std::sync::Arc<type_::Type>> {
-        match self {
-            Self::Annotation(_, type_) => Some(type_.clone()),
-            _ => None,
-        }
+// Looks up the type constructor for the given type
+pub fn type_constructor_from_modules(
+    importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+    type_: std::sync::Arc<type_::Type>,
+) -> Option<&type_::TypeConstructor> {
+    let type_ = type_::collapse_links(type_);
+    match type_.as_ref() {
+        type_::Type::Named { name, module, .. } => importable_modules
+            .get(module)
+            .and_then(|i| i.types.get(name)),
+        _ => None,
     }
 }
 
