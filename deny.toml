@@ -3,7 +3,6 @@
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 ignore = [
-    "RUSTSEC-2021-0145"
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
