@@ -445,7 +445,7 @@ fn analyse(
                 return Err(Error::Type {
                     path: path.clone(),
                     src: code.clone(),
-                    error: errors,
+                    errors,
                 })
             }
             Ok(ast) => ast,

@@ -60,7 +60,7 @@ pub enum Error {
     Type {
         path: Utf8PathBuf,
         src: EcoString,
-        error: Vec1<crate::type_::Error>,
+        errors: Vec1<crate::type_::Error>,
     },
 
     #[error("unknown import {import}")]
@@ -1146,7 +1146,7 @@ Second: {second}"
                 }]
             }
 
-            Error::Type { path, src, error } => error
+            Error::Type { path, src, errors: error } => error
                 .iter()
                 .map(|error| {
                     match error {

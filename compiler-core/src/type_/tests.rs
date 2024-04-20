@@ -133,7 +133,7 @@ macro_rules! assert_error {
         let error = $crate::error::Error::Type {
             src: $src.into(),
             path: camino::Utf8PathBuf::from("/src/one/two.gleam"),
-            error: vec1::vec1![error],
+            errors: vec1::vec1![error],
         };
         let output = error.pretty_string();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -454,7 +454,7 @@ pub fn module_error_with_target(
     let error = Error::Type {
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
-        error: Vec1::try_from_vec(error).expect("should have at least one error"),
+        errors: Vec1::try_from_vec(error).expect("should have at least one error"),
     };
     error.pretty_string()
 }
