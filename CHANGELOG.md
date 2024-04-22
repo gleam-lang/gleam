@@ -57,25 +57,25 @@
 
 - Improve error message if importing type using the value import syntax or vice versa. ([Pi-Cla](https://github.com/Pi-Cla/))
 
-```
-error: Unknown module field
-  ┌─ /src/one/two.gleam:1:19
-  │
-1 │ import gleam/foo.{Bar}
-  │                   ^^^ Did you mean `type Bar`?
+  ```
+  error: Unknown module field
+    ┌─ /src/one/two.gleam:1:19
+    │
+  1 │ import gleam/one.{One}
+    │                   ^^^ Did you mean `type One`?
 
-`Bar` is only a type, it cannot be imported as a value.
-```
+  `One` is only a type, it cannot be imported as a value.
+  ```
 
-```
-error: Unknown module type
-  ┌─ /src/one/two.gleam:1:19
-  │
-1 │ import gleam/foo.{type Baz}
-  │                   ^^^^^^^^ Did you mean `Baz`?
+  ```
+  error: Unknown module type
+    ┌─ /src/one/two.gleam:1:19
+    │
+  1 │ import gleam/two.{type Two}
+    │                   ^^^^^^^^ Did you mean `Two`?
 
-`Baz` is only a value, it cannot be imported as a type.
-```
+  `Two` is only a value, it cannot be imported as a type.
+  ```
 
 ### Formatter
 
