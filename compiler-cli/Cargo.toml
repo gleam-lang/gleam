@@ -9,32 +9,32 @@ license-file = "LICENCE"
 # The pure compiler
 gleam-core = { path = "../compiler-core" }
 # OS SIGINT and SIGTERM signal handling
-ctrlc = { version = "3.2.1", features = ["termination"] }
+ctrlc = { version = "3", features = ["termination"] }
 # Command line interface
-clap = { version = "4.5.4", features = ["derive"] }
+clap = { version = "4", features = ["derive"] }
 # Recursively traversing directories
-ignore = "0.4.22"
+ignore = "0"
 # Allow user to type in sensitive information without showing it in the shell
-rpassword = "7.3.1"
+rpassword = "7"
 # Async runtime
-tokio = { version = "1.24.2", features = ["rt", "rt-multi-thread"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
 # Further file system functions (i.e. copy directory)
-fs_extra = "1.2.0"
-tracing-subscriber = { version = "0.3.18", features = ["fmt", "env-filter"] }
+fs_extra = "1"
+tracing-subscriber = { version = "0", features = ["fmt", "env-filter"] }
 # HTTP client
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0", default-features = false, features = ["rustls-tls"] }
 # Checksums
-sha2 = "0.10.8"
+sha2 = "0"
 # Getting hostname
-hostname = "0.3.1"
+hostname = "0"
 # TOML parser/editor that preserves comments & formatting
-toml_edit = "0.9"
+toml_edit = "0"
 # File locking
-fslock = "0.2.1"
+fslock = "0"
 # Provides a way to determine if two files are the same using filesystem node ids
-same-file = "1.0.6"
+same-file = "1"
 # Open generated docs in browser
-opener = "0.7"
+opener = "0"
 camino = { workspace = true, features = ["serde1"] }
 async-trait.workspace = true
 base16.workspace = true
@@ -61,10 +61,10 @@ walkdir.workspace = true
 
 [dev-dependencies]
 # Creation of temporary directories
-tempfile = "3.2.0"
+tempfile = "3"
 pretty_assertions.workspace = true
 
 [build-dependencies]
 # For statically linking the VCRuntime on Windows when
 # using the MSVC toolchain
-static_vcruntime = "2.0.0"
+static_vcruntime = "2"
