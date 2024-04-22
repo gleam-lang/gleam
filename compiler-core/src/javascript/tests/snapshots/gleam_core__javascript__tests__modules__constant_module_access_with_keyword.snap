@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/javascript/tests/modules.rs
+expression: "\nimport rocket_ship\npub const variable = rocket_ship.class\n"
+---
+import * as $rocket_ship from "../rocket_ship.mjs";
+
+export const variable = $rocket_ship.class$;

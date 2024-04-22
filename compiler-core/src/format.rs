@@ -354,12 +354,25 @@ impl<'comments> Formatter<'comments> {
                         .group();
                     ".{".to_doc().append(unqualified).append("}")
                 };
+
                 let doc = docvec!["import ", module.as_str(), second];
-                match as_name {
-                    Some((AssignName::Variable(name) | AssignName::Discard(name), _)) => {
+                let default_module_access_name = module.split('/').last().map(EcoString::from);
+                match (default_module_access_name, as_name) {
+                    // If the `as name` is the same as the module name that would be
+                    // used anyways we won't render it. For example:
+                    // ```gleam
+                    // import gleam/int as int
+                    //                  ^^^^^^ this is redundant and removed
+                    // ```
+                    (Some(module_name), Some((AssignName::Variable(name), _)))
+                        if &module_name == name =>
+                    {
+                        doc
+                    }
+                    (_, None) => doc,
+                    (_, Some((AssignName::Variable(name) | AssignName::Discard(name), _))) => {
                         doc.append(" as ").append(name)
                     }
-                    None => doc,
                 }
             }
 
@@ -381,19 +394,21 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn const_expr<'a, A, B>(&mut self, value: &'a Constant<A, B>) -> Document<'a> {
-        match value {
+        let comments = self.pop_comments(value.location().start);
+        let document = match value {
             Constant::Int { value, .. } => self.int(value),
 
             Constant::Float { value, .. } => self.float(value),
 
             Constant::String { value, .. } => self.string(value),
 
-            Constant::List { elements, .. } => self.const_list(elements),
+            Constant::List {
+                elements, location, ..
+            } => self.const_list(elements, location),
 
-            Constant::Tuple { elements, .. } => "#"
-                .to_doc()
-                .append(wrap_args(elements.iter().map(|e| self.const_expr(e))))
-                .group(),
+            Constant::Tuple {
+                elements, location, ..
+            } => self.const_tuple(elements, location),
 
             Constant::BitArray {
                 segments, location, ..
@@ -455,27 +470,98 @@ impl<'comments> Formatter<'comments> {
                 module: Some(module),
                 ..
             } => docvec![module, ".", name],
+        };
+        commented(document, comments)
+    }
+
+    fn const_list<'a, A, B>(
+        &mut self,
+        elements: &'a [Constant<A, B>],
+        location: &SrcSpan,
+    ) -> Document<'a> {
+        if elements.is_empty() {
+            // We take all comments that come _before_ the end of the list,
+            // that is all comments that are inside "[" and "]", if there's
+            // any comment we want to put it inside the empty list!
+            return match printed_comments(self.pop_comments(location.end), false) {
+                None => "[]".to_doc(),
+                Some(comments) => "["
+                    .to_doc()
+                    .append(break_("", "").nest(INDENT))
+                    .append(comments)
+                    .append(break_("", ""))
+                    .append("]")
+                    // vvv We want to make sure the comments are on a separate
+                    //     line from the opening and closing brackets so we
+                    //     force the breaks to be split on newlines.
+                    .force_break(),
+            };
+        }
+
+        let comma = flex_break(",", ", ");
+        let elements = join(elements.iter().map(|e| self.const_expr(e)), comma);
+
+        let doc = break_("[", "[").append(elements).nest(INDENT);
+
+        // We get all remaining comments that come before the list's closing
+        // square bracket.
+        // If there's any we add those before the closing square bracket instead
+        // of moving those out of the list.
+        // Otherwise those would be moved out of the list.
+        let comments = self.pop_comments(location.end);
+        match printed_comments(comments, false) {
+            None => doc.append(break_(",", "")).append("]").group(),
+            Some(comment) => doc
+                .append(break_(",", "").nest(INDENT))
+                // ^ See how here we're adding the missing indentation to the
+                //   final break so that the final comment is as indented as the
+                //   list's items.
+                .append(comment)
+                .append(line())
+                .append("]")
+                .force_break(),
         }
     }
 
-    fn const_list<'a, A, B>(&mut self, elements: &'a [Constant<A, B>]) -> Document<'a> {
+    pub fn const_tuple<'a, A, B>(
+        &mut self,
+        elements: &'a [Constant<A, B>],
+        location: &SrcSpan,
+    ) -> Document<'a> {
         if elements.is_empty() {
-            return "[]".to_doc();
+            // We take all comments that come _before_ the end of the tuple,
+            // that is all comments that are inside "#(" and ")", if there's
+            // any comment we want to put it inside the empty list!
+            return match printed_comments(self.pop_comments(location.end), false) {
+                None => "#()".to_doc(),
+                Some(comments) => "#("
+                    .to_doc()
+                    .append(break_("", "").nest(INDENT))
+                    .append(comments)
+                    .append(break_("", ""))
+                    .append(")")
+                    // vvv We want to make sure the comments are on a separate
+                    //     line from the opening and closing parentheses so we
+                    //     force the breaks to be split on newlines.
+                    .force_break(),
+            };
         }
 
-        let comma: fn() -> Document<'a> = if elements.iter().all(Constant::is_simple) {
-            || flex_break(",", ", ")
-        } else {
-            || break_(",", ", ")
-        };
-        docvec![
-            break_("[", "["),
-            join(elements.iter().map(|e| self.const_expr(e)), comma())
-        ]
-        .nest(INDENT)
-        .append(break_(",", ""))
-        .append("]")
-        .group()
+        let args_docs = elements.iter().map(|e| self.const_expr(e));
+        let tuple_doc = break_("#(", "#(")
+            .append(join(args_docs, break_(",", ", ")).next_break_fits(NextBreakFitsMode::Disabled))
+            .nest(INDENT);
+
+        let comments = self.pop_comments(location.end);
+        match printed_comments(comments, false) {
+            None => tuple_doc.append(break_(",", "")).append(")"),
+            Some(comments) => tuple_doc
+                .append(break_(",", "").nest(INDENT))
+                .append(comments)
+                .append(line())
+                .append(")")
+                .force_break(),
+        }
     }
 
     pub fn docs_const_expr<'a>(
@@ -735,7 +821,7 @@ impl<'comments> Formatter<'comments> {
 
         let keyword = match kind {
             AssignmentKind::Let => "let ",
-            AssignmentKind::Assert => "let assert ",
+            AssignmentKind::Assert { .. } => "let assert ",
         };
 
         let pattern = self.pattern(pattern);
@@ -1045,6 +1131,25 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn tuple<'a>(&mut self, elements: &'a [UntypedExpr], location: &SrcSpan) -> Document<'a> {
+        if elements.is_empty() {
+            // We take all comments that come _before_ the end of the tuple,
+            // that is all comments that are inside "#(" and ")", if there's
+            // any comment we want to put it inside the empty tuple!
+            return match printed_comments(self.pop_comments(location.end), false) {
+                None => "#()".to_doc(),
+                Some(comments) => "#("
+                    .to_doc()
+                    .append(break_("", "").nest(INDENT))
+                    .append(comments)
+                    .append(break_("", ""))
+                    .append(")")
+                    // vvv We want to make sure the comments are on a separate
+                    //     line from the opening and closing parentheses so we
+                    //     force the breaks to be split on newlines.
+                    .force_break(),
+            };
+        }
+
         self.append_inlinable_wrapped_args(
             "#".to_doc(),
             elements,
@@ -1149,7 +1254,7 @@ impl<'comments> Formatter<'comments> {
         let constructor_doc = self.expr(constructor);
         let comments = self.pop_comments(spread.base.location().start);
         let spread_doc = commented("..".to_doc().append(self.expr(&spread.base)), comments);
-        let arg_docs = args.iter().map(|a| self.record_update_arg(a));
+        let arg_docs = args.iter().map(|a| self.record_update_arg(a).group());
         let all_arg_docs = once(spread_doc).chain(arg_docs);
         constructor_doc.append(wrap_args(all_arg_docs)).group()
     }
@@ -1613,7 +1718,8 @@ impl<'comments> Formatter<'comments> {
 
         let alternative_patterns = std::iter::once(&clause.pattern)
             .chain(&clause.alternative_patterns)
-            .map(|p| {
+            .enumerate()
+            .map(|(alternative_index, p)| {
                 // Here `p` is a single pattern that can be comprised of
                 // multiple subjects.
                 // ```gleam
@@ -1623,15 +1729,31 @@ impl<'comments> Formatter<'comments> {
                 //   | _, _ -> todo
                 // }
                 // ```
-                //
-                // We turn each subject pattern into a document and join those
-                // with a breakable comma (that's also going to be nested).
-                // Then we make sure that the formatter tries to keep each
-                // alternative on a single line by making it a group!
-                let patterns = p.iter().map(|p| self.pattern(p));
-                join(patterns, break_(",", ", ")).group().nest(INDENT)
+                let is_first_alternative = alternative_index == 0;
+                let subject_docs = p.iter().enumerate().map(|(subject_index, subject)| {
+                    // There's a small catch in turning each subject into a document.
+                    // Sadly we can't simply call `self.pattern` on each subject and
+                    // then nest each one in case it gets broken.
+                    // The first ever pattern that appears in a case clause (that is
+                    // the first subject of the first alternative) must not be nested
+                    // further; otherwise, when broken, it would have 2 extra spaces
+                    // of indentation: https://github.com/gleam-lang/gleam/issues/2940.
+                    let is_first_subject = subject_index == 0;
+                    let is_first_pattern_of_clause = is_first_subject && is_first_alternative;
+                    let subject_doc = self.pattern(subject);
+                    if is_first_pattern_of_clause {
+                        subject_doc
+                    } else {
+                        subject_doc.nest(INDENT)
+                    }
+                });
+                // We join all subjects with a breakable comma (that's also
+                // going to be nested) and make the subjects into a group to
+                // make sure the formatter tries to keep them on a single line.
+                join(subject_docs, break_(",", ", ").nest(INDENT)).group()
             });
-
+        // Last, we make sure that the formatter tries to keep each
+        // alternative on a single line by making it a group!
         join(alternative_patterns, alternatives_separator).group()
     }
 
@@ -2175,7 +2297,8 @@ impl<'a> Documentable<'a> for &'a ArgNames {
 fn pub_(publicity: Publicity) -> Document<'static> {
     match publicity {
         Publicity::Public => "pub ".to_doc(),
-        Publicity::Private | Publicity::Internal => nil(),
+        Publicity::Private => nil(),
+        Publicity::Internal => "@internal".to_doc().append(line()).append("pub "),
     }
 }
 

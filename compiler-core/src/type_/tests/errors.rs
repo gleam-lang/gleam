@@ -1708,6 +1708,32 @@ pub fn main(_x: two.Thing) {
 }
 
 #[test]
+fn value_imported_as_type() {
+    assert_with_module_error!(
+        (
+            "gleam/foo",
+            "pub type Bar {
+               Baz
+             }"
+        ),
+        "import gleam/foo.{type Baz}"
+    );
+}
+
+#[test]
+fn type_imported_as_value() {
+    assert_with_module_error!(
+        (
+            "gleam/foo",
+            "pub type Bar {
+               Baz
+             }"
+        ),
+        "import gleam/foo.{Bar}"
+    );
+}
+
+#[test]
 fn duplicate_module_function_arguments() {
     assert_module_error!(
         "
@@ -1762,4 +1788,27 @@ fn list() {
 #[test]
 fn mismatched_list_tail() {
     assert_error!("[\"foo\", ..[1, 2]]");
+}
+
+#[test]
+fn leak_multiple_private_types() {
+    assert_module_error!(
+        "
+        type Private {
+            Private
+        }
+
+        pub fn ret_private() -> Private {
+            Private
+        }
+
+        pub fn ret_private2() -> Private {
+            Private
+        }
+
+        pub fn main() {
+            ret_private()
+        }
+        "
+    );
 }

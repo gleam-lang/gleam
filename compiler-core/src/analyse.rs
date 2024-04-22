@@ -110,6 +110,26 @@ impl TargetSupport {
     }
 }
 
+#[derive(Debug)]
+pub struct InferenceFailure {
+    // Right now this is an option because we don't complete the module typing on error
+    // Once we add proper type holes and always return a module this should not be an option
+    pub ast: Option<TypedModule>,
+    // All the inference errors that occurred during type inference
+    pub errors: Vec1<Error>,
+}
+
+impl From<Error> for InferenceFailure {
+    // Used to create InferenceFailure from a singe error.
+    // Should not be needed once we start actually collecting all the errors.
+    fn from(error: Error) -> Self {
+        InferenceFailure {
+            ast: None,
+            errors: vec1::vec1![error],
+        }
+    }
+}
+
 // TODO: This takes too many arguments.
 #[allow(clippy::too_many_arguments)]
 /// Crawl the AST, annotating each node with the inferred type or
@@ -127,7 +147,8 @@ pub fn infer_module<A>(
     line_numbers: LineNumbers,
     package_config: &PackageConfig,
     src_path: Utf8PathBuf,
-) -> Result<TypedModule, Error> {
+) -> Result<TypedModule, InferenceFailure> {
+    let mut errors = Vec::new();
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
     let package = package_config.name.clone();
@@ -258,7 +279,7 @@ pub fn infer_module<A>(
             continue;
         }
         if let Some(leaked) = value.type_.find_private_type() {
-            return Err(Error::PrivateTypeLeak {
+            errors.push(Error::PrivateTypeLeak {
                 location: value.variant.definition_location(),
                 leaked,
             });
@@ -287,7 +308,10 @@ pub fn infer_module<A>(
 
     let is_internal = package_config.is_internal_module(name.as_str());
 
-    Ok(ast::Module {
+    // Sort the errors by location so that they are easier to debug.
+    errors.sort_by_key(|e| e.start_location());
+
+    let ast = ast::Module {
         documentation,
         name: name.clone(),
         definitions: typed_statements,
@@ -305,7 +329,15 @@ pub fn infer_module<A>(
             line_numbers,
             src_path,
         },
-    })
+    };
+
+    match Vec1::try_from_vec(errors) {
+        Err(_) => Ok(ast),
+        Ok(errors) => Err(InferenceFailure {
+            ast: Some(ast),
+            errors,
+        }),
+    }
 }
 
 fn validate_module_name(name: &EcoString) -> Result<(), Error> {

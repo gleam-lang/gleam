@@ -574,9 +574,15 @@ impl TypedDefinition {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             Definition::Function(function) => {
+                // Search for the corresponding node inside the function
+                // only if the index falls within the function's full location.
+                if !function.full_location().contains(byte_index) {
+                    return None;
+                }
+
                 if let Some(found) = function.body.iter().find_map(|s| s.find_node(byte_index)) {
                     return Some(found);
-                };
+                }
 
                 if let Some(found_arg) = function
                     .arguments
@@ -1433,23 +1439,19 @@ pub enum AssignmentKind {
     // let x = ...
     Let,
     // let assert x = ...
-    Assert,
+    Assert { location: SrcSpan },
 }
 
 impl AssignmentKind {
-    pub(crate) fn performs_exhaustiveness_check(&self) -> bool {
-        match self {
-            AssignmentKind::Let => true,
-            AssignmentKind::Assert => false,
-        }
-    }
-
     /// Returns `true` if the assignment kind is [`Assert`].
     ///
     /// [`Assert`]: AssignmentKind::Assert
     #[must_use]
     pub fn is_assert(&self) -> bool {
-        matches!(self, Self::Assert)
+        match self {
+            Self::Assert { .. } => true,
+            Self::Let => false,
+        }
     }
 }
 

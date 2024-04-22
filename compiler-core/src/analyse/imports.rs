@@ -78,6 +78,7 @@ impl<'a> Importer<'a> {
                 name: import.name.clone(),
                 module_name: module.name.clone(),
                 type_constructors: module.public_type_names(),
+                value_with_same_name: module.get_public_value(&import.name).is_some(),
             })?
             .clone()
             .with_location(import.location);
@@ -121,6 +122,7 @@ impl<'a> Importer<'a> {
                     name: import_name.clone(),
                     module_name: module.name.clone(),
                     value_constructors: module.public_value_names(),
+                    type_with_same_name: module.get_public_type(import_name).is_some(),
                 });
             }
         };

@@ -133,7 +133,7 @@ macro_rules! assert_error {
         let error = $crate::error::Error::Type {
             src: $src.into(),
             path: camino::Utf8PathBuf::from("/src/one/two.gleam"),
-            error,
+            errors: vec1::vec1![error],
         };
         let output = error.pretty_string();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -344,7 +344,7 @@ pub fn compile_module(
     src: &str,
     warnings: Option<Arc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
-) -> Result<TypedModule, crate::type_::Error> {
+) -> Result<TypedModule, Vec<crate::type_::Error>> {
     compile_module_with_opts(
         module_name,
         src,
@@ -362,7 +362,7 @@ pub fn compile_module_with_opts(
     dep: Vec<DependencyModule<'_>>,
     target: Target,
     target_support: TargetSupport,
-) -> Result<TypedModule, crate::type_::Error> {
+) -> Result<TypedModule, Vec<crate::type_::Error>> {
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
     let warnings = TypeWarningEmitter::new(
@@ -413,7 +413,7 @@ pub fn compile_module_with_opts(
     ast.name = module_name.into();
     let mut config = crate::config::PackageConfig::default();
     config.name = "thepackage".into();
-    crate::analyse::infer_module(
+    let inference_result = crate::analyse::infer_module(
         target,
         &ids,
         ast,
@@ -425,7 +425,12 @@ pub fn compile_module_with_opts(
         LineNumbers::new(src),
         &config,
         "".into(),
-    )
+    );
+
+    match inference_result {
+        Ok(ast) => Ok(ast),
+        Err(crate::analyse::InferenceFailure { errors, .. }) => Err(errors.to_vec()),
+    }
 }
 
 pub fn module_error(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
@@ -449,7 +454,7 @@ pub fn module_error_with_target(
     let error = Error::Type {
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
-        error,
+        errors: Vec1::try_from_vec(error).expect("should have at least one error"),
     };
     error.pretty_string()
 }

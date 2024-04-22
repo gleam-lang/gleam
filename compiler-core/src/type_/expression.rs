@@ -1062,8 +1062,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
-        if kind.performs_exhaustiveness_check() {
-            self.check_let_exhaustiveness(location, value.type_(), &pattern)?;
+        let exhaustiveness_check = self.check_let_exhaustiveness(location, value.type_(), &pattern);
+        match kind {
+            AssignmentKind::Let => exhaustiveness_check?,
+            AssignmentKind::Assert { location } if exhaustiveness_check.is_ok() => self
+                .environment
+                .warnings
+                .emit(Warning::RedundantAssertAssignment { location }),
+            AssignmentKind::Assert { .. } => {}
         }
 
         Ok(Assignment {
@@ -1621,6 +1627,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         },
                         module_name: module.name.clone(),
                         value_constructors: module.public_value_names(),
+                        type_with_same_name: false,
                     })?;
 
             // Emit a warning if the value being used is deprecated.
@@ -1952,6 +1959,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         module_name: module_name.clone(),
                         name: name.clone(),
                         value_constructors: module.public_value_names(),
+                        type_with_same_name: false,
                     })?
             }
         };

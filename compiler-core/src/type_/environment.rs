@@ -334,6 +334,7 @@ impl<'a> Environment<'a> {
                         name: name.clone(),
                         module_name: module.name.clone(),
                         type_constructors: module.public_type_names(),
+                        imported_type_as_value: false,
                     })
             }
         }?;
@@ -380,6 +381,7 @@ impl<'a> Environment<'a> {
                         name: name.clone(),
                         module_name: module.name.clone(),
                         type_constructors: module.public_type_names(),
+                        imported_type_as_value: false,
                     }
                 })
             }
@@ -416,6 +418,7 @@ impl<'a> Environment<'a> {
                         name: name.clone(),
                         module_name: module.name.clone(),
                         value_constructors: module.public_value_names(),
+                        imported_value_as_type: false,
                     }
                 })
             }

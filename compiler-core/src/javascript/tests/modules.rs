@@ -177,3 +177,35 @@ pub fn nasa_go() { go() }
 "#
     );
 }
+
+#[test]
+fn import_with_keyword() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            "rocket_ship",
+            r#"
+pub const class = 1
+pub const in = 2
+"#
+        ),
+        r#"
+import rocket_ship.{class, in as while}
+pub fn main() {
+  #(class, while)
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3004
+#[test]
+fn constant_module_access_with_keyword() {
+    assert_js!(
+        (CURRENT_PACKAGE, "rocket_ship", r#"pub const class = 1"#),
+        r#"
+import rocket_ship
+pub const variable = rocket_ship.class
+"#,
+    );
+}

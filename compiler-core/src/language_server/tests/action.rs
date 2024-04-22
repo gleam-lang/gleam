@@ -111,9 +111,25 @@ pub fn main() {
 ";
     let expected = "
 // test
-
 import result
 
+pub fn main() {
+  result.is_ok
+}
+";
+    assert_eq!(remove_unused_action(code, 2), expected.to_string())
+}
+
+#[test]
+fn test_remove_unused_start_of_file() {
+    let code = "import option
+import result
+
+pub fn main() {
+  result.is_ok
+}
+";
+    let expected = "import result
 
 pub fn main() {
   result.is_ok
@@ -136,7 +152,6 @@ pub fn main() {
     let expected = "
 // test
 import result.{is_ok}%SPACE%
-
 
 pub fn main() {
   is_ok
