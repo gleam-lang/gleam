@@ -76,6 +76,10 @@ impl TypedConstant {
 
     pub fn private_fn_deps(&self, already_found: &mut HashSet<EcoString>) {
         match self {
+            Constant::Int { .. } => todo!(),
+            Constant::Float { .. } => todo!(),
+            Constant::String { .. } => todo!(),
+
             TypedConstant::Var {
                 name, constructor, ..
             } => {
@@ -90,7 +94,11 @@ impl TypedConstant {
                 .iter()
                 .for_each(|arg| arg.value.private_fn_deps(already_found)),
 
-            _ => (),
+            Constant::Tuple { elements, .. } => todo!(),
+
+            Constant::List { elements, .. } => todo!(),
+
+            Constant::BitArray { segments, .. } => todo!(),
         }
     }
 }
