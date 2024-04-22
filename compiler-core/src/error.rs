@@ -1912,7 +1912,7 @@ Private types can only be used within the module that defines them.",
                     name,
                     module_name,
                     type_constructors,
-                    imported_type_as_value
+                    value_with_same_name: imported_type_as_value
                 } => {
                     let text = if *imported_type_as_value {
                         format!("`{name}` is only a value, it cannot be imported as a type.")
@@ -1945,7 +1945,7 @@ Private types can only be used within the module that defines them.",
                     name,
                     module_name,
                     value_constructors,
-                    imported_value_as_type,
+                    type_with_same_name: imported_value_as_type,
                 } => {
                     let text = if *imported_value_as_type {
                         format!("`{name}` is only a type, it cannot be imported as a value.")
@@ -1964,36 +1964,6 @@ Private types can only be used within the module that defines them.",
                                 } else {
                                     did_you_mean(name, value_constructors)
                                 },
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::UnknownModuleField {
-                    location,
-                    name,
-                    module_name,
-                    type_constructors,
-                    value_constructors,
-                } => {
-                    let options: Vec<_> = type_constructors
-                        .iter()
-                        .chain(value_constructors)
-                        .cloned()
-                        .collect();
-                    let text = format!("The module `{module_name}` does not have a `{name}` field.",);
-                    Diagnostic {
-                        title: "Unknown module field".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: did_you_mean(name, &options),
                                 span: *location,
                             },
                             path: path.clone(),
