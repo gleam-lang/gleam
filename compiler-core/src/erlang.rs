@@ -180,7 +180,7 @@ fn module_document<'a>(
             &mut type_exports,
             &mut type_defs,
             &module.name,
-            &module.overridden_publicities,
+            &overridden_publicity,
         );
     }
 

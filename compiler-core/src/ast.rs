@@ -19,7 +19,6 @@ use crate::type_::{
 use std::sync::Arc;
 
 use ecow::EcoString;
-use im::HashSet;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use vec1::Vec1;
@@ -45,7 +44,6 @@ pub struct Module<Info, Statements> {
     pub documentation: Vec<EcoString>,
     pub type_info: Info,
     pub definitions: Vec<Statements>,
-    pub overridden_publicities: HashSet<EcoString>,
 }
 
 impl TypedModule {
