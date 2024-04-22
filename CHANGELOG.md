@@ -128,3 +128,6 @@
 
 - Fixed variables in constant expressions not being escaped correctly when
   exporting to JavaScript. ([PgBiel](https://github.com/PgBiel))
+
+- Fixed a typo when attempting to publish a package with non-Hex dependencies
+  ([inoas](https://github.com/inoas))

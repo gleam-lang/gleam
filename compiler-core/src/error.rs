@@ -3072,8 +3072,9 @@ licences = ["Apache-2.0"]"#
                 }]
             }
 
+
             Error::PublishNonHexDependencies { package } => vec![Diagnostic {
-                title: "Unblished dependencies".into(),
+                title: "Unpublished dependencies".into(),
                 text: wrap_format!(
                     "The package cannot be published to Hex \
 because dependency `{package}` is not a Hex dependency.",
