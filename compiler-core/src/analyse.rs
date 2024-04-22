@@ -33,7 +33,6 @@ use crate::{
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
-use im::HashSet;
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -175,7 +174,6 @@ pub fn infer_module<A>(
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
     let mut env = imports::Importer::run(origin, env, &statements.imports)?;
-    let mut overridden_publicities = HashSet::new();
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
@@ -251,8 +249,7 @@ pub fn infer_module<A>(
                     working_group.push(statement);
                 }
                 CallGraphNode::ModuleConstant(c) => {
-                    let statement =
-                        infer_module_constant(c, &mut env, &mut overridden_publicities, &name)?;
+                    let statement = infer_module_constant(c, &mut env, &name)?;
                     working_group.push(statement);
                 }
             }
@@ -318,7 +315,6 @@ pub fn infer_module<A>(
         documentation,
         name: name.clone(),
         definitions: typed_statements,
-        overridden_publicities,
         type_info: ModuleInterface {
             name,
             types,
@@ -1079,7 +1075,6 @@ fn record_imported_items_for_use_detection<A>(
 fn infer_module_constant(
     c: ModuleConstant<(), ()>,
     environment: &mut Environment<'_>,
-    overridden_publicities: &mut HashSet<EcoString>,
     module_name: &EcoString,
 ) -> Result<TypedDefinition, Error> {
     let ModuleConstant {
@@ -1129,8 +1124,6 @@ fn infer_module_constant(
 
     if publicity.is_private() {
         environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
-    } else {
-        typed_expr.private_fn_deps(overridden_publicities);
     }
 
     Ok(Definition::ModuleConstant(ModuleConstant {
