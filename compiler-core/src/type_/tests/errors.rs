@@ -1708,6 +1708,32 @@ pub fn main(_x: two.Thing) {
 }
 
 #[test]
+fn value_imported_as_type() {
+    assert_with_module_error!(
+        (
+            "gleam/foo",
+            "pub type Bar {
+               Baz
+             }"
+        ),
+        "import gleam/foo.{type Baz}"
+    );
+}
+
+#[test]
+fn type_imported_as_value() {
+    assert_with_module_error!(
+        (
+            "gleam/foo",
+            "pub type Bar {
+               Baz
+             }"
+        ),
+        "import gleam/foo.{Bar}"
+    );
+}
+
+#[test]
 fn duplicate_module_function_arguments() {
     assert_module_error!(
         "

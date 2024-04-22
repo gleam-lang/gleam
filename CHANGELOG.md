@@ -55,6 +55,28 @@
 
 - Initial support for type analysis returning multiple errors. ([Ameen Radwan](https://github.com/Acepie))
 
+- Improve error message if importing type using the value import syntax or vice versa. ([Pi-Cla](https://github.com/Pi-Cla/))
+
+```
+error: Unknown module field
+  ┌─ /src/one/two.gleam:1:19
+  │
+1 │ import gleam/foo.{Bar}
+  │                   ^^^ Did you mean `type Bar`?
+
+`Bar` is only a type, it cannot be imported as a value.
+```
+
+```
+error: Unknown module type
+  ┌─ /src/one/two.gleam:1:19
+  │
+1 │ import gleam/foo.{type Baz}
+  │                   ^^^^^^^^ Did you mean `Baz`?
+
+`Baz` is only a value, it cannot be imported as a type.
+```
+
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.

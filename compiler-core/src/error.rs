@@ -1912,8 +1912,13 @@ Private types can only be used within the module that defines them.",
                     name,
                     module_name,
                     type_constructors,
+                    imported_type_as_value
                 } => {
-                    let text = format!("The module `{module_name}` does not have a `{name}` type.",);
+                    let text = if *imported_type_as_value {
+                        format!("`{name}` is only a value, it cannot be imported as a type.")
+                    } else {
+                        format!("The module `{module_name}` does not have a `{name}` type.")
+                    };
                     Diagnostic {
                         title: "Unknown module type".into(),
                         text,
@@ -1921,7 +1926,11 @@ Private types can only be used within the module that defines them.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: did_you_mean(name, type_constructors),
+                                text: if *imported_type_as_value {
+                                    Some(format!("Did you mean `{name}`?"))
+                                } else {
+                                    did_you_mean(name, type_constructors)
+                                },
                                 span: *location,
                             },
                             path: path.clone(),
@@ -1936,8 +1945,13 @@ Private types can only be used within the module that defines them.",
                     name,
                     module_name,
                     value_constructors,
+                    imported_value_as_type,
                 } => {
-                    let text = format!("The module `{module_name}` does not have a `{name}` value.",);
+                    let text = if *imported_value_as_type {
+                        format!("`{name}` is only a type, it cannot be imported as a value.")
+                    } else {
+                        format!("The module `{module_name}` does not have a `{name}` value.")
+                    };
                     Diagnostic {
                         title: "Unknown module field".into(),
                         text,
@@ -1945,7 +1959,11 @@ Private types can only be used within the module that defines them.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: did_you_mean(name, value_constructors),
+                                text: if *imported_value_as_type {
+                                    Some(format!("Did you mean `type {name}`?"))
+                                } else {
+                                    did_you_mean(name, value_constructors)
+                                },
                                 span: *location,
                             },
                             path: path.clone(),
