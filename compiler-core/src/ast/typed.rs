@@ -164,8 +164,6 @@ impl TypedExpr {
         }
     }
 
-    // This could be optimised in places to exit early if the first of a series
-    // of expressions is after the byte index.
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             Self::Var { .. }
@@ -185,20 +183,44 @@ impl TypedExpr {
                 .find_map(|e| e.find_node(byte_index))
                 .or_else(|| finally.find_node(byte_index)),
 
+            // Exit the search and return None if during iteration a statement
+            // is found with a start index beyond the index under search.
             Self::Block { statements, .. } => {
-                statements.iter().find_map(|e| e.find_node(byte_index))
+                for statement in statements {
+                    if statement.location().start > byte_index {
+                        break;
+                    }
+
+                    if let Some(located) = statement.find_node(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                None
             }
 
+            // Exit the search and return the encompassing type (e.g., list or tuple)
+            // if during iteration, an element is encountered with a start index
+            // beyond the index under search.
             Self::Tuple {
                 elems: expressions, ..
             }
             | Self::List {
                 elements: expressions,
                 ..
-            } => expressions
-                .iter()
-                .find_map(|e| e.find_node(byte_index))
-                .or_else(|| self.self_if_contains_location(byte_index)),
+            } => {
+                for expression in expressions {
+                    if expression.location().start > byte_index {
+                        break;
+                    }
+
+                    if let Some(located) = expression.find_node(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                self.self_if_contains_location(byte_index)
+            }
 
             Self::NegateBool { value, .. } | Self::NegateInt { value, .. } => value
                 .find_node(byte_index)
