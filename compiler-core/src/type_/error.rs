@@ -69,6 +69,7 @@ pub enum Error {
         name: EcoString,
         module_name: EcoString,
         type_constructors: Vec<EcoString>,
+        imported_type_as_value: bool,
     },
 
     UnknownModuleValue {
@@ -76,6 +77,7 @@ pub enum Error {
         name: EcoString,
         module_name: EcoString,
         value_constructors: Vec<EcoString>,
+        imported_value_as_type: bool,
     },
 
     UnknownModuleField {
@@ -659,6 +661,7 @@ pub enum UnknownValueConstructorError {
         name: EcoString,
         module_name: EcoString,
         value_constructors: Vec<EcoString>,
+        imported_value_as_type: bool,
     },
 }
 
@@ -691,11 +694,13 @@ pub fn convert_get_value_constructor_error(
             name,
             module_name,
             value_constructors,
+            imported_value_as_type,
         } => Error::UnknownModuleValue {
             location,
             name,
             module_name,
             value_constructors,
+            imported_value_as_type,
         },
     }
 }
@@ -722,6 +727,7 @@ pub enum UnknownTypeConstructorError {
         name: EcoString,
         module_name: EcoString,
         type_constructors: Vec<EcoString>,
+        imported_type_as_value: bool,
     },
 }
 
@@ -749,11 +755,13 @@ pub fn convert_get_type_constructor_error(
             name,
             module_name,
             type_constructors,
+            imported_type_as_value,
         } => Error::UnknownModuleType {
             location: *location,
             name,
             module_name,
             type_constructors,
+            imported_type_as_value,
         },
     }
 }
