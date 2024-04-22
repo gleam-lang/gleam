@@ -163,15 +163,11 @@ fn module_document<'a>(
         .append(").")
         .append(line());
 
-    let mut overridden_publicity = HashSet::new();
-
-    for def in module.definitions.iter() {
-        if let Definition::ModuleConstant(c) = def {
-            if c.publicity.is_importable() {
-                c.value.private_fn_deps(&mut overridden_publicity)
-            }
-        }
-    }
+    // We need to know which private functions are referenced in importable
+    // constants so that we can export them anyway in the generated Erlang.
+    // This is because otherwise when the constant is used in another module it
+    // would result in an error as it tries to reference this private function.
+    let overridden_publicity = find_private_functions_referenced_in_importable_constants(module);
 
     for s in &module.definitions {
         register_imports(
@@ -2036,5 +2032,51 @@ impl<'a> TypePrinter<'a> {
     fn var_as_any(mut self) -> Self {
         self.var_as_any = true;
         self
+    }
+}
+
+fn find_private_functions_referenced_in_importable_constants(
+    module: &TypedModule,
+) -> HashSet<EcoString> {
+    let mut overridden_publicity = HashSet::new();
+
+    for def in module.definitions.iter() {
+        if let Definition::ModuleConstant(c) = def {
+            if c.publicity.is_importable() {
+                find_referenced_private_functions(&c.value, &mut overridden_publicity)
+            }
+        }
+    }
+    overridden_publicity
+}
+
+fn find_referenced_private_functions(
+    constant: &TypedConstant,
+    already_found: &mut HashSet<EcoString>,
+) {
+    match constant {
+        Constant::Int { .. } => todo!(),
+        Constant::Float { .. } => todo!(),
+        Constant::String { .. } => todo!(),
+
+        TypedConstant::Var {
+            name, constructor, ..
+        } => {
+            if let Some(ValueConstructor { type_, .. }) = constructor.as_deref() {
+                if let Type::Fn { .. } = **type_ {
+                    let _ = already_found.insert(name.clone());
+                }
+            }
+        }
+
+        TypedConstant::Record { args, .. } => args
+            .iter()
+            .for_each(|arg| find_referenced_private_functions(&arg.value, already_found)),
+
+        Constant::Tuple { elements, .. } => todo!(),
+
+        Constant::List { elements, .. } => todo!(),
+
+        Constant::BitArray { segments, .. } => todo!(),
     }
 }
