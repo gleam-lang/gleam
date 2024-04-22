@@ -36,7 +36,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/thebugcatcher">Adi Iyengar</a> -
   <a href="https://github.com/aidenfoxivey">Aiden Fox Ivey</a> -
   <a href="https://github.com/JitPackJoyride">Ajit Krishna</a> -
-  <a href="https://github.com/aldrin-ronco">aldrin-ronco</a> -
   <a href="https://alembic.com.au">Alembic</a> -
   <a href="https://github.com/rawhat">Alex Manning</a> -
   <a href="https://github.com/akoutmos">Alexander Koutmos</a> -
@@ -61,6 +60,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/briancorbinxyz">Brian Corbin</a> -
   <a href="https://github.com/brian-dawn">Brian Dawn</a> -
   <a href="https://github.com/bglusman">Brian Glusman</a> -
+  <a href="https://github.com/b-bruno">Bruno B.</a> -
   <a href="https://github.com/nono">Bruno Michel</a> -
   <a href="https://github.com/bucsi">bucsi</a> -
   <a href="https://github.com/carlomunguia">Carlo Munguia</a> -
@@ -165,14 +165,12 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/hamptokr">Kramer Hampton</a> -
   <a href="https://github.com/krystofrezac">Kryštof Řezáč</a> -
   <a href="https://github.com/krzysztofgb">Krzysztof G.</a> -
-  <a href="https://github.com/lawik">Lars Wikman</a> -
   <a href="https://github.com/leostera">Leandro Ostera</a> -
   <a href="https://github.com/leonqadirie">Leon Qadirie</a> -
   <a href="https://github.com/defp">lidashuang</a> -
   <a href="https://github.com/LighghtEeloo">LighghtEeloo</a> -
   <a href="https://github.com/wowi42">Loïc Tosser</a> -
   <a href="https://github.com/lpetic">Lucian Petic</a> -
-  <a href="https://github.com/leopoldhub">Léopold Hubert</a> -
   <a href="https://github.com/manuel-rubio">Manuel Rubio</a> -
   <a href="https://github.com/ideaMarcos">Marcøs</a> -
   <a href="https://github.com/AYM1607">Mariano Uvalle</a> -
@@ -258,6 +256,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/tsloughter">Tristan Sloughter</a> -
   <a href="https://github.com/sandsower">Vic Valenzuela</a> -
   <a href="https://github.com/rodrigues">Victor Rodrigues</a> -
+  <a href="https://github.com/VincentCosta6">Vincent Costa</a> -
   <a href="https://github.com/PerpetualPossum">Viv Verner</a> -
   <a href="https://github.com/yelps">Volker Rabe</a> -
   <a href="https://github.com/weizhliu">Weizheng Liu</a> -
