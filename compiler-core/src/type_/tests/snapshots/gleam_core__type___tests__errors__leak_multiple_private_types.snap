@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n        type Private {\n            Private\n        }\n\n        pub fn ret_private() -> Private {\n            Private\n        }\n\n        pub fn ret_private2() -> Private {\n            Private\n        }\n\n        pub fn main() {\n            ret_private()\n        }\n        "
+---
+error: Private type used in public interface
+  ┌─ /src/one/two.gleam:6:9
+  │
+6 │         pub fn ret_private() -> Private {
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following type is private, but is being used by this public export.
+
+    Private
+
+Private types can only be used within the module that defines them.
+
+error: Private type used in public interface
+   ┌─ /src/one/two.gleam:10:9
+   │
+10 │         pub fn ret_private2() -> Private {
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following type is private, but is being used by this public export.
+
+    Private
+
+Private types can only be used within the module that defines them.
+
+error: Private type used in public interface
+   ┌─ /src/one/two.gleam:14:9
+   │
+14 │         pub fn main() {
+   │         ^^^^^^^^^^^^^
+
+The following type is private, but is being used by this public export.
+
+    Private
+
+Private types can only be used within the module that defines them.

@@ -6,6 +6,7 @@
 
 - A helpful error message is now shown if the `manifest.toml` file has been
   edited to be invalid in some way. ([zahash](https://github.com/zahash))
+
   ```
   error: Corrupt manifest.toml
 
@@ -17,6 +18,7 @@
 - The error message shown when unable to find package versions that satisfy all
   the version constraints specified for a project's dependencies has been
   greatly improved. ([zahash](https://github.com/zahash))
+
   ```
   error: Dependency resolution failed
 
@@ -37,6 +39,7 @@
 - The compiler will now raise a warning for `let assert` assignments where the
   assertion is redundant.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
   ```
   warning: Redundant assertion
     ┌─ /home/lucy/src/app/src/app.gleam:4:7
@@ -50,20 +53,59 @@
 - Empty case expressions are no longer parse errors and will instead be
   exhaustiveness errors. ([Race Williams](https://github.com/raquentin))
 
-- Introduced some enhancements to the tree traversal algorithm, such that 
-  less work needs to be done in order to find the correct node. ([Milco Kats](https://github.com/katsmil))
+- Initial support for type analysis returning multiple errors. ([Ameen Radwan](https://github.com/Acepie))
+
+- Improve error message if importing type using the value import syntax or vice versa. ([Pi-Cla](https://github.com/Pi-Cla/))
+
+```
+error: Unknown module field
+  ┌─ /src/one/two.gleam:1:19
+  │
+1 │ import gleam/foo.{Bar}
+  │                   ^^^ Did you mean `type Bar`?
+
+`Bar` is only a type, it cannot be imported as a value.
+```
+
+```
+error: Unknown module type
+  ┌─ /src/one/two.gleam:1:19
+  │
+1 │ import gleam/foo.{type Baz}
+  │                   ^^^^^^^^ Did you mean `Baz`?
+
+`Baz` is only a value, it cannot be imported as a type.
+```
 
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
   ```gleam
   import gleam/result as result
   ```
+
   is formatted to
+
   ```gleam
   import gleam/result
   ```
+
+- Comments are no longer moved out of constant lists, constant tuples and empty
+  tuples. You can now write this:
+
+  ```gleam
+  const values = [
+    // This is a comment!
+    1, 2, 3
+    // Another comment...
+    11,
+    // And a final one.
+  ]
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Language Server
 

@@ -1627,6 +1627,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         },
                         module_name: module.name.clone(),
                         value_constructors: module.public_value_names(),
+                        type_with_same_name: false,
                     })?;
 
             // Emit a warning if the value being used is deprecated.
@@ -1958,6 +1959,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         module_name: module_name.clone(),
                         name: name.clone(),
                         value_constructors: module.public_value_names(),
+                        type_with_same_name: false,
                     })?
             }
         };

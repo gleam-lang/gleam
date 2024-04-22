@@ -1,13 +1,11 @@
 ---
 source: compiler-core/src/type_/tests/imports.rs
-assertion_line: 213
 expression: "import one.{One, type One}\n\npub fn main() -> One {\n  todo\n}\n"
 ---
 error: Unknown module field
   ┌─ /src/one/two.gleam:1:13
   │
 1 │ import one.{One, type One}
-  │             ^^^
+  │             ^^^ Did you mean `type One`?
 
-The module `one` does not have a `One` value.
-
+`One` is only a type, it cannot be imported as a value.
