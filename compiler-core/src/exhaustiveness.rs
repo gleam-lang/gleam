@@ -299,18 +299,23 @@ impl<'a> Compiler<'a> {
             .map(|row| self.move_unconditional_patterns(row))
             .collect::<Vec<_>>();
 
-        // There may be multiple rows, but if the first one has no patterns
-        // those extra rows are redundant, as a row without columns/patterns
-        // always matches.
-        let first_row_always_matches = rows.first().map(|c| c.columns.is_empty()).unwrap_or(false);
-        if first_row_always_matches {
-            let row = rows.remove(0);
-            self.diagnostics.reachable.push(row.body.clause_index);
+        // There may be multiple rows, but if any row has the `_` pattern or no column/pattern
+        // then the rows beneath it are redundant, as that row will always match
+        for (i, r) in rows.iter().enumerate() {
+            if r.columns.is_empty() {
+                let mut row = Row::new(Vec::new(), None, Body::new(0));
+                for _ in 0..=i {
+                    row = rows.remove(0);
+                    self.diagnostics.reachable.push(row.body.clause_index);
+                }
 
-            return match row.guard {
-                Some(guard) => Decision::Guard(guard, row.body, Box::new(self.compile_rows(rows))),
-                None => Decision::Success(row.body),
-            };
+                return match row.guard {
+                    Some(guard) => {
+                        Decision::Guard(guard, row.body, Box::new(self.compile_rows(rows)))
+                    }
+                    None => Decision::Success(row.body),
+                };
+            }
         }
 
         match self.branch_mode(&rows) {
