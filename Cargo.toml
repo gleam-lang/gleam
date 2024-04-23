@@ -31,7 +31,7 @@ protobuf = "3.4"
 # gzip (de)compression
 flate2 = "1.0"
 # RSA signature and SHA256 checksum verification
-ring = "0.16"
+ring = "0.17"
 # PEM -> DER conversion
 x509-parser = "0.15"
 # Pubgrub dependency resolution algorithm
