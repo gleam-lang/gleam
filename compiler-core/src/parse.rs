@@ -2892,7 +2892,7 @@ where
                     self.extra.module_comments.push(SrcSpan { start, end });
                 }
                 Some(Ok((start, Token::NewLine, _))) => {
-                    let _ = self.extra.new_lines.insert(start);
+                    let _ = self.extra.new_lines.push(start);
                 }
 
                 // die on lex error

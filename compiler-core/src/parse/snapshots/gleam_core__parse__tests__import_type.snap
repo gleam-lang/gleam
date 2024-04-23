@@ -58,6 +58,6 @@ Parsed {
         doc_comments: [],
         comments: [],
         empty_lines: [],
-        new_lines: {},
+        new_lines: [],
     },
 }

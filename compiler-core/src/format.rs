@@ -16,7 +16,7 @@ use crate::{
 };
 use ecow::EcoString;
 use itertools::Itertools;
-use std::{collections::BTreeSet, sync::Arc};
+use std::{cmp::Ordering, sync::Arc};
 use vec1::Vec1;
 
 use crate::type_::Deprecation;
@@ -41,7 +41,7 @@ pub(crate) struct Intermediate<'a> {
     doc_comments: Vec<Comment<'a>>,
     module_comments: Vec<Comment<'a>>,
     empty_lines: &'a [u32],
-    new_lines: &'a BTreeSet<u32>,
+    new_lines: &'a [u32],
 }
 
 impl<'a> Intermediate<'a> {
@@ -75,7 +75,7 @@ pub struct Formatter<'a> {
     doc_comments: &'a [Comment<'a>],
     module_comments: &'a [Comment<'a>],
     empty_lines: &'a [u32],
-    new_lines: Option<&'a BTreeSet<u32>>,
+    new_lines: &'a [u32],
 }
 
 impl<'comments> Formatter<'comments> {
@@ -89,7 +89,7 @@ impl<'comments> Formatter<'comments> {
             doc_comments: &extra.doc_comments,
             module_comments: &extra.module_comments,
             empty_lines: extra.empty_lines,
-            new_lines: Some(extra.new_lines),
+            new_lines: &extra.new_lines,
         }
     }
 
@@ -1346,20 +1346,24 @@ impl<'comments> Formatter<'comments> {
         let first = self.expr(first).group();
         docs.push(self.operator_side(first, 5, first_precedence));
 
-        let try_to_keep_on_one_line = if let Some(new_lines) = self.new_lines {
-            let pipeline_start = expressions.first().location().start;
-            let pipeline_end = expressions.last().location().end;
-            // If there's any newline between the pipeline start and end
-            // then we want to force the pipeline to be split on multiple lines.
-            new_lines
-                .range(pipeline_start..pipeline_end)
-                .next()
-                .is_none()
-        } else {
-            // If we are not keeping track of newlines in the source code then
-            // we split the pipeline by default.
-            false
-        };
+        let pipeline_start = expressions.first().location().start;
+        let pipeline_end = expressions.last().location().end;
+        let try_to_keep_on_one_line = self
+            .new_lines
+            .binary_search_by(|newline| {
+                if *newline <= pipeline_start {
+                    Ordering::Less
+                } else if *newline >= pipeline_end {
+                    Ordering::Greater
+                } else {
+                    // If the newline is in between the pipe start and end
+                    // then we've found it!
+                    Ordering::Equal
+                }
+            })
+            // If we couldn't find any newline between the start and end of
+            // the pipeline then we will try and keep it on a single line.
+            .is_err();
 
         for expr in expressions.iter().skip(1) {
             let comments = self.pop_comments(expr.location().start);
