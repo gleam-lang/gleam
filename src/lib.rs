@@ -10,7 +10,7 @@ use bytes::buf::Buf;
 use flate2::read::GzDecoder;
 use http::{Method, StatusCode};
 use lazy_static::lazy_static;
-use protobuf::Message;
+use protobuf::{Message, MessageField};
 use regex::Regex;
 use ring::digest::{Context, SHA256};
 use serde::Deserialize;
@@ -248,7 +248,7 @@ pub fn get_repository_versions_response(
         verify_payload(signed, public_key).map_err(|_| ApiError::IncorrectPayloadSignature)?;
 
     let versions = Versions::parse_from_bytes(&payload)?
-        .take_packages()
+        .packages
         .into_iter()
         .map(|mut n| {
             let parse_version = |v: &str| {
@@ -256,8 +256,8 @@ pub fn get_repository_versions_response(
                 Version::parse(v).map_err(err)
             };
             let versions = n
-                .take_versions()
-                .into_iter()
+                .versions
+                .iter()
                 .map(|v| parse_version(v.as_str()))
                 .collect::<Result<Vec<Version>, ApiError>>()?;
             Ok((n.take_name(), versions))
@@ -306,7 +306,8 @@ pub fn get_package_response(
 
     let mut package = proto::package::Package::parse_from_bytes(&payload)?;
     let releases = package
-        .take_releases()
+        .releases
+        .clone()
         .into_iter()
         .map(proto_to_release)
         .collect::<Result<Vec<_>, _>>()?;
@@ -482,7 +483,7 @@ pub enum ApiError {
     IncorrectPayloadSignature,
 
     #[error(transparent)]
-    InvalidProtobuf(#[from] protobuf::ProtobufError),
+    InvalidProtobuf(#[from] protobuf::Error),
 
     #[error("unexpected version format {0}")]
     InvalidVersionFormat(String),
@@ -549,16 +550,12 @@ fn read_and_check_body(reader: impl std::io::Read, checksum: &[u8]) -> Result<Ve
 }
 
 fn proto_to_retirement_status(
-    mut status: proto::package::RetirementStatus,
+    status: MessageField<proto::package::RetirementStatus>,
 ) -> Option<RetirementStatus> {
-    if status.has_reason() {
-        Some(RetirementStatus {
-            message: status.take_message(),
-            reason: proto_to_retirement_reason(status.get_reason()),
-        })
-    } else {
-        None
-    }
+    status.into_option().map(|mut stat| RetirementStatus {
+        message: stat.take_message(),
+        reason: proto_to_retirement_reason(stat.reason()),
+    })
 }
 
 fn proto_to_retirement_reason(reason: proto::package::RetirementReason) -> RetirementReason {
@@ -597,16 +594,17 @@ fn proto_to_dep(mut dep: proto::package::Dependency) -> Result<(String, Dependen
 
 fn proto_to_release(mut release: proto::package::Release) -> Result<Release<()>, ApiError> {
     let dependencies = release
-        .take_dependencies()
+        .dependencies
+        .clone()
         .into_iter()
         .map(proto_to_dep)
         .collect::<Result<HashMap<_, _>, _>>()?;
     let version =
-        Version::try_from(release.get_version()).expect("Failed to parse version format from Hex");
+        Version::try_from(release.version()).expect("Failed to parse version format from Hex");
     Ok(Release {
         version,
         outer_checksum: release.take_outer_checksum(),
-        retirement_status: proto_to_retirement_status(release.take_retired()),
+        retirement_status: proto_to_retirement_status(release.retired),
         requirements: dependencies,
         meta: (),
     })
@@ -775,7 +773,7 @@ fn verify_payload(mut signed: Signed, pem_public_key: &[u8]) -> Result<Vec<u8>, 
         &ring::signature::RSA_PKCS1_2048_8192_SHA512,
         &spki.subject_public_key,
     )
-    .verify(payload.as_slice(), signed.get_signature());
+    .verify(payload.as_slice(), signed.signature());
 
     if verification.is_ok() {
         Ok(payload)

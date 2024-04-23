@@ -1,5 +1,5 @@
 fn main() {
-    // protobuf_codegen_pure::Codegen::new()
+    // protobuf_codegen::Codegen::new()
     //     .out_dir("src/proto")
     //     .inputs(&[
     //         // "proto/names.proto",
