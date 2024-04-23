@@ -1,5 +1,3 @@
-use im::HashSet;
-
 use super::*;
 use crate::type_::{FieldMap, HasType};
 
