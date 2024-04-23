@@ -180,3 +180,29 @@ fn use_private_in_internal() {
         "#
     );
 }
+
+#[test]
+fn use_private_in_list() {
+    assert_erl!(
+        r#"
+          fn identity(a) {
+            a
+          }
+
+          pub const funcs = [identity]
+        "#
+    )
+}
+
+#[test]
+fn use_private_in_tuple() {
+    assert_erl!(
+        r#"
+          fn identity(a) {
+            a
+          }
+
+          pub const funcs = #(identity)
+        "#
+    )
+}
