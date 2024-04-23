@@ -45,11 +45,11 @@ base16 = { version = "0.2", features = ["alloc"] }
 # HTTP client
 reqwest = { version = "0.12", features = ["json"] }
 # HTTP mock server
-mockito = "0.31.1"
+mockito = "1.4"
 # Async runtime
 tokio = { version = "1", features = ["full"] }
 # toml encoding
-toml = "0.5"
+toml = "0.8"
 
 [build-dependencies]
 # Protobuf code generation
