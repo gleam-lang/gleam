@@ -6010,3 +6010,19 @@ fn comments_inside_empty_tuple() {
 "#
     );
 }
+
+#[test]
+fn comments_at_the_end_of_anonymous_function() {
+    assert_format!(
+        r#"pub fn main() {
+  fn() {
+    1
+    // a final comment
+
+    // another final comment
+    // at the end of the block
+  }
+}
+"#
+    );
+}
