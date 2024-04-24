@@ -2874,25 +2874,34 @@ where
     // returns old tok0
     fn next_tok(&mut self) -> Option<Spanned> {
         let t = self.tok0.take();
+        let mut previous_newline = None;
         let mut nxt;
         loop {
             match self.tokens.next() {
                 // gather and skip extra
-                Some(Ok((s, Token::EmptyLine, _))) => {
-                    self.extra.empty_lines.push(s);
-                }
                 Some(Ok((start, Token::CommentNormal, end))) => {
                     self.extra.comments.push(SrcSpan { start, end });
+                    previous_newline = None;
                 }
                 Some(Ok((start, Token::CommentDoc { content }, end))) => {
                     self.extra.doc_comments.push(SrcSpan::new(start, end));
                     self.doc_comments.push_back((start, content));
+                    previous_newline = None;
                 }
                 Some(Ok((start, Token::CommentModule, end))) => {
                     self.extra.module_comments.push(SrcSpan { start, end });
+                    previous_newline = None;
                 }
                 Some(Ok((start, Token::NewLine, _))) => {
-                    let _ = self.extra.new_lines.push(start);
+                    self.extra.new_lines.push(start);
+                    // If the previous token is a newline as well that means we
+                    // have run into an empty line.
+                    if let Some(start) = previous_newline {
+                        // We increase the byte position so that newline's start
+                        // doesn't overlap with the previous token's end.
+                        self.extra.empty_lines.push(start + 1);
+                    }
+                    previous_newline = Some(start);
                 }
 
                 // die on lex error
@@ -3445,7 +3454,6 @@ fn is_reserved_word(tok: Token) -> bool {
         | Token::EndOfFile
         | Token::CommentNormal
         | Token::CommentModule
-        | Token::EmptyLine
         | Token::NewLine => false,
     }
 }

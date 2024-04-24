@@ -432,26 +432,11 @@ where
                 self.eat_single_char(Token::Hash);
             }
             '\n' | ' ' | '\t' | '\x0C' => {
-                // Skip whitespaces and consume empty lines
-
-                // Add one, so the empty line does not overlap with previous token's end
-                let tok_start = self.get_pos() + 1;
-
-                // We want to emit newline tokens
+                let tok_start = self.get_pos();
+                let _ = self.next_char();
+                let tok_end = self.get_pos();
                 if c == '\n' {
-                    self.emit((tok_start, Token::NewLine, tok_start));
-                }
-
-                let mut newlines = 0;
-                while let Some('\n' | ' ' | '\t' | '\x0C') = self.chr0 {
-                    if self.next_char() == Some('\n') {
-                        self.emit((self.get_pos(), Token::NewLine, self.get_pos()));
-                        newlines += 1;
-                    }
-                }
-                if newlines > 1 {
-                    let tok_end = self.get_pos();
-                    self.emit((tok_start, Token::EmptyLine, tok_end));
+                    self.emit((tok_start, Token::NewLine, tok_end));
                 }
             }
             c => {
