@@ -963,7 +963,7 @@ pub fn main() {
                     },
                     end: Position {
                         line: 0,
-                        character: 11
+                        character: 10
                     }
                 },
                 new_text: "gleam".into()
@@ -1041,7 +1041,7 @@ pub fn test_helper() {
                         },
                         end: Position {
                             line: 0,
-                            character: 13
+                            character: 12
                         }
                     },
                     new_text: "app".into()
@@ -1059,7 +1059,7 @@ pub fn test_helper() {
                         },
                         end: Position {
                             line: 0,
-                            character: 13
+                            character: 12
                         }
                     },
                     new_text: "test_helper".into()
@@ -1099,7 +1099,7 @@ pub fn main() { 1 }
                     },
                     end: Position {
                         line: 0,
-                        character: 13
+                        character: 12
                     }
                 },
                 new_text: "dep".into()
@@ -1134,7 +1134,7 @@ pub fn main() {
                     },
                     end: Position {
                         line: 0,
-                        character: 13
+                        character: 12
                     }
                 },
                 new_text: "example_module".into()
@@ -1171,7 +1171,7 @@ pub fn main() {
                     },
                     end: Position {
                         line: 0,
-                        character: 13
+                        character: 12
                     }
                 },
                 new_text: "example_module".into()
@@ -1208,7 +1208,7 @@ pub fn main() {
                     },
                     end: Position {
                         line: 0,
-                        character: 13
+                        character: 12
                     }
                 },
                 new_text: "example_module".into()
@@ -1258,7 +1258,7 @@ pub fn main() {
                         },
                         end: Position {
                             line: 0,
-                            character: 13
+                            character: 12
                         }
                     },
                     new_text: "app".into()
@@ -1276,7 +1276,7 @@ pub fn main() {
                         },
                         end: Position {
                             line: 0,
-                            character: 13
+                            character: 12
                         }
                     },
                     new_text: "example_module".into()
@@ -1294,7 +1294,7 @@ pub fn main() {
                         },
                         end: Position {
                             line: 0,
-                            character: 13
+                            character: 12
                         }
                     },
                     new_text: "indirect_module".into()
@@ -1337,7 +1337,7 @@ pub fn main() { 1 }
                     },
                     end: Position {
                         line: 3,
-                        character: 13
+                        character: 12
                     }
                 },
                 new_text: "example_module".into()
@@ -1372,7 +1372,7 @@ pub fn main() {
                     },
                     end: Position {
                         line: 0,
-                        character: 13
+                        character: 12
                     }
                 },
                 new_text: "dep".into()
@@ -1407,7 +1407,7 @@ pub fn main() {
                     },
                     end: Position {
                         line: 0,
-                        character: 14
+                        character: 13
                     }
                 },
                 new_text: "dep".into()
@@ -1446,7 +1446,7 @@ pub fn main() {
                     },
                     end: Position {
                         line: 0,
-                        character: 13
+                        character: 12
                     }
                 },
                 new_text: internal_name.clone(),
