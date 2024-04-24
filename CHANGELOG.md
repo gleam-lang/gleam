@@ -107,6 +107,18 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Comments at the end of an anonymous function are no longer moved out of it.
+  You can now write this:
+
+  ```gleam
+  fn() {
+    todo
+    // A comment here!
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Language Server
 
 - The code action to remove unused imports now removes the entire line is
