@@ -36,3 +36,20 @@ pub fn multi_line_pipeline_is_split_no_matter_the_length() {
 "#
     );
 }
+
+#[test]
+pub fn adding_a_newline_to_a_pipeline_splits_all() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  wibble |> wobble
+  |> wabble
+}
+"#,
+        r#"pub fn main() {
+  wibble
+  |> wobble
+  |> wabble
+}
+"#,
+    );
+}
