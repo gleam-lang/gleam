@@ -7,6 +7,7 @@ use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Mode, Options, Package},
     config::{DocsPage, PackageConfig},
+    docs::DocContext,
     error::Error,
     hex,
     io::HttpClient as _,
@@ -76,7 +77,7 @@ pub fn build(options: BuildOptions) -> Result<()> {
         },
         crate::build::download_dependencies()?,
     )?;
-    let outputs = build_documentation(&config, &mut built.root_package)?;
+    let outputs = build_documentation(&config, &mut built.root_package, DocContext::Build)?;
 
     // Write
     crate::fs::delete_directory(&out)?;
@@ -114,6 +115,7 @@ fn open_docs(path: &Utf8Path) -> Result<()> {
 pub(crate) fn build_documentation(
     config: &PackageConfig,
     compiled: &mut Package,
+    is_hex_publish: DocContext,
 ) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
     compiled.attach_doc_and_module_comments();
     cli::print_generating_documentation();
@@ -131,6 +133,7 @@ pub(crate) fn build_documentation(
         &pages,
         ProjectIO::new(),
         SystemTime::now(),
+        is_hex_publish,
     );
 
     outputs.push(gleam_core::docs::generate_json_package_interface(
@@ -167,7 +170,8 @@ impl PublishCommand {
             },
             crate::build::download_dependencies()?,
         )?;
-        let outputs = build_documentation(&config, &mut built.root_package)?;
+        let outputs =
+            build_documentation(&config, &mut built.root_package, DocContext::HexPublish)?;
         let archive = crate::fs::create_tar_archive(outputs)?;
         Ok(Self { config, archive })
     }
