@@ -127,6 +127,31 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Pipes can now be placed on a single line if they are short enough:
+
+  ```gleam
+  [1, 2, 3] |> list.map(int.to_string) |> string.join(with: "\n")
+  ```
+
+  In addition you can also force the formatter to break a pipe on multiple lines
+  by manually breaking it. This:
+
+  ```gleam
+  [1, 2, 3]
+  // By putting a newline here I'm telling the formatter to split the pipeline
+  |> list.map(int.to_string) |> string.join(with: "\n")
+  ```
+
+  Will turn into this:
+
+  ```gleam
+  [1, 2, 3]
+  |> list.map(int.to_string)
+  |> string.join(with: "\n")
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Language Server
 
 - The code action to remove unused imports now removes the entire line is
