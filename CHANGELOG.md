@@ -134,3 +134,6 @@
 
 - Fixed a typo when attempting to publish a package with non-Hex dependencies
   ([inoas](https://github.com/inoas))
+
+- Fixed import completions not appearing in some editors due to range being
+  longer than line. ([Ameen Radwan](https://github.com/Acepie))

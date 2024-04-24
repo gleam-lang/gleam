@@ -482,7 +482,7 @@ where
         let start = line_num.line_and_column_number(start_of_line);
         let end = line_num.line_and_column_number(end_of_line - 1);
         let start = lsp::Position::new(start.line - 1, start.column + 6);
-        let end = lsp::Position::new(end.line - 1, end.column);
+        let end = lsp::Position::new(end.line - 1, end.column - 1);
         let completions = self.complete_modules_for_import(module, start, end);
 
         Some(Ok(Some(completions)))
