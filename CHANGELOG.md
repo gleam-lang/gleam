@@ -6,6 +6,7 @@
 
 - A helpful error message is now shown if the `manifest.toml` file has been
   edited to be invalid in some way.
+
   ```
   error: Corrupt manifest.toml
 
@@ -13,11 +14,13 @@
 
   Hint: Please fun `gleam update` to fix it.
   ```
+
   ([zahash](https://github.com/zahash))
 
 - The error message shown when unable to find package versions that satisfy all
   the version constraints specified for a project's dependencies has been
   greatly improved.
+
   ```
   error: Dependency resolution failed
 
@@ -32,12 +35,14 @@
   - lustre_dev_tools
   - glint
   ```
+
   ([zahash](https://github.com/zahash))
 
 ### Compiler
 
 - The compiler will now raise a warning for `let assert` assignments where the
   assertion is redundant.
+
   ```
   warning: Redundant assertion
     ┌─ /home/lucy/src/app/src/app.gleam:4:7
@@ -47,6 +52,7 @@
 
   This assertion is redundant since the pattern covers all possibilities.
   ```
+
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Empty case expressions are no longer parse errors and will instead be
@@ -55,6 +61,7 @@
 - Initial support for type analysis returning multiple errors. ([Ameen Radwan](https://github.com/Acepie))
 
 - Improve error message if importing type using the value import syntax or vice versa.
+
   ```
   error: Unknown module field
     ┌─ /src/one/two.gleam:1:19
@@ -64,6 +71,7 @@
 
   `One` is only a type, it cannot be imported as a value.
   ```
+
   ```
   error: Unknown module type
     ┌─ /src/one/two.gleam:1:19
@@ -73,22 +81,28 @@
 
   `Two` is only a value, it cannot be imported as a type.
   ```
+
   ([Pi-Cla](https://github.com/Pi-Cla/))
 
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.
+
   ```gleam
   import gleam/result as result
   ```
+
   is formatted to
+
   ```gleam
   import gleam/result
   ```
+
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Comments are no longer moved out of constant lists, constant tuples and empty
   tuples. You can now write this:
+
   ```gleam
   const values = [
     // This is a comment!
@@ -98,16 +112,19 @@
     // And a final one.
   ]
   ```
+
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Comments at the end of an anonymous function are no longer moved out of it.
   You can now write this:
+
   ```gleam
   fn() {
     todo
     // A comment here!
   }
   ```
+
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Language Server
