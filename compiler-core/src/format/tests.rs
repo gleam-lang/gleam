@@ -4500,7 +4500,9 @@ fn empty_lines_work_with_trailing_space() {
   2
 }
 ";
-    assert_format!(expected); // Sanity check
+    // We first make extra sure we've not messed up the expected output and
+    // check it's well formatted.
+    assert_format!(expected);
 
     assert_format_rewrite!(src, expected);
 }
@@ -4540,7 +4542,10 @@ fn empty_lines_work_with_eol_normalisation() {
   2
 }
 ";
-    assert_format!(expected); // Sanity check
+
+    // We first make extra sure we've not messed up the expected output and
+    // check it's well formatted.
+    assert_format!(expected);
 
     assert_format_rewrite!(&src.replace('\n', "\r\n"), expected);
     assert_format_rewrite!(&src.replace('\n', "\r"), expected);
@@ -4581,7 +4586,10 @@ fn empty_lines_work_with_trailing_space_and_eol_normalisation() {
   2
 }
 ";
-    assert_format!(expected); // check the expected value is well formatted.
+
+    // We first make extra sure we've not messed up the expected output and
+    // check it's well formatted.
+    assert_format!(expected);
 
     assert_format_rewrite!(src.replace('\n', "\r\n"), expected);
     assert_format_rewrite!(&src.replace('\n', "\r"), expected);
