@@ -179,3 +179,7 @@
 
 - Fixed import completions not appearing in some editors due to range being
   longer than line. ([Ameen Radwan](https://github.com/Acepie))
+
+- Fixed a bug where TypeScript definitions files would use `null` instead of
+  `undefined`.
+  ([Louis Pilfold](https://github.com/lpil))
