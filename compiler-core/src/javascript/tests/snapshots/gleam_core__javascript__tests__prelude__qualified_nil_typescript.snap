@@ -5,5 +5,4 @@ expression: "import gleam\npub fn go() { gleam.Nil }\n"
 ---
 import type * as $gleam from "../gleam.d.mts";
 
-export function go(): null;
-
+export function go(): undefined;

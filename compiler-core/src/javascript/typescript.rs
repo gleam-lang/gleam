@@ -626,7 +626,7 @@ impl<'a> TypeScriptGenerator<'a> {
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
         match name {
-            "Nil" => "null".to_doc(),
+            "Nil" => "undefined".to_doc(),
             "Int" | "Float" => "number".to_doc(),
             "UtfCodepoint" => {
                 self.tracker.prelude_used = true;

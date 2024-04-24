@@ -7,5 +7,4 @@ export const a: boolean;
 
 export const b: boolean;
 
-export const c: null;
-
+export const c: undefined;
