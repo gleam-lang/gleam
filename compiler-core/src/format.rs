@@ -756,6 +756,7 @@ impl<'comments> Formatter<'comments> {
         args: &'a [UntypedArg],
         return_annotation: Option<&'a TypeAst>,
         body: &'a Vec1<UntypedStatement>,
+        location: &SrcSpan,
     ) -> Document<'a> {
         let args = wrap_args(args.iter().map(|e| self.fn_arg(e)))
             .group()
@@ -775,12 +776,18 @@ impl<'comments> Formatter<'comments> {
         //
         // These are some of the ways we could tweak the look of expression
         // functions in the future if people are not satisfied with it.
-        let body = self.statements(body);
+
         let header = "fn".to_doc().append(args);
 
         let header = match return_annotation {
             None => header,
             Some(t) => header.append(" -> ").append(self.type_ast(t)),
+        };
+
+        let statements = self.statements(body);
+        let body = match printed_comments(self.pop_comments(location.end), false) {
+            None => statements,
+            Some(comments) => statements.append(line()).append(comments).force_break(),
         };
 
         header.append(" ").append(wrap_block(body)).group()
@@ -890,8 +897,9 @@ impl<'comments> Formatter<'comments> {
                 return_annotation,
                 arguments: args,
                 body,
+                location,
                 ..
-            } => self.expr_fn(args, return_annotation.as_ref(), body),
+            } => self.expr_fn(args, return_annotation.as_ref(), body, location),
 
             UntypedExpr::List {
                 elements,
