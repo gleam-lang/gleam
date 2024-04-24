@@ -4,6 +4,7 @@ use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
+    docs::DocContext,
     hex, paths,
     paths::ProjectPaths,
     requirement::Requirement,
@@ -56,8 +57,11 @@ impl PublishCommand {
         check_for_name_squatting(&compile_result)?;
 
         // Build HTML documentation
-        let docs_tarball =
-            fs::create_tar_archive(docs::build_documentation(&config, &mut compile_result)?)?;
+        let docs_tarball = fs::create_tar_archive(docs::build_documentation(
+            &config,
+            &mut compile_result,
+            DocContext::HexPublish,
+        )?)?;
 
         // Ask user if this is correct
         if !generated_files_added.is_empty() {
