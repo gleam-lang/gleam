@@ -2,8 +2,11 @@ use crate::ast::SrcSpan;
 use crate::parse::error::{
     InvalidUnicodeEscapeError, LexicalError, LexicalErrorType, ParseError, ParseErrorType,
 };
+use crate::parse::lexer::make_tokenizer;
+use crate::parse::token::Token;
 use camino::Utf8PathBuf;
 
+use itertools::Itertools;
 use pretty_assertions::assert_eq;
 
 macro_rules! assert_error {
@@ -941,7 +944,7 @@ fn main() {
 fn type_invalid_constructor() {
     assert_module_error!(
         "
-type A { 
+type A {
     A(String)
     type
 }
@@ -953,7 +956,7 @@ type A {
 fn type_invalid_type_name() {
     assert_module_error!(
         "
-type A(a, type) { 
+type A(a, type) {
     A
 }
 "
@@ -964,7 +967,7 @@ type A(a, type) {
 fn type_invalid_constructor_arg() {
     assert_module_error!(
         "
-type A { 
+type A {
     A(type: String)
 }
 "
@@ -1018,5 +1021,19 @@ type A {
 }
 const a = A(\"a\", let)
 "
+    );
+}
+
+#[test]
+fn newline_tokens() {
+    assert_eq!(
+        make_tokenizer("1\n\n2\n").collect_vec(),
+        [
+            Ok((0, Token::Int { value: "1".into() }, 1)),
+            Ok((1, Token::NewLine, 2)),
+            Ok((2, Token::NewLine, 3)),
+            Ok((3, Token::Int { value: "2".into() }, 4)),
+            Ok((4, Token::NewLine, 5))
+        ]
     );
 }

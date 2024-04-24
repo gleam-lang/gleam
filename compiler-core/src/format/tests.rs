@@ -28,11 +28,11 @@ macro_rules! assert_format {
 
 #[macro_export]
 macro_rules! assert_format_rewrite {
-    ($src:expr, $output:expr  $(,)?) => {
+    ($src:expr, $expected:expr  $(,)?) => {
         let mut writer = String::new();
         $crate::format::pretty(&mut writer, &$src.into(), camino::Utf8Path::new("<stdin>"))
             .unwrap();
-        assert_eq!(writer, $output);
+        assert_eq!(writer, $expected);
     };
 }
 
@@ -4581,9 +4581,9 @@ fn empty_lines_work_with_trailing_space_and_eol_normalisation() {
   2
 }
 ";
-    assert_format!(expected); // Sanity check
+    assert_format!(expected); // check the expected value is well formatted.
 
-    assert_format_rewrite!(&src.replace('\n', "\r\n"), expected);
+    assert_format_rewrite!(src.replace('\n', "\r\n"), expected);
     assert_format_rewrite!(&src.replace('\n', "\r"), expected);
 }
 #[test]

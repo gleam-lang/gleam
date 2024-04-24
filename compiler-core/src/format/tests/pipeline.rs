@@ -20,7 +20,7 @@ pub fn single_line_pipeline_longer_than_line_limit_gets_split() {
 pub fn single_line_pipeline_shorter_than_line_limit_is_kept_on_a_single_line() {
     assert_format!(
         r#"pub fn main() {
-  wibble |> wobble
+  wibble(1) |> wobble
 }
 "#
     );
@@ -30,7 +30,7 @@ pub fn single_line_pipeline_shorter_than_line_limit_is_kept_on_a_single_line() {
 pub fn multi_line_pipeline_is_split_no_matter_the_length() {
     assert_format!(
         r#"pub fn main() {
-  wibble
+  wibble(1)
   |> wobble
 }
 "#

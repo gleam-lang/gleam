@@ -89,7 +89,7 @@ impl<'comments> Formatter<'comments> {
             doc_comments: &extra.doc_comments,
             module_comments: &extra.module_comments,
             empty_lines: extra.empty_lines,
-            new_lines: &extra.new_lines,
+            new_lines: extra.new_lines,
         }
     }
 
