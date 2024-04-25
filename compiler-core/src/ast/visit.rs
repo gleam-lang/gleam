@@ -11,8 +11,8 @@ use ecow::EcoString;
 use crate::type_::Type;
 
 use super::{
-    BinOp, SrcSpan, TypeAst, TypedArg, TypedClause, TypedExpr, TypedExprBitArraySegment,
-    TypedRecordUpdateArg, TypedStatement,
+    BinOp, SrcSpan, Statement, TypeAst, TypedArg, TypedClause, TypedExpr, TypedExprBitArraySegment,
+    TypedRecordUpdateArg, TypedStatement, Use,
 };
 
 pub trait Visit<'a> {
@@ -224,6 +224,18 @@ pub trait Visit<'a> {
     fn visit_typed_expr_negate_int(&self, location: &'a SrcSpan, value: &'a TypedExpr) {
         visit_typed_expr_negate_int(self, location, value)
     }
+
+    fn visit_typed_statement(&self, stmt: &'a TypedStatement) {
+        visit_typed_statement(self, stmt);
+    }
+
+    fn visit_typed_assignment(&self, assignment: &'a TypedAssignment) {
+        visit_typed_assignment(self, assignment);
+    }
+
+    fn visit_use(&self, use_: &'a Use) {
+        visit_use(self, use_);
+    }
 }
 
 pub fn visit_typed_expr<'a, V>(v: &V, node: &'a TypedExpr)
@@ -389,7 +401,7 @@ where
     V: Visit<'a> + ?Sized,
 {
     for stmt in statements {
-        todo!()
+        v.visit_typed_statement(stmt);
     }
 }
 
@@ -402,7 +414,7 @@ pub fn visit_typed_expr_pipeline<'a, V>(
     V: Visit<'a> + ?Sized,
 {
     for assignment in assignments {
-        todo!();
+        v.visit_typed_assignment(assignment);
     }
 
     v.visit_typed_expr(finally);
@@ -430,7 +442,7 @@ pub fn visit_typed_expr_fn<'a, V>(
     V: Visit<'a> + ?Sized,
 {
     for stmt in body {
-        todo!()
+        v.visit_typed_statement(stmt);
     }
 }
 
@@ -616,4 +628,29 @@ where
     V: Visit<'a> + ?Sized,
 {
     v.visit_typed_expr(value);
+}
+
+pub fn visit_typed_statement<'a, V>(v: &V, stmt: &'a TypedStatement)
+where
+    V: Visit<'a> + ?Sized,
+{
+    match stmt {
+        Statement::Expression(expr) => v.visit_typed_expr(expr),
+        Statement::Assignment(assignment) => v.visit_typed_assignment(assignment),
+        Statement::Use(use_) => v.visit_use(use_),
+    }
+}
+
+pub fn visit_typed_assignment<'a, V>(v: &V, assignment: &'a TypedAssignment)
+where
+    V: Visit<'a> + ?Sized,
+{
+    v.visit_typed_expr(&assignment.value);
+}
+
+pub fn visit_use<'a, V>(v: &V, use_: &'a Use)
+where
+    V: Visit<'a> + ?Sized,
+{
+    todo!("v.visit_untyped_expr(use_.call)")
 }
