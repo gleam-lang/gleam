@@ -11,8 +11,8 @@ use ecow::EcoString;
 use crate::type_::Type;
 
 use super::{
-    BinOp, SrcSpan, Statement, TypeAst, TypedArg, TypedClause, TypedExpr, TypedExprBitArraySegment,
-    TypedRecordUpdateArg, TypedStatement, Use,
+    BinOp, BitArrayOption, SrcSpan, Statement, TypeAst, TypedArg, TypedClause, TypedExpr,
+    TypedExprBitArraySegment, TypedRecordUpdateArg, TypedStatement, Use,
 };
 
 pub trait Visit<'a> {
@@ -235,6 +235,26 @@ pub trait Visit<'a> {
 
     fn visit_use(&mut self, use_: &'a Use) {
         visit_use(self, use_);
+    }
+
+    fn visit_typed_call_arg(&mut self, arg: &'a TypedCallArg) {
+        visit_typed_call_arg(self, arg);
+    }
+
+    fn visit_typed_clause(&mut self, clause: &'a TypedClause) {
+        visit_typed_clause(self, clause);
+    }
+
+    fn visit_typed_expr_bit_array_segment(&mut self, segment: &'a TypedExprBitArraySegment) {
+        visit_typed_expr_bit_array_segment(self, segment);
+    }
+
+    fn visit_typed_record_update_arg(&mut self, arg: &'a TypedRecordUpdateArg) {
+        visit_typed_record_update_arg(self, arg);
+    }
+
+    fn visit_typed_bit_array_option(&mut self, option: &'a BitArrayOption<TypedExpr>) {
+        visit_typed_bit_array_option(self, option);
     }
 }
 
@@ -478,7 +498,7 @@ pub fn visit_typed_expr_call<'a, V>(
 {
     v.visit_typed_expr(fun);
     for arg in args {
-        todo!()
+        v.visit_typed_call_arg(arg);
     }
 }
 
@@ -510,7 +530,7 @@ pub fn visit_typed_expr_case<'a, V>(
     }
 
     for clause in clauses {
-        todo!()
+        v.visit_typed_clause(clause);
     }
 }
 
@@ -600,7 +620,7 @@ pub fn visit_typed_expr_bit_array<'a, V>(
     V: Visit<'a> + ?Sized,
 {
     for segment in segments {
-        todo!()
+        v.visit_typed_expr_bit_array_segment(segment);
     }
 }
 
@@ -615,7 +635,7 @@ pub fn visit_typed_expr_record_update<'a, V>(
 {
     v.visit_typed_expr(spread);
     for arg in args {
-        todo!()
+        v.visit_typed_record_update_arg(arg);
     }
 }
 
@@ -656,4 +676,64 @@ where
     V: Visit<'a> + ?Sized,
 {
     todo!("v.visit_untyped_expr(use_.call)")
+}
+
+pub fn visit_typed_call_arg<'a, V>(v: &mut V, arg: &'a TypedCallArg)
+where
+    V: Visit<'a> + ?Sized,
+{
+    v.visit_typed_expr(&arg.value);
+}
+
+pub fn visit_typed_clause<'a, V>(v: &mut V, clause: &'a TypedClause)
+where
+    V: Visit<'a> + ?Sized,
+{
+    v.visit_typed_expr(&clause.then);
+}
+
+pub fn visit_typed_expr_bit_array_segment<'a, V>(v: &mut V, segment: &'a TypedExprBitArraySegment)
+where
+    V: Visit<'a> + ?Sized,
+{
+    v.visit_typed_expr(&segment.value);
+    for option in &segment.options {
+        v.visit_typed_bit_array_option(option);
+    }
+}
+
+pub fn visit_typed_record_update_arg<'a, V>(v: &mut V, arg: &'a TypedRecordUpdateArg)
+where
+    V: Visit<'a> + ?Sized,
+{
+    v.visit_typed_expr(&arg.value);
+}
+
+pub fn visit_typed_bit_array_option<'a, V>(v: &mut V, option: &'a BitArrayOption<TypedExpr>)
+where
+    V: Visit<'a> + ?Sized,
+{
+    match option {
+        BitArrayOption::Bytes { location } => todo!(),
+        BitArrayOption::Int { location } => todo!(),
+        BitArrayOption::Float { location } => todo!(),
+        BitArrayOption::Bits { location } => todo!(),
+        BitArrayOption::Utf8 { location } => todo!(),
+        BitArrayOption::Utf16 { location } => todo!(),
+        BitArrayOption::Utf32 { location } => todo!(),
+        BitArrayOption::Utf8Codepoint { location } => todo!(),
+        BitArrayOption::Utf16Codepoint { location } => todo!(),
+        BitArrayOption::Utf32Codepoint { location } => todo!(),
+        BitArrayOption::Signed { location } => todo!(),
+        BitArrayOption::Unsigned { location } => todo!(),
+        BitArrayOption::Big { location } => todo!(),
+        BitArrayOption::Little { location } => todo!(),
+        BitArrayOption::Native { location } => todo!(),
+        BitArrayOption::Size {
+            location,
+            value,
+            short_form,
+        } => v.visit_typed_expr(value),
+        BitArrayOption::Unit { location, value } => todo!(),
+    }
 }
