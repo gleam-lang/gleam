@@ -4,6 +4,7 @@ mod untyped;
 
 #[cfg(test)]
 mod tests;
+pub mod visit;
 
 pub use self::typed::TypedExpr;
 pub use self::untyped::{UntypedExpr, Use};
