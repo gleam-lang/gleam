@@ -11,13 +11,26 @@ use ecow::EcoString;
 use crate::type_::Type;
 
 use super::{
-    BinOp, BitArrayOption, SrcSpan, Statement, TypeAst, TypedArg, TypedClause, TypedExpr,
-    TypedExprBitArraySegment, TypedRecordUpdateArg, TypedStatement, Use,
+    BinOp, BitArrayOption, Definition, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
+    TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule,
+    TypedRecordUpdateArg, TypedStatement, Use,
 };
 
 pub trait Visit<'a> {
-    fn visit_typed_expr(&mut self, node: &'a TypedExpr) {
-        visit_typed_expr(self, node);
+    fn visit_typed_module(&mut self, module: &'a TypedModule) {
+        visit_typed_module(self, module);
+    }
+
+    fn visit_typed_definition(&mut self, def: &'a TypedDefinition) {
+        visit_typed_definition(self, def);
+    }
+
+    fn visit_typed_function(&mut self, fun: &'a TypedFunction) {
+        visit_typed_function(self, fun);
+    }
+
+    fn visit_typed_expr(&mut self, expr: &'a TypedExpr) {
+        visit_typed_expr(self, expr);
     }
 
     fn visit_typed_expr_int(
@@ -255,6 +268,35 @@ pub trait Visit<'a> {
 
     fn visit_typed_bit_array_option(&mut self, option: &'a BitArrayOption<TypedExpr>) {
         visit_typed_bit_array_option(self, option);
+    }
+}
+
+pub fn visit_typed_module<'a, V>(v: &mut V, module: &'a TypedModule)
+where
+    V: Visit<'a> + ?Sized,
+{
+    for def in &module.definitions {
+        v.visit_typed_definition(def);
+    }
+}
+pub fn visit_typed_definition<'a, V>(v: &mut V, def: &'a TypedDefinition)
+where
+    V: Visit<'a> + ?Sized,
+{
+    match def {
+        Definition::Function(fun) => v.visit_typed_function(fun),
+        Definition::TypeAlias(type_alias) => todo!(),
+        Definition::CustomType(custom_type) => todo!(),
+        Definition::Import(import) => todo!(),
+        Definition::ModuleConstant(module_constant) => todo!(),
+    }
+}
+pub fn visit_typed_function<'a, V>(v: &mut V, fun: &'a TypedFunction)
+where
+    V: Visit<'a> + ?Sized,
+{
+    for stmt in &fun.body {
+        v.visit_typed_statement(stmt);
     }
 }
 
@@ -675,7 +717,7 @@ pub fn visit_use<'a, V>(v: &mut V, use_: &'a Use)
 where
     V: Visit<'a> + ?Sized,
 {
-    todo!("v.visit_untyped_expr(use_.call)")
+    todo!()
 }
 
 pub fn visit_typed_call_arg<'a, V>(v: &mut V, arg: &'a TypedCallArg)
