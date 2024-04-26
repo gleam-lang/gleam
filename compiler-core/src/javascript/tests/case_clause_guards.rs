@@ -388,6 +388,32 @@ fn module_access_submodule() {
 }
 
 #[test]
+fn module_access_aliased() {
+    assert_js!(
+        (
+            "package",
+            "hero/submodule",
+            r#"
+              pub type Hero {
+                Hero(name: String)
+              }
+              pub const ironman = Hero("Tony Stark")
+            "#
+        ),
+        r#"
+          import hero/submodule as myhero
+          pub fn main() {
+            let name = "Tony Stark"
+            case name {
+              n if n == myhero.ironman.name -> True
+              _ -> False
+            }
+          }
+        "#
+    );
+}
+
+#[test]
 fn module_nested_access() {
     assert_js!(
         (
