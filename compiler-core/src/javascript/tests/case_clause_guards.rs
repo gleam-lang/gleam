@@ -203,7 +203,7 @@ fn alternative_patterns_assignment() {
     [x] | [_, x] -> x
     _ -> 1
   }
-}  
+}
 "#,
     );
 }
@@ -216,7 +216,7 @@ fn alternative_patterns_guard() {
     [x] | [_, x] if x == 1 -> x
     _ -> 0
   }
-}   
+}
 "#,
     );
 }
@@ -228,11 +228,9 @@ fn field_access() {
         pub type Person {
           Person(username: String, name: String, age: Int)
         }
-        
         pub fn main() {
           let given_name = "jack"
           let raiden = Person("raiden", "jack", 31)
-          
           case given_name {
             name if name == raiden.name -> "It's jack"
             _ -> "It's not jack"
@@ -356,6 +354,32 @@ fn module_access() {
             let name = "Tony Stark"
             case name {
               n if n == hero.ironman.name -> True
+              _ -> False
+            }
+          }
+        "#
+    );
+}
+
+#[test]
+fn module_access_submodule() {
+    assert_js!(
+        (
+            "package",
+            "hero/submodule",
+            r#"
+              pub type Hero {
+                Hero(name: String)
+              }
+              pub const ironman = Hero("Tony Stark")
+            "#
+        ),
+        r#"
+          import hero/submodule
+          pub fn main() {
+            let name = "Tony Stark"
+            case name {
+              n if n == submodule.ironman.name -> True
               _ -> False
             }
           }

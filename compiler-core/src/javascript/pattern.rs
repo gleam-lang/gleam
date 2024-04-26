@@ -275,8 +275,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             }
 
             ClauseGuard::ModuleSelect {
-                module_name, label, ..
-            } => docvec!("$", module_name, ".", label),
+                module_alias,
+                label,
+                ..
+            } => docvec!("$", module_alias, ".", label),
 
             ClauseGuard::Not { expression, .. } => {
                 docvec!["!", self.guard(expression)?]
