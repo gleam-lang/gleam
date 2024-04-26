@@ -194,4 +194,4 @@
 
 - Fixed a bug where unreachable infinite cases would not be detected when
   after a discard or variable pattern.
-  ([Ameen Radwan](https://github.com/Acepie))
+  ([Ameen Radwan](https://github.com/Acepie)) and ([Pi-Cla](https://github.com/Pi-Cla))
