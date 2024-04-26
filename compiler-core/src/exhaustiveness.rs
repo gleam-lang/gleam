@@ -382,7 +382,10 @@ impl<'a> Compiler<'a> {
                 // This row does not match on the branch variable, so we push it
                 // into the fallback rows to be tested later.
                 None => {
-                    fallback_rows.push(row);
+                    fallback_rows.push(row.clone());
+                    for (_, _, rows) in &mut raw_cases {
+                        rows.push(row.clone());
+                    }
                     continue;
                 }
                 // This row does match on the branch variable.
@@ -444,14 +447,12 @@ impl<'a> Compiler<'a> {
                     // This is the first time testing the tag, so we add a case for it.
                     None => {
                         _ = tested.insert(key, raw_cases.len());
-                        raw_cases.push((constructor, Vec::new(), vec![row]));
+                        let mut rows = fallback_rows.clone();
+                        rows.push(row);
+                        raw_cases.push((constructor, Vec::new(), rows));
                     }
                 }
             }
-        }
-
-        for (_, _, rows) in &mut raw_cases {
-            rows.append(&mut fallback_rows.clone());
         }
 
         let cases = raw_cases
