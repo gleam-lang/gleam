@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.3.0 - 2024-04-26
+
+- Updated all dependencies.
+
 ## v2.2.0 - 2024-04-10
 
 - Updated for latest version of Reqwest.
