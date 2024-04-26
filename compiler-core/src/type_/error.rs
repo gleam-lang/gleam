@@ -534,6 +534,12 @@ pub enum Warning {
     RedundantAssertAssignment {
         location: SrcSpan,
     },
+
+    /// If an expression occurs after a function returning the Never type then it is guarenteed
+    /// to never be executed (since the function above it will never return)
+    ExpressionAfterNever {
+        location: SrcSpan,
+    },
 }
 
 impl Error {

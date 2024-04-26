@@ -700,6 +700,22 @@ hidden from the package's documentation.",
                         extra_labels: vec![],
                     }),
                 },
+                type_::Warning::ExpressionAfterNever { location } => Diagnostic {
+                    title: "Expression after never".into(),
+                    text: "This expression is redundant since it comes after a function with the `Never` return type."
+                        .into(),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some("You can remove this".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             },
         }
     }
