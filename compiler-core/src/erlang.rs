@@ -2055,6 +2055,11 @@ fn find_referenced_private_functions(
     already_found: &mut HashSet<EcoString>,
 ) {
     match constant {
+        Constant::Int { .. }
+        | Constant::Float { .. }
+        | Constant::String { .. }
+        | Constant::BitArray { .. } => (),
+
         TypedConstant::Var {
             name, constructor, ..
         } => {
@@ -2072,7 +2077,5 @@ fn find_referenced_private_functions(
         Constant::Tuple { elements, .. } | Constant::List { elements, .. } => elements
             .iter()
             .for_each(|element| find_referenced_private_functions(element, already_found)),
-
-        _ => (),
     }
 }
