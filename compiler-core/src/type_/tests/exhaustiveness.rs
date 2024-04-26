@@ -844,6 +844,57 @@ pub fn main(x) {
     );
 }
 
+//https://github.com/gleam-lang/gleam/issues/2651
+#[test]
+fn redundant_3() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+case x {
+59 -> "gleew"
+14 -> "glabber"
+1 -> ""
+_ -> "glooper"
+2 -> ""
+3 -> "glen"
+4 -> "glew"
+}
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_4() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+case x {
+"P" -> 4
+_ -> 3
+"geeper!" -> 5
+}
+}
+"#
+    );
+}
+
+#[test]
+fn redundant_5() {
+    assert_warning!(
+        r#"
+pub fn main(x) {
+case x {
+"P" -> 4
+"" -> 65
+"P" -> 19
+_ -> 3
+}
+}
+"#
+    );
+}
+
 #[test]
 fn let_1() {
     assert_module_error!(

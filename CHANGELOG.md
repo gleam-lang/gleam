@@ -191,3 +191,7 @@
 - Fixed a bug where TypeScript definitions files would use `null` instead of
   `undefined`.
   ([Louis Pilfold](https://github.com/lpil))
+
+- Fixed a bug where unreachable infinite cases would not be detected when
+  after a discard or variable pattern.
+  ([Ameen Radwan](https://github.com/Acepie))
