@@ -38,6 +38,10 @@
 
   ([zahash](https://github.com/zahash))
 
+- A link to the package on Hex is no longer auto-added to the HTML documentation
+  when building them locally. It is still added when publishing to Hex.
+  ([Pi-Cla](https://github.com/Pi-Cla))
+
 ### Compiler
 
 - The compiler will now raise a warning for `let assert` assignments where the
