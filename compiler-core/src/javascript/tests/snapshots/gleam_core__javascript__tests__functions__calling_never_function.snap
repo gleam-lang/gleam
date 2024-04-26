@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\npub fn main() {\n  bottom()\n}\n\npub fn bottom() -> Never {\n  bottom()\n}\n"
+---
+export function bottom() {
+  while (true) {
+    
+  }
+}
+
+export function main() {
+  return bottom();
+}

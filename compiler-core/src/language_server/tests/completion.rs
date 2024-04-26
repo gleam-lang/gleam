@@ -63,6 +63,13 @@ fn prelude_type_completions() -> Vec<CompletionItem> {
             ..Default::default()
         },
         CompletionItem {
+            label: "Never".into(),
+            kind: Some(CompletionItemKind::CLASS),
+            detail: Some("Type".into()),
+            documentation: None,
+            ..Default::default()
+        },
+        CompletionItem {
             label: "Nil".into(),
             kind: Some(CompletionItemKind::CLASS),
             detail: Some("Type".into()),

@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/erlang/tests/functions.rs
+expression: "\npub fn main() {\n  bottom()\n}\n\npub fn bottom() -> Never {\n  bottom()\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([bottom/0, main/0]).
+
+-spec bottom() -> never.
+bottom() ->
+    bottom().
+
+-spec main() -> never.
+main() ->
+    bottom().

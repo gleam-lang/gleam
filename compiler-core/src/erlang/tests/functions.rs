@@ -69,6 +69,21 @@ pub fn main() {
 }
 
 #[test]
+fn never_function_called() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  bottom()
+}
+
+pub fn bottom() -> Never {
+  bottom()
+}
+"#
+    );
+}
+
+#[test]
 fn nested_imported_function_called() {
     assert_erl!(
         ("package", "some/other", "pub fn wibble() { Nil }"),

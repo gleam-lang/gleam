@@ -1971,6 +1971,7 @@ impl<'a> TypePrinter<'a> {
 
     fn print_prelude_type(&self, name: &str, args: &[Arc<Type>]) -> Document<'static> {
         match name {
+            "Never" => "never".to_doc(),
             "Nil" => "nil".to_doc(),
             "Int" | "UtfCodepoint" => "integer()".to_doc(),
             "String" => "binary()".to_doc(),

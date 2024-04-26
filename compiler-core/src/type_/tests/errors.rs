@@ -1756,6 +1756,17 @@ fn(x, x) {
 }
 
 #[test]
+fn try_to_construct_never() {
+    assert_error!(
+        "
+fn() {
+  Never
+}
+"
+    );
+}
+
+#[test]
 fn negate_boolean_as_integer() {
     assert_error!(
         "

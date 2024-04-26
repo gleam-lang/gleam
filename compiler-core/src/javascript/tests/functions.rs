@@ -34,6 +34,21 @@ pub fn take_two(x: Int) -> Int {
 }
 
 #[test]
+fn calling_never_function() {
+    assert_js!(
+        r#"
+pub fn main() {
+  bottom()
+}
+
+pub fn bottom() -> Never {
+  bottom()
+}
+"#,
+    );
+}
+
+#[test]
 fn function_formatting() {
     assert_js!(
         r#"

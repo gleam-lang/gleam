@@ -19,6 +19,7 @@ const BOOL: &str = "Bool";
 const FLOAT: &str = "Float";
 const INT: &str = "Int";
 const LIST: &str = "List";
+const NEVER: &str = "Never";
 const NIL: &str = "Nil";
 const RESULT: &str = "Result";
 const STRING: &str = "String";
@@ -38,6 +39,7 @@ pub enum PreludeType {
     Float,
     Int,
     List,
+    Never,
     Nil,
     Result,
     String,
@@ -52,6 +54,7 @@ impl PreludeType {
             PreludeType::Float => FLOAT,
             PreludeType::Int => INT,
             PreludeType::List => LIST,
+            PreludeType::Never => NEVER,
             PreludeType::Nil => NIL,
             PreludeType::Result => RESULT,
             PreludeType::String => STRING,
@@ -95,6 +98,16 @@ pub fn string() -> Arc<Type> {
         args: vec![],
         publicity: Publicity::Public,
         name: STRING.into(),
+        module: PRELUDE_MODULE_NAME.into(),
+        package: PRELUDE_PACKAGE_NAME.into(),
+    })
+}
+
+pub fn never() -> Arc<Type> {
+    Arc::new(Type::Named {
+        args: vec![],
+        publicity: Publicity::Public,
+        name: NEVER.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
     })
@@ -334,6 +347,21 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         origin: Default::default(),
                         parameters: vec![list_parameter.clone()],
                         typ: list(list_parameter),
+                        module: PRELUDE_MODULE_NAME.into(),
+                        publicity: Publicity::Public,
+                        deprecation: NotDeprecated,
+                        documentation: None,
+                    },
+                );
+            }
+
+            PreludeType::Never => {
+                let _ = prelude.types.insert(
+                    NEVER.into(),
+                    TypeConstructor {
+                        origin: Default::default(),
+                        parameters: vec![],
+                        typ: never(),
                         module: PRELUDE_MODULE_NAME.into(),
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,

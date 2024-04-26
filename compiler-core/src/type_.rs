@@ -160,6 +160,16 @@ impl Type {
         }
     }
 
+    pub fn is_never(&self) -> bool {
+        match self {
+            Self::Named { module, name, .. } if "Never" == name && is_prelude_module(module) => {
+                true
+            }
+            Self::Var { type_ } => type_.borrow().is_never(),
+            _ => false,
+        }
+    }
+
     pub fn is_bit_array(&self) -> bool {
         match self {
             Self::Named { module, name, .. } if "BitArray" == name && is_prelude_module(module) => {
@@ -835,6 +845,13 @@ impl TypeVar {
     pub fn is_nil(&self) -> bool {
         match self {
             Self::Link { type_ } => type_.is_nil(),
+            Self::Unbound { .. } | Self::Generic { .. } => false,
+        }
+    }
+
+    pub fn is_never(&self) -> bool {
+        match self {
+            Self::Link { type_ } => type_.is_never(),
             Self::Unbound { .. } | Self::Generic { .. } => false,
         }
     }

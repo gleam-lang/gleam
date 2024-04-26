@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nfn() {\n  Never\n}\n"
+---
+error: Unknown variable
+  ┌─ /src/one/two.gleam:3:3
+  │
+3 │   Never
+  │   ^^^^^
+
+`Never` is a type, it cannot be used as a value.
