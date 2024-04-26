@@ -195,3 +195,6 @@
 - Fixed a bug where unreachable infinite cases would not be detected when
   after a discard or variable pattern.
   ([Ameen Radwan](https://github.com/Acepie)) and ([Pi-Cla](https://github.com/Pi-Cla))
+
+- Fixed a bug where module imports in guard clauses would not be generated
+  correctly for js target. ([Ameen Radwan](https://github.com/Acepie))
