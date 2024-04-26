@@ -16,80 +16,84 @@ use super::{
     TypedRecordUpdateArg, TypedStatement, Use,
 };
 
-pub trait Visit<'a> {
-    fn visit_typed_module(&mut self, module: &'a TypedModule) {
+pub trait Visit<'ast> {
+    fn visit_typed_module(&mut self, module: &'ast TypedModule) {
         visit_typed_module(self, module);
     }
 
-    fn visit_typed_definition(&mut self, def: &'a TypedDefinition) {
+    fn visit_typed_definition(&mut self, def: &'ast TypedDefinition) {
         visit_typed_definition(self, def);
     }
 
-    fn visit_typed_function(&mut self, fun: &'a TypedFunction) {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         visit_typed_function(self, fun);
     }
 
-    fn visit_typed_expr(&mut self, expr: &'a TypedExpr) {
+    fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
         visit_typed_expr(self, expr);
     }
 
     fn visit_typed_expr_int(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        value: &'a EcoString,
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        value: &'ast EcoString,
     ) {
         visit_typed_expr_int(self, location, typ, value);
     }
 
     fn visit_typed_expr_float(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        value: &'a EcoString,
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        value: &'ast EcoString,
     ) {
         visit_typed_expr_float(self, location, typ, value);
     }
 
     fn visit_typed_expr_string(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        value: &'a EcoString,
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        value: &'ast EcoString,
     ) {
         visit_typed_expr_string(self, location, typ, value);
     }
 
-    fn visit_typed_expr_block(&mut self, location: &'a SrcSpan, statements: &'a [TypedStatement]) {
+    fn visit_typed_expr_block(
+        &mut self,
+        location: &'ast SrcSpan,
+        statements: &'ast [TypedStatement],
+    ) {
         visit_typed_expr_block(self, location, statements);
     }
 
     fn visit_typed_expr_pipeline(
         &mut self,
-        location: &'a SrcSpan,
-        assignments: &'a [TypedAssignment],
-        finally: &'a TypedExpr,
+        location: &'ast SrcSpan,
+        assignments: &'ast [TypedAssignment],
+        finally: &'ast TypedExpr,
     ) {
         visit_typed_expr_pipeline(self, location, assignments, finally);
     }
 
     fn visit_typed_expr_var(
         &mut self,
-        location: &'a SrcSpan,
-        constructor: &'a ValueConstructor,
-        name: &'a EcoString,
+        location: &'ast SrcSpan,
+        constructor: &'ast ValueConstructor,
+        name: &'ast EcoString,
     ) {
         visit_typed_expr_var(self, location, constructor, name);
     }
 
     fn visit_typed_expr_fn(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        is_capture: &'a bool,
-        args: &'a [TypedArg],
-        body: &'a [TypedStatement],
-        return_annotation: &'a Option<TypeAst>,
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        is_capture: &'ast bool,
+        args: &'ast [TypedArg],
+        body: &'ast [TypedStatement],
+        return_annotation: &'ast Option<TypeAst>,
     ) {
         visit_typed_expr_fn(
             self,
@@ -104,64 +108,64 @@ pub trait Visit<'a> {
 
     fn visit_typed_expr_list(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        elements: &'a [TypedExpr],
-        tail: &'a Option<Box<TypedExpr>>,
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        elements: &'ast [TypedExpr],
+        tail: &'ast Option<Box<TypedExpr>>,
     ) {
         visit_typed_expr_list(self, location, typ, elements, tail);
     }
 
     fn visit_typed_expr_call(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        fun: &'a TypedExpr,
-        args: &'a [TypedCallArg],
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        fun: &'ast TypedExpr,
+        args: &'ast [TypedCallArg],
     ) {
         visit_typed_expr_call(self, location, typ, fun, args);
     }
 
     fn visit_typed_expr_bin_op(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        name: &'a BinOp,
-        left: &'a TypedExpr,
-        right: &'a TypedExpr,
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        name: &'ast BinOp,
+        left: &'ast TypedExpr,
+        right: &'ast TypedExpr,
     ) {
         visit_typed_expr_bin_op(self, location, typ, name, left, right);
     }
 
     fn visit_typed_expr_case(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        subjects: &'a [TypedExpr],
-        clauses: &'a [TypedClause],
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        subjects: &'ast [TypedExpr],
+        clauses: &'ast [TypedClause],
     ) {
         visit_typed_expr_case(self, location, typ, subjects, clauses);
     }
 
     fn visit_typed_expr_record_access(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        label: &'a EcoString,
-        index: &'a u64,
-        record: &'a TypedExpr,
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        label: &'ast EcoString,
+        index: &'ast u64,
+        record: &'ast TypedExpr,
     ) {
         visit_typed_expr_record_access(self, location, typ, label, index, record);
     }
 
     fn visit_typed_expr_module_select(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        label: &'a EcoString,
-        module_name: &'a EcoString,
-        module_alias: &'a EcoString,
-        constructor: &'a ModuleValueConstructor,
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        label: &'ast EcoString,
+        module_name: &'ast EcoString,
+        module_alias: &'ast EcoString,
+        constructor: &'ast ModuleValueConstructor,
     ) {
         visit_typed_expr_module_select(
             self,
@@ -176,97 +180,97 @@ pub trait Visit<'a> {
 
     fn visit_typed_expr_tuple(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        elems: &'a [TypedExpr],
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        elems: &'ast [TypedExpr],
     ) {
         visit_typed_expr_tuple(self, location, typ, elems);
     }
 
     fn visit_typed_expr_tuple_index(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        index: &'a u64,
-        tuple: &'a TypedExpr,
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        index: &'ast u64,
+        tuple: &'ast TypedExpr,
     ) {
         visit_typed_expr_tuple_index(self, location, typ, index, tuple);
     }
 
     fn visit_typed_expr_todo(
         &mut self,
-        location: &'a SrcSpan,
-        message: &'a Option<Box<TypedExpr>>,
-        type_: &'a Arc<Type>,
+        location: &'ast SrcSpan,
+        message: &'ast Option<Box<TypedExpr>>,
+        type_: &'ast Arc<Type>,
     ) {
         visit_typed_expr_todo(self, location, message, type_);
     }
 
     fn visit_typed_expr_panic(
         &mut self,
-        location: &'a SrcSpan,
-        message: &'a Option<Box<TypedExpr>>,
-        type_: &'a Arc<Type>,
+        location: &'ast SrcSpan,
+        message: &'ast Option<Box<TypedExpr>>,
+        type_: &'ast Arc<Type>,
     ) {
         visit_typed_expr_panic(self, location, message, type_);
     }
 
     fn visit_typed_expr_bit_array(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        segments: &'a [TypedExprBitArraySegment],
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        segments: &'ast [TypedExprBitArraySegment],
     ) {
         visit_typed_expr_bit_array(self, location, typ, segments);
     }
 
     fn visit_typed_expr_record_update(
         &mut self,
-        location: &'a SrcSpan,
-        typ: &'a Arc<Type>,
-        spread: &'a TypedExpr,
-        args: &'a [TypedRecordUpdateArg],
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        spread: &'ast TypedExpr,
+        args: &'ast [TypedRecordUpdateArg],
     ) {
         visit_typed_expr_record_update(self, location, typ, spread, args);
     }
 
-    fn visit_typed_expr_negate_bool(&mut self, location: &'a SrcSpan, value: &'a TypedExpr) {
+    fn visit_typed_expr_negate_bool(&mut self, location: &'ast SrcSpan, value: &'ast TypedExpr) {
         visit_typed_expr_negate_bool(self, location, value);
     }
 
-    fn visit_typed_expr_negate_int(&mut self, location: &'a SrcSpan, value: &'a TypedExpr) {
+    fn visit_typed_expr_negate_int(&mut self, location: &'ast SrcSpan, value: &'ast TypedExpr) {
         visit_typed_expr_negate_int(self, location, value)
     }
 
-    fn visit_typed_statement(&mut self, stmt: &'a TypedStatement) {
+    fn visit_typed_statement(&mut self, stmt: &'ast TypedStatement) {
         visit_typed_statement(self, stmt);
     }
 
-    fn visit_typed_assignment(&mut self, assignment: &'a TypedAssignment) {
+    fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
         visit_typed_assignment(self, assignment);
     }
 
-    fn visit_use(&mut self, use_: &'a Use) {
+    fn visit_use(&mut self, use_: &'ast Use) {
         visit_use(self, use_);
     }
 
-    fn visit_typed_call_arg(&mut self, arg: &'a TypedCallArg) {
+    fn visit_typed_call_arg(&mut self, arg: &'ast TypedCallArg) {
         visit_typed_call_arg(self, arg);
     }
 
-    fn visit_typed_clause(&mut self, clause: &'a TypedClause) {
+    fn visit_typed_clause(&mut self, clause: &'ast TypedClause) {
         visit_typed_clause(self, clause);
     }
 
-    fn visit_typed_expr_bit_array_segment(&mut self, segment: &'a TypedExprBitArraySegment) {
+    fn visit_typed_expr_bit_array_segment(&mut self, segment: &'ast TypedExprBitArraySegment) {
         visit_typed_expr_bit_array_segment(self, segment);
     }
 
-    fn visit_typed_record_update_arg(&mut self, arg: &'a TypedRecordUpdateArg) {
+    fn visit_typed_record_update_arg(&mut self, arg: &'ast TypedRecordUpdateArg) {
         visit_typed_record_update_arg(self, arg);
     }
 
-    fn visit_typed_bit_array_option(&mut self, option: &'a BitArrayOption<TypedExpr>) {
+    fn visit_typed_bit_array_option(&mut self, option: &'ast BitArrayOption<TypedExpr>) {
         visit_typed_bit_array_option(self, option);
     }
 }
