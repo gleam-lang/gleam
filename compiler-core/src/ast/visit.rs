@@ -289,10 +289,10 @@ where
 {
     match def {
         Definition::Function(fun) => v.visit_typed_function(fun),
-        Definition::TypeAlias(type_alias) => todo!(),
-        Definition::CustomType(custom_type) => todo!(),
-        Definition::Import(import) => todo!(),
-        Definition::ModuleConstant(module_constant) => todo!(),
+        Definition::TypeAlias(type_alias) => { /* TODO */ }
+        Definition::CustomType(custom_type) => { /* TODO */ }
+        Definition::Import(import) => { /* TODO */ }
+        Definition::ModuleConstant(module_constant) => { /* TODO */ }
     }
 }
 pub fn visit_typed_function<'a, V>(v: &mut V, fun: &'a TypedFunction)
@@ -721,7 +721,7 @@ pub fn visit_use<'a, V>(v: &mut V, use_: &'a Use)
 where
     V: Visit<'a> + ?Sized,
 {
-    todo!()
+    { /* TODO */ }
 }
 
 pub fn visit_typed_call_arg<'a, V>(v: &mut V, arg: &'a TypedCallArg)
@@ -760,26 +760,26 @@ where
     V: Visit<'a> + ?Sized,
 {
     match option {
-        BitArrayOption::Bytes { location } => todo!(),
-        BitArrayOption::Int { location } => todo!(),
-        BitArrayOption::Float { location } => todo!(),
-        BitArrayOption::Bits { location } => todo!(),
-        BitArrayOption::Utf8 { location } => todo!(),
-        BitArrayOption::Utf16 { location } => todo!(),
-        BitArrayOption::Utf32 { location } => todo!(),
-        BitArrayOption::Utf8Codepoint { location } => todo!(),
-        BitArrayOption::Utf16Codepoint { location } => todo!(),
-        BitArrayOption::Utf32Codepoint { location } => todo!(),
-        BitArrayOption::Signed { location } => todo!(),
-        BitArrayOption::Unsigned { location } => todo!(),
-        BitArrayOption::Big { location } => todo!(),
-        BitArrayOption::Little { location } => todo!(),
-        BitArrayOption::Native { location } => todo!(),
+        BitArrayOption::Bytes { location } => { /* TODO */ }
+        BitArrayOption::Int { location } => { /* TODO */ }
+        BitArrayOption::Float { location } => { /* TODO */ }
+        BitArrayOption::Bits { location } => { /* TODO */ }
+        BitArrayOption::Utf8 { location } => { /* TODO */ }
+        BitArrayOption::Utf16 { location } => { /* TODO */ }
+        BitArrayOption::Utf32 { location } => { /* TODO */ }
+        BitArrayOption::Utf8Codepoint { location } => { /* TODO */ }
+        BitArrayOption::Utf16Codepoint { location } => { /* TODO */ }
+        BitArrayOption::Utf32Codepoint { location } => { /* TODO */ }
+        BitArrayOption::Signed { location } => { /* TODO */ }
+        BitArrayOption::Unsigned { location } => { /* TODO */ }
+        BitArrayOption::Big { location } => { /* TODO */ }
+        BitArrayOption::Little { location } => { /* TODO */ }
+        BitArrayOption::Native { location } => { /* TODO */ }
         BitArrayOption::Size {
             location,
             value,
             short_form,
         } => v.visit_typed_expr(value),
-        BitArrayOption::Unit { location, value } => todo!(),
+        BitArrayOption::Unit { location, value } => { /* TODO */ }
     }
 }
