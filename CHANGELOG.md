@@ -88,6 +88,29 @@
 
   ([Pi-Cla](https://github.com/Pi-Cla/))
 
+- The compiler will now raise a warning when you try to use `todo` or `panic` as
+  if they were functions: this could previously lead to a confusing behaviour
+  since one might expect the arguments to be printed in the error message.
+  The error message now suggests the correct way to add an error message to
+  `todo` and `panic`.
+
+  ```
+  warning: Todo used as a function
+    ┌─ /src/warning/wrn.gleam:2:16
+    │
+  2 │           todo(1)
+    │                ^
+
+  `todo` is not a function and will crash before it can do anything with
+  this argument.
+
+  Hint: if you want to display an error message you should write
+  `todo as "my error message"`
+  See: https://tour.gleam.run/advanced-features/todo/
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.
