@@ -2459,7 +2459,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         assignments_location,
                         last_statement_location,
                     },
-                    (CallKind::Use { .. }, _) | (CallKind::Function, _) => ArgumentKind::Regular,
+                    (CallKind::Use { .. } | CallKind::Function, _) => ArgumentKind::Regular,
                 };
                 let value = self.infer_call_argument(value, typ.clone(), argument_kind)?;
 
@@ -2823,10 +2823,10 @@ struct UseAssignments {
 }
 
 impl UseAssignments {
-    fn from_use_expression(sugar_assignments: &Vec<UseAssignment>) -> UseAssignments {
+    fn from_use_expression(sugar_assignments: &[UseAssignment]) -> UseAssignments {
         let mut assignments = UseAssignments::default();
 
-        for (index, assignment) in sugar_assignments.into_iter().enumerate() {
+        for (index, assignment) in sugar_assignments.iter().enumerate() {
             let UseAssignment {
                 location,
                 pattern,

@@ -986,15 +986,15 @@ pub enum UnifyErrorSituation {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FunctionsMismatchReason {
-    MismatchedResults {
+    Results {
         one: Arc<Type>,
         other: Arc<Type>,
     },
-    MismatchedArity {
+    Arity {
         one: usize,
         other: usize,
     },
-    MismatchedArg {
+    Arg {
         one: Arc<Type>,
         other: Arc<Type>,
         position: usize,
@@ -1163,7 +1163,7 @@ impl UnifyError {
                 // If both the expected and given values are functions we can be a
                 // bit more specific with the error and highlight the reason of the
                 // problem instead of having a generic type mismatch error.
-                FunctionsMismatchReason::MismatchedResults { one, other } => Error::CouldNotUnify {
+                FunctionsMismatchReason::Results { one, other } => Error::CouldNotUnify {
                     location: last_statement_location,
                     expected: one.clone(),
                     given: other.clone(),
@@ -1171,18 +1171,16 @@ impl UnifyError {
                     rigid_type_names: im::hashmap![],
                 },
 
-                FunctionsMismatchReason::MismatchedArity { one, other } => {
-                    Error::UseCallbackIncorrectArity {
-                        call_location: function_location,
-                        pattern_location,
-                        expected: *one,
-                        given: *other,
-                    }
-                }
+                FunctionsMismatchReason::Arity { one, other } => Error::UseCallbackIncorrectArity {
+                    call_location: function_location,
+                    pattern_location,
+                    expected: *one,
+                    given: *other,
+                },
 
                 // For this one we just fallback to the generic cannot unify error
                 // as it is already plenty clear in a `use` expression.
-                FunctionsMismatchReason::MismatchedArg { .. } => self.into_error(body_location),
+                FunctionsMismatchReason::Arg { .. } => self.into_error(body_location),
             },
 
             // In all other cases we fallback to the generic cannot unify error.
