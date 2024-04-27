@@ -3,8 +3,8 @@ mod tests;
 
 use crate::{
     ast::{
-        CustomType, Function, Import, ModuleConstant, TypeAlias, TypeAstConstructor, TypeAstFn,
-        TypeAstHole, TypeAstTuple, TypeAstVar, Use, *,
+        CustomType, Import, ModuleConstant, TypeAlias, TypeAstConstructor, TypeAstFn, TypeAstHole,
+        TypeAstTuple, TypeAstVar, UntypedUse, *,
     },
     build::Target,
     docvec,
@@ -702,7 +702,7 @@ impl<'comments> Formatter<'comments> {
         commented(doc, comments)
     }
 
-    fn statement_fn<'a>(&mut self, function: &'a Function<(), UntypedExpr>) -> Document<'a> {
+    fn statement_fn<'a>(&mut self, function: &'a UntypedFunction) -> Document<'a> {
         // @deprecated attribute
         let attributes = self.deprecation_attr(&function.deprecation);
 
@@ -2146,7 +2146,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn use_<'a>(&mut self, use_: &'a Use) -> Document<'a> {
+    fn use_<'a>(&mut self, use_: &'a UntypedUse) -> Document<'a> {
         let comments = self.pop_comments(use_.location.start);
 
         let call = if use_.call.is_call() {
@@ -2246,7 +2246,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn statement<'a>(&mut self, statement: &'a Statement<(), UntypedExpr>) -> Document<'a> {
+    fn statement<'a>(&mut self, statement: &'a UntypedStatement) -> Document<'a> {
         match statement {
             Statement::Expression(expression) => self.expr(expression),
             Statement::Assignment(assignment) => self.assignment(assignment),

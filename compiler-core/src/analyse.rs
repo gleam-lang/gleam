@@ -7,8 +7,8 @@ use crate::{
         self, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
         RecordConstructorArg, SrcSpan, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn,
-        TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedModule, UntypedArg,
-        UntypedModule, UntypedStatement,
+        TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedFunction, TypedModule,
+        UntypedArg, UntypedFunction, UntypedModule, UntypedStatement,
     },
     build::{Origin, Target},
     call_graph::{into_dependency_order, CallGraphNode},
@@ -619,7 +619,7 @@ fn register_values_from_custom_type(
 }
 
 fn register_value_from_function(
-    f: &Function<(), ast::UntypedExpr>,
+    f: &UntypedFunction,
     names: &mut HashMap<EcoString, SrcSpan>,
     environment: &mut Environment<'_>,
     hydrators: &mut HashMap<EcoString, Hydrator>,
@@ -719,7 +719,7 @@ fn assert_valid_javascript_external(
 }
 
 fn infer_function(
-    f: Function<(), ast::UntypedExpr>,
+    f: UntypedFunction,
     environment: &mut Environment<'_>,
     hydrators: &mut HashMap<EcoString, Hydrator>,
     module_name: &EcoString,
@@ -1260,7 +1260,7 @@ fn generalise_module_constant(
 }
 
 fn generalise_function(
-    function: Function<Arc<Type>, ast::TypedExpr>,
+    function: TypedFunction,
     environment: &mut Environment<'_>,
     module_name: &EcoString,
 ) -> TypedDefinition {

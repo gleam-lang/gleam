@@ -573,6 +573,5 @@ use x <- fn(f) { f(1) }
     assert!(use_.find_node(0).is_none());
     assert!(use_.find_node(1).is_some()); // The use
     assert!(use_.find_node(23).is_some());
-
     assert!(use_.find_node(26).is_some()); // The int
 }

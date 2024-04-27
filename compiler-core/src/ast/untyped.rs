@@ -21,7 +21,7 @@ pub enum UntypedExpr {
 
     Block {
         location: SrcSpan,
-        statements: Vec1<Statement<(), Self>>,
+        statements: Vec1<UntypedStatement>,
     },
 
     Var {
@@ -234,9 +234,12 @@ impl HasLocation for UntypedExpr {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Use {
+pub struct Use<ExpressionT> {
     pub location: SrcSpan,
     pub assignments_location: SrcSpan,
-    pub call: Box<UntypedExpr>,
+    pub call: Box<ExpressionT>,
     pub assignments: Vec<UseAssignment>,
 }
+
+pub type UntypedUse = Use<UntypedExpr>;
+pub type TypedUse = Use<TypedExpr>;

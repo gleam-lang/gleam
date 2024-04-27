@@ -50,7 +50,7 @@ pub enum TypedExpr {
         typ: Arc<Type>,
         is_capture: bool,
         args: Vec<Arg<Arc<Type>>>,
-        body: Vec1<Statement<Arc<Type>, Self>>,
+        body: Vec1<TypedStatement>,
         return_annotation: Option<TypeAst>,
     },
 
