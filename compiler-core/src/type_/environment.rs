@@ -726,19 +726,49 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
                 retrn: retrn2,
                 ..
             },
-        ) if args1.len() == args2.len() => {
-            for (a, b) in args1.iter().zip(args2) {
-                unify(a.clone(), b.clone()).map_err(|_| UnifyError::CouldNotUnify {
+        ) => {
+            if args1.len() == args2.len() {
+                for (i, (a, b)) in args1.iter().zip(args2).enumerate() {
+                    unify(a.clone(), b.clone()).map_err(|_| UnifyError::CouldNotUnify {
+                        expected: t1.clone(),
+                        given: t2.clone(),
+                        situation: Some(UnifyErrorSituation::FunctionsMismatch {
+                            reason: FunctionsMismatchReason::MismatchedArg {
+                                one: a.clone(),
+                                other: b.clone(),
+                                position: i,
+                            },
+                        }),
+                    })?;
+                }
+                unify(retrn1.clone(), retrn2.clone())
+                    .map_err(|_| UnifyError::CouldNotUnify {
+                        expected: t1.clone(),
+                        given: t2.clone(),
+                        situation: None,
+                    })
+                    .map_err(|_| UnifyError::CouldNotUnify {
+                        expected: t1.clone(),
+                        given: t2.clone(),
+                        situation: Some(UnifyErrorSituation::FunctionsMismatch {
+                            reason: FunctionsMismatchReason::MismatchedResults {
+                                one: retrn1.clone(),
+                                other: retrn2.clone(),
+                            },
+                        }),
+                    })
+            } else {
+                Err(UnifyError::CouldNotUnify {
                     expected: t1.clone(),
                     given: t2.clone(),
-                    situation: None,
-                })?;
+                    situation: Some(UnifyErrorSituation::FunctionsMismatch {
+                        reason: FunctionsMismatchReason::MismatchedArity {
+                            one: args1.len(),
+                            other: args2.len(),
+                        },
+                    }),
+                })
             }
-            unify(retrn1.clone(), retrn2.clone()).map_err(|_| UnifyError::CouldNotUnify {
-                expected: t1.clone(),
-                given: t2.clone(),
-                situation: None,
-            })
         }
 
         _ => Err(UnifyError::CouldNotUnify {

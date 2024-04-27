@@ -12,7 +12,7 @@ use ecow::EcoString;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 
-use super::FieldAccessUsage;
+use super::{expression::CallKind, FieldAccessUsage};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct UnknownType {
@@ -364,6 +364,61 @@ pub enum Error {
         name: EcoString,
         location: SrcSpan,
     },
+
+    /// When there's something that is not a function to the left of the `<-`
+    /// operator in a use expression:
+    ///
+    /// For example:
+    ///
+    /// ```gleam
+    /// use <- "wibble"
+    /// todo
+    /// ```
+    NotFnInUse {
+        location: SrcSpan,
+        typ: Arc<Type>,
+    },
+
+    /// When the function to the right hand side of `<-` in a `use` expression
+    /// is called with the wrong number of arguments (given already takes into
+    /// account the use callback passed to the function).
+    ///
+    UseFnIncorrectArity {
+        location: SrcSpan,
+        expected: usize,
+        given: usize,
+    },
+
+    /// When on the left hand side of `<-` in a `use` expression there is the
+    /// wrong number of patterns.
+    ///
+    /// For example:
+    ///
+    /// ```gleam
+    /// use _, _ <- result.try(res)
+    /// todo
+    /// ```
+    ///
+    UseCallbackIncorrectArity {
+        call_location: SrcSpan,
+        pattern_location: SrcSpan,
+        expected: usize,
+        given: usize,
+    },
+
+    /// When on the right hand side of use there is a function that doesn't take
+    /// a callback function as its last argument.
+    ///
+    /// For example:
+    ///
+    /// ```gleam
+    /// use <- io.println
+    /// ```
+    ///
+    UseFnDoesntTakeCallback {
+        location: SrcSpan,
+        actual_type: Option<Type>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -611,7 +666,14 @@ impl Error {
             | Error::InexhaustiveLetAssignment { location, .. }
             | Error::UnusedTypeAliasParameter { location, .. }
             | Error::DuplicateTypeParameter { location, .. }
-            | Error::UnsupportedPublicFunctionTarget { location, .. } => location.start,
+            | Error::UnsupportedPublicFunctionTarget { location, .. }
+            | Error::NotFnInUse { location, .. }
+            | Error::UseCallbackIncorrectArity {
+                pattern_location: location,
+                ..
+            }
+            | Error::UseFnDoesntTakeCallback { location, .. }
+            | Error::UseFnIncorrectArity { location, .. } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
@@ -788,17 +850,33 @@ pub fn convert_not_fun_error(
     e: MatchFunTypeError,
     fn_location: SrcSpan,
     call_location: SrcSpan,
+    call_kind: CallKind,
 ) -> Error {
-    match e {
-        MatchFunTypeError::IncorrectArity { expected, given } => Error::IncorrectArity {
-            labels: vec![],
-            location: call_location,
-            expected,
-            given,
+    match (call_kind, e) {
+        (CallKind::Function, MatchFunTypeError::IncorrectArity { expected, given }) => {
+            Error::IncorrectArity {
+                labels: vec![],
+                location: call_location,
+                expected,
+                given,
+            }
+        }
+
+        (CallKind::Function, MatchFunTypeError::NotFn { typ }) => Error::NotFn {
+            location: fn_location,
+            typ,
         },
 
-        MatchFunTypeError::NotFn { typ } => Error::NotFn {
-            location: fn_location,
+        (CallKind::Use { .. }, MatchFunTypeError::IncorrectArity { expected, given }) => {
+            Error::UseFnIncorrectArity {
+                location: call_location,
+                expected,
+                given,
+            }
+        }
+
+        (CallKind::Use { .. }, MatchFunTypeError::NotFn { typ }) => Error::NotFnInUse {
+            location: call_location,
             typ,
         },
     }
@@ -874,7 +952,7 @@ fn unify_enclosed_type_test() {
     );
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnifyErrorSituation {
     /// Clauses in a case expression were found to return different types.
     CaseClauseMismatch,
@@ -899,6 +977,28 @@ pub enum UnifyErrorSituation {
 
     /// The tail of the list is not the same type as the other elements.
     ListTailMismatch,
+
+    /// When two functions cannot be unified.
+    FunctionsMismatch {
+        reason: FunctionsMismatchReason,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FunctionsMismatchReason {
+    MismatchedResults {
+        one: Arc<Type>,
+        other: Arc<Type>,
+    },
+    MismatchedArity {
+        one: usize,
+        other: usize,
+    },
+    MismatchedArg {
+        one: Arc<Type>,
+        other: Arc<Type>,
+        position: usize,
+    },
 }
 
 impl UnifyErrorSituation {
@@ -937,6 +1037,8 @@ match the one before it.",
                 "All elements in a list must have the same type, but the elements of
 this list don't match the type of the elements being prepended to it.",
             ),
+
+            Self::FunctionsMismatch { .. } => None,
         }
     }
 }
@@ -1031,6 +1133,60 @@ impl UnifyError {
             Self::DuplicateVarInPattern { name } => Error::DuplicateVarInPattern { location, name },
 
             Self::RecursiveType => Error::RecursiveType { location },
+        }
+    }
+
+    pub fn into_use_unify_error(
+        self,
+        function_location: SrcSpan,
+        pattern_location: SrcSpan,
+        last_statement_location: SrcSpan,
+        body_location: SrcSpan,
+    ) -> Error {
+        match &self {
+            // If the expected value is not a function, that means we're trying
+            // to pass something that doesn't take a function as callback to the
+            // right hand side of use.
+            Self::CouldNotUnify {
+                expected,
+                given: _,
+                situation: _,
+            } if !expected.as_ref().is_fun() => Error::UseFnDoesntTakeCallback {
+                location: function_location,
+                actual_type: Some(expected.as_ref().clone()),
+            },
+
+            Self::CouldNotUnify {
+                situation: Some(UnifyErrorSituation::FunctionsMismatch { reason }),
+                ..
+            } => match reason {
+                // If both the expected and given values are functions we can be a
+                // bit more specific with the error and highlight the reason of the
+                // problem instead of having a generic type mismatch error.
+                FunctionsMismatchReason::MismatchedResults { one, other } => Error::CouldNotUnify {
+                    location: last_statement_location,
+                    expected: one.clone(),
+                    given: other.clone(),
+                    situation: None,
+                    rigid_type_names: im::hashmap![],
+                },
+
+                FunctionsMismatchReason::MismatchedArity { one, other } => {
+                    Error::UseCallbackIncorrectArity {
+                        call_location: function_location,
+                        pattern_location,
+                        expected: *one,
+                        given: *other,
+                    }
+                }
+
+                // For this one we just fallback to the generic cannot unify error
+                // as it is already plenty clear in a `use` expression.
+                FunctionsMismatchReason::MismatchedArg { .. } => self.into_error(body_location),
+            },
+
+            // In all other cases we fallback to the generic cannot unify error.
+            _ => self.into_error(body_location),
         }
     }
 }

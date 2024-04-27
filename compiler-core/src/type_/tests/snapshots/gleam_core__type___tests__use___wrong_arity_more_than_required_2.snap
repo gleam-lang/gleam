@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+expression: "\nlet f = fn(a, b) { 1 }\nuse <- f(1, 2, 3)\n123\n"
+---
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:3:8
+  │
+3 │ use <- f(1, 2, 3)
+  │        ^^^^^^^^^^ Expected 2 arguments, got 4
+
+The function on the right of `<-` here takes 2 arguments.
+All the arguments have already been supplied, so it cannot take the the
+`use` callback function as a final argument.
+
+See: https://tour.gleam.run/advanced-features/use/

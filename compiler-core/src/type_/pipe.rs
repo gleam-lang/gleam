@@ -1,3 +1,5 @@
+use self::expression::CallKind;
+
 use super::*;
 use crate::ast::{Assignment, AssignmentKind, TypedAssignment, UntypedExpr, PIPE_VARIABLE};
 use vec1::Vec1;
@@ -200,9 +202,12 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let (function, args, typ) = self
-            .expr_typer
-            .do_infer_call_with_known_fun(function, args, location)?;
+        let (function, args, typ) = self.expr_typer.do_infer_call_with_known_fun(
+            function,
+            args,
+            location,
+            CallKind::Function,
+        )?;
         let function = TypedExpr::Call {
             location,
             typ,
@@ -215,9 +220,12 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         // the function below. If it is not we don't know if the error comes
         // from incorrect usage of the pipe or if it originates from the
         // argument expressions.
-        let (function, args, typ) = self
-            .expr_typer
-            .do_infer_call_with_known_fun(function, args, location)?;
+        let (function, args, typ) = self.expr_typer.do_infer_call_with_known_fun(
+            function,
+            args,
+            location,
+            CallKind::Function,
+        )?;
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -239,9 +247,12 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         // the function below. If it is not we don't know if the error comes
         // from incorrect usage of the pipe or if it originates from the
         // argument expressions.
-        let (fun, args, typ) = self
-            .expr_typer
-            .do_infer_call_with_known_fun(function, arguments, location)?;
+        let (fun, args, typ) = self.expr_typer.do_infer_call_with_known_fun(
+            function,
+            arguments,
+            location,
+            CallKind::Function,
+        )?;
         Ok(TypedExpr::Call {
             location,
             typ,
