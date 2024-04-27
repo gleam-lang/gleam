@@ -747,8 +747,8 @@ impl TypedDefinition {
                     {
                         return Some(Located::UnqualifiedImport(
                             crate::build::UnqualifiedImport {
-                                name: unqualified.name.clone(),
-                                module: import.module.clone(),
+                                name: &unqualified.name,
+                                module: &import.module,
                                 is_type: false,
                             },
                         ));
@@ -761,8 +761,8 @@ impl TypedDefinition {
                     {
                         return Some(Located::UnqualifiedImport(
                             crate::build::UnqualifiedImport {
-                                name: unqualified.name.clone(),
-                                module: import.module.clone(),
+                                name: &unqualified.name,
+                                module: &import.module,
                                 is_type: true,
                             },
                         ));

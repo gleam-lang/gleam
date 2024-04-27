@@ -289,9 +289,9 @@ impl Module {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct UnqualifiedImport {
-    pub name: EcoString,
-    pub module: EcoString,
+pub struct UnqualifiedImport<'a> {
+    pub name: &'a EcoString,
+    pub module: &'a EcoString,
     pub is_type: bool,
 }
 
@@ -304,7 +304,7 @@ pub enum Located<'a> {
     FunctionBody(&'a TypedFunction),
     Arg(&'a TypedArg),
     Annotation(SrcSpan, std::sync::Arc<type_::Type>),
-    UnqualifiedImport(UnqualifiedImport),
+    UnqualifiedImport(UnqualifiedImport<'a>),
 }
 
 impl<'a> Located<'a> {
@@ -341,14 +341,14 @@ impl<'a> Located<'a> {
                 module,
                 name,
                 is_type,
-            }) => importable_modules.get(module).and_then(|m| {
+            }) => importable_modules.get(*module).and_then(|m| {
                 if *is_type {
-                    m.types.get(name).map(|t| DefinitionLocation {
+                    m.types.get(*name).map(|t| DefinitionLocation {
                         module: Some(&module),
                         span: t.origin,
                     })
                 } else {
-                    m.values.get(name).map(|v| DefinitionLocation {
+                    m.values.get(*name).map(|v| DefinitionLocation {
                         module: Some(&module),
                         span: v.definition_location().span,
                     })
