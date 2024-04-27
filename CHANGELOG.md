@@ -185,9 +185,11 @@
   removed if it would otherwise be left blank.
   ([Milco Kats](https://github.com/katsmil))
 
-- Hover for type annotations is now separate from the thing being annotated ([Ameen Radwan](https://github.com/Acepie))
+- Hover for type annotations is now separate from the thing being annotated. ([Ameen Radwan](https://github.com/Acepie))
 
-- Go to definition now works for direct type annotations ([Ameen Radwan](https://github.com/Acepie))
+- Go to definition now works for direct type annotations. ([Ameen Radwan](https://github.com/Acepie))
+
+- Go to definition now works for import statements. ([Ameen Radwan](https://github.com/Acepie))
 
 ### Bug Fixes
 
