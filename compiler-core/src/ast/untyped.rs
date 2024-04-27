@@ -236,6 +236,7 @@ impl HasLocation for UntypedExpr {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Use {
     pub location: SrcSpan,
+    pub assignments_location: SrcSpan,
     pub call: Box<UntypedExpr>,
     pub assignments: Vec<UseAssignment>,
 }

@@ -140,6 +140,34 @@ impl Implementations {
     }
 }
 
+/// This is used to tell apart regular function calls and `use` expressions:
+/// a `use` is still typed as if it were a normal function call but we want to
+/// be able to tell the difference in order to provide better error message.
+///
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub enum CallKind {
+    Function,
+    Use {
+        assignments_location: SrcSpan,
+        last_statement_location: SrcSpan,
+    },
+}
+
+/// This is used to tell apart regular call arguments and the callback that is
+/// implicitly passed to a `use` function call.
+/// Both are going to be typed as usual but we want to tell them apart in order
+/// to report better error messages for `use` expressions.
+///
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub enum ArgumentKind {
+    Regular,
+    UseCallback {
+        function_location: SrcSpan,
+        assignments_location: SrcSpan,
+        last_statement_location: SrcSpan,
+    },
+}
+
 #[derive(Debug)]
 pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) environment: &'a mut Environment<'b>,
@@ -277,7 +305,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 fun,
                 arguments: args,
                 ..
-            } => self.infer_call(*fun, args, location),
+            } => self.infer_call(*fun, args, location, CallKind::Function),
 
             UntypedExpr::BinOp {
                 location,
@@ -488,6 +516,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         sequence_location: SrcSpan,
         mut following_expressions: Vec<UntypedStatement>,
     ) -> Result<TypedStatement, Error> {
+        let assignments_location = use_.assignments_location;
+        let call_location = use_.call.location();
         let mut call = get_use_expression_call(*use_.call)?;
         let assignments = UseAssignments::from_use_expression(use_.assignments);
 
@@ -505,6 +535,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         let statements = Vec1::try_from_vec(statements).expect("safe: todo added above");
+        // We need this to report good error messages in case there's a type error
+        // in use. We consider `use` to be the last statement of a block since
+        // it consumes everything that comes below it and returns a single value.
+        let last_statement_location = statements
+            .iter()
+            .find_or_last(|e| e.is_use())
+            .expect("safe: iter from non empty vec")
+            .location();
 
         let first = statements.first().location();
 
@@ -528,12 +566,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             implicit: true,
         });
 
-        let call = self.infer(UntypedExpr::Call {
-            location: SrcSpan::new(use_.location.start, sequence_location.end),
-            fun: call.function,
-            arguments: call.arguments,
-        })?;
+        let call = self.infer_call(
+            *call.function,
+            call.arguments,
+            call_location,
+            CallKind::Use {
+                assignments_location,
+                last_statement_location,
+            },
+        )?;
 
+        // TODO: Return a Statement::Use that is typed instead of just a call!
         Ok(Statement::Expression(call))
     }
 
@@ -647,8 +690,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         fun: UntypedExpr,
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
+        kind: CallKind,
     ) -> Result<TypedExpr, Error> {
-        let (fun, args, typ) = self.do_infer_call(fun, args, location)?;
+        let (fun, args, typ) = self.do_infer_call(fun, args, location, kind)?;
 
         // One common mistake is to think that the syntax for adding a message
         // to a `todo` or a `panic` exception is to `todo("...")`, but really
@@ -2190,8 +2234,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
 
                 let (mut args_types, return_type) =
-                    match_fun_type(fun.type_(), args.len(), self.environment)
-                        .map_err(|e| convert_not_fun_error(e, fun.location(), location))?;
+                    match_fun_type(fun.type_(), args.len(), self.environment).map_err(|e| {
+                        convert_not_fun_error(e, fun.location(), location, CallKind::Function)
+                    })?;
+
                 let args = args_types
                     .iter_mut()
                     .zip(args)
@@ -2331,6 +2377,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         fun: UntypedExpr,
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
+        kind: CallKind,
     ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
         let fun = match fun {
             UntypedExpr::FieldAccess {
@@ -2348,7 +2395,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             fun => self.infer(fun),
         }?;
 
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location)?;
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location, kind)?;
         Ok((fun, args, typ))
     }
 
@@ -2357,6 +2404,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         fun: TypedExpr,
         mut args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
+        kind: CallKind,
     ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
         // Check to see if the function accepts labelled arguments
         match self
@@ -2373,20 +2421,42 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Extract the type of the fun, ensuring it actually is a function
         let (mut args_types, return_type) =
             match_fun_type(fun.type_(), args.len(), self.environment)
-                .map_err(|e| convert_not_fun_error(e, fun.location(), location))?;
+                .map_err(|e| convert_not_fun_error(e, fun.location(), location, kind))?;
 
         // Ensure that the given args have the correct types
+        let args_count = args_types.len();
         let args = args_types
             .iter_mut()
             .zip(args)
-            .map(|(typ, arg): (&mut Arc<Type>, _)| {
+            .enumerate()
+            .map(|(i, (typ, arg))| {
                 let CallArg {
                     label,
                     value,
                     location,
                     implicit,
                 } = arg;
-                let value = self.infer_call_argument(value, typ.clone())?;
+
+                // If we're typing a `use` call then the last argument is the
+                // use callback and we want to treat it differently to report
+                // better errors.
+                let is_last_argument = i == args_count - 1;
+                let argument_kind = match (kind, is_last_argument) {
+                    (
+                        CallKind::Use {
+                            last_statement_location,
+                            assignments_location,
+                        },
+                        true,
+                    ) => ArgumentKind::UseCallback {
+                        function_location: fun.location(),
+                        assignments_location,
+                        last_statement_location,
+                    },
+                    (CallKind::Use { .. }, _) | (CallKind::Function, _) => ArgumentKind::Regular,
+                };
+                let value = self.infer_call_argument(value, typ.clone(), argument_kind)?;
+
                 Ok(CallArg {
                     label,
                     value,
@@ -2402,6 +2472,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         value: UntypedExpr,
         typ: Arc<Type>,
+        kind: ArgumentKind,
     ) -> Result<TypedExpr, Error> {
         let typ = collapse_links(typ);
 
@@ -2439,7 +2510,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             (_, value) => self.infer(value),
         }?;
 
-        unify(typ, value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
+        unify(typ, value.type_()).map_err(|e| match kind {
+            ArgumentKind::UseCallback {
+                function_location,
+                assignments_location,
+                last_statement_location,
+            } => e.into_use_unify_error(
+                function_location,
+                assignments_location,
+                last_statement_location,
+                value.location(),
+            ),
+            ArgumentKind::Regular => convert_unify_error(e, value.location()),
+        })?;
         Ok(value)
     }
 

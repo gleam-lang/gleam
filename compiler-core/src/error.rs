@@ -1638,7 +1638,7 @@ But function expects:
                 } => {
                     let mut printer = Printer::new();
                     printer.with_names(annotated_names.clone());
-                    let mut text = if let Some(description) = situation.and_then(|s| s.description()) {
+                    let mut text = if let Some(description) = situation.as_ref().and_then(|s| s.description()) {
                         let mut text = description.to_string();
                         text.push('\n');
                         text.push('\n');
@@ -2725,7 +2725,166 @@ Rename or remove one of them.",
                             extra_labels: vec![],
                         }),
                     }
-                }
+                },
+
+                TypeError::NotFnInUse { location, typ } => {
+                    let mut printer = Printer::new();
+                    let text = wrap_format!(
+                        "In a use expression, there should be a function on the right hand side of `<-`, but this value has type:
+
+{}
+
+See: https://tour.gleam.run/advanced-features/use/",
+                        printer.pretty_print(typ, 4)
+                    );
+
+                    Diagnostic {
+                        title: "Type mismatch".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                },
+
+                TypeError::UseFnDoesntTakeCallback { location, actual_type: None }
+                | TypeError::UseFnIncorrectArity { location, expected: 0, given: 1 } => {
+                    let text = wrap("The function on the right of `<-` here takes no arguments.
+But it has to take at least one argument, a callback function.
+
+See: https://tour.gleam.run/advanced-features/use/");
+                    Diagnostic {
+                        title: "Incorrect arity".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("Expected no arguments, got 1".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                },
+
+                TypeError::UseFnIncorrectArity { location, expected, given } => {
+                    let expected_string = match expected {
+                        0 => "no arguments".into(),
+                        1 => "1 argument".into(),
+                        _ => format!("{expected} arguments"),
+                    };
+                    let supplied_arguments = given - 1;
+                    let supplied_arguments_string = match supplied_arguments {
+                        0 => "no arguments".into(),
+                        1 => "1 argument".into(),
+                        _ => format!("{given} arguments"),
+                    };
+                    let label = format!("Expected {expected_string}, got {given}");
+                    let mut text: String = format!("The function on the right of `<-` here takes {expected_string}.\n");
+
+                    if expected > given {
+                        if supplied_arguments == 0 {
+                            text.push_str("The only argument that was supplied is the `use` callback function.\n")
+                        } else {
+                            text.push_str(&format!("You supplied {supplied_arguments_string} and the final one is the `use` callback function.\n"));
+                        }
+                    } else {
+                        text.push_str("All the arguments have already been supplied, so it cannot take the the `use` callback function as a final argument.\n")
+                    };
+
+                    text.push_str("\nSee: https://tour.gleam.run/advanced-features/use/");
+
+                    Diagnostic {
+                        title: "Incorrect arity".into(),
+                        text: wrap(&text),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some(label),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                },
+
+                TypeError::UseFnDoesntTakeCallback { location, actual_type: Some(actual) } => {
+                    let mut printer = Printer::new();
+                    let text = wrap_format!("The function on the right hand side of `<-` has to take a callback function as its last argument. But the last argument of this function has type:
+
+{}
+
+See: https://tour.gleam.run/advanced-features/use/",
+                        printer.pretty_print(actual, 4)
+                    );
+                    Diagnostic {
+                        title: "Type mismatch".into(),
+                        text: wrap(&text),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                },
+
+                TypeError::UseCallbackIncorrectArity { pattern_location, call_location, expected, given } => {
+                    let expected = match expected {
+                        0 => "no arguments".into(),
+                        1 => "1 argument".into(),
+                        _ => format!("{expected} arguments"),
+                    };
+
+                    let specified = match given {
+                        0 => "none were provided".into(),
+                        1 => "1 was provided".into(),
+                        _ => format!("{given} were provided"),
+                    };
+
+                    let text = wrap_format!("This function takes a callback that expects {expected}. But {specified} on the left hand side of `<-`.
+
+See: https://tour.gleam.run/advanced-features/use/");
+                    Diagnostic {
+                        title: "Incorrect arity".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *call_location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![
+                                Label {
+                                    text: Some(format!("Expected {expected}, got {given}")),
+                                    span: *pattern_location
+                                }
+                            ],
+                        }),
+                    }
+                },
             }
                 })
                 .collect_vec(),

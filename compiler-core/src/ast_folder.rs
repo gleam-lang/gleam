@@ -590,6 +590,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
 
             Statement::Use(Use {
                 location,
+                assignments_location,
                 call,
                 assignments,
             }) => {
@@ -604,6 +605,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 let call = Box::new(self.fold_expr(*call));
                 Statement::Use(Use {
                     location,
+                    assignments_location,
                     call,
                     assignments,
                 })

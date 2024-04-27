@@ -152,6 +152,14 @@ impl Type {
         }
     }
 
+    #[must_use]
+    fn is_fun(&self) -> bool {
+        match self {
+            Self::Fn { .. } => true,
+            _ => false,
+        }
+    }
+
     pub fn is_nil(&self) -> bool {
         match self {
             Self::Named { module, name, .. } if "Nil" == name && is_prelude_module(module) => true,

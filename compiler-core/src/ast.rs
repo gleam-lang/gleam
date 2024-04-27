@@ -1831,6 +1831,14 @@ impl<T, E> Statement<T, E> {
     pub fn is_expression(&self) -> bool {
         matches!(self, Self::Expression(..))
     }
+
+    #[must_use]
+    pub(crate) fn is_use(&self) -> bool {
+        match self {
+            Self::Use(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl UntypedStatement {

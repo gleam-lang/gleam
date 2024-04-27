@@ -93,6 +93,7 @@
   since one might expect the arguments to be printed in the error message.
   The error message now suggests the correct way to add an error message to
   `todo` and `panic`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
   ```
   warning: Todo used as a function
@@ -109,6 +110,60 @@
   See: https://tour.gleam.run/advanced-features/todo/
   ```
 
+- Improve error message when something that is not a function appears on the
+  right hand side of `<-` in a `use` expression.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+  ```txt
+  error: Type mismatch
+    ┌─ /src/one/two.gleam:2:8
+    │
+  2 │ use <- 123
+    │        ^^^
+
+  In a use expression, there should be a function on the right hand side of
+  `<-`, but this value has type:
+
+      Int
+
+  See: https://tour.gleam.run/advanced-features/use/
+  ```
+
+- Improve error message when a function with the wrong number of arguments
+  appears on the right hand side of `<-` in a `use` expression.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+  ```txt
+  error: Incorrect arity
+    ┌─ /src/one/two.gleam:3:8
+    │
+  3 │ use <- func
+    │        ^^^^ Expected no arguments, got 1
+
+  The function on the right of `<-` here takes no arguments.
+  But it has to take at least one argument, a callback function.
+
+  See: https://tour.gleam.run/advanced-features/use/
+  ```
+
+  ```txt
+  error: Incorrect arity
+    ┌─ /src/one/two.gleam:3:8
+    │
+  3 │ use <- f(1, 2)
+    │        ^^^^^^^ Expected 2 arguments, got 3
+
+  The function on the right of `<-` here takes 2 arguments.
+  All the arguments have already been supplied, so it cannot take the the
+  `use` callback function as a final argument.
+
+  See: https://tour.gleam.run/advanced-features/use/
+  ```
+
+- Improve error message when a the callback function of a `use` expression
+  returns a value with the wrong type.
+  Now the error will point precisely to the last statement and not complain
+  about the whole block saying it has the wrong function type.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Formatter

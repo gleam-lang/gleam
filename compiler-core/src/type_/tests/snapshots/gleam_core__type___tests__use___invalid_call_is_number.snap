@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/use_.rs
-assertion_line: 94
 expression: "\nuse <- 123\n123\n"
 ---
 error: Type mismatch
@@ -9,7 +8,9 @@ error: Type mismatch
 2 │ use <- 123
   │        ^^^
 
-This value is being called as a function but its type is:
+In a use expression, there should be a function on the right hand side of
+`<-`, but this value has type:
 
     Int
 
+See: https://tour.gleam.run/advanced-features/use/

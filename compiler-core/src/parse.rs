@@ -805,7 +805,7 @@ where
     // use <- module.function(a, b)
     // use a, b, c <- function(a, b)
     // use a, b, c, <- function(a, b)
-    fn parse_use(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
+    fn parse_use(&mut self, start: u32, end: u32) -> Result<UntypedStatement, ParseError> {
         let assignments = if let Some((_, Token::LArrow, _)) = self.tok0 {
             vec![]
         } else {
@@ -815,8 +815,17 @@ where
         _ = self.expect_one_following_series(&Token::LArrow, "a use variable assignment")?;
         let call = self.expect_expression()?;
 
+        let assignments_location = match (assignments.first(), assignments.last()) {
+            (Some(first), Some(last)) => SrcSpan {
+                start: first.location.start,
+                end: last.location.end,
+            },
+            (_, _) => SrcSpan { start, end },
+        };
+
         Ok(Statement::Use(Use {
             location: SrcSpan::new(start, call.location().end),
+            assignments_location,
             assignments,
             call: Box::new(call),
         }))
@@ -915,9 +924,9 @@ where
 
     fn parse_statement(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
         match self.tok0.take() {
-            Some((start, Token::Use, _)) => {
+            Some((start, Token::Use, end)) => {
                 self.advance();
-                Ok(Some(self.parse_use(start)?))
+                Ok(Some(self.parse_use(start, end)?))
             }
 
             Some((start, Token::Let, _)) => {

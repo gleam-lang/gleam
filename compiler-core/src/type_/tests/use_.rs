@@ -100,6 +100,94 @@ use <- 123
 }
 
 #[test]
+fn wrong_arity() {
+    assert_error!(
+        r#"
+let f = fn(callback) { callback(1, 2) }
+use <- f
+123
+"#
+    );
+}
+
+#[test]
+fn use_with_function_that_doesnt_take_callback_as_last_arg_1() {
+    assert_error!(
+        r#"
+let f = fn(a) { a + 1 }
+use <- f
+123
+"#
+    );
+}
+
+#[test]
+fn use_with_function_that_doesnt_take_callback_as_last_arg_2() {
+    assert_error!(
+        r#"
+let f = fn() { 1 }
+use <- f
+123
+"#
+    );
+}
+
+#[test]
+fn use_with_function_that_doesnt_take_callback_as_last_arg_3() {
+    assert_error!(
+        r#"
+let f = fn(a, b) { a + b }
+use <- f(1)
+123
+"#
+    );
+}
+
+#[test]
+fn wrong_arity_less_than_required() {
+    assert_error!(
+        r#"
+let f = fn(a, b) { 1 }
+use <- f
+123
+"#
+    );
+}
+
+#[test]
+fn wrong_arity_less_than_required_2() {
+    assert_error!(
+        r#"
+let f = fn(a, b, c) { 1 }
+use <- f(1)
+123
+"#
+    );
+}
+
+#[test]
+fn wrong_arity_more_than_required() {
+    assert_error!(
+        r#"
+let f = fn(a, b) { 1 }
+use <- f(1, 2)
+123
+"#
+    );
+}
+
+#[test]
+fn wrong_arity_more_than_required_2() {
+    assert_error!(
+        r#"
+let f = fn(a, b) { 1 }
+use <- f(1, 2, 3)
+123
+"#
+    );
+}
+
+#[test]
 fn no_callback_body() {
     assert_warning!(
         r#"
@@ -118,6 +206,137 @@ fn invalid_callback_type() {
 let x = fn(f) { f() + 1 }
 use <- x()
 Nil
+"#
+    );
+}
+
+#[test]
+fn invalid_callback_type_2() {
+    assert_error!(
+        r#"
+let x = fn(f) { "Hello, " <> f() }
+use <- x()
+let n = 1
+n + 2
+"#
+    );
+}
+
+#[test]
+fn invalid_callback_type_3() {
+    assert_error!(
+        r#"
+let x = fn(f) { "Hello, " <> f() }
+let y = fn(f) { 1 + f() }
+use <- x()
+use <- y()
+let n = 1
+n + 1
+"#
+    );
+}
+
+#[test]
+fn invalid_callback_type_4() {
+    assert_error!(
+        r#"
+let x = fn(f) { "Hello, " <> f() }
+let y = fn(f) { 1 + f() }
+let z = fn(f) { 1.0 +. f() }
+use <- x()
+use <- y()
+let n = 1
+use <- z()
+1.0
+"#
+    );
+}
+
+#[test]
+fn wrong_callback_arity() {
+    assert_error!(
+        r#"
+let x = fn(f) { "Hello, " <> f() }
+use _ <- x()
+"Giacomo!"
+"#
+    );
+}
+
+#[test]
+fn wrong_callback_arity_2() {
+    assert_error!(
+        r#"
+let x = fn(f) { "Hello, " <> f(1) }
+use <- x()
+"Giacomo!"
+"#
+    );
+}
+
+#[test]
+fn wrong_callback_arity_3() {
+    assert_error!(
+        r#"
+let x = fn(f) { "Hello, " <> f(1) }
+use _, _ <- x()
+"Giacomo!"
+"#
+    );
+}
+
+#[test]
+fn wrong_callback_arg() {
+    assert_error!(
+        r#"
+let x = fn(f) { "Hello, " <> f(1) }
+use n <- x()
+n <> "Giacomo!"
+"#
+    );
+}
+
+#[test]
+fn wrong_callback_arg_with_wrong_annotation() {
+    assert_error!(
+        r#"
+let x = fn(f) { "Hello, " <> f(1) }
+use n: String <- x()
+n <> "Giacomo!"
+"#
+    );
+}
+
+#[test]
+fn wrong_callback_arg_2() {
+    assert_module_error!(
+        r#"
+pub type Box {
+  Box(Int)
+}
+
+pub fn main() {
+  let x = fn(f) { "Hello, " <> f(Box(1)) }
+  use Box("hi") <- x()
+  "Giacomo!"
+}
+"#
+    );
+}
+
+#[test]
+fn wrong_callback_arg_3() {
+    assert_module_error!(
+        r#"
+pub type Box {
+  Box(Int)
+}
+
+pub fn main() {
+  let x = fn(f) { "Hello, " <> f(1) }
+  use Box(1) <- x()
+  "Giacomo!"
+}
 "#
     );
 }
