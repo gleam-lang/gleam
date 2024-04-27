@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub fn main() {\n          todo()\n        }"
+---
+warning: Todo found
+  ┌─ /src/warning/wrn.gleam:2:11
+  │
+2 │           todo()
+  │           ^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before
+running your program.
+
+Hint: I think its type is `fn() -> a`.
+
+
+warning: Todo used as a function
+  ┌─ /src/warning/wrn.gleam:2:11
+  │
+2 │           todo()
+  │           ^^^^^^
+
+`todo` is not a function, you can just write `todo` instead of `todo()`.

@@ -2,7 +2,7 @@ use crate::{
     ast::TodoKind,
     diagnostic::{self, Diagnostic, Location},
     error::wrap,
-    type_::{self, pretty::Printer},
+    type_::{self, error::TodoOrPanic, pretty::Printer},
 };
 use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
@@ -700,6 +700,63 @@ hidden from the package's documentation.",
                         extra_labels: vec![],
                     }),
                 },
+
+                type_::Warning::TodoOrPanicUsedAsFunction {
+                    kind,
+                    location,
+                    args_location,
+                    args,
+                } => {
+                    let title = match kind {
+                        TodoOrPanic::Todo => "Todo used as a function".into(),
+                        TodoOrPanic::Panic => "Panic used as a function".into(),
+                    };
+                    let label_location = match args_location {
+                        None => location,
+                        Some(location) => location,
+                    };
+                    let name = match kind {
+                        TodoOrPanic::Todo => "todo",
+                        TodoOrPanic::Panic => "panic",
+                    };
+                    let mut text = format!("`{name}` is not a function");
+                    match args {
+                        0 => text.push_str(&format!(
+                            ", you can just write `{name}` instead of `{name}()`."
+                        )),
+                        1 => text.push_str(
+                            " and will crash before it can do anything with this argument.",
+                        ),
+                        _ => text.push_str(
+                            " and will crash before it can do anything with these arguments.",
+                        ),
+                    };
+
+                    match args {
+                        0 => {}
+                        _ => text.push_str(&format!(
+                            "\n\nHint: if you want to display an error message you should write
+`{name} as \"my error message\"`
+See: https://tour.gleam.run/advanced-features/{name}/"
+                        )),
+                    }
+
+                    Diagnostic {
+                        title,
+                        text: wrap(&text),
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            label: diagnostic::Label {
+                                text: Some("".into()),
+                                span: *label_location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
             },
         }
     }
