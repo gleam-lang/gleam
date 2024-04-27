@@ -226,6 +226,8 @@ where
                     None
                 }
 
+                Located::UnqualifiedImport(_) => None,
+
                 Located::Arg(_) => None,
 
                 Located::Annotation(_, _) => Some(this.completion_types(module)),
@@ -288,6 +290,7 @@ where
                     Some(hover_for_module_constant(constant, lines))
                 }
                 Located::ModuleStatement(_) => None,
+                Located::UnqualifiedImport(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::Expression(expression) => {
                     let module = this.module_for_uri(&params.text_document.uri);

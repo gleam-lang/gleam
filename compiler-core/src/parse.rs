@@ -2176,8 +2176,9 @@ where
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {
-                        let (_, as_name, _) = self.expect_name()?;
+                        let (_, as_name, end) = self.expect_name()?;
                         import.as_name = Some(as_name);
+                        import.location.end = end;
                     }
                     imports.values.push(import)
                 }
@@ -2191,8 +2192,9 @@ where
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {
-                        let (_, as_name, _) = self.expect_upname()?;
+                        let (_, as_name, end) = self.expect_upname()?;
                         import.as_name = Some(as_name);
+                        import.location.end = end;
                     }
                     imports.values.push(import)
                 }
@@ -2207,8 +2209,9 @@ where
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {
-                        let (_, as_name, _) = self.expect_upname()?;
+                        let (_, as_name, end) = self.expect_upname()?;
                         import.as_name = Some(as_name);
+                        import.location.end = end;
                     }
                     imports.types.push(import)
                 }

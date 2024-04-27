@@ -738,8 +738,36 @@ impl TypedDefinition {
                 }
             }
 
-            Definition::Import(_) => {
+            Definition::Import(import) => {
                 if self.location().contains(byte_index) {
+                    if let Some(unqualified) = import
+                        .unqualified_values
+                        .iter()
+                        .find(|i| i.location.contains(byte_index))
+                    {
+                        return Some(Located::UnqualifiedImport(
+                            crate::build::UnqualifiedImport {
+                                name: unqualified.name.clone(),
+                                module: import.module.clone(),
+                                is_type: false,
+                            },
+                        ));
+                    }
+
+                    if let Some(unqualified) = import
+                        .unqualified_types
+                        .iter()
+                        .find(|i| i.location.contains(byte_index))
+                    {
+                        return Some(Located::UnqualifiedImport(
+                            crate::build::UnqualifiedImport {
+                                name: unqualified.name.clone(),
+                                module: import.module.clone(),
+                                is_type: true,
+                            },
+                        ));
+                    }
+
                     Some(Located::ModuleStatement(self))
                 } else {
                     None

@@ -289,6 +289,13 @@ impl Module {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct UnqualifiedImport {
+    pub name: EcoString,
+    pub module: EcoString,
+    pub is_type: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Located<'a> {
     Pattern(&'a TypedPattern),
     Statement(&'a TypedStatement),
@@ -297,6 +304,7 @@ pub enum Located<'a> {
     FunctionBody(&'a TypedFunction),
     Arg(&'a TypedArg),
     Annotation(SrcSpan, std::sync::Arc<type_::Type>),
+    UnqualifiedImport(UnqualifiedImport),
 }
 
 impl<'a> Located<'a> {
@@ -321,9 +329,30 @@ impl<'a> Located<'a> {
             Self::Statement(statement) => statement.definition_location(),
             Self::FunctionBody(statement) => None,
             Self::Expression(expression) => expression.definition_location(),
+            Self::ModuleStatement(Definition::Import(import)) => Some(DefinitionLocation {
+                module: Some(import.module.as_str()),
+                span: SrcSpan { start: 0, end: 0 },
+            }),
             Self::ModuleStatement(statement) => Some(DefinitionLocation {
                 module: None,
                 span: statement.location(),
+            }),
+            Self::UnqualifiedImport(UnqualifiedImport {
+                module,
+                name,
+                is_type,
+            }) => importable_modules.get(module).and_then(|m| {
+                if *is_type {
+                    m.types.get(name).map(|t| DefinitionLocation {
+                        module: Some(&module),
+                        span: t.origin,
+                    })
+                } else {
+                    m.values.get(name).map(|v| DefinitionLocation {
+                        module: Some(&module),
+                        span: v.definition_location().span,
+                    })
+                }
             }),
             Self::Arg(_) => None,
             Self::Annotation(_, type_) => self.type_location(importable_modules, type_.clone()),
