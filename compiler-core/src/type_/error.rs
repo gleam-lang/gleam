@@ -531,9 +531,30 @@ pub enum Warning {
         location: SrcSpan,
         leaked: Type,
     },
+
     RedundantAssertAssignment {
         location: SrcSpan,
     },
+
+    /// When a `todo` or `panic` is used as a function instead of providing the
+    /// error message with the `as` syntax.
+    ///
+    /// ```gleam
+    /// todo("this won't appear in the error message")
+    /// ```
+    ///
+    TodoOrPanicUsedAsFunction {
+        kind: TodoOrPanic,
+        location: SrcSpan,
+        args_location: Option<SrcSpan>,
+        args: usize,
+    },
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+pub enum TodoOrPanic {
+    Todo,
+    Panic,
 }
 
 impl Error {

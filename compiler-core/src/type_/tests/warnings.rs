@@ -1495,3 +1495,57 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn panic_used_as_function() {
+    assert_warning!(
+        "pub fn main() {
+          panic()
+        }"
+    );
+}
+
+#[test]
+fn panic_used_as_function_2() {
+    assert_warning!(
+        "pub fn main() {
+          panic(1)
+        }"
+    );
+}
+
+#[test]
+fn panic_used_as_function_3() {
+    assert_warning!(
+        "pub fn main() {
+          panic(1, Nil)
+        }"
+    );
+}
+
+#[test]
+fn todo_used_as_function() {
+    assert_warning!(
+        "pub fn main() {
+          todo()
+        }"
+    );
+}
+
+#[test]
+fn todo_used_as_function_2() {
+    assert_warning!(
+        "pub fn main() {
+          todo(1)
+        }"
+    );
+}
+
+#[test]
+fn todo_used_as_function_3() {
+    assert_warning!(
+        "pub fn main() {
+          todo(1, Nil)
+        }"
+    );
+}

@@ -649,6 +649,31 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let (fun, args, typ) = self.do_infer_call(fun, args, location)?;
+
+        let _ = match fun {
+            TypedExpr::Todo { .. } => Some((location, TodoOrPanic::Todo)),
+            TypedExpr::Panic { .. } => Some((location, TodoOrPanic::Panic)),
+            _ => None,
+        }
+        .map(|(location, kind)| {
+            let args_location = match (args.first(), args.last()) {
+                (Some(first), Some(last)) => Some(SrcSpan {
+                    start: first.location().start,
+                    end: last.location().end,
+                }),
+                _ => None,
+            };
+
+            self.environment
+                .warnings
+                .emit(Warning::TodoOrPanicUsedAsFunction {
+                    kind,
+                    location,
+                    args_location,
+                    args: args.len(),
+                });
+        });
+
         Ok(TypedExpr::Call {
             location,
             typ,
