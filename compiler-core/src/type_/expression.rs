@@ -5,10 +5,10 @@ use crate::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan, Statement,
         TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
-        TypedExpr, TypedMultiPattern, TypedStatement, UntypedArg, UntypedAssignment, UntypedClause,
-        UntypedClauseGuard, UntypedConstant, UntypedConstantBitArraySegment, UntypedExpr,
-        UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, Use, UseAssignment,
-        USE_ASSIGNMENT_VARIABLE,
+        TypedExpr, TypedMultiPattern, TypedStatement, TypedUse, UntypedArg, UntypedAssignment,
+        UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBitArraySegment,
+        UntypedExpr, UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, UntypedUse,
+        Use, UseAssignment, USE_ASSIGNMENT_VARIABLE,
     },
     build::Target,
     exhaustiveness,
@@ -483,7 +483,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             match statement {
                 Statement::Use(use_) => {
                     let expression = self.infer_use(use_, location, untyped.collect())?;
-                    statements.push(expression);
+                    statements.push(TypedStatement::Use(expression));
                     break; // Inferring the use has consumed the rest of the exprs
                 }
 
@@ -512,14 +512,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_use(
         &mut self,
-        use_: Use,
+        use_: UntypedUse,
         sequence_location: SrcSpan,
         mut following_expressions: Vec<UntypedStatement>,
-    ) -> Result<TypedStatement, Error> {
+    ) -> Result<TypedUse, Error> {
+        let use_location = use_.location;
+        let use_assignments = use_.assignments;
         let assignments_location = use_.assignments_location;
         let call_location = use_.call.location();
         let mut call = get_use_expression_call(*use_.call)?;
-        let assignments = UseAssignments::from_use_expression(use_.assignments);
+        let assignments = UseAssignments::from_use_expression(&use_assignments);
 
         let mut statements = assignments.body_assignments;
 
@@ -576,8 +578,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             },
         )?;
 
-        // TODO: Return a Statement::Use that is typed instead of just a call!
-        Ok(Statement::Expression(call))
+        Ok(Use {
+            location: use_location,
+            call: Box::new(call),
+            assignments_location,
+            assignments: use_assignments,
+        })
     }
 
     fn infer_negate_bool(
@@ -2817,7 +2823,7 @@ struct UseAssignments {
 }
 
 impl UseAssignments {
-    fn from_use_expression(sugar_assignments: Vec<UseAssignment>) -> UseAssignments {
+    fn from_use_expression(sugar_assignments: &Vec<UseAssignment>) -> UseAssignments {
         let mut assignments = UseAssignments::default();
 
         for (index, assignment) in sugar_assignments.into_iter().enumerate() {
@@ -2829,8 +2835,8 @@ impl UseAssignments {
             match pattern {
                 // For discards we add a discard function arguments.
                 Pattern::Discard { name, .. } => assignments.function_arguments.push(Arg {
-                    location,
-                    names: ArgNames::Discard { name },
+                    location: *location,
+                    names: ArgNames::Discard { name: name.clone() },
                     annotation: None,
                     type_: (),
                 }),
@@ -2838,9 +2844,9 @@ impl UseAssignments {
                 // For simple patterns of a single variable we add a regular
                 // function argument.
                 Pattern::Variable { name, .. } => assignments.function_arguments.push(Arg {
-                    location,
-                    annotation,
-                    names: ArgNames::Named { name },
+                    location: *location,
+                    annotation: annotation.clone(),
+                    names: ArgNames::Named { name: name.clone() },
                     type_: (),
                 }),
 
@@ -2858,17 +2864,20 @@ impl UseAssignments {
                 | Pattern::StringPrefix { .. }) => {
                     let name: EcoString = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
                     assignments.function_arguments.push(Arg {
-                        location,
+                        location: *location,
                         names: ArgNames::Named { name: name.clone() },
                         annotation: None,
                         type_: (),
                     });
                     let assignment = Assignment {
-                        location,
-                        pattern,
-                        annotation,
+                        location: *location,
+                        pattern: pattern.clone(),
+                        annotation: annotation.clone(),
                         kind: AssignmentKind::Let,
-                        value: Box::new(UntypedExpr::Var { location, name }),
+                        value: Box::new(UntypedExpr::Var {
+                            location: *location,
+                            name,
+                        }),
                     };
                     assignments
                         .body_assignments

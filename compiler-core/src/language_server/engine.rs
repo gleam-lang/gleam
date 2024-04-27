@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Function, Import, ModuleConstant, Publicity, SrcSpan, TypedDefinition,
-        TypedExpr, TypedPattern,
+        Arg, Definition, Import, ModuleConstant, Publicity, SrcSpan, TypedDefinition, TypedExpr,
+        TypedFunction, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
     config::PackageConfig,
@@ -687,10 +687,7 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover
     }
 }
 
-fn hover_for_function_head(
-    fun: &Function<Arc<Type>, TypedExpr>,
-    line_numbers: LineNumbers,
-) -> Hover {
+fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Hover {
     let empty_str = EcoString::from("");
     let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
     let function_type = Type::Fn {
