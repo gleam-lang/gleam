@@ -174,20 +174,17 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
-        let uri = &self.params.text_document.uri;
-        let mut actions = vec![];
-
         self.visit_typed_module(self.module);
-
         if !self.hovered {
             return vec![];
         }
 
         self.edits.sort_by_key(|edit| edit.range.start);
 
+        let mut actions = vec![];
         CodeActionBuilder::new("Remove redundant tuple")
-            .kind(CodeActionKind::QUICKFIX)
-            .changes(uri.clone(), self.edits)
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits)
             .preferred(true)
             .push_to(&mut actions);
 
