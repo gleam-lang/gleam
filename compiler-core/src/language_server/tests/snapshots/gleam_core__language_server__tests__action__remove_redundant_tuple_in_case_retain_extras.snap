@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: result
+---
+pub fn main() {
+  case
+    
+      // first comment
+      1,
+      // second comment
+      2,
+      3 // third comment before comma
+
+      
+
+      // fourth comment after comma
+
+    
+  {
+    a -> 0
+  }
+}
