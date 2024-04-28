@@ -105,7 +105,8 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
             // Delete `(`
             let (lparen_offset, _) = code
                 .match_indices('(')
-                .find(|(i, _)| !self.extra.contains(*i as u32))
+                // Ignore in comments
+                .find(|(i, _)| !self.extra.contains(location.start + *i as u32))
                 .expect("`(` not found in tuple");
 
             self.edits.push(TextEdit {
@@ -131,7 +132,8 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
 
                 if let Some((trailing_comma_offset, _)) = code
                     .rmatch_indices(',')
-                    .find(|(i, _)| !self.extra.contains(*i as u32))
+                    // Ignore in comments
+                    .find(|(i, _)| !self.extra.contains(last_elem_span.end + *i as u32))
                 {
                     self.edits.push(TextEdit {
                         range: src_span_to_lsp_range(
