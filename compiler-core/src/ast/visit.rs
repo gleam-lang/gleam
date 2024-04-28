@@ -721,7 +721,7 @@ pub fn visit_use<'a, V>(v: &mut V, use_: &'a Use)
 where
     V: Visit<'a> + ?Sized,
 {
-    { /* TODO */ }
+    /* TODO */
 }
 
 pub fn visit_typed_call_arg<'a, V>(v: &mut V, arg: &'a TypedCallArg)

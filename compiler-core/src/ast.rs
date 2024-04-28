@@ -1320,6 +1320,10 @@ impl SrcSpan {
     pub fn contains(&self, byte_index: u32) -> bool {
         byte_index >= self.start && byte_index < self.end
     }
+
+    pub fn contains_span(&self, other: Self) -> bool {
+        self.start <= other.start && other.end <= self.end
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

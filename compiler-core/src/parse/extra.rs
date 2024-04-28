@@ -15,6 +15,18 @@ impl ModuleExtra {
     pub fn new() -> Self {
         Default::default()
     }
+
+    pub fn contains(&self, offset: u32) -> bool {
+        self.module_comments
+            .iter()
+            .any(|span| span.contains(offset))
+            || self.doc_comments.iter().any(|span| span.contains(offset))
+            || self.comments.iter().any(|span| span.contains(offset))
+            || self
+                .empty_lines
+                .iter()
+                .any(|&empty_line_offset| empty_line_offset == offset)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
