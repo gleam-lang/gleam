@@ -385,6 +385,8 @@
   automatically detected.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Completions are now provided for values and types for use in unqualified imports ([Ameen Radwan](https://github.com/Acepie))
+
 ### Bug Fixes
 
 - Fixed [RUSTSEC-2021-0145](https://rustsec.org/advisories/RUSTSEC-2021-0145) by
