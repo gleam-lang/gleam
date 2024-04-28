@@ -51,7 +51,7 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
 }
 
 const REMOVE_UNUSED_IMPORTS_TITLE: &str = "Remove unused imports";
-const REMOVE_REDUNDANT_TUPLE_IN_CASE_SUBJECT_TITLE: &str = "Remove redundant tuple";
+const REMOVE_REDUNDANT_TUPLE_IN_CASE_SUBJECT_TITLE: &str = "Remove redundant tuple in case subject";
 
 fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> String {
     let response = engine_response(src, line)
