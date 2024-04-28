@@ -1457,6 +1457,94 @@ pub fn main() {
 }
 
 #[test]
+fn completions_for_an_unqualified_import() {
+    let code = "
+import dep.{}
+
+pub fn main() {
+  0
+}";
+    let dep = "pub const wibble = \"wibble\"
+const wobble = \"wobble\"
+@internal
+pub const wabble = \"wabble\"
+
+pub fn myfun() {
+    0
+}
+
+pub type Wibble = String
+";
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code).add_module("dep", dep),
+            Position::new(1, 12)
+        ),
+        vec![
+            CompletionItem {
+                label: "myfun".into(),
+                kind: Some(CompletionItemKind::FUNCTION),
+                detail: Some("fn() -> Int".into()),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "type Wibble".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "wabble".into(),
+                kind: Some(CompletionItemKind::CONSTANT),
+                detail: Some("String".into()),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "wibble".into(),
+                kind: Some(CompletionItemKind::CONSTANT),
+                detail: Some("String".into()),
+                ..Default::default()
+            },
+        ]
+    );
+}
+
+#[test]
+fn completions_for_an_unqualified_import_already_imported() {
+    let code = "
+import dep.{wibble,wabble,type Wibble}
+
+pub fn main() {
+  0
+}";
+    let dep = "pub const wibble = \"wibble\"
+const wobble = \"wobble\"
+@internal
+pub const wabble = \"wabble\"
+
+pub fn myfun() {
+    0
+}
+
+pub type Wibble = String
+";
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code).add_module("dep", dep),
+            Position::new(1, 12)
+        ),
+        vec![CompletionItem {
+            label: "myfun".into(),
+            kind: Some(CompletionItemKind::FUNCTION),
+            detail: Some("fn() -> Int".into()),
+            ..Default::default()
+        },]
+    );
+}
+
+#[test]
 fn completions_for_a_function_arg_annotation() {
     let code = "
 pub fn wibble(

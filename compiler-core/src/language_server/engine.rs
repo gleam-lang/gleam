@@ -225,9 +225,16 @@ where
                     Some(this.completion_types(module))
                 }
 
-                Located::ModuleStatement(Definition::Import(_) | Definition::ModuleConstant(_)) => {
-                    None
-                }
+                // If the import completions returned no results and we are in an import then
+                // we should try to provide completions for unqualified values
+                Located::ModuleStatement(Definition::Import(import)) => this
+                    .compiler
+                    .get_module_inferface(import.module.as_str())
+                    .map(|importing_module| {
+                        this.completions_from_imported_module(importing_module, module)
+                    }),
+
+                Located::ModuleStatement(Definition::ModuleConstant(_)) => None,
 
                 Located::UnqualifiedImport(_) => None,
 
@@ -505,6 +512,78 @@ where
         completions
     }
 
+    fn completions_from_imported_module<'b>(
+        &'b self,
+        importing_module: &'b crate::type_::ModuleInterface,
+        module: &'b Module,
+    ) -> Vec<lsp::CompletionItem> {
+        let mut completions = vec![];
+
+        let mut already_imported_types = std::collections::HashSet::new();
+        let mut already_imported_values = std::collections::HashSet::new();
+        // Find values and type that have already previously been imported
+        for import in module.ast.definitions.iter().filter_map(get_import) {
+            if import.module == importing_module.name {
+                for unqualified in &import.unqualified_types {
+                    let _ = already_imported_types.insert(&unqualified.name);
+                }
+
+                for unqualified in &import.unqualified_values {
+                    let _ = already_imported_values.insert(&unqualified.name);
+                }
+            }
+        }
+
+        for (name, type_) in &importing_module.types {
+            match type_.publicity {
+                // We skip private types as we never want those to appear in
+                // completions.
+                Publicity::Private => continue,
+                // We only skip internal types if those are not defined in
+                // the root package.
+                Publicity::Internal if importing_module.package != self.root_package_name() => {
+                    continue
+                }
+                Publicity::Internal => {}
+                // We never skip public types.
+                Publicity::Public => {}
+            }
+
+            if already_imported_types.contains(name) {
+                continue;
+            }
+            let completion: lsp::CompletionItem = type_completion(None, name, type_);
+            let completion = lsp::CompletionItem {
+                label: "type ".to_string() + &completion.label,
+                ..completion
+            };
+            completions.push(completion);
+        }
+
+        for (name, value) in &importing_module.values {
+            match value.publicity {
+                // We skip private values as we never want those to appear in
+                // completions.
+                Publicity::Private => continue,
+                // We only skip internal values if those are not defined in
+                // the root package.
+                Publicity::Internal if importing_module.package != self.root_package_name() => {
+                    continue
+                }
+                Publicity::Internal => {}
+                // We never skip public values.
+                Publicity::Public => {}
+            }
+
+            if already_imported_values.contains(name) {
+                continue;
+            }
+            completions.push(value_completion(None, name, value));
+        }
+
+        completions
+    }
+
     fn import_completions<'b>(
         &'b self,
         src: EcoString,
@@ -515,11 +594,11 @@ where
         let start_of_line = line_num.byte_index(params.position.line, 0);
         let end_of_line = line_num.byte_index(params.position.line + 1, 0);
 
-        // Drop all lines before the line the cursor is on
-        let src = &src.get(start_of_line as usize..)?;
+        // Drop all lines except the line the cursor is on
+        let src = &src.get(start_of_line as usize..end_of_line as usize)?;
 
-        // If this isn't an import line then we don't offer import completions
-        if !src.trim_start().starts_with("import") {
+        // If this isn't an import line or if the import is being unqualified already then we don't offer import completions
+        if !src.trim_start().starts_with("import") || src.contains('.') {
             return None;
         }
 
