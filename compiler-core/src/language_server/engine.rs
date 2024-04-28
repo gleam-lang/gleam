@@ -231,7 +231,7 @@ where
                     .compiler
                     .get_module_inferface(import.module.as_str())
                     .map(|importing_module| {
-                        this.completions_from_imported_module(importing_module, module)
+                        this.unqualified_completions_from_module(importing_module, module)
                     }),
 
                 Located::ModuleStatement(Definition::ModuleConstant(_)) => None,
@@ -512,7 +512,7 @@ where
         completions
     }
 
-    fn completions_from_imported_module<'b>(
+    fn unqualified_completions_from_module<'b>(
         &'b self,
         importing_module: &'b crate::type_::ModuleInterface,
         module: &'b Module,
