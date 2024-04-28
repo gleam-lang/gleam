@@ -554,6 +554,7 @@ where
             }
             let completion: lsp::CompletionItem = type_completion(None, name, type_);
             let completion = lsp::CompletionItem {
+                // Add type prior to unqualified import for types
                 label: "type ".to_string() + &completion.label,
                 ..completion
             };
