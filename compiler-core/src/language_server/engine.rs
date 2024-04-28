@@ -599,7 +599,7 @@ where
         let src = &src.get(start_of_line as usize..end_of_line as usize)?;
 
         // If this isn't an import line or if the import is being unqualified already then we don't offer import completions
-        if !src.trim_start().starts_with("import") || src.contains('.') {
+        if !src.trim_start().starts_with("import") || src.contains(".{") {
             return None;
         }
 
