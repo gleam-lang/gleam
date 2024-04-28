@@ -214,3 +214,58 @@ jobs:
             org.opencontainers.image.source=https://github.com/gleam-lang/gleam
             org.opencontainers.image.version=nightly-${{ matrix.base-image }}
             org.opencontainers.image.licenses=Apache-2.0
+
+  build-nightly-wasm:
+    name: build-nightly-wasm
+    runs-on: ubuntu-latest
+      #needs: [ nightly-last-run ]
+      #if: ${{ github.repository_owner == 'gleam-lang' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          profile: minimal
+          override: true
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
+      - name: Build wasm
+        run: wasm-pack build --release --target web compiler-wasm
+
+      - name: Build wasm archive
+        run: |
+          VERSION="nightly"
+          DAY=$(date +"%y%m%d")
+          ARCHIVE="gleam-$VERSION-browser.tar.gz"
+
+          tar -C compiler-wasm/pkg/ -czvf $ARCHIVE .
+          openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
+          openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
+
+          echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
+          echo "DAY=$DAY" >> $GITHUB_ENV
+
+      - name: Upload x86_64-unknown-linux-musl artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gleam
+          path: target/${{ matrix.target }}/release/gleam
+          overwrite: true
+        if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+
+      - name: Upload wasm release archive
+        shell: bash
+        run: |
+          gh release upload nightly --clobber \
+            "${{ env.ASSET }}" \
+            "${{ env.ASSET }}.sha256" \
+            "${{ env.ASSET }}.sha512"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
