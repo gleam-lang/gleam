@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         Arg, Definition, Import, ModuleConstant, Publicity, SrcSpan, TypedDefinition, TypedExpr,
-        TypedFunction, TypedPattern,
+        TypedFunction, TypedModule, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
     config::PackageConfig,
@@ -25,7 +25,8 @@ use std::sync::Arc;
 use strum::IntoEnumIterator;
 
 use super::{
-    code_action::CodeActionBuilder, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+    code_action::{CodeActionBuilder, RedundantTupleInCaseSubject},
+    src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -255,6 +256,7 @@ where
             };
 
             code_action_unused_imports(module, &params, &mut actions);
+            actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
 
             Ok(if actions.is_empty() {
                 None
@@ -902,7 +904,7 @@ fn hover_for_imported_value(
 }
 
 // Returns true if any part of either range overlaps with the other.
-fn overlaps(a: lsp_types::Range, b: lsp_types::Range) -> bool {
+pub fn overlaps(a: lsp_types::Range, b: lsp_types::Range) -> bool {
     within(a.start, b) || within(a.end, b) || within(b.start, a) || within(b.end, a)
 }
 
@@ -1003,7 +1005,7 @@ fn format_hexdocs_link_section(package_name: &str, module_name: &str, name: &str
 fn get_hexdocs_link_section(
     module_name: &str,
     name: &str,
-    ast: &crate::ast::TypedModule,
+    ast: &TypedModule,
     hex_deps: &std::collections::HashSet<EcoString>,
 ) -> Option<String> {
     let package_name = ast.definitions.iter().find_map(|def| match def {
