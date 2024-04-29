@@ -231,7 +231,7 @@ where
                     .compiler
                     .get_module_inferface(import.module.as_str())
                     .map(|importing_module| {
-                        this.unqualified_completions_from_module(importing_module, module)
+                        this.unqualified_completions_from_module(importing_module, module, true)
                     }),
 
                 Located::ModuleStatement(Definition::ModuleConstant(_)) => None,
@@ -397,8 +397,8 @@ where
         self.compiler.modules.get(&module_name)
     }
 
-    // checks if publicity is importable from root package
-    fn is_importable(&self, publicity: &Publicity, package: &str) -> bool {
+    /// checks based on the publicity if something should be suggested for import from root package
+    fn is_suggestable_import(&self, publicity: &Publicity, package: &str) -> bool {
         match publicity {
             // We skip private types as we never want those to appear in
             // completions.
@@ -441,7 +441,7 @@ where
 
             // Qualified types
             for (name, type_) in &module.types {
-                if !self.is_importable(&type_.publicity, module.package.as_str()) {
+                if !self.is_suggestable_import(&type_.publicity, module.package.as_str()) {
                     continue;
                 }
 
@@ -487,7 +487,7 @@ where
 
             // Qualified values
             for (name, value) in &module.values {
-                if !self.is_importable(&value.publicity, module.package.as_str()) {
+                if !self.is_suggestable_import(&value.publicity, module.package.as_str()) {
                     continue;
                 }
 
@@ -515,14 +515,20 @@ where
         &'b self,
         importing_module: &'b crate::type_::ModuleInterface,
         module: &'b Module,
+        // should type completions include the word "type" in the completion
+        include_type_in_completion: bool,
     ) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
 
+        // Find values and type that have already previously been imported
         let mut already_imported_types = std::collections::HashSet::new();
         let mut already_imported_values = std::collections::HashSet::new();
-        // Find values and type that have already previously been imported
+
+        // Search the ast for import statements
         for import in module.ast.definitions.iter().filter_map(get_import) {
+            // Find the import that matches the module being imported from
             if import.module == importing_module.name {
+                // Add the values and types that have already been imported
                 for unqualified in &import.unqualified_types {
                     let _ = already_imported_types.insert(&unqualified.name);
                 }
@@ -534,27 +540,36 @@ where
         }
 
         for (name, type_) in &importing_module.types {
-            if !self.is_importable(&type_.publicity, importing_module.package.as_str()) {
+            // Skip types that should not be suggested
+            if !self.is_suggestable_import(&type_.publicity, importing_module.package.as_str()) {
                 continue;
             }
 
+            // Skip type that are already imported
             if already_imported_types.contains(name) {
                 continue;
             }
-            let completion: lsp::CompletionItem = type_completion(None, name, type_);
-            let completion = lsp::CompletionItem {
-                // Add type prior to unqualified import for types
-                label: "type ".to_string() + &completion.label,
-                ..completion
+
+            let completion: lsp::CompletionItem = if !include_type_in_completion {
+                type_completion(None, name, type_)
+            } else {
+                let completion = type_completion(None, name, type_);
+                lsp::CompletionItem {
+                    // Add type prior to unqualified import for types
+                    insert_text: Some("type ".to_string() + &completion.label),
+                    ..completion
+                }
             };
             completions.push(completion);
         }
 
         for (name, value) in &importing_module.values {
-            if !self.is_importable(&value.publicity, importing_module.package.as_str()) {
+            // Skip values that should not be suggested
+            if !self.is_suggestable_import(&value.publicity, importing_module.package.as_str()) {
                 continue;
             }
 
+            // Skip values that are already imported
             if already_imported_values.contains(name) {
                 continue;
             }
@@ -577,19 +592,37 @@ where
         // Drop all lines except the line the cursor is on
         let src = &src.get(start_of_line as usize..end_of_line as usize)?;
 
-        // If this isn't an import line or if the import is being unqualified already then we don't offer import completions
-        if !src.trim_start().starts_with("import") || src.contains(".{") {
+        // If this isn't an import line then we don't offer import completions
+        if !src.trim_start().starts_with("import") {
             return None;
         }
 
-        // Find where to start and end the import completion
-        let start = line_num.line_and_column_number(start_of_line);
-        let end = line_num.line_and_column_number(end_of_line - 1);
-        let start = lsp::Position::new(start.line - 1, start.column + 6);
-        let end = lsp::Position::new(end.line - 1, end.column - 1);
-        let completions = self.complete_modules_for_import(module, start, end);
+        // Check if we are completing an unqualified import
+        if let Some(dot_index) = src.find('.') {
+            // Find the module that is being imported from
+            let importing_module_name = src.get(6..dot_index)?.trim();
+            let importing_module: &crate::type_::ModuleInterface =
+                self.compiler.get_module_inferface(&importing_module_name)?;
 
-        Some(Ok(Some(completions)))
+            // Check if the cursor is proceeded by the word "type".
+            // We want to make sure suggestions don't include the word "type"
+            // if the cursor is proceeded by it.
+            let cursor = src.get(..params.position.character as usize)?;
+            Some(Ok(Some(self.unqualified_completions_from_module(
+                importing_module,
+                module,
+                !cursor.trim().ends_with("type"),
+            ))))
+        } else {
+            // Find where to start and end the import completion
+            let start = line_num.line_and_column_number(start_of_line);
+            let end = line_num.line_and_column_number(end_of_line - 1);
+            let start = lsp::Position::new(start.line - 1, start.column + 6);
+            let end = lsp::Position::new(end.line - 1, end.column - 1);
+            let completions = self.complete_modules_for_import(module, start, end);
+
+            Some(Ok(Some(completions)))
+        }
     }
 
     fn complete_modules_for_import<'b>(
@@ -645,12 +678,10 @@ where
             .map(|(name, _)| lsp::CompletionItem {
                 label: name.to_string(),
                 kind: Some(lsp::CompletionItemKind::MODULE),
-                text_edit: {
-                    Some(lsp::CompletionTextEdit::Edit(lsp::TextEdit {
-                        range: lsp::Range { start, end },
-                        new_text: name.to_string(),
-                    }))
-                },
+                text_edit: Some(lsp::CompletionTextEdit::Edit(lsp::TextEdit {
+                    range: lsp::Range { start, end },
+                    new_text: name.to_string(),
+                })),
                 ..Default::default()
             })
             .collect()
