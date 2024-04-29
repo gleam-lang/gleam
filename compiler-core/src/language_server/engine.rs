@@ -397,6 +397,21 @@ where
         self.compiler.modules.get(&module_name)
     }
 
+    // checks if publicity is importable from root package
+    fn is_importable(&self, publicity: &Publicity, package: &str) -> bool {
+        match publicity {
+            // We skip private types as we never want those to appear in
+            // completions.
+            Publicity::Private => false,
+            // We only skip internal types if those are not defined in
+            // the root package.
+            Publicity::Internal if package != self.root_package_name() => false,
+            Publicity::Internal => true,
+            // We never skip public types.
+            Publicity::Public => true,
+        }
+    }
+
     fn completion_types<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
 
@@ -426,16 +441,8 @@ where
 
             // Qualified types
             for (name, type_) in &module.types {
-                match type_.publicity {
-                    // We skip private types as we never want those to appear in
-                    // completions.
-                    Publicity::Private => continue,
-                    // We only skip internal types if those are not defined in
-                    // the root package.
-                    Publicity::Internal if module.package != self.root_package_name() => continue,
-                    Publicity::Internal => {}
-                    // We never skip public types.
-                    Publicity::Public => {}
+                if !self.is_importable(&type_.publicity, module.package.as_str()) {
+                    continue;
                 }
 
                 let module = import.used_name();
@@ -480,16 +487,8 @@ where
 
             // Qualified values
             for (name, value) in &module.values {
-                match value.publicity {
-                    // We skip private values as we never want those to appear in
-                    // completions.
-                    Publicity::Private => continue,
-                    // We only skip internal values if those are not defined in
-                    // the root package.
-                    Publicity::Internal if module.package != self.root_package_name() => continue,
-                    Publicity::Internal => {}
-                    // We never skip public values.
-                    Publicity::Public => {}
+                if !self.is_importable(&value.publicity, module.package.as_str()) {
+                    continue;
                 }
 
                 let module = import.used_name();
@@ -535,18 +534,8 @@ where
         }
 
         for (name, type_) in &importing_module.types {
-            match type_.publicity {
-                // We skip private types as we never want those to appear in
-                // completions.
-                Publicity::Private => continue,
-                // We only skip internal types if those are not defined in
-                // the root package.
-                Publicity::Internal if importing_module.package != self.root_package_name() => {
-                    continue
-                }
-                Publicity::Internal => {}
-                // We never skip public types.
-                Publicity::Public => {}
+            if !self.is_importable(&type_.publicity, importing_module.package.as_str()) {
+                continue;
             }
 
             if already_imported_types.contains(name) {
@@ -562,18 +551,8 @@ where
         }
 
         for (name, value) in &importing_module.values {
-            match value.publicity {
-                // We skip private values as we never want those to appear in
-                // completions.
-                Publicity::Private => continue,
-                // We only skip internal values if those are not defined in
-                // the root package.
-                Publicity::Internal if importing_module.package != self.root_package_name() => {
-                    continue
-                }
-                Publicity::Internal => {}
-                // We never skip public values.
-                Publicity::Public => {}
+            if !self.is_importable(&value.publicity, importing_module.package.as_str()) {
+                continue;
             }
 
             if already_imported_values.contains(name) {
