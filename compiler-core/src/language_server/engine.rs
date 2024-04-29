@@ -604,7 +604,7 @@ where
             // Find the module that is being imported from
             let importing_module_name = src.get(6..dot_index)?.trim();
             let importing_module: &crate::type_::ModuleInterface =
-                self.compiler.get_module_inferface(&importing_module_name)?;
+                self.compiler.get_module_inferface(importing_module_name)?;
 
             // Check if the cursor is proceeded by the word "type".
             // We want to make sure suggestions don't include the word "type"
