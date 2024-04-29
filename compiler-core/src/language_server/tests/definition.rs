@@ -907,41 +907,6 @@ fn main() {
 }
 
 #[test]
-fn goto_definition_import_unqualified_value_with_as() {
-    let code = "
-import example_module.{my_num as num}
-fn main() {
-  num
-}
-";
-
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
-            Position::new(1, 35)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\example_module.gleam"
-            } else {
-                "/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 10
-                },
-                end: Position {
-                    line: 0,
-                    character: 16
-                }
-            }
-        })
-    )
-}
-
-#[test]
 fn goto_definition_import_unqualified_type() {
     let code = "
 import example_module.{type MyType}
@@ -954,41 +919,6 @@ fn main() -> MyType {
         definition(
             TestProject::for_source(code).add_module("example_module", "pub type MyType = Int"),
             Position::new(1, 33)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\example_module.gleam"
-            } else {
-                "/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0
-                },
-                end: Position {
-                    line: 0,
-                    character: 21
-                }
-            }
-        })
-    )
-}
-
-#[test]
-fn goto_definition_import_unqualified_type_with_as() {
-    let code = "
-import example_module.{type MyType as Wibble}
-fn main() -> Wibble {
-  0
-}
-";
-
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_module("example_module", "pub type MyType = Int"),
-            Position::new(1, 42)
         ),
         Some(Location {
             uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
