@@ -650,12 +650,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         let (fun, args, typ) = self.do_infer_call(fun, args, location)?;
 
-        let _ = match fun {
+        // One common mistake is to think that the syntax for adding a message
+        // to a `todo` or a `panic` exception is to `todo("...")`, but really
+        // this does nothing as the `todo` or `panic` throws the exception
+        // before it gets to the function call `("...")`.
+        // If we find code doing this then emit a warning.
+        let todopanic = match fun {
             TypedExpr::Todo { .. } => Some((location, TodoOrPanic::Todo)),
             TypedExpr::Panic { .. } => Some((location, TodoOrPanic::Panic)),
             _ => None,
-        }
-        .map(|(location, kind)| {
+        };
+        if let Some((location, kind)) = todopanic {
             let args_location = match (args.first(), args.last()) {
                 (Some(first), Some(last)) => Some(SrcSpan {
                     start: first.location().start,
@@ -663,7 +668,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }),
                 _ => None,
             };
-
             self.environment
                 .warnings
                 .emit(Warning::TodoOrPanicUsedAsFunction {
@@ -672,7 +676,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     args_location,
                     args: args.len(),
                 });
-        });
+        }
 
         Ok(TypedExpr::Call {
             location,
