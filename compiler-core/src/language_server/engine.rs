@@ -539,6 +539,7 @@ where
             }
         }
 
+        // Get completable types
         for (name, type_) in &importing_module.types {
             // Skip types that should not be suggested
             if !self.is_suggestable_import(&type_.publicity, importing_module.package.as_str()) {
@@ -563,6 +564,7 @@ where
             completions.push(completion);
         }
 
+        // Get completable values
         for (name, value) in &importing_module.values {
             // Skip values that should not be suggested
             if !self.is_suggestable_import(&value.publicity, importing_module.package.as_str()) {
