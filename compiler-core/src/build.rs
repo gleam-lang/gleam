@@ -293,6 +293,7 @@ pub struct UnqualifiedImport<'a> {
     pub name: &'a EcoString,
     pub module: &'a EcoString,
     pub is_type: bool,
+    pub location: &'a SrcSpan,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -341,6 +342,7 @@ impl<'a> Located<'a> {
                 module,
                 name,
                 is_type,
+                ..
             }) => importable_modules.get(*module).and_then(|m| {
                 if *is_type {
                     m.types.get(*name).map(|t| DefinitionLocation {

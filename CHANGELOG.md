@@ -191,6 +191,8 @@
 
 - Go to definition now works for import statements. ([Ameen Radwan](https://github.com/Acepie))
 
+- Hover now works for unqualified imports. ([Ameen Radwan](https://github.com/Acepie))
+
 ### Bug Fixes
 
 - Fixed [RUSTSEC-2021-0145](https://rustsec.org/advisories/RUSTSEC-2021-0145) by

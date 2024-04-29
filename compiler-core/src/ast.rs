@@ -750,6 +750,7 @@ impl TypedDefinition {
                                 name: &unqualified.name,
                                 module: &import.module,
                                 is_type: false,
+                                location: &unqualified.location,
                             },
                         ));
                     }
@@ -764,6 +765,7 @@ impl TypedDefinition {
                                 name: &unqualified.name,
                                 module: &import.module,
                                 is_type: true,
+                                location: &unqualified.location,
                             },
                         ));
                     }

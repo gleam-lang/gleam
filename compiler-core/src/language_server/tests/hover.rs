@@ -739,3 +739,95 @@ fn identity(x: Wibble) -> Wibble {
         })
     );
 }
+
+#[test]
+fn hover_import_unqualified_value() {
+    let code = "
+import example_module.{my_num}
+fn main() {
+  my_num
+}
+";
+
+    assert_eq!(
+        hover(
+            TestProject::for_source(code).add_module(
+                "example_module",
+                "
+/// Exciting documentation
+/// Maybe even multiple lines
+pub const my_num = 1"
+            ),
+            Position::new(1, 26)
+        ),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nInt\n```\n Exciting documentation\n Maybe even multiple lines\n"
+                    .to_string()
+            )),
+            range: Some(Range::new(Position::new(1, 23), Position::new(1, 29))),
+        })
+    )
+}
+
+#[test]
+fn hover_import_unqualified_value_from_hex() {
+    let code = "
+import example_module.{my_num}
+fn main() {
+  my_num
+}
+";
+
+    assert_eq!(
+        hover(
+            TestProject::for_source(code).add_hex_module(
+                "example_module",
+                "
+/// Exciting documentation
+/// Maybe even multiple lines
+pub const my_num = 1"
+            ),
+            Position::new(1, 26)
+        ),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nInt\n```\n Exciting documentation\n Maybe even multiple lines\n\nView on [HexDocs](https://hexdocs.pm/hex/example_module.html#my_num)"
+                    .to_string()
+            )),
+            range: Some(Range::new(Position::new(1, 23), Position::new(1, 29))),
+        })
+    )
+}
+
+#[test]
+fn hover_import_unqualified_type() {
+    let code = "
+import example_module.{type MyType, MyType}
+fn main() -> MyType {
+  MyType
+}
+";
+
+    assert_eq!(
+        hover(
+            TestProject::for_source(code).add_module(
+                "example_module",
+                "
+/// Exciting documentation
+/// Maybe even multiple lines
+pub type MyType {
+    MyType
+}"
+            ),
+            Position::new(1, 33)
+        ),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nMyType\n```\n Exciting documentation\n Maybe even multiple lines\n"
+                    .to_string()
+            )),
+            range: Some(Range::new(Position::new(1, 23), Position::new(1, 34))),
+        })
+    )
+}
