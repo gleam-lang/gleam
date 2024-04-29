@@ -175,7 +175,7 @@ pub fn main() {
 }
 
 #[test]
-fn test_remove_redundant_tuple_in_case_simple() {
+fn test_remove_redundant_tuple_in_case_subject_simple() {
     let code = "
 pub fn main() {
   case #() { a -> 0 }
@@ -189,6 +189,26 @@ pub fn main() {
   case  { a -> 0 }
   case 1 { a -> 0 }
   case 1, 2 { a -> 0 }
+}
+";
+
+    assert_eq!(
+        apply_first_code_action_with_title(code, 7, REMOVE_REDUNDANT_TUPLE_IN_CASE_SUBJECT_TITLE),
+        expected
+    );
+}
+
+#[test]
+fn test_remove_redundant_tuple_in_case_subject_nested() {
+    let code = "
+pub fn main() {
+  case #(case #(0) { a -> 0 }) { b -> 0 }
+}
+";
+
+    let expected = "
+pub fn main() {
+  case case 0 { a -> 0 } { b -> 0 }
 }
 ";
 
