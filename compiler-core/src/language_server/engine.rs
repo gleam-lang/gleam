@@ -3,7 +3,7 @@ use crate::{
         Arg, Definition, Function, Import, ModuleConstant, Publicity, SrcSpan, TypedDefinition,
         TypedExpr, TypedPattern,
     },
-    build::{type_constructor_from_modules, Located, Module},
+    build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
@@ -11,7 +11,10 @@ use crate::{
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
-    type_::{pretty::Printer, PreludeType, Type, TypeConstructor, ValueConstructorVariant},
+    type_::{
+        pretty::Printer, ModuleInterface, PreludeType, Type, TypeConstructor,
+        ValueConstructorVariant,
+    },
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
@@ -290,7 +293,30 @@ where
                     Some(hover_for_module_constant(constant, lines))
                 }
                 Located::ModuleStatement(_) => None,
-                Located::UnqualifiedImport(_) => None,
+                Located::UnqualifiedImport(UnqualifiedImport {
+                    name,
+                    module,
+                    is_type,
+                    location,
+                }) => this
+                    .compiler
+                    .get_module_inferface(module.as_str())
+                    .and_then(|module| {
+                        if is_type {
+                            module.types.get(name).map(|t| {
+                                hover_for_annotation(*location, t.typ.as_ref(), Some(t), lines)
+                            })
+                        } else {
+                            module.values.get(name).map(|v| {
+                                let m = if this.hex_deps.contains(&module.package) {
+                                    Some(module)
+                                } else {
+                                    None
+                                };
+                                hover_for_imported_value(v, location, lines, m, name)
+                            })
+                        }
+                    }),
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::Expression(expression) => {
                     let module = this.module_for_uri(&params.text_document.uri);
@@ -759,6 +785,33 @@ fn hover_for_expression(
     }
 }
 
+fn hover_for_imported_value(
+    value: &crate::type_::ValueConstructor,
+    location: &SrcSpan,
+    line_numbers: LineNumbers,
+    hex_module_imported_from: Option<&ModuleInterface>,
+    name: &EcoString,
+) -> Hover {
+    let documentation = value.get_documentation().unwrap_or_default();
+
+    let link_section = hex_module_imported_from.map_or("".to_string(), |m| {
+        format_hexdocs_link_section(m.package.as_str(), m.name.as_str(), name)
+    });
+
+    // Show the type of the hovered node to the user
+    let type_ = Printer::new().pretty_print(value.type_.as_ref(), 0);
+    let contents = format!(
+        "```gleam
+{type_}
+```
+{documentation}{link_section}"
+    );
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(*location, &line_numbers)),
+    }
+}
+
 // Returns true if any part of either range overlaps with the other.
 fn overlaps(a: lsp_types::Range, b: lsp_types::Range) -> bool {
     within(a.start, b) || within(a.end, b) || within(b.start, a) || within(b.end, a)
@@ -853,6 +906,11 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
     }
 }
 
+fn format_hexdocs_link_section(package_name: &str, module_name: &str, name: &str) -> String {
+    let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
+    format!("\nView on [HexDocs]({link})")
+}
+
 fn get_hexdocs_link_section(
     module_name: &str,
     name: &str,
@@ -866,6 +924,5 @@ fn get_hexdocs_link_section(
         _ => None,
     })?;
 
-    let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
-    Some(format!("\nView on [HexDocs]({link})"))
+    Some(format_hexdocs_link_section(package_name, module_name, name))
 }
