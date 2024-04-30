@@ -221,6 +221,35 @@ pub fn main() -> One {
     );
 }
 
+#[test]
+fn import_type_duplicate_with_as() {
+    assert_with_module_error!(
+        ("one", "pub type One = Int"),
+        "import one.{type One as MyOne, type One as MyOne}
+
+pub fn main() -> One {
+  todo
+}
+",
+    );
+}
+
+#[test]
+fn import_type_duplicate_with_as_multiline() {
+    assert_with_module_error!(
+        ("one", "pub type One = Int"),
+        "import one.{
+          type One as MyOne,
+          type One as MyOne
+        }
+
+pub fn main() -> One {
+  todo
+}
+",
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/2379
 #[test]
 fn deprecated_type_import_conflict() {
