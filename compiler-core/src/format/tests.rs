@@ -5960,7 +5960,7 @@ pub const wibble = 1
 }
 
 #[test]
-fn comments_inside_contant_list() {
+fn comments_inside_constant_list() {
     assert_format!(
         r#"const wibble = [
   // A comment
@@ -5974,7 +5974,7 @@ fn comments_inside_contant_list() {
 }
 
 #[test]
-fn comments_inside_contant_empty_list() {
+fn comments_inside_constant_empty_list() {
     assert_format!(
         r#"const wibble = [
   // A comment
@@ -5984,7 +5984,7 @@ fn comments_inside_contant_empty_list() {
 }
 
 #[test]
-fn comments_inside_contant_tuple() {
+fn comments_inside_constant_tuple() {
     assert_format!(
         r#"const wibble = #(
   // A comment
@@ -5999,7 +5999,7 @@ fn comments_inside_contant_tuple() {
 }
 
 #[test]
-fn comments_inside_contant_empty_tuple() {
+fn comments_inside_constant_empty_tuple() {
     assert_format!(
         r#"const wibble = #(
   // A comment
