@@ -1,5 +1,3 @@
-#![allow(unused_variables)]
-
 use crate::{
     ast::TypedAssignment,
     type_::{ModuleValueConstructor, TypedCallArg, ValueConstructor},
@@ -283,16 +281,17 @@ where
         v.visit_typed_definition(def);
     }
 }
+
 pub fn visit_typed_definition<'a, V>(v: &mut V, def: &'a TypedDefinition)
 where
     V: Visit<'a> + ?Sized,
 {
     match def {
         Definition::Function(fun) => v.visit_typed_function(fun),
-        Definition::TypeAlias(type_alias) => { /* TODO */ }
-        Definition::CustomType(custom_type) => { /* TODO */ }
-        Definition::Import(import) => { /* TODO */ }
-        Definition::ModuleConstant(module_constant) => { /* TODO */ }
+        Definition::TypeAlias(_type_alias) => { /* TODO */ }
+        Definition::CustomType(_custom_type) => { /* TODO */ }
+        Definition::Import(_import) => { /* TODO */ }
+        Definition::ModuleConstant(_module_constant) => { /* TODO */ }
     }
 }
 pub fn visit_typed_function<'a, V>(v: &mut V, fun: &'a TypedFunction)
@@ -433,30 +432,30 @@ where
 }
 
 pub fn visit_typed_expr_int<'a, V>(
-    v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
-    value: &'a EcoString,
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
+    _value: &'a EcoString,
 ) where
     V: Visit<'a> + ?Sized,
 {
 }
 
 pub fn visit_typed_expr_float<'a, V>(
-    v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
-    value: &'a EcoString,
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
+    _value: &'a EcoString,
 ) where
     V: Visit<'a> + ?Sized,
 {
 }
 
 pub fn visit_typed_expr_string<'a, V>(
-    v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
-    value: &'a EcoString,
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
+    _value: &'a EcoString,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -464,7 +463,7 @@ pub fn visit_typed_expr_string<'a, V>(
 
 pub fn visit_typed_expr_block<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
+    _location: &'a SrcSpan,
     statements: &'a [TypedStatement],
 ) where
     V: Visit<'a> + ?Sized,
@@ -476,7 +475,7 @@ pub fn visit_typed_expr_block<'a, V>(
 
 pub fn visit_typed_expr_pipeline<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
+    _location: &'a SrcSpan,
     assignments: &'a [TypedAssignment],
     finally: &'a TypedExpr,
 ) where
@@ -490,23 +489,24 @@ pub fn visit_typed_expr_pipeline<'a, V>(
 }
 
 pub fn visit_typed_expr_var<'a, V>(
-    v: &mut V,
-    location: &'a SrcSpan,
-    constructor: &'a ValueConstructor,
-    name: &'a EcoString,
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _constructor: &'a ValueConstructor,
+    _name: &'a EcoString,
 ) where
     V: Visit<'a> + ?Sized,
 {
+    /* TODO */
 }
 
 pub fn visit_typed_expr_fn<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
-    is_capture: &'a bool,
-    args: &'a [TypedArg],
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
+    _is_capture: &'a bool,
+    _args: &'a [TypedArg],
     body: &'a [TypedStatement],
-    return_annotation: &'a Option<TypeAst>,
+    _return_annotation: &'a Option<TypeAst>,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -517,8 +517,8 @@ pub fn visit_typed_expr_fn<'a, V>(
 
 pub fn visit_typed_expr_list<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
     elements: &'a [TypedExpr],
     tail: &'a Option<Box<TypedExpr>>,
 ) where
@@ -535,8 +535,8 @@ pub fn visit_typed_expr_list<'a, V>(
 
 pub fn visit_typed_expr_call<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
     fun: &'a TypedExpr,
     args: &'a [TypedCallArg],
 ) where
@@ -550,9 +550,9 @@ pub fn visit_typed_expr_call<'a, V>(
 
 pub fn visit_typed_expr_bin_op<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
-    name: &'a BinOp,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
+    _name: &'a BinOp,
     left: &'a TypedExpr,
     right: &'a TypedExpr,
 ) where
@@ -564,8 +564,8 @@ pub fn visit_typed_expr_bin_op<'a, V>(
 
 pub fn visit_typed_expr_case<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
     subjects: &'a [TypedExpr],
     clauses: &'a [TypedClause],
 ) where
@@ -582,10 +582,10 @@ pub fn visit_typed_expr_case<'a, V>(
 
 pub fn visit_typed_expr_record_access<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
-    label: &'a EcoString,
-    index: &'a u64,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
+    _label: &'a EcoString,
+    _index: &'a u64,
     record: &'a TypedExpr,
 ) where
     V: Visit<'a> + ?Sized,
@@ -594,22 +594,23 @@ pub fn visit_typed_expr_record_access<'a, V>(
 }
 
 pub fn visit_typed_expr_module_select<'a, V>(
-    v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
-    label: &'a EcoString,
-    module_name: &'a EcoString,
-    module_alias: &'a EcoString,
-    constructor: &'a ModuleValueConstructor,
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
+    _label: &'a EcoString,
+    _module_name: &'a EcoString,
+    _module_alias: &'a EcoString,
+    _constructor: &'a ModuleValueConstructor,
 ) where
     V: Visit<'a> + ?Sized,
 {
+    /* TODO */
 }
 
 pub fn visit_typed_expr_tuple<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
     elems: &'a [TypedExpr],
 ) where
     V: Visit<'a> + ?Sized,
@@ -621,9 +622,9 @@ pub fn visit_typed_expr_tuple<'a, V>(
 
 pub fn visit_typed_expr_tuple_index<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
-    index: &'a u64,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
+    _index: &'a u64,
     tuple: &'a TypedExpr,
 ) where
     V: Visit<'a> + ?Sized,
@@ -633,9 +634,9 @@ pub fn visit_typed_expr_tuple_index<'a, V>(
 
 pub fn visit_typed_expr_todo<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
+    _location: &'a SrcSpan,
     message: &'a Option<Box<TypedExpr>>,
-    type_: &'a Arc<Type>,
+    _type_: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -646,9 +647,9 @@ pub fn visit_typed_expr_todo<'a, V>(
 
 pub fn visit_typed_expr_panic<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
+    _location: &'a SrcSpan,
     message: &'a Option<Box<TypedExpr>>,
-    type_: &'a Arc<Type>,
+    _type_: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -659,8 +660,8 @@ pub fn visit_typed_expr_panic<'a, V>(
 
 pub fn visit_typed_expr_bit_array<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
     segments: &'a [TypedExprBitArraySegment],
 ) where
     V: Visit<'a> + ?Sized,
@@ -672,8 +673,8 @@ pub fn visit_typed_expr_bit_array<'a, V>(
 
 pub fn visit_typed_expr_record_update<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
-    typ: &'a Arc<Type>,
+    _location: &'a SrcSpan,
+    _typ: &'a Arc<Type>,
     spread: &'a TypedExpr,
     args: &'a [TypedRecordUpdateArg],
 ) where
@@ -685,14 +686,14 @@ pub fn visit_typed_expr_record_update<'a, V>(
     }
 }
 
-pub fn visit_typed_expr_negate_bool<'a, V>(v: &mut V, location: &'a SrcSpan, value: &'a TypedExpr)
+pub fn visit_typed_expr_negate_bool<'a, V>(v: &mut V, _location: &'a SrcSpan, value: &'a TypedExpr)
 where
     V: Visit<'a> + ?Sized,
 {
     v.visit_typed_expr(value);
 }
 
-pub fn visit_typed_expr_negate_int<'a, V>(v: &mut V, location: &'a SrcSpan, value: &'a TypedExpr)
+pub fn visit_typed_expr_negate_int<'a, V>(v: &mut V, _location: &'a SrcSpan, value: &'a TypedExpr)
 where
     V: Visit<'a> + ?Sized,
 {
@@ -717,7 +718,7 @@ where
     v.visit_typed_expr(&assignment.value);
 }
 
-pub fn visit_use<'a, V>(v: &mut V, use_: &'a Use)
+pub fn visit_use<'a, V>(_v: &mut V, _use_: &'a Use)
 where
     V: Visit<'a> + ?Sized,
 {
@@ -755,31 +756,34 @@ where
     v.visit_typed_expr(&arg.value);
 }
 
-pub fn visit_typed_bit_array_option<'a, V>(v: &mut V, option: &'a BitArrayOption<TypedExpr>)
+pub fn visit_typed_bit_array_option<'a, V>(_v: &mut V, option: &'a BitArrayOption<TypedExpr>)
 where
     V: Visit<'a> + ?Sized,
 {
     match option {
-        BitArrayOption::Bytes { location } => { /* TODO */ }
-        BitArrayOption::Int { location } => { /* TODO */ }
-        BitArrayOption::Float { location } => { /* TODO */ }
-        BitArrayOption::Bits { location } => { /* TODO */ }
-        BitArrayOption::Utf8 { location } => { /* TODO */ }
-        BitArrayOption::Utf16 { location } => { /* TODO */ }
-        BitArrayOption::Utf32 { location } => { /* TODO */ }
-        BitArrayOption::Utf8Codepoint { location } => { /* TODO */ }
-        BitArrayOption::Utf16Codepoint { location } => { /* TODO */ }
-        BitArrayOption::Utf32Codepoint { location } => { /* TODO */ }
-        BitArrayOption::Signed { location } => { /* TODO */ }
-        BitArrayOption::Unsigned { location } => { /* TODO */ }
-        BitArrayOption::Big { location } => { /* TODO */ }
-        BitArrayOption::Little { location } => { /* TODO */ }
-        BitArrayOption::Native { location } => { /* TODO */ }
+        BitArrayOption::Bytes { location: _ } => { /* TODO */ }
+        BitArrayOption::Int { location: _ } => { /* TODO */ }
+        BitArrayOption::Float { location: _ } => { /* TODO */ }
+        BitArrayOption::Bits { location: _ } => { /* TODO */ }
+        BitArrayOption::Utf8 { location: _ } => { /* TODO */ }
+        BitArrayOption::Utf16 { location: _ } => { /* TODO */ }
+        BitArrayOption::Utf32 { location: _ } => { /* TODO */ }
+        BitArrayOption::Utf8Codepoint { location: _ } => { /* TODO */ }
+        BitArrayOption::Utf16Codepoint { location: _ } => { /* TODO */ }
+        BitArrayOption::Utf32Codepoint { location: _ } => { /* TODO */ }
+        BitArrayOption::Signed { location: _ } => { /* TODO */ }
+        BitArrayOption::Unsigned { location: _ } => { /* TODO */ }
+        BitArrayOption::Big { location: _ } => { /* TODO */ }
+        BitArrayOption::Little { location: _ } => { /* TODO */ }
+        BitArrayOption::Native { location: _ } => { /* TODO */ }
         BitArrayOption::Size {
-            location,
-            value,
-            short_form,
-        } => v.visit_typed_expr(value),
-        BitArrayOption::Unit { location, value } => { /* TODO */ }
+            location: _,
+            value: _,
+            short_form: _,
+        } => { /* TODO */ }
+        BitArrayOption::Unit {
+            location: _,
+            value: _,
+        } => { /* TODO */ }
     }
 }
