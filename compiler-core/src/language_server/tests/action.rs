@@ -51,7 +51,7 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
 }
 
 const REMOVE_UNUSED_IMPORTS_TITLE: &str = "Remove unused imports";
-const REMOVE_REDUNDANT_TUPLE_IN_CASE_SUBJECT_TITLE: &str = "Remove redundant tuple in case subject";
+const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
 
 fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> String {
     let response = engine_response(src, line)
@@ -193,7 +193,7 @@ pub fn main() {
 ";
 
     assert_eq!(
-        apply_first_code_action_with_title(code, 7, REMOVE_REDUNDANT_TUPLE_IN_CASE_SUBJECT_TITLE),
+        apply_first_code_action_with_title(code, 7, REMOVE_REDUNDANT_TUPLES),
         expected
     );
 }
@@ -213,7 +213,7 @@ pub fn main() {
 ";
 
     assert_eq!(
-        apply_first_code_action_with_title(code, 7, REMOVE_REDUNDANT_TUPLE_IN_CASE_SUBJECT_TITLE),
+        apply_first_code_action_with_title(code, 7, REMOVE_REDUNDANT_TUPLES),
         expected
     );
 }
@@ -241,8 +241,7 @@ pub fn main() {
 }
 ";
 
-    let result =
-        apply_first_code_action_with_title(code, 20, REMOVE_REDUNDANT_TUPLE_IN_CASE_SUBJECT_TITLE);
+    let result = apply_first_code_action_with_title(code, 20, REMOVE_REDUNDANT_TUPLES);
 
     insta::assert_snapshot!(result);
 }

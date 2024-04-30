@@ -184,7 +184,7 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
         self.edits.sort_by_key(|edit| edit.range.start);
 
         let mut actions = vec![];
-        CodeActionBuilder::new("Remove redundant tuple in case subject")
+        CodeActionBuilder::new("Remove redundant tuples")
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits)
             .preferred(true)
