@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n        import one.{\n          fn1\n        } as x\n        import two.{\n          fn2\n        } as x\n        "
+---
+error: Duplicate import
+  ┌─ /src/one/two.gleam:2:9
+  │    
+2 │   ╭         import one.{
+3 │   │           fn1
+4 │   │         } as x
+  │   ╰──────────────^ First imported here
+5 │ ╭           import two.{
+6 │ │             fn2
+7 │ │           } as x
+  │ ╰────────────────^ Reimported here
+
+`x` has been imported multiple times.
+Names in a Gleam module must be unique so one will need to be renamed.

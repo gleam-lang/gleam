@@ -1643,6 +1643,32 @@ fn same_imports_multiple_times_6() {
     );
 }
 
+#[test]
+fn same_imports_multiple_times_7() {
+    assert_with_module_error!(
+        (
+            "one",
+            "
+            pub fn fn1() { 1 }
+            "
+        ),
+        (
+            "two",
+            "
+            pub fn fn2() { 1 }
+            "
+        ),
+        "
+        import one.{
+          fn1
+        } as x
+        import two.{
+          fn2
+        } as x
+        "
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1705
 #[test]
 fn update_multi_variant_record() {
