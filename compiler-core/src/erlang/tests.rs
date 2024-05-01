@@ -622,3 +622,16 @@ pub fn main() {
 "
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/3073
+#[test]
+fn scientific_notation() {
+    assert_erl!(
+        "
+pub fn main() {
+  1.0e6
+  1.e6
+}
+"
+    );
+}
