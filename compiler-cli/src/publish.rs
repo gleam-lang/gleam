@@ -527,7 +527,7 @@ impl<'a> ReleaseMetadata<'a> {
             r#"{{<<"name">>, <<"{name}">>}}.
 {{<<"app">>, <<"{name}">>}}.
 {{<<"version">>, <<"{version}">>}}.
-{{<<"description">>, <<"{description}/utf8">>}}.
+{{<<"description">>, <<"{description}"/utf8>>}}.
 {{<<"licenses">>, [{licenses}]}}.
 {{<<"build_tools">>, [{build_tools}]}}.
 {{<<"links">>, [{links}
@@ -630,7 +630,7 @@ fn release_metadata_as_erlang() {
         r#"{<<"name">>, <<"myapp">>}.
 {<<"app">>, <<"myapp">>}.
 {<<"version">>, <<"1.2.3">>}.
-{<<"description">>, <<"description goes here 🌈/utf8">>}.
+{<<"description">>, <<"description goes here 🌈"/utf8>>}.
 {<<"licenses">>, [<<"MIT">>, <<"MPL-2.0">>]}.
 {<<"build_tools">>, [<<"gleam">>, <<"rebar3">>]}.
 {<<"links">>, [
