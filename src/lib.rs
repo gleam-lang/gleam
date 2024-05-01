@@ -459,6 +459,64 @@ pub fn publish_package_response(response: http::Response<Vec<u8>>) -> Result<(),
     }
 }
 
+pub fn revert_release_request(
+    package_name: &str,
+    version: &str,
+    api_key: &str,
+    config: &Config,
+) -> Result<http::Request<Vec<u8>>, ApiError> {
+    validate_package_and_version(package_name, version)?;
+
+    Ok(config
+        .api_request(
+            Method::DELETE,
+            &format!("packages/{}/releases/{}", package_name, version),
+            Some(api_key),
+        )
+        .body(vec![])
+        .expect("publish_package_request request"))
+}
+
+pub fn revert_release_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+    let (parts, body) = response.into_parts();
+    match parts.status {
+        StatusCode::NO_CONTENT => Ok(()),
+        StatusCode::NOT_FOUND => Err(ApiError::NotFound),
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        status => Err(ApiError::unexpected_response(status, body)),
+    }
+}
+
+pub fn revert_package_request(
+    package_name: &str,
+    owner: &str,
+    api_key: &str,
+    config: &Config,
+) -> Result<http::Request<Vec<u8>>, ApiError> {
+    Ok(config
+        .api_request(
+            Method::DELETE,
+            &format!("packages/{}/owners/{}", package_name, owner),
+            Some(api_key),
+        )
+        .body(vec![])
+        .expect("publish_package_request request"))
+}
+
+pub fn revert_package_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+    let (parts, body) = response.into_parts();
+    match parts.status {
+        StatusCode::NO_CONTENT => Ok(()),
+        StatusCode::NOT_FOUND => Err(ApiError::NotFound),
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        status => Err(ApiError::unexpected_response(status, body)),
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum ApiError {
     #[error(transparent)]

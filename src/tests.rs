@@ -196,6 +196,72 @@ async fn remove_docs_success() {
 }
 
 #[tokio::test]
+async fn revert_release_success() {
+    let key = "my-api-key-here";
+    let package = "gleam_experimental_stdlib";
+    let version = "0.8.0";
+
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock(
+            "DELETE",
+            format!("/packages/{}/releases/{}", package, version).as_str(),
+        )
+        .expect(1)
+        .match_header("authorization", key)
+        .match_header("accept", "application/json")
+        .with_status(204)
+        .create_async()
+        .await;
+
+    let mut config = Config::new();
+    config.api_base = http::Uri::try_from(server.url()).unwrap();
+
+    let result = crate::revert_release_response(
+        http_send(crate::revert_release_request(package, version, key, &config).unwrap())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(result, ());
+    mock.assert();
+}
+
+#[tokio::test]
+async fn revert_package_success() {
+    let key = "my-api-key-here";
+    let package = "gleam_experimental_stdlib";
+    let owner = "lpil";
+
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock(
+            "DELETE",
+            format!("/packages/{}/owners/{}", package, owner).as_str(),
+        )
+        .expect(1)
+        .match_header("authorization", key)
+        .match_header("accept", "application/json")
+        .with_status(204)
+        .create_async()
+        .await;
+
+    let mut config = Config::new();
+    config.api_base = http::Uri::try_from(server.url()).unwrap();
+
+    let result = crate::revert_package_response(
+        http_send(crate::revert_package_request(package, owner, key, &config).unwrap())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(result, ());
+    mock.assert();
+}
+
+#[tokio::test]
 async fn remove_key_success() {
     let name = "some-key-name";
     let key = "my-api-key-here";
