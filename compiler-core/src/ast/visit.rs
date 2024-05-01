@@ -1,7 +1,44 @@
-use crate::{
-    ast::TypedAssignment,
-    type_::{ModuleValueConstructor, TypedCallArg, ValueConstructor},
-};
+//! AST traversal routines, referenced from [`syn::visit`](https://docs.rs/syn/latest/syn/visit/index.html)
+//!
+//! Each method of the [`Visit`] trait can be overriden to customize the
+//! behaviour when visiting the corresponding type of AST node. By default,
+//! every method recursively visits the substructure of the node by using the
+//! right visitor method.
+//!
+//! # Example
+//!
+//! Suppose we would like to collect all function names in a module,
+//! we can do the following:
+//!
+//! ```no_run
+//! use gleam_core::ast::{TypedFunction, visit::{self, Visit}};
+//!
+//! struct FnCollector<'ast> {
+//!     functions: Vec<&'ast TypedFunction>
+//! }
+//!
+//! impl<'ast> Visit<'ast> for FnCollector<'ast> {
+//!     fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
+//!         self.functions.push(fun);
+//!
+//!         // Use the default behaviour to visit any nested functions
+//!         visit::visit_typed_function(self, fun);
+//!     }
+//! }
+//!
+//! fn print_all_module_functions() {
+//!     let module = todo!("module");
+//!     let mut fn_collector = FnCollector { functions: vec![] };
+//!
+//!     // This will walk the AST and collect all functions
+//!     fn_collector.visit_typed_module(module);
+//!
+//!     // Print the collected functions
+//!     println!("{:#?}", fn_collector.functions);
+//! }
+//! ```
+
+use crate::type_::{ModuleValueConstructor, TypedCallArg, ValueConstructor};
 use std::sync::Arc;
 
 use ecow::EcoString;
@@ -9,8 +46,8 @@ use ecow::EcoString;
 use crate::type_::Type;
 
 use super::{
-    BinOp, BitArrayOption, Definition, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
-    TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule,
+    BinOp, BitArrayOption, Definition, SrcSpan, Statement, TypeAst, TypedArg, TypedAssignment,
+    TypedClause, TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule,
     TypedRecordUpdateArg, TypedStatement, Use,
 };
 
