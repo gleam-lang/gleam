@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ### Build tool
 
 - A helpful error message is now shown if the `manifest.toml` file has been
