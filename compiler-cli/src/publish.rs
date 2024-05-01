@@ -5,8 +5,8 @@ use gleam_core::{
     build::{Codegen, Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
     docs::DocContext,
-    hex, paths,
-    paths::ProjectPaths,
+    hex,
+    paths::{self, ProjectPaths},
     requirement::Requirement,
     Error, Result,
 };
