@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.4.0 - 2024-05-01
+
+- Added the `revert_release_request`, `revert_release_response`,
+  `revert_package_request`, and `revert_package_response` functions.
+
 ## v2.3.0 - 2024-04-26
 
 - Updated all dependencies.
