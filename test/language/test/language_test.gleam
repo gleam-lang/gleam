@@ -937,6 +937,8 @@ fn bit_array_target_tests() -> List(Test) {
     |> example(fn() {
       assert_equal(True, <<63, 128, 0, 0>> == <<1.0:float-32>>)
     }),
+    "<<\"😀\":utf8>> == <<\"\u{1F600}\":utf8>>"
+    |> example(fn() { assert_equal(True, <<"😀":utf8>> == <<"\u{1F600}":utf8>>) }),
   ]
 }
 

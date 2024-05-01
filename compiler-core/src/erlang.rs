@@ -602,7 +602,7 @@ fn expr_segment<'a>(
         // Skip the normal <<value/utf8>> surrounds and set the string literal flag
         TypedExpr::String { value, .. } => {
             value_is_a_string_literal = true;
-            value.to_doc().surround("\"", "\"")
+            string_inner(value).surround("\"", "\"")
         }
 
         // As normal

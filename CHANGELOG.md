@@ -309,3 +309,5 @@
 - Fixed a bug where having utf8 symbols in `gleam.toml`'s description value
   would result in an HTTP 500 error when running `gleam publish`.
   ([inoas](https://github.com/inoas))
+- Unicode `\u{}` syntax in bit_array string segments now produce valid Erlang
+  unicode characters ([Pi-Cla](https://github.com/Pi-Cla))
