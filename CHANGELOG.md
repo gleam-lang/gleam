@@ -42,7 +42,7 @@
   when building them locally. It is still added when publishing to Hex.
   ([Pi-Cla](https://github.com/Pi-Cla))
 
-- Fixed a bug where having utf8 symbols in ´gleam.toml´'s description value
+- Fixed a bug where having utf8 symbols in `gleam.toml`'s description value
   would result in an HTTP 500 error when running `gleam publish`.
 
   ([inoas](https://github.com/inoas))
