@@ -902,10 +902,14 @@ fn float<'a>(value: &str) -> Document<'a> {
     if value.ends_with('.') {
         value.push('0')
     }
-    if value == "0.0" {
-        return "+0.0".to_doc();
+
+    match value.split(".").collect_vec().as_slice() {
+        ["0", "0"] => "+0.0".to_doc(),
+        [before_dot, after_dot] if after_dot.starts_with("e") => {
+            Document::String(format!("{before_dot}.0{after_dot}"))
+        }
+        _ => Document::String(value),
     }
-    Document::String(value)
 }
 
 fn expr_list<'a>(

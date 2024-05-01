@@ -227,3 +227,7 @@
 - Fixed a bug where formatting constant lists of tuples would be force the tuples
   to be broken across multiple lines, even when they could fit on a single line.
   ([Isaac Harris-Holt](https://github.com/isaacharrisholt))
+
+- Fixed a bug where floating points in scientific notation with no trailing
+  zeros would generate invalid Erlang code.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
