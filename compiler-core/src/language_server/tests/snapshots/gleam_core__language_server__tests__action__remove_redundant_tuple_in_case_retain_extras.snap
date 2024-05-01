@@ -17,6 +17,17 @@ pub fn main() {
 
     
   {
-    a -> 0
+    
+      // first comment
+      a,
+      // second comment
+      b,
+      c // third comment before comma
+
+      
+
+      // fourth comment after comma
+
+     -> 0
   }
 }
