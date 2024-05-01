@@ -178,17 +178,15 @@ pub fn main() {
 fn test_remove_redundant_tuple_in_case_subject_simple() {
     let code = "
 pub fn main() {
-  case #() { a -> 0 }
-  case #(1) { a -> 0 }
-  case #(1, 2) { a -> 0 }
+  case #(1) { #(a) -> 0 }
+  case #(1, 2) { #(a, b) -> 0 }
 }
 ";
 
     let expected = "
 pub fn main() {
-  case  { a -> 0 }
   case 1 { a -> 0 }
-  case 1, 2 { a -> 0 }
+  case 1, 2 { a, b -> 0 }
 }
 ";
 
@@ -202,7 +200,7 @@ pub fn main() {
 fn test_remove_redundant_tuple_in_case_subject_nested() {
     let code = "
 pub fn main() {
-  case #(case #(0) { a -> 0 }) { b -> 0 }
+  case #(case #(0) { #(a) -> 0 }) { #(b) -> 0 }
 }
 ";
 
@@ -236,7 +234,18 @@ pub fn main() {
 
     )
   {
-    a -> 0
+    #(
+      // first comment
+      a,
+      // second comment
+      b,
+      c // third comment before comma
+
+      ,
+
+      // fourth comment after comma
+
+    ) -> 0
   }
 }
 ";
@@ -244,6 +253,38 @@ pub fn main() {
     let result = apply_first_code_action_with_title(code, 20, REMOVE_REDUNDANT_TUPLES);
 
     insta::assert_snapshot!(result);
+}
+
+#[test]
+fn test_remove_redundant_tuple_in_case_subject_ignore_ineligible() {
+    let code = "
+pub fn main() {
+  case #() { #() -> 0 }
+  case #(0), #(1) { #(a), b -> 0 }
+  case #(0), #(1) {
+    #(1), #(b) -> 0
+    a, #(0) -> 1
+    #(a), #(b) -> 2
+  }
+}
+";
+
+    let expected = "
+pub fn main() {
+  case #() { #() -> 0 }
+  case 0, #(1) { a, b -> 0 }
+  case #(0), 1 {
+    #(1), b -> 0
+    a, 0 -> 1
+    #(a), b -> 2
+  }
+}
+";
+
+    assert_eq!(
+        apply_first_code_action_with_title(code, 11, REMOVE_REDUNDANT_TUPLES),
+        expected
+    );
 }
 
 /* TODO: implement qualified unused location
