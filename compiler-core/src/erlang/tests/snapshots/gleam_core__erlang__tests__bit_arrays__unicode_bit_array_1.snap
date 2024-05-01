@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+expression: "\n    pub fn main() {\n        let emoji = \"\\u{1F600}\"\n        let arr = <<emoji:utf8>>\n}"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-spec main() -> bitstring().
+main() ->
+    Emoji = <<"\x{1F600}"/utf8>>,
+    Arr = <<Emoji/binary>>.

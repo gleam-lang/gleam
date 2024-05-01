@@ -128,3 +128,25 @@ fn bit_array_declare_and_use_var() {
 }"#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3050
+#[test]
+fn unicode_bit_array_1() {
+    assert_erl!(
+        r#"
+    pub fn main() {
+        let emoji = "\u{1F600}"
+        let arr = <<emoji:utf8>>
+}"#
+    );
+}
+
+#[test]
+fn unicode_bit_array_2() {
+    assert_erl!(
+        r#"
+    pub fn main() {
+        let arr = <<"\u{1F600}":utf8>>
+}"#
+    );
+}
