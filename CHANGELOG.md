@@ -58,6 +58,11 @@
 
   Hint: Rename this module and try again.
   ```
+- New subcommand `gleam hex revert` added. ([Pi-Cla](https://github.com/Pi-Cla))
+  * You can specify the options like this: `gleam hex revert --package gling --version 1.2.3`
+  * A new package can be reverted or updated within 24 hours of it's initial publish,
+  a new version of an existing package can be reverted or updated within one hour.
+  * You could already update packages even before this release by running: `gleam publish` again.
 
 ### Compiler
 
