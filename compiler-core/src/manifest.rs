@@ -118,18 +118,9 @@ impl Manifest {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Base16Checksum(pub Vec<u8>);
 
-impl ToString for Base16Checksum {
-    fn to_string(&self) -> String {
-        base16::encode_upper(&self.0)
-    }
-}
-
-impl serde::Serialize for Base16Checksum {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&base16::encode_upper(&self.0))
+impl std::fmt::Display for Base16Checksum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", base16::encode_upper(&self.0))
     }
 }
 
@@ -191,6 +182,15 @@ pub enum ManifestPackageSource {
     Git { repo: EcoString, commit: EcoString },
     #[serde(rename = "local")]
     Local { path: Utf8PathBuf }, // should be the canonical path
+}
+
+impl serde::Serialize for Base16Checksum {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&base16::encode_upper(&self.0))
+    }
 }
 
 fn sorted_vec<S, T>(value: &[T], serializer: S) -> Result<S::Ok, S::Error>
