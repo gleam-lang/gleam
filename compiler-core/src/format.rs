@@ -558,7 +558,7 @@ impl<'comments> Formatter<'comments> {
 
         let comments = self.pop_comments(location.end);
         match printed_comments(comments, false) {
-            None => tuple_doc.append(break_(",", "")).append(")"),
+            None => tuple_doc.append(break_(",", "")).append(")").group(),
             Some(comments) => tuple_doc
                 .append(break_(",", "").nest(INDENT))
                 .append(comments)
