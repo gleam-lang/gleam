@@ -42,9 +42,7 @@ pub trait ApiKeyCommand {
         let result = self.with_api_key(runtime.handle(), hex_config, &api_key);
 
         // Ensure to remove the API key
-        runtime.block_on(hex::remove_api_key(
-            &hostname, hex_config, &api_key, &http,
-        ))?;
+        runtime.block_on(hex::remove_api_key(&hostname, hex_config, &api_key, &http))?;
 
         result
     }
