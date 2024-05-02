@@ -1647,7 +1647,7 @@ fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Docum
 
 fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a str, label: &'a str) -> Document<'a> {
     match crate::type_::collapse_links(typ).as_ref() {
-        crate::type_::Type::Fn { args, .. } => "fun "
+        Type::Fn { args, .. } => "fun "
             .to_doc()
             .append(module_name_to_erlang(module_name))
             .append(":")
@@ -1698,16 +1698,16 @@ fn variable_name(name: &str) -> String {
 fn id_to_type_var(id: u64) -> Document<'static> {
     if id < 26 {
         let mut name = "".to_string();
-        name.push(std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
+        name.push(char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
         return Document::String(name);
     }
     let mut name = vec![];
     let mut last_char = id;
     while last_char >= 26 {
-        name.push(std::char::from_u32((last_char % 26 + 65) as u32).expect("id_to_type_var 1"));
+        name.push(char::from_u32((last_char % 26 + 65) as u32).expect("id_to_type_var 1"));
         last_char /= 26;
     }
-    name.push(std::char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
+    name.push(char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
     name.reverse();
     name.into_iter().collect::<EcoString>().to_doc()
 }

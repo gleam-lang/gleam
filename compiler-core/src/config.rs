@@ -49,7 +49,7 @@ impl<'de> Deserialize<'de> for SpdxLicense {
     where
         D: serde::Deserializer<'de>,
     {
-        let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
+        let s: &str = Deserialize::deserialize(deserializer)?;
         match spdx::license_id(s) {
             None => Err(serde::de::Error::custom(format!(
                 "{s} is not a valid SPDX License ID"
@@ -182,7 +182,7 @@ impl PackageConfig {
     // with the current compiler version
     pub fn check_gleam_compatibility(&self) -> Result<(), Error> {
         if let Some(required_version) = &self.gleam_version {
-            let compiler_version = hexpm::version::Version::parse(COMPILER_VERSION)
+            let compiler_version = Version::parse(COMPILER_VERSION)
                 .expect("Parse compiler semantic version");
             let range = hexpm::version::Range::new(required_version.to_string())
                 .to_pubgrub()

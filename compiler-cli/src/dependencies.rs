@@ -271,7 +271,7 @@ fn remove_extra_packages<Telem: Telemetry>(
 fn read_manifest_from_disc(paths: &ProjectPaths) -> Result<Manifest> {
     tracing::debug!("reading_manifest_toml");
     let manifest_path = paths.manifest();
-    let toml = crate::fs::read(&manifest_path)?;
+    let toml = fs::read(&manifest_path)?;
     let manifest = toml::from_str(&toml).map_err(|e| Error::FileIo {
         action: FileIoAction::Parse,
         kind: FileKind::File,
@@ -333,7 +333,7 @@ impl LocalPackages {
                 packages: HashMap::new(),
             });
         }
-        let toml = crate::fs::read(&path)?;
+        let toml = fs::read(&path)?;
         toml::from_str(&toml).map_err(|e| Error::FileIo {
             action: FileIoAction::Parse,
             kind: FileKind::File,

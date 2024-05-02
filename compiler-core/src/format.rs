@@ -303,7 +303,7 @@ impl<'comments> Formatter<'comments> {
                 }
                 // It shouldn't really be possible for a non import to be here so
                 // we just return a default value.
-                _ => std::cmp::Ordering::Equal,
+                _ => Ordering::Equal,
             })
             .map(|import| self.targeted_definition(import));
 

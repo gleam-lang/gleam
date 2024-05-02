@@ -23,7 +23,7 @@ pub struct Hydrator {
     created_type_variables: im::HashMap<EcoString, CreatedTypeVariable>,
     /// A rigid type is a generic type that was specified as being generic in
     /// an annotation. As such it should never be instantiated into an unbound
-    /// variable. This type_id => name map is used for reporting the original
+    /// variable. This `type_id` => name map is used for reporting the original
     /// annotated name on error.
     rigid_type_names: im::HashMap<u64, EcoString>,
     permit_new_type_variables: bool,

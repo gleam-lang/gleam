@@ -536,11 +536,11 @@ pub enum ModuleValueConstructor {
         /// function.
         ///
         /// This function has module "themodule" and name "wibble"
-        ///     pub fn wibble() { Nil }
+        ///     pub fn `wibble()` { Nil }
         ///
         /// This function has module "other" and name "whoop"
         ///     @external(erlang, "other", "whoop")
-        ///     pub fn wibble() -> Nil
+        ///     pub fn `wibble()` -> Nil
         ///
         module: EcoString,
         name: EcoString,

@@ -49,7 +49,7 @@ pub struct Environment<'a> {
     /// Warnings
     pub warnings: &'a TypeWarningEmitter,
 
-    /// entity_usages is a stack of scopes. When an entity is created it is
+    /// `entity_usages` is a stack of scopes. When an entity is created it is
     /// added to the top scope. When an entity is used we crawl down the scope
     /// stack for an entity with that name and mark it as used.
     /// NOTE: The bool in the tuple here tracks if the entity has been used

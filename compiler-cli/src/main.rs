@@ -131,8 +131,8 @@ enum Command {
     ///
     /// This command uses this environment variables:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
+    /// - `HEXPM_USER`: (optional) The Hex username to authenticate with.
+    /// - `HEXPM_PASS`: (optional) The Hex password to authenticate with.
     #[command(verbatim_doc_comment)]
     Publish {
         #[arg(long)]
@@ -315,7 +315,7 @@ pub struct CompilePackage {
     ///
     /// Required when compiling to JavaScript.
     ///
-    /// This likely wants to be a `.mjs` file as NodeJS does not permit
+    /// This likely wants to be a `.mjs` file as `NodeJS` does not permit
     /// importing of other JavaScript file extensions.
     ///
     #[arg(long = "javascript-prelude")]
@@ -344,8 +344,8 @@ enum Hex {
     ///
     /// This command uses this environment variables:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
+    /// - `HEXPM_USER`: (optional) The Hex username to authenticate with.
+    /// - `HEXPM_PASS`: (optional) The Hex password to authenticate with.
     #[command(verbatim_doc_comment)]
     Retire {
         package: String,
@@ -362,8 +362,8 @@ enum Hex {
     ///
     /// This command uses this environment variables:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
+    /// - `HEXPM_USER`: (optional) The Hex username to authenticate with.
+    /// - `HEXPM_PASS`: (optional) The Hex password to authenticate with.
     #[command(verbatim_doc_comment)]
     Unretire { package: String, version: String },
 }
@@ -377,21 +377,21 @@ enum Docs {
         open: bool,
     },
 
-    /// Publish HTML docs to HexDocs
+    /// Publish HTML docs to `HexDocs`
     ///
     /// This command uses this environment variables:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
+    /// - `HEXPM_USER`: (optional) The Hex username to authenticate with.
+    /// - `HEXPM_PASS`: (optional) The Hex password to authenticate with.
     #[command(verbatim_doc_comment)]
     Publish,
 
-    /// Remove HTML docs from HexDocs
+    /// Remove HTML docs from `HexDocs`
     ///
     /// This command uses this environment variables:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
+    /// - `HEXPM_USER`: (optional) The Hex username to authenticate with.
+    /// - `HEXPM_PASS`: (optional) The Hex password to authenticate with.
     #[command(verbatim_doc_comment)]
     Remove {
         /// The name of the package
