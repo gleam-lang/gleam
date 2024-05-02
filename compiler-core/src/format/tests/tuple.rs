@@ -51,3 +51,19 @@ fn tuple_with_last_splittable_arg() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3070
+#[test]
+fn constant_long_list_of_tuples() {
+    assert_format!(
+        r#"const foo = [
+  #(1, 2), #(3, 4), #(5, 6), #(7, 8), #(9, 10), #(11, 12), #(1, 2), #(3, 4),
+  #(5, 6), #(7, 8), #(9, 10), #(11, 12),
+]
+
+pub fn main() {
+  todo
+}
+"#
+    );
+}
