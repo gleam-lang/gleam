@@ -12,7 +12,7 @@
 
   The `manifest.toml` file is corrupt.
 
-  Hint: Please fun `gleam update` to fix it.
+  Hint: Please run `gleam update` to fix it.
   ```
 
   ([zahash](https://github.com/zahash))
