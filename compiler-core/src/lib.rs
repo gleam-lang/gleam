@@ -87,7 +87,6 @@ pub mod uid;
 pub mod version;
 pub mod warning;
 
-pub(crate) mod ast_folder;
 mod call_graph;
 mod dep_tree;
 mod exhaustiveness;

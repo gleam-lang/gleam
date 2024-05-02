@@ -21,12 +21,6 @@ enum Index<'a> {
 }
 
 #[derive(Debug)]
-pub struct Subjects<'a> {
-    pub values: Vec<Document<'a>>,
-    pub assignments: Vec<(Document<'a>, Document<'a>)>,
-}
-
-#[derive(Debug)]
 pub(crate) struct Generator<'module_ctx, 'expression_gen, 'a> {
     pub expression_generator: &'expression_gen mut expression::Generator<'module_ctx>,
     path: Vec<Index<'a>>,
