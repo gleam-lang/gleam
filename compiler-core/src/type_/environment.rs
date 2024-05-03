@@ -741,22 +741,16 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
                         }),
                     })?;
                 }
-                unify(retrn1.clone(), retrn2.clone())
-                    .map_err(|_| UnifyError::CouldNotUnify {
-                        expected: t1.clone(),
-                        given: t2.clone(),
-                        situation: None,
-                    })
-                    .map_err(|_| UnifyError::CouldNotUnify {
-                        expected: t1.clone(),
-                        given: t2.clone(),
-                        situation: Some(UnifyErrorSituation::FunctionsMismatch {
-                            reason: FunctionsMismatchReason::Results {
-                                one: retrn1.clone(),
-                                other: retrn2.clone(),
-                            },
-                        }),
-                    })
+                unify(retrn1.clone(), retrn2.clone()).map_err(|_| UnifyError::CouldNotUnify {
+                    expected: t1.clone(),
+                    given: t2.clone(),
+                    situation: Some(UnifyErrorSituation::FunctionsMismatch {
+                        reason: FunctionsMismatchReason::Results {
+                            one: retrn1.clone(),
+                            other: retrn2.clone(),
+                        },
+                    }),
+                })
             } else {
                 Err(UnifyError::CouldNotUnify {
                     expected: t1.clone(),
