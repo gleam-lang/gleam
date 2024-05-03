@@ -952,6 +952,62 @@ fn unify_enclosed_type_test() {
     );
 }
 
+pub fn unify_wrong_arity(
+    t1: &Arc<Type>,
+    arity1: usize,
+    t2: &Arc<Type>,
+    arity2: usize,
+) -> UnifyError {
+    UnifyError::CouldNotUnify {
+        expected: t1.clone(),
+        given: t2.clone(),
+        situation: Some(UnifyErrorSituation::FunctionsMismatch {
+            reason: FunctionsMismatchReason::Arity {
+                expected: arity1,
+                given: arity2,
+            },
+        }),
+    }
+}
+
+pub fn unify_wrong_arguments(
+    expected: &Arc<Type>,
+    expected_arg: &Arc<Type>,
+    given: &Arc<Type>,
+    given_arg: &Arc<Type>,
+    position: usize,
+) -> UnifyError {
+    UnifyError::CouldNotUnify {
+        expected: expected.clone(),
+        given: given.clone(),
+        situation: Some(UnifyErrorSituation::FunctionsMismatch {
+            reason: FunctionsMismatchReason::Argument {
+                expected: expected_arg.clone(),
+                given: given_arg.clone(),
+                position,
+            },
+        }),
+    }
+}
+
+pub fn unify_wrong_returns(
+    expected: &Arc<Type>,
+    expected_return: &Arc<Type>,
+    given: &Arc<Type>,
+    given_return: &Arc<Type>,
+) -> UnifyError {
+    UnifyError::CouldNotUnify {
+        expected: expected.clone(),
+        given: given.clone(),
+        situation: Some(UnifyErrorSituation::FunctionsMismatch {
+            reason: FunctionsMismatchReason::Results {
+                expected: expected_return.clone(),
+                given: given_return.clone(),
+            },
+        }),
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnifyErrorSituation {
     /// Clauses in a case expression were found to return different types.
@@ -987,16 +1043,16 @@ pub enum UnifyErrorSituation {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FunctionsMismatchReason {
     Results {
-        one: Arc<Type>,
-        other: Arc<Type>,
+        expected: Arc<Type>,
+        given: Arc<Type>,
     },
     Arity {
-        one: usize,
-        other: usize,
+        expected: usize,
+        given: usize,
     },
     Argument {
-        one: Arc<Type>,
-        other: Arc<Type>,
+        expected: Arc<Type>,
+        given: Arc<Type>,
         position: usize,
     },
 }
@@ -1163,7 +1219,10 @@ impl UnifyError {
                 // If both the expected and given values are functions we can be a
                 // bit more specific with the error and highlight the reason of the
                 // problem instead of having a generic type mismatch error.
-                FunctionsMismatchReason::Results { one, other } => Error::CouldNotUnify {
+                FunctionsMismatchReason::Results {
+                    expected: one,
+                    given: other,
+                } => Error::CouldNotUnify {
                     location: last_statement_location,
                     expected: one.clone(),
                     given: other.clone(),
@@ -1171,7 +1230,10 @@ impl UnifyError {
                     rigid_type_names: im::hashmap![],
                 },
 
-                FunctionsMismatchReason::Arity { one, other } => Error::UseCallbackIncorrectArity {
+                FunctionsMismatchReason::Arity {
+                    expected: one,
+                    given: other,
+                } => Error::UseCallbackIncorrectArity {
                     call_location: function_location,
                     pattern_location,
                     expected: *one,

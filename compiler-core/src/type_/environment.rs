@@ -727,42 +727,17 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
                 ..
             },
         ) => {
-            if args1.len() == args2.len() {
-                for (i, (a, b)) in args1.iter().zip(args2).enumerate() {
-                    unify(a.clone(), b.clone()).map_err(|_| UnifyError::CouldNotUnify {
-                        expected: t1.clone(),
-                        given: t2.clone(),
-                        situation: Some(UnifyErrorSituation::FunctionsMismatch {
-                            reason: FunctionsMismatchReason::Argument {
-                                one: a.clone(),
-                                other: b.clone(),
-                                position: i,
-                            },
-                        }),
-                    })?;
-                }
-                unify(retrn1.clone(), retrn2.clone()).map_err(|_| UnifyError::CouldNotUnify {
-                    expected: t1.clone(),
-                    given: t2.clone(),
-                    situation: Some(UnifyErrorSituation::FunctionsMismatch {
-                        reason: FunctionsMismatchReason::Results {
-                            one: retrn1.clone(),
-                            other: retrn2.clone(),
-                        },
-                    }),
-                })
-            } else {
-                Err(UnifyError::CouldNotUnify {
-                    expected: t1.clone(),
-                    given: t2.clone(),
-                    situation: Some(UnifyErrorSituation::FunctionsMismatch {
-                        reason: FunctionsMismatchReason::Arity {
-                            one: args1.len(),
-                            other: args2.len(),
-                        },
-                    }),
-                })
+            if args1.len() != args2.len() {
+                Err(unify_wrong_arity(&t1, args1.len(), &t2, args2.len()))?
             }
+
+            for (i, (a, b)) in args1.iter().zip(args2).enumerate() {
+                unify(a.clone(), b.clone())
+                    .map_err(|_| unify_wrong_arguments(&t1, a, &t2, b, i))?;
+            }
+
+            unify(retrn1.clone(), retrn2.clone())
+                .map_err(|_| unify_wrong_returns(&t1, retrn1, &t2, retrn2))
         }
 
         _ => Err(UnifyError::CouldNotUnify {
