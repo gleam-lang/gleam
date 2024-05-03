@@ -2512,19 +2512,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             (_, value) => self.infer(value),
         }?;
 
-        unify(typ, value.type_()).map_err(|e| match kind {
-            ArgumentKind::UseCallback {
-                function_location,
-                assignments_location,
-                last_statement_location,
-            } => e.into_use_unify_error(
-                function_location,
-                assignments_location,
-                last_statement_location,
-                value.location(),
-            ),
-            ArgumentKind::Regular => convert_unify_error(e, value.location()),
-        })?;
+        unify(typ, value.type_())
+            .map_err(|e| convert_unify_call_error(e, value.location(), kind))?;
         Ok(value)
     }
 
