@@ -2730,7 +2730,8 @@ Rename or remove one of them.",
                 TypeError::NotFnInUse { location, typ } => {
                     let mut printer = Printer::new();
                     let text = wrap_format!(
-                        "In a use expression, there should be a function on the right hand side of `<-`, but this value has type:
+                        "In a use expression, there should be a function on the right hand side \
+of `<-`, but this value has type:
 
 {}
 
@@ -2791,16 +2792,19 @@ See: https://tour.gleam.run/advanced-features/use/");
                         _ => format!("{given} arguments"),
                     };
                     let label = format!("Expected {expected_string}, got {given}");
-                    let mut text: String = format!("The function on the right of `<-` here takes {expected_string}.\n");
+                    let mut text: String = format!("The function on the right of `<-` \
+here takes {expected_string}.\n");
 
                     if expected > given {
                         if supplied_arguments == 0 {
                             text.push_str("The only argument that was supplied is the `use` callback function.\n")
                         } else {
-                            text.push_str(&format!("You supplied {supplied_arguments_string} and the final one is the `use` callback function.\n"));
+                            text.push_str(&format!("You supplied {supplied_arguments_string} \
+and the final one is the `use` callback function.\n"));
                         }
                     } else {
-                        text.push_str("All the arguments have already been supplied, so it cannot take the the `use` callback function as a final argument.\n")
+                        text.push_str("All the arguments have already been supplied, \
+so it cannot take the the `use` callback function as a final argument.\n")
                     };
 
                     text.push_str("\nSee: https://tour.gleam.run/advanced-features/use/");
@@ -2824,7 +2828,9 @@ See: https://tour.gleam.run/advanced-features/use/");
 
                 TypeError::UseFnDoesntTakeCallback { location, actual_type: Some(actual) } => {
                     let mut printer = Printer::new();
-                    let text = wrap_format!("The function on the right hand side of `<-` has to take a callback function as its last argument. But the last argument of this function has type:
+                    let text = wrap_format!("The function on the right hand side of `<-` \
+has to take a callback function as its last argument. \
+But the last argument of this function has type:
 
 {}
 
@@ -2861,7 +2867,8 @@ See: https://tour.gleam.run/advanced-features/use/",
                         _ => format!("{given} were provided"),
                     };
 
-                    let text = wrap_format!("This function takes a callback that expects {expected}. But {specified} on the left hand side of `<-`.
+                    let text = wrap_format!("This function takes a callback that expects {expected}. \
+But {specified} on the left hand side of `<-`.
 
 See: https://tour.gleam.run/advanced-features/use/");
                     Diagnostic {
