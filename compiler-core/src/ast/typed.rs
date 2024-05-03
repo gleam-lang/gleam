@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
 use super::*;
-use crate::type_::{bool, HasType, Type};
+use crate::type_::{bool, HasType, Type, ValueConstructorVariant};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypedExpr {
@@ -529,6 +529,24 @@ impl TypedExpr {
             TypedExpr::Call { fun, .. } => fun.is_record_builder(),
             TypedExpr::Var { constructor, .. } => constructor.variant.is_record(),
             _ => false,
+        }
+    }
+
+    /// If `self` is a record constructor, returns the nuber of arguments it
+    /// needs to be called. Otherwise, returns `None`.
+    ///
+    pub fn record_constructor_arity(&self) -> Option<u16> {
+        match self {
+            TypedExpr::Call { fun, .. } => fun.record_constructor_arity(),
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { arity, .. },
+                        ..
+                    },
+                ..
+            } => Some(*arity),
+            _ => None,
         }
     }
 }
