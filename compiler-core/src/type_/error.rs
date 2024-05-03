@@ -12,7 +12,10 @@ use ecow::EcoString;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 
-use super::{expression::CallKind, FieldAccessUsage};
+use super::{
+    expression::{ArgumentKind, CallKind},
+    FieldAccessUsage,
+};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct UnknownType {
@@ -1253,4 +1256,20 @@ impl UnifyError {
 
 pub fn convert_unify_error(e: UnifyError, location: SrcSpan) -> Error {
     e.into_error(location)
+}
+
+pub fn convert_unify_call_error(e: UnifyError, location: SrcSpan, kind: ArgumentKind) -> Error {
+    match kind {
+        ArgumentKind::UseCallback {
+            function_location,
+            assignments_location,
+            last_statement_location,
+        } => e.into_use_unify_error(
+            function_location,
+            assignments_location,
+            last_statement_location,
+            location,
+        ),
+        ArgumentKind::Regular => convert_unify_error(e, location),
+    }
 }
