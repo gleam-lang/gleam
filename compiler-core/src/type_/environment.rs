@@ -733,7 +733,7 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
                         expected: t1.clone(),
                         given: t2.clone(),
                         situation: Some(UnifyErrorSituation::FunctionsMismatch {
-                            reason: FunctionsMismatchReason::Arg {
+                            reason: FunctionsMismatchReason::Argument {
                                 one: a.clone(),
                                 other: b.clone(),
                                 position: i,

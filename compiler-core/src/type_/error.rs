@@ -994,7 +994,7 @@ pub enum FunctionsMismatchReason {
         one: usize,
         other: usize,
     },
-    Arg {
+    Argument {
         one: Arc<Type>,
         other: Arc<Type>,
         position: usize,
@@ -1180,7 +1180,7 @@ impl UnifyError {
 
                 // For this one we just fallback to the generic cannot unify error
                 // as it is already plenty clear in a `use` expression.
-                FunctionsMismatchReason::Arg { .. } => self.into_error(body_location),
+                FunctionsMismatchReason::Argument { .. } => self.into_error(body_location),
             },
 
             // In all other cases we fallback to the generic cannot unify error.
