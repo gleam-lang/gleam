@@ -6,7 +6,7 @@ error: Type mismatch
   ┌─ /src/one/two.gleam:3:8
   │
 3 │ use <- f(1)
-  │        ^
+  │        ^^^^
 
 The function on the right hand side of `<-` has to take a callback function
 as its last argument. But the last argument of this function has type:

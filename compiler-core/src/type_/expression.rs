@@ -148,6 +148,7 @@ impl Implementations {
 pub enum CallKind {
     Function,
     Use {
+        call_location: SrcSpan,
         assignments_location: SrcSpan,
         last_statement_location: SrcSpan,
     },
@@ -516,11 +517,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         sequence_location: SrcSpan,
         mut following_expressions: Vec<UntypedStatement>,
     ) -> Result<TypedStatement, Error> {
-        let use_assignments = use_.assignments;
-        let assignments_location = use_.assignments_location;
-        let call_location = use_.call.location();
+        let use_call_location = use_.call.location();
         let mut call = get_use_expression_call(*use_.call)?;
-        let assignments = UseAssignments::from_use_expression(use_assignments);
+        let assignments = UseAssignments::from_use_expression(use_.assignments);
 
         let mut statements = assignments.body_assignments;
 
@@ -536,6 +535,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         let statements = Vec1::try_from_vec(statements).expect("safe: todo added above");
+
         // We need this to report good error messages in case there's a type error
         // in use. We consider `use` to be the last statement of a block since
         // it consumes everything that comes below it and returns a single value.
@@ -567,12 +567,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             implicit: true,
         });
 
+        let call_location = SrcSpan {
+            start: use_.location.start,
+            end: sequence_location.end,
+        };
+
         let call = self.infer_call(
             *call.function,
             call.arguments,
             call_location,
             CallKind::Use {
-                assignments_location,
+                call_location: use_call_location,
+                assignments_location: use_.assignments_location,
                 last_statement_location,
             },
         )?;
@@ -2442,10 +2448,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // better errors.
                 let argument_kind = match kind {
                     CallKind::Use {
+                        call_location,
                         last_statement_location,
                         assignments_location,
                     } if i == args_count - 1 => ArgumentKind::UseCallback {
-                        function_location: fun.location(),
+                        function_location: call_location,
                         assignments_location,
                         last_statement_location,
                     },
