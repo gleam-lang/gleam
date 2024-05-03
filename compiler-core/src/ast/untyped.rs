@@ -235,9 +235,37 @@ impl HasLocation for UntypedExpr {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Use<ExpressionT> {
-    pub location: SrcSpan,
-    pub assignments_location: SrcSpan,
+    /// This is the expression with the untyped/typed code of the use callback
+    /// function.
+    ///
     pub call: Box<ExpressionT>,
+
+    /// This is the location of the whole use line, starting from the `use`
+    /// keyword and ending with the function call on the right hand side of
+    /// `<-`.
+    ///
+    /// ```gleam
+    /// use a <- reult.try(result)
+    /// ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    /// ```
+    ///
+    pub location: SrcSpan,
+
+    /// This is the SrcSpan of the patterns you find on the left hand side of
+    /// `<-` in a use expression.
+    ///
+    /// ```gleam
+    /// use pattern1, pattern2 <- todo
+    ///     ^^^^^^^^^^^^^^^^^^
+    /// ```
+    ///
+    /// In case there's no patterns it will be corresponding to the SrcSpan of
+    /// the `use` keyword itself.
+    ///
+    pub assignments_location: SrcSpan,
+
+    /// The patterns on the left hand side of `<-` in a use expression.
+    ///
     pub assignments: Vec<UseAssignment>,
 }
 
