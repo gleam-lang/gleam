@@ -41,7 +41,7 @@ impl FieldMap {
     ///
     pub fn reorder<A>(&self, args: &mut [CallArg<A>], location: SrcSpan) -> Result<(), Error> {
         let mut labelled_arguments_given = false;
-        let mut seen_labels = std::collections::HashSet::new();
+        let mut seen_labels = HashSet::new();
         let mut unknown_labels = Vec::new();
 
         if self.arity as usize != args.len() {

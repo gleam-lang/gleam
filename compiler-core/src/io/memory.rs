@@ -274,13 +274,13 @@ impl Default for InMemoryFile {
     }
 }
 
-impl std::io::Write for InMemoryFile {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+impl io::Write for InMemoryFile {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let mut reference = (*self.buffer).borrow_mut();
         reference.write(buf)
     }
 
-    fn flush(&mut self) -> std::io::Result<()> {
+    fn flush(&mut self) -> io::Result<()> {
         let mut reference = (*self.buffer).borrow_mut();
         reference.flush()
     }

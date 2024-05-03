@@ -128,7 +128,7 @@ impl TypeWarningEmitter {
         }
     }
 
-    pub fn emit(&self, warning: crate::type_::Warning) {
+    pub fn emit(&self, warning: type_::Warning) {
         self.emitter.emit(Warning::Type {
             path: self.module_path.clone(),
             src: self.module_src.clone(),
@@ -142,7 +142,7 @@ pub enum Warning {
     Type {
         path: Utf8PathBuf,
         src: EcoString,
-        warning: crate::type_::Warning,
+        warning: type_::Warning,
     },
     InvalidSource {
         path: Utf8PathBuf,
@@ -192,7 +192,7 @@ expression.",
                     if !typ.is_variable() {
                         text.push_str(&format!(
                             "\n\nHint: I think its type is `{}`.\n",
-                            type_::pretty::Printer::new().pretty_print(typ, 0)
+                            Printer::new().pretty_print(typ, 0)
                         ));
                     }
 

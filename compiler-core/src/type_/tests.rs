@@ -268,8 +268,8 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    crate::type_::ExprTyper::new(
-        &mut crate::type_::Environment::new(
+    ExprTyper::new(
+        &mut Environment::new(
             ids,
             "thepackage".into(),
             "themodule".into(),
@@ -288,7 +288,7 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
 }
 
 fn infer(src: &str) -> String {
-    let mut printer = crate::type_::pretty::Printer::new();
+    let mut printer = Printer::new();
     let result = compile_statement_sequence(src).expect("should successfully infer");
     printer.pretty_print(result.last().type_().as_ref(), 0)
 }
@@ -378,14 +378,14 @@ pub fn compile_module_with_opts(
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
+    let mut direct_dependencies = HashMap::from_iter(vec![]);
 
     for (package, name, module_src) in dep {
         let parsed = crate::parse::parse_module(module_src).expect("syntax error");
         let mut ast = parsed.module;
         ast.name = name.into();
         let line_numbers = LineNumbers::new(module_src);
-        let mut config = crate::config::PackageConfig::default();
+        let mut config = PackageConfig::default();
         config.name = package.into();
         let module = crate::analyse::infer_module::<()>(
             target,
@@ -394,7 +394,7 @@ pub fn compile_module_with_opts(
             Origin::Src,
             &modules,
             &warnings,
-            &std::collections::HashMap::from_iter(vec![]),
+            &HashMap::from_iter(vec![]),
             target_support,
             line_numbers,
             &config,
@@ -411,7 +411,7 @@ pub fn compile_module_with_opts(
     let parsed = crate::parse::parse_module(src).expect("syntax error");
     let mut ast = parsed.module;
     ast.name = module_name.into();
-    let mut config = crate::config::PackageConfig::default();
+    let mut config = PackageConfig::default();
     config.name = "thepackage".into();
     let inference_result = crate::analyse::infer_module(
         target,
@@ -609,7 +609,7 @@ fn infer_module_type_retention_test() {
         definitions: vec![],
         type_info: (),
     };
-    let direct_dependencies = std::collections::HashMap::from_iter(vec![]);
+    let direct_dependencies = HashMap::from_iter(vec![]);
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
     // DUPE: preludeinsertion

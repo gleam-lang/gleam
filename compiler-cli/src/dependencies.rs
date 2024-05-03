@@ -271,7 +271,7 @@ fn remove_extra_packages<Telem: Telemetry>(
 fn read_manifest_from_disc(paths: &ProjectPaths) -> Result<Manifest> {
     tracing::debug!("reading_manifest_toml");
     let manifest_path = paths.manifest();
-    let toml = crate::fs::read(&manifest_path)?;
+    let toml = fs::read(&manifest_path)?;
     let manifest = toml::from_str(&toml).map_err(|e| Error::FileIo {
         action: FileIoAction::Parse,
         kind: FileKind::File,
@@ -333,7 +333,7 @@ impl LocalPackages {
                 packages: HashMap::new(),
             });
         }
-        let toml = crate::fs::read(&path)?;
+        let toml = fs::read(&path)?;
         toml::from_str(&toml).map_err(|e| Error::FileIo {
             action: FileIoAction::Parse,
             kind: FileKind::File,
@@ -1083,7 +1083,7 @@ impl dependency::PackageFetcher for PackageFetcher {
 #[test]
 fn provided_local_to_hex() {
     let provided_package = ProvidedPackage {
-        version: hexpm::version::Version::new(1, 0, 0),
+        version: Version::new(1, 0, 0),
         source: ProvidedPackageSource::Local {
             path: "canonical/path/to/package".into(),
         },
@@ -1104,7 +1104,7 @@ fn provided_local_to_hex() {
         name: "package".into(),
         repository: "local".into(),
         releases: vec![hexpm::Release {
-            version: hexpm::version::Version::new(1, 0, 0),
+            version: Version::new(1, 0, 0),
             retirement_status: None,
             outer_checksum: vec![],
             meta: (),
@@ -1141,7 +1141,7 @@ fn provided_local_to_hex() {
 #[test]
 fn provided_git_to_hex() {
     let provided_package = ProvidedPackage {
-        version: hexpm::version::Version::new(1, 0, 0),
+        version: Version::new(1, 0, 0),
         source: ProvidedPackageSource::Git {
             repo: "https://github.com/gleam-lang/gleam.git".into(),
             commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
@@ -1163,7 +1163,7 @@ fn provided_git_to_hex() {
         name: "package".into(),
         repository: "local".into(),
         releases: vec![hexpm::Release {
-            version: hexpm::version::Version::new(1, 0, 0),
+            version: Version::new(1, 0, 0),
             retirement_status: None,
             outer_checksum: vec![],
             meta: (),
@@ -1200,7 +1200,7 @@ fn provided_git_to_hex() {
 #[test]
 fn provided_local_to_manifest() {
     let provided_package = ProvidedPackage {
-        version: hexpm::version::Version::new(1, 0, 0),
+        version: Version::new(1, 0, 0),
         source: ProvidedPackageSource::Local {
             path: "canonical/path/to/package".into(),
         },
@@ -1219,7 +1219,7 @@ fn provided_local_to_manifest() {
 
     let manifest_package = ManifestPackage {
         name: "package".into(),
-        version: hexpm::version::Version::new(1, 0, 0),
+        version: Version::new(1, 0, 0),
         otp_app: None,
         build_tools: vec!["gleam".into()],
         requirements: vec!["req_1".into(), "req_2".into()],
@@ -1237,7 +1237,7 @@ fn provided_local_to_manifest() {
 #[test]
 fn provided_git_to_manifest() {
     let provided_package = ProvidedPackage {
-        version: hexpm::version::Version::new(1, 0, 0),
+        version: Version::new(1, 0, 0),
         source: ProvidedPackageSource::Git {
             repo: "https://github.com/gleam-lang/gleam.git".into(),
             commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
@@ -1257,7 +1257,7 @@ fn provided_git_to_manifest() {
 
     let manifest_package = ManifestPackage {
         name: "package".into(),
-        version: hexpm::version::Version::new(1, 0, 0),
+        version: Version::new(1, 0, 0),
         otp_app: None,
         build_tools: vec!["gleam".into()],
         requirements: vec!["req_1".into(), "req_2".into()],

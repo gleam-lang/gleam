@@ -47,7 +47,7 @@ fn module_types() {
         "PetCat",
         &[(
             "name",
-            Arc::new(type_::Type::Named {
+            Arc::new(Type::Named {
                 publicity: Publicity::Public,
                 package: "package".into(),
                 module: module_name,

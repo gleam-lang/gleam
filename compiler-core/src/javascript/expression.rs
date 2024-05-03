@@ -1072,7 +1072,7 @@ impl<'module> Generator<'module> {
     }
 
     fn pattern_assignments_doc(assignments: Vec<Assignment<'_>>) -> Document<'_> {
-        let assignments = assignments.into_iter().map(pattern::Assignment::into_doc);
+        let assignments = assignments.into_iter().map(Assignment::into_doc);
         join(assignments, line())
     }
 

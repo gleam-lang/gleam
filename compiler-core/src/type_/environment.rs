@@ -566,7 +566,7 @@ impl<'a> Environment<'a> {
         }
 
         for (name, info) in self.unused_module_aliases.iter() {
-            if self.unused_modules.get(name).is_none() {
+            if !self.unused_modules.contains_key(name) {
                 self.warnings.emit(Warning::UnusedImportedModuleAlias {
                     alias: name.clone(),
                     location: info.location,

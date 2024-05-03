@@ -59,12 +59,12 @@ pub enum Constant<T, RecordTag> {
 impl TypedConstant {
     pub fn type_(&self) -> Arc<Type> {
         match self {
-            Constant::Int { .. } => crate::type_::int(),
-            Constant::Float { .. } => crate::type_::float(),
-            Constant::String { .. } => crate::type_::string(),
-            Constant::BitArray { .. } => crate::type_::bits(),
+            Constant::Int { .. } => type_::int(),
+            Constant::Float { .. } => type_::float(),
+            Constant::String { .. } => type_::string(),
+            Constant::BitArray { .. } => type_::bits(),
             Constant::Tuple { elements, .. } => {
-                crate::type_::tuple(elements.iter().map(|e| e.type_()).collect())
+                type_::tuple(elements.iter().map(|e| e.type_()).collect())
             }
             Constant::List { typ, .. }
             | Constant::Record { typ, .. }
