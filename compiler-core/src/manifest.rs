@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fmt::Display;
 
 use crate::io::{make_relative, ordered_map};
 use crate::requirement::Requirement;
@@ -119,9 +118,9 @@ impl Manifest {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Base16Checksum(pub Vec<u8>);
 
-impl Display for Base16Checksum {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", base16::encode_upper(&self.0))
+impl ToString for Base16Checksum {
+    fn to_string(&self) -> String {
+        base16::encode_upper(&self.0)
     }
 }
 
