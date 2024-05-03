@@ -11,7 +11,7 @@ use hexpm::version::Version;
 use http::Uri;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
-use std::fmt;
+use std::fmt::{self, Display};
 use std::marker::PhantomData;
 
 #[cfg(test)]
@@ -38,9 +38,9 @@ pub struct SpdxLicense {
     pub licence: String,
 }
 
-impl ToString for SpdxLicense {
-    fn to_string(&self) -> String {
-        String::from(&self.licence)
+impl Display for SpdxLicense {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.licence)
     }
 }
 
@@ -49,7 +49,7 @@ impl<'de> Deserialize<'de> for SpdxLicense {
     where
         D: serde::Deserializer<'de>,
     {
-        let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
+        let s: &str = Deserialize::deserialize(deserializer)?;
         match spdx::license_id(s) {
             None => Err(serde::de::Error::custom(format!(
                 "{s} is not a valid SPDX License ID"
@@ -182,8 +182,8 @@ impl PackageConfig {
     // with the current compiler version
     pub fn check_gleam_compatibility(&self) -> Result<(), Error> {
         if let Some(required_version) = &self.gleam_version {
-            let compiler_version = hexpm::version::Version::parse(COMPILER_VERSION)
-                .expect("Parse compiler semantic version");
+            let compiler_version =
+                Version::parse(COMPILER_VERSION).expect("Parse compiler semantic version");
             let range = hexpm::version::Range::new(required_version.to_string())
                 .to_pubgrub()
                 .map_err(|error| Error::InvalidVersionFormat {

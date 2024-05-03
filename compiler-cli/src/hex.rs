@@ -33,7 +33,7 @@ pub trait ApiKeyCommand {
         let password = std::env::var(PASS_KEY).or_else(|_| cli::ask_password(PASS_PROMPT))?;
 
         // Get API key
-        let api_key = runtime.block_on(gleam_core::hex::create_api_key(
+        let api_key = runtime.block_on(hex::create_api_key(
             &hostname, &username, &password, hex_config, &http,
         ))?;
 
@@ -42,9 +42,7 @@ pub trait ApiKeyCommand {
         let result = self.with_api_key(runtime.handle(), hex_config, &api_key);
 
         // Ensure to remove the API key
-        runtime.block_on(gleam_core::hex::remove_api_key(
-            &hostname, hex_config, &api_key, &http,
-        ))?;
+        runtime.block_on(hex::remove_api_key(&hostname, hex_config, &api_key, &http))?;
 
         result
     }

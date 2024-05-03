@@ -183,7 +183,7 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     JavaScript {
         path: Utf8PathBuf,
         src: EcoString,
-        error: crate::javascript::Error,
+        error: javascript::Error,
     },
 
     #[error("Invalid runtime for {target} target: {invalid_runtime}")]

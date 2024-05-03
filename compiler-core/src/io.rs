@@ -33,7 +33,7 @@ pub fn make_relative(source_path: &Utf8Path, target_path: &Utf8Path) -> Utf8Path
     }
 }
 
-pub trait Reader: std::io::Read {
+pub trait Reader: io::Read {
     /// A wrapper around `std::io::Read` that has Gleam's error handling.
     fn read_bytes(&mut self, buffer: &mut [u8]) -> Result<usize> {
         self.read(buffer).map_err(|e| self.convert_err(e))
@@ -62,10 +62,10 @@ impl Utf8Writer for String {
     }
 }
 
-pub trait Writer: std::io::Write + Utf8Writer {
+pub trait Writer: io::Write + Utf8Writer {
     /// A wrapper around `io::Write` that has Gleam's error handling.
     fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
-        std::io::Write::write(self, bytes)
+        io::Write::write(self, bytes)
             .map(|_| ())
             .map_err(|e| self.convert_err(e))
     }
@@ -242,24 +242,24 @@ pub trait FileSystemWriter {
 /// A wrapper around a Read implementing object that has Gleam's error handling.
 pub struct WrappedReader {
     path: Utf8PathBuf,
-    inner: DebugIgnore<Box<dyn std::io::Read>>,
+    inner: DebugIgnore<Box<dyn io::Read>>,
 }
 
 impl WrappedReader {
-    pub fn new(path: &Utf8Path, inner: Box<dyn std::io::Read>) -> Self {
+    pub fn new(path: &Utf8Path, inner: Box<dyn io::Read>) -> Self {
         Self {
             path: path.to_path_buf(),
             inner: DebugIgnore(inner),
         }
     }
 
-    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
         self.inner.read(buffer)
     }
 }
 
-impl std::io::Read for WrappedReader {
-    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+impl io::Read for WrappedReader {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
         self.read(buffer)
     }
 }

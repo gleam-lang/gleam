@@ -67,7 +67,7 @@ where
 
         let options = build::Options {
             warnings_as_errors: false,
-            mode: build::Mode::Lsp,
+            mode: Mode::Lsp,
             target: None,
             codegen: build::Codegen::None,
             root_target_support: TargetSupport::Enforced,

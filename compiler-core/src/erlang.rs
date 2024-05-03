@@ -25,7 +25,7 @@ use itertools::Itertools;
 use pattern::{pattern, requires_guard};
 use regex::{Captures, Regex};
 use std::sync::OnceLock;
-use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
+use std::{collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
 
 const INDENT: isize = 4;
@@ -903,9 +903,9 @@ fn float<'a>(value: &str) -> Document<'a> {
         value.push('0')
     }
 
-    match value.split(".").collect_vec().as_slice() {
+    match value.split('.').collect_vec().as_slice() {
         ["0", "0"] => "+0.0".to_doc(),
-        [before_dot, after_dot] if after_dot.starts_with("e") => {
+        [before_dot, after_dot] if after_dot.starts_with('e') => {
             Document::String(format!("{before_dot}.0{after_dot}"))
         }
         _ => Document::String(value),
@@ -1651,7 +1651,7 @@ fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Docum
 
 fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a str, label: &'a str) -> Document<'a> {
     match crate::type_::collapse_links(typ).as_ref() {
-        crate::type_::Type::Fn { args, .. } => "fun "
+        Type::Fn { args, .. } => "fun "
             .to_doc()
             .append(module_name_to_erlang(module_name))
             .append(":")
@@ -1702,16 +1702,16 @@ fn variable_name(name: &str) -> String {
 fn id_to_type_var(id: u64) -> Document<'static> {
     if id < 26 {
         let mut name = "".to_string();
-        name.push(std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
+        name.push(char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
         return Document::String(name);
     }
     let mut name = vec![];
     let mut last_char = id;
     while last_char >= 26 {
-        name.push(std::char::from_u32((last_char % 26 + 65) as u32).expect("id_to_type_var 1"));
+        name.push(char::from_u32((last_char % 26 + 65) as u32).expect("id_to_type_var 1"));
         last_char /= 26;
     }
-    name.push(std::char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
+    name.push(char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
     name.reverse();
     name.into_iter().collect::<EcoString>().to_doc()
 }

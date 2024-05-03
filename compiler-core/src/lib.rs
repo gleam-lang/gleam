@@ -1,6 +1,5 @@
 #![warn(
     clippy::all,
-    clippy::doc_markdown,
     clippy::dbg_macro,
     clippy::todo,
     clippy::mem_forget,
