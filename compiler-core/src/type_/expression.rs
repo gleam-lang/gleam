@@ -1166,17 +1166,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         clauses: Vec<UntypedClause>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        subjects
-            .iter()
-            .filter(|untyped_expr| untyped_expr.is_tuple())
-            .for_each(|literal_tuple| {
-                self.environment
-                    .warnings
-                    .emit(Warning::CaseMatchOnLiteralTuple {
-                        location: literal_tuple.location(),
-                    });
-            });
-
         let subjects_count = subjects.len();
         let mut typed_subjects = Vec::with_capacity(subjects_count);
         let mut subject_types = Vec::with_capacity(subjects_count);
@@ -1203,6 +1192,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         self.check_case_exhaustiveness(location, &subject_types, &typed_clauses)?;
+        typed_subjects
+            .iter()
+            .filter_map(check_subject_for_redundant_match)
+            .for_each(|warning| self.environment.warnings.emit(warning));
 
         Ok(TypedExpr::Case {
             location,
@@ -2719,6 +2712,45 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         Ok(())
+    }
+}
+
+fn check_subject_for_redundant_match(subject: &TypedExpr) -> Option<Warning> {
+    match subject {
+        TypedExpr::Tuple { elems, .. } if !elems.is_empty() => {
+            Some(Warning::CaseMatchOnLiteralCollection {
+                kind: LiteralCollectionKind::Tuple,
+                location: subject.location(),
+            })
+        }
+
+        TypedExpr::List { elements, tail, .. } if !elements.is_empty() || tail.is_some() => {
+            Some(Warning::CaseMatchOnLiteralCollection {
+                kind: LiteralCollectionKind::List,
+                location: subject.location(),
+            })
+        }
+
+        TypedExpr::BitArray { segments, .. } if !segments.is_empty() => {
+            Some(Warning::CaseMatchOnLiteralCollection {
+                kind: LiteralCollectionKind::BitArray,
+                location: subject.location(),
+            })
+        }
+
+        _ => match subject.record_constructor_arity() {
+            Some(0) => Some(Warning::CaseMatchOnLiteralValue {
+                location: subject.location(),
+            }),
+            Some(_) => Some(Warning::CaseMatchOnLiteralCollection {
+                kind: LiteralCollectionKind::Record,
+                location: subject.location(),
+            }),
+            None if subject.is_literal() => Some(Warning::CaseMatchOnLiteralValue {
+                location: subject.location(),
+            }),
+            None => None,
+        },
     }
 }
 
