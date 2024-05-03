@@ -6,7 +6,7 @@ error: Incorrect arity
   ┌─ /src/one/two.gleam:3:5
   │
 3 │ use _, _ <- x()
-  │     ^^^^    ^
+  │     ^^^^    ^^^
   │     │        
   │     Expected 1 argument, got 2
 

@@ -870,18 +870,21 @@ pub fn convert_not_fun_error(
             typ,
         },
 
-        (CallKind::Use { .. }, MatchFunTypeError::IncorrectArity { expected, given }) => {
-            Error::UseFnIncorrectArity {
+        (
+            CallKind::Use { call_location, .. },
+            MatchFunTypeError::IncorrectArity { expected, given },
+        ) => Error::UseFnIncorrectArity {
+            location: call_location,
+            expected,
+            given,
+        },
+
+        (CallKind::Use { call_location, .. }, MatchFunTypeError::NotFn { typ }) => {
+            Error::NotFnInUse {
                 location: call_location,
-                expected,
-                given,
+                typ,
             }
         }
-
-        (CallKind::Use { .. }, MatchFunTypeError::NotFn { typ }) => Error::NotFnInUse {
-            location: call_location,
-            typ,
-        },
     }
 }
 
