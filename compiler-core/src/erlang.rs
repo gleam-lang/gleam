@@ -585,7 +585,9 @@ fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'
     match statement {
         Statement::Expression(e) => expr(e, env),
         Statement::Assignment(a) => assignment(a, env),
-        Statement::Use(use_) => expr(use_.call.as_ref(), env),
+        Statement::Use(_) => {
+            unreachable!("Use statements must not be present for Erlang generation")
+        }
     }
 }
 

@@ -10,7 +10,7 @@ use crate::{
         UntypedConstant, UntypedConstantBitArraySegment, UntypedCustomType, UntypedDefinition,
         UntypedExpr, UntypedExprBitArraySegment, UntypedFunction, UntypedImport, UntypedModule,
         UntypedModuleConstant, UntypedPattern, UntypedPatternBitArraySegment,
-        UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias, UntypedUse, Use, UseAssignment,
+        UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias, Use, UseAssignment,
     },
     build::Target,
 };
@@ -814,7 +814,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         assignment
     }
 
-    fn fold_use(&mut self, use_: UntypedUse) -> UntypedUse {
+    fn fold_use(&mut self, use_: Use) -> Use {
         use_
     }
 }

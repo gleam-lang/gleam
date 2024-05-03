@@ -234,11 +234,11 @@ impl HasLocation for UntypedExpr {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Use<ExpressionT> {
+pub struct Use {
     /// This is the expression with the untyped/typed code of the use callback
     /// function.
     ///
-    pub call: Box<ExpressionT>,
+    pub call: Box<UntypedExpr>,
 
     /// This is the location of the whole use line, starting from the `use`
     /// keyword and ending with the function call on the right hand side of
@@ -268,6 +268,3 @@ pub struct Use<ExpressionT> {
     ///
     pub assignments: Vec<UseAssignment>,
 }
-
-pub type UntypedUse = Use<UntypedExpr>;
-pub type TypedUse = Use<TypedExpr>;

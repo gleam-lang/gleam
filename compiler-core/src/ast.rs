@@ -6,7 +6,7 @@ mod untyped;
 mod tests;
 
 pub use self::typed::TypedExpr;
-pub use self::untyped::{TypedUse, UntypedExpr, UntypedUse, Use};
+pub use self::untyped::{UntypedExpr, Use};
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
@@ -1815,7 +1815,7 @@ pub enum Statement<TypeT, ExpressionT> {
     /// Assigning an expression to variables using a pattern.
     Assignment(Assignment<TypeT, ExpressionT>),
     /// A `use` expression.
-    Use(Use<ExpressionT>),
+    Use(Use),
 }
 
 pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
@@ -1892,7 +1892,7 @@ impl TypedStatement {
         match self {
             Statement::Expression(expression) => expression.type_(),
             Statement::Assignment(assignment) => assignment.type_(),
-            Statement::Use(use_) => use_.call.type_(),
+            Statement::Use(_use) => unreachable!("Use must not exist for typed code"),
         }
     }
 
@@ -1906,13 +1906,7 @@ impl TypedStatement {
 
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
-            Statement::Use(use_) => use_.call.find_node(byte_index).or_else(|| {
-                if use_.location.contains(byte_index) {
-                    Some(Located::Statement(self))
-                } else {
-                    None
-                }
-            }),
+            Statement::Use(_) => None,
             Statement::Expression(expression) => expression.find_node(byte_index),
             Statement::Assignment(assignment) => assignment.find_node(byte_index).or_else(|| {
                 if assignment.location.contains(byte_index) {
