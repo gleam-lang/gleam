@@ -2446,20 +2446,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // If we're typing a `use` call then the last argument is the
                 // use callback and we want to treat it differently to report
                 // better errors.
-                let is_last_argument = i == args_count - 1;
-                let argument_kind = match (kind, is_last_argument) {
-                    (
-                        CallKind::Use {
-                            last_statement_location,
-                            assignments_location,
-                        },
-                        true,
-                    ) => ArgumentKind::UseCallback {
+                let argument_kind = match kind {
+                    CallKind::Use {
+                        last_statement_location,
+                        assignments_location,
+                    } if i == args_count - 1 => ArgumentKind::UseCallback {
                         function_location: fun.location(),
                         assignments_location,
                         last_statement_location,
                     },
-                    (CallKind::Use { .. } | CallKind::Function, _) => ArgumentKind::Regular,
+                    CallKind::Use { .. } | CallKind::Function => ArgumentKind::Regular,
                 };
                 let value = self.infer_call_argument(value, typ.clone(), argument_kind)?;
 
