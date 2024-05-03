@@ -42,11 +42,6 @@
   when building them locally. It is still added when publishing to Hex.
   ([Pi-Cla](https://github.com/Pi-Cla))
 
-- Fixed a bug where having utf8 symbols in `gleam.toml`'s description value
-  would result in an HTTP 500 error when running `gleam publish`.
-
-  ([inoas](https://github.com/inoas))
-
 ### Compiler
 
 - The compiler will now raise a warning for `let assert` assignments where the
@@ -236,3 +231,7 @@
 - Fixed a bug where floating points in scientific notation with no trailing
   zeros would generate invalid Erlang code.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where having utf8 symbols in `gleam.toml`'s description value
+  would result in an HTTP 500 error when running `gleam publish`.
+  ([inoas](https://github.com/inoas))
