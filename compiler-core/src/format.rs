@@ -4,7 +4,7 @@ mod tests;
 use crate::{
     ast::{
         CustomType, Import, ModuleConstant, TypeAlias, TypeAstConstructor, TypeAstFn, TypeAstHole,
-        TypeAstTuple, TypeAstVar, UntypedUse, *,
+        TypeAstTuple, TypeAstVar, *,
     },
     build::Target,
     docvec,
@@ -2146,7 +2146,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn use_<'a>(&mut self, use_: &'a UntypedUse) -> Document<'a> {
+    fn use_<'a>(&mut self, use_: &'a Use) -> Document<'a> {
         let comments = self.pop_comments(use_.location.start);
 
         let call = if use_.call.is_call() {
