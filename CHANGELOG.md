@@ -210,7 +210,7 @@
     ┌─ /src/warning/wrn.gleam:4:8
     │
   4 │   case 1 {
-    │        ^ There's no need to match on this value
+    │        ^ There's no need to pattern match on this value
 
   Matching on a literal value is redundant since you can already tell which
   branch is going to match with this value.

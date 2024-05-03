@@ -654,7 +654,7 @@ can already tell which branch is going to match with this value.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("There's no need to match on this value".into()),
+                            text: Some("There's no need to pattern match on this value".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
