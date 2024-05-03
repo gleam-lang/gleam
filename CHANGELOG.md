@@ -183,6 +183,39 @@
   about the whole block saying it has the wrong function type.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler will now raise a warning when pattern matching on a literal value
+  like a list, a tuple, integers, strings etc.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+  ```
+  warning: Redundant list
+    ┌─ /src/warning/wrn.gleam:2:14
+    │
+  2 │         case [1, 2] {
+    │              ^^^^^^ You can remove this list wrapper
+
+  Instead of building a list and matching on it, you can match on its
+  contents directly.
+  A case expression can take multiple subjects separated by commas like this:
+
+      case one_subject, another_subject {
+        _, _ -> todo
+      }
+
+  See: https://tour.gleam.run/flow-control/multiple-subjects/
+  ```
+
+  ```
+  warning: Match on a literal value
+    ┌─ /src/warning/wrn.gleam:4:8
+    │
+  4 │   case 1 {
+    │        ^ There's no need to match on this value
+
+  Matching on a literal value is redundant since you can already tell which
+  branch is going to match with this value.
+  ```
+
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.
