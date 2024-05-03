@@ -11,7 +11,7 @@ use hexpm::version::Version;
 use http::Uri;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
-use std::fmt::{self, Display};
+use std::fmt::{self};
 use std::marker::PhantomData;
 
 #[cfg(test)]
@@ -38,9 +38,9 @@ pub struct SpdxLicense {
     pub licence: String,
 }
 
-impl Display for SpdxLicense {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.licence)
+impl ToString for SpdxLicense {
+    fn to_string(&self) -> String {
+        String::from(&self.licence)
     }
 }
 
