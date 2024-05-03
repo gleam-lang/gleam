@@ -179,6 +179,10 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where formatting constant lists of tuples would be force the tuples
+  to be broken across multiple lines, even when they could fit on a single line.
+  ([Isaac Harris-Holt](https://github.com/isaacharrisholt))
+
 ### Language Server
 
 - The code action to remove unused imports now removes the entire line is
