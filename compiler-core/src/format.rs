@@ -2309,9 +2309,13 @@ impl<'comments> Formatter<'comments> {
         let comments = self.pop_comments(location.end);
         let closing_parens = match printed_comments(comments, false) {
             None => docvec!(break_(",", ""), ")"),
-            Some(comment) => {
-                docvec!(break_(",", "").nest(INDENT), comment.nest(INDENT), line(), ")").force_break()
-            }
+            Some(comment) => docvec!(
+                break_(",", "").nest(INDENT),
+                comment.nest(INDENT),
+                line(),
+                ")"
+            )
+            .force_break(),
         };
 
         "(".to_doc().append(args_doc).append(closing_parens).group()
