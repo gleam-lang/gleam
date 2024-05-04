@@ -1161,6 +1161,18 @@ fn const_annotation_wrong_4() {
 }
 
 #[test]
+fn const_annotation_wrong_5() {
+    assert_module_error!(
+        "const my_num: String = 7
+const my_string: MyInvalidType = \"str\"
+const my_tuple: String = #(Ok(1), MyInvalidType, 3)
+const my_string2: String = my_num
+const my_string3: String = my_string
+const my_string4: String = my_tuple"
+    );
+}
+
+#[test]
 fn const_usage_wrong() {
     assert_module_error!(
         "const pair = #(1, 2.0)

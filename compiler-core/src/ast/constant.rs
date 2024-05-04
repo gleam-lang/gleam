@@ -54,6 +54,13 @@ pub enum Constant<T, RecordTag> {
         constructor: Option<Box<ValueConstructor>>,
         typ: T,
     },
+
+    /// A placeholder constant used to allow module analysis to continue
+    /// even when there are type errors. Should never end up in generated code.
+    Invalid {
+        location: SrcSpan,
+        typ: T,
+    },
 }
 
 impl TypedConstant {
@@ -68,7 +75,8 @@ impl TypedConstant {
             }
             Constant::List { typ, .. }
             | Constant::Record { typ, .. }
-            | Constant::Var { typ, .. } => typ.clone(),
+            | Constant::Var { typ, .. }
+            | Constant::Invalid { typ, .. } => typ.clone(),
         }
     }
 }
@@ -89,7 +97,8 @@ impl<A, B> Constant<A, B> {
             | Constant::String { location, .. }
             | Constant::Record { location, .. }
             | Constant::BitArray { location, .. }
-            | Constant::Var { location, .. } => *location,
+            | Constant::Var { location, .. }
+            | Constant::Invalid { location, .. } => *location,
         }
     }
 

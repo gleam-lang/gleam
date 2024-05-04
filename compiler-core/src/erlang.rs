@@ -1037,6 +1037,8 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
                 .expect("This is guaranteed to hold a value."),
             env,
         ),
+
+        Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
     }
 }
 
