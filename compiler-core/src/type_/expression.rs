@@ -668,6 +668,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
+    // TODO: This takes too many arguments.
+    #[allow(clippy::too_many_arguments)]
     fn infer_fn(
         &mut self,
         args: Vec<UntypedArg>,
