@@ -488,6 +488,10 @@ impl<'comments> Formatter<'comments> {
                 module: Some(module),
                 ..
             } => docvec![module, ".", name],
+
+            Constant::Invalid { .. } => {
+                panic!("invalid constants can not be in an untyped ast")
+            }
         };
         commented(document, comments)
     }

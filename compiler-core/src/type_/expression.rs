@@ -2122,15 +2122,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    // TODO: extract the type annotation checking into a crate::analyse::infer_module_const
-    // function that uses this function internally
-    pub fn infer_const(
+    // helper for infer_const to get the value of a constant ignoring annotations
+    fn infer_const_value(
         &mut self,
-        annotation: &Option<TypeAst>,
         value: UntypedConstant,
         errors: &mut Vec<Error>,
     ) -> Result<TypedConstant, Error> {
-        let inferred = match value {
+        match value {
             Constant::Int {
                 location, value, ..
             } => Ok(Constant::Int { location, value }),
@@ -2359,16 +2357,68 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     ValueConstructorVariant::Record { .. } => unreachable!(),
                 }
             }
-        }?;
+
+            Constant::Invalid { .. } => panic!("invalid constants can not be in an untyped ast"),
+        }
+    }
+
+    // TODO: currently this inference returns a result because it is recursively called during function inference.
+    // This is so that type errors with constant literals within functions still display their type errors appropriately
+    // even if there are other non-constant related errors in the function.
+    // When we move to make function inference continuable we will switch to return a TypedConstant directly.
+    pub fn infer_const(
+        &mut self,
+        annotation: &Option<TypeAst>,
+        value: UntypedConstant,
+        errors: &mut Vec<Error>,
+    ) -> Result<TypedConstant, Error> {
+        let loc = value.location();
+        let inferred = self.infer_const_value(value, errors);
 
         // Check type annotation is accurate.
         if let Some(ann) = annotation {
-            let const_ann = self.type_from_ast(ann)?;
-            unify(const_ann, inferred.type_())
-                .map_err(|e| convert_unify_error(e, inferred.location()))?;
-        };
-
-        Ok(inferred)
+            match (self.type_from_ast(ann), inferred) {
+                // Type annotation and inferred value are valid. Ensure they are unifiable and use the inferred type.
+                // NOTE: if the types are not unifiable we use the inferred type at the moment so that we don't allow
+                // mistyped constants in other places in the compiler (i.e. string typed int literals, etc.).
+                // Need to see if this causes enough confusion that we should use the annotation type instead
+                (Ok(const_ann), Ok(inferred)) => {
+                    if let Err(e) = unify(const_ann, inferred.type_())
+                        .map_err(|e| convert_unify_error(e, inferred.location()))
+                    {
+                        errors.push(e);
+                    }
+                    Ok(inferred)
+                }
+                // Type annotation is valid but not the inferred value. Place a placeholder constant with the annotation type.
+                // This should limit the errors to only the definition.
+                (Ok(const_ann), Err(value_err)) => {
+                    errors.push(value_err.clone());
+                    Ok(Constant::Invalid {
+                        location: loc,
+                        typ: const_ann,
+                    })
+                }
+                // Type annotation is invalid but the inferred value is ok. Use the inferred type.
+                (Err(annotation_err), Ok(inferred)) => {
+                    errors.push(annotation_err);
+                    Ok(inferred)
+                }
+                // Type annotation and inferred value are invalid. Place a placeholder constant with an unbound type.
+                // This should limit the errors to only the definition assuming the constant is used consistently.
+                (Err(annotation_err), Err(value_err)) => {
+                    errors.push(annotation_err);
+                    errors.push(value_err.clone());
+                    Ok(Constant::Invalid {
+                        location: loc,
+                        typ: self.new_unbound_var(),
+                    })
+                }
+            }
+        } else {
+            // No type annotation, use the inferred value.
+            inferred
+        }
     }
 
     fn infer_const_tuple(

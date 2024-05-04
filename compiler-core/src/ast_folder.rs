@@ -865,6 +865,8 @@ pub trait UntypedConstantFolder {
                 constructor: _,
                 typ: (),
             } => self.fold_constant_var(location, module, name),
+
+            Constant::Invalid { location, typ: () } => self.fold_constant_invalid(location),
         }
     }
 
@@ -941,6 +943,10 @@ pub trait UntypedConstantFolder {
         }
     }
 
+    fn fold_constant_invalid(&mut self, location: SrcSpan) -> UntypedConstant {
+        Constant::Invalid { location, typ: () }
+    }
+
     /// You probably don't want to override this method.
     fn walk_constant(&mut self, m: UntypedConstant) -> UntypedConstant {
         match m {
@@ -948,7 +954,8 @@ pub trait UntypedConstantFolder {
             | Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. }
-            | Constant::Tuple { .. } => m,
+            | Constant::Tuple { .. }
+            | Constant::Invalid { .. } => m,
 
             Constant::List {
                 location,
