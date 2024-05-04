@@ -2732,10 +2732,11 @@ fn check_subject_for_redundant_match(subject: &TypedExpr) -> Option<Warning> {
         }
 
         TypedExpr::BitArray { segments, .. } if !segments.is_empty() => {
-            Some(Warning::CaseMatchOnLiteralCollection {
-                kind: LiteralCollectionKind::BitArray,
-                location: subject.location(),
-            })
+            // We don't want a warning when matching on literal bit arrays
+            // because it can make sense to do it; for example if one is
+            // matching on segments that do not align with the segments used
+            // for construction.
+            None
         }
 
         _ => match subject.record_constructor_arity() {

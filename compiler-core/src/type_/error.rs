@@ -446,7 +446,6 @@ pub enum EmptyListCheckKind {
 pub enum LiteralCollectionKind {
     List,
     Tuple,
-    BitArray,
     Record,
 }
 

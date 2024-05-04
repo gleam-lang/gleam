@@ -1248,17 +1248,6 @@ fn pattern_matching_on_literal_empty_list() {
 }
 
 #[test]
-fn pattern_matching_on_literal_bit_array() {
-    assert_warning!(
-        "pub fn main() {
-        case <<1, 2>> {
-            _ -> Nil
-        }
-      }"
-    );
-}
-
-#[test]
 fn pattern_matching_on_literal_empty_bit_array() {
     assert_warning!(
         "pub fn main() {

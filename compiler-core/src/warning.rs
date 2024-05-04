@@ -608,7 +608,6 @@ the same values.\n"
                     let kind = match kind {
                         LiteralCollectionKind::List => "list",
                         LiteralCollectionKind::Tuple => "tuple",
-                        LiteralCollectionKind::BitArray => "bit array",
                         LiteralCollectionKind::Record => "record",
                     };
 
