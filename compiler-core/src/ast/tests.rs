@@ -144,7 +144,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             has_javascript_external: false,
         },
     )
-    .infer_statements(ast)
+    .infer_statements(ast, &mut vec![])
     .expect("should successfully infer")
     .first()
     .clone()
