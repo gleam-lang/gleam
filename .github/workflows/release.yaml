@@ -53,7 +53,7 @@ jobs:
           key: v1-${{ matrix.target }}
 
       - name: Build release binary
-        uses: actions-rs/cargo@v1
+        uses: clechasseur/rs-cargo@v2
         with:
           command: build
           args: --release --target ${{ matrix.target }}

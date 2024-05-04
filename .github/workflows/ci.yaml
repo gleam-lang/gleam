@@ -105,7 +105,7 @@ jobs:
           key: v1-${{ matrix.target }}
 
       - name: Install Gleam
-        uses: actions-rs/cargo@v1
+        uses: clechasseur/rs-cargo@v2
         with:
           command: install
           args: "--path compiler-cli --target ${{ matrix.target }} --debug --locked"
@@ -113,7 +113,7 @@ jobs:
         if: ${{ matrix.run-integration-tests }}
 
       - name: Run tests
-        uses: actions-rs/cargo@v1
+        uses: clechasseur/rs-cargo@v2
         with:
           command: test
           args: "--workspace --target ${{ matrix.target }}"
