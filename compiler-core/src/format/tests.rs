@@ -6035,3 +6035,77 @@ fn comments_at_the_end_of_anonymous_function() {
 "#
     );
 }
+
+#[test]
+fn comments_in_anonymous_function_args() {
+    assert_format!(
+        r#"pub fn main() {
+  fn(
+    // A comment 1
+    // A comment 2
+  ) {
+    1
+  }
+}
+"#
+    );
+    assert_format!(
+        r#"pub fn main() {
+  fn(
+    // A comment 1
+    a,
+    // A comment 2
+  ) {
+    1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn comments_after_last_argument_of_record_constructor() {
+    assert_format!(
+        r#"type Record {
+  Record(
+    field: String,
+    // comment_line_1: String,
+    // comment_line_2: String,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn only_comments_in_record_constructor() {
+    assert_format!(
+        r#"type Record {
+  Record(
+    // comment_line_1: String,
+    // comment_line_2: String,
+  )
+}
+"#
+    );
+}
+#[test]
+fn comment_after_spread_operator() {
+    assert_format!(
+        "type Triple {
+  Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1, 2, 3)
+  let Triple(
+    really_really_long_variable_name_a,
+    c: really_really_long_variable_name_c,
+    ..,
+    // comment
+  ) = triple
+  really_really_long_variable_name_c
+}
+"
+    );
+}

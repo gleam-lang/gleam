@@ -531,7 +531,7 @@ fn function<'a>(
             text_documentation: text_documentation(doc),
             signature: print(
                 formatter
-                    .docs_fn_signature(Publicity::Public, name, args, ret.clone())
+                    .docs_fn_signature(Publicity::Public, name, args, ret.clone(), location)
                     .group(),
             ),
             source_url: source_links.url(*location),
@@ -667,7 +667,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             name,
             definition: print(
                 formatter
-                    .type_alias(Publicity::Public, name, args, typ, deprecation)
+                    .type_alias(Publicity::Public, name, args, typ, deprecation, location)
                     .group(),
             ),
             documentation: markdown_documentation(doc),
