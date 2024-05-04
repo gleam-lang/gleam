@@ -324,8 +324,16 @@ impl<'comments> Formatter<'comments> {
                 type_ast: resolved_type,
                 publicity,
                 deprecation,
+                location,
                 ..
-            }) => self.type_alias(*publicity, alias, args, resolved_type, deprecation),
+            }) => self.type_alias(
+                *publicity,
+                alias,
+                args,
+                resolved_type,
+                deprecation,
+                location,
+            ),
 
             Definition::CustomType(ct) => self.custom_type(ct),
 
@@ -447,23 +455,29 @@ impl<'comments> Formatter<'comments> {
                 name,
                 args,
                 module: None,
+                location,
                 ..
-            } => name
-                .to_doc()
-                .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a))))
-                .group(),
+            } => {
+                let args = args.iter().map(|a| self.constant_call_arg(a)).collect_vec();
+                name.to_doc()
+                    .append(self.wrap_args(args, location.end))
+                    .group()
+            }
 
             Constant::Record {
                 name,
                 args,
                 module: Some(m),
+                location,
                 ..
-            } => m
-                .to_doc()
-                .append(".")
-                .append(name.as_str())
-                .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a))))
-                .group(),
+            } => {
+                let args = args.iter().map(|a| self.constant_call_arg(a)).collect_vec();
+                m.to_doc()
+                    .append(".")
+                    .append(name.as_str())
+                    .append(self.wrap_args(args, location.end))
+                    .group()
+            }
 
             Constant::Var {
                 name, module: None, ..
@@ -609,6 +623,7 @@ impl<'comments> Formatter<'comments> {
         module: &'a Option<EcoString>,
         name: &'a str,
         args: &'a [TypeAst],
+        location: &SrcSpan,
     ) -> Document<'a> {
         let head = module
             .as_ref()
@@ -618,7 +633,7 @@ impl<'comments> Formatter<'comments> {
         if args.is_empty() {
             head
         } else {
-            head.append(self.type_arguments(args))
+            head.append(self.type_arguments(args, location))
         }
     }
 
@@ -630,31 +645,32 @@ impl<'comments> Formatter<'comments> {
                 name,
                 arguments: args,
                 module,
-                ..
-            }) => self.type_ast_constructor(module, name, args),
+                location,
+            }) => self.type_ast_constructor(module, name, args, location),
 
             TypeAst::Fn(TypeAstFn {
                 arguments: args,
                 return_: retrn,
-                ..
+                location,
             }) => "fn"
                 .to_doc()
-                .append(self.type_arguments(args))
+                .append(self.type_arguments(args, location))
                 .group()
                 .append(" ->")
                 .append(break_("", " ").append(self.type_ast(retrn)).nest(INDENT)),
 
             TypeAst::Var(TypeAstVar { name, .. }) => name.to_doc(),
 
-            TypeAst::Tuple(TypeAstTuple { elems, .. }) => {
-                "#".to_doc().append(self.type_arguments(elems))
+            TypeAst::Tuple(TypeAstTuple { elems, location }) => {
+                "#".to_doc().append(self.type_arguments(elems, location))
             }
         }
         .group()
     }
 
-    fn type_arguments<'a>(&mut self, args: &'a [TypeAst]) -> Document<'a> {
-        wrap_args(args.iter().map(|t| self.type_ast(t)))
+    fn type_arguments<'a>(&mut self, args: &'a [TypeAst], location: &SrcSpan) -> Document<'a> {
+        let args = args.iter().map(|t| self.type_ast(t)).collect_vec();
+        self.wrap_args(args, location.end)
     }
 
     pub fn type_alias<'a>(
@@ -664,6 +680,7 @@ impl<'comments> Formatter<'comments> {
         args: &'a [EcoString],
         typ: &'a TypeAst,
         deprecation: &'a Deprecation,
+        location: &SrcSpan,
     ) -> Document<'a> {
         // @deprecated attribute
         let head = self.deprecation_attr(deprecation);
@@ -673,7 +690,8 @@ impl<'comments> Formatter<'comments> {
         let head = if args.is_empty() {
             head
         } else {
-            head.append(wrap_args(args.iter().map(|e| e.to_doc())).group())
+            let args = args.iter().map(|e| e.to_doc()).collect_vec();
+            head.append(self.wrap_args(args, location.end).group())
         };
 
         head.append(" =")
@@ -720,10 +738,15 @@ impl<'comments> Formatter<'comments> {
         };
 
         // Fn name and args
+        let args = function
+            .arguments
+            .iter()
+            .map(|e| self.fn_arg(e))
+            .collect_vec();
         let signature = pub_(function.publicity)
             .append("fn ")
             .append(&function.name)
-            .append(wrap_args(function.arguments.iter().map(|e| self.fn_arg(e))));
+            .append(self.wrap_args(args, function.location.end));
 
         // Add return annotation
         let signature = match &function.return_annotation {
@@ -762,7 +785,9 @@ impl<'comments> Formatter<'comments> {
         body: &'a Vec1<UntypedStatement>,
         location: &SrcSpan,
     ) -> Document<'a> {
-        let args = wrap_args(args.iter().map(|e| self.fn_arg(e)))
+        let args_docs = args.iter().map(|e| self.fn_arg(e)).collect_vec();
+        let args = self
+            .wrap_args(args_docs, body.first().location().start)
             .group()
             .next_break_fits(NextBreakFitsMode::Disabled);
         //   ^^^ We add this so that when an expression function is passed as
@@ -958,8 +983,9 @@ impl<'comments> Formatter<'comments> {
                 constructor,
                 spread,
                 arguments: args,
+                location,
                 ..
-            } => self.record_update(constructor, spread, args),
+            } => self.record_update(constructor, spread, args, location),
         };
         commented(document, comments)
     }
@@ -1061,6 +1087,7 @@ impl<'comments> Formatter<'comments> {
         args: &'a [CallArg<UntypedPattern>],
         module: &'a Option<EcoString>,
         with_spread: bool,
+        location: &SrcSpan,
     ) -> Document<'a> {
         fn is_breakable(expr: &UntypedPattern) -> bool {
             match expr {
@@ -1082,9 +1109,8 @@ impl<'comments> Formatter<'comments> {
         } else if args.is_empty() {
             name
         } else if with_spread {
-            name.append(wrap_args_with_spread(
-                args.iter().map(|a| self.pattern_call_arg(a)),
-            ))
+            let args = args.iter().map(|a| self.pattern_call_arg(a)).collect_vec();
+            name.append(self.wrap_args_with_spread(args, location.end))
         } else {
             match args {
                 [arg] if is_breakable(&arg.value) => name
@@ -1093,9 +1119,10 @@ impl<'comments> Formatter<'comments> {
                     .append(")")
                     .group(),
 
-                _ => name
-                    .append(wrap_args(args.iter().map(|a| self.pattern_call_arg(a))))
-                    .group(),
+                _ => {
+                    let args = args.iter().map(|a| self.pattern_call_arg(a)).collect_vec();
+                    name.append(self.wrap_args(args, location.end)).group()
+                }
             }
         }
     }
@@ -1261,14 +1288,20 @@ impl<'comments> Formatter<'comments> {
         constructor: &'a UntypedExpr,
         spread: &'a RecordUpdateSpread,
         args: &'a [UntypedRecordUpdateArg],
+        location: &SrcSpan,
     ) -> Document<'a> {
         use std::iter::once;
         let constructor_doc = self.expr(constructor);
         let comments = self.pop_comments(spread.base.location().start);
         let spread_doc = commented("..".to_doc().append(self.expr(&spread.base)), comments);
-        let arg_docs = args.iter().map(|a| self.record_update_arg(a).group());
+        let arg_docs = args
+            .iter()
+            .map(|a| self.record_update_arg(a).group())
+            .collect_vec();
         let all_arg_docs = once(spread_doc).chain(arg_docs);
-        constructor_doc.append(wrap_args(all_arg_docs)).group()
+        constructor_doc
+            .append(self.wrap_args(all_arg_docs, location.end))
+            .group()
     }
 
     pub fn bin_op<'a>(
@@ -1427,12 +1460,18 @@ impl<'comments> Formatter<'comments> {
             self.expr(fun)
         } else if hole_in_first_position {
             // x |> fun(_, 2, 3)
+            let args = args
+                .iter()
+                .skip(1)
+                .map(|a| self.call_arg(a, arity))
+                .collect_vec();
             self.expr(fun)
-                .append(wrap_args(args.iter().skip(1).map(|a| self.call_arg(a, arity))).group())
+                .append(self.wrap_args(args, fun.location().end).group())
         } else {
             // x |> fun(1, _, 3)
+            let args = args.iter().map(|a| self.call_arg(a, arity)).collect_vec();
             self.expr(fun)
-                .append(wrap_args(args.iter().map(|a| self.call_arg(a, arity))).group())
+                .append(self.wrap_args(args, fun.location().end).group())
         }
     }
 
@@ -1446,6 +1485,7 @@ impl<'comments> Formatter<'comments> {
             Some(Statement::Expression(UntypedExpr::Call {
                 fun,
                 arguments: args,
+                location,
                 ..
             })) => {
                 let arity = args.len();
@@ -1460,9 +1500,11 @@ impl<'comments> Formatter<'comments> {
                             .group()
                     }
 
-                    _ => self
-                        .expr(fun)
-                        .append(wrap_args(args.iter().map(|a| self.call_arg(a, arity))).group()),
+                    _ => {
+                        let args = args.iter().map(|a| self.call_arg(a, arity)).collect_vec();
+                        self.expr(fun)
+                            .append(self.wrap_args(args, location.end).group())
+                    }
                 }
             }
 
@@ -1479,13 +1521,21 @@ impl<'comments> Formatter<'comments> {
         let doc_comments = self.doc_comments(constructor.location.start);
 
         let doc = if constructor.arguments.is_empty() {
-            constructor.name.as_str().to_doc()
+            if self.any_comments(constructor.location.end) {
+                constructor
+                    .name
+                    .as_str()
+                    .to_doc()
+                    .append(self.wrap_args(vec![], constructor.location.end))
+                    .group()
+            } else {
+                constructor.name.as_str().to_doc()
+            }
         } else {
-            constructor
-                .name
-                .as_str()
-                .to_doc()
-                .append(wrap_args(constructor.arguments.iter().map(
+            let args = constructor
+                .arguments
+                .iter()
+                .map(
                     |RecordConstructorArg {
                          label,
                          ast,
@@ -1503,7 +1553,13 @@ impl<'comments> Formatter<'comments> {
                             arg_comments,
                         )
                     },
-                )))
+                )
+                .collect_vec();
+            constructor
+                .name
+                .as_str()
+                .to_doc()
+                .append(self.wrap_args(args, constructor.location.end))
                 .group()
         };
 
@@ -1523,8 +1579,9 @@ impl<'comments> Formatter<'comments> {
             .append(if ct.parameters.is_empty() {
                 Document::EcoString(ct.name.clone())
             } else {
+                let args = ct.parameters.iter().map(|e| e.to_doc()).collect_vec();
                 Document::EcoString(ct.name.clone())
-                    .append(wrap_args(ct.parameters.iter().map(|e| e.to_doc())))
+                    .append(self.wrap_args(args, ct.location.end))
                     .group()
             });
 
@@ -1567,8 +1624,8 @@ impl<'comments> Formatter<'comments> {
             .append(if args.is_empty() {
                 name.to_doc()
             } else {
-                name.to_doc()
-                    .append(wrap_args(args.iter().map(|e| e.to_doc())))
+                let args = args.iter().map(|e| e.to_doc()).collect_vec();
+                name.to_doc().append(self.wrap_args(args, location.end))
             })
     }
 
@@ -1578,13 +1635,14 @@ impl<'comments> Formatter<'comments> {
         name: &'a str,
         args: &'a [TypedArg],
         return_type: Arc<Type>,
+        location: &SrcSpan,
     ) -> Document<'a> {
         let mut printer = type_::pretty::Printer::new();
 
         pub_(publicity)
             .append("fn ")
             .append(name)
-            .append(self.docs_fn_args(args, &mut printer))
+            .append(self.docs_fn_args(args, &mut printer, location))
             .append(" -> ".to_doc())
             .append(printer.print(&return_type))
     }
@@ -1594,12 +1652,17 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         args: &'a [TypedArg],
         printer: &mut type_::pretty::Printer,
+        location: &SrcSpan,
     ) -> Document<'a> {
-        wrap_args(args.iter().map(|arg| {
-            self.docs_fn_arg_name(arg)
-                .append(": ".to_doc().append(printer.print(&arg.type_)))
-                .group()
-        }))
+        let args = args
+            .iter()
+            .map(|arg| {
+                self.docs_fn_arg_name(arg)
+                    .append(": ".to_doc().append(printer.print(&arg.type_)))
+                    .group()
+            })
+            .collect_vec();
+        self.wrap_args(args, location.end)
     }
 
     fn docs_fn_arg_name<'a>(&mut self, arg: &'a TypedArg) -> Document<'a> {
@@ -1937,13 +2000,18 @@ impl<'comments> Formatter<'comments> {
                 arguments: args,
                 module,
                 with_spread,
+                location,
                 ..
-            } => self.pattern_constructor(name, args, module, *with_spread),
+            } => self.pattern_constructor(name, args, module, *with_spread, location),
 
-            Pattern::Tuple { elems, .. } => "#"
-                .to_doc()
-                .append(wrap_args(elems.iter().map(|e| self.pattern(e))))
-                .group(),
+            Pattern::Tuple {
+                elems, location, ..
+            } => {
+                let args = elems.iter().map(|e| self.pattern(e)).collect_vec();
+                "#".to_doc()
+                    .append(self.wrap_args(args, location.end))
+                    .group()
+            }
 
             Pattern::BitArray {
                 segments, location, ..
@@ -2311,6 +2379,74 @@ impl<'comments> Formatter<'comments> {
 
         "(".to_doc().append(args_doc).append(closing_parens).group()
     }
+
+    pub fn wrap_args<'a, I>(&mut self, args: I, comments_limit: u32) -> Document<'a>
+    where
+        I: IntoIterator<Item = Document<'a>>,
+    {
+        let mut args = args.into_iter().peekable();
+        if args.peek().is_none() {
+            let comments = self.pop_comments(comments_limit);
+            return match printed_comments(comments, false) {
+                Some(comments) => "("
+                    .to_doc()
+                    .append(break_("", ""))
+                    .append(comments)
+                    .nest_if_broken(INDENT)
+                    .force_break()
+                    .append(break_("", ""))
+                    .append(")"),
+                None => "()".to_doc(),
+            };
+        }
+        let doc = break_("(", "(").append(join(args, break_(",", ", ")));
+
+        // Include trailing comments if there are any
+        let comments = self.pop_comments(comments_limit);
+        match printed_comments(comments, false) {
+            Some(comments) => doc
+                .append(break_(",", ""))
+                .append(comments)
+                .nest_if_broken(INDENT)
+                .force_break()
+                .append(break_("", ""))
+                .append(")"),
+            None => doc
+                .nest_if_broken(INDENT)
+                .append(break_(",", ""))
+                .append(")"),
+        }
+    }
+
+    pub fn wrap_args_with_spread<'a, I>(&mut self, args: I, comments_limit: u32) -> Document<'a>
+    where
+        I: IntoIterator<Item = Document<'a>>,
+    {
+        let mut args = args.into_iter().peekable();
+        if args.peek().is_none() {
+            return self.wrap_args(args, comments_limit);
+        }
+        let doc = break_("(", "(")
+            .append(join(args, break_(",", ", ")))
+            .append(break_(",", ", "))
+            .append("..");
+
+        // Include trailing comments if there are any
+        let comments = self.pop_comments(comments_limit);
+        match printed_comments(comments, false) {
+            Some(comments) => doc
+                .append(break_(",", ""))
+                .append(comments)
+                .nest_if_broken(INDENT)
+                .force_break()
+                .append(break_("", ""))
+                .append(")"),
+            None => doc
+                .nest_if_broken(INDENT)
+                .append(break_(",", ""))
+                .append(")"),
+        }
+    }
 }
 
 fn init_and_last<T>(vec: &[T]) -> Option<(&[T], &T)> {
@@ -2395,40 +2531,6 @@ pub fn wrap_block(doc: Document<'_>) -> Document<'_> {
         .nest(INDENT)
         .append(break_("", " "))
         .append("}")
-}
-
-pub fn wrap_args<'a, I>(args: I) -> Document<'a>
-where
-    I: IntoIterator<Item = Document<'a>>,
-{
-    let mut args = args.into_iter().peekable();
-    if args.peek().is_none() {
-        return "()".to_doc();
-    }
-    break_("(", "(")
-        .append(join(args, break_(",", ", ")).next_break_fits(NextBreakFitsMode::Disabled))
-        .nest(INDENT)
-        .append(break_(",", ""))
-        .append(")")
-}
-
-pub fn wrap_args_with_spread<'a, I>(args: I) -> Document<'a>
-where
-    I: IntoIterator<Item = Document<'a>>,
-{
-    let mut args = args.into_iter().peekable();
-    if args.peek().is_none() {
-        return "()".to_doc();
-    }
-
-    break_("(", "(")
-        .append(join(args, break_(",", ", ")))
-        .append(break_(",", ", "))
-        .append("..")
-        .nest(INDENT)
-        .append(break_(",", ""))
-        .append(")")
-        .group()
 }
 
 fn printed_comments<'a, 'comments>(
