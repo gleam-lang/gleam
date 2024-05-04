@@ -513,7 +513,7 @@ where
 
     fn unqualified_completions_from_module<'b>(
         &'b self,
-        importing_module: &'b crate::type_::ModuleInterface,
+        importing_module: &'b ModuleInterface,
         module: &'b Module,
         // should type completions include the word "type" in the completion
         include_type_in_completion: bool,
@@ -603,7 +603,7 @@ where
         if let Some(dot_index) = src.find('.') {
             // Find the module that is being imported from
             let importing_module_name = src.get(6..dot_index)?.trim();
-            let importing_module: &crate::type_::ModuleInterface =
+            let importing_module: &ModuleInterface =
                 self.compiler.get_module_inferface(importing_module_name)?;
 
             // Check if the cursor is proceeded by the word "type".
