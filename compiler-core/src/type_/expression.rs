@@ -2362,10 +2362,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    // TODO: currently this inference returns a result because it is recursively called during function inference.
-    // This is so that type errors with constant literals within functions still display their type errors appropriately
-    // even if there are other non-constant related errors in the function.
-    // When we move to make function inference continuable we will switch to return a TypedConstant directly.
     pub fn infer_const(
         &mut self,
         annotation: &Option<TypeAst>,
