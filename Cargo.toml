@@ -58,3 +58,6 @@ thiserror = "1"
 pretty_assertions = "1"
 # Snapshot testing to make test maintenance easier
 insta = "1"
+# A transitive dependency needed to compile into wasm32-unknown-unknown
+# See https://docs.rs/getrandom/latest/getrandom/index.html#webassembly-support
+getrandom = { version = "0", features = ["js"] }
