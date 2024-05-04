@@ -22,6 +22,7 @@ itertools.workspace = true
 serde.workspace = true
 termcolor.workspace = true
 tracing.workspace = true
+getrandom.workspace = true
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.42"
