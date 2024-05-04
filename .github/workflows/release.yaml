@@ -42,13 +42,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
-          override: true
-          default: true
-          profile: minimal
 
       - name: Handle Rust dependencies caching
         uses: Swatinem/rust-cache@v2
