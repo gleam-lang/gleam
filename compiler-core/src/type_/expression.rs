@@ -2375,16 +2375,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if let Some(ann) = annotation {
             match (self.type_from_ast(ann), inferred) {
                 // Type annotation and inferred value are valid. Ensure they are unifiable and use the inferred type.
-                // NOTE: if the types are not unifiable we use the inferred type at the moment so that we don't allow
-                // mistyped constants in other places in the compiler (i.e. string typed int literals, etc.).
-                // Need to see if this causes enough confusion that we should use the annotation type instead
+                // NOTE: if the types are not unifiable we use the annotated type.
                 (Ok(const_ann), Ok(inferred)) => {
-                    if let Err(e) = unify(const_ann, inferred.type_())
+                    if let Err(e) = unify(const_ann.clone(), inferred.type_())
                         .map_err(|e| convert_unify_error(e, inferred.location()))
                     {
                         errors.push(e);
+                        Constant::Invalid {
+                            location: loc,
+                            typ: const_ann,
+                        }
+                    } else {
+                        inferred
                     }
-                    inferred
                 }
                 // Type annotation is valid but not the inferred value. Place a placeholder constant with the annotation type.
                 // This should limit the errors to only the definition.

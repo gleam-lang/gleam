@@ -1179,11 +1179,11 @@ const str1: MyInvalidType = \"str\"
 const tpl: String = #(Ok(1), MyInvalidType, 3)
 const lst = [1, 2.0]
 const unbound: MyInvalidType = MyInvalidType
-const assignment1err: String = num
-const assignment2ok: String = str1
-const assignment3err: String = tpl
-const assignment4err: String = lst
-const assignment5ok: String = unbound"
+const assignment1: String = num
+const assignment2: String = str1
+const assignment3: String = tpl
+const assignment4: String = lst
+const assignment5: String = unbound"
     );
 }
 
