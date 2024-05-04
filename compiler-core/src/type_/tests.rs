@@ -133,7 +133,7 @@ macro_rules! assert_error {
         let error = $crate::error::Error::Type {
             src: $src.into(),
             path: camino::Utf8PathBuf::from("/src/one/two.gleam"),
-            errors: vec1::vec1![error],
+            errors: error,
         };
         let output = error.pretty_string();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -259,7 +259,9 @@ macro_rules! assert_no_warnings {
     };
 }
 
-fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::type_::Error> {
+fn compile_statement_sequence(
+    src: &str,
+) -> Result<Vec1<TypedStatement>, Vec1<crate::type_::Error>> {
     let ast = crate::parse::parse_statement_sequence(src).expect("syntax error");
     let mut modules = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
@@ -268,7 +270,8 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    ExprTyper::new(
+    let errors = &mut vec![];
+    let res = ExprTyper::new(
         &mut Environment::new(
             ids,
             "thepackage".into(),
@@ -284,7 +287,16 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
             has_javascript_external: false,
         },
     )
-    .infer_statements(ast, &mut vec![])
+    .infer_statements(ast, errors);
+    match (res, Vec1::try_from_vec(errors.to_vec())) {
+        (Ok(res), Err(_)) => Ok(res),
+        (Ok(_), Ok(errors)) => Err(errors),
+        (Err(err), Ok(mut errors)) => {
+            errors.push(err);
+            Err(errors)
+        }
+        (Err(err), Err(_)) => Err(Vec1::new(err)),
+    }
 }
 
 fn infer(src: &str) -> String {

@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "const my_num: String = 7\nconst my_string: MyInvalidType = \"str\"\nconst my_tuple: String = #(Ok(1), MyInvalidType, 3)\nconst my_string2: String = my_num\nconst my_string3: String = my_string\nconst my_string4: String = my_tuple"
+expression: "const mismatched_types: String = 7\nconst invalid_annotation: MyInvalidType = \"str\"\nconst invalid_value: String = MyInvalidValue\nconst invalid_unannotated_value = [1, 2.0]\nconst invalid_everything: MyInvalidType = MyInvalidValue"
 ---
 error: Type mismatch
-  ┌─ /src/one/two.gleam:1:24
+  ┌─ /src/one/two.gleam:1:34
   │
-1 │ const my_num: String = 7
-  │                        ^
+1 │ const mismatched_types: String = 7
+  │                                  ^
 
 Expected type:
 
@@ -17,31 +17,47 @@ Found type:
     Int
 
 error: Unknown type
-  ┌─ /src/one/two.gleam:2:18
+  ┌─ /src/one/two.gleam:2:27
   │
-2 │ const my_string: MyInvalidType = "str"
-  │                  ^^^^^^^^^^^^^
+2 │ const invalid_annotation: MyInvalidType = "str"
+  │                           ^^^^^^^^^^^^^
 
 The type `MyInvalidType` is not defined or imported in this module.
 
 error: Unknown variable
-  ┌─ /src/one/two.gleam:3:35
+  ┌─ /src/one/two.gleam:3:31
   │
-3 │ const my_tuple: String = #(Ok(1), MyInvalidType, 3)
-  │                                   ^^^^^^^^^^^^^
+3 │ const invalid_value: String = MyInvalidValue
+  │                               ^^^^^^^^^^^^^^
 
-The name `MyInvalidType` is not in scope here.
+The name `MyInvalidValue` is not in scope here.
 
 error: Type mismatch
-  ┌─ /src/one/two.gleam:4:28
+  ┌─ /src/one/two.gleam:4:39
   │
-4 │ const my_string2: String = my_num
-  │                            ^^^^^^
+4 │ const invalid_unannotated_value = [1, 2.0]
+  │                                       ^^^
 
 Expected type:
 
-    String
+    Int
 
 Found type:
 
-    Int
+    Float
+
+error: Unknown type
+  ┌─ /src/one/two.gleam:5:27
+  │
+5 │ const invalid_everything: MyInvalidType = MyInvalidValue
+  │                           ^^^^^^^^^^^^^
+
+The type `MyInvalidType` is not defined or imported in this module.
+
+error: Unknown variable
+  ┌─ /src/one/two.gleam:5:43
+  │
+5 │ const invalid_everything: MyInvalidType = MyInvalidValue
+  │                                           ^^^^^^^^^^^^^^
+
+The name `MyInvalidValue` is not in scope here.

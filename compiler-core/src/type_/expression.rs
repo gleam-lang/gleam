@@ -987,7 +987,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .into_iter()
             .map(|s| {
                 self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| {
-                    env.infer_const(&None, expr, errors)
+                    Ok(env.infer_const(&None, expr, errors))
                 })
             })
             .try_collect()?;
@@ -1651,9 +1651,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             }
 
-            ClauseGuard::Constant(constant) => self
-                .infer_const(&None, constant, errors)
-                .map(ClauseGuard::Constant),
+            ClauseGuard::Constant(constant) => Ok(ClauseGuard::Constant(
+                self.infer_const(&None, constant, errors),
+            )),
         }
     }
 
@@ -2304,7 +2304,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             location,
                             implicit,
                         } = arg;
-                        let value = self.infer_const(&None, value, errors)?;
+                        let value = self.infer_const(&None, value, errors);
                         unify(typ.clone(), value.type_())
                             .map_err(|e| convert_unify_error(e, value.location()))?;
                         Ok(CallArg {
@@ -2371,7 +2371,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         annotation: &Option<TypeAst>,
         value: UntypedConstant,
         errors: &mut Vec<Error>,
-    ) -> Result<TypedConstant, Error> {
+    ) -> TypedConstant {
         let loc = value.location();
         let inferred = self.infer_const_value(value, errors);
 
@@ -2388,36 +2388,45 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     {
                         errors.push(e);
                     }
-                    Ok(inferred)
+                    inferred
                 }
                 // Type annotation is valid but not the inferred value. Place a placeholder constant with the annotation type.
                 // This should limit the errors to only the definition.
                 (Ok(const_ann), Err(value_err)) => {
                     errors.push(value_err.clone());
-                    Ok(Constant::Invalid {
+                    Constant::Invalid {
                         location: loc,
                         typ: const_ann,
-                    })
+                    }
                 }
                 // Type annotation is invalid but the inferred value is ok. Use the inferred type.
                 (Err(annotation_err), Ok(inferred)) => {
                     errors.push(annotation_err);
-                    Ok(inferred)
+                    inferred
                 }
                 // Type annotation and inferred value are invalid. Place a placeholder constant with an unbound type.
                 // This should limit the errors to only the definition assuming the constant is used consistently.
                 (Err(annotation_err), Err(value_err)) => {
                     errors.push(annotation_err);
                     errors.push(value_err.clone());
-                    Ok(Constant::Invalid {
+                    Constant::Invalid {
                         location: loc,
                         typ: self.new_unbound_var(),
-                    })
+                    }
                 }
             }
         } else {
             // No type annotation, use the inferred value.
-            inferred
+            match inferred {
+                Ok(inferred) => inferred,
+                Err(e) => {
+                    errors.push(e);
+                    Constant::Invalid {
+                        location: loc,
+                        typ: self.new_unbound_var(),
+                    }
+                }
+            }
         }
     }
 
@@ -2430,7 +2439,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
         for element in untyped_elements {
-            let element = self.infer_const(&None, element, errors)?;
+            let element = self.infer_const(&None, element, errors);
             elements.push(element);
         }
 
@@ -2447,7 +2456,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
         for element in untyped_elements {
-            let element = self.infer_const(&None, element, errors)?;
+            let element = self.infer_const(&None, element, errors);
             unify(typ.clone(), element.type_())
                 .map_err(|e| convert_unify_error(e, element.location()))?;
             elements.push(element);

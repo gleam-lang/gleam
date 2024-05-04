@@ -1163,12 +1163,27 @@ fn const_annotation_wrong_4() {
 #[test]
 fn const_annotation_wrong_5() {
     assert_module_error!(
-        "const my_num: String = 7
-const my_string: MyInvalidType = \"str\"
-const my_tuple: String = #(Ok(1), MyInvalidType, 3)
-const my_string2: String = my_num
-const my_string3: String = my_string
-const my_string4: String = my_tuple"
+        "const mismatched_types: String = 7
+const invalid_annotation: MyInvalidType = \"str\"
+const invalid_value: String = MyInvalidValue
+const invalid_unannotated_value = [1, 2.0]
+const invalid_everything: MyInvalidType = MyInvalidValue"
+    );
+}
+
+#[test]
+fn const_annotation_wrong_6() {
+    assert_module_error!(
+        "const num: String = 7
+const str1: MyInvalidType = \"str\"
+const tpl: String = #(Ok(1), MyInvalidType, 3)
+const lst = [1, 2.0]
+const unbound: MyInvalidType = MyInvalidType
+const assignment1err: String = num
+const assignment2ok: String = str1
+const assignment3err: String = tpl
+const assignment4err: String = lst
+const assignment5ok: String = unbound"
     );
 }
 
