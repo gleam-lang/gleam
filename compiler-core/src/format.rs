@@ -1481,11 +1481,10 @@ impl<'comments> Formatter<'comments> {
         let doc = if constructor.arguments.is_empty() {
             constructor.name.as_str().to_doc()
         } else {
-            constructor
-                .name
-                .as_str()
-                .to_doc()
-                .append(wrap_args(constructor.arguments.iter().map(
+            let args = constructor
+                .arguments
+                .iter()
+                .map(
                     |RecordConstructorArg {
                          label,
                          ast,
@@ -1503,7 +1502,13 @@ impl<'comments> Formatter<'comments> {
                             arg_comments,
                         )
                     },
-                )))
+                )
+                .collect::<Vec<Document<'a>>>();
+            constructor
+                .name
+                .as_str()
+                .to_doc()
+                .append(self.wrap_function_call_args(args, &constructor.location))
                 .group()
         };
 
@@ -2305,7 +2310,7 @@ impl<'comments> Formatter<'comments> {
         let closing_parens = match printed_comments(comments, false) {
             None => docvec!(break_(",", ""), ")"),
             Some(comment) => {
-                docvec!(break_(",", "").nest(INDENT), comment, line(), ")").force_break()
+                docvec!(break_(",", "").nest(INDENT), comment.nest(INDENT), line(), ")").force_break()
             }
         };
 

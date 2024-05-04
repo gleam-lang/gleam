@@ -5960,6 +5960,34 @@ pub const wibble = 1
 }
 
 #[test]
+fn comments_inside_type_constructor() {
+    assert_format!(
+        r#"type Select {
+  Select(
+    // comment: String,
+    // modifier: String,
+    // with: String,
+    select: String,
+    distinct: String,
+    from: String,
+    join: String,
+    where: String,
+    group_by: String,
+    having: String,
+    // window: String,
+    order: String,
+    limit: String,
+    offset: String,
+    union: String,
+    // stuff
+    // epilog: String,
+  )
+}
+"#
+    );
+}
+
+#[test]
 fn comments_inside_constant_list() {
     assert_format!(
         r#"const wibble = [
@@ -6031,6 +6059,23 @@ fn comments_at_the_end_of_anonymous_function() {
     // another final comment
     // at the end of the block
   }
+}
+"#
+    );
+}
+
+#[test]
+fn comments_at_the_end_of_function_call() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(
+    wobble,
+    wubble,
+    wabble,
+    // One
+    // Two
+    // Three
+  )
 }
 "#
     );
