@@ -42,6 +42,23 @@
   when building them locally. It is still added when publishing to Hex.
   ([Pi-Cla](https://github.com/Pi-Cla))
 
+- An error is now emitted when compiling to Erlang and there is a Gleam module
+  that would overwrite a built-in Erlang/OTP module, causing cryptic errors and
+  crashes.
+  ([Louis Pilfold](https://github.com/lpil))
+
+  ```
+  error: Erlang module name collision
+
+  The module `src/code.gleam` compiles to an Erlang module named `code`.
+
+  By default Erlang includes a module with the same name so if we were to
+  compile and load your module it would overwrite the Erlang one, potentially
+  causing confusing errors and crashes.
+
+  Hint: Rename this module and try again.
+  ```
+
 ### Compiler
 
 - The compiler will now raise a warning for `let assert` assignments where the

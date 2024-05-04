@@ -267,6 +267,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("Corrupt manifest.toml")]
     CorruptManifest,
+
+    #[error("The Gleam module {path} would overwrite the Erlang module {name}")]
+    GleamModuleWouldOverwriteStandardErlangModule { name: EcoString, path: Utf8PathBuf },
 }
 
 impl Error {
@@ -3346,6 +3349,21 @@ but you are using v{gleam_version}.",
                 level: Level::Error,
                 location: None,
                 hint: Some("Please run `gleam update` to fix it.".into()),
+            }],
+
+            Error::GleamModuleWouldOverwriteStandardErlangModule { name, path } =>
+vec![Diagnostic {
+                title: "Erlang module name collision".into(),
+                text: wrap_format!("The module `{path}` compiles to an Erlang module \
+named `{name}`.
+
+By default Erlang includes a module with the same name so if we were \
+to compile and load your module it would overwrite the Erlang one, potentially \
+causing confusing errors and crashes.
+"),
+                level: Level::Error,
+                location: None,
+                hint: Some("Rename this module and try again.".into()),
             }],
         }
     }

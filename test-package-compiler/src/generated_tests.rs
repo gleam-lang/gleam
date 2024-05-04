@@ -231,6 +231,18 @@ fn javascript_import() {
 
 #[rustfmt::skip]
 #[test]
+fn not_overwriting_erlang_module() {
+    let output =
+        crate::prepare("./cases/not_overwriting_erlang_module");
+    insta::assert_snapshot!(
+        "not_overwriting_erlang_module",
+        output,
+        "./cases/not_overwriting_erlang_module"
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn opaque_type_accessor() {
     let output =
         crate::prepare("./cases/opaque_type_accessor");
@@ -250,6 +262,18 @@ fn opaque_type_destructure() {
         "opaque_type_destructure",
         output,
         "./cases/opaque_type_destructure"
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn overwriting_erlang_module() {
+    let output =
+        crate::prepare("./cases/overwriting_erlang_module");
+    insta::assert_snapshot!(
+        "overwriting_erlang_module",
+        output,
+        "./cases/overwriting_erlang_module"
     );
 }
 
