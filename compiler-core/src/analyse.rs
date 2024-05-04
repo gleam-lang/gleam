@@ -245,12 +245,24 @@ pub fn infer_module<A>(
         for definition in group {
             match definition {
                 CallGraphNode::Function(f) => {
-                    let statement =
-                        infer_function(f, &mut env, &mut hydrators, &name, &mut errors)?;
-                    working_group.push(statement);
+                    let statement = infer_function(f, &mut env, &mut hydrators, &name, &mut errors);
+                    match statement {
+                        Ok(statement) => working_group.push(statement),
+                        Err(e) => {
+                            // TODO: We do this to maintain any constant related errors within the function
+                            // Once function inference is continuable this entire match will be removed
+                            let mut errs = Vec1::new(e);
+                            errs.append(&mut errors);
+                            errs.sort_by_key(|e| e.start_location());
+                            return Err(InferenceFailure {
+                                ast: None,
+                                errors: errs,
+                            });
+                        }
+                    }
                 }
                 CallGraphNode::ModuleConstant(c) => {
-                    let statement = infer_module_constant(c, &mut env, &name, &mut errors)?;
+                    let statement = infer_module_constant(c, &mut env, &name, &mut errors);
                     working_group.push(statement);
                 }
             }
@@ -1079,7 +1091,7 @@ fn infer_module_constant(
     environment: &mut Environment<'_>,
     module_name: &EcoString,
     errors: &mut Vec<Error>,
-) -> Result<TypedDefinition, Error> {
+) -> TypedDefinition {
     let ModuleConstant {
         documentation: doc,
         location,
@@ -1099,7 +1111,7 @@ fn infer_module_constant(
             has_javascript_external: false,
         },
     );
-    let typed_expr = expr_typer.infer_const(&annotation, *value, errors)?;
+    let typed_expr = expr_typer.infer_const(&annotation, *value, errors);
     let type_ = typed_expr.type_();
     let implementations = expr_typer.implementations;
 
@@ -1129,7 +1141,7 @@ fn infer_module_constant(
         environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
     }
 
-    Ok(Definition::ModuleConstant(ModuleConstant {
+    Definition::ModuleConstant(ModuleConstant {
         documentation: doc,
         location,
         name,
@@ -1139,7 +1151,7 @@ fn infer_module_constant(
         type_,
         deprecation,
         implementations,
-    }))
+    })
 }
 
 pub fn infer_bit_array_option<UntypedValue, TypedValue, Typer>(

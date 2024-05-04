@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 343
 expression: "case [1] { x if x == [1, 2.0] -> 1 }"
 ---
 error: Type mismatch
@@ -17,3 +16,15 @@ Found type:
 
     Float
 
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:1:1
+  │
+1 │ case [1] { x if x == [1, 2.0] -> 1 }
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This case expression does not have a pattern for all possible values.
+If it is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    _
