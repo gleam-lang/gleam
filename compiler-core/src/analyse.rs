@@ -245,11 +245,12 @@ pub fn infer_module<A>(
         for definition in group {
             match definition {
                 CallGraphNode::Function(f) => {
-                    let statement = infer_function(f, &mut env, &mut hydrators, &name)?;
+                    let statement =
+                        infer_function(f, &mut env, &mut hydrators, &name, &mut errors)?;
                     working_group.push(statement);
                 }
                 CallGraphNode::ModuleConstant(c) => {
-                    let statement = infer_module_constant(c, &mut env, &name)?;
+                    let statement = infer_module_constant(c, &mut env, &name, &mut errors)?;
                     working_group.push(statement);
                 }
             }
@@ -723,6 +724,7 @@ fn infer_function(
     environment: &mut Environment<'_>,
     hydrators: &mut HashMap<EcoString, Hydrator>,
     module_name: &EcoString,
+    errors: &mut Vec<Error>,
 ) -> Result<TypedDefinition, Error> {
     let Function {
         documentation: doc,
@@ -783,7 +785,7 @@ fn infer_function(
             .expect("Could not find hydrator for fn");
 
         let (args, body) =
-            expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type))?;
+            expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type), errors)?;
         let args_types = args.iter().map(|a| a.type_.clone()).collect();
         let typ = fn_(args_types, body.last().type_());
         Ok((typ, args, body, expr_typer.implementations))
@@ -1076,6 +1078,7 @@ fn infer_module_constant(
     c: ModuleConstant<(), ()>,
     environment: &mut Environment<'_>,
     module_name: &EcoString,
+    errors: &mut Vec<Error>,
 ) -> Result<TypedDefinition, Error> {
     let ModuleConstant {
         documentation: doc,
@@ -1096,7 +1099,7 @@ fn infer_module_constant(
             has_javascript_external: false,
         },
     );
-    let typed_expr = expr_typer.infer_const(&annotation, *value)?;
+    let typed_expr = expr_typer.infer_const(&annotation, *value, errors)?;
     let type_ = typed_expr.type_();
     let implementations = expr_typer.implementations;
 

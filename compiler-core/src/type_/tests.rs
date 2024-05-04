@@ -284,7 +284,7 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
             has_javascript_external: false,
         },
     )
-    .infer_statements(ast)
+    .infer_statements(ast, &mut vec![])
 }
 
 fn infer(src: &str) -> String {
