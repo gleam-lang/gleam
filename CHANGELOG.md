@@ -251,6 +251,53 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Comments appearing after arguments are not longer moved to different place.
+  You can now write all of those:
+
+  ```gleam
+  type Record {
+    Record(
+      field: String,
+      // comment_line_1: String,
+      // comment_line_2: String,
+    )
+  }
+  ```
+
+  ```gleam
+  pub fn main() {
+    fn(
+      a,
+      // A comment 2
+    ) {
+      1
+    }
+  }
+  ```
+
+  ```gleam
+  fn main() {
+    let triple = Triple(1, 2, 3)
+    let Triple(
+      a,
+      ..,
+      // comment
+    ) = triple
+    a
+  }
+  ```
+
+  ```gleam
+  type Record {
+    Record(
+      // comment_line_1: String,
+      // comment_line_2: String,
+    )
+  }
+  ```
+
+  ([Mateusz Ledwoń](https://github.com/Axot017))
+
 ### Language Server
 
 - The code action to remove unused imports now removes the entire line is
