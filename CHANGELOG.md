@@ -38,9 +38,6 @@
 
   ([zahash](https://github.com/zahash))
 
-- Replace `actions-rs/toolchain` with `dtolnay/rust-toolchain` and
-  `actions-rs/cargo` with `clechasseur/rs-cargo` ([Pi-Cla](https://github.com/Pi-Cla))
-
 - A link to the package on Hex is no longer auto-added to the HTML documentation
   when building them locally. It is still added when publishing to Hex.
   ([Pi-Cla](https://github.com/Pi-Cla))
@@ -312,8 +309,3 @@
 - Fixed a bug where having utf8 symbols in `gleam.toml`'s description value
   would result in an HTTP 500 error when running `gleam publish`.
   ([inoas](https://github.com/inoas))
-
-- CI Builds on aarch64-unknown-linux-gnu now work again.
-  The issue was caused by using an out of date version of `ring`
-  which was finally removed after the bump in dependencies from `hexpm-rust`
-  ([Pi-Cla](https://github.com/Pi-Cla))
