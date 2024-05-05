@@ -1,7 +1,7 @@
 use camino::Utf8PathBuf;
 use lsp::{
     notification::{DidChangeWatchedFiles, DidOpenTextDocument},
-    request::GotoDefinition,
+    request::{GotoDefinition, SemanticTokensFullRequest},
 };
 use lsp_types::{
     self as lsp,
@@ -23,6 +23,7 @@ pub enum Request {
     GoToDefinition(lsp::GotoDefinitionParams),
     Completion(lsp::CompletionParams),
     CodeAction(lsp::CodeActionParams),
+    SemanticTokensFull(lsp::SemanticTokensParams),
 }
 
 impl Request {
@@ -48,6 +49,10 @@ impl Request {
             "textDocument/codeAction" => {
                 let params = cast_request::<CodeActionRequest>(request);
                 Some(Message::Request(id, Request::CodeAction(params)))
+            }
+            "textDocument/semanticTokens/full" => {
+                let params = cast_request::<SemanticTokensFullRequest>(request);
+                Some(Message::Request(id, Request::SemanticTokensFull(params)))
             }
             _ => None,
         }

@@ -1,4 +1,5 @@
 use super::{
+    engine::SemanticTokenMapping,
     messages::{Message, MessageBuffer, Next, Notification, Request},
     progress::ConnectionProgressReporter,
 };
@@ -17,6 +18,7 @@ use crate::{
 };
 use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
+use lsp::{SemanticTokensLegend, SemanticTokensOptions, WorkDoneProgressOptions};
 use lsp_types::{
     self as lsp, HoverProviderCapability, InitializeParams, Position, PublishDiagnosticsParams,
     Range, TextEdit, Url,
@@ -101,6 +103,7 @@ where
             Request::GoToDefinition(param) => self.goto_definition(param),
             Request::Completion(param) => self.completion(param),
             Request::CodeAction(param) => self.code_action(param),
+            Request::SemanticTokensFull(param) => self.semantic_tokens_full(param),
         };
 
         self.publish_feedback(feedback);
@@ -319,6 +322,11 @@ where
         self.respond_with_engine(path, |engine| engine.action(params))
     }
 
+    fn semantic_tokens_full(&mut self, params: lsp::SemanticTokensParams) -> (Json, Feedback) {
+        let path = super::path(&params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.semantic_tokens_full(params))
+    }
+
     fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
         self.project_changed(&path);
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
@@ -405,7 +413,17 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         execute_command_provider: None,
         workspace: None,
         call_hierarchy_provider: None,
-        semantic_tokens_provider: None,
+        semantic_tokens_provider: Some(
+            lsp::SemanticTokensServerCapabilities::SemanticTokensOptions(SemanticTokensOptions {
+                work_done_progress_options: WorkDoneProgressOptions::default(),
+                legend: SemanticTokensLegend {
+                    token_types: SemanticTokenMapping::LSP_MAPPING.into(),
+                    token_modifiers: vec![],
+                },
+                range: Some(false),
+                full: Some(lsp::SemanticTokensFullOptions::Bool(true)),
+            }),
+        ),
         moniker_provider: None,
         linked_editing_range_provider: None,
         experimental: None,

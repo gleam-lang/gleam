@@ -1,8 +1,10 @@
 use crate::{
     ast::{
         Arg, Definition, Import, ModuleConstant, Publicity, SrcSpan, TypedDefinition, TypedExpr,
-        TypedFunction, TypedPattern,
+        TypedFunction, TypedPattern, ASSERT_FAIL_VARIABLE, ASSERT_SUBJECT_VARIABLE,
+        CAPTURE_VARIABLE, PIPE_VARIABLE, TRY_VARIABLE, USE_ASSIGNMENT_VARIABLE,
     },
+    ast_visitor::Visitor,
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -12,16 +14,16 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        pretty::Printer, ModuleInterface, PreludeType, Type, TypeConstructor,
+        pretty::Printer, ModuleInterface, PreludeType, Type, TypeConstructor, TypeVar,
         ValueConstructorVariant,
     },
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
-use lsp::CodeAction;
+use lsp::{CodeAction, SemanticToken, SemanticTokens, SemanticTokensResult};
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
-use std::sync::Arc;
+use std::{cell::RefCell, sync::Arc};
 use strum::IntoEnumIterator;
 
 use super::{
@@ -63,6 +65,41 @@ pub struct LanguageServerEngine<IO, Reporter> {
     /// Used to know if to show the "View on HexDocs" link
     /// when hovering on an imported value
     hex_deps: std::collections::HashSet<EcoString>,
+}
+
+macro_rules! semantic_tokens {
+    ($($name: ident => $lsp_name: ident),* $(,)?) => {
+        // C-like enumerations can be casted to 0,1,2 etc in order which is exactly what the
+        // LSP protocal needs for the mapping
+        #[derive(Debug)]
+        #[allow(non_camel_case_types)]
+        pub(crate) enum SemanticTokenMapping {
+            $(
+            $name,
+            )*
+        }
+
+        impl SemanticTokenMapping {
+            pub(crate) const LSP_MAPPING: &'static [lsp::SemanticTokenType] = &[
+                $(
+                lsp::SemanticTokenType::$lsp_name,
+                )*
+            ];
+        }
+
+        $(
+        pub(crate) const $name: u32 = SemanticTokenMapping::$name as u32;
+        )*
+    }
+}
+
+// Constructs an integer <=> string mapping according in accordance to
+// https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#semanticTokensLegend
+semantic_tokens! {
+    SEMANTIC_TOKEN_TYPE => TYPE,
+    SEMANTIC_TOKEN_PROPERTY => PROPERTY,
+    SEMANTIC_TOKEN_FUNCTION => FUNCTION,
+    SEMANTIC_TOKEN_STRUCT => STRUCT,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -254,6 +291,198 @@ where
             } else {
                 Some(actions)
             })
+        })
+    }
+
+    pub fn semantic_tokens_full(
+        &mut self,
+        params: lsp::SemanticTokensParams,
+    ) -> Response<Option<SemanticTokensResult>> {
+        self.respond(|this| {
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(None);
+            };
+
+            let semantic_tokens: RefCell<Vec<SemanticToken>> = vec![].into();
+
+            let mut last_line = 0;
+            let mut last_char = 0;
+            let line_numbers = LineNumbers::new(&module.code);
+
+            let push_range: RefCell<_> = (|span: SrcSpan, token_type: u32| {
+                let requested_range = src_span_to_lsp_range(span, &line_numbers);
+
+                assert_eq!(requested_range.start.line, requested_range.end.line);
+
+                let delta_line = requested_range.start.line - last_line;
+                last_line = requested_range.start.line;
+
+                let delta_start = if delta_line == 0 {
+                    requested_range.start.character - last_char
+                } else {
+                    requested_range.start.character
+                };
+                last_char = requested_range.start.character;
+
+                semantic_tokens.borrow_mut().push(SemanticToken {
+                    delta_line,
+                    delta_start,
+                    length: requested_range.end.character - requested_range.start.character,
+                    token_type,
+                    token_modifiers_bitset: 0,
+                })
+            })
+            .into();
+
+            let type_to_token_type = |typ: &Type| {
+                let mut token_type = SEMANTIC_TOKEN_FUNCTION;
+                let mut type__ = typ.to_owned();
+                loop {
+                    match type__ {
+                        Type::Named {
+                            ref module,
+                            ref name,
+                            ..
+                        } => {
+                            let module_interface =
+                                this.compiler.get_module_inferface(module.as_ref());
+
+                            if let Some(module) = module_interface {
+                                if let Some(exported_value) = module.values.get(name) {
+                                    match &exported_value.variant {
+                                        ValueConstructorVariant::LocalVariable { .. } => {
+                                            // unreachable!
+                                            break;
+                                        }
+                                        ValueConstructorVariant::ModuleConstant { .. } => {
+                                            token_type = SEMANTIC_TOKEN_PROPERTY;
+                                            break;
+                                        }
+                                        ValueConstructorVariant::LocalConstant { .. } => {
+                                            token_type = SEMANTIC_TOKEN_PROPERTY;
+                                            break;
+                                        }
+                                        ValueConstructorVariant::ModuleFn { .. } => {
+                                            token_type = SEMANTIC_TOKEN_FUNCTION;
+                                            break;
+                                        }
+                                        ValueConstructorVariant::Record { .. } => {
+                                            token_type = SEMANTIC_TOKEN_PROPERTY;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if module.types.get(name).is_some() {
+                                    token_type = SEMANTIC_TOKEN_PROPERTY;
+                                    break;
+                                }
+                            }
+                        }
+                        Type::Fn { .. } => {
+                            token_type = SEMANTIC_TOKEN_FUNCTION;
+                            break;
+                        }
+                        Type::Var { type_ } => {
+                            let borrowed = type_.borrow();
+                            match &*borrowed {
+                                TypeVar::Unbound { .. } => break,
+                                TypeVar::Link { type_ } => type__ = type_.as_ref().to_owned(),
+                                TypeVar::Generic { .. } => break,
+                            }
+                        }
+                        Type::Tuple { .. } => {
+                            token_type = SEMANTIC_TOKEN_PROPERTY;
+                            break;
+                        }
+                    }
+                }
+
+                token_type
+            };
+
+            Visitor {
+                owned_visit_module_select: Some(&mut |location, typ, label, _, _, _| {
+                    let index_span = SrcSpan {
+                        start: location.end - label.len() as u32,
+                        end: location.end,
+                    };
+                    push_range.borrow_mut()(index_span, type_to_token_type(typ))
+                }),
+                owned_visit_tuple_index: Some(&mut |span, _, index, _| {
+                    let index_span = SrcSpan {
+                        start: span.end - index.to_string().len() as u32,
+                        end: span.end,
+                    };
+                    push_range.borrow_mut()(index_span, SEMANTIC_TOKEN_PROPERTY)
+                }),
+                owned_visit_record_access: Some(&mut |location, typ, label, _, _| {
+                    let index_span = SrcSpan {
+                        start: location.end - label.len() as u32,
+                        end: location.end,
+                    };
+
+                    push_range.borrow_mut()(index_span, type_to_token_type(typ))
+                }),
+                owned_visit_pattern_of_var: Some(&mut |span, name, typ| {
+                    if name == PIPE_VARIABLE
+                        || name == TRY_VARIABLE
+                        || name == USE_ASSIGNMENT_VARIABLE
+                        || name == ASSERT_FAIL_VARIABLE
+                        || name == ASSERT_SUBJECT_VARIABLE
+                        || name == CAPTURE_VARIABLE
+                    {
+                        return;
+                    }
+
+                    push_range.borrow_mut()(*span, type_to_token_type(typ));
+                }),
+                owned_visit_import: Some(&mut |import| {
+                    for unqualified_type in &import.unqualified_types {
+                        push_range.borrow_mut()(unqualified_type.location, SEMANTIC_TOKEN_TYPE);
+                    }
+
+                    for unqualified_value in &import.unqualified_values {
+                        let token_type = this
+                            .compiler
+                            .get_module_inferface(&import.module)
+                            .map(|module_interface| {
+                                match module_interface.values.get(&unqualified_value.name) {
+                                    Some(value_ctor) => match value_ctor.variant {
+                                        ValueConstructorVariant::LocalVariable { .. } => {
+                                            // unreachable!
+                                            None
+                                        }
+                                        ValueConstructorVariant::ModuleConstant { .. } => {
+                                            Some(SEMANTIC_TOKEN_PROPERTY)
+                                        }
+                                        ValueConstructorVariant::LocalConstant { .. } => {
+                                            Some(SEMANTIC_TOKEN_PROPERTY)
+                                        }
+                                        ValueConstructorVariant::ModuleFn { .. } => {
+                                            Some(SEMANTIC_TOKEN_FUNCTION)
+                                        }
+                                        ValueConstructorVariant::Record { .. } => {
+                                            Some(SEMANTIC_TOKEN_STRUCT)
+                                        }
+                                    },
+                                    None => None,
+                                }
+                            })
+                            .flatten();
+
+                        if let Some(token_type) = token_type {
+                            push_range.borrow_mut()(unqualified_value.location, token_type);
+                        }
+                    }
+                }),
+            }
+            .visit_module(&module.ast);
+
+            Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
+                result_id: None,
+                data: semantic_tokens.into_inner(),
+            })))
         })
     }
 
