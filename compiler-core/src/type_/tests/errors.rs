@@ -344,7 +344,7 @@ fn case_tuple_guard() {
 
 #[test]
 fn case_list_guard() {
-    assert_error!("case [1] { x if x == [1, 2.0] -> 1 }");
+    assert_error!("case [1] { x if x == [1, 2.0] -> 1 _ -> 2 }");
 }
 
 #[test]
