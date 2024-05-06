@@ -2317,7 +2317,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let inferred = self.infer_const_value(value);
 
         // Get the type of the annotation if it exists and validate it against the inferred value.
-        let annotation = annotation.as_ref().map(|a| self.type_from_ast(&a));
+        let annotation = annotation.as_ref().map(|a| self.type_from_ast(a));
         match (annotation, inferred) {
             // No annotation and valid inferred value.
             (None, Ok(inferred)) => inferred,
