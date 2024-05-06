@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "const invalid_everything: MyInvalidType = MyInvalidValue\nconst mismatched_types: String = 7"
+---
+error: Unknown type
+  ┌─ /src/one/two.gleam:1:27
+  │
+1 │ const invalid_everything: MyInvalidType = MyInvalidValue
+  │                           ^^^^^^^^^^^^^
+
+The type `MyInvalidType` is not defined or imported in this module.
+
+error: Unknown variable
+  ┌─ /src/one/two.gleam:1:43
+  │
+1 │ const invalid_everything: MyInvalidType = MyInvalidValue
+  │                                           ^^^^^^^^^^^^^^
+
+The name `MyInvalidValue` is not in scope here.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:2:34
+  │
+2 │ const mismatched_types: String = 7
+  │                                  ^
+
+Expected type:
+
+    String
+
+Found type:
+
+    Int

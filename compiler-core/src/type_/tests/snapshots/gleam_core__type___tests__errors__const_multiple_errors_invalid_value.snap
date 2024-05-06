@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "const invalid_value: String = MyInvalidValue\nconst invalid_unannotated_value = [1, 2.0]"
+---
+error: Unknown variable
+  ┌─ /src/one/two.gleam:1:31
+  │
+1 │ const invalid_value: String = MyInvalidValue
+  │                               ^^^^^^^^^^^^^^
+
+The name `MyInvalidValue` is not in scope here.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:2:39
+  │
+2 │ const invalid_unannotated_value = [1, 2.0]
+  │                                       ^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Float
