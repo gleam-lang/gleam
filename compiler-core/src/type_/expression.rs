@@ -2316,59 +2316,56 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let loc = value.location();
         let inferred = self.infer_const_value(value);
 
-        // Check type annotation is accurate.
-        if let Some(ann) = annotation {
-            match (self.type_from_ast(ann), inferred) {
-                // Type annotation and inferred value are valid. Ensure they are unifiable and use the inferred type.
-                // NOTE: if the types are not unifiable we use the annotated type.
-                (Ok(const_ann), Ok(inferred)) => {
-                    if let Err(e) = unify(const_ann.clone(), inferred.type_())
-                        .map_err(|e| convert_unify_error(e, inferred.location()))
-                    {
-                        self.errors.push(e);
-                        Constant::Invalid {
-                            location: loc,
-                            typ: const_ann,
-                        }
-                    } else {
-                        inferred
-                    }
+        // Get the type of the annotation if it exists and validate it against the inferred value.
+        let annotation = annotation.as_ref().map(|a| self.type_from_ast(&a));
+        match (annotation, inferred) {
+            // No annotation and valid inferred value.
+            (None, Ok(inferred)) => inferred,
+            // No annotation and invalid inferred value. Use an unbound variable hole.
+            (None, Err(e)) => {
+                self.errors.push(e);
+                Constant::Invalid {
+                    location: loc,
+                    typ: self.new_unbound_var(),
                 }
-                // Type annotation is valid but not the inferred value. Place a placeholder constant with the annotation type.
-                // This should limit the errors to only the definition.
-                (Ok(const_ann), Err(value_err)) => {
-                    self.errors.push(value_err.clone());
+            }
+            // Type annotation and inferred value are valid. Ensure they are unifiable.
+            // NOTE: if the types are not unifiable we use the annotated type.
+            (Some(Ok(const_ann)), Ok(inferred)) => {
+                if let Err(e) = unify(const_ann.clone(), inferred.type_())
+                    .map_err(|e| convert_unify_error(e, inferred.location()))
+                {
+                    self.errors.push(e);
                     Constant::Invalid {
                         location: loc,
                         typ: const_ann,
                     }
-                }
-                // Type annotation is invalid but the inferred value is ok. Use the inferred type.
-                (Err(annotation_err), Ok(inferred)) => {
-                    self.errors.push(annotation_err);
+                } else {
                     inferred
                 }
-                // Type annotation and inferred value are invalid. Place a placeholder constant with an unbound type.
-                // This should limit the errors to only the definition assuming the constant is used consistently.
-                (Err(annotation_err), Err(value_err)) => {
-                    self.errors.push(annotation_err);
-                    self.errors.push(value_err.clone());
-                    Constant::Invalid {
-                        location: loc,
-                        typ: self.new_unbound_var(),
-                    }
+            }
+            // Type annotation is valid but not the inferred value. Place a placeholder constant with the annotation type.
+            // This should limit the errors to only the definition.
+            (Some(Ok(const_ann)), Err(value_err)) => {
+                self.errors.push(value_err.clone());
+                Constant::Invalid {
+                    location: loc,
+                    typ: const_ann,
                 }
             }
-        } else {
-            // No type annotation, use the inferred value.
-            match inferred {
-                Ok(inferred) => inferred,
-                Err(e) => {
-                    self.errors.push(e);
-                    Constant::Invalid {
-                        location: loc,
-                        typ: self.new_unbound_var(),
-                    }
+            // Type annotation is invalid but the inferred value is ok. Use the inferred type.
+            (Some(Err(annotation_err)), Ok(inferred)) => {
+                self.errors.push(annotation_err);
+                inferred
+            }
+            // Type annotation and inferred value are invalid. Place a placeholder constant with an unbound type.
+            // This should limit the errors to only the definition assuming the constant is used consistently.
+            (Some(Err(annotation_err)), Err(value_err)) => {
+                self.errors.push(annotation_err);
+                self.errors.push(value_err.clone());
+                Constant::Invalid {
+                    location: loc,
+                    typ: self.new_unbound_var(),
                 }
             }
         }
