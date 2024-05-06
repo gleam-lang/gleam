@@ -270,6 +270,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("The Gleam module {path} would overwrite the Erlang module {name}")]
     GleamModuleWouldOverwriteStandardErlangModule { name: EcoString, path: Utf8PathBuf },
+
+    #[error("Version already published")]
+    HexPublishReplaceRequired { version: String },
 }
 
 impl Error {
@@ -3364,6 +3367,16 @@ causing confusing errors and crashes.
                 level: Level::Error,
                 location: None,
                 hint: Some("Rename this module and try again.".into()),
+            }],
+
+            Error::HexPublishReplaceRequired { version } => vec![Diagnostic {
+                title: "Version already published".into(),
+                text: wrap_format!("Version v{version} has already been published.
+This release has been recently published so you can replace it \
+or you can publish it using a different version number"),
+                level: Level::Error,
+                location: None,
+                hint: Some("Please add the --replace flag if you want to replace the release.".into()),
             }],
         }
     }
