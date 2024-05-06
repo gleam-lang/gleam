@@ -409,12 +409,12 @@ where
                     };
                     push_range.borrow_mut()(index_span, type_to_token_type(typ))
                 }),
-                owned_visit_tuple_index: Some(&mut |span, _, index, _| {
+                owned_visit_tuple_index: Some(&mut |span, typ, index, _| {
                     let index_span = SrcSpan {
                         start: span.end - index.to_string().len() as u32,
                         end: span.end,
                     };
-                    push_range.borrow_mut()(index_span, SEMANTIC_TOKEN_PROPERTY)
+                    push_range.borrow_mut()(index_span, type_to_token_type(typ))
                 }),
                 owned_visit_record_access: Some(&mut |location, typ, label, _, _| {
                     let index_span = SrcSpan {
