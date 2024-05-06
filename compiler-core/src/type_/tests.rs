@@ -286,8 +286,9 @@ fn compile_statement_sequence(
             has_erlang_external: false,
             has_javascript_external: false,
         },
+        errors,
     )
-    .infer_statements(ast, errors);
+    .infer_statements(ast);
     match (res, Vec1::try_from_vec(errors.to_vec())) {
         (Ok(res), Err(_)) => Ok(res),
         (Ok(_), Ok(errors)) => Err(errors),

@@ -791,13 +791,13 @@ fn infer_function(
             .zip(&args_types)
             .map(|(a, t)| a.set_type(t.clone()))
             .collect();
-        let mut expr_typer = ExprTyper::new(environment, definition);
+        let mut expr_typer = ExprTyper::new(environment, definition, errors);
         expr_typer.hydrator = hydrators
             .remove(&name)
             .expect("Could not find hydrator for fn");
 
         let (args, body) =
-            expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type), errors)?;
+            expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type))?;
         let args_types = args.iter().map(|a| a.type_.clone()).collect();
         let typ = fn_(args_types, body.last().type_());
         Ok((typ, args, body, expr_typer.implementations))
@@ -1110,8 +1110,9 @@ fn infer_module_constant(
             has_erlang_external: false,
             has_javascript_external: false,
         },
+        errors,
     );
-    let typed_expr = expr_typer.infer_const(&annotation, *value, errors);
+    let typed_expr = expr_typer.infer_const(&annotation, *value);
     let type_ = typed_expr.type_();
     let implementations = expr_typer.implementations;
 

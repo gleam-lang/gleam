@@ -136,6 +136,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             .into(),
         },
     );
+    let errors = &mut vec![];
     ExprTyper::new(
         &mut environment,
         FunctionDefinition {
@@ -143,8 +144,9 @@ fn compile_expression(src: &str) -> TypedStatement {
             has_erlang_external: false,
             has_javascript_external: false,
         },
+        errors,
     )
-    .infer_statements(ast, &mut vec![])
+    .infer_statements(ast)
     .expect("should successfully infer")
     .first()
     .clone()
