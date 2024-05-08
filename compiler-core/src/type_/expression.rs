@@ -2347,7 +2347,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Type annotation is valid but not the inferred value. Place a placeholder constant with the annotation type.
             // This should limit the errors to only the definition.
             (Some(Ok(const_ann)), Err(value_err)) => {
-                self.errors.push(value_err.clone());
+                self.errors.push(value_err);
                 Constant::Invalid {
                     location: loc,
                     typ: const_ann,
@@ -2362,7 +2362,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // This should limit the errors to only the definition assuming the constant is used consistently.
             (Some(Err(annotation_err)), Err(value_err)) => {
                 self.errors.push(annotation_err);
-                self.errors.push(value_err.clone());
+                self.errors.push(value_err);
                 Constant::Invalid {
                     location: loc,
                     typ: self.new_unbound_var(),

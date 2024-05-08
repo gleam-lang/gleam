@@ -2057,6 +2057,8 @@ fn find_referenced_private_functions(
     already_found: &mut HashSet<EcoString>,
 ) {
     match constant {
+        Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
+
         Constant::Int { .. }
         | Constant::Float { .. }
         | Constant::String { .. }
