@@ -228,6 +228,20 @@ impl<'module> Generator<'module> {
 
                 // Sized ints
                 [Opt::Size { value: size, .. }] => {
+                    let size_int = match *size.clone() {
+                        TypedExpr::Int {
+                            location: _,
+                            typ: _,
+                            value,
+                        } => value.parse().unwrap_or(0),
+                        _ => 0,
+                    };
+                    if size_int > 0 && size_int % 8 != 0 {
+                        return Err(Error::Unsupported {
+                            feature: "Non byte aligned array".into(),
+                            location: segment.location,
+                        });
+                    }
                     self.tracker.sized_integer_segment_used = true;
                     let size = self.not_in_tail_position(|gen| gen.wrap_expression(size))?;
                     Ok(docvec!["sizedInt(", value, ", ", size, ")"])
@@ -1317,6 +1331,16 @@ fn bit_array<'a>(
 
             // Sized ints
             [Opt::Size { value: size, .. }] => {
+                let size_int = match *size.clone() {
+                    Constant::Int { location: _, value } => value.parse().unwrap_or(0),
+                    _ => 0,
+                };
+                if size_int > 0 && size_int % 8 != 0 {
+                    return Err(Error::Unsupported {
+                        feature: "Non byte aligned array".into(),
+                        location: segment.location,
+                    });
+                }
                 tracker.sized_integer_segment_used = true;
                 let size = constant_expr_fun(tracker, size)?;
                 Ok(docvec!["sizedInt(", value, ", ", size, ")"])
