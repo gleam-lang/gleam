@@ -1,9 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go() {\n  <<256:size(64)>>\n}\n"
+expression: "\nfn go() {\n  let x = 4\n  <<256:size(x)>>\n}\n"
 ---
 import { toBitArray, sizedInt } from "../gleam.mjs";
 
 function go() {
-  return toBitArray([sizedInt(256, 64)]);
+  let x = 4;
+  return toBitArray([sizedInt(256, x)]);
 }
