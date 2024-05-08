@@ -32,6 +32,24 @@
   reserved word in Erlang/OTP 27.
   ([Jake Barszcz](https://github.com/barszcz))
 
+- Non byte aligned arrays that use literals for size are now marked as an
+  Unsupported feature for Javascript since they would already cause
+  a runtime error on Javascript.
+
+  This means if you compile specifically for Javascript you will now recieve this error:
+
+  ```
+  error: Unsupported feature for compilation target
+    ┌─ /src/test/gleam_test.gleam:6:5
+    │
+  6 │   <<1:size(5)>>
+    │     ^^^^^^^^^
+
+  Non byte aligned array is not supported for JavaScript compilation.
+  ```
+
+  Else any functions which rely on this will not be compiled into Javascript.
+
 ### Formatter
 
 ### Language Server
