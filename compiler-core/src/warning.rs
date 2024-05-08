@@ -830,6 +830,27 @@ Your code will crash before reaching this point.",
                         }),
                     }
                 }
+
+                type_::Warning::RedundantPipeFunctionCapture { location } => Diagnostic {
+                    title: "Redundant function capture".into(),
+                    text: wrap(
+                        "This function capture is redundant since the value is already piped as \
+                        the first argument of this call.
+
+See: https://tour.gleam.run/functions/pipelines/",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some("You can safely remove this".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             },
         }
     }
