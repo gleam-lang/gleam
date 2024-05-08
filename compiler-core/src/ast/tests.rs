@@ -35,19 +35,18 @@ fn compile_module(src: &str) -> TypedModule {
     let line_numbers = LineNumbers::new(src);
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
-    crate::analyse::infer_module::<()>(
-        Target::Erlang,
-        &ids,
-        ast,
-        crate::build::Origin::Src,
-        &modules,
-        &TypeWarningEmitter::null(),
-        &std::collections::HashMap::new(),
-        TargetSupport::Enforced,
-        line_numbers,
-        &config,
-        "".into(),
-    )
+
+    crate::analyse::ModuleAnalyzer::<()> {
+        target: Target::Erlang,
+        ids: &ids,
+        origin: crate::build::Origin::Src,
+        importable_modules: &modules,
+        warnings: &TypeWarningEmitter::null(),
+        direct_dependencies: &std::collections::HashMap::new(),
+        target_support: TargetSupport::Enforced,
+        package_config: &config,
+    }
+    .infer_module(ast, line_numbers, "".into())
     .expect("should successfully infer")
 }
 

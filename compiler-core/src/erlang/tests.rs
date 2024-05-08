@@ -48,19 +48,18 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         let mut ast = parsed.module;
         ast.name = dep_name.into();
         let line_numbers = LineNumbers::new(dep_src);
-        let dep = crate::analyse::infer_module::<()>(
-            Target::Erlang,
-            &ids,
-            ast,
-            Origin::Src,
-            &modules,
-            &TypeWarningEmitter::null(),
-            &std::collections::HashMap::new(),
-            TargetSupport::NotEnforced,
-            line_numbers,
-            &dep_config,
-            "".into(),
-        )
+
+        let dep = crate::analyse::ModuleAnalyzer::<()> {
+            target: Target::Erlang,
+            ids: &ids,
+            origin: Origin::Src,
+            importable_modules: &modules,
+            warnings: &TypeWarningEmitter::null(),
+            direct_dependencies: &std::collections::HashMap::new(),
+            target_support: TargetSupport::NotEnforced,
+            package_config: &dep_config,
+        }
+        .infer_module(ast, line_numbers, "".into())
         .expect("should successfully infer dep Erlang");
         let _ = modules.insert(dep_name.into(), dep.type_info);
         let _ = direct_dependencies.insert(dep_package.into(), ());
@@ -71,19 +70,17 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
     let mut ast = parsed.module;
     ast.name = "my/mod".into();
     let line_numbers = LineNumbers::new(src);
-    let ast = crate::analyse::infer_module::<()>(
-        Target::Erlang,
-        &ids,
-        ast,
-        Origin::Src,
-        &modules,
-        &TypeWarningEmitter::null(),
-        &direct_dependencies,
-        TargetSupport::NotEnforced,
-        line_numbers,
-        &config,
-        "".into(),
-    )
+    let ast = crate::analyse::ModuleAnalyzer::<()> {
+        target: Target::Erlang,
+        ids: &ids,
+        origin: Origin::Src,
+        importable_modules: &modules,
+        warnings: &TypeWarningEmitter::null(),
+        direct_dependencies: &direct_dependencies,
+        target_support: TargetSupport::NotEnforced,
+        package_config: &config,
+    }
+    .infer_module(ast, line_numbers, "".into())
     .expect("should successfully infer root Erlang");
     let line_numbers = LineNumbers::new(src);
     module(&ast, &line_numbers).unwrap()

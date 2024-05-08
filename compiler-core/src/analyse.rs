@@ -130,226 +130,235 @@ impl From<Error> for InferenceFailure {
     }
 }
 
-// TODO: This takes too many arguments.
-#[allow(clippy::too_many_arguments)]
-/// Crawl the AST, annotating each node with the inferred type or
-/// returning an error.
-///
-pub fn infer_module<A>(
-    target: Target,
-    ids: &UniqueIdGenerator,
-    mut module: UntypedModule,
-    origin: Origin,
-    modules: &im::HashMap<EcoString, ModuleInterface>,
-    warnings: &TypeWarningEmitter,
-    direct_dependencies: &HashMap<EcoString, A>,
-    target_support: TargetSupport,
-    line_numbers: LineNumbers,
-    package_config: &PackageConfig,
-    src_path: Utf8PathBuf,
-) -> Result<TypedModule, InferenceFailure> {
-    let mut errors = Vec::new();
-    let name = module.name.clone();
-    let documentation = std::mem::take(&mut module.documentation);
-    let package = package_config.name.clone();
-    let env = Environment::new(
-        ids.clone(),
-        package_config.name.clone(),
-        name.clone(),
-        target,
-        modules,
-        warnings,
-        target_support,
-    );
-    validate_module_name(&name)?;
+#[derive(Debug)]
+pub struct ModuleAnalyzer<'a, A> {
+    pub target: Target,
+    pub ids: &'a UniqueIdGenerator,
+    pub origin: Origin,
+    pub importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
+    pub warnings: &'a TypeWarningEmitter,
+    pub direct_dependencies: &'a HashMap<EcoString, A>,
+    pub target_support: TargetSupport,
+    pub package_config: &'a PackageConfig,
+}
 
-    let mut type_names = HashMap::with_capacity(module.definitions.len());
-    let mut value_names = HashMap::with_capacity(module.definitions.len());
-    let mut hydrators = HashMap::with_capacity(module.definitions.len());
+impl<'a, A> ModuleAnalyzer<'a, A> {
+    // TODO: refactor this XL function to be easier to scan, the find details
+    // being in helper methods.
+    //
+    /// Crawl the AST, annotating each node with the inferred type or
+    /// returning an error.
+    ///
+    pub fn infer_module(
+        &self,
+        mut module: UntypedModule,
+        line_numbers: LineNumbers,
+        src_path: Utf8PathBuf,
+    ) -> Result<TypedModule, InferenceFailure> {
+        let mut errors = Vec::new();
+        let name = module.name.clone();
+        let documentation = std::mem::take(&mut module.documentation);
+        let package = self.package_config.name.clone();
+        let env = Environment::new(
+            self.ids.clone(),
+            package.clone(),
+            name.clone(),
+            self.target,
+            self.importable_modules,
+            self.warnings,
+            self.target_support,
+        );
+        validate_module_name(&name)?;
 
-    let statements = GroupedStatements::new(module.into_iter_statements(target));
-    let statements_count = statements.len();
+        let mut type_names = HashMap::with_capacity(module.definitions.len());
+        let mut value_names = HashMap::with_capacity(module.definitions.len());
+        let mut hydrators = HashMap::with_capacity(module.definitions.len());
 
-    // Register any modules, types, and values being imported
-    // We process imports first so that anything imported can be referenced
-    // anywhere in the module.
-    let mut env = imports::Importer::run(origin, env, &statements.imports)?;
+        let statements = GroupedStatements::new(module.into_iter_statements(self.target));
+        let statements_count = statements.len();
 
-    // Register types so they can be used in constructors and functions
-    // earlier in the module.
-    for t in &statements.custom_types {
-        register_types_from_custom_type(
-            t,
-            &mut type_names,
-            &mut env,
-            &name,
-            package_config,
-            &mut hydrators,
-        )?;
-    }
-    // TODO: Extract a Type alias class to perform this.
-    let sorted_aliases = sorted_type_aliases(&statements.type_aliases)?;
-    for t in sorted_aliases {
-        register_type_alias(t, &mut type_names, &mut env, &name)?;
-    }
+        // Register any modules, types, and values being imported
+        // We process imports first so that anything imported can be referenced
+        // anywhere in the module.
+        let mut env = imports::Importer::run(self.origin, env, &statements.imports)?;
 
-    // Register values so they can be used in functions earlier in the module.
-    for c in &statements.constants {
-        assert_unique_name(&mut value_names, &c.name, c.location)?;
-    }
-    for f in &statements.functions {
-        register_value_from_function(f, &mut value_names, &mut env, &mut hydrators, &name)?;
-    }
-    for t in &statements.custom_types {
-        register_values_from_custom_type(
-            t,
-            &mut hydrators,
-            &mut env,
-            &mut value_names,
-            &name,
-            &t.parameters,
-        )?;
-    }
+        // Register types so they can be used in constructors and functions
+        // earlier in the module.
+        for t in &statements.custom_types {
+            register_types_from_custom_type(
+                t,
+                &mut type_names,
+                &mut env,
+                &name,
+                self.package_config,
+                &mut hydrators,
+            )?;
+        }
+        // TODO: Extract a Type alias class to perform this.
+        let sorted_aliases = sorted_type_aliases(&statements.type_aliases)?;
+        for t in sorted_aliases {
+            register_type_alias(t, &mut type_names, &mut env, &name)?;
+        }
 
-    // Infer the types of each statement in the module
-    let mut typed_statements = Vec::with_capacity(statements_count);
-    for i in statements.imports {
-        let statement = record_imported_items_for_use_detection(
-            i,
-            package.as_str(),
-            direct_dependencies,
-            warnings,
-            &env,
-        )?;
-        typed_statements.push(statement);
-    }
-    for t in statements.custom_types {
-        let statement = infer_custom_type(t, &mut env)?;
-        typed_statements.push(statement);
-    }
-    for t in statements.type_aliases {
-        let statement = insert_type_alias(t, &mut env)?;
-        typed_statements.push(statement);
-    }
+        // Register values so they can be used in functions earlier in the module.
+        for c in &statements.constants {
+            assert_unique_name(&mut value_names, &c.name, c.location)?;
+        }
+        for f in &statements.functions {
+            register_value_from_function(f, &mut value_names, &mut env, &mut hydrators, &name)?;
+        }
+        for t in &statements.custom_types {
+            register_values_from_custom_type(
+                t,
+                &mut hydrators,
+                &mut env,
+                &mut value_names,
+                &name,
+                &t.parameters,
+            )?;
+        }
 
-    // Sort functions and constants into dependency order for inference. Definitions that do
-    // not depend on other definitions are inferred first, then ones that depend
-    // on those, etc.
-    let definition_groups = into_dependency_order(statements.functions, statements.constants)?;
-    let mut working_group = vec![];
+        // Infer the types of each statement in the module
+        let mut typed_statements = Vec::with_capacity(statements_count);
+        for i in statements.imports {
+            let statement = record_imported_items_for_use_detection(
+                i,
+                package.as_str(),
+                self.direct_dependencies,
+                self.warnings,
+                &env,
+            )?;
+            typed_statements.push(statement);
+        }
+        for t in statements.custom_types {
+            let statement = infer_custom_type(t, &mut env)?;
+            typed_statements.push(statement);
+        }
+        for t in statements.type_aliases {
+            let statement = insert_type_alias(t, &mut env)?;
+            typed_statements.push(statement);
+        }
 
-    for group in definition_groups {
-        // A group may have multiple functions that depend on each other through
-        // mutual recursion.
+        // Sort functions and constants into dependency order for inference. Definitions that do
+        // not depend on other definitions are inferred first, then ones that depend
+        // on those, etc.
+        let definition_groups = into_dependency_order(statements.functions, statements.constants)?;
+        let mut working_group = vec![];
 
-        for definition in group {
-            match definition {
-                CallGraphNode::Function(f) => {
-                    let statement = infer_function(f, &mut env, &mut hydrators, &name, &mut errors);
-                    match statement {
-                        Ok(statement) => working_group.push(statement),
-                        Err(e) => {
-                            // TODO: We do this to maintain any constant related errors within the function
-                            // Once function inference is continuable this entire match will be removed
-                            let mut errs = Vec1::new(e);
-                            errs.append(&mut errors);
-                            errs.sort_by_key(|e| e.start_location());
-                            return Err(InferenceFailure {
-                                ast: None,
-                                errors: errs,
-                            });
+        for group in definition_groups {
+            // A group may have multiple functions that depend on each other through
+            // mutual recursion.
+
+            for definition in group {
+                match definition {
+                    CallGraphNode::Function(f) => {
+                        let statement =
+                            infer_function(f, &mut env, &mut hydrators, &name, &mut errors);
+                        match statement {
+                            Ok(statement) => working_group.push(statement),
+                            Err(e) => {
+                                // TODO: We do this to maintain any constant related errors within the function
+                                // Once function inference is continuable this entire match will be removed
+                                let mut errs = Vec1::new(e);
+                                errs.append(&mut errors);
+                                errs.sort_by_key(|e| e.start_location());
+                                return Err(InferenceFailure {
+                                    ast: None,
+                                    errors: errs,
+                                });
+                            }
                         }
                     }
+                    CallGraphNode::ModuleConstant(c) => {
+                        let statement = infer_module_constant(c, &mut env, &name, &mut errors);
+                        working_group.push(statement);
+                    }
                 }
-                CallGraphNode::ModuleConstant(c) => {
-                    let statement = infer_module_constant(c, &mut env, &name, &mut errors);
-                    working_group.push(statement);
-                }
+            }
+
+            // Now that the entire group has been inferred, generalise their types.
+            for inferred in working_group.drain(..) {
+                let statement = generalise_statement(inferred, &name, &mut env);
+                typed_statements.push(statement);
             }
         }
 
-        // Now that the entire group has been inferred, generalise their types.
-        for inferred in working_group.drain(..) {
-            let statement = generalise_statement(inferred, &name, &mut env);
-            typed_statements.push(statement);
+        // Generate warnings for unused items
+        let unused_imports = env.convert_unused_to_warnings();
+
+        // Remove imported types and values to create the public interface
+        // Private types and values are retained so they can be used in the language
+        // server, but are filtered out when type checking to prevent using private
+        // items.
+        env.module_types.retain(|_, info| info.module == name);
+        env.accessors
+            .retain(|_, accessors| accessors.publicity.is_importable());
+
+        // Ensure no exported values have private types in their type signature
+        for value in env.module_values.values() {
+            if value.publicity.is_private() {
+                continue;
+            }
+            if let Some(leaked) = value.type_.find_private_type() {
+                errors.push(Error::PrivateTypeLeak {
+                    location: value.variant.definition_location(),
+                    leaked,
+                });
+            }
+
+            // We also want to make sure that no public type exposes internal ones
+            // in their type signature.
+            if !value.publicity.is_public() {
+                continue;
+            }
+            // We also don't want to raise a warning if we're inside an internal
+            // module ourselves, the type wouldn't actually be publicly exposed.
+            if self.package_config.is_internal_module(name.as_str()) {
+                continue;
+            }
         }
-    }
 
-    // Generate warnings for unused items
-    let unused_imports = env.convert_unused_to_warnings();
-
-    // Remove imported types and values to create the public interface
-    // Private types and values are retained so they can be used in the language
-    // server, but are filtered out when type checking to prevent using private
-    // items.
-    env.module_types.retain(|_, info| info.module == name);
-    env.accessors
-        .retain(|_, accessors| accessors.publicity.is_importable());
-
-    // Ensure no exported values have private types in their type signature
-    for value in env.module_values.values() {
-        if value.publicity.is_private() {
-            continue;
-        }
-        if let Some(leaked) = value.type_.find_private_type() {
-            errors.push(Error::PrivateTypeLeak {
-                location: value.variant.definition_location(),
-                leaked,
-            });
-        }
-
-        // We also want to make sure that no public type exposes internal ones
-        // in their type signature.
-        if !value.publicity.is_public() {
-            continue;
-        }
-        // We also don't want to raise a warning if we're inside an internal
-        // module ourselves, the type wouldn't actually be publicly exposed.
-        if package_config.is_internal_module(name.as_str()) {
-            continue;
-        }
-    }
-
-    let Environment {
-        module_types: types,
-        module_types_constructors: types_constructors,
-        module_values: values,
-        todo_encountered: contains_todo,
-        accessors,
-        ..
-    } = env;
-
-    let is_internal = package_config.is_internal_module(name.as_str());
-
-    // Sort the errors by location so that they are easier to debug.
-    errors.sort_by_key(|e| e.start_location());
-
-    let ast = ast::Module {
-        documentation,
-        name: name.clone(),
-        definitions: typed_statements,
-        type_info: ModuleInterface {
-            name,
-            types,
-            types_value_constructors: types_constructors,
-            values,
+        let Environment {
+            module_types: types,
+            module_types_constructors: types_constructors,
+            module_values: values,
+            todo_encountered: contains_todo,
             accessors,
-            origin,
-            package: package_config.name.clone(),
-            is_internal,
-            unused_imports,
-            contains_todo,
-            line_numbers,
-            src_path,
-        },
-    };
+            ..
+        } = env;
 
-    match Vec1::try_from_vec(errors) {
-        Err(_) => Ok(ast),
-        Ok(errors) => Err(InferenceFailure {
-            ast: Some(ast),
-            errors,
-        }),
+        let is_internal = self.package_config.is_internal_module(name.as_str());
+
+        // Sort the errors by location so that they are easier to debug.
+        errors.sort_by_key(|e| e.start_location());
+
+        let ast = ast::Module {
+            documentation,
+            name: name.clone(),
+            definitions: typed_statements,
+            type_info: ModuleInterface {
+                name,
+                types,
+                types_value_constructors: types_constructors,
+                values,
+                accessors,
+                origin: self.origin,
+                package: self.package_config.name.clone(),
+                is_internal,
+                unused_imports,
+                contains_todo,
+                line_numbers,
+                src_path,
+            },
+        };
+
+        match Vec1::try_from_vec(errors) {
+            Err(_) => Ok(ast),
+            Ok(errors) => Err(InferenceFailure {
+                ast: Some(ast),
+                errors,
+            }),
+        }
     }
 }
 

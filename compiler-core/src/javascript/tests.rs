@@ -102,19 +102,18 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         let mut ast = parsed.module;
         ast.name = (*dep_name).into();
         let line_numbers = LineNumbers::new(dep_src);
-        let dep = crate::analyse::infer_module::<()>(
-            Target::JavaScript,
-            &ids,
-            ast,
-            Origin::Src,
-            &modules,
-            &TypeWarningEmitter::null(),
-            &std::collections::HashMap::new(),
-            TargetSupport::Enforced,
-            line_numbers,
-            &dep_config,
-            "".into(),
-        )
+
+        let dep = crate::analyse::ModuleAnalyzer::<()> {
+            target: Target::JavaScript,
+            ids: &ids,
+            origin: Origin::Src,
+            importable_modules: &modules,
+            warnings: &TypeWarningEmitter::null(),
+            direct_dependencies: &std::collections::HashMap::new(),
+            target_support: TargetSupport::Enforced,
+            package_config: &dep_config,
+        }
+        .infer_module(ast, line_numbers, "".into())
         .expect("should successfully infer");
         let _ = modules.insert((*dep_name).into(), dep.type_info);
         let _ = direct_dependencies.insert((*dep_package).into(), ());
@@ -127,19 +126,17 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
 
-    crate::analyse::infer_module::<()>(
-        Target::JavaScript,
-        &ids,
-        ast,
-        Origin::Src,
-        &modules,
-        &TypeWarningEmitter::null(),
-        &direct_dependencies,
-        TargetSupport::NotEnforced,
-        line_numbers,
-        &config,
-        "".into(),
-    )
+    crate::analyse::ModuleAnalyzer::<()> {
+        target: Target::JavaScript,
+        ids: &ids,
+        origin: Origin::Src,
+        importable_modules: &modules,
+        warnings: &TypeWarningEmitter::null(),
+        direct_dependencies: &direct_dependencies,
+        target_support: TargetSupport::NotEnforced,
+        package_config: &config,
+    }
+    .infer_module(ast, line_numbers, "".into())
     .expect("should successfully infer")
 }
 

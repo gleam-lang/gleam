@@ -1,4 +1,4 @@
-use crate::analyse::{infer_module, TargetSupport};
+use crate::analyse::{ModuleAnalyzer, TargetSupport};
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
@@ -423,19 +423,18 @@ fn analyse(
         tracing::debug!(module = ?name, "Type checking");
 
         let line_numbers = LineNumbers::new(&code);
-        let inference_result = infer_module(
+
+        let inference_result = crate::analyse::ModuleAnalyzer {
             target,
             ids,
-            ast,
             origin,
-            module_types,
-            &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
-            &direct_dependencies,
+            importable_modules: module_types,
+            warnings: &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
+            direct_dependencies: &direct_dependencies,
             target_support,
-            line_numbers,
             package_config,
-            path.clone(),
-        );
+        }
+        .infer_module(ast, line_numbers, path.clone());
 
         // TODO: Once we are guaranteed to get an AST back we should change this
         // so that instead of returning immediately we bubble up and

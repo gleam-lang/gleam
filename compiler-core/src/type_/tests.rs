@@ -400,19 +400,17 @@ pub fn compile_module_with_opts(
         let line_numbers = LineNumbers::new(module_src);
         let mut config = PackageConfig::default();
         config.name = package.into();
-        let module = crate::analyse::infer_module::<()>(
+        let module = crate::analyse::ModuleAnalyzer::<()> {
             target,
-            &ids,
-            ast,
-            Origin::Src,
-            &modules,
-            &warnings,
-            &HashMap::from_iter(vec![]),
+            ids: &ids,
+            origin: Origin::Src,
+            importable_modules: &modules,
+            warnings: &TypeWarningEmitter::null(),
+            direct_dependencies: &HashMap::new(),
             target_support,
-            line_numbers,
-            &config,
-            "".into(),
-        )
+            package_config: &config,
+        }
+        .infer_module(ast, line_numbers, "".into())
         .expect("should successfully infer");
         let _ = modules.insert(name.into(), module.type_info);
 
@@ -426,19 +424,17 @@ pub fn compile_module_with_opts(
     ast.name = module_name.into();
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
-    let inference_result = crate::analyse::infer_module(
+    let inference_result = crate::analyse::ModuleAnalyzer::<()> {
         target,
-        &ids,
-        ast,
-        Origin::Src,
-        &modules,
-        &warnings,
-        &direct_dependencies,
-        TargetSupport::Enforced,
-        LineNumbers::new(src),
-        &config,
-        "".into(),
-    );
+        ids: &ids,
+        origin: Origin::Src,
+        importable_modules: &modules,
+        warnings: &warnings,
+        direct_dependencies: &direct_dependencies,
+        target_support: TargetSupport::Enforced,
+        package_config: &config,
+    }
+    .infer_module(ast, LineNumbers::new(src), "".into());
 
     match inference_result {
         Ok(ast) => Ok(ast),
@@ -632,19 +628,18 @@ fn infer_module_type_retention_test() {
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
-    let module = crate::analyse::infer_module::<()>(
-        Target::Erlang,
-        &ids,
-        module,
-        Origin::Src,
-        &modules,
-        &TypeWarningEmitter::null(),
-        &direct_dependencies,
-        TargetSupport::Enforced,
-        LineNumbers::new(""),
-        &config,
-        "".into(),
-    )
+
+    let module = crate::analyse::ModuleAnalyzer::<()> {
+        target: Target::Erlang,
+        ids: &ids,
+        origin: Origin::Src,
+        importable_modules: &modules,
+        warnings: &TypeWarningEmitter::null(),
+        direct_dependencies: &direct_dependencies,
+        target_support: TargetSupport::Enforced,
+        package_config: &config,
+    }
+    .infer_module(module, LineNumbers::new(""), "".into())
     .expect("Should infer OK");
 
     assert_eq!(
