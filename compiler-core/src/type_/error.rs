@@ -639,6 +639,18 @@ pub enum Warning {
         location: SrcSpan,
         panic_position: PanicPosition,
     },
+
+    /// When a function capture is used in a pipe to pipe into the first
+    /// argument of a function:
+    ///
+    /// ```gleam
+    /// wibble |> wobble(_, 1)
+    ///                  ^ Redundant and can be removed
+    /// ```
+    ///
+    RedundantPipeFunctionCapture {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]

@@ -2012,3 +2012,55 @@ fn warnings_for_matches_on_literal_values_that_are_not_like_an_if_2() {
         "#
     );
 }
+
+#[test]
+fn redundant_function_capture_in_pipe_1() {
+    assert_warning!(
+        "
+  pub fn wibble(_, _) { 1 }
+
+  pub fn main() {
+    1 |> wibble(_, 2) |> wibble(2)
+  }
+"
+    );
+}
+
+#[test]
+fn redundant_function_capture_in_pipe_2() {
+    assert_warning!(
+        "
+  pub fn wobble(_) { 1 }
+
+  pub fn main() {
+    1 |> wobble(_) |> wobble
+  }
+"
+    );
+}
+
+#[test]
+fn redundant_function_capture_in_pipe_3() {
+    assert_warning!(
+        "
+  pub fn wobble(_) { 1 }
+
+  pub fn main() {
+    1 |> wobble |> wobble(_)
+  }
+"
+    );
+}
+
+#[test]
+fn redundant_function_capture_in_pipe_4() {
+    assert_warning!(
+        "
+  pub fn wibble(_, _) { 1 }
+
+  pub fn main() {
+    1 |> wibble(2) |> wibble(_, 2)
+  }
+"
+    );
+}

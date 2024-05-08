@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n  pub fn wobble(_) { 1 }\n\n  pub fn main() {\n    1 |> wobble(_) |> wobble\n  }\n"
+---
+warning: Redundant function capture
+  ┌─ /src/warning/wrn.gleam:5:17
+  │
+5 │     1 |> wobble(_) |> wobble
+  │                 ^ You can safely remove this
+
+This function capture is redundant since the value is already piped as the
+first argument of this call.
+
+See: https://tour.gleam.run/functions/pipelines/

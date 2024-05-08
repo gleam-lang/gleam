@@ -33,12 +33,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         expressions: Vec1<UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let size = expressions.len();
-        let end = &expressions[..]
-            .last()
-            // The vec is non-empty, this indexing can never fail
-            .expect("Empty pipeline in typer")
-            .location()
-            .end;
+        let end = expressions.last().location().end;
         let mut expressions = expressions.into_iter();
         let first = expr_typer.infer(expressions.next().expect("Empty pipeline in typer"))?;
         let mut typer = Self {
@@ -48,7 +43,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             argument_location: first.location(),
             location: SrcSpan {
                 start: first.location().start,
-                end: *end,
+                end,
             },
             assignments: Vec::with_capacity(size),
         };
@@ -90,6 +85,20 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     .warn_for_unreachable_code(call.location(), PanicPosition::PreviousExpression);
             }
 
+            match &call {
+                UntypedExpr::Fn { arguments, .. } => match arguments.as_slice() {
+                    [first] | [first, ..] if first.is_capture_hole() => {
+                        self.expr_typer.environment.warnings.emit(
+                            Warning::RedundantPipeFunctionCapture {
+                                location: first.location,
+                            },
+                        )
+                    }
+                    _ => (),
+                },
+                _ => (),
+            }
+
             let call = match call {
                 // left |> right(..args)
                 UntypedExpr::Call {
@@ -120,6 +129,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 self.push_assignment(call);
             }
         }
+
         Ok(finally.expect("Empty pipeline in typer"))
     }
 
