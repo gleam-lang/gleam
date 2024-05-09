@@ -216,9 +216,9 @@
   branch is going to match with this value.
 
 - The compiler will now continue module analysis when there are errors in top
-  level constant definitions or type aliases. This means that when these errors
-  occur the compiler will continue analysing the rest of the code to find other
-  errors and type information.
+  level constant definitions, imports or type aliases. This means that when
+  these errors occur the compiler will continue analysing the rest of the code
+  to find other errors and type information.
 
   When using the build tool this means that the programmer will be shown
   multiple error messages when there are multiple problems in a module.
