@@ -75,7 +75,7 @@ pub fn compile_package(
         let mut config = PackageConfig::default();
         config.name = dep_package.into();
 
-        let dep = crate::analyse::ModuleAnalyzer::<()> {
+        let dep = crate::analyse::ModuleAnalyzerConstructor::<()> {
             target: Target::Erlang,
             ids: &ids,
             origin: Origin::Src,
@@ -100,7 +100,7 @@ pub fn compile_package(
     ast.name = module_name.clone();
     let mut config = PackageConfig::default();
     config.name = "my_package".into();
-    let ast = crate::analyse::ModuleAnalyzer {
+    let ast = crate::analyse::ModuleAnalyzerConstructor {
         target: Target::Erlang,
         ids: &ids,
         origin: Origin::Src,

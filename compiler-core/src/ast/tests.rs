@@ -36,7 +36,7 @@ fn compile_module(src: &str) -> TypedModule {
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
 
-    crate::analyse::ModuleAnalyzer::<()> {
+    crate::analyse::ModuleAnalyzerConstructor::<()> {
         target: Target::Erlang,
         ids: &ids,
         origin: crate::build::Origin::Src,

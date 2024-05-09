@@ -49,7 +49,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         ast.name = dep_name.into();
         let line_numbers = LineNumbers::new(dep_src);
 
-        let dep = crate::analyse::ModuleAnalyzer::<()> {
+        let dep = crate::analyse::ModuleAnalyzerConstructor::<()> {
             target: Target::Erlang,
             ids: &ids,
             origin: Origin::Src,
@@ -70,7 +70,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
     let mut ast = parsed.module;
     ast.name = "my/mod".into();
     let line_numbers = LineNumbers::new(src);
-    let ast = crate::analyse::ModuleAnalyzer::<()> {
+    let ast = crate::analyse::ModuleAnalyzerConstructor::<()> {
         target: Target::Erlang,
         ids: &ids,
         origin: Origin::Src,

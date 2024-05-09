@@ -1,4 +1,4 @@
-use crate::analyse::{ModuleAnalyzer, TargetSupport};
+use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
@@ -424,7 +424,7 @@ fn analyse(
 
         let line_numbers = LineNumbers::new(&code);
 
-        let inference_result = crate::analyse::ModuleAnalyzer {
+        let inference_result = crate::analyse::ModuleAnalyzerConstructor {
             target,
             ids,
             origin,
