@@ -203,10 +203,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         validate_module_name(&self.module_name)?;
 
         let documentation = std::mem::take(&mut module.documentation);
-        let package = self.package_config.name.clone();
         let env = Environment::new(
             self.ids.clone(),
-            package.clone(),
+            self.package_config.name.clone(),
             self.module_name.clone(),
             self.target,
             self.importable_modules,
@@ -246,17 +245,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Infer the types of each statement in the module
         let mut typed_statements = Vec::with_capacity(statements_count);
         for i in statements.imports {
-            let statement =
-                self.record_imported_items_for_use_detection(i, package.as_str(), &env)?;
-            typed_statements.push(statement);
+            typed_statements.push(self.analyse_import(i, &env)?);
         }
         for t in statements.custom_types {
-            let statement = infer_custom_type(t, &mut env)?;
-            typed_statements.push(statement);
+            typed_statements.push(analyse_custom_type(t, &mut env)?);
         }
         for t in statements.type_aliases {
-            let statement = insert_type_alias(t, &mut env)?;
-            typed_statements.push(statement);
+            typed_statements.push(analyse_type_alias(t, &mut env));
         }
 
         // Sort functions and constants into dependency order for inference. Definitions that do
@@ -289,16 +284,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         }
                     }
                     CallGraphNode::ModuleConstant(c) => {
-                        let statement = self.infer_module_constant(c, &mut env);
-                        working_group.push(statement);
+                        working_group.push(self.infer_module_constant(c, &mut env));
                     }
                 }
             }
 
             // Now that the entire group has been inferred, generalise their types.
             for inferred in working_group.drain(..) {
-                let statement = generalise_statement(inferred, &self.module_name, &mut env);
-                typed_statements.push(statement);
+                typed_statements.push(generalise_statement(inferred, &self.module_name, &mut env));
             }
         }
 
@@ -316,29 +309,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // Ensure no exported values have private types in their type signature
         for value in env.module_values.values() {
-            if value.publicity.is_private() {
-                continue;
-            }
-            if let Some(leaked) = value.type_.find_private_type() {
-                self.errors.push(Error::PrivateTypeLeak {
-                    location: value.variant.definition_location(),
-                    leaked,
-                });
-            }
-
-            // We also want to make sure that no public type exposes internal ones
-            // in their type signature.
-            if !value.publicity.is_public() {
-                continue;
-            }
-            // We also don't want to raise a warning if we're inside an internal
-            // module ourselves, the type wouldn't actually be publicly exposed.
-            if self
-                .package_config
-                .is_internal_module(self.module_name.as_str())
-            {
-                continue;
-            }
+            self.check_for_type_leaks(value)
         }
 
         let Environment {
@@ -582,10 +553,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }))
     }
 
-    fn record_imported_items_for_use_detection(
+    fn analyse_import(
         &mut self,
         i: Import<()>,
-        current_package: &str,
         environment: &Environment<'_>,
     ) -> Result<TypedDefinition, Error> {
         let Import {
@@ -612,7 +582,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // current package to be imported.
         // Upgrade this to an error in future.
         if module_info.package != GLEAM_CORE_PACKAGE_NAME
-            && module_info.package != current_package
+            && module_info.package != self.package_config.name
             && !self.direct_dependencies.contains_key(&module_info.package)
         {
             self.warnings
@@ -977,6 +947,30 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         };
         Ok(())
     }
+
+    fn check_for_type_leaks(&mut self, value: &ValueConstructor) {
+        // A private value doesn't export anything so it can't leak anything.
+        if value.publicity.is_private() {
+            return;
+        }
+
+        // We also don't want to raise a warning if we're inside an internal
+        // module ourselves, the type wouldn't actually be publicly exposed.
+        if self
+            .package_config
+            .is_internal_module(self.module_name.as_str())
+        {
+            return;
+        }
+
+        // If a private or internal value references a private type
+        if let Some(leaked) = value.type_.find_private_type() {
+            self.errors.push(Error::PrivateTypeLeak {
+                location: value.variant.definition_location(),
+                leaked,
+            });
+        }
+    }
 }
 
 fn validate_module_name(name: &EcoString) -> Result<(), Error> {
@@ -1091,10 +1085,7 @@ fn ensure_annotations_present(
     Ok(())
 }
 
-fn insert_type_alias(
-    t: TypeAlias<()>,
-    environment: &mut Environment<'_>,
-) -> Result<TypedDefinition, Error> {
+fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> TypedDefinition {
     let TypeAlias {
         documentation: doc,
         location,
@@ -1110,7 +1101,7 @@ fn insert_type_alias(
         .expect("Could not find existing type for type alias")
         .typ
         .clone();
-    Ok(Definition::TypeAlias(TypeAlias {
+    Definition::TypeAlias(TypeAlias {
         documentation: doc,
         location,
         publicity,
@@ -1119,10 +1110,10 @@ fn insert_type_alias(
         type_ast: resolved_type,
         type_: typ,
         deprecation,
-    }))
+    })
 }
 
-fn infer_custom_type(
+fn analyse_custom_type(
     t: CustomType<()>,
     environment: &mut Environment<'_>,
 ) -> Result<TypedDefinition, Error> {
@@ -1155,25 +1146,13 @@ fn infer_custom_type(
                 let args = if let Some((args_types, _return_type)) = preregistered_type.fn_types() {
                     args.into_iter()
                         .zip(&args_types)
-                        .map(
-                            |(
-                                RecordConstructorArg {
-                                    label,
-                                    ast,
-                                    location,
-                                    ..
-                                },
-                                t,
-                            )| {
-                                RecordConstructorArg {
-                                    label,
-                                    ast,
-                                    location,
-                                    type_: t.clone(),
-                                    doc: None,
-                                }
-                            },
-                        )
+                        .map(|(argument, t)| RecordConstructorArg {
+                            label: argument.label,
+                            ast: argument.ast,
+                            location: argument.location,
+                            type_: t.clone(),
+                            doc: None,
+                        })
                         .collect()
                 } else {
                     vec![]
