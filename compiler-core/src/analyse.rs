@@ -237,23 +237,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             assert_unique_name(&mut self.value_names, &c.name, c.location)?;
         }
         for f in &statements.functions {
-            register_value_from_function(
-                f,
-                &mut self.value_names,
-                &mut env,
-                &mut self.hydrators,
-                &self.module_name,
-            )?;
+            self.register_value_from_function(f, &mut env)?;
         }
         for t in &statements.custom_types {
-            register_values_from_custom_type(
-                t,
-                &mut self.hydrators,
-                &mut env,
-                &mut self.value_names,
-                &self.module_name,
-                &t.parameters,
-            )?;
+            self.register_values_from_custom_type(t, &mut env, &t.parameters)?;
         }
 
         // Infer the types of each statement in the module
@@ -411,6 +398,147 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
     }
 
+    fn register_values_from_custom_type(
+        &mut self,
+        t: &CustomType<()>,
+        environment: &mut Environment<'_>,
+        type_parameters: &[EcoString],
+    ) -> Result<(), Error> {
+        let CustomType {
+            location,
+            publicity,
+            opaque,
+            name,
+            constructors,
+            deprecation,
+            ..
+        } = t;
+
+        let mut hydrator = self
+            .hydrators
+            .remove(name)
+            .expect("Could not find hydrator for register_values custom type");
+        hydrator.disallow_new_type_variables();
+        let typ = environment
+            .module_types
+            .get(name)
+            .expect("Type for custom type not found in register_values")
+            .typ
+            .clone();
+        if let Some(accessors) = custom_type_accessors(constructors, &mut hydrator, environment)? {
+            let map = AccessorsMap {
+                publicity: if *opaque {
+                    Publicity::Private
+                } else {
+                    *publicity
+                },
+                accessors,
+                // TODO: improve the ownership here so that we can use the
+                // `return_type_constructor` below rather than looking it up twice.
+                type_: typ.clone(),
+            };
+            environment.insert_accessors(name.clone(), map)
+        }
+
+        let mut constructors_data = vec![];
+
+        for (index, constructor) in constructors.iter().enumerate() {
+            assert_unique_name(
+                &mut self.value_names,
+                &constructor.name,
+                constructor.location,
+            )?;
+
+            let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
+            let mut args_types = Vec::with_capacity(constructor.arguments.len());
+            let mut fields = Vec::with_capacity(constructor.arguments.len());
+
+            for (i, RecordConstructorArg { label, ast, .. }) in
+                constructor.arguments.iter().enumerate()
+            {
+                // Build a type from the annotation AST
+                let t = hydrator.type_from_ast(ast, environment)?;
+
+                fields.push(TypeValueConstructorField { type_: t.clone() });
+
+                // Register the type for this parameter
+                args_types.push(t);
+
+                // Register the label for this parameter, if there is one
+                if let Some(label) = label {
+                    field_map.insert(label.clone(), i as u32).map_err(|_| {
+                        Error::DuplicateField {
+                            label: label.clone(),
+                            location: *location,
+                        }
+                    })?;
+                }
+            }
+            let field_map = field_map.into_option();
+            // Insert constructor function into module scope
+            let typ = match constructor.arguments.len() {
+                0 => typ.clone(),
+                _ => fn_(args_types.clone(), typ.clone()),
+            };
+            let constructor_info = ValueConstructorVariant::Record {
+                documentation: constructor.documentation.clone(),
+                constructors_count: constructors.len() as u16,
+                name: constructor.name.clone(),
+                arity: constructor.arguments.len() as u16,
+                field_map: field_map.clone(),
+                location: constructor.location,
+                module: self.module_name.clone(),
+                constructor_index: index as u16,
+            };
+
+            // If the contructor belongs to an opaque type then it's going to be
+            // considered as private.
+            let value_constructor_publicity = if *opaque {
+                Publicity::Private
+            } else {
+                *publicity
+            };
+
+            environment.insert_module_value(
+                constructor.name.clone(),
+                ValueConstructor {
+                    publicity: value_constructor_publicity,
+                    deprecation: deprecation.clone(),
+                    type_: typ.clone(),
+                    variant: constructor_info.clone(),
+                },
+            );
+
+            if value_constructor_publicity.is_private() {
+                environment.init_usage(
+                    constructor.name.clone(),
+                    EntityKind::PrivateTypeConstructor(name.clone()),
+                    constructor.location,
+                );
+            }
+
+            constructors_data.push(TypeValueConstructor {
+                name: constructor.name.clone(),
+                parameters: fields,
+            });
+            environment.insert_variable(
+                constructor.name.clone(),
+                constructor_info,
+                typ,
+                value_constructor_publicity,
+                deprecation.clone(),
+            );
+        }
+
+        // Now record the constructors for the type.
+        environment.insert_type_to_constructors(
+            name.clone(),
+            TypeVariantConstructors::new(constructors_data, type_parameters, hydrator),
+        );
+
+        Ok(())
+    }
+
     fn register_types_from_custom_type(
         &mut self,
         t: &CustomType<()>,
@@ -427,7 +555,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             documentation,
             ..
         } = t;
-        assert_unique_type_name(&mut self.type_names, name, *location)?;
+        self.assert_unique_type_name(name, *location)?;
         let mut hydrator = Hydrator::new();
         let parameters = make_type_vars(parameters, location, &mut hydrator, environment)?;
 
@@ -498,7 +626,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = t;
 
         // A type alias must not have the same name as any other type in the module.
-        assert_unique_type_name(&mut self.type_names, name, *location)?;
+        self.assert_unique_type_name(name, *location)?;
 
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
         // in some fashion.
@@ -534,6 +662,85 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         };
         Ok(())
     }
+
+    fn assert_unique_type_name(
+        &mut self,
+        name: &EcoString,
+        location: SrcSpan,
+    ) -> Result<(), Error> {
+        match self.type_names.insert(name.clone(), location) {
+            Some(previous_location) => Err(Error::DuplicateTypeName {
+                name: name.clone(),
+                previous_location,
+                location,
+            }),
+            None => Ok(()),
+        }
+    }
+
+    fn register_value_from_function(
+        &mut self,
+        f: &UntypedFunction,
+        environment: &mut Environment<'_>,
+    ) -> Result<(), Error> {
+        let Function {
+            name,
+            arguments: args,
+            location,
+            return_annotation,
+            publicity,
+            documentation,
+            external_erlang,
+            external_javascript,
+            deprecation,
+            end_position: _,
+            body: _,
+            return_type: _,
+            implementations,
+        } = f;
+        assert_unique_name(&mut self.value_names, name, *location)?;
+        assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
+
+        let mut builder = FieldMapBuilder::new(args.len() as u32);
+        for arg in args.iter() {
+            builder.add(arg.names.get_label(), arg.location)?;
+        }
+        let field_map = builder.finish();
+        let mut hydrator = Hydrator::new();
+
+        // When external implementations are present then the type annotations
+        // must be given in full, so we disallow holes in the annotations.
+        hydrator.permit_holes(external_erlang.is_none() && external_javascript.is_none());
+
+        let arg_types = args
+            .iter()
+            .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
+            .try_collect()?;
+        let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
+        let typ = fn_(arg_types, return_type);
+        let _ = self.hydrators.insert(name.clone(), hydrator);
+
+        let external = target_function_implementation(
+            environment.target,
+            external_erlang,
+            external_javascript,
+        );
+        let (impl_module, impl_function) = implementation_names(external, &self.module_name, name);
+        let variant = ValueConstructorVariant::ModuleFn {
+            documentation: documentation.clone(),
+            name: impl_function,
+            field_map,
+            module: impl_module,
+            arity: args.len(),
+            location: *location,
+            implementations: *implementations,
+        };
+        environment.insert_variable(name.clone(), variant, typ, *publicity, deprecation.clone());
+        if publicity.is_private() {
+            environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
+        };
+        Ok(())
+    }
 }
 
 fn validate_module_name(name: &EcoString) -> Result<(), Error> {
@@ -548,206 +755,6 @@ fn validate_module_name(name: &EcoString) -> Result<(), Error> {
             });
         }
     }
-    Ok(())
-}
-
-fn register_values_from_custom_type(
-    t: &CustomType<()>,
-    hydrators: &mut HashMap<EcoString, Hydrator>,
-    environment: &mut Environment<'_>,
-    names: &mut HashMap<EcoString, SrcSpan>,
-    module_name: &EcoString,
-    type_parameters: &[EcoString],
-) -> Result<(), Error> {
-    let CustomType {
-        location,
-        publicity,
-        opaque,
-        name,
-        constructors,
-        deprecation,
-        ..
-    } = t;
-
-    let mut hydrator = hydrators
-        .remove(name)
-        .expect("Could not find hydrator for register_values custom type");
-    hydrator.disallow_new_type_variables();
-    let typ = environment
-        .module_types
-        .get(name)
-        .expect("Type for custom type not found in register_values")
-        .typ
-        .clone();
-    if let Some(accessors) = custom_type_accessors(constructors, &mut hydrator, environment)? {
-        let map = AccessorsMap {
-            publicity: if *opaque {
-                Publicity::Private
-            } else {
-                *publicity
-            },
-            accessors,
-            // TODO: improve the ownership here so that we can use the
-            // `return_type_constructor` below rather than looking it up twice.
-            type_: typ.clone(),
-        };
-        environment.insert_accessors(name.clone(), map)
-    }
-
-    let mut constructors_data = vec![];
-
-    for (index, constructor) in constructors.iter().enumerate() {
-        assert_unique_name(names, &constructor.name, constructor.location)?;
-
-        let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
-        let mut args_types = Vec::with_capacity(constructor.arguments.len());
-        let mut fields = Vec::with_capacity(constructor.arguments.len());
-
-        for (i, RecordConstructorArg { label, ast, .. }) in constructor.arguments.iter().enumerate()
-        {
-            // Build a type from the annotation AST
-            let t = hydrator.type_from_ast(ast, environment)?;
-
-            fields.push(TypeValueConstructorField { type_: t.clone() });
-
-            // Register the type for this parameter
-            args_types.push(t);
-
-            // Register the label for this parameter, if there is one
-            if let Some(label) = label {
-                field_map
-                    .insert(label.clone(), i as u32)
-                    .map_err(|_| Error::DuplicateField {
-                        label: label.clone(),
-                        location: *location,
-                    })?;
-            }
-        }
-        let field_map = field_map.into_option();
-        // Insert constructor function into module scope
-        let typ = match constructor.arguments.len() {
-            0 => typ.clone(),
-            _ => fn_(args_types.clone(), typ.clone()),
-        };
-        let constructor_info = ValueConstructorVariant::Record {
-            documentation: constructor.documentation.clone(),
-            constructors_count: constructors.len() as u16,
-            name: constructor.name.clone(),
-            arity: constructor.arguments.len() as u16,
-            field_map: field_map.clone(),
-            location: constructor.location,
-            module: module_name.clone(),
-            constructor_index: index as u16,
-        };
-
-        // If the contructor belongs to an opaque type then it's going to be
-        // considered as private.
-        let value_constructor_publicity = if *opaque {
-            Publicity::Private
-        } else {
-            *publicity
-        };
-
-        environment.insert_module_value(
-            constructor.name.clone(),
-            ValueConstructor {
-                publicity: value_constructor_publicity,
-                deprecation: deprecation.clone(),
-                type_: typ.clone(),
-                variant: constructor_info.clone(),
-            },
-        );
-
-        if value_constructor_publicity.is_private() {
-            environment.init_usage(
-                constructor.name.clone(),
-                EntityKind::PrivateTypeConstructor(name.clone()),
-                constructor.location,
-            );
-        }
-
-        constructors_data.push(TypeValueConstructor {
-            name: constructor.name.clone(),
-            parameters: fields,
-        });
-        environment.insert_variable(
-            constructor.name.clone(),
-            constructor_info,
-            typ,
-            value_constructor_publicity,
-            deprecation.clone(),
-        );
-    }
-
-    // Now record the constructors for the type.
-    environment.insert_type_to_constructors(
-        name.clone(),
-        TypeVariantConstructors::new(constructors_data, type_parameters, hydrator),
-    );
-
-    Ok(())
-}
-
-fn register_value_from_function(
-    f: &UntypedFunction,
-    names: &mut HashMap<EcoString, SrcSpan>,
-    environment: &mut Environment<'_>,
-    hydrators: &mut HashMap<EcoString, Hydrator>,
-    module_name: &EcoString,
-) -> Result<(), Error> {
-    let Function {
-        name,
-        arguments: args,
-        location,
-        return_annotation,
-        publicity,
-        documentation,
-        external_erlang,
-        external_javascript,
-        deprecation,
-        end_position: _,
-        body: _,
-        return_type: _,
-        implementations,
-    } = f;
-    assert_unique_name(names, name, *location)?;
-    assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
-
-    let mut builder = FieldMapBuilder::new(args.len() as u32);
-    for arg in args.iter() {
-        builder.add(arg.names.get_label(), arg.location)?;
-    }
-    let field_map = builder.finish();
-    let mut hydrator = Hydrator::new();
-
-    // When external implementations are present then the type annotations
-    // must be given in full, so we disallow holes in the annotations.
-    hydrator.permit_holes(external_erlang.is_none() && external_javascript.is_none());
-
-    let arg_types = args
-        .iter()
-        .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
-        .try_collect()?;
-    let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
-    let typ = fn_(arg_types, return_type);
-    let _ = hydrators.insert(name.clone(), hydrator);
-
-    let external =
-        target_function_implementation(environment.target, external_erlang, external_javascript);
-    let (impl_module, impl_function) = implementation_names(external, module_name, name);
-    let variant = ValueConstructorVariant::ModuleFn {
-        documentation: documentation.clone(),
-        name: impl_function,
-        field_map,
-        module: impl_module,
-        arity: args.len(),
-        location: *location,
-        implementations: *implementations,
-    };
-    environment.insert_variable(name.clone(), variant, typ, *publicity, deprecation.clone());
-    if publicity.is_private() {
-        environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
-    };
     Ok(())
 }
 
@@ -1426,21 +1433,6 @@ fn make_type_vars(
             })
         })
         .collect::<Result<_, _>>()
-}
-
-fn assert_unique_type_name(
-    names: &mut HashMap<EcoString, SrcSpan>,
-    name: &EcoString,
-    location: SrcSpan,
-) -> Result<(), Error> {
-    match names.insert(name.clone(), location) {
-        Some(previous_location) => Err(Error::DuplicateTypeName {
-            name: name.clone(),
-            previous_location,
-            location,
-        }),
-        None => Ok(()),
-    }
 }
 
 fn assert_unique_name(
