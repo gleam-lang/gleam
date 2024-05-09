@@ -400,7 +400,7 @@ pub fn compile_module_with_opts(
         let line_numbers = LineNumbers::new(module_src);
         let mut config = PackageConfig::default();
         config.name = package.into();
-        let module = crate::analyse::ModuleAnalyzer::<()> {
+        let module = crate::analyse::ModuleAnalyzerConstructor::<()> {
             target,
             ids: &ids,
             origin: Origin::Src,
@@ -424,7 +424,7 @@ pub fn compile_module_with_opts(
     ast.name = module_name.into();
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
-    let inference_result = crate::analyse::ModuleAnalyzer::<()> {
+    let inference_result = crate::analyse::ModuleAnalyzerConstructor::<()> {
         target,
         ids: &ids,
         origin: Origin::Src,
@@ -629,7 +629,7 @@ fn infer_module_type_retention_test() {
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
 
-    let module = crate::analyse::ModuleAnalyzer::<()> {
+    let module = crate::analyse::ModuleAnalyzerConstructor::<()> {
         target: Target::Erlang,
         ids: &ids,
         origin: Origin::Src,

@@ -103,7 +103,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         ast.name = (*dep_name).into();
         let line_numbers = LineNumbers::new(dep_src);
 
-        let dep = crate::analyse::ModuleAnalyzer::<()> {
+        let dep = crate::analyse::ModuleAnalyzerConstructor::<()> {
             target: Target::JavaScript,
             ids: &ids,
             origin: Origin::Src,
@@ -126,7 +126,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
 
-    crate::analyse::ModuleAnalyzer::<()> {
+    crate::analyse::ModuleAnalyzerConstructor::<()> {
         target: Target::JavaScript,
         ids: &ids,
         origin: Origin::Src,
