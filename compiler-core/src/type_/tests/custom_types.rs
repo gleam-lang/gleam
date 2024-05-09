@@ -1,4 +1,4 @@
-use crate::{assert_module_infer, assert_warning};
+use crate::{assert_module_error, assert_module_infer, assert_warning};
 
 // https://github.com/gleam-lang/gleam/issues/2215
 #[test]
@@ -26,6 +26,20 @@ pub fn name() -> String {
   let c = Cat("Numi", 20)
   c.name
 }
+        "#
+    );
+}
+
+#[test]
+fn fault_tolerance() {
+    // An error in a custom type does not stop analysis
+    assert_module_error!(
+        r#"
+pub type Cat {
+  Cat(UnknownType)
+}
+
+pub type Kitten = AnotherUnknownType
         "#
     );
 }

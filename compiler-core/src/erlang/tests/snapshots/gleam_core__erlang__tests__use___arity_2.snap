@@ -16,4 +16,3 @@ pair(X, F) ->
 -spec main() -> {float(), integer()}.
 main() ->
     pair(1.0, fun() -> 123 end).
-

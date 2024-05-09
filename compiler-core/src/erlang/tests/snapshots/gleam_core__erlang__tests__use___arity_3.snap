@@ -16,4 +16,3 @@ trip(X, Y, F) ->
 -spec main() -> {float(), binary(), integer()}.
 main() ->
     trip(1.0, <<""/utf8>>, fun() -> 123 end).
-
