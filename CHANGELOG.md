@@ -215,25 +215,20 @@
   Matching on a literal value is redundant since you can already tell which
   branch is going to match with this value.
 
-- The compiler will now continue module analysis when there are errors in top level constant definitions. This means that multiple constant errors can be displayed at once if there are not other errors. ([Ameen Radwan](https://github.com/Acepie))
+- The compiler will now continue module analysis when there are errors in top
+  level constant definitions or type aliases. This means that when these errors
+  occur the compiler will continue analysing the rest of the code to find other
+  errors and type information.
 
-  ```
-  error: Unknown type
-    ┌─ /src/test_gleam.gleam:5:18
-    │
-  5 │ const my_string: MyInvalidType = "str"
-    │                  ^^^^^^^^^^^^^
+  When using the build tool this means that the programmer will be shown
+  multiple error messages when there are multiple problems in a module.
 
-  The type `MyInvalidType` is not defined or imported in this module.
+  When using the language server multiple error diagnostics will be shown, and
+  the compiler will get updated type information about the code even when there
+  are errors. This should improve the accuracy of feedback and suggestions from
+  the language server as its information about the code will be more up-to-date.
 
-  error: Unknown variable
-    ┌─ /src/test_gleam.gleam:7:35
-    │
-  7 │ const my_tuple: String = #(Ok(1), MyInvalidType, 3)
-    │                                   ^^^^^^^^^^^^^
-
-  The name `MyInvalidType` is not in scope here.
-  ```
+  ([Ameen Radwan](https://github.com/Acepie)) and ([Louis Pilfold](https://github.com/Acepie))
 
 ### Formatter
 
