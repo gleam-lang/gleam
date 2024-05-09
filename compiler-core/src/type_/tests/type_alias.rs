@@ -92,3 +92,17 @@ type A(a) =
 "#
     );
 }
+
+#[test]
+fn type_alias_error_does_not_stop_analysis() {
+    // Both these aliases have errors! We do not stop on the first one.
+    assert_module_error!(
+        r#"
+type UnusedParameter(a) =
+  Int
+
+type UnknownType =
+  Dunno
+"#
+    );
+}
