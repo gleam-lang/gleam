@@ -246,13 +246,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Infer the types of each statement in the module
         let mut typed_statements = Vec::with_capacity(statements_count);
         for i in statements.imports {
-            let statement = record_imported_items_for_use_detection(
-                i,
-                package.as_str(),
-                self.direct_dependencies,
-                self.warnings,
-                &env,
-            )?;
+            let statement =
+                self.record_imported_items_for_use_detection(i, package.as_str(), &env)?;
             typed_statements.push(statement);
         }
         for t in statements.custom_types {
@@ -277,13 +272,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             for definition in group {
                 match definition {
                     CallGraphNode::Function(f) => {
-                        let statement = infer_function(
-                            f,
-                            &mut env,
-                            &mut self.hydrators,
-                            &self.module_name,
-                            &mut self.errors,
-                        );
+                        let statement = self.infer_function(f, &mut env);
                         match statement {
                             Ok(statement) => working_group.push(statement),
                             Err(e) => {
@@ -300,8 +289,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         }
                     }
                     CallGraphNode::ModuleConstant(c) => {
-                        let statement =
-                            infer_module_constant(c, &mut env, &self.module_name, &mut self.errors);
+                        let statement = self.infer_module_constant(c, &mut env);
                         working_group.push(statement);
                     }
                 }
@@ -396,6 +384,254 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 errors,
             }),
         }
+    }
+
+    fn infer_module_constant(
+        &mut self,
+        c: ModuleConstant<(), ()>,
+        environment: &mut Environment<'_>,
+    ) -> TypedDefinition {
+        let ModuleConstant {
+            documentation: doc,
+            location,
+            name,
+            annotation,
+            publicity,
+            value,
+            deprecation,
+            ..
+        } = c;
+
+        let definition = FunctionDefinition {
+            has_body: true,
+            has_erlang_external: false,
+            has_javascript_external: false,
+        };
+        let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors);
+        let typed_expr = expr_typer.infer_const(&annotation, *value);
+        let type_ = typed_expr.type_();
+        let implementations = expr_typer.implementations;
+
+        let variant = ValueConstructor {
+            publicity,
+            deprecation: deprecation.clone(),
+            variant: ValueConstructorVariant::ModuleConstant {
+                documentation: doc.clone(),
+                location,
+                literal: typed_expr.clone(),
+                module: self.module_name.clone(),
+                implementations,
+            },
+            type_: type_.clone(),
+        };
+
+        environment.insert_variable(
+            name.clone(),
+            variant.variant.clone(),
+            type_.clone(),
+            publicity,
+            Deprecation::NotDeprecated,
+        );
+        environment.insert_module_value(name.clone(), variant);
+
+        if publicity.is_private() {
+            environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
+        }
+
+        Definition::ModuleConstant(ModuleConstant {
+            documentation: doc,
+            location,
+            name,
+            annotation,
+            publicity,
+            value: Box::new(typed_expr),
+            type_,
+            deprecation,
+            implementations,
+        })
+    }
+
+    fn infer_function(
+        &mut self,
+        f: UntypedFunction,
+        environment: &mut Environment<'_>,
+    ) -> Result<TypedDefinition, Error> {
+        let Function {
+            documentation: doc,
+            location,
+            name,
+            publicity,
+            arguments,
+            body,
+            return_annotation,
+            end_position: end_location,
+            deprecation,
+            external_erlang,
+            external_javascript,
+            return_type: (),
+            implementations: _,
+        } = f;
+        let target = environment.target;
+        let preregistered_fn = environment
+            .get_variable(&name)
+            .expect("Could not find preregistered type for function");
+        let field_map = preregistered_fn.field_map().cloned();
+        let preregistered_type = preregistered_fn.type_.clone();
+        let (args_types, return_type) = preregistered_type
+            .fn_types()
+            .expect("Preregistered type for fn was not a fn");
+
+        // Find the external implementation for the current target, if one has been given.
+        let external =
+            target_function_implementation(target, &external_erlang, &external_javascript);
+        let (impl_module, impl_function) = implementation_names(external, &self.module_name, &name);
+
+        // The function must have at least one implementation somewhere.
+        ensure_function_has_an_implementation(
+            &body,
+            &external_erlang,
+            &external_javascript,
+            location,
+        )?;
+
+        if external.is_some() {
+            // There was an external implementation, so type annotations are
+            // mandatory as the Gleam implementation may be absent, and because we
+            // think you should always specify types for external functions for
+            // clarity + to avoid accidental mistakes.
+            ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
+        }
+
+        let definition = FunctionDefinition {
+            has_body: !body.first().is_placeholder(),
+            has_erlang_external: external_erlang.is_some(),
+            has_javascript_external: external_javascript.is_some(),
+        };
+
+        // Infer the type using the preregistered args + return types as a starting point
+        let (type_, args, body, implementations) = environment.in_new_scope(|environment| {
+            let args_types = arguments
+                .into_iter()
+                .zip(&args_types)
+                .map(|(a, t)| a.set_type(t.clone()))
+                .collect();
+            let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors);
+            expr_typer.hydrator = self
+                .hydrators
+                .remove(&name)
+                .expect("Could not find hydrator for fn");
+
+            let (args, body) =
+                expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type))?;
+            let args_types = args.iter().map(|a| a.type_.clone()).collect();
+            let typ = fn_(args_types, body.last().type_());
+            Ok((typ, args, body, expr_typer.implementations))
+        })?;
+
+        // Assert that the inferred type matches the type of any recursive call
+        unify(preregistered_type, type_.clone()).map_err(|e| convert_unify_error(e, location))?;
+
+        // Ensure that the current target has an implementation for the function.
+        // This is done at the expression level while inferring the function body, but we do it again
+        // here as externally implemented functions may not have a Gleam body.
+        if publicity.is_importable()
+            && environment.target_support.is_enforced()
+            && !implementations.supports(target)
+        {
+            return Err(Error::UnsupportedPublicFunctionTarget {
+                name: name.clone(),
+                target,
+                location,
+            });
+        }
+
+        let variant = ValueConstructorVariant::ModuleFn {
+            documentation: doc.clone(),
+            name: impl_function,
+            field_map,
+            module: impl_module,
+            arity: args.len(),
+            location,
+            implementations,
+        };
+
+        environment.insert_variable(
+            name.clone(),
+            variant,
+            type_.clone(),
+            publicity,
+            deprecation.clone(),
+        );
+
+        Ok(Definition::Function(Function {
+            documentation: doc,
+            location,
+            name,
+            publicity,
+            deprecation,
+            arguments: args,
+            end_position: end_location,
+            return_annotation,
+            return_type: type_
+                .return_type()
+                .expect("Could not find return type for fn"),
+            body,
+            external_erlang,
+            external_javascript,
+            implementations,
+        }))
+    }
+
+    fn record_imported_items_for_use_detection(
+        &mut self,
+        i: Import<()>,
+        current_package: &str,
+        environment: &Environment<'_>,
+    ) -> Result<TypedDefinition, Error> {
+        let Import {
+            documentation,
+            location,
+            module,
+            as_name,
+            unqualified_values,
+            unqualified_types,
+            ..
+        } = i;
+        // Find imported module
+        let module_info =
+            environment
+                .importable_modules
+                .get(&module)
+                .ok_or_else(|| Error::UnknownModule {
+                    location,
+                    name: module.clone(),
+                    imported_modules: environment.imported_modules.keys().cloned().collect(),
+                })?;
+
+        // Modules should belong to a package that is a direct dependency of the
+        // current package to be imported.
+        // Upgrade this to an error in future.
+        if module_info.package != GLEAM_CORE_PACKAGE_NAME
+            && module_info.package != current_package
+            && !self.direct_dependencies.contains_key(&module_info.package)
+        {
+            self.warnings
+                .emit(type_::Warning::TransitiveDependencyImported {
+                    location,
+                    module: module_info.name.clone(),
+                    package: module_info.package.clone(),
+                })
+        }
+
+        Ok(Definition::Import(Import {
+            documentation,
+            location,
+            module,
+            as_name,
+            unqualified_values,
+            unqualified_types,
+            package: module_info.package.clone(),
+        }))
     }
 
     fn register_values_from_custom_type(
@@ -795,132 +1031,6 @@ fn assert_valid_javascript_external(
     Ok(())
 }
 
-fn infer_function(
-    f: UntypedFunction,
-    environment: &mut Environment<'_>,
-    hydrators: &mut HashMap<EcoString, Hydrator>,
-    module_name: &EcoString,
-    errors: &mut Vec<Error>,
-) -> Result<TypedDefinition, Error> {
-    let Function {
-        documentation: doc,
-        location,
-        name,
-        publicity,
-        arguments,
-        body,
-        return_annotation,
-        end_position: end_location,
-        deprecation,
-        external_erlang,
-        external_javascript,
-        return_type: (),
-        implementations: _,
-    } = f;
-    let target = environment.target;
-    let preregistered_fn = environment
-        .get_variable(&name)
-        .expect("Could not find preregistered type for function");
-    let field_map = preregistered_fn.field_map().cloned();
-    let preregistered_type = preregistered_fn.type_.clone();
-    let (args_types, return_type) = preregistered_type
-        .fn_types()
-        .expect("Preregistered type for fn was not a fn");
-
-    // Find the external implementation for the current target, if one has been given.
-    let external = target_function_implementation(target, &external_erlang, &external_javascript);
-    let (impl_module, impl_function) = implementation_names(external, module_name, &name);
-
-    // The function must have at least one implementation somewhere.
-    ensure_function_has_an_implementation(&body, &external_erlang, &external_javascript, location)?;
-
-    if external.is_some() {
-        // There was an external implementation, so type annotations are
-        // mandatory as the Gleam implementation may be absent, and because we
-        // think you should always specify types for external functions for
-        // clarity + to avoid accidental mistakes.
-        ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
-    }
-
-    let definition = FunctionDefinition {
-        has_body: !body.first().is_placeholder(),
-        has_erlang_external: external_erlang.is_some(),
-        has_javascript_external: external_javascript.is_some(),
-    };
-
-    // Infer the type using the preregistered args + return types as a starting point
-    let (type_, args, body, implementations) = environment.in_new_scope(|environment| {
-        let args_types = arguments
-            .into_iter()
-            .zip(&args_types)
-            .map(|(a, t)| a.set_type(t.clone()))
-            .collect();
-        let mut expr_typer = ExprTyper::new(environment, definition, errors);
-        expr_typer.hydrator = hydrators
-            .remove(&name)
-            .expect("Could not find hydrator for fn");
-
-        let (args, body) =
-            expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type))?;
-        let args_types = args.iter().map(|a| a.type_.clone()).collect();
-        let typ = fn_(args_types, body.last().type_());
-        Ok((typ, args, body, expr_typer.implementations))
-    })?;
-
-    // Assert that the inferred type matches the type of any recursive call
-    unify(preregistered_type, type_.clone()).map_err(|e| convert_unify_error(e, location))?;
-
-    // Ensure that the current target has an implementation for the function.
-    // This is done at the expression level while inferring the function body, but we do it again
-    // here as externally implemented functions may not have a Gleam body.
-    if publicity.is_importable()
-        && environment.target_support.is_enforced()
-        && !implementations.supports(target)
-    {
-        return Err(Error::UnsupportedPublicFunctionTarget {
-            name: name.clone(),
-            target,
-            location,
-        });
-    }
-
-    let variant = ValueConstructorVariant::ModuleFn {
-        documentation: doc.clone(),
-        name: impl_function,
-        field_map,
-        module: impl_module,
-        arity: args.len(),
-        location,
-        implementations,
-    };
-
-    environment.insert_variable(
-        name.clone(),
-        variant,
-        type_.clone(),
-        publicity,
-        deprecation.clone(),
-    );
-
-    Ok(Definition::Function(Function {
-        documentation: doc,
-        location,
-        name,
-        publicity,
-        deprecation,
-        arguments: args,
-        end_position: end_location,
-        return_annotation,
-        return_type: type_
-            .return_type()
-            .expect("Could not find return type for fn"),
-        body,
-        external_erlang,
-        external_javascript,
-        implementations,
-    }))
-}
-
 /// Returns the module name and function name of the implementation of a
 /// function. If the function is implemented as a Gleam function then it is the
 /// same as the name of the module and function. If the function has an external
@@ -1096,127 +1206,6 @@ fn infer_custom_type(
         typed_parameters,
         deprecation,
     }))
-}
-
-fn record_imported_items_for_use_detection<A>(
-    i: Import<()>,
-    current_package: &str,
-    direct_dependencies: &HashMap<EcoString, A>,
-    warnings: &TypeWarningEmitter,
-    environment: &Environment<'_>,
-) -> Result<TypedDefinition, Error> {
-    let Import {
-        documentation,
-        location,
-        module,
-        as_name,
-        unqualified_values,
-        unqualified_types,
-        ..
-    } = i;
-    // Find imported module
-    let module_info =
-        environment
-            .importable_modules
-            .get(&module)
-            .ok_or_else(|| Error::UnknownModule {
-                location,
-                name: module.clone(),
-                imported_modules: environment.imported_modules.keys().cloned().collect(),
-            })?;
-
-    // Modules should belong to a package that is a direct dependency of the
-    // current package to be imported.
-    // Upgrade this to an error in future.
-    if module_info.package != GLEAM_CORE_PACKAGE_NAME
-        && module_info.package != current_package
-        && !direct_dependencies.contains_key(&module_info.package)
-    {
-        warnings.emit(type_::Warning::TransitiveDependencyImported {
-            location,
-            module: module_info.name.clone(),
-            package: module_info.package.clone(),
-        })
-    }
-
-    Ok(Definition::Import(Import {
-        documentation,
-        location,
-        module,
-        as_name,
-        unqualified_values,
-        unqualified_types,
-        package: module_info.package.clone(),
-    }))
-}
-
-fn infer_module_constant(
-    c: ModuleConstant<(), ()>,
-    environment: &mut Environment<'_>,
-    module_name: &EcoString,
-    errors: &mut Vec<Error>,
-) -> TypedDefinition {
-    let ModuleConstant {
-        documentation: doc,
-        location,
-        name,
-        annotation,
-        publicity,
-        value,
-        deprecation,
-        ..
-    } = c;
-
-    let mut expr_typer = ExprTyper::new(
-        environment,
-        FunctionDefinition {
-            has_body: true,
-            has_erlang_external: false,
-            has_javascript_external: false,
-        },
-        errors,
-    );
-    let typed_expr = expr_typer.infer_const(&annotation, *value);
-    let type_ = typed_expr.type_();
-    let implementations = expr_typer.implementations;
-
-    let variant = ValueConstructor {
-        publicity,
-        deprecation: deprecation.clone(),
-        variant: ValueConstructorVariant::ModuleConstant {
-            documentation: doc.clone(),
-            location,
-            literal: typed_expr.clone(),
-            module: module_name.clone(),
-            implementations,
-        },
-        type_: type_.clone(),
-    };
-
-    environment.insert_variable(
-        name.clone(),
-        variant.variant.clone(),
-        type_.clone(),
-        publicity,
-        Deprecation::NotDeprecated,
-    );
-    environment.insert_module_value(name.clone(), variant);
-
-    if publicity.is_private() {
-        environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
-    }
-
-    Definition::ModuleConstant(ModuleConstant {
-        documentation: doc,
-        location,
-        name,
-        annotation,
-        publicity,
-        value: Box::new(typed_expr),
-        type_,
-        deprecation,
-        implementations,
-    })
 }
 
 pub fn infer_bit_array_option<UntypedValue, TypedValue, Typer>(
