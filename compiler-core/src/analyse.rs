@@ -829,7 +829,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // A type alias must not have the same name as any other type in the module.
         if let Err(error) = self.assert_unique_type_name(name, *location) {
-            // TODO: test fault tolerance
             self.errors.push(error);
             // A type already exists with the name so we cannot continue and
             // register this new type with the same name.
@@ -839,17 +838,35 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
         // in some fashion.
         let mut hydrator = Hydrator::new();
-        self.record_if_error(self.hydrate_and_register_type(
-            name,
-            args,
-            resolved_type,
-            *location,
-            deprecation,
-            *publicity,
-            documentation.clone(),
-            &mut hydrator,
-            environment,
-        ));
+        let mut tryblock = || {
+            let parameters = make_type_vars(args, *location, &mut hydrator, environment)?;
+            hydrator.disallow_new_type_variables();
+            let typ = hydrator.type_from_ast(resolved_type, environment)?;
+
+            // Insert the alias so that it can be used by other code.
+            environment.insert_type_constructor(
+                name.clone(),
+                TypeConstructor {
+                    origin: *location,
+                    module: self.module_name.clone(),
+                    parameters,
+                    typ,
+                    deprecation: deprecation.clone(),
+                    publicity: *publicity,
+                    documentation: documentation.clone(),
+                },
+            )?;
+
+            if let Some(name) = hydrator.unused_type_variables().next() {
+                return Err(Error::UnusedTypeAliasParameter {
+                    location: *location,
+                    name: name.clone(),
+                });
+            }
+
+            Ok(())
+        };
+        self.record_if_error(tryblock());
 
         // Register the type for detection of dead code.
         if publicity.is_private() {
@@ -964,47 +981,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 leaked,
             });
         }
-    }
-
-    fn hydrate_and_register_type(
-        &self,
-        name: &EcoString,
-        args: &[EcoString],
-        resolved_type: &TypeAst,
-        location: SrcSpan,
-        deprecation: &Deprecation,
-        publicity: Publicity,
-        documentation: Option<EcoString>,
-        hydrator: &mut Hydrator,
-        environment: &mut Environment<'_>,
-    ) -> Result<(), Error> {
-        let parameters = make_type_vars(args, location, hydrator, environment)?;
-        hydrator.disallow_new_type_variables();
-        let typ = hydrator.type_from_ast(resolved_type, environment)?;
-
-        // Insert the alias so that it can be used by other code.
-        environment.insert_type_constructor(
-            name.clone(),
-            TypeConstructor {
-                origin: location,
-                module: self.module_name.clone(),
-                parameters,
-                typ,
-                deprecation: deprecation.clone(),
-                publicity,
-                documentation: documentation.clone(),
-            },
-        )?;
-
-        if let Some(name) = hydrator.unused_type_variables().next() {
-            // TODO: test fault tolerance
-            return Err(Error::UnusedTypeAliasParameter {
-                location,
-                name: name.clone(),
-            });
-        }
-
-        Ok(())
     }
 }
 
