@@ -11,3 +11,10 @@ error: Unknown module field
 
 The module `one` does not have a `Two` value.
 
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   Two
+  │   ^^^
+
+The name `Two` is not in scope here.

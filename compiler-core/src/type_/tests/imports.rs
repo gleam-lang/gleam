@@ -1,4 +1,4 @@
-use crate::{assert_infer_with_module, assert_with_module_error};
+use crate::{assert_infer_with_module, assert_module_error, assert_with_module_error};
 
 // https://github.com/gleam-lang/gleam/issues/1760
 #[test]
@@ -227,9 +227,7 @@ fn import_type_duplicate_with_as() {
         ("one", "pub type One = Int"),
         "import one.{type One as MyOne, type One as MyOne}
 
-pub fn main() -> One {
-  todo
-}
+pub type X = One
 ",
     );
 }
@@ -243,9 +241,7 @@ fn import_type_duplicate_with_as_multiline() {
           type One as MyOne
         }
 
-pub fn main() -> One {
-  todo
-}
+pub type X = One
 ",
     );
 }
@@ -291,5 +287,17 @@ fn imported_constructor_instead_of_type() {
 pub fn main(x: Foo) {
   todo
 }",
+    );
+}
+
+#[test]
+fn import_errors_do_not_block_analysis() {
+    // An error in an import doesn't stop the rest of the module being analysed
+    assert_module_error!(
+        "import unknown_module
+
+pub fn main() {
+  1 + Nil
+}"
     );
 }

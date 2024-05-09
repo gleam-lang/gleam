@@ -40,6 +40,8 @@ use std::{
 };
 use vec1::Vec1;
 
+use self::imports::Importer;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Inferred<T> {
     Known(T),
@@ -219,7 +221,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Register any modules, types, and values being imported
         // We process imports first so that anything imported can be referenced
         // anywhere in the module.
-        let mut env = imports::Importer::run(self.origin, env, &statements.imports)?;
+        let mut env = Importer::run(self.origin, env, &statements.imports, &mut self.errors);
 
         // Register types so they can be used in constructors and functions
         // earlier in the module.
@@ -245,7 +247,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Infer the types of each statement in the module
         let mut typed_statements = Vec::with_capacity(statements_count);
         for i in statements.imports {
-            typed_statements.push(self.analyse_import(i, &env)?);
+            optionally_push(&mut typed_statements, self.analyse_import(i, &env));
         }
         for t in statements.custom_types {
             typed_statements.push(analyse_custom_type(t, &mut env)?);
@@ -557,7 +559,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         &mut self,
         i: Import<()>,
         environment: &Environment<'_>,
-    ) -> Result<TypedDefinition, Error> {
+    ) -> Option<TypedDefinition> {
         let Import {
             documentation,
             location,
@@ -568,15 +570,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ..
         } = i;
         // Find imported module
-        let module_info =
-            environment
-                .importable_modules
-                .get(&module)
-                .ok_or_else(|| Error::UnknownModule {
-                    location,
-                    name: module.clone(),
-                    imported_modules: environment.imported_modules.keys().cloned().collect(),
-                })?;
+        let Some(module_info) = environment.importable_modules.get(&module) else {
+            // Here the module being imported doesn't exist. We don't emit an
+            // error here as the `Importer` that was run earlier will have
+            // already emitted an error for this.
+            return None;
+        };
 
         // Modules should belong to a package that is a direct dependency of the
         // current package to be imported.
@@ -593,7 +592,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 })
         }
 
-        Ok(Definition::Import(Import {
+        Some(Definition::Import(Import {
             documentation,
             location,
             module,
@@ -981,6 +980,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 leaked,
             });
         }
+    }
+}
+
+fn optionally_push<T>(vector: &mut Vec<T>, item: Option<T>) {
+    if let Some(item) = item {
+        vector.push(item)
     }
 }
 
