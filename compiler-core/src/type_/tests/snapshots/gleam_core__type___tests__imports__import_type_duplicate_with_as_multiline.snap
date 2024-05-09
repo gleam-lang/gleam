@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/imports.rs
-expression: "import one.{\n          type One as MyOne,\n          type One as MyOne\n        }\n\npub fn main() -> One {\n  todo\n}\n"
+assertion_line: 237
+expression: "import one.{\n          type One as MyOne,\n          type One as MyOne\n        }\n\npub type X = One\n"
 ---
 error: Duplicate type definition
   ┌─ /src/one/two.gleam:2:11
@@ -12,3 +13,11 @@ error: Duplicate type definition
 
 The type `MyOne` has been defined multiple times.
 Names in a Gleam module must be unique so one will need to be renamed.
+
+error: Unknown type
+  ┌─ /src/one/two.gleam:6:14
+  │
+6 │ pub type X = One
+  │              ^^^ Did you mean `MyOne`?
+
+The type `One` is not defined or imported in this module.

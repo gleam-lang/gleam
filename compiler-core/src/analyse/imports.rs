@@ -26,12 +26,15 @@ impl<'a> Importer<'a> {
         origin: Origin,
         env: Environment<'a>,
         imports: &'b [Import<()>],
-    ) -> Result<Environment<'a>, Error> {
+        errors: &mut Vec<Error>,
+    ) -> Environment<'a> {
         let mut importer = Self::new(origin, env);
         for import in imports {
-            importer.register_import(import)?;
+            if let Err(error) = importer.register_import(import) {
+                errors.push(error)
+            }
         }
-        Ok(importer.environment)
+        importer.environment
     }
 
     fn register_import(&mut self, import: &Import<()>) -> Result<(), Error> {
