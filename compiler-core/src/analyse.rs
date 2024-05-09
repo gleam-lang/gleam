@@ -228,7 +228,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
         let sorted_aliases = sorted_type_aliases(&statements.type_aliases)?;
         for t in sorted_aliases {
-            self.register_type_alias(t, &mut env)?;
+            self.register_type_alias(t, &mut env);
         }
 
         // Register values so they can be used in functions earlier in the module.
@@ -763,7 +763,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = t;
         self.assert_unique_type_name(name, *location)?;
         let mut hydrator = Hydrator::new();
-        let parameters = make_type_vars(parameters, location, &mut hydrator, environment)?;
+        let parameters = make_type_vars(parameters, *location, &mut hydrator, environment)?;
 
         hydrator.clear_ridgid_type_names();
 
@@ -815,11 +815,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         Ok(())
     }
 
-    fn register_type_alias(
-        &mut self,
-        t: &TypeAlias<()>,
-        environment: &mut Environment<'_>,
-    ) -> Result<(), Error> {
+    fn register_type_alias(&mut self, t: &TypeAlias<()>, environment: &mut Environment<'_>) {
         let TypeAlias {
             location,
             publicity,
@@ -832,41 +828,39 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = t;
 
         // A type alias must not have the same name as any other type in the module.
-        self.assert_unique_type_name(name, *location)?;
+        if let Err(error) = self.assert_unique_type_name(name, *location) {
+            // TODO: test fault tolerance
+            self.errors.push(error);
+            // A type already exists with the name so we cannot continue and
+            // register this new type with the same name.
+            return;
+        }
 
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
         // in some fashion.
         let mut hydrator = Hydrator::new();
-        let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
-        hydrator.disallow_new_type_variables();
-        let typ = hydrator.type_from_ast(resolved_type, environment)?;
-
-        // Insert the alias so that it can be used by other code.
-        environment.insert_type_constructor(
-            name.clone(),
-            TypeConstructor {
-                origin: *location,
-                module: self.module_name.clone(),
-                parameters,
-                typ,
-                deprecation: deprecation.clone(),
-                publicity: *publicity,
-                documentation: documentation.clone(),
-            },
-        )?;
-
-        if let Some(name) = hydrator.unused_type_variables().next() {
-            return Err(Error::UnusedTypeAliasParameter {
-                location: *location,
-                name: name.clone(),
-            });
-        }
+        self.record_if_error(self.hydrate_and_register_type(
+            name,
+            args,
+            resolved_type,
+            *location,
+            deprecation,
+            *publicity,
+            documentation.clone(),
+            &mut hydrator,
+            environment,
+        ));
 
         // Register the type for detection of dead code.
         if publicity.is_private() {
             environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
         };
-        Ok(())
+    }
+
+    fn record_if_error(&mut self, result: Result<(), Error>) {
+        if let Err(error) = result {
+            self.errors.push(error);
+        }
     }
 
     fn assert_unique_type_name(
@@ -970,6 +964,47 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 leaked,
             });
         }
+    }
+
+    fn hydrate_and_register_type(
+        &self,
+        name: &EcoString,
+        args: &[EcoString],
+        resolved_type: &TypeAst,
+        location: SrcSpan,
+        deprecation: &Deprecation,
+        publicity: Publicity,
+        documentation: Option<EcoString>,
+        hydrator: &mut Hydrator,
+        environment: &mut Environment<'_>,
+    ) -> Result<(), Error> {
+        let parameters = make_type_vars(args, location, hydrator, environment)?;
+        hydrator.disallow_new_type_variables();
+        let typ = hydrator.type_from_ast(resolved_type, environment)?;
+
+        // Insert the alias so that it can be used by other code.
+        environment.insert_type_constructor(
+            name.clone(),
+            TypeConstructor {
+                origin: location,
+                module: self.module_name.clone(),
+                parameters,
+                typ,
+                deprecation: deprecation.clone(),
+                publicity,
+                documentation: documentation.clone(),
+            },
+        )?;
+
+        if let Some(name) = hydrator.unused_type_variables().next() {
+            // TODO: test fault tolerance
+            return Err(Error::UnusedTypeAliasParameter {
+                location,
+                name: name.clone(),
+            });
+        }
+
+        Ok(())
     }
 }
 
@@ -1096,11 +1131,15 @@ fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> Ty
         deprecation,
         ..
     } = t;
-    let typ = environment
-        .get_type_constructor(&None, &alias)
-        .expect("Could not find existing type for type alias")
-        .typ
-        .clone();
+
+    // There could be no type alias registered if it was invalid in some way.
+    // analysis aims to be fault tolerant to get the best possible feedback for
+    // the programmer in the language server, so the analyser gets here even
+    // though there was previously errors.
+    let typ = match environment.get_type_constructor(&None, &alias) {
+        Ok(constructor) => constructor.typ.clone(),
+        Err(_) => environment.new_generic_var(),
+    };
     Definition::TypeAlias(TypeAlias {
         documentation: doc,
         location,
@@ -1387,7 +1426,7 @@ fn generalise_function(
 
 fn make_type_vars(
     args: &[EcoString],
-    location: &SrcSpan,
+    location: SrcSpan,
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
 ) -> Result<Vec<Arc<Type>>, Error> {
@@ -1395,7 +1434,7 @@ fn make_type_vars(
         .map(|name| {
             hydrator.add_type_variable(name, environment).map_err(|()| {
                 Error::DuplicateTypeParameter {
-                    location: *location,
+                    location,
                     name: name.clone(),
                 }
             })
