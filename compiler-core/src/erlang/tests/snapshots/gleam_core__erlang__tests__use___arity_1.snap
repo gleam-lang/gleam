@@ -16,4 +16,3 @@ pair(F) ->
 -spec main() -> {integer(), integer()}.
 main() ->
     pair(fun() -> 123 end).
-

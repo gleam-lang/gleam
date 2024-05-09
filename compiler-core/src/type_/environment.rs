@@ -244,8 +244,7 @@ impl<'a> Environment<'a> {
         );
     }
 
-    /// Insert a value into the current module.
-    /// Errors if the module already has a value with that name.
+    /// Insert (or overwrites) a value into the current module.
     ///
     pub fn insert_module_value(&mut self, name: EcoString, value: ValueConstructor) {
         let _ = self.module_values.insert(name, value);

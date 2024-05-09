@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/consts.rs
+assertion_line: 100
 expression: "\n          fn identity(a) {\n            a\n          }\n\n          pub type Mapper(b) {\n            Mapper(fn(b) -> b)\n          }\n\n          pub type Funcs(b) {\n            Funcs(mapper: Mapper(b))\n          }\n\n          pub const id_mapper = Funcs(Mapper(identity))\n        "
 ---
 -module(my@mod).
@@ -15,4 +16,3 @@ expression: "\n          fn identity(a) {\n            a\n          }\n\n       
 -spec identity(K) -> K.
 identity(A) ->
     A.
-

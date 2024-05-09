@@ -233,15 +233,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.register_type_alias(t, &mut env);
         }
 
-        // Register values so they can be used in functions earlier in the module.
-        for c in &statements.constants {
-            assert_unique_name(&mut self.value_names, &c.name, c.location)?;
-        }
         for f in &statements.functions {
             self.register_value_from_function(f, &mut env)?;
-        }
-        for t in &statements.custom_types {
-            self.register_values_from_custom_type(t, &mut env, &t.parameters)?;
         }
 
         // Infer the types of each statement in the module
@@ -250,7 +243,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             optionally_push(&mut typed_statements, self.analyse_import(i, &env));
         }
         for t in statements.custom_types {
-            typed_statements.push(analyse_custom_type(t, &mut env)?);
+            optionally_push(&mut typed_statements, self.analyse_custom_type(t, &mut env));
         }
         for t in statements.type_aliases {
             typed_statements.push(analyse_type_alias(t, &mut env));
@@ -603,6 +596,100 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }))
     }
 
+    fn analyse_custom_type(
+        &mut self,
+        t: CustomType<()>,
+        environment: &mut Environment<'_>,
+    ) -> Option<TypedDefinition> {
+        match self.do_analyse_custom_type(t, environment) {
+            Ok(t) => Some(t),
+            Err(error) => {
+                self.errors.push(error);
+                None
+            }
+        }
+    }
+
+    // TODO: split this into a new class.
+    fn do_analyse_custom_type(
+        &mut self,
+        t: CustomType<()>,
+        environment: &mut Environment<'_>,
+    ) -> Result<TypedDefinition, Error> {
+        self.register_values_from_custom_type(&t, environment, &t.parameters)?;
+
+        let CustomType {
+            documentation: doc,
+            location,
+            end_position,
+            publicity,
+            opaque,
+            name,
+            parameters,
+            constructors,
+            deprecation,
+            ..
+        } = t;
+
+        let constructors = constructors
+            .into_iter()
+            .map(
+                |RecordConstructor {
+                     location,
+                     name,
+                     arguments: args,
+                     documentation,
+                 }| {
+                    let preregistered_fn = environment
+                        .get_variable(&name)
+                        .expect("Could not find preregistered type for function");
+                    let preregistered_type = preregistered_fn.type_.clone();
+
+                    let args =
+                        if let Some((args_types, _return_type)) = preregistered_type.fn_types() {
+                            args.into_iter()
+                                .zip(&args_types)
+                                .map(|(argument, t)| RecordConstructorArg {
+                                    label: argument.label,
+                                    ast: argument.ast,
+                                    location: argument.location,
+                                    type_: t.clone(),
+                                    doc: None,
+                                })
+                                .collect()
+                        } else {
+                            vec![]
+                        };
+
+                    RecordConstructor {
+                        location,
+                        name,
+                        arguments: args,
+                        documentation,
+                    }
+                },
+            )
+            .collect();
+        let typed_parameters = environment
+            .get_type_constructor(&None, &name)
+            .expect("Could not find preregistered type constructor ")
+            .parameters
+            .clone();
+
+        Ok(Definition::CustomType(CustomType {
+            documentation: doc,
+            location,
+            end_position,
+            publicity,
+            opaque,
+            name,
+            parameters,
+            constructors,
+            typed_parameters,
+            deprecation,
+        }))
+    }
+
     fn register_values_from_custom_type(
         &mut self,
         t: &CustomType<()>,
@@ -914,7 +1001,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_type: _,
             implementations,
         } = f;
-        assert_unique_name(&mut self.value_names, name, *location)?;
         assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
 
         let mut builder = FieldMapBuilder::new(args.len() as u32);
@@ -1131,80 +1217,6 @@ fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> Ty
         type_: typ,
         deprecation,
     })
-}
-
-fn analyse_custom_type(
-    t: CustomType<()>,
-    environment: &mut Environment<'_>,
-) -> Result<TypedDefinition, Error> {
-    let CustomType {
-        documentation: doc,
-        location,
-        end_position,
-        publicity,
-        opaque,
-        name,
-        parameters,
-        constructors,
-        deprecation,
-        ..
-    } = t;
-    let constructors = constructors
-        .into_iter()
-        .map(
-            |RecordConstructor {
-                 location,
-                 name,
-                 arguments: args,
-                 documentation,
-             }| {
-                let preregistered_fn = environment
-                    .get_variable(&name)
-                    .expect("Could not find preregistered type for function");
-                let preregistered_type = preregistered_fn.type_.clone();
-
-                let args = if let Some((args_types, _return_type)) = preregistered_type.fn_types() {
-                    args.into_iter()
-                        .zip(&args_types)
-                        .map(|(argument, t)| RecordConstructorArg {
-                            label: argument.label,
-                            ast: argument.ast,
-                            location: argument.location,
-                            type_: t.clone(),
-                            doc: None,
-                        })
-                        .collect()
-                } else {
-                    vec![]
-                };
-
-                RecordConstructor {
-                    location,
-                    name,
-                    arguments: args,
-                    documentation,
-                }
-            },
-        )
-        .collect();
-    let typed_parameters = environment
-        .get_type_constructor(&None, &name)
-        .expect("Could not find preregistered type constructor ")
-        .parameters
-        .clone();
-
-    Ok(Definition::CustomType(CustomType {
-        documentation: doc,
-        location,
-        end_position,
-        publicity,
-        opaque,
-        name,
-        parameters,
-        constructors,
-        typed_parameters,
-        deprecation,
-    }))
 }
 
 pub fn infer_bit_array_option<UntypedValue, TypedValue, Typer>(
