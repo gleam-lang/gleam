@@ -43,3 +43,19 @@ pub type Kitten = AnotherUnknownType
         "#
     );
 }
+
+#[test]
+fn duplicate_variable_error_does_not_stop_analysis() {
+    // Both these aliases have errors! We do not stop on the first one.
+    assert_module_error!(
+        r#"
+type Two(a, a) {
+  Two(a, a)
+}
+
+type Three(a, a) {
+  Three
+}
+"#
+    );
+}
