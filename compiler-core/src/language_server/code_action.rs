@@ -208,7 +208,7 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
         let (lparen_offset, _) = tuple_code
             .match_indices('(')
             // Ignore in comments
-            .find(|(i, _)| !self.extra.contains(location.start + *i as u32))
+            .find(|(i, _)| !self.extra.is_within_comment(location.start + *i as u32))
             .expect("`(` not found in tuple");
 
         edits.push(TextEdit {
@@ -233,7 +233,11 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
             if let Some((trailing_comma_offset, _)) = code_after_last_elem
                 .rmatch_indices(',')
                 // Ignore in comments
-                .find(|(i, _)| !self.extra.contains(last_elem_location.end + *i as u32))
+                .find(|(i, _)| {
+                    !self
+                        .extra
+                        .is_within_comment(last_elem_location.end + *i as u32)
+                })
             {
                 edits.push(TextEdit {
                     range: src_span_to_lsp_range(

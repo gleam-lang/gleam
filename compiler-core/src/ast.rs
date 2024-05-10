@@ -17,6 +17,7 @@ use crate::type_::expression::Implementations;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
+use std::cmp::Ordering;
 use std::sync::Arc;
 
 use ecow::EcoString;
@@ -1319,6 +1320,16 @@ impl SrcSpan {
 
     pub fn contains(&self, byte_index: u32) -> bool {
         byte_index >= self.start && byte_index < self.end
+    }
+
+    pub fn cmp_byte_index(&self, byte_index: u32) -> Ordering {
+        if byte_index < self.start {
+            Ordering::Less
+        } else if self.end <= byte_index {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
     }
 }
 
