@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/type_/tests/custom_types.rs
+assertion_line: 50
+expression: "\ntype Two(a, a) {\n  Two(a, a)\n}\n\ntype Three(a, a) {\n  Three\n}\n"
+---
+error: Duplicate type parameter
+  ┌─ /src/one/two.gleam:2:1
+  │
+2 │ type Two(a, a) {
+  │ ^^^^^^^^^^^^^^
+
+This definition has multiple type parameters named `a`.
+Rename or remove one of them.
+
+error: Duplicate type parameter
+  ┌─ /src/one/two.gleam:6:1
+  │
+6 │ type Three(a, a) {
+  │ ^^^^^^^^^^^^^^^^
+
+This definition has multiple type parameters named `a`.
+Rename or remove one of them.

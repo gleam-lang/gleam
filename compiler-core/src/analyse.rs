@@ -234,6 +234,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         for f in &statements.functions {
+            // TODO: do not exit early if there is an error here.
             self.register_value_from_function(f, &mut env)?;
         }
 
@@ -901,9 +902,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             documentation,
             ..
         } = t;
+        // We exit early here as we don't yet have a good way to handle the two
+        // duplicate definitions in the later pass of the analyser which
+        // register the constructor values for the types. The latter would end up
+        // overwriting the former, but here in type registering we keep the
+        // former. I think we want to really keep the former both times.
+        // The fact we can't straightforwardly do this indicated to me that we
+        // could improve our approach here somewhat.
         self.assert_unique_type_name(name, *location)?;
+
         let mut hydrator = Hydrator::new();
-        let parameters = make_type_vars(parameters, *location, &mut hydrator, environment)?;
+        let parameters = self.make_type_vars(parameters, *location, &mut hydrator, environment);
 
         hydrator.clear_ridgid_type_names();
 
@@ -928,18 +937,20 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             args: parameters.clone(),
         });
         let _ = self.hydrators.insert(name.clone(), hydrator);
-        environment.insert_type_constructor(
-            name.clone(),
-            TypeConstructor {
-                origin: *location,
-                module: self.module_name.clone(),
-                deprecation: deprecation.clone(),
-                parameters,
-                publicity,
-                typ,
-                documentation: documentation.clone(),
-            },
-        )?;
+        environment
+            .insert_type_constructor(
+                name.clone(),
+                TypeConstructor {
+                    origin: *location,
+                    module: self.module_name.clone(),
+                    deprecation: deprecation.clone(),
+                    parameters,
+                    publicity,
+                    typ,
+                    documentation: documentation.clone(),
+                },
+            )
+            .expect("name uniqueness checked above");
 
         if *opaque && constructors.is_empty() {
             environment
@@ -978,8 +989,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
         // in some fashion.
         let mut hydrator = Hydrator::new();
-        let mut tryblock = || {
-            let parameters = make_type_vars(args, *location, &mut hydrator, environment)?;
+        let parameters = self.make_type_vars(args, *location, &mut hydrator, environment);
+        let tryblock = || {
             hydrator.disallow_new_type_variables();
             let typ = hydrator.type_from_ast(resolved_type, environment)?;
 
@@ -1013,6 +1024,30 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
         };
     }
+
+    fn make_type_vars(
+        &mut self,
+        args: &[EcoString],
+        location: SrcSpan,
+        hydrator: &mut Hydrator,
+        environment: &mut Environment<'_>,
+    ) -> Vec<Arc<Type>> {
+        args.iter()
+            .map(|name| {
+                match hydrator.add_type_variable(name, environment) {
+                    Ok(t) => t,
+                    Err(t) => {
+                        self.errors.push(Error::DuplicateTypeParameter {
+                            location,
+                            name: name.clone(),
+                        });
+                        t
+                    }
+                }
+            })
+            .collect()
+    }
+
 
     fn record_if_error(&mut self, result: Result<(), Error>) {
         if let Err(error) = result {
@@ -1437,23 +1472,6 @@ fn generalise_function(
     })
 }
 
-fn make_type_vars(
-    args: &[EcoString],
-    location: SrcSpan,
-    hydrator: &mut Hydrator,
-    environment: &mut Environment<'_>,
-) -> Result<Vec<Arc<Type>>, Error> {
-    args.iter()
-        .map(|name| {
-            hydrator.add_type_variable(name, environment).map_err(|()| {
-                Error::DuplicateTypeParameter {
-                    location,
-                    name: name.clone(),
-                }
-            })
-        })
-        .collect::<Result<_, _>>()
-}
 
 fn assert_unique_name(
     names: &mut HashMap<EcoString, SrcSpan>,

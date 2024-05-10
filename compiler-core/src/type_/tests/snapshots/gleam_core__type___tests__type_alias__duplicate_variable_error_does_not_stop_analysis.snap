@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/type_/tests/type_alias.rs
+assertion_line: 113
+expression: "\ntype Two(a, a) =\n  #(a, a)\n\ntype UnknownType =\n  Dunno\n"
+---
+error: Duplicate type parameter
+  ┌─ /src/one/two.gleam:2:1
+  │  
+2 │ ╭ type Two(a, a) =
+3 │ │   #(a, a)
+  │ ╰───^
+
+This definition has multiple type parameters named `a`.
+Rename or remove one of them.
+
+error: Unknown type
+  ┌─ /src/one/two.gleam:6:3
+  │
+6 │   Dunno
+  │   ^^^^^
+
+The type `Dunno` is not defined or imported in this module.
