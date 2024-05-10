@@ -260,28 +260,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             // mutual recursion.
 
             for definition in group {
-                match definition {
-                    CallGraphNode::Function(f) => {
-                        let statement = self.infer_function(f, &mut env);
-                        match statement {
-                            Ok(statement) => working_group.push(statement),
-                            Err(e) => {
-                                // TODO: We do this to maintain any constant related errors within the function
-                                // Once function inference is continuable this entire match will be removed
-                                let mut errs = Vec1::new(e);
-                                errs.append(&mut self.errors);
-                                errs.sort_by_key(|e| e.start_location());
-                                return Err(AnalysisFailure {
-                                    ast: None,
-                                    errors: errs,
-                                });
-                            }
-                        }
-                    }
-                    CallGraphNode::ModuleConstant(c) => {
-                        working_group.push(self.infer_module_constant(c, &mut env));
-                    }
-                }
+                let def = match definition {
+                    CallGraphNode::Function(f) => self.infer_function(f, &mut env),
+                    CallGraphNode::ModuleConstant(c) => self.infer_module_constant(c, &mut env),
+                };
+                working_group.push(def);
             }
 
             // Now that the entire group has been inferred, generalise their types.
@@ -424,7 +407,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         &mut self,
         f: UntypedFunction,
         environment: &mut Environment<'_>,
-    ) -> Result<TypedDefinition, Error> {
+    ) -> TypedDefinition {
         let Function {
             documentation: doc,
             location,
@@ -537,7 +520,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             && environment.target_support.is_enforced()
             && !implementations.supports(target)
         {
-            return Err(Error::UnsupportedPublicFunctionTarget {
+            self.errors.push(Error::UnsupportedPublicFunctionTarget {
                 name: name.clone(),
                 target,
                 location,
@@ -562,7 +545,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             deprecation.clone(),
         );
 
-        Ok(Definition::Function(Function {
+        Definition::Function(Function {
             documentation: doc,
             location,
             name,
@@ -578,7 +561,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_erlang,
             external_javascript,
             implementations,
-        }))
+        })
     }
 
     fn ensure_annotations_present(
