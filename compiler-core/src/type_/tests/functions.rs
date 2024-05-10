@@ -230,3 +230,20 @@ pub fn bad_2() {
 "#
     );
 }
+
+#[test]
+fn invalid_javascript_external_do_not_stop_analysis() {
+    // Both these have errors! We do not stop on the first one.
+    assert_module_error!(
+        r#"
+@external(javascript, "somemodule", "() => 123")
+pub fn one() -> Nil {
+  Nil
+}
+
+pub fn two() -> Nil {
+  ""
+}
+"#
+    );
+}
