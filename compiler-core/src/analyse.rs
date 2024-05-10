@@ -522,7 +522,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         };
 
         // Assert that the inferred type matches the type of any recursive call
-        unify(preregistered_type.clone(), type_).map_err(|e| convert_unify_error(e, location))?;
+        if let Err(error) = unify(preregistered_type.clone(), type_) {
+            self.errors.push(convert_unify_error(error, location));
+        }
 
         // Ensure that the current target has an implementation for the function.
         // This is done at the expression level while inferring the function body, but we do it again
