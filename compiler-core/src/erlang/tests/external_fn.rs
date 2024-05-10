@@ -223,7 +223,7 @@ pub fn one(x: Int) -> Int
 fn no_body_or_implementation() {
     assert_module_error!(
         r#"
-pub fn one(x: Int) -> Int
+pub fn one(x: Int) -> Float
 "#
     );
 }

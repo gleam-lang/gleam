@@ -168,3 +168,15 @@ pub fn two(x) {
 "#
     );
 }
+
+#[test]
+fn no_impl_function_fault_tolerance() {
+    // A function not having an implementation does not stop analysis.
+    assert_module_error!(
+        r#"
+pub fn no_impl() -> Nil
+
+pub type X = UnknownType
+"#
+    );
+}

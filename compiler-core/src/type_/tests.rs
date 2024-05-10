@@ -438,7 +438,7 @@ pub fn compile_module_with_opts(
 
     match inference_result {
         Ok(ast) => Ok(ast),
-        Err(crate::analyse::InferenceFailure { errors, .. }) => Err(errors.to_vec()),
+        Err(crate::analyse::AnalysisFailure { errors, .. }) => Err(errors.to_vec()),
     }
 }
 
