@@ -16,16 +16,18 @@ impl ModuleExtra {
         Default::default()
     }
 
-    pub fn contains(&self, offset: u32) -> bool {
-        self.module_comments
-            .iter()
-            .any(|span| span.contains(offset))
-            || self.doc_comments.iter().any(|span| span.contains(offset))
-            || self.comments.iter().any(|span| span.contains(offset))
+    pub fn is_within_comment(&self, byte_index: u32) -> bool {
+        self.comments
+            .binary_search_by(|span| span.cmp_byte_index(byte_index))
+            .is_ok()
             || self
-                .empty_lines
-                .iter()
-                .any(|&empty_line_offset| empty_line_offset == offset)
+                .doc_comments
+                .binary_search_by(|span| span.cmp_byte_index(byte_index))
+                .is_ok()
+            || self
+                .module_comments
+                .binary_search_by(|span| span.cmp_byte_index(byte_index))
+                .is_ok()
     }
 }
 
