@@ -205,3 +205,28 @@ pub fn bad_2() {
 "#
     );
 }
+
+#[test]
+fn annotation_mismatch_function_fault_tolerance() {
+    // A function having an invalid body does not stop analysis.
+    assert_module_error!(
+        r#"
+pub fn bad(x: Int) -> Float {
+  // This does not match the return annotation
+  1
+}
+
+pub fn user() -> Float {
+  // This checks that the bad function is still usable, the types coming from
+  // its annotations. This function is valid.
+  bad(1)
+}
+
+// Another bad function to make sure that analysis has not stopped. This error
+// should also be emitted.
+pub fn bad_2() {
+  bad(Nil)
+}
+"#
+    );
+}
