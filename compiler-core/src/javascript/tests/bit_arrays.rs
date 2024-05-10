@@ -297,6 +297,17 @@ fn as_module_const() {
     )
 }
 
+#[test]
+fn negative_size() {
+    assert_js!(
+        r#"
+fn go() {
+  <<1:size(-1)>>
+}
+"#,
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1591
 #[test]
 fn not_byte_aligned() {
