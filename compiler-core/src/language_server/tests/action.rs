@@ -1,3 +1,5 @@
+use std::assert_eq;
+
 use crate::{language_server::engine, line_numbers::LineNumbers};
 use lsp_types::{
     CodeActionContext, CodeActionParams, PartialResultParams, Position, Range,
@@ -256,14 +258,26 @@ pub fn main() {
 }
 
 #[test]
-fn test_remove_redundant_tuple_in_case_subject_ignore_ineligible() {
+fn test_remove_redundant_tuple_in_case_subject_ignore_empty_tuple() {
     let code = "
 pub fn main() {
   case #() { #() -> 0 }
-  case #(0), #(1) { #(a), b -> 0 }
+}
+";
+
+    assert!(engine_response(code, 11)
+        .result
+        .expect("ok response")
+        .is_none());
+}
+
+#[test]
+fn test_remove_redundant_tuple_in_case_subject_only_safe_remove() {
+    let code = "
+pub fn main() {
   case #(0), #(1) {
     #(1), #(b) -> 0
-    a, #(0) -> 1
+    a, #(0) -> 1 // The first of this clause is not a tuple
     #(a), #(b) -> 2
   }
 }
@@ -271,11 +285,9 @@ pub fn main() {
 
     let expected = "
 pub fn main() {
-  case #() { #() -> 0 }
-  case 0, #(1) { a, b -> 0 }
   case #(0), 1 {
     #(1), b -> 0
-    a, 0 -> 1
+    a, 0 -> 1 // The first of this clause is not a tuple
     #(a), b -> 2
   }
 }
