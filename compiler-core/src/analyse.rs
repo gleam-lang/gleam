@@ -465,7 +465,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             // mandatory as the Gleam implementation may be absent, and because we
             // think you should always specify types for external functions for
             // clarity + to avoid accidental mistakes.
-            ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
+            self.ensure_annotations_present(&arguments, return_annotation.as_ref(), location);
         }
 
         let definition = FunctionDefinition {
@@ -550,6 +550,28 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_javascript,
             implementations,
         }))
+    }
+
+    fn ensure_annotations_present(
+        &mut self,
+        arguments: &[UntypedArg],
+        return_annotation: Option<&TypeAst>,
+        location: SrcSpan,
+    ) {
+        for arg in arguments {
+            if arg.annotation.is_none() {
+                self.errors.push(Error::ExternalMissingAnnotation {
+                    location: arg.location,
+                    kind: MissingAnnotation::Parameter,
+                });
+            }
+        }
+        if return_annotation.is_none() {
+            self.errors.push(Error::ExternalMissingAnnotation {
+                location,
+                kind: MissingAnnotation::Return,
+            });
+        }
     }
 
     fn ensure_function_has_an_implementation(
@@ -1171,28 +1193,6 @@ fn target_function_implementation<'a>(
         Target::Erlang => external_erlang,
         Target::JavaScript => external_javascript,
     }
-}
-
-fn ensure_annotations_present(
-    arguments: &[UntypedArg],
-    return_annotation: Option<&TypeAst>,
-    location: SrcSpan,
-) -> Result<(), Error> {
-    for arg in arguments {
-        if arg.annotation.is_none() {
-            return Err(Error::ExternalMissingAnnotation {
-                location: arg.location,
-                kind: MissingAnnotation::Parameter,
-            });
-        }
-    }
-    if return_annotation.is_none() {
-        return Err(Error::ExternalMissingAnnotation {
-            location,
-            kind: MissingAnnotation::Return,
-        });
-    }
-    Ok(())
 }
 
 fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> TypedDefinition {

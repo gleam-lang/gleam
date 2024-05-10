@@ -316,3 +316,16 @@ pub fn should_not_be_generated() {
 "#
     );
 }
+
+#[test]
+fn no_gleam_impl_no_annotations_function_fault_tolerance() {
+    // A function not having annotations when required does not stop analysis.
+    assert_module_error!(
+        r#"
+@external(erlang, "one", "two")
+pub fn no_impl()
+
+pub type X = UnknownType
+"#
+    );
+}
