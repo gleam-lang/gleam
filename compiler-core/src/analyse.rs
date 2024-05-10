@@ -6,9 +6,9 @@ use crate::{
     ast::{
         self, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
-        RecordConstructorArg, SrcSpan, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn,
-        TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedFunction, TypedModule,
-        UntypedArg, UntypedFunction, UntypedModule, UntypedStatement,
+        RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypeAstConstructor,
+        TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
+        TypedFunction, TypedModule, UntypedArg, UntypedFunction, UntypedModule, UntypedStatement,
     },
     build::{Origin, Target},
     call_graph::{into_dependency_order, CallGraphNode},
@@ -19,7 +19,7 @@ use crate::{
         self,
         environment::*,
         error::{convert_unify_error, Error, MissingAnnotation},
-        expression::{ExprTyper, FunctionDefinition},
+        expression::{ExprTyper, FunctionDefinition, Implementations},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
@@ -417,6 +417,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         })
     }
 
+    // TODO: Extract this into a class of its own! Or perhaps it just wants some
+    // helper methods extracted. There's a whole bunch of state in this one
+    // function, and it does a handful of things.
     fn infer_function(
         &mut self,
         f: UntypedFunction,
@@ -438,12 +441,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             implementations: _,
         } = f;
         let target = environment.target;
+        let body_location = body.last().location();
         let preregistered_fn = environment
             .get_variable(&name)
             .expect("Could not find preregistered type for function");
         let field_map = preregistered_fn.field_map().cloned();
         let preregistered_type = preregistered_fn.type_.clone();
-        let (args_types, return_type) = preregistered_type
+        let (prereg_args_types, prereg_return_type) = preregistered_type
             .fn_types()
             .expect("Preregistered type for fn was not a fn");
 
@@ -474,28 +478,51 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             has_javascript_external: external_javascript.is_some(),
         };
 
+        let typed_args = arguments
+            .into_iter()
+            .zip(&prereg_args_types)
+            .map(|(a, t)| a.set_type(t.clone()))
+            .collect_vec();
+
         // Infer the type using the preregistered args + return types as a starting point
-        let (type_, args, body, implementations) = environment.in_new_scope(|environment| {
-            let args_types = arguments
-                .into_iter()
-                .zip(&args_types)
-                .map(|(a, t)| a.set_type(t.clone()))
-                .collect();
+        let result = environment.in_new_scope(|environment| {
             let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors);
             expr_typer.hydrator = self
                 .hydrators
                 .remove(&name)
                 .expect("Could not find hydrator for fn");
 
-            let (args, body) =
-                expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type))?;
+            let (args, body) = expr_typer.infer_fn_with_known_types(
+                typed_args.clone(),
+                body,
+                Some(prereg_return_type.clone()),
+            )?;
             let args_types = args.iter().map(|a| a.type_.clone()).collect();
             let typ = fn_(args_types, body.last().type_());
-            Ok((typ, args, body, expr_typer.implementations))
-        })?;
+            Ok((typ, body, expr_typer.implementations))
+        });
+
+        // If we could not successfully infer the type etc information of the
+        // function then register the error and continue anaylsis using the best
+        // information that we have, so we can still learn about the rest of the
+        // module.
+        let (type_, body, implementations) = match result {
+            Ok((type_, body, implementations)) => (type_, body, implementations),
+            Err(error) => {
+                self.errors.push(error);
+                let type_ = preregistered_type.clone();
+                let body = Vec1::new(Statement::Expression(TypedExpr::Todo {
+                    type_: prereg_return_type.clone(),
+                    location: body_location,
+                    message: None,
+                }));
+                let implementations = Implementations::supporting_all();
+                (type_, body, implementations)
+            }
+        };
 
         // Assert that the inferred type matches the type of any recursive call
-        unify(preregistered_type, type_.clone()).map_err(|e| convert_unify_error(e, location))?;
+        unify(preregistered_type.clone(), type_).map_err(|e| convert_unify_error(e, location))?;
 
         // Ensure that the current target has an implementation for the function.
         // This is done at the expression level while inferring the function body, but we do it again
@@ -520,7 +547,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name: impl_function,
             field_map,
             module: impl_module,
-            arity: args.len(),
+            arity: typed_args.len(),
             location,
             implementations,
         };
@@ -528,7 +555,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         environment.insert_variable(
             name.clone(),
             variant,
-            type_.clone(),
+            preregistered_type.clone(),
             publicity,
             deprecation.clone(),
         );
@@ -539,10 +566,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name,
             publicity,
             deprecation,
-            arguments: args,
+            arguments: typed_args,
             end_position: end_location,
             return_annotation,
-            return_type: type_
+            return_type: preregistered_type
                 .return_type()
                 .expect("Could not find return type for fn"),
             body,
