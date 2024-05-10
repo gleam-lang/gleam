@@ -611,7 +611,7 @@ pub type Shape {
     Rectangle(x: String, y: String)
 }
 pub fn get_x(shape: Shape) { shape.x }
-pub fn get_y(shape: Shape) { shape.y }"
+"
     );
 }
 

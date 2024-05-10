@@ -180,3 +180,28 @@ pub type X = UnknownType
 "#
     );
 }
+
+#[test]
+fn bad_body_function_fault_tolerance() {
+    // A function having an invalid body does not stop analysis.
+    assert_module_error!(
+        r#"
+pub fn bad(x: Int) -> Float {
+  // Invalid body.
+  "" + ""
+}
+
+pub fn user() -> Float {
+  // This checks that the bad function is still usable, the types coming from
+  // its annotations. This function is valid.
+  bad(1)
+}
+
+// Another bad function to make sure that analysis has not stopped. This error
+// should also be emitted.
+pub fn bad_2() {
+  bad(Nil)
+}
+"#
+    );
+}

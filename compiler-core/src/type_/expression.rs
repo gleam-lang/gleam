@@ -46,6 +46,18 @@ pub struct Implementations {
     pub uses_javascript_externals: bool,
 }
 
+impl Implementations {
+    pub fn supporting_all() -> Self {
+        Self {
+            gleam: true,
+            can_run_on_erlang: true,
+            can_run_on_javascript: true,
+            uses_javascript_externals: false,
+            uses_erlang_externals: false,
+        }
+    }
+}
+
 /// Tracking whether the function being currently type checked has externals
 /// implementations or not.
 /// This is used to determine whether an error should be raised in the case when
