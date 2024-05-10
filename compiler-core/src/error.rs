@@ -1378,9 +1378,9 @@ Names in a Gleam module must be unique so one will need to be renamed."
 
                 TypeError::DuplicateField { location, label } => {
                     let text =
-                        format!("The field `{label}` has already been defined. Rename this field.");
+                        format!("The label `{label}` has already been defined. Rename this label.");
                     Diagnostic {
-                        title: "Duplicate field".into(),
+                        title: "Duplicate label".into(),
                         text,
                         hint: None,
                         level: Level::Error,
