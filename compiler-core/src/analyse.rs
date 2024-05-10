@@ -113,7 +113,7 @@ impl TargetSupport {
 }
 
 #[derive(Debug)]
-pub struct InferenceFailure {
+pub struct AnalysisFailure {
     // Right now this is an option because we don't complete the module typing on error
     // Once we add proper type holes and always return a module this should not be an option
     pub ast: Option<TypedModule>,
@@ -121,11 +121,11 @@ pub struct InferenceFailure {
     pub errors: Vec1<Error>,
 }
 
-impl From<Error> for InferenceFailure {
+impl From<Error> for AnalysisFailure {
     // Used to create InferenceFailure from a singe error.
     // Should not be needed once we start actually collecting all the errors.
     fn from(error: Error) -> Self {
-        InferenceFailure {
+        AnalysisFailure {
             ast: None,
             errors: vec1::vec1![error],
         }
@@ -157,7 +157,7 @@ impl<'a, A> ModuleAnalyzerConstructor<'a, A> {
         module: UntypedModule,
         line_numbers: LineNumbers,
         src_path: Utf8PathBuf,
-    ) -> Result<TypedModule, InferenceFailure> {
+    ) -> Result<TypedModule, AnalysisFailure> {
         ModuleAnalyzer {
             target: self.target,
             ids: self.ids,
@@ -201,7 +201,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     pub fn infer_module(
         mut self,
         mut module: UntypedModule,
-    ) -> Result<TypedModule, InferenceFailure> {
+    ) -> Result<TypedModule, AnalysisFailure> {
         validate_module_name(&self.module_name)?;
 
         let documentation = std::mem::take(&mut module.documentation);
@@ -271,7 +271,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                                 let mut errs = Vec1::new(e);
                                 errs.append(&mut self.errors);
                                 errs.sort_by_key(|e| e.start_location());
-                                return Err(InferenceFailure {
+                                return Err(AnalysisFailure {
                                     ast: None,
                                     errors: errs,
                                 });
@@ -345,7 +345,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         match Vec1::try_from_vec(self.errors) {
             Err(_) => Ok(ast),
-            Ok(errors) => Err(InferenceFailure {
+            Ok(errors) => Err(AnalysisFailure {
                 ast: Some(ast),
                 errors,
             }),
@@ -453,12 +453,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let (impl_module, impl_function) = implementation_names(external, &self.module_name, &name);
 
         // The function must have at least one implementation somewhere.
-        ensure_function_has_an_implementation(
+        let has_implementation = self.ensure_function_has_an_implementation(
             &body,
             &external_erlang,
             &external_javascript,
             location,
-        )?;
+        );
 
         if external.is_some() {
             // There was an external implementation, so type annotations are
@@ -500,7 +500,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Ensure that the current target has an implementation for the function.
         // This is done at the expression level while inferring the function body, but we do it again
         // here as externally implemented functions may not have a Gleam body.
-        if publicity.is_importable()
+        //
+        // We don't emit this error if there is no implementation, as this would
+        // have already emitted an error above.
+        if has_implementation
+            && publicity.is_importable()
             && environment.target_support.is_enforced()
             && !implementations.supports(target)
         {
@@ -546,6 +550,22 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_javascript,
             implementations,
         }))
+    }
+
+    fn ensure_function_has_an_implementation(
+        &mut self,
+        body: &Vec1<UntypedStatement>,
+        external_erlang: &Option<(EcoString, EcoString)>,
+        external_javascript: &Option<(EcoString, EcoString)>,
+        location: SrcSpan,
+    ) -> bool {
+        match (external_erlang, external_javascript) {
+            (None, None) if body.first().is_placeholder() => {
+                self.errors.push(Error::NoImplementation { location });
+                false
+            }
+            _ => true,
+        }
     }
 
     fn analyse_import(
@@ -1150,18 +1170,6 @@ fn target_function_implementation<'a>(
     match target {
         Target::Erlang => external_erlang,
         Target::JavaScript => external_javascript,
-    }
-}
-
-fn ensure_function_has_an_implementation(
-    body: &Vec1<UntypedStatement>,
-    external_erlang: &Option<(EcoString, EcoString)>,
-    external_javascript: &Option<(EcoString, EcoString)>,
-    location: SrcSpan,
-) -> Result<(), Error> {
-    match (external_erlang, external_javascript) {
-        (None, None) if body.first().is_placeholder() => Err(Error::NoImplementation { location }),
-        _ => Ok(()),
     }
 }
 
