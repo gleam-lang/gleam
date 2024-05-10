@@ -793,7 +793,7 @@ where
     v.visit_typed_expr(&arg.value);
 }
 
-pub fn visit_typed_bit_array_option<'a, V>(_v: &mut V, option: &'a BitArrayOption<TypedExpr>)
+pub fn visit_typed_bit_array_option<'a, V>(v: &mut V, option: &'a BitArrayOption<TypedExpr>)
 where
     V: Visit<'a> + ?Sized,
 {
@@ -815,9 +815,11 @@ where
         BitArrayOption::Native { location: _ } => { /* TODO */ }
         BitArrayOption::Size {
             location: _,
-            value: _,
+            value,
             short_form: _,
-        } => { /* TODO */ }
+        } => {
+            v.visit_typed_expr(value);
+        }
         BitArrayOption::Unit {
             location: _,
             value: _,
