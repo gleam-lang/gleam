@@ -234,7 +234,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         for f in &statements.functions {
-            // TODO: do not exit early if there is an error here.
             self.register_value_from_function(f, &mut env)?;
         }
 
@@ -435,6 +434,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .fn_types()
             .expect("Preregistered type for fn was not a fn");
 
+        // Ensure that folks are not writing inline JavaScript expressions as
+        // the implementation for JS externals.
+        self.assert_valid_javascript_external(&name, external_javascript.as_ref(), location);
+
         // Find the external implementation for the current target, if one has been given.
         let external =
             target_function_implementation(target, &external_erlang, &external_javascript);
@@ -563,6 +566,43 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_javascript,
             implementations,
         })
+    }
+
+    fn assert_valid_javascript_external(
+        &mut self,
+        function_name: &EcoString,
+        external_javascript: Option<&(EcoString, EcoString)>,
+        location: SrcSpan,
+    ) {
+        use regex::Regex;
+
+        static MODULE: OnceLock<Regex> = OnceLock::new();
+        static FUNCTION: OnceLock<Regex> = OnceLock::new();
+
+        let (module, function) = match external_javascript {
+            None => return,
+            Some(external) => external,
+        };
+        if !MODULE
+            .get_or_init(|| Regex::new("^[a-zA-Z0-9\\./:_-]+$").expect("regex"))
+            .is_match(module)
+        {
+            self.errors.push(Error::InvalidExternalJavascriptModule {
+                location,
+                module: module.clone(),
+                name: function_name.clone(),
+            });
+        }
+        if !FUNCTION
+            .get_or_init(|| Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$").expect("regex"))
+            .is_match(function)
+        {
+            self.errors.push(Error::InvalidExternalJavascriptFunction {
+                location,
+                function: function.clone(),
+                name: function_name.clone(),
+            });
+        }
     }
 
     fn ensure_annotations_present(
@@ -1033,21 +1073,18 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         environment: &mut Environment<'_>,
     ) -> Vec<Arc<Type>> {
         args.iter()
-            .map(|name| {
-                match hydrator.add_type_variable(name, environment) {
-                    Ok(t) => t,
-                    Err(t) => {
-                        self.errors.push(Error::DuplicateTypeParameter {
-                            location,
-                            name: name.clone(),
-                        });
-                        t
-                    }
+            .map(|name| match hydrator.add_type_variable(name, environment) {
+                Ok(t) => t,
+                Err(t) => {
+                    self.errors.push(Error::DuplicateTypeParameter {
+                        location,
+                        name: name.clone(),
+                    });
+                    t
                 }
             })
             .collect()
     }
-
 
     fn record_if_error(&mut self, result: Result<(), Error>) {
         if let Err(error) = result {
@@ -1090,8 +1127,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_type: _,
             implementations,
         } = f;
-        assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
-
         let mut builder = FieldMapBuilder::new(args.len() as u32);
         for arg in args.iter() {
             builder.add(arg.names.get_label(), arg.location)?;
@@ -1175,43 +1210,6 @@ fn validate_module_name(name: &EcoString) -> Result<(), Error> {
                 keyword: segment.into(),
             });
         }
-    }
-    Ok(())
-}
-
-fn assert_valid_javascript_external(
-    function_name: &EcoString,
-    external_javascript: Option<&(EcoString, EcoString)>,
-    location: SrcSpan,
-) -> Result<(), Error> {
-    use regex::Regex;
-
-    static MODULE: OnceLock<Regex> = OnceLock::new();
-    static FUNCTION: OnceLock<Regex> = OnceLock::new();
-
-    let (module, function) = match external_javascript {
-        None => return Ok(()),
-        Some(external) => external,
-    };
-    if !MODULE
-        .get_or_init(|| Regex::new("^[a-zA-Z0-9\\./:_-]+$").expect("regex"))
-        .is_match(module)
-    {
-        return Err(Error::InvalidExternalJavascriptModule {
-            location,
-            module: module.clone(),
-            name: function_name.clone(),
-        });
-    }
-    if !FUNCTION
-        .get_or_init(|| Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$").expect("regex"))
-        .is_match(function)
-    {
-        return Err(Error::InvalidExternalJavascriptFunction {
-            location,
-            function: function.clone(),
-            name: function_name.clone(),
-        });
     }
     Ok(())
 }
@@ -1471,7 +1469,6 @@ fn generalise_function(
         implementations,
     })
 }
-
 
 fn assert_unique_name(
     names: &mut HashMap<EcoString, SrcSpan>,
