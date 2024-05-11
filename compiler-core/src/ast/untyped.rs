@@ -31,6 +31,10 @@ pub enum UntypedExpr {
 
     // TODO: create new variant for captures specifically
     Fn {
+        /// The location from the start of the `fn` keyword to the end of the head before the opening bracket
+        head_location: SrcSpan,
+        /// For anonymous functions, this is the location of the entire function including the end of the body.
+        /// For named functions, this is the location of the function head.
         location: SrcSpan,
         is_capture: bool,
         arguments: Vec<Arg<()>>,

@@ -594,6 +594,7 @@ where
                         end_position,
                         ..
                     })) => UntypedExpr::Fn {
+                        head_location: location,
                         location: SrcSpan::new(location.start, end_position),
                         is_capture: false,
                         arguments: args,
@@ -1584,7 +1585,7 @@ where
                 let end = return_annotation
                     .as_ref()
                     .map(|l| l.location().end)
-                    .unwrap_or_else(|| if is_anon { rbr_e } else { rpar_e });
+                    .unwrap_or(rpar_e);
                 let body = match some_body {
                     None => vec1![Statement::Expression(UntypedExpr::Todo {
                         kind: TodoKind::EmptyFunction,
@@ -3545,6 +3546,7 @@ pub fn make_call(
 
         // An anon function using the capture syntax run(_, 1, 2)
         1 => Ok(UntypedExpr::Fn {
+            head_location: call.location(),
             location: call.location(),
             is_capture: true,
             arguments: vec![Arg {
