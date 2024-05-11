@@ -249,12 +249,20 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             } => self.fold_block(location, statements),
 
             UntypedExpr::Fn {
+                head_location,
                 location,
                 is_capture,
                 arguments,
                 body,
                 return_annotation,
-            } => self.fold_fn(location, is_capture, arguments, body, return_annotation),
+            } => self.fold_fn(
+                head_location,
+                location,
+                is_capture,
+                arguments,
+                body,
+                return_annotation,
+            ),
 
             UntypedExpr::List {
                 location,
@@ -361,6 +369,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             }
 
             UntypedExpr::Fn {
+                head_location,
                 location,
                 is_capture,
                 arguments,
@@ -371,6 +380,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 let return_annotation = return_annotation.map(|t| self.fold_type(t));
                 let body = body.mapped(|s| self.fold_statement(s));
                 UntypedExpr::Fn {
+                    head_location,
                     location,
                     is_capture,
                     arguments,
@@ -653,6 +663,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
 
     fn fold_fn(
         &mut self,
+        head_location: SrcSpan,
         location: SrcSpan,
         is_capture: bool,
         arguments: Vec<UntypedArg>,
@@ -660,6 +671,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         return_annotation: Option<TypeAst>,
     ) -> UntypedExpr {
         UntypedExpr::Fn {
+            head_location,
             location,
             is_capture,
             arguments,

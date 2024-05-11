@@ -262,3 +262,57 @@ fn expr_function_as_last_argument() {
 "#
     );
 }
+
+#[test]
+fn comment_at_start_of_inline_function_body() {
+    assert_format!(
+        r#"pub fn main() {
+  let add = fn(x: Int, y: Int) {
+    // This is a comment
+    x + y
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn comment_at_start_of_top_level_function_body() {
+    assert_format!(
+        r#"pub fn add(x: Int, y: Int) {
+  // This is a comment
+  x + y
+}
+"#
+    );
+}
+
+#[test]
+fn comment_at_end_of_inline_function_args() {
+    assert_format!(
+        r#"pub fn main() {
+  let add = fn(
+    x: Int,
+    y: Int,
+    // This is a comment
+  ) {
+    x + y
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn comment_middle_of_inline_function_body() {
+    assert_format!(
+        r#"pub fn main() {
+  let add = fn(x: Int, y: Int, z: Int) {
+    let a = x + y
+    // This is a comment
+    a + z
+  }
+}
+"#
+    );
+}
