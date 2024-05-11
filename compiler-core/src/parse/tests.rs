@@ -658,6 +658,26 @@ fn attributes_with_improper_definition() {
 }
 
 #[test]
+fn const_with_function_call() {
+    assert_module_error!(
+        r#"
+pub fn wibble() { 123 }
+const wib: Int = wibble()
+"#
+    );
+}
+
+#[test]
+fn const_with_function_call_with_args() {
+    assert_module_error!(
+        r#"
+pub fn wibble() { 123 }
+const wib: Int = wibble(1, "wobble")
+"#
+    );
+}
+
+#[test]
 fn import_type() {
     assert_parse_module!(r#"import wibble.{type Wobble, Wobble, type Wabble}"#);
 }
