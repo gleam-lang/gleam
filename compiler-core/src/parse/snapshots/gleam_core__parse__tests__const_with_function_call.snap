@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn wibble() { 123 }\nconst wib: Int = wibble()\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:18
+  │
+3 │ const wib: Int = wibble()
+  │                  ^^^^^^^ Functions can only be called within other functions
