@@ -788,11 +788,11 @@ impl<'comments> Formatter<'comments> {
         return_annotation: Option<&'a TypeAst>,
         body: &'a Vec1<UntypedStatement>,
         location: &SrcSpan,
-        head_location: &SrcSpan,
+        end_of_head_byte_index: &u32,
     ) -> Document<'a> {
         let args_docs = args.iter().map(|e| self.fn_arg(e)).collect_vec();
         let args = self
-            .wrap_args(args_docs, head_location.end)
+            .wrap_args(args_docs, *end_of_head_byte_index)
             .group()
             .next_break_fits(NextBreakFitsMode::Disabled);
         //   ^^^ We add this so that when an expression function is passed as
@@ -932,14 +932,14 @@ impl<'comments> Formatter<'comments> {
                 arguments: args,
                 body,
                 location,
-                head_location,
+                end_of_head_byte_index,
                 ..
             } => self.expr_fn(
                 args,
                 return_annotation.as_ref(),
                 body,
                 location,
-                head_location,
+                end_of_head_byte_index,
             ),
 
             UntypedExpr::List {

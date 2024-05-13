@@ -594,8 +594,8 @@ where
                         end_position,
                         ..
                     })) => UntypedExpr::Fn {
-                        head_location: location,
                         location: SrcSpan::new(location.start, end_position),
+                        end_of_head_byte_index: location.end,
                         is_capture: false,
                         arguments: args,
                         body,
@@ -3546,8 +3546,8 @@ pub fn make_call(
 
         // An anon function using the capture syntax run(_, 1, 2)
         1 => Ok(UntypedExpr::Fn {
-            head_location: call.location(),
             location: call.location(),
+            end_of_head_byte_index: call.location().end,
             is_capture: true,
             arguments: vec![Arg {
                 location: SrcSpan { start: 0, end: 0 },
