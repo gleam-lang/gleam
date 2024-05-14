@@ -1,4 +1,5 @@
 use crate::{
+    build::SourceFingerprint,
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
@@ -67,39 +68,58 @@ where
             path
         };
 
-        let entry = match self.engines.entry(path.clone()) {
-            Entry::Occupied(entry) => return Ok(Some(entry.into_mut())),
-            Entry::Vacant(entry) => entry,
-        };
+        // If the gleam.toml has changed then discard the project as the target,
+        // deps, etc may have changed and we need to rebuild taking them into
+        // account.
+        // TODO: check mtime before making the hash
+        if let Some(project) = self.engines.get(&path) {
+            let paths = ProjectPaths::new(path.clone());
+            let config_path = paths.root_config();
+            let toml = self.io.read(&config_path)?;
+            if project.gleam_toml_fingerprint != SourceFingerprint::new(&toml) {
+                let _ = self.engines.remove(&path);
+            }
+        }
 
-        tracing::info!(?path, "creating_new_language_server_engine");
-
-        let paths = ProjectPaths::new(path);
-        let config_path = paths.root_config();
-        let toml = self.io.read(&config_path)?;
-        let config = toml::from_str(&toml).map_err(|e| Error::FileIo {
-            action: FileIoAction::Parse,
-            kind: FileKind::File,
-            path: config_path,
-            err: Some(e.to_string()),
-        })?;
-        let engine = LanguageServerEngine::new(
-            config,
-            self.progress_reporter.clone(),
-            self.io.clone(),
-            paths,
-        )?;
-        let project = Project {
-            engine,
-            feedback: FeedbackBookKeeper::default(),
-        };
-        Ok(Some(entry.insert(project)))
+        // Look up the project, creating a new one if it does not exist.
+        Ok(Some(match self.engines.entry(path.clone()) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => {
+                let project =
+                    Self::new_project(path, self.io.clone(), self.progress_reporter.clone())?;
+                entry.insert(project)
+            }
+        }))
     }
 
     pub fn delete_engine_for_path(&mut self, path: &Utf8Path) {
         if let Some(path) = find_gleam_project_parent(&self.io, path) {
             _ = self.engines.remove(&path);
         }
+    }
+
+    fn new_project(
+        path: Utf8PathBuf,
+        io: FileSystemProxy<IO>,
+        progress_reporter: Reporter,
+    ) -> Result<Project<IO, Reporter>, Error> {
+        tracing::info!(?path, "creating_new_language_server_engine");
+        let paths = ProjectPaths::new(path);
+        let config_path = paths.root_config();
+        let toml = io.read(&config_path)?;
+        let config = toml::from_str(&toml).map_err(|e| Error::FileIo {
+            action: FileIoAction::Parse,
+            kind: FileKind::File,
+            path: config_path,
+            err: Some(e.to_string()),
+        })?;
+        let engine = LanguageServerEngine::new(config, progress_reporter, io, paths)?;
+        let project = Project {
+            engine,
+            feedback: FeedbackBookKeeper::default(),
+            gleam_toml_fingerprint: SourceFingerprint::new(&toml),
+        };
+        Ok(project)
     }
 }
 
@@ -143,6 +163,7 @@ where
 pub struct Project<A, B> {
     pub engine: LanguageServerEngine<A, B>,
     pub feedback: FeedbackBookKeeper,
+    pub gleam_toml_fingerprint: SourceFingerprint,
 }
 
 #[cfg(test)]

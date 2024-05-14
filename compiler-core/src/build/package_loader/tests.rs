@@ -2,7 +2,7 @@ use ecow::{eco_format, EcoString};
 
 use super::*;
 use crate::{
-    build::module_loader::SourceFingerprint,
+    build::SourceFingerprint,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
     line_numbers,
     parse::extra::ModuleExtra,
