@@ -39,6 +39,8 @@ pub struct AnnotationPrinter<'a> {
 
     // A set of unqualified type names that are valid in the current module - used to check if a prelude type is shadowed.
     unqualified_type_names: &'a HashSet<EcoString>,
+
+    current_module: EcoString,
 }
 
 impl<'a> AnnotationPrinter<'a> {
@@ -48,6 +50,7 @@ impl<'a> AnnotationPrinter<'a> {
         generic_annotations: &'a HashMap<u64, TypeAst>,
         unqualified_imports: &'a HashMap<(EcoString, EcoString), UnqualifiedImport>,
         unqualified_type_names: &'a HashSet<EcoString>,
+        current_module: EcoString,
     ) -> Self {
         AnnotationPrinter {
             names: HashMap::new(),
@@ -57,6 +60,7 @@ impl<'a> AnnotationPrinter<'a> {
             generic_annotations,
             unqualified_imports,
             unqualified_type_names,
+            current_module,
         }
     }
 
@@ -88,10 +92,11 @@ impl<'a> AnnotationPrinter<'a> {
                 } else {
                     if let Some(module_alias) = self.module_aliases.get(module) {
                         typ_str.push_str(module_alias);
-                    } else {
+                        typ_str.push('.');
+                    } else if module != &self.current_module {
                         typ_str.push_str(module);
+                        typ_str.push('.');
                     }
-                    typ_str.push('.');
                     typ_str.push_str(name);
                 }
 
@@ -189,6 +194,7 @@ fn test_type_alias() {
         &generic_annotations,
         &unqualified_imports,
         &unqualified_type_names,
+        EcoString::from(""),
     );
 
     let typ = Type::Named {
@@ -222,6 +228,7 @@ fn test_generic_type_annotation() {
         &generic_annotations,
         &unqualified_imports,
         &unqualified_type_names,
+        EcoString::from(""),
     );
 
     let typ = Type::Var {
@@ -256,6 +263,7 @@ fn test_unqualified_import() {
         &generic_annotations,
         &unqualified_imports,
         &unqualified_type_names,
+        EcoString::from(""),
     );
 
     let typ = Type::Named {
@@ -285,6 +293,7 @@ fn test_prelude_type_shadowed() {
         &generic_annotations,
         &unqualified_imports,
         &unqualified_type_names,
+        EcoString::from(""),
     );
 
     let typ = Type::Named {
@@ -312,6 +321,7 @@ fn test_prelude_type_not_shadowed() {
         &generic_annotations,
         &unqualified_imports,
         &unqualified_type_names,
+        EcoString::from(""),
     );
 
     let typ = Type::Named {
@@ -339,6 +349,7 @@ fn test_generic_type_var() {
         &generic_annotations,
         &unqualified_imports,
         &unqualified_type_names,
+        EcoString::from(""),
     );
 
     let typ = Type::Var {
@@ -367,6 +378,7 @@ fn test_tuple_type() {
         &generic_annotations,
         &unqualified_imports,
         &unqualified_type_names,
+        EcoString::from(""),
     );
 
     let typ = Type::Tuple {
@@ -407,6 +419,7 @@ fn test_fn_type() {
         &generic_annotations,
         &unqualified_imports,
         &unqualified_type_names,
+        EcoString::from(""),
     );
 
     let typ = Type::Fn {
@@ -454,6 +467,7 @@ fn test_module_alias() {
         &generic_annotations,
         &unqualified_imports,
         &unqualified_type_names,
+        EcoString::from(""),
     );
 
     let typ = Type::Named {
@@ -493,6 +507,7 @@ fn test_type_alias_and_generics() {
         &generic_annotations,
         &unqualified_imports,
         &unqualified_type_names,
+        EcoString::from(""),
     );
 
     let typ = Type::Named {
@@ -540,6 +555,7 @@ fn test_unqualified_import_and_generic() {
         &generic_annotations,
         &unqualified_imports,
         &unqualified_type_names,
+        EcoString::from(""),
     );
 
     let typ = Type::Named {
@@ -582,6 +598,7 @@ fn test_unqualified_import_and_module_alias() {
         &generic_annotations,
         &unqualified_imports,
         &unqualified_type_names,
+        EcoString::from(""),
     );
 
     let typ = Type::Named {
@@ -593,4 +610,97 @@ fn test_unqualified_import_and_module_alias() {
     };
 
     assert_eq!(printer.print_type(&typ), "C");
+}
+
+#[test]
+fn test_module_imports() {
+    let type_aliases = HashMap::new();
+    let mut module_aliases = HashMap::new();
+    let generic_annotations = HashMap::new();
+    let unqualified_imports = HashMap::new();
+    let mut unqualified_type_names = HashSet::new();
+
+    let _ = module_aliases.insert(EcoString::from("mod"), EcoString::from("animals"));
+    let _ = unqualified_type_names.insert(EcoString::from("Cat"));
+
+    let mut printer = AnnotationPrinter::new(
+        &type_aliases,
+        &module_aliases,
+        &generic_annotations,
+        &unqualified_imports,
+        &unqualified_type_names,
+        EcoString::from(""),
+    );
+
+    let typ = Type::Named {
+        name: EcoString::from("Cat"),
+        args: vec![],
+        module: EcoString::from("mod"),
+        publicity: crate::ast::Publicity::Public,
+        package: EcoString::from(""),
+    };
+
+    let typ1 = Type::Named {
+        name: EcoString::from("Cat"),
+        args: vec![],
+        module: EcoString::from(""),
+        publicity: crate::ast::Publicity::Public,
+        package: EcoString::from(""),
+    };
+
+    assert_eq!(printer.print_type(&typ), "animals.Cat");
+    assert_eq!(printer.print_type(&typ1), "Cat");
+}
+
+#[test]
+fn test_multiple_generic_annotations() {
+    let type_aliases = HashMap::new();
+    let module_aliases = HashMap::new();
+    let mut generic_annotations = HashMap::new();
+    let unqualified_imports = HashMap::new();
+    let unqualified_type_names = HashSet::new();
+
+    let type_var = TypeAst::Var(crate::ast::TypeAstVar {
+        name: EcoString::from("foo"),
+        location: crate::ast::SrcSpan::default(),
+    });
+
+    let type_var2 = TypeAst::Var(crate::ast::TypeAstVar {
+        name: EcoString::from("bar"),
+        location: crate::ast::SrcSpan::default(),
+    });
+
+    let _ = generic_annotations.insert(0, type_var);
+    let _ = generic_annotations.insert(1, type_var2);
+
+    let mut printer = AnnotationPrinter::new(
+        &type_aliases,
+        &module_aliases,
+        &generic_annotations,
+        &unqualified_imports,
+        &unqualified_type_names,
+        EcoString::from(""),
+    );
+
+    let typ = Type::Named {
+        name: EcoString::from("Tiger"),
+        args: vec![
+            Arc::new(Type::Var {
+                type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
+            }),
+            Arc::new(Type::Var {
+                type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 1 })),
+            }),
+        ],
+        module: EcoString::from(""),
+        publicity: crate::ast::Publicity::Public,
+        package: EcoString::from(""),
+    };
+
+    let typ1 = Type::Var {
+        type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 2 })),
+    };
+
+    assert_eq!(printer.print_type(&typ), "Tiger(foo, bar)");
+    assert_eq!(printer.print_type(&typ1), "a");
 }
