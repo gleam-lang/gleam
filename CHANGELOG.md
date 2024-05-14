@@ -429,3 +429,7 @@
 - Fixed a bug where using a constant defined in another module that referenced
   a private function could generate invalid code on the Erlang target.
   ([Shayan Javani](https://github.com/massivefermion))
+
+- Fixed a bug where the language server would dynamically request the client to
+  watch files even when the client has stated it does not support that.
+  ([Louis Pilfold](https://github.com/lpil))
