@@ -410,3 +410,12 @@ fn comments_before<'a>(
     }
     comments
 }
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub(crate) struct SourceFingerprint(u64);
+
+impl SourceFingerprint {
+    pub(crate) fn new(source: &str) -> Self {
+        SourceFingerprint(xxhash_rust::xxh3::xxh3_64(source.as_bytes()))
+    }
+}

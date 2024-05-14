@@ -5,10 +5,9 @@ use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
         elixir_libraries::ElixirLibraries,
-        module_loader::SourceFingerprint,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader, StaleTracker},
-        Mode, Module, Origin, Package, Target,
+        Mode, Module, Origin, Package, SourceFingerprint, Target,
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
