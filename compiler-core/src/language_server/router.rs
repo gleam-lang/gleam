@@ -9,7 +9,10 @@ use crate::{
     paths::ProjectPaths,
     Error, Result,
 };
-use std::collections::{hash_map::Entry, HashMap};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    time::SystemTime,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -71,12 +74,8 @@ where
         // If the gleam.toml has changed then discard the project as the target,
         // deps, etc may have changed and we need to rebuild taking them into
         // account.
-        // TODO: check mtime before making the hash
         if let Some(project) = self.engines.get(&path) {
-            let paths = ProjectPaths::new(path.clone());
-            let config_path = paths.root_config();
-            let toml = self.io.read(&config_path)?;
-            if project.gleam_toml_fingerprint != SourceFingerprint::new(&toml) {
+            if Self::gleam_toml_changed(&path, project, &self.io)? {
                 let _ = self.engines.remove(&path);
             }
         }
@@ -90,6 +89,28 @@ where
                 entry.insert(project)
             }
         }))
+    }
+
+    /// Has gleam.toml changed since the last time we saw this project?
+    fn gleam_toml_changed(
+        path: &Utf8PathBuf,
+        project: &Project<IO, Reporter>,
+        io: &FileSystemProxy<IO>,
+    ) -> Result<bool, Error> {
+        // Get the location of gleam.toml for this project
+        let paths = ProjectPaths::new(path.clone());
+        let config_path = paths.root_config();
+
+        // See if the file modification time has changed.
+        if io.modification_time(path)? == project.gleam_toml_modification_time {
+            return Ok(false); // Not changed
+        }
+
+        // The mtime has changed. This might not be a content change, so let's
+        // check the hash.
+        let toml = io.read(&config_path)?;
+        let gleam_toml_changed = project.gleam_toml_fingerprint != SourceFingerprint::new(&toml);
+        Ok(gleam_toml_changed)
     }
 
     pub fn delete_engine_for_path(&mut self, path: &Utf8Path) {
@@ -106,6 +127,7 @@ where
         tracing::info!(?path, "creating_new_language_server_engine");
         let paths = ProjectPaths::new(path);
         let config_path = paths.root_config();
+        let modification_time = io.modification_time(&config_path)?;
         let toml = io.read(&config_path)?;
         let config = toml::from_str(&toml).map_err(|e| Error::FileIo {
             action: FileIoAction::Parse,
@@ -117,6 +139,7 @@ where
         let project = Project {
             engine,
             feedback: FeedbackBookKeeper::default(),
+            gleam_toml_modification_time: modification_time,
             gleam_toml_fingerprint: SourceFingerprint::new(&toml),
         };
         Ok(project)
@@ -163,6 +186,7 @@ where
 pub struct Project<A, B> {
     pub engine: LanguageServerEngine<A, B>,
     pub feedback: FeedbackBookKeeper,
+    pub gleam_toml_modification_time: SystemTime,
     pub gleam_toml_fingerprint: SourceFingerprint,
 }
 
