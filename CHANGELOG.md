@@ -370,13 +370,20 @@
   removed if it would otherwise be left blank.
   ([Milco Kats](https://github.com/katsmil))
 
-- Hover for type annotations is now separate from the thing being annotated. ([Ameen Radwan](https://github.com/Acepie))
+- Hover for type annotations is now separate from the thing being annotated.
+  ([Ameen Radwan](https://github.com/Acepie))
 
 - Go to definition now works for direct type annotations. ([Ameen Radwan](https://github.com/Acepie))
 
 - Go to definition now works for import statements. ([Ameen Radwan](https://github.com/Acepie))
 
 - Hover now works for unqualified imports. ([Ameen Radwan](https://github.com/Acepie))
+
+- The language server now detects when the `gleam.toml` config file has changed
+  even if the client does not support watching files. This means that changes to
+  the default target, new dependencies, and other configuration will be
+  automatically detected.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ### Bug Fixes
 
