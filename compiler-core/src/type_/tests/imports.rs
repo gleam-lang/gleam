@@ -301,3 +301,14 @@ pub fn main() {
 }"
     );
 }
+
+#[test]
+fn unqualified_import_errors_do_not_block_later_unqualified() {
+    assert_module_error!(
+        "import gleam.{Unknown, type Int as Integer}
+
+pub fn main() -> Integer {
+  Nil
+}"
+    );
+}

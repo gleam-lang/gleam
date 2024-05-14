@@ -9,100 +9,105 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct Importer<'a> {
+pub struct Importer<'context, 'errors> {
     origin: Origin,
-    environment: Environment<'a>,
+    environment: Environment<'context>,
+    errors: &'errors mut Vec<Error>,
 }
 
-impl<'a> Importer<'a> {
-    pub fn new(origin: Origin, environment: Environment<'a>) -> Self {
+impl<'context, 'errors> Importer<'context, 'errors> {
+    pub fn new(
+        origin: Origin,
+        environment: Environment<'context>,
+        errors: &'errors mut Vec<Error>,
+    ) -> Self {
         Self {
             origin,
             environment,
+            errors,
         }
     }
 
-    pub fn run<'b>(
+    pub fn run<'code>(
         origin: Origin,
-        env: Environment<'a>,
-        imports: &'b [Import<()>],
-        errors: &mut Vec<Error>,
-    ) -> Environment<'a> {
-        let mut importer = Self::new(origin, env);
+        env: Environment<'context>,
+        imports: &'code [Import<()>],
+        errors: &'errors mut Vec<Error>,
+    ) -> Environment<'context> {
+        let mut importer = Self::new(origin, env, errors);
         for import in imports {
-            if let Err(error) = importer.register_import(import) {
-                errors.push(error)
-            }
+            importer.register_import(import)
         }
         importer.environment
     }
 
-    fn register_import(&mut self, import: &Import<()>) -> Result<(), Error> {
+    fn register_import(&mut self, import: &Import<()>) {
         let location = import.location;
-        let imported_module_name = import.module.clone();
+        let name = import.module.clone();
 
         // Find imported module
-        let module_info = self
-            .environment
-            .importable_modules
-            .get(&imported_module_name)
-            .ok_or_else(|| Error::UnknownModule {
+        let Some(module_info) = self.environment.importable_modules.get(&name) else {
+            self.errors.push(Error::UnknownModule {
                 location,
-                name: imported_module_name.clone(),
+                name: name.clone(),
                 imported_modules: self.environment.imported_modules.keys().cloned().collect(),
-            })?;
+            });
+            return;
+        };
 
-        self.check_src_does_not_import_test(module_info, location, imported_module_name.clone())?;
-        self.register_module(import, module_info)?;
+        if let Err(e) = self.check_src_does_not_import_test(module_info, location, name.clone()) {
+            self.errors.push(e);
+            return;
+        }
+
+        if let Err(e) = self.register_module(import, module_info) {
+            self.errors.push(e);
+            return;
+        }
 
         // Insert unqualified imports into scope
         for type_ in &import.unqualified_types {
-            self.register_unqualified_type(type_, module_info)?;
+            self.register_unqualified_type(type_, module_info);
         }
         for value in &import.unqualified_values {
-            self.register_unqualified_value(value, module_info)?;
+            self.register_unqualified_value(value, module_info);
         }
-        Ok(())
     }
 
-    fn register_unqualified_type(
-        &mut self,
-        import: &UnqualifiedImport,
-        module: &ModuleInterface,
-    ) -> Result<(), Error> {
+    fn register_unqualified_type(&mut self, import: &UnqualifiedImport, module: &ModuleInterface) {
         let imported_name = import.as_name.as_ref().unwrap_or(&import.name);
 
         // Register the unqualified import if it is a type constructor
-        let type_info = module
-            .get_public_type(&import.name)
+        let Some(type_info) = module.get_public_type(&import.name) else {
             // TODO: refine to a type specific error
-            .ok_or_else(|| Error::UnknownModuleType {
+            self.errors.push(Error::UnknownModuleType {
                 location: import.location,
                 name: import.name.clone(),
                 module_name: module.name.clone(),
                 type_constructors: module.public_type_names(),
                 value_with_same_name: module.get_public_value(&import.name).is_some(),
-            })?
-            .clone()
-            .with_location(import.location);
+            });
+            return;
+        };
 
-        self.environment
-            .insert_type_constructor(imported_name.clone(), type_info)?;
+        let type_info = type_info.clone().with_location(import.location);
+
+        if let Err(e) = self
+            .environment
+            .insert_type_constructor(imported_name.clone(), type_info)
+        {
+            self.errors.push(e);
+            return;
+        }
 
         self.environment.init_usage(
             imported_name.clone(),
             EntityKind::ImportedType,
             import.location,
         );
-
-        Ok(())
     }
 
-    fn register_unqualified_value(
-        &mut self,
-        import: &UnqualifiedImport,
-        module: &ModuleInterface,
-    ) -> Result<(), Error> {
+    fn register_unqualified_value(&mut self, import: &UnqualifiedImport, module: &ModuleInterface) {
         let import_name = &import.name;
         let location = import.location;
         let used_name = import.as_name.as_ref().unwrap_or(&import.name);
@@ -120,13 +125,14 @@ impl<'a> Importer<'a> {
                 &value.variant
             }
             None => {
-                return Err(Error::UnknownModuleValue {
+                self.errors.push(Error::UnknownModuleValue {
                     location,
                     name: import_name.clone(),
                     module_name: module.name.clone(),
                     value_constructors: module.public_value_names(),
                     type_with_same_name: module.get_public_type(import_name).is_some(),
                 });
+                return;
             }
         };
 
@@ -144,11 +150,12 @@ impl<'a> Importer<'a> {
 
         // Check if value already was imported
         if let Some(previous) = self.environment.unqualified_imported_names.get(used_name) {
-            return Err(Error::DuplicateImport {
+            self.errors.push(Error::DuplicateImport {
                 location,
                 previous_location: *previous,
                 name: import_name.clone(),
             });
+            return;
         }
 
         // Register the name as imported so it can't be imported a
@@ -157,8 +164,6 @@ impl<'a> Importer<'a> {
             .environment
             .unqualified_imported_names
             .insert(used_name.clone(), location);
-
-        Ok(())
     }
 
     fn check_src_does_not_import_test(
@@ -180,7 +185,7 @@ impl<'a> Importer<'a> {
     fn register_module(
         &mut self,
         import: &Import<()>,
-        import_info: &'a ModuleInterface,
+        import_info: &'context ModuleInterface,
     ) -> Result<(), Error> {
         if let Some(used_name) = import.used_name() {
             self.check_not_a_duplicate_import(&used_name, import.location)?;

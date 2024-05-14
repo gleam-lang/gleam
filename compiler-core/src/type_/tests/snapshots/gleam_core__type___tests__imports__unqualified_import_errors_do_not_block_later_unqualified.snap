@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/imports.rs
+assertion_line: 307
+expression: "import gleam.{Unknown, type Int as Integer}\n\npub fn main() -> Integer {\n  Nil\n}"
+---
+error: Unknown module field
+  ┌─ /src/one/two.gleam:1:15
+  │
+1 │ import gleam.{Unknown, type Int as Integer}
+  │               ^^^^^^^
+
+The module `gleam` does not have a `Unknown` value.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   Nil
+  │   ^^^
+
+The type of this returned value doesn't match the return type
+annotation of this function.
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Nil
