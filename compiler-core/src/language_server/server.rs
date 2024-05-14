@@ -166,7 +166,7 @@ where
             .workspace
             .as_ref()
             .and_then(|w| w.did_change_watched_files)
-            .map(|wf| wf.dynamic_registration == Some(true))
+            .map(|wf| wf.dynamic_registration.unwrap_or(false))
             .unwrap_or(false);
 
         if !supports_watch_files {
