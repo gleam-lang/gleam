@@ -1266,7 +1266,8 @@ fn provided_git_to_manifest() {
 #[test]
 fn verified_requirements_equality_with_canonicalized_paths() {
     let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
-    let temp_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf()).expect("Path should be valid UTF-8");
+    let temp_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+        .expect("Path should be valid UTF-8");
 
     let sub_dir = temp_path.join("subdir");
     std::fs::create_dir(&sub_dir).expect("Failed to create a subdir");
@@ -1276,13 +1277,22 @@ fn verified_requirements_equality_with_canonicalized_paths() {
     let canonical_path = std::fs::canonicalize(&file_path).expect("Failed to canonicalize path");
     let relative_path = temp_path.join("./subdir/../subdir/./file.txt");
 
-    let requirements1 = HashMap::from([
-        (EcoString::from("dep1"), Requirement::Path { path: Utf8PathBuf::from(canonical_path.to_str().expect("Path should be valid UTF-8")) }),
-    ]);
+    let requirements1 = HashMap::from([(
+        EcoString::from("dep1"),
+        Requirement::Path {
+            path: Utf8PathBuf::from(canonical_path.to_str().expect("Path should be valid UTF-8")),
+        },
+    )]);
 
-    let requirements2 = HashMap::from([
-        (EcoString::from("dep1"), Requirement::Path { path: Utf8PathBuf::from(relative_path.to_string()) }),
-    ]);
+    let requirements2 = HashMap::from([(
+        EcoString::from("dep1"),
+        Requirement::Path {
+            path: Utf8PathBuf::from(relative_path.to_string()),
+        },
+    )]);
 
-    assert!(is_same_requirements(&requirements1, &requirements2, &temp_path).expect("Requirements should be the same"));
+    assert!(
+        is_same_requirements(&requirements1, &requirements2, &temp_path)
+            .expect("Requirements should be the same")
+    );
 }
