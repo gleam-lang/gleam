@@ -442,3 +442,6 @@
 - Fixed a bug where the language server would dynamically request the client to
   watch files even when the client has stated it does not support that.
   ([Louis Pilfold](https://github.com/lpil))
+
+- Fixed a bug where local path dependencies could be mishandled on Windows.
+  ([Francisco Montanez](https://github.com/Francisco-Montanez))
