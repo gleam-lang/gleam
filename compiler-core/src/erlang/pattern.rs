@@ -121,7 +121,7 @@ fn print<'a>(
                         "<<",
                         name.clone(),
                         ":",
-                        left_side_string.len(),
+                        string_length_utf8_bytes(left_side_string),
                         "/binary",
                         ", ",
                         right,
@@ -129,14 +129,12 @@ fn print<'a>(
                         " when ",
                         name,
                         " =:= ",
-                        "<<\"",
-                        left_side_string,
-                        "\">>"
+                        string(left_side_string)
                     ]
                 }
                 None => docvec![
                     "<<\"",
-                    left_side_string,
+                    string_inner(left_side_string),
                     "\"/utf8",
                     ", ",
                     right,

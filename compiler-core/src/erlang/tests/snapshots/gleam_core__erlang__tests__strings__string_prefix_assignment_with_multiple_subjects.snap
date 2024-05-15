@@ -10,10 +10,10 @@ expression: "\npub fn go(x) {\n  case x {\n    \"1\" as digit <> _ | \"2\" as di
 -spec go(binary()) -> binary().
 go(X) ->
     case X of
-        <<Digit:1/binary, _/binary>> when Digit =:= <<"1">> ->
+        <<Digit:1/binary, _/binary>> when Digit =:= <<"1"/utf8>> ->
             Digit;
 
-        <<Digit:1/binary, _/binary>> when Digit =:= <<"2">> ->
+        <<Digit:1/binary, _/binary>> when Digit =:= <<"2"/utf8>> ->
             Digit;
 
         _ ->

@@ -10,10 +10,10 @@ expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" as greeting <> name i
 -spec go(binary()) -> binary().
 go(X) ->
     case X of
-        <<Greeting:7/binary, Name/binary>> when Greeting =:= <<"Hello, ">> andalso (Name =:= <<"Dude"/utf8>>) ->
+        <<Greeting:7/binary, Name/binary>> when Greeting =:= <<"Hello, "/utf8>> andalso (Name =:= <<"Dude"/utf8>>) ->
             <<Greeting/binary, "Mate"/utf8>>;
 
-        <<Greeting@1:7/binary, Name@1/binary>> when Greeting@1 =:= <<"Hello, ">> ->
+        <<Greeting@1:7/binary, Name@1/binary>> when Greeting@1 =:= <<"Hello, "/utf8>> ->
             Greeting@1;
 
         _ ->
