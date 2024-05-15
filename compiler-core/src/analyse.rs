@@ -6,9 +6,9 @@ use crate::{
     ast::{
         self, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
-        RecordConstructorArg, SrcSpan, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn,
-        TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedFunction, TypedModule,
-        UntypedArg, UntypedFunction, UntypedModule, UntypedStatement,
+        RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypeAstConstructor,
+        TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
+        TypedFunction, TypedModule, UntypedArg, UntypedFunction, UntypedModule, UntypedStatement,
     },
     build::{Origin, Target},
     call_graph::{into_dependency_order, CallGraphNode},
@@ -19,7 +19,7 @@ use crate::{
         self,
         environment::*,
         error::{convert_unify_error, Error, MissingAnnotation},
-        expression::{ExprTyper, FunctionDefinition},
+        expression::{ExprTyper, FunctionDefinition, Implementations},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
@@ -39,6 +39,8 @@ use std::{
     sync::{Arc, OnceLock},
 };
 use vec1::Vec1;
+
+use self::imports::Importer;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Inferred<T> {
@@ -111,7 +113,7 @@ impl TargetSupport {
 }
 
 #[derive(Debug)]
-pub struct InferenceFailure {
+pub struct AnalysisFailure {
     // Right now this is an option because we don't complete the module typing on error
     // Once we add proper type holes and always return a module this should not be an option
     pub ast: Option<TypedModule>,
@@ -119,224 +121,1081 @@ pub struct InferenceFailure {
     pub errors: Vec1<Error>,
 }
 
-impl From<Error> for InferenceFailure {
+impl From<Error> for AnalysisFailure {
     // Used to create InferenceFailure from a singe error.
     // Should not be needed once we start actually collecting all the errors.
     fn from(error: Error) -> Self {
-        InferenceFailure {
+        AnalysisFailure {
             ast: None,
             errors: vec1::vec1![error],
         }
     }
 }
 
-// TODO: This takes too many arguments.
-#[allow(clippy::too_many_arguments)]
-/// Crawl the AST, annotating each node with the inferred type or
-/// returning an error.
+/// This struct is used to take the data required for analysis. It is used to
+/// construct the private ModuleAnalyzer which has this data plus any
+/// internal state.
 ///
-pub fn infer_module<A>(
+#[derive(Debug)]
+pub struct ModuleAnalyzerConstructor<'a, A> {
+    pub target: Target,
+    pub ids: &'a UniqueIdGenerator,
+    pub origin: Origin,
+    pub importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
+    pub warnings: &'a TypeWarningEmitter,
+    pub direct_dependencies: &'a HashMap<EcoString, A>,
+    pub target_support: TargetSupport,
+    pub package_config: &'a PackageConfig,
+}
+
+impl<'a, A> ModuleAnalyzerConstructor<'a, A> {
+    /// Crawl the AST, annotating each node with the inferred type or
+    /// returning an error.
+    ///
+    pub fn infer_module(
+        self,
+        module: UntypedModule,
+        line_numbers: LineNumbers,
+        src_path: Utf8PathBuf,
+    ) -> Result<TypedModule, AnalysisFailure> {
+        ModuleAnalyzer {
+            target: self.target,
+            ids: self.ids,
+            origin: self.origin,
+            importable_modules: self.importable_modules,
+            warnings: self.warnings,
+            direct_dependencies: self.direct_dependencies,
+            target_support: self.target_support,
+            package_config: self.package_config,
+            line_numbers,
+            src_path,
+            errors: vec![],
+            type_names: HashMap::with_capacity(module.definitions.len()),
+            value_names: HashMap::with_capacity(module.definitions.len()),
+            hydrators: HashMap::with_capacity(module.definitions.len()),
+            module_name: module.name.clone(),
+        }
+        .infer_module(module)
+    }
+}
+
+struct ModuleAnalyzer<'a, A> {
     target: Target,
-    ids: &UniqueIdGenerator,
-    mut module: UntypedModule,
+    ids: &'a UniqueIdGenerator,
     origin: Origin,
-    modules: &im::HashMap<EcoString, ModuleInterface>,
-    warnings: &TypeWarningEmitter,
-    direct_dependencies: &HashMap<EcoString, A>,
+    importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
+    warnings: &'a TypeWarningEmitter,
+    direct_dependencies: &'a HashMap<EcoString, A>,
     target_support: TargetSupport,
+    package_config: &'a PackageConfig,
     line_numbers: LineNumbers,
-    package_config: &PackageConfig,
     src_path: Utf8PathBuf,
-) -> Result<TypedModule, InferenceFailure> {
-    let mut errors = Vec::new();
-    let name = module.name.clone();
-    let documentation = std::mem::take(&mut module.documentation);
-    let package = package_config.name.clone();
-    let env = Environment::new(
-        ids.clone(),
-        package_config.name.clone(),
-        name.clone(),
-        target,
-        modules,
-        warnings,
-        target_support,
-    );
-    validate_module_name(&name)?;
+    errors: Vec<Error>,
+    type_names: HashMap<EcoString, SrcSpan>,
+    value_names: HashMap<EcoString, SrcSpan>,
+    hydrators: HashMap<EcoString, Hydrator>,
+    module_name: EcoString,
+}
 
-    let mut type_names = HashMap::with_capacity(module.definitions.len());
-    let mut value_names = HashMap::with_capacity(module.definitions.len());
-    let mut hydrators = HashMap::with_capacity(module.definitions.len());
+impl<'a, A> ModuleAnalyzer<'a, A> {
+    pub fn infer_module(
+        mut self,
+        mut module: UntypedModule,
+    ) -> Result<TypedModule, AnalysisFailure> {
+        validate_module_name(&self.module_name)?;
 
-    let statements = GroupedStatements::new(module.into_iter_statements(target));
-    let statements_count = statements.len();
+        let documentation = std::mem::take(&mut module.documentation);
+        let env = Environment::new(
+            self.ids.clone(),
+            self.package_config.name.clone(),
+            self.module_name.clone(),
+            self.target,
+            self.importable_modules,
+            self.warnings,
+            self.target_support,
+        );
 
-    // Register any modules, types, and values being imported
-    // We process imports first so that anything imported can be referenced
-    // anywhere in the module.
-    let mut env = imports::Importer::run(origin, env, &statements.imports)?;
+        let statements = GroupedStatements::new(module.into_iter_statements(self.target));
+        let statements_count = statements.len();
 
-    // Register types so they can be used in constructors and functions
-    // earlier in the module.
-    for t in &statements.custom_types {
-        register_types_from_custom_type(
-            t,
-            &mut type_names,
-            &mut env,
-            &name,
-            package_config,
-            &mut hydrators,
-        )?;
-    }
-    // TODO: Extract a Type alias class to perform this.
-    let sorted_aliases = sorted_type_aliases(&statements.type_aliases)?;
-    for t in sorted_aliases {
-        register_type_alias(t, &mut type_names, &mut env, &name)?;
-    }
+        // Register any modules, types, and values being imported
+        // We process imports first so that anything imported can be referenced
+        // anywhere in the module.
+        let mut env = Importer::run(self.origin, env, &statements.imports, &mut self.errors);
 
-    // Register values so they can be used in functions earlier in the module.
-    for c in &statements.constants {
-        assert_unique_name(&mut value_names, &c.name, c.location)?;
-    }
-    for f in &statements.functions {
-        register_value_from_function(f, &mut value_names, &mut env, &mut hydrators, &name)?;
-    }
-    for t in &statements.custom_types {
-        register_values_from_custom_type(
-            t,
-            &mut hydrators,
-            &mut env,
-            &mut value_names,
-            &name,
-            &t.parameters,
-        )?;
-    }
+        // Register types so they can be used in constructors and functions
+        // earlier in the module.
+        for t in &statements.custom_types {
+            self.register_types_from_custom_type(t, &mut env)?;
+        }
+        let sorted_aliases = sorted_type_aliases(&statements.type_aliases)?;
+        for t in sorted_aliases {
+            self.register_type_alias(t, &mut env);
+        }
 
-    // Infer the types of each statement in the module
-    let mut typed_statements = Vec::with_capacity(statements_count);
-    for i in statements.imports {
-        let statement = record_imported_items_for_use_detection(
-            i,
-            package.as_str(),
-            direct_dependencies,
-            warnings,
-            &env,
-        )?;
-        typed_statements.push(statement);
-    }
-    for t in statements.custom_types {
-        let statement = infer_custom_type(t, &mut env)?;
-        typed_statements.push(statement);
-    }
-    for t in statements.type_aliases {
-        let statement = insert_type_alias(t, &mut env)?;
-        typed_statements.push(statement);
-    }
+        for f in &statements.functions {
+            self.register_value_from_function(f, &mut env)?;
+        }
 
-    // Sort functions and constants into dependency order for inference. Definitions that do
-    // not depend on other definitions are inferred first, then ones that depend
-    // on those, etc.
-    let definition_groups = into_dependency_order(statements.functions, statements.constants)?;
-    let mut working_group = vec![];
+        // Infer the types of each statement in the module
+        let mut typed_statements = Vec::with_capacity(statements_count);
+        for i in statements.imports {
+            optionally_push(&mut typed_statements, self.analyse_import(i, &env));
+        }
+        for t in statements.custom_types {
+            optionally_push(&mut typed_statements, self.analyse_custom_type(t, &mut env));
+        }
+        for t in statements.type_aliases {
+            typed_statements.push(analyse_type_alias(t, &mut env));
+        }
 
-    for group in definition_groups {
-        // A group may have multiple functions that depend on each other through
-        // mutual recursion.
+        // Sort functions and constants into dependency order for inference. Definitions that do
+        // not depend on other definitions are inferred first, then ones that depend
+        // on those, etc.
+        let definition_groups = into_dependency_order(statements.functions, statements.constants)?;
+        let mut working_group = vec![];
 
-        for definition in group {
-            match definition {
-                CallGraphNode::Function(f) => {
-                    let statement = infer_function(f, &mut env, &mut hydrators, &name)?;
-                    working_group.push(statement);
-                }
-                CallGraphNode::ModuleConstant(c) => {
-                    let statement = infer_module_constant(c, &mut env, &name)?;
-                    working_group.push(statement);
-                }
+        for group in definition_groups {
+            // A group may have multiple functions that depend on each other through
+            // mutual recursion.
+
+            for definition in group {
+                let def = match definition {
+                    CallGraphNode::Function(f) => self.infer_function(f, &mut env),
+                    CallGraphNode::ModuleConstant(c) => self.infer_module_constant(c, &mut env),
+                };
+                working_group.push(def);
+            }
+
+            // Now that the entire group has been inferred, generalise their types.
+            for inferred in working_group.drain(..) {
+                typed_statements.push(generalise_statement(inferred, &self.module_name, &mut env));
             }
         }
 
-        // Now that the entire group has been inferred, generalise their types.
-        for inferred in working_group.drain(..) {
-            let statement = generalise_statement(inferred, &name, &mut env);
-            typed_statements.push(statement);
+        // Generate warnings for unused items
+        let unused_imports = env.convert_unused_to_warnings();
+
+        // Remove imported types and values to create the public interface
+        // Private types and values are retained so they can be used in the language
+        // server, but are filtered out when type checking to prevent using private
+        // items.
+        env.module_types
+            .retain(|_, info| info.module == self.module_name);
+        env.accessors
+            .retain(|_, accessors| accessors.publicity.is_importable());
+
+        // Ensure no exported values have private types in their type signature
+        for value in env.module_values.values() {
+            self.check_for_type_leaks(value)
+        }
+
+        let Environment {
+            module_types: types,
+            module_types_constructors: types_constructors,
+            module_values: values,
+            todo_encountered: contains_todo,
+            accessors,
+            ..
+        } = env;
+
+        let is_internal = self
+            .package_config
+            .is_internal_module(self.module_name.as_str());
+
+        // Sort the errors by location so that they are easier to debug.
+        self.errors.sort_by_key(|e| e.start_location());
+
+        let ast = ast::Module {
+            documentation,
+            name: self.module_name.clone(),
+            definitions: typed_statements,
+            type_info: ModuleInterface {
+                name: self.module_name,
+                types,
+                types_value_constructors: types_constructors,
+                values,
+                accessors,
+                origin: self.origin,
+                package: self.package_config.name.clone(),
+                is_internal,
+                unused_imports,
+                contains_todo,
+                line_numbers: self.line_numbers,
+                src_path: self.src_path,
+            },
+        };
+
+        match Vec1::try_from_vec(self.errors) {
+            Err(_) => Ok(ast),
+            Ok(errors) => Err(AnalysisFailure {
+                ast: Some(ast),
+                errors,
+            }),
         }
     }
 
-    // Generate warnings for unused items
-    let unused_imports = env.convert_unused_to_warnings();
+    fn infer_module_constant(
+        &mut self,
+        c: ModuleConstant<(), ()>,
+        environment: &mut Environment<'_>,
+    ) -> TypedDefinition {
+        let ModuleConstant {
+            documentation: doc,
+            location,
+            name,
+            annotation,
+            publicity,
+            value,
+            deprecation,
+            ..
+        } = c;
 
-    // Remove imported types and values to create the public interface
-    // Private types and values are retained so they can be used in the language
-    // server, but are filtered out when type checking to prevent using private
-    // items.
-    env.module_types.retain(|_, info| info.module == name);
-    env.accessors
-        .retain(|_, accessors| accessors.publicity.is_importable());
+        let definition = FunctionDefinition {
+            has_body: true,
+            has_erlang_external: false,
+            has_javascript_external: false,
+        };
+        let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors);
+        let typed_expr = expr_typer.infer_const(&annotation, *value);
+        let type_ = typed_expr.type_();
+        let implementations = expr_typer.implementations;
 
-    // Ensure no exported values have private types in their type signature
-    for value in env.module_values.values() {
-        if value.publicity.is_private() {
-            continue;
+        let variant = ValueConstructor {
+            publicity,
+            deprecation: deprecation.clone(),
+            variant: ValueConstructorVariant::ModuleConstant {
+                documentation: doc.clone(),
+                location,
+                literal: typed_expr.clone(),
+                module: self.module_name.clone(),
+                implementations,
+            },
+            type_: type_.clone(),
+        };
+
+        environment.insert_variable(
+            name.clone(),
+            variant.variant.clone(),
+            type_.clone(),
+            publicity,
+            Deprecation::NotDeprecated,
+        );
+        environment.insert_module_value(name.clone(), variant);
+
+        if publicity.is_private() {
+            environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
         }
+
+        Definition::ModuleConstant(ModuleConstant {
+            documentation: doc,
+            location,
+            name,
+            annotation,
+            publicity,
+            value: Box::new(typed_expr),
+            type_,
+            deprecation,
+            implementations,
+        })
+    }
+
+    // TODO: Extract this into a class of its own! Or perhaps it just wants some
+    // helper methods extracted. There's a whole bunch of state in this one
+    // function, and it does a handful of things.
+    fn infer_function(
+        &mut self,
+        f: UntypedFunction,
+        environment: &mut Environment<'_>,
+    ) -> TypedDefinition {
+        let Function {
+            documentation: doc,
+            location,
+            name,
+            publicity,
+            arguments,
+            body,
+            return_annotation,
+            end_position: end_location,
+            deprecation,
+            external_erlang,
+            external_javascript,
+            return_type: (),
+            implementations: _,
+        } = f;
+        let target = environment.target;
+        let body_location = body.last().location();
+        let preregistered_fn = environment
+            .get_variable(&name)
+            .expect("Could not find preregistered type for function");
+        let field_map = preregistered_fn.field_map().cloned();
+        let preregistered_type = preregistered_fn.type_.clone();
+        let (prereg_args_types, prereg_return_type) = preregistered_type
+            .fn_types()
+            .expect("Preregistered type for fn was not a fn");
+
+        // Ensure that folks are not writing inline JavaScript expressions as
+        // the implementation for JS externals.
+        self.assert_valid_javascript_external(&name, external_javascript.as_ref(), location);
+
+        // Find the external implementation for the current target, if one has been given.
+        let external =
+            target_function_implementation(target, &external_erlang, &external_javascript);
+        let (impl_module, impl_function) = implementation_names(external, &self.module_name, &name);
+
+        // The function must have at least one implementation somewhere.
+        let has_implementation = self.ensure_function_has_an_implementation(
+            &body,
+            &external_erlang,
+            &external_javascript,
+            location,
+        );
+
+        if external.is_some() {
+            // There was an external implementation, so type annotations are
+            // mandatory as the Gleam implementation may be absent, and because we
+            // think you should always specify types for external functions for
+            // clarity + to avoid accidental mistakes.
+            self.ensure_annotations_present(&arguments, return_annotation.as_ref(), location);
+        }
+
+        let definition = FunctionDefinition {
+            has_body: !body.first().is_placeholder(),
+            has_erlang_external: external_erlang.is_some(),
+            has_javascript_external: external_javascript.is_some(),
+        };
+
+        let typed_args = arguments
+            .into_iter()
+            .zip(&prereg_args_types)
+            .map(|(a, t)| a.set_type(t.clone()))
+            .collect_vec();
+
+        // Infer the type using the preregistered args + return types as a starting point
+        let result = environment.in_new_scope(|environment| {
+            let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors);
+            expr_typer.hydrator = self
+                .hydrators
+                .remove(&name)
+                .expect("Could not find hydrator for fn");
+
+            let (args, body) = expr_typer.infer_fn_with_known_types(
+                typed_args.clone(),
+                body,
+                Some(prereg_return_type.clone()),
+            )?;
+            let args_types = args.iter().map(|a| a.type_.clone()).collect();
+            let typ = fn_(args_types, body.last().type_());
+            Ok((typ, body, expr_typer.implementations))
+        });
+
+        // If we could not successfully infer the type etc information of the
+        // function then register the error and continue anaylsis using the best
+        // information that we have, so we can still learn about the rest of the
+        // module.
+        let (type_, body, implementations) = match result {
+            Ok((type_, body, implementations)) => (type_, body, implementations),
+            Err(error) => {
+                self.errors.push(error);
+                let type_ = preregistered_type.clone();
+                let body = Vec1::new(Statement::Expression(TypedExpr::Todo {
+                    type_: prereg_return_type.clone(),
+                    location: body_location,
+                    message: None,
+                }));
+                let implementations = Implementations::supporting_all();
+                (type_, body, implementations)
+            }
+        };
+
+        // Assert that the inferred type matches the type of any recursive call
+        if let Err(error) = unify(preregistered_type.clone(), type_) {
+            self.errors.push(convert_unify_error(error, location));
+        }
+
+        // Ensure that the current target has an implementation for the function.
+        // This is done at the expression level while inferring the function body, but we do it again
+        // here as externally implemented functions may not have a Gleam body.
+        //
+        // We don't emit this error if there is no implementation, as this would
+        // have already emitted an error above.
+        if has_implementation
+            && publicity.is_importable()
+            && environment.target_support.is_enforced()
+            && !implementations.supports(target)
+        {
+            self.errors.push(Error::UnsupportedPublicFunctionTarget {
+                name: name.clone(),
+                target,
+                location,
+            });
+        }
+
+        let variant = ValueConstructorVariant::ModuleFn {
+            documentation: doc.clone(),
+            name: impl_function,
+            field_map,
+            module: impl_module,
+            arity: typed_args.len(),
+            location,
+            implementations,
+        };
+
+        environment.insert_variable(
+            name.clone(),
+            variant,
+            preregistered_type.clone(),
+            publicity,
+            deprecation.clone(),
+        );
+
+        Definition::Function(Function {
+            documentation: doc,
+            location,
+            name,
+            publicity,
+            deprecation,
+            arguments: typed_args,
+            end_position: end_location,
+            return_annotation,
+            return_type: preregistered_type
+                .return_type()
+                .expect("Could not find return type for fn"),
+            body,
+            external_erlang,
+            external_javascript,
+            implementations,
+        })
+    }
+
+    fn assert_valid_javascript_external(
+        &mut self,
+        function_name: &EcoString,
+        external_javascript: Option<&(EcoString, EcoString)>,
+        location: SrcSpan,
+    ) {
+        use regex::Regex;
+
+        static MODULE: OnceLock<Regex> = OnceLock::new();
+        static FUNCTION: OnceLock<Regex> = OnceLock::new();
+
+        let (module, function) = match external_javascript {
+            None => return,
+            Some(external) => external,
+        };
+        if !MODULE
+            .get_or_init(|| Regex::new("^[a-zA-Z0-9\\./:_-]+$").expect("regex"))
+            .is_match(module)
+        {
+            self.errors.push(Error::InvalidExternalJavascriptModule {
+                location,
+                module: module.clone(),
+                name: function_name.clone(),
+            });
+        }
+        if !FUNCTION
+            .get_or_init(|| Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$").expect("regex"))
+            .is_match(function)
+        {
+            self.errors.push(Error::InvalidExternalJavascriptFunction {
+                location,
+                function: function.clone(),
+                name: function_name.clone(),
+            });
+        }
+    }
+
+    fn ensure_annotations_present(
+        &mut self,
+        arguments: &[UntypedArg],
+        return_annotation: Option<&TypeAst>,
+        location: SrcSpan,
+    ) {
+        for arg in arguments {
+            if arg.annotation.is_none() {
+                self.errors.push(Error::ExternalMissingAnnotation {
+                    location: arg.location,
+                    kind: MissingAnnotation::Parameter,
+                });
+            }
+        }
+        if return_annotation.is_none() {
+            self.errors.push(Error::ExternalMissingAnnotation {
+                location,
+                kind: MissingAnnotation::Return,
+            });
+        }
+    }
+
+    fn ensure_function_has_an_implementation(
+        &mut self,
+        body: &Vec1<UntypedStatement>,
+        external_erlang: &Option<(EcoString, EcoString)>,
+        external_javascript: &Option<(EcoString, EcoString)>,
+        location: SrcSpan,
+    ) -> bool {
+        match (external_erlang, external_javascript) {
+            (None, None) if body.first().is_placeholder() => {
+                self.errors.push(Error::NoImplementation { location });
+                false
+            }
+            _ => true,
+        }
+    }
+
+    fn analyse_import(
+        &mut self,
+        i: Import<()>,
+        environment: &Environment<'_>,
+    ) -> Option<TypedDefinition> {
+        let Import {
+            documentation,
+            location,
+            module,
+            as_name,
+            unqualified_values,
+            unqualified_types,
+            ..
+        } = i;
+        // Find imported module
+        let Some(module_info) = environment.importable_modules.get(&module) else {
+            // Here the module being imported doesn't exist. We don't emit an
+            // error here as the `Importer` that was run earlier will have
+            // already emitted an error for this.
+            return None;
+        };
+
+        // Modules should belong to a package that is a direct dependency of the
+        // current package to be imported.
+        // Upgrade this to an error in future.
+        if module_info.package != GLEAM_CORE_PACKAGE_NAME
+            && module_info.package != self.package_config.name
+            && !self.direct_dependencies.contains_key(&module_info.package)
+        {
+            self.warnings
+                .emit(type_::Warning::TransitiveDependencyImported {
+                    location,
+                    module: module_info.name.clone(),
+                    package: module_info.package.clone(),
+                })
+        }
+
+        Some(Definition::Import(Import {
+            documentation,
+            location,
+            module,
+            as_name,
+            unqualified_values,
+            unqualified_types,
+            package: module_info.package.clone(),
+        }))
+    }
+
+    fn analyse_custom_type(
+        &mut self,
+        t: CustomType<()>,
+        environment: &mut Environment<'_>,
+    ) -> Option<TypedDefinition> {
+        match self.do_analyse_custom_type(t, environment) {
+            Ok(t) => Some(t),
+            Err(error) => {
+                self.errors.push(error);
+                None
+            }
+        }
+    }
+
+    // TODO: split this into a new class.
+    fn do_analyse_custom_type(
+        &mut self,
+        t: CustomType<()>,
+        environment: &mut Environment<'_>,
+    ) -> Result<TypedDefinition, Error> {
+        self.register_values_from_custom_type(&t, environment, &t.parameters)?;
+
+        let CustomType {
+            documentation: doc,
+            location,
+            end_position,
+            publicity,
+            opaque,
+            name,
+            parameters,
+            constructors,
+            deprecation,
+            ..
+        } = t;
+
+        let constructors = constructors
+            .into_iter()
+            .map(
+                |RecordConstructor {
+                     location,
+                     name,
+                     arguments: args,
+                     documentation,
+                 }| {
+                    let preregistered_fn = environment
+                        .get_variable(&name)
+                        .expect("Could not find preregistered type for function");
+                    let preregistered_type = preregistered_fn.type_.clone();
+
+                    let args =
+                        if let Some((args_types, _return_type)) = preregistered_type.fn_types() {
+                            args.into_iter()
+                                .zip(&args_types)
+                                .map(|(argument, t)| RecordConstructorArg {
+                                    label: argument.label,
+                                    ast: argument.ast,
+                                    location: argument.location,
+                                    type_: t.clone(),
+                                    doc: None,
+                                })
+                                .collect()
+                        } else {
+                            vec![]
+                        };
+
+                    RecordConstructor {
+                        location,
+                        name,
+                        arguments: args,
+                        documentation,
+                    }
+                },
+            )
+            .collect();
+        let typed_parameters = environment
+            .get_type_constructor(&None, &name)
+            .expect("Could not find preregistered type constructor ")
+            .parameters
+            .clone();
+
+        Ok(Definition::CustomType(CustomType {
+            documentation: doc,
+            location,
+            end_position,
+            publicity,
+            opaque,
+            name,
+            parameters,
+            constructors,
+            typed_parameters,
+            deprecation,
+        }))
+    }
+
+    fn register_values_from_custom_type(
+        &mut self,
+        t: &CustomType<()>,
+        environment: &mut Environment<'_>,
+        type_parameters: &[EcoString],
+    ) -> Result<(), Error> {
+        let CustomType {
+            location,
+            publicity,
+            opaque,
+            name,
+            constructors,
+            deprecation,
+            ..
+        } = t;
+
+        let mut hydrator = self
+            .hydrators
+            .remove(name)
+            .expect("Could not find hydrator for register_values custom type");
+        hydrator.disallow_new_type_variables();
+        let typ = environment
+            .module_types
+            .get(name)
+            .expect("Type for custom type not found in register_values")
+            .typ
+            .clone();
+        if let Some(accessors) = custom_type_accessors(constructors, &mut hydrator, environment)? {
+            let map = AccessorsMap {
+                publicity: if *opaque {
+                    Publicity::Private
+                } else {
+                    *publicity
+                },
+                accessors,
+                // TODO: improve the ownership here so that we can use the
+                // `return_type_constructor` below rather than looking it up twice.
+                type_: typ.clone(),
+            };
+            environment.insert_accessors(name.clone(), map)
+        }
+
+        let mut constructors_data = vec![];
+
+        for (index, constructor) in constructors.iter().enumerate() {
+            assert_unique_name(
+                &mut self.value_names,
+                &constructor.name,
+                constructor.location,
+            )?;
+
+            let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
+            let mut args_types = Vec::with_capacity(constructor.arguments.len());
+            let mut fields = Vec::with_capacity(constructor.arguments.len());
+
+            for (i, RecordConstructorArg { label, ast, .. }) in
+                constructor.arguments.iter().enumerate()
+            {
+                // Build a type from the annotation AST
+                let t = hydrator.type_from_ast(ast, environment)?;
+
+                fields.push(TypeValueConstructorField { type_: t.clone() });
+
+                // Register the type for this parameter
+                args_types.push(t);
+
+                // Register the label for this parameter, if there is one
+                if let Some(label) = label {
+                    field_map.insert(label.clone(), i as u32).map_err(|_| {
+                        Error::DuplicateField {
+                            label: label.clone(),
+                            location: *location,
+                        }
+                    })?;
+                }
+            }
+            let field_map = field_map.into_option();
+            // Insert constructor function into module scope
+            let typ = match constructor.arguments.len() {
+                0 => typ.clone(),
+                _ => fn_(args_types.clone(), typ.clone()),
+            };
+            let constructor_info = ValueConstructorVariant::Record {
+                documentation: constructor.documentation.clone(),
+                constructors_count: constructors.len() as u16,
+                name: constructor.name.clone(),
+                arity: constructor.arguments.len() as u16,
+                field_map: field_map.clone(),
+                location: constructor.location,
+                module: self.module_name.clone(),
+                constructor_index: index as u16,
+            };
+
+            // If the contructor belongs to an opaque type then it's going to be
+            // considered as private.
+            let value_constructor_publicity = if *opaque {
+                Publicity::Private
+            } else {
+                *publicity
+            };
+
+            environment.insert_module_value(
+                constructor.name.clone(),
+                ValueConstructor {
+                    publicity: value_constructor_publicity,
+                    deprecation: deprecation.clone(),
+                    type_: typ.clone(),
+                    variant: constructor_info.clone(),
+                },
+            );
+
+            if value_constructor_publicity.is_private() {
+                environment.init_usage(
+                    constructor.name.clone(),
+                    EntityKind::PrivateTypeConstructor(name.clone()),
+                    constructor.location,
+                );
+            }
+
+            constructors_data.push(TypeValueConstructor {
+                name: constructor.name.clone(),
+                parameters: fields,
+            });
+            environment.insert_variable(
+                constructor.name.clone(),
+                constructor_info,
+                typ,
+                value_constructor_publicity,
+                deprecation.clone(),
+            );
+        }
+
+        // Now record the constructors for the type.
+        environment.insert_type_to_constructors(
+            name.clone(),
+            TypeVariantConstructors::new(constructors_data, type_parameters, hydrator),
+        );
+
+        Ok(())
+    }
+
+    fn register_types_from_custom_type(
+        &mut self,
+        t: &CustomType<()>,
+        environment: &mut Environment<'a>,
+    ) -> Result<(), Error> {
+        let CustomType {
+            name,
+            publicity,
+            parameters,
+            location,
+            deprecation,
+            opaque,
+            constructors,
+            documentation,
+            ..
+        } = t;
+        // We exit early here as we don't yet have a good way to handle the two
+        // duplicate definitions in the later pass of the analyser which
+        // register the constructor values for the types. The latter would end up
+        // overwriting the former, but here in type registering we keep the
+        // former. I think we want to really keep the former both times.
+        // The fact we can't straightforwardly do this indicated to me that we
+        // could improve our approach here somewhat.
+        self.assert_unique_type_name(name, *location)?;
+
+        let mut hydrator = Hydrator::new();
+        let parameters = self.make_type_vars(parameters, *location, &mut hydrator, environment);
+
+        hydrator.clear_ridgid_type_names();
+
+        // We check is the type comes from an internal module and restrict its
+        // publicity.
+        let publicity = match publicity {
+            // It's important we only restrict the publicity of public types.
+            Publicity::Public if self.package_config.is_internal_module(&self.module_name) => {
+                Publicity::Internal
+            }
+            // If a type is private we don't want to make it internal just because
+            // it comes from an internal module, so in that case the publicity is
+            // left unchanged.
+            Publicity::Public | Publicity::Private | Publicity::Internal => *publicity,
+        };
+
+        let typ = Arc::new(Type::Named {
+            publicity,
+            package: environment.current_package.clone(),
+            module: self.module_name.to_owned(),
+            name: name.clone(),
+            args: parameters.clone(),
+        });
+        let _ = self.hydrators.insert(name.clone(), hydrator);
+        environment
+            .insert_type_constructor(
+                name.clone(),
+                TypeConstructor {
+                    origin: *location,
+                    module: self.module_name.clone(),
+                    deprecation: deprecation.clone(),
+                    parameters,
+                    publicity,
+                    typ,
+                    documentation: documentation.clone(),
+                },
+            )
+            .expect("name uniqueness checked above");
+
+        if *opaque && constructors.is_empty() {
+            environment
+                .warnings
+                .emit(type_::Warning::OpaqueExternalType {
+                    location: *location,
+                });
+        }
+
+        if publicity.is_private() {
+            environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
+        };
+        Ok(())
+    }
+
+    fn register_type_alias(&mut self, t: &TypeAlias<()>, environment: &mut Environment<'_>) {
+        let TypeAlias {
+            location,
+            publicity,
+            parameters: args,
+            alias: name,
+            type_ast: resolved_type,
+            deprecation,
+            type_: _,
+            documentation,
+        } = t;
+
+        // A type alias must not have the same name as any other type in the module.
+        if let Err(error) = self.assert_unique_type_name(name, *location) {
+            self.errors.push(error);
+            // A type already exists with the name so we cannot continue and
+            // register this new type with the same name.
+            return;
+        }
+
+        // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
+        // in some fashion.
+        let mut hydrator = Hydrator::new();
+        let parameters = self.make_type_vars(args, *location, &mut hydrator, environment);
+        let tryblock = || {
+            hydrator.disallow_new_type_variables();
+            let typ = hydrator.type_from_ast(resolved_type, environment)?;
+
+            // Insert the alias so that it can be used by other code.
+            environment.insert_type_constructor(
+                name.clone(),
+                TypeConstructor {
+                    origin: *location,
+                    module: self.module_name.clone(),
+                    parameters,
+                    typ,
+                    deprecation: deprecation.clone(),
+                    publicity: *publicity,
+                    documentation: documentation.clone(),
+                },
+            )?;
+
+            if let Some(name) = hydrator.unused_type_variables().next() {
+                return Err(Error::UnusedTypeAliasParameter {
+                    location: *location,
+                    name: name.clone(),
+                });
+            }
+
+            Ok(())
+        };
+        self.record_if_error(tryblock());
+
+        // Register the type for detection of dead code.
+        if publicity.is_private() {
+            environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
+        };
+    }
+
+    fn make_type_vars(
+        &mut self,
+        args: &[EcoString],
+        location: SrcSpan,
+        hydrator: &mut Hydrator,
+        environment: &mut Environment<'_>,
+    ) -> Vec<Arc<Type>> {
+        args.iter()
+            .map(|name| match hydrator.add_type_variable(name, environment) {
+                Ok(t) => t,
+                Err(t) => {
+                    self.errors.push(Error::DuplicateTypeParameter {
+                        location,
+                        name: name.clone(),
+                    });
+                    t
+                }
+            })
+            .collect()
+    }
+
+    fn record_if_error(&mut self, result: Result<(), Error>) {
+        if let Err(error) = result {
+            self.errors.push(error);
+        }
+    }
+
+    fn assert_unique_type_name(
+        &mut self,
+        name: &EcoString,
+        location: SrcSpan,
+    ) -> Result<(), Error> {
+        match self.type_names.insert(name.clone(), location) {
+            Some(previous_location) => Err(Error::DuplicateTypeName {
+                name: name.clone(),
+                previous_location,
+                location,
+            }),
+            None => Ok(()),
+        }
+    }
+
+    fn register_value_from_function(
+        &mut self,
+        f: &UntypedFunction,
+        environment: &mut Environment<'_>,
+    ) -> Result<(), Error> {
+        let Function {
+            name,
+            arguments: args,
+            location,
+            return_annotation,
+            publicity,
+            documentation,
+            external_erlang,
+            external_javascript,
+            deprecation,
+            end_position: _,
+            body: _,
+            return_type: _,
+            implementations,
+        } = f;
+        let mut builder = FieldMapBuilder::new(args.len() as u32);
+        for arg in args.iter() {
+            builder.add(arg.names.get_label(), arg.location)?;
+        }
+        let field_map = builder.finish();
+        let mut hydrator = Hydrator::new();
+
+        // When external implementations are present then the type annotations
+        // must be given in full, so we disallow holes in the annotations.
+        hydrator.permit_holes(external_erlang.is_none() && external_javascript.is_none());
+
+        let arg_types = args
+            .iter()
+            .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
+            .try_collect()?;
+        let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
+        let typ = fn_(arg_types, return_type);
+        let _ = self.hydrators.insert(name.clone(), hydrator);
+
+        let external = target_function_implementation(
+            environment.target,
+            external_erlang,
+            external_javascript,
+        );
+        let (impl_module, impl_function) = implementation_names(external, &self.module_name, name);
+        let variant = ValueConstructorVariant::ModuleFn {
+            documentation: documentation.clone(),
+            name: impl_function,
+            field_map,
+            module: impl_module,
+            arity: args.len(),
+            location: *location,
+            implementations: *implementations,
+        };
+        environment.insert_variable(name.clone(), variant, typ, *publicity, deprecation.clone());
+        if publicity.is_private() {
+            environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
+        };
+        Ok(())
+    }
+
+    fn check_for_type_leaks(&mut self, value: &ValueConstructor) {
+        // A private value doesn't export anything so it can't leak anything.
+        if value.publicity.is_private() {
+            return;
+        }
+
+        // We also don't want to raise a warning if we're inside an internal
+        // module ourselves, the type wouldn't actually be publicly exposed.
+        if self
+            .package_config
+            .is_internal_module(self.module_name.as_str())
+        {
+            return;
+        }
+
+        // If a private or internal value references a private type
         if let Some(leaked) = value.type_.find_private_type() {
-            errors.push(Error::PrivateTypeLeak {
+            self.errors.push(Error::PrivateTypeLeak {
                 location: value.variant.definition_location(),
                 leaked,
             });
         }
-
-        // We also want to make sure that no public type exposes internal ones
-        // in their type signature.
-        if !value.publicity.is_public() {
-            continue;
-        }
-        // We also don't want to raise a warning if we're inside an internal
-        // module ourselves, the type wouldn't actually be publicly exposed.
-        if package_config.is_internal_module(name.as_str()) {
-            continue;
-        }
     }
+}
 
-    let Environment {
-        module_types: types,
-        module_types_constructors: types_constructors,
-        module_values: values,
-        todo_encountered: contains_todo,
-        accessors,
-        ..
-    } = env;
-
-    let is_internal = package_config.is_internal_module(name.as_str());
-
-    // Sort the errors by location so that they are easier to debug.
-    errors.sort_by_key(|e| e.start_location());
-
-    let ast = ast::Module {
-        documentation,
-        name: name.clone(),
-        definitions: typed_statements,
-        type_info: ModuleInterface {
-            name,
-            types,
-            types_value_constructors: types_constructors,
-            values,
-            accessors,
-            origin,
-            package: package_config.name.clone(),
-            is_internal,
-            unused_imports,
-            contains_todo,
-            line_numbers,
-            src_path,
-        },
-    };
-
-    match Vec1::try_from_vec(errors) {
-        Err(_) => Ok(ast),
-        Ok(errors) => Err(InferenceFailure {
-            ast: Some(ast),
-            errors,
-        }),
+fn optionally_push<T>(vector: &mut Vec<T>, item: Option<T>) {
+    if let Some(item) = item {
+        vector.push(item)
     }
 }
 
@@ -353,494 +1212,6 @@ fn validate_module_name(name: &EcoString) -> Result<(), Error> {
         }
     }
     Ok(())
-}
-
-fn register_type_alias(
-    t: &TypeAlias<()>,
-    names: &mut HashMap<EcoString, SrcSpan>,
-    environment: &mut Environment<'_>,
-    module: &EcoString,
-) -> Result<(), Error> {
-    let TypeAlias {
-        location,
-        publicity,
-        parameters: args,
-        alias: name,
-        type_ast: resolved_type,
-        deprecation,
-        type_: _,
-        documentation,
-    } = t;
-
-    // A type alias must not have the same name as any other type in the module.
-    assert_unique_type_name(names, name, *location)?;
-
-    // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
-    // in some fashion.
-    let mut hydrator = Hydrator::new();
-    let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
-    hydrator.disallow_new_type_variables();
-    let typ = hydrator.type_from_ast(resolved_type, environment)?;
-
-    // Insert the alias so that it can be used by other code.
-    environment.insert_type_constructor(
-        name.clone(),
-        TypeConstructor {
-            origin: *location,
-            module: module.clone(),
-            parameters,
-            typ,
-            deprecation: deprecation.clone(),
-            publicity: *publicity,
-            documentation: documentation.clone(),
-        },
-    )?;
-
-    if let Some(name) = hydrator.unused_type_variables().next() {
-        return Err(Error::UnusedTypeAliasParameter {
-            location: *location,
-            name: name.clone(),
-        });
-    }
-
-    // Register the type for detection of dead code.
-    if publicity.is_private() {
-        environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
-    };
-    Ok(())
-}
-
-fn register_types_from_custom_type<'a>(
-    t: &CustomType<()>,
-    names: &mut HashMap<EcoString, SrcSpan>,
-    environment: &mut Environment<'a>,
-    module: &'a EcoString,
-    config: &PackageConfig,
-    hydrators: &mut HashMap<EcoString, Hydrator>,
-) -> Result<(), Error> {
-    let CustomType {
-        name,
-        publicity,
-        parameters,
-        location,
-        deprecation,
-        opaque,
-        constructors,
-        documentation,
-        ..
-    } = t;
-    assert_unique_type_name(names, name, *location)?;
-    let mut hydrator = Hydrator::new();
-    let parameters = make_type_vars(parameters, location, &mut hydrator, environment)?;
-
-    hydrator.clear_ridgid_type_names();
-
-    // We check is the type comes from an internal module and restrict its
-    // publicity.
-    let publicity = match publicity {
-        // It's important we only restrict the publicity of public types.
-        Publicity::Public if config.is_internal_module(module) => Publicity::Internal,
-        // If a type is private we don't want to make it internal just because
-        // it comes from an internal module, so in that case the publicity is
-        // left unchanged.
-        Publicity::Public | Publicity::Private | Publicity::Internal => *publicity,
-    };
-
-    let typ = Arc::new(Type::Named {
-        publicity,
-        package: environment.current_package.clone(),
-        module: module.to_owned(),
-        name: name.clone(),
-        args: parameters.clone(),
-    });
-    let _ = hydrators.insert(name.clone(), hydrator);
-    environment.insert_type_constructor(
-        name.clone(),
-        TypeConstructor {
-            origin: *location,
-            module: module.clone(),
-            deprecation: deprecation.clone(),
-            parameters,
-            publicity,
-            typ,
-            documentation: documentation.clone(),
-        },
-    )?;
-
-    if *opaque && constructors.is_empty() {
-        environment
-            .warnings
-            .emit(type_::Warning::OpaqueExternalType {
-                location: *location,
-            });
-    }
-
-    if publicity.is_private() {
-        environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
-    };
-    Ok(())
-}
-
-fn register_values_from_custom_type(
-    t: &CustomType<()>,
-    hydrators: &mut HashMap<EcoString, Hydrator>,
-    environment: &mut Environment<'_>,
-    names: &mut HashMap<EcoString, SrcSpan>,
-    module_name: &EcoString,
-    type_parameters: &[EcoString],
-) -> Result<(), Error> {
-    let CustomType {
-        location,
-        publicity,
-        opaque,
-        name,
-        constructors,
-        deprecation,
-        ..
-    } = t;
-
-    let mut hydrator = hydrators
-        .remove(name)
-        .expect("Could not find hydrator for register_values custom type");
-    hydrator.disallow_new_type_variables();
-    let typ = environment
-        .module_types
-        .get(name)
-        .expect("Type for custom type not found in register_values")
-        .typ
-        .clone();
-    if let Some(accessors) = custom_type_accessors(constructors, &mut hydrator, environment)? {
-        let map = AccessorsMap {
-            publicity: if *opaque {
-                Publicity::Private
-            } else {
-                *publicity
-            },
-            accessors,
-            // TODO: improve the ownership here so that we can use the
-            // `return_type_constructor` below rather than looking it up twice.
-            type_: typ.clone(),
-        };
-        environment.insert_accessors(name.clone(), map)
-    }
-
-    let mut constructors_data = vec![];
-
-    for (index, constructor) in constructors.iter().enumerate() {
-        assert_unique_name(names, &constructor.name, constructor.location)?;
-
-        let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
-        let mut args_types = Vec::with_capacity(constructor.arguments.len());
-        let mut fields = Vec::with_capacity(constructor.arguments.len());
-
-        for (i, RecordConstructorArg { label, ast, .. }) in constructor.arguments.iter().enumerate()
-        {
-            // Build a type from the annotation AST
-            let t = hydrator.type_from_ast(ast, environment)?;
-
-            fields.push(TypeValueConstructorField { type_: t.clone() });
-
-            // Register the type for this parameter
-            args_types.push(t);
-
-            // Register the label for this parameter, if there is one
-            if let Some(label) = label {
-                field_map
-                    .insert(label.clone(), i as u32)
-                    .map_err(|_| Error::DuplicateField {
-                        label: label.clone(),
-                        location: *location,
-                    })?;
-            }
-        }
-        let field_map = field_map.into_option();
-        // Insert constructor function into module scope
-        let typ = match constructor.arguments.len() {
-            0 => typ.clone(),
-            _ => fn_(args_types.clone(), typ.clone()),
-        };
-        let constructor_info = ValueConstructorVariant::Record {
-            documentation: constructor.documentation.clone(),
-            constructors_count: constructors.len() as u16,
-            name: constructor.name.clone(),
-            arity: constructor.arguments.len() as u16,
-            field_map: field_map.clone(),
-            location: constructor.location,
-            module: module_name.clone(),
-            constructor_index: index as u16,
-        };
-
-        // If the contructor belongs to an opaque type then it's going to be
-        // considered as private.
-        let value_constructor_publicity = if *opaque {
-            Publicity::Private
-        } else {
-            *publicity
-        };
-
-        environment.insert_module_value(
-            constructor.name.clone(),
-            ValueConstructor {
-                publicity: value_constructor_publicity,
-                deprecation: deprecation.clone(),
-                type_: typ.clone(),
-                variant: constructor_info.clone(),
-            },
-        );
-
-        if value_constructor_publicity.is_private() {
-            environment.init_usage(
-                constructor.name.clone(),
-                EntityKind::PrivateTypeConstructor(name.clone()),
-                constructor.location,
-            );
-        }
-
-        constructors_data.push(TypeValueConstructor {
-            name: constructor.name.clone(),
-            parameters: fields,
-        });
-        environment.insert_variable(
-            constructor.name.clone(),
-            constructor_info,
-            typ,
-            value_constructor_publicity,
-            deprecation.clone(),
-        );
-    }
-
-    // Now record the constructors for the type.
-    environment.insert_type_to_constructors(
-        name.clone(),
-        TypeVariantConstructors::new(constructors_data, type_parameters, hydrator),
-    );
-
-    Ok(())
-}
-
-fn register_value_from_function(
-    f: &UntypedFunction,
-    names: &mut HashMap<EcoString, SrcSpan>,
-    environment: &mut Environment<'_>,
-    hydrators: &mut HashMap<EcoString, Hydrator>,
-    module_name: &EcoString,
-) -> Result<(), Error> {
-    let Function {
-        name,
-        arguments: args,
-        location,
-        return_annotation,
-        publicity,
-        documentation,
-        external_erlang,
-        external_javascript,
-        deprecation,
-        end_position: _,
-        body: _,
-        return_type: _,
-        implementations,
-    } = f;
-    assert_unique_name(names, name, *location)?;
-    assert_valid_javascript_external(name, external_javascript.as_ref(), *location)?;
-
-    let mut builder = FieldMapBuilder::new(args.len() as u32);
-    for arg in args.iter() {
-        builder.add(arg.names.get_label(), arg.location)?;
-    }
-    let field_map = builder.finish();
-    let mut hydrator = Hydrator::new();
-
-    // When external implementations are present then the type annotations
-    // must be given in full, so we disallow holes in the annotations.
-    hydrator.permit_holes(external_erlang.is_none() && external_javascript.is_none());
-
-    let arg_types = args
-        .iter()
-        .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
-        .try_collect()?;
-    let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
-    let typ = fn_(arg_types, return_type);
-    let _ = hydrators.insert(name.clone(), hydrator);
-
-    let external =
-        target_function_implementation(environment.target, external_erlang, external_javascript);
-    let (impl_module, impl_function) = implementation_names(external, module_name, name);
-    let variant = ValueConstructorVariant::ModuleFn {
-        documentation: documentation.clone(),
-        name: impl_function,
-        field_map,
-        module: impl_module,
-        arity: args.len(),
-        location: *location,
-        implementations: *implementations,
-    };
-    environment.insert_variable(name.clone(), variant, typ, *publicity, deprecation.clone());
-    if publicity.is_private() {
-        environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
-    };
-    Ok(())
-}
-
-fn assert_valid_javascript_external(
-    function_name: &EcoString,
-    external_javascript: Option<&(EcoString, EcoString)>,
-    location: SrcSpan,
-) -> Result<(), Error> {
-    use regex::Regex;
-
-    static MODULE: OnceLock<Regex> = OnceLock::new();
-    static FUNCTION: OnceLock<Regex> = OnceLock::new();
-
-    let (module, function) = match external_javascript {
-        None => return Ok(()),
-        Some(external) => external,
-    };
-    if !MODULE
-        .get_or_init(|| Regex::new("^[a-zA-Z0-9\\./:_-]+$").expect("regex"))
-        .is_match(module)
-    {
-        return Err(Error::InvalidExternalJavascriptModule {
-            location,
-            module: module.clone(),
-            name: function_name.clone(),
-        });
-    }
-    if !FUNCTION
-        .get_or_init(|| Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$").expect("regex"))
-        .is_match(function)
-    {
-        return Err(Error::InvalidExternalJavascriptFunction {
-            location,
-            function: function.clone(),
-            name: function_name.clone(),
-        });
-    }
-    Ok(())
-}
-
-fn infer_function(
-    f: UntypedFunction,
-    environment: &mut Environment<'_>,
-    hydrators: &mut HashMap<EcoString, Hydrator>,
-    module_name: &EcoString,
-) -> Result<TypedDefinition, Error> {
-    let Function {
-        documentation: doc,
-        location,
-        name,
-        publicity,
-        arguments,
-        body,
-        return_annotation,
-        end_position: end_location,
-        deprecation,
-        external_erlang,
-        external_javascript,
-        return_type: (),
-        implementations: _,
-    } = f;
-    let target = environment.target;
-    let preregistered_fn = environment
-        .get_variable(&name)
-        .expect("Could not find preregistered type for function");
-    let field_map = preregistered_fn.field_map().cloned();
-    let preregistered_type = preregistered_fn.type_.clone();
-    let (args_types, return_type) = preregistered_type
-        .fn_types()
-        .expect("Preregistered type for fn was not a fn");
-
-    // Find the external implementation for the current target, if one has been given.
-    let external = target_function_implementation(target, &external_erlang, &external_javascript);
-    let (impl_module, impl_function) = implementation_names(external, module_name, &name);
-
-    // The function must have at least one implementation somewhere.
-    ensure_function_has_an_implementation(&body, &external_erlang, &external_javascript, location)?;
-
-    if external.is_some() {
-        // There was an external implementation, so type annotations are
-        // mandatory as the Gleam implementation may be absent, and because we
-        // think you should always specify types for external functions for
-        // clarity + to avoid accidental mistakes.
-        ensure_annotations_present(&arguments, return_annotation.as_ref(), location)?;
-    }
-
-    let definition = FunctionDefinition {
-        has_body: !body.first().is_placeholder(),
-        has_erlang_external: external_erlang.is_some(),
-        has_javascript_external: external_javascript.is_some(),
-    };
-
-    // Infer the type using the preregistered args + return types as a starting point
-    let (type_, args, body, implementations) = environment.in_new_scope(|environment| {
-        let args_types = arguments
-            .into_iter()
-            .zip(&args_types)
-            .map(|(a, t)| a.set_type(t.clone()))
-            .collect();
-        let mut expr_typer = ExprTyper::new(environment, definition);
-        expr_typer.hydrator = hydrators
-            .remove(&name)
-            .expect("Could not find hydrator for fn");
-
-        let (args, body) =
-            expr_typer.infer_fn_with_known_types(args_types, body, Some(return_type))?;
-        let args_types = args.iter().map(|a| a.type_.clone()).collect();
-        let typ = fn_(args_types, body.last().type_());
-        Ok((typ, args, body, expr_typer.implementations))
-    })?;
-
-    // Assert that the inferred type matches the type of any recursive call
-    unify(preregistered_type, type_.clone()).map_err(|e| convert_unify_error(e, location))?;
-
-    // Ensure that the current target has an implementation for the function.
-    // This is done at the expression level while inferring the function body, but we do it again
-    // here as externally implemented functions may not have a Gleam body.
-    if publicity.is_importable()
-        && environment.target_support.is_enforced()
-        && !implementations.supports(target)
-    {
-        return Err(Error::UnsupportedPublicFunctionTarget {
-            name: name.clone(),
-            target,
-            location,
-        });
-    }
-
-    let variant = ValueConstructorVariant::ModuleFn {
-        documentation: doc.clone(),
-        name: impl_function,
-        field_map,
-        module: impl_module,
-        arity: args.len(),
-        location,
-        implementations,
-    };
-
-    environment.insert_variable(
-        name.clone(),
-        variant,
-        type_.clone(),
-        publicity,
-        deprecation.clone(),
-    );
-
-    Ok(Definition::Function(Function {
-        documentation: doc,
-        location,
-        name,
-        publicity,
-        deprecation,
-        arguments: args,
-        end_position: end_location,
-        return_annotation,
-        return_type: type_
-            .return_type()
-            .expect("Could not find return type for fn"),
-        body,
-        external_erlang,
-        external_javascript,
-        implementations,
-    }))
 }
 
 /// Returns the module name and function name of the implementation of a
@@ -869,44 +1240,7 @@ fn target_function_implementation<'a>(
     }
 }
 
-fn ensure_function_has_an_implementation(
-    body: &Vec1<UntypedStatement>,
-    external_erlang: &Option<(EcoString, EcoString)>,
-    external_javascript: &Option<(EcoString, EcoString)>,
-    location: SrcSpan,
-) -> Result<(), Error> {
-    match (external_erlang, external_javascript) {
-        (None, None) if body.first().is_placeholder() => Err(Error::NoImplementation { location }),
-        _ => Ok(()),
-    }
-}
-
-fn ensure_annotations_present(
-    arguments: &[UntypedArg],
-    return_annotation: Option<&TypeAst>,
-    location: SrcSpan,
-) -> Result<(), Error> {
-    for arg in arguments {
-        if arg.annotation.is_none() {
-            return Err(Error::ExternalMissingAnnotation {
-                location: arg.location,
-                kind: MissingAnnotation::Parameter,
-            });
-        }
-    }
-    if return_annotation.is_none() {
-        return Err(Error::ExternalMissingAnnotation {
-            location,
-            kind: MissingAnnotation::Return,
-        });
-    }
-    Ok(())
-}
-
-fn insert_type_alias(
-    t: TypeAlias<()>,
-    environment: &mut Environment<'_>,
-) -> Result<TypedDefinition, Error> {
+fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> TypedDefinition {
     let TypeAlias {
         documentation: doc,
         location,
@@ -917,12 +1251,16 @@ fn insert_type_alias(
         deprecation,
         ..
     } = t;
-    let typ = environment
-        .get_type_constructor(&None, &alias)
-        .expect("Could not find existing type for type alias")
-        .typ
-        .clone();
-    Ok(Definition::TypeAlias(TypeAlias {
+
+    // There could be no type alias registered if it was invalid in some way.
+    // analysis aims to be fault tolerant to get the best possible feedback for
+    // the programmer in the language server, so the analyser gets here even
+    // though there was previously errors.
+    let typ = match environment.get_type_constructor(&None, &alias) {
+        Ok(constructor) => constructor.typ.clone(),
+        Err(_) => environment.new_generic_var(),
+    };
+    Definition::TypeAlias(TypeAlias {
         documentation: doc,
         location,
         publicity,
@@ -931,212 +1269,7 @@ fn insert_type_alias(
         type_ast: resolved_type,
         type_: typ,
         deprecation,
-    }))
-}
-
-fn infer_custom_type(
-    t: CustomType<()>,
-    environment: &mut Environment<'_>,
-) -> Result<TypedDefinition, Error> {
-    let CustomType {
-        documentation: doc,
-        location,
-        end_position,
-        publicity,
-        opaque,
-        name,
-        parameters,
-        constructors,
-        deprecation,
-        ..
-    } = t;
-    let constructors = constructors
-        .into_iter()
-        .map(
-            |RecordConstructor {
-                 location,
-                 name,
-                 arguments: args,
-                 documentation,
-             }| {
-                let preregistered_fn = environment
-                    .get_variable(&name)
-                    .expect("Could not find preregistered type for function");
-                let preregistered_type = preregistered_fn.type_.clone();
-
-                let args = if let Some((args_types, _return_type)) = preregistered_type.fn_types() {
-                    args.into_iter()
-                        .zip(&args_types)
-                        .map(
-                            |(
-                                RecordConstructorArg {
-                                    label,
-                                    ast,
-                                    location,
-                                    ..
-                                },
-                                t,
-                            )| {
-                                RecordConstructorArg {
-                                    label,
-                                    ast,
-                                    location,
-                                    type_: t.clone(),
-                                    doc: None,
-                                }
-                            },
-                        )
-                        .collect()
-                } else {
-                    vec![]
-                };
-
-                RecordConstructor {
-                    location,
-                    name,
-                    arguments: args,
-                    documentation,
-                }
-            },
-        )
-        .collect();
-    let typed_parameters = environment
-        .get_type_constructor(&None, &name)
-        .expect("Could not find preregistered type constructor ")
-        .parameters
-        .clone();
-
-    Ok(Definition::CustomType(CustomType {
-        documentation: doc,
-        location,
-        end_position,
-        publicity,
-        opaque,
-        name,
-        parameters,
-        constructors,
-        typed_parameters,
-        deprecation,
-    }))
-}
-
-fn record_imported_items_for_use_detection<A>(
-    i: Import<()>,
-    current_package: &str,
-    direct_dependencies: &HashMap<EcoString, A>,
-    warnings: &TypeWarningEmitter,
-    environment: &Environment<'_>,
-) -> Result<TypedDefinition, Error> {
-    let Import {
-        documentation,
-        location,
-        module,
-        as_name,
-        unqualified_values,
-        unqualified_types,
-        ..
-    } = i;
-    // Find imported module
-    let module_info =
-        environment
-            .importable_modules
-            .get(&module)
-            .ok_or_else(|| Error::UnknownModule {
-                location,
-                name: module.clone(),
-                imported_modules: environment.imported_modules.keys().cloned().collect(),
-            })?;
-
-    // Modules should belong to a package that is a direct dependency of the
-    // current package to be imported.
-    // Upgrade this to an error in future.
-    if module_info.package != GLEAM_CORE_PACKAGE_NAME
-        && module_info.package != current_package
-        && !direct_dependencies.contains_key(&module_info.package)
-    {
-        warnings.emit(type_::Warning::TransitiveDependencyImported {
-            location,
-            module: module_info.name.clone(),
-            package: module_info.package.clone(),
-        })
-    }
-
-    Ok(Definition::Import(Import {
-        documentation,
-        location,
-        module,
-        as_name,
-        unqualified_values,
-        unqualified_types,
-        package: module_info.package.clone(),
-    }))
-}
-
-fn infer_module_constant(
-    c: ModuleConstant<(), ()>,
-    environment: &mut Environment<'_>,
-    module_name: &EcoString,
-) -> Result<TypedDefinition, Error> {
-    let ModuleConstant {
-        documentation: doc,
-        location,
-        name,
-        annotation,
-        publicity,
-        value,
-        deprecation,
-        ..
-    } = c;
-
-    let mut expr_typer = ExprTyper::new(
-        environment,
-        FunctionDefinition {
-            has_body: true,
-            has_erlang_external: false,
-            has_javascript_external: false,
-        },
-    );
-    let typed_expr = expr_typer.infer_const(&annotation, *value)?;
-    let type_ = typed_expr.type_();
-    let implementations = expr_typer.implementations;
-
-    let variant = ValueConstructor {
-        publicity,
-        deprecation: deprecation.clone(),
-        variant: ValueConstructorVariant::ModuleConstant {
-            documentation: doc.clone(),
-            location,
-            literal: typed_expr.clone(),
-            module: module_name.clone(),
-            implementations,
-        },
-        type_: type_.clone(),
-    };
-
-    environment.insert_variable(
-        name.clone(),
-        variant.variant.clone(),
-        type_.clone(),
-        publicity,
-        Deprecation::NotDeprecated,
-    );
-    environment.insert_module_value(name.clone(), variant);
-
-    if publicity.is_private() {
-        environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
-    }
-
-    Ok(Definition::ModuleConstant(ModuleConstant {
-        documentation: doc,
-        location,
-        name,
-        annotation,
-        publicity,
-        value: Box::new(typed_expr),
-        type_,
-        deprecation,
-        implementations,
-    }))
+    })
 }
 
 pub fn infer_bit_array_option<UntypedValue, TypedValue, Typer>(
@@ -1335,39 +1468,6 @@ fn generalise_function(
         external_javascript,
         implementations,
     })
-}
-
-fn make_type_vars(
-    args: &[EcoString],
-    location: &SrcSpan,
-    hydrator: &mut Hydrator,
-    environment: &mut Environment<'_>,
-) -> Result<Vec<Arc<Type>>, Error> {
-    args.iter()
-        .map(|name| {
-            hydrator.add_type_variable(name, environment).map_err(|()| {
-                Error::DuplicateTypeParameter {
-                    location: *location,
-                    name: name.clone(),
-                }
-            })
-        })
-        .collect::<Result<_, _>>()
-}
-
-fn assert_unique_type_name(
-    names: &mut HashMap<EcoString, SrcSpan>,
-    name: &EcoString,
-    location: SrcSpan,
-) -> Result<(), Error> {
-    match names.insert(name.clone(), location) {
-        Some(previous_location) => Err(Error::DuplicateTypeName {
-            name: name.clone(),
-            previous_location,
-            location,
-        }),
-        None => Ok(()),
-    }
 }
 
 fn assert_unique_name(

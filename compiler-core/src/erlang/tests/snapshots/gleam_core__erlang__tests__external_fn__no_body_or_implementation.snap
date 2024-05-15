@@ -1,15 +1,14 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
 assertion_line: 224
-expression: "\npub fn one(x: Int) -> Int\n"
+expression: "\npub fn one(x: Int) -> Float\n"
 ---
 error: Function without an implementation
   ┌─ /src/one/two.gleam:2:1
   │
-2 │ pub fn one(x: Int) -> Int
+2 │ pub fn one(x: Int) -> Float
   │ ^^^^^^^^^^^^^^^^^^
 
 We can't compile this function as it doesn't have an
 implementation. Add a body or an external implementation
 using the `@external` attribute.
-

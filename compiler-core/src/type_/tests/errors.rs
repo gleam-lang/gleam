@@ -344,7 +344,7 @@ fn case_tuple_guard() {
 
 #[test]
 fn case_list_guard() {
-    assert_error!("case [1] { x if x == [1, 2.0] -> 1 }");
+    assert_error!("case [1] { x if x == [1, 2.0] -> 1 _ -> 2 }");
 }
 
 #[test]
@@ -611,7 +611,7 @@ pub type Shape {
     Rectangle(x: String, y: String)
 }
 pub fn get_x(shape: Shape) { shape.x }
-pub fn get_y(shape: Shape) { shape.y }"
+"
     );
 }
 
@@ -911,7 +911,7 @@ fn guard_record_wrong_arity() {
     assert_module_error!(
         r#"type X { X(a: Int, b: Float) }
 fn x() {
-  case X(1, 2.0) { x if x == X(1) -> 1 }
+  case X(1, 2.0) { x if x == X(1) -> 1 _ -> 2 }
 }"#
     );
 }
@@ -920,7 +920,7 @@ fn x() {
 fn subject_int_float_guard_tuple() {
     assert_module_error!(
         r#"type X { X(a: Int, b: Float) }
-fn x() { case X(1, 2.0) { x if x == X(2.0, 1) -> 1 } }"#
+fn x() { case X(1, 2.0) { x if x == X(2.0, 1) -> 1 _ -> 2 } }"#
     );
 }
 
@@ -1158,6 +1158,74 @@ fn const_annotation_wrong_3() {
 #[test]
 fn const_annotation_wrong_4() {
     assert_module_error!("pub const pair: #(Int, Float) = #(4.1, 1)");
+}
+
+#[test]
+fn const_multiple_errors_mismatched_types() {
+    assert_module_error!(
+        "const mismatched_types: String = 7
+const invalid_annotation: MyInvalidType = \"str\""
+    );
+}
+
+#[test]
+fn const_multiple_errors_invalid_annotation() {
+    assert_module_error!(
+        "const invalid_annotation: MyInvalidType = \"str\"
+const invalid_value: String = MyInvalidValue"
+    );
+}
+
+#[test]
+fn const_multiple_errors_invalid_value() {
+    assert_module_error!(
+        "const invalid_value: String = MyInvalidValue
+const invalid_unannotated_value = [1, 2.0]"
+    );
+}
+
+#[test]
+fn const_multiple_errors_invalid_unannotated_value() {
+    assert_module_error!(
+        "const invalid_unannotated_value = [1, 2.0]
+const invalid_everything: MyInvalidType = MyInvalidValue"
+    );
+}
+
+#[test]
+fn const_multiple_errors_invalid_annotation_and_value() {
+    assert_module_error!(
+        "const invalid_everything: MyInvalidType = MyInvalidValue
+const mismatched_types: String = 7"
+    );
+}
+
+#[test]
+fn const_multiple_errors_are_local_with_annotation() {
+    assert_module_error!(
+        "const num: String = 7
+const tpl: String = #(Ok(1), MyInvalidType, 3)
+const assignment1: String = num
+const assignment2: String = tpl"
+    );
+}
+
+#[test]
+fn const_multiple_errors_are_local_with_inferred_value() {
+    assert_module_error!(
+        "const str: MyInvalidType = \"str\"
+const assignment: String = str"
+    );
+}
+
+#[test]
+fn const_multiple_errors_are_local_with_unbound_value() {
+    assert_module_error!(
+        "const lst = [1, 2.0]
+const unbound: MyInvalidType = MyInvalidType
+const assignment1: String = lst
+const assignment2: String = unbound"
+    );
 }
 
 #[test]

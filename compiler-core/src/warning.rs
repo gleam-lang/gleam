@@ -2,7 +2,11 @@ use crate::{
     ast::TodoKind,
     diagnostic::{self, Diagnostic, Location},
     error::wrap,
-    type_::{self, error::TodoOrPanic, pretty::Printer},
+    type_::{
+        self,
+        error::{LiteralCollectionKind, TodoOrPanic},
+        pretty::Printer,
+    },
 };
 use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
@@ -600,19 +604,56 @@ the same values.\n"
                     }
                 }
 
-                type_::Warning::CaseMatchOnLiteralTuple { location } => Diagnostic {
-                    title: "Redundant tuple".into(),
-                    text: "Case expressions can take multiple subjects directly.".into(),
-                    hint: Some(
-                        "You can pass the contents of the tuple directly, separated by commas."
-                            .into(),
+                type_::Warning::CaseMatchOnLiteralCollection { kind, location } => {
+                    let kind = match kind {
+                        LiteralCollectionKind::List => "list",
+                        LiteralCollectionKind::Tuple => "tuple",
+                        LiteralCollectionKind::Record => "record",
+                    };
+
+                    let title = format!("Redundant {kind}");
+                    let text = wrap(&format!(
+                        "Instead of building a {kind} and matching on it, \
+you can match on its contents directly.
+A case expression can take multiple subjects separated by commas like this:
+
+    case one_subject, another_subject {{
+      _, _ -> todo
+    }}
+
+See: https://tour.gleam.run/flow-control/multiple-subjects/"
+                    ));
+
+                    Diagnostic {
+                        title,
+                        text,
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: Some(format!("You can remove this {kind} wrapper")),
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
+                type_::Warning::CaseMatchOnLiteralValue { location } => Diagnostic {
+                    title: "Match on a literal value".into(),
+                    text: wrap(
+                        "Matching on a literal value is redundant since you \
+can already tell which branch is going to match with this value.",
                     ),
+                    hint: None,
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("You can remove this tuple wrapper".into()),
+                            text: Some("There's no need to pattern match on this value".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),

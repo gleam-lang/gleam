@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "const lst = [1, 2.0]\nconst unbound: MyInvalidType = MyInvalidType\nconst assignment1: String = lst\nconst assignment2: String = unbound"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:17
+  │
+1 │ const lst = [1, 2.0]
+  │                 ^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Float
+
+error: Unknown type
+  ┌─ /src/one/two.gleam:2:16
+  │
+2 │ const unbound: MyInvalidType = MyInvalidType
+  │                ^^^^^^^^^^^^^
+
+The type `MyInvalidType` is not defined or imported in this module.
+
+error: Unknown variable
+  ┌─ /src/one/two.gleam:2:32
+  │
+2 │ const unbound: MyInvalidType = MyInvalidType
+  │                                ^^^^^^^^^^^^^
+
+The name `MyInvalidType` is not in scope here.

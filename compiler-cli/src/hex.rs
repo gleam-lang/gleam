@@ -1,6 +1,7 @@
 use gleam_core::{
     hex::{self, RetirementReason},
-    Result,
+    io::HttpClient as _,
+    Error, Result,
 };
 
 use crate::{cli, http::HttpClient};
@@ -131,6 +132,73 @@ impl ApiKeyCommand for UnretireCommand {
             &HttpClient::new(),
         ))?;
         cli::print_unretired(&self.package, &self.version);
+        Ok(())
+    }
+}
+
+pub struct RevertCommand {
+    package: String,
+    version: String,
+}
+
+pub fn revertcommand(package: Option<String>, version: Option<String>) -> Result<()> {
+    RevertCommand::setup(package, version)?.run()?;
+
+    Ok(())
+}
+
+impl RevertCommand {
+    fn setup(package: Option<String>, version: Option<String>) -> Result<Self> {
+        let (package, version): (String, String) = match (package, version) {
+            (Some(pkg), Some(ver)) => (pkg, ver),
+            (None, Some(ver)) => (crate::config::root_config()?.name.to_string(), ver),
+            (Some(pkg), None) => {
+                let query =
+                    "Which version of package ".to_string() + &pkg + " do you want to revert?";
+                let ver = cli::ask(&query)?;
+                (pkg, ver)
+            }
+            (None, None) => {
+                // Only want to access root_config once rather than twice
+                let config = crate::config::root_config()?;
+
+                (config.name.to_string(), config.version.to_string())
+            }
+        };
+
+        let question =
+            "Do you wish to revert ".to_string() + &package + " version " + &version + "?";
+        let should_revert = cli::confirm(&question)?;
+        if should_revert {
+            Ok(Self { version, package })
+        } else {
+            println!("Not reverting.");
+            std::process::exit(0);
+        }
+    }
+}
+
+impl ApiKeyCommand for RevertCommand {
+    fn with_api_key(
+        &mut self,
+        handle: &tokio::runtime::Handle,
+        hex_config: &hexpm::Config,
+        api_key: &str,
+    ) -> Result<()> {
+        let http = HttpClient::new();
+
+        // Revert release from API
+        let request =
+            hexpm::revert_release_request(&self.package, &self.version, api_key, hex_config)
+                .map_err(Error::hex)?;
+        let response = handle.block_on(http.send(request))?;
+        hexpm::revert_release_response(response).map_err(Error::hex)?;
+
+        // Done!
+        println!(
+            "{} {} has been removed from Hex",
+            self.package, self.version
+        );
         Ok(())
     }
 }

@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+assertion_line: 253
+expression: "\n@external(javascript, \"somemodule\", \"() => 123\")\npub fn one() -> Nil {\n  Nil\n}\n\npub fn two() -> Nil {\n  \"\"\n}\n"
+---
+error: Invalid JavaScript function
+  ┌─ /src/one/two.gleam:3:1
+  │
+3 │ pub fn one() -> Nil {
+  │ ^^^^^^^^^^^^^^^^^^^
+
+The function `one` has an external JavaScript implementation but the
+function name `() => 123` is not valid.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:8:3
+  │
+8 │   ""
+  │   ^^
+
+The type of this returned value doesn't match the return type
+annotation of this function.
+
+Expected type:
+
+    Nil
+
+Found type:
+
+    String

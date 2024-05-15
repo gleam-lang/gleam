@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/type_alias.rs
+assertion_line: 99
+expression: "\ntype UnusedParameter(a) =\n  Int\n\ntype UnknownType =\n  Dunno\n"
+---
+error: Unused type parameter
+  ┌─ /src/one/two.gleam:2:1
+  │  
+2 │ ╭ type UnusedParameter(a) =
+3 │ │   Int
+  │ ╰─────^
+
+The type variable `a` is unused. It can be safely removed.
+
+error: Unknown type
+  ┌─ /src/one/two.gleam:6:3
+  │
+6 │   Dunno
+  │   ^^^^^
+
+The type `Dunno` is not defined or imported in this module.

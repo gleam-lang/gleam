@@ -46,6 +46,18 @@ pub struct Implementations {
     pub uses_javascript_externals: bool,
 }
 
+impl Implementations {
+    pub fn supporting_all() -> Self {
+        Self {
+            gleam: true,
+            can_run_on_erlang: true,
+            can_run_on_javascript: true,
+            uses_javascript_externals: false,
+            uses_erlang_externals: false,
+        }
+    }
+}
+
 /// Tracking whether the function being currently type checked has externals
 /// implementations or not.
 /// This is used to determine whether an error should be raised in the case when
@@ -178,10 +190,17 @@ pub(crate) struct ExprTyper<'a, 'b> {
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
+
+    // Accumulated errors found while typing the expression
+    pub(crate) errors: &'a mut Vec<Error>,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>, definition: FunctionDefinition) -> Self {
+    pub fn new(
+        environment: &'a mut Environment<'b>,
+        definition: FunctionDefinition,
+        errors: &'a mut Vec<Error>,
+    ) -> Self {
         let mut hydrator = Hydrator::new();
 
         let implementations = Implementations {
@@ -201,6 +220,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             environment,
             implementations,
             current_function_definition: definition,
+            errors,
         }
     }
 
@@ -940,7 +960,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .into_iter()
             .map(|s| {
                 self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| {
-                    env.infer_const(&None, expr)
+                    Ok(env.infer_const(&None, expr))
                 })
             })
             .try_collect()?;
@@ -1166,17 +1186,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         clauses: Vec<UntypedClause>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        subjects
-            .iter()
-            .filter(|untyped_expr| untyped_expr.is_tuple())
-            .for_each(|literal_tuple| {
-                self.environment
-                    .warnings
-                    .emit(Warning::CaseMatchOnLiteralTuple {
-                        location: literal_tuple.location(),
-                    });
-            });
-
         let subjects_count = subjects.len();
         let mut typed_subjects = Vec::with_capacity(subjects_count);
         let mut subject_types = Vec::with_capacity(subjects_count);
@@ -1203,6 +1212,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         self.check_case_exhaustiveness(location, &subject_types, &typed_clauses)?;
+        typed_subjects
+            .iter()
+            .filter_map(check_subject_for_redundant_match)
+            .for_each(|warning| self.environment.warnings.emit(warning));
 
         Ok(TypedExpr::Case {
             location,
@@ -1603,7 +1616,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
 
             ClauseGuard::Constant(constant) => {
-                self.infer_const(&None, constant).map(ClauseGuard::Constant)
+                Ok(ClauseGuard::Constant(self.infer_const(&None, constant)))
             }
         }
     }
@@ -2071,14 +2084,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    // TODO: extract the type annotation checking into a crate::analyse::infer_module_const
-    // function that uses this function internally
-    pub fn infer_const(
-        &mut self,
-        annotation: &Option<TypeAst>,
-        value: UntypedConstant,
-    ) -> Result<TypedConstant, Error> {
-        let inferred = match value {
+    // helper for infer_const to get the value of a constant ignoring annotations
+    fn infer_const_value(&mut self, value: UntypedConstant) -> Result<TypedConstant, Error> {
+        match value {
             Constant::Int {
                 location, value, ..
             } => Ok(Constant::Int { location, value }),
@@ -2254,7 +2262,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             location,
                             implicit,
                         } = arg;
-                        let value = self.infer_const(&None, value)?;
+                        let value = self.infer_const(&None, value);
                         unify(typ.clone(), value.type_())
                             .map_err(|e| convert_unify_error(e, value.location()))?;
                         Ok(CallArg {
@@ -2307,16 +2315,72 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     ValueConstructorVariant::Record { .. } => unreachable!(),
                 }
             }
-        }?;
 
-        // Check type annotation is accurate.
-        if let Some(ann) = annotation {
-            let const_ann = self.type_from_ast(ann)?;
-            unify(const_ann, inferred.type_())
-                .map_err(|e| convert_unify_error(e, inferred.location()))?;
-        };
+            Constant::Invalid { .. } => panic!("invalid constants can not be in an untyped ast"),
+        }
+    }
 
-        Ok(inferred)
+    pub fn infer_const(
+        &mut self,
+        annotation: &Option<TypeAst>,
+        value: UntypedConstant,
+    ) -> TypedConstant {
+        let loc = value.location();
+        let inferred = self.infer_const_value(value);
+
+        // Get the type of the annotation if it exists and validate it against the inferred value.
+        let annotation = annotation.as_ref().map(|a| self.type_from_ast(a));
+        match (annotation, inferred) {
+            // No annotation and valid inferred value.
+            (None, Ok(inferred)) => inferred,
+            // No annotation and invalid inferred value. Use an unbound variable hole.
+            (None, Err(e)) => {
+                self.errors.push(e);
+                Constant::Invalid {
+                    location: loc,
+                    typ: self.new_unbound_var(),
+                }
+            }
+            // Type annotation and inferred value are valid. Ensure they are unifiable.
+            // NOTE: if the types are not unifiable we use the annotated type.
+            (Some(Ok(const_ann)), Ok(inferred)) => {
+                if let Err(e) = unify(const_ann.clone(), inferred.type_())
+                    .map_err(|e| convert_unify_error(e, inferred.location()))
+                {
+                    self.errors.push(e);
+                    Constant::Invalid {
+                        location: loc,
+                        typ: const_ann,
+                    }
+                } else {
+                    inferred
+                }
+            }
+            // Type annotation is valid but not the inferred value. Place a placeholder constant with the annotation type.
+            // This should limit the errors to only the definition.
+            (Some(Ok(const_ann)), Err(value_err)) => {
+                self.errors.push(value_err);
+                Constant::Invalid {
+                    location: loc,
+                    typ: const_ann,
+                }
+            }
+            // Type annotation is invalid but the inferred value is ok. Use the inferred type.
+            (Some(Err(annotation_err)), Ok(inferred)) => {
+                self.errors.push(annotation_err);
+                inferred
+            }
+            // Type annotation and inferred value are invalid. Place a placeholder constant with an unbound type.
+            // This should limit the errors to only the definition assuming the constant is used consistently.
+            (Some(Err(annotation_err)), Err(value_err)) => {
+                self.errors.push(annotation_err);
+                self.errors.push(value_err);
+                Constant::Invalid {
+                    location: loc,
+                    typ: self.new_unbound_var(),
+                }
+            }
+        }
     }
 
     fn infer_const_tuple(
@@ -2327,7 +2391,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
         for element in untyped_elements {
-            let element = self.infer_const(&None, element)?;
+            let element = self.infer_const(&None, element);
             elements.push(element);
         }
 
@@ -2343,7 +2407,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
         for element in untyped_elements {
-            let element = self.infer_const(&None, element)?;
+            let element = self.infer_const(&None, element);
             unify(typ.clone(), element.type_())
                 .map_err(|e| convert_unify_error(e, element.location()))?;
             elements.push(element);
@@ -2719,6 +2783,46 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         Ok(())
+    }
+}
+
+fn check_subject_for_redundant_match(subject: &TypedExpr) -> Option<Warning> {
+    match subject {
+        TypedExpr::Tuple { elems, .. } if !elems.is_empty() => {
+            Some(Warning::CaseMatchOnLiteralCollection {
+                kind: LiteralCollectionKind::Tuple,
+                location: subject.location(),
+            })
+        }
+
+        TypedExpr::List { elements, tail, .. } if !elements.is_empty() || tail.is_some() => {
+            Some(Warning::CaseMatchOnLiteralCollection {
+                kind: LiteralCollectionKind::List,
+                location: subject.location(),
+            })
+        }
+
+        TypedExpr::BitArray { segments, .. } if !segments.is_empty() => {
+            // We don't want a warning when matching on literal bit arrays
+            // because it can make sense to do it; for example if one is
+            // matching on segments that do not align with the segments used
+            // for construction.
+            None
+        }
+
+        _ => match subject.record_constructor_arity() {
+            Some(0) => Some(Warning::CaseMatchOnLiteralValue {
+                location: subject.location(),
+            }),
+            Some(_) => Some(Warning::CaseMatchOnLiteralCollection {
+                kind: LiteralCollectionKind::Record,
+                location: subject.location(),
+            }),
+            None if subject.is_literal() => Some(Warning::CaseMatchOnLiteralValue {
+                location: subject.location(),
+            }),
+            None => None,
+        },
     }
 }
 

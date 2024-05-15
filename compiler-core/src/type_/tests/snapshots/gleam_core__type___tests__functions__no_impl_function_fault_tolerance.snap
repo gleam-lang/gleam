@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+assertion_line: 175
+expression: "\npub fn no_impl() -> Nil\n\npub type X = UnknownType\n"
+---
+error: Function without an implementation
+  ┌─ /src/one/two.gleam:2:1
+  │
+2 │ pub fn no_impl() -> Nil
+  │ ^^^^^^^^^^^^^^^^
+
+We can't compile this function as it doesn't have an
+implementation. Add a body or an external implementation
+using the `@external` attribute.
+
+error: Unknown type
+  ┌─ /src/one/two.gleam:4:14
+  │
+4 │ pub type X = UnknownType
+  │              ^^^^^^^^^^^
+
+The type `UnknownType` is not defined or imported in this module.

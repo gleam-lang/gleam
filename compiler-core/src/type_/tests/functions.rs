@@ -168,3 +168,82 @@ pub fn two(x) {
 "#
     );
 }
+
+#[test]
+fn no_impl_function_fault_tolerance() {
+    // A function not having an implementation does not stop analysis.
+    assert_module_error!(
+        r#"
+pub fn no_impl() -> Nil
+
+pub type X = UnknownType
+"#
+    );
+}
+
+#[test]
+fn bad_body_function_fault_tolerance() {
+    // A function having an invalid body does not stop analysis.
+    assert_module_error!(
+        r#"
+pub fn bad(x: Int) -> Float {
+  // Invalid body.
+  "" + ""
+}
+
+pub fn user() -> Float {
+  // This checks that the bad function is still usable, the types coming from
+  // its annotations. This function is valid.
+  bad(1)
+}
+
+// Another bad function to make sure that analysis has not stopped. This error
+// should also be emitted.
+pub fn bad_2() {
+  bad(Nil)
+}
+"#
+    );
+}
+
+#[test]
+fn annotation_mismatch_function_fault_tolerance() {
+    // A function having an invalid body does not stop analysis.
+    assert_module_error!(
+        r#"
+pub fn bad(x: Int) -> Float {
+  // This does not match the return annotation
+  1
+}
+
+pub fn user() -> Float {
+  // This checks that the bad function is still usable, the types coming from
+  // its annotations. This function is valid.
+  bad(1)
+}
+
+// Another bad function to make sure that analysis has not stopped. This error
+// should also be emitted.
+pub fn bad_2() {
+  bad(Nil)
+}
+"#
+    );
+}
+
+#[test]
+fn invalid_javascript_external_do_not_stop_analysis() {
+    // Both these have errors! We do not stop on the first one.
+    assert_module_error!(
+        r#"
+@external(javascript, "somemodule", "() => 123")
+pub fn one() -> Nil {
+  Nil
+}
+
+pub fn two() -> Nil {
+  ""
+}
+"#
+    );
+}

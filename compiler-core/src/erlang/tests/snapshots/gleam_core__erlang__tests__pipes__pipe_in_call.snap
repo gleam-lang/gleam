@@ -22,4 +22,3 @@ main() ->
         end,
         _pipe
     ).
-

@@ -58,6 +58,25 @@
 
   Hint: Rename this module and try again.
   ```
+- New subcommand `gleam hex revert` added. ([Pi-Cla](https://github.com/Pi-Cla))
+  * You can specify the options like this: `gleam hex revert --package gling --version 1.2.3`
+  * A new package can be reverted or updated within 24 hours of it's initial publish,
+  a new version of an existing package can be reverted or updated within one hour.
+  * You could already update packages even before this release by running: `gleam publish` again.
+
+- When the user tries to replace a release without the `--replace` flag
+  the error message now mentions the lack of a `--replace` flag.
+  ([Pi-Cla](https://github.com/Pi-Cla))
+
+  ```
+  error: Version already published
+
+  Version v1.0.0 has already been published.
+  This release has been recently published so you can replace it
+  or you can publish it using a different version number
+
+  Hint: Please add the --replace flag if you want to replace the release.
+  ```
 
 ### Compiler
 
@@ -183,6 +202,53 @@
   about the whole block saying it has the wrong function type.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler will now raise a warning when pattern matching on a literal value
+  like a list, a tuple, integers, strings etc.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+  ```
+  warning: Redundant list
+    ┌─ /src/warning/wrn.gleam:2:14
+    │
+  2 │         case [1, 2] {
+    │              ^^^^^^ You can remove this list wrapper
+
+  Instead of building a list and matching on it, you can match on its
+  contents directly.
+  A case expression can take multiple subjects separated by commas like this:
+
+      case one_subject, another_subject {
+        _, _ -> todo
+      }
+
+  See: https://tour.gleam.run/flow-control/multiple-subjects/
+  ```
+
+  ```
+  warning: Match on a literal value
+    ┌─ /src/warning/wrn.gleam:4:8
+    │
+  4 │   case 1 {
+    │        ^ There's no need to pattern match on this value
+
+  Matching on a literal value is redundant since you can already tell which
+  branch is going to match with this value.
+
+- The compiler will now continue module analysis when there are errors in top
+  level definitions. This means that when these errors occur the compiler will
+  continue analysing the rest of the code to find other errors and type
+  information.
+
+  When using the build tool this means that the programmer will be shown
+  multiple error messages when there are multiple problems in a module.
+
+  When using the language server multiple error diagnostics will be shown, and
+  the compiler will get updated type information about the code even when there
+  are errors. This should improve the accuracy of feedback and suggestions from
+  the language server as its information about the code will be more up-to-date.
+
+  ([Ameen Radwan](https://github.com/Acepie)) and ([Louis Pilfold](https://github.com/Acepie))
+
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.
@@ -251,19 +317,73 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Comments appearing after arguments are not longer moved to different place.
+  You can now write all of those:
+
+  ```gleam
+  type Record {
+    Record(
+      field: String,
+      // comment_line_1: String,
+      // comment_line_2: String,
+    )
+  }
+  ```
+
+  ```gleam
+  pub fn main() {
+    fn(
+      a,
+      // A comment 2
+    ) {
+      1
+    }
+  }
+  ```
+
+  ```gleam
+  fn main() {
+    let triple = Triple(1, 2, 3)
+    let Triple(
+      a,
+      ..,
+      // comment
+    ) = triple
+    a
+  }
+  ```
+
+  ```gleam
+  type Record {
+    Record(
+      // comment_line_1: String,
+      // comment_line_2: String,
+    )
+  }
+  ```
+
+  ([Mateusz Ledwoń](https://github.com/Axot017))
+
 ### Language Server
 
 - The code action to remove unused imports now removes the entire line is
   removed if it would otherwise be left blank.
   ([Milco Kats](https://github.com/katsmil))
 
-- Hover for type annotations is now separate from the thing being annotated. ([Ameen Radwan](https://github.com/Acepie))
+- Hover for type annotations is now separate from the thing being annotated.
+  ([Ameen Radwan](https://github.com/Acepie))
 
 - Go to definition now works for direct type annotations. ([Ameen Radwan](https://github.com/Acepie))
 
 - Go to definition now works for import statements. ([Ameen Radwan](https://github.com/Acepie))
 
 - Hover now works for unqualified imports. ([Ameen Radwan](https://github.com/Acepie))
+
+- The language server now detects when the `gleam.toml` config file has changed
+  even if the client does not support watching files. This means that changes to
+  the default target, new dependencies, and other configuration will be
+  automatically detected.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ### Bug Fixes
 
@@ -309,3 +429,14 @@
 - Fixed a bug where having utf8 symbols in `gleam.toml`'s description value
   would result in an HTTP 500 error when running `gleam publish`.
   ([inoas](https://github.com/inoas))
+
+- Unicode `\u{}` syntax in bit_array string segments now produce valid Erlang
+  unicode characters ([Pi-Cla](https://github.com/Pi-Cla))
+
+- Fixed a bug where using a constant defined in another module that referenced
+  a private function could generate invalid code on the Erlang target.
+  ([Shayan Javani](https://github.com/massivefermion))
+
+- Fixed a bug where the language server would dynamically request the client to
+  watch files even when the client has stated it does not support that.
+  ([Louis Pilfold](https://github.com/lpil))

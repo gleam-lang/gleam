@@ -365,6 +365,20 @@ enum Hex {
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
     #[command(verbatim_doc_comment)]
     Unretire { package: String, version: String },
+
+    /// Revert a release from Hex
+    ///
+    /// This command uses this environment variables:
+    ///
+    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
+    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
+    Revert {
+        #[arg(long)]
+        package: Option<String>,
+
+        #[arg(long)]
+        version: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -469,6 +483,8 @@ fn main() {
         Command::Hex(Hex::Unretire { package, version }) => {
             hex::UnretireCommand::new(package, version).run()
         }
+
+        Command::Hex(Hex::Revert { package, version }) => hex::revertcommand(package, version),
 
         Command::Add { packages, dev } => add::command(packages, dev),
 

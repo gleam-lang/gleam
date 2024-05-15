@@ -392,6 +392,10 @@ impl<'a> ModuleEncoder<'a> {
                         .expect("This is guaranteed to hold a value."),
                 );
             }
+
+            Constant::Invalid { .. } => {
+                panic!("invalid constants should not reach code generation")
+            }
         }
     }
 

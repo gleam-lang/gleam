@@ -1204,6 +1204,127 @@ fn pattern_matching_on_tuples_doesnt_raise_a_warning() {
 }
 
 #[test]
+fn pattern_matching_on_literal_empty_tuple() {
+    assert_warning!(
+        "pub fn main() {
+        case #() {
+            _ -> Nil
+        }
+      }"
+    );
+}
+
+#[test]
+fn pattern_matching_on_literal_list() {
+    assert_warning!(
+        "pub fn main() {
+        case [1, 2] {
+            _ -> Nil
+        }
+      }"
+    );
+}
+
+#[test]
+fn pattern_matching_on_literal_list_with_tail() {
+    assert_warning!(
+        "pub fn main() {
+        case [1, 2, ..[]] {
+            _ -> Nil
+        }
+      }"
+    );
+}
+
+#[test]
+fn pattern_matching_on_literal_empty_list() {
+    assert_warning!(
+        "pub fn main() {
+        case [] {
+            _ -> Nil
+        }
+      }"
+    );
+}
+
+#[test]
+fn pattern_matching_on_literal_empty_bit_array() {
+    assert_warning!(
+        "pub fn main() {
+        case <<>> {
+            _ -> Nil
+        }
+      }"
+    );
+}
+
+#[test]
+fn pattern_matching_on_literal_record() {
+    assert_warning!(
+        "
+pub type Wibble { Wibble(Int) }
+pub fn main() {
+  let n = 1
+  case Wibble(n) {
+    _ -> Nil
+  }
+}"
+    );
+}
+
+#[test]
+fn pattern_matching_on_literal_record_with_no_args() {
+    assert_warning!(
+        "
+pub type Wibble { Wibble }
+pub fn main() {
+  case Wibble {
+    _ -> Nil
+  }
+}"
+    );
+}
+
+#[test]
+fn pattern_matching_on_literal_int() {
+    assert_warning!(
+        "
+pub type Wibble { Wibble }
+pub fn main() {
+  case 1 {
+    _ -> Nil
+  }
+}"
+    );
+}
+
+#[test]
+fn pattern_matching_on_literal_float() {
+    assert_warning!(
+        "
+pub type Wibble { Wibble }
+pub fn main() {
+  case 1.0 {
+    _ -> Nil
+  }
+}"
+    );
+}
+
+#[test]
+fn pattern_matching_on_literal_string() {
+    assert_warning!(
+        "
+pub type Wibble { Wibble }
+pub fn main() {
+  case \"hello\" {
+    _ -> Nil
+  }
+}"
+    );
+}
+
+#[test]
 fn opaque_external_type_raises_a_warning() {
     assert_warning!("pub opaque type External");
 }

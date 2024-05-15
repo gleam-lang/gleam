@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "const str: MyInvalidType = \"str\"\nconst assignment: String = str"
+---
+error: Unknown type
+  ┌─ /src/one/two.gleam:1:12
+  │
+1 │ const str: MyInvalidType = "str"
+  │            ^^^^^^^^^^^^^
+
+The type `MyInvalidType` is not defined or imported in this module.

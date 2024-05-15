@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "const mismatched_types: String = 7\nconst invalid_annotation: MyInvalidType = \"str\""
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:34
+  │
+1 │ const mismatched_types: String = 7
+  │                                  ^
+
+Expected type:
+
+    String
+
+Found type:
+
+    Int
+
+error: Unknown type
+  ┌─ /src/one/two.gleam:2:27
+  │
+2 │ const invalid_annotation: MyInvalidType = "str"
+  │                           ^^^^^^^^^^^^^
+
+The type `MyInvalidType` is not defined or imported in this module.

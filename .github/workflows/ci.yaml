@@ -33,8 +33,7 @@ jobs:
         target:
           - x86_64-unknown-linux-gnu
           - x86_64-unknown-linux-musl
-          # https://github.com/gleam-lang/gleam/issues/2221
-          # - aarch64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
           - aarch64-unknown-linux-musl
           - x86_64-apple-darwin
           - x86_64-pc-windows-msvc
@@ -47,10 +46,10 @@ jobs:
             target: x86_64-unknown-linux-musl
             use-cross: true
             run-integration-tests: true
-          # - os: ubuntu-latest
-          #   target: aarch64-unknown-linux-gnu
-          #   use-cross: true
-          #   run-integration-tests: false # Cannot run aarch64 binaries on x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            use-cross: true
+            run-integration-tests: false # Cannot run aarch64 binaries on x86_64
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             use-cross: true
@@ -81,13 +80,10 @@ jobs:
         if: ${{ matrix.target == 'x86_64-unknown-linux-musl'}}
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
-          override: true
-          default: true
-          profile: minimal
 
       - name: Install Erlang (non-macos)
         uses: erlef/setup-beam@v1
@@ -109,7 +105,7 @@ jobs:
           key: v1-${{ matrix.target }}
 
       - name: Install Gleam
-        uses: actions-rs/cargo@v1
+        uses: clechasseur/rs-cargo@v2
         with:
           command: install
           args: "--path compiler-cli --target ${{ matrix.target }} --debug --locked"
@@ -117,7 +113,7 @@ jobs:
         if: ${{ matrix.run-integration-tests }}
 
       - name: Run tests
-        uses: actions-rs/cargo@v1
+        uses: clechasseur/rs-cargo@v2
         with:
           command: test
           args: "--workspace --target ${{ matrix.target }}"
@@ -237,12 +233,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           target: wasm32-unknown-unknown
-          profile: minimal
-          override: true
 
       - uses: actions/setup-node@v4
         with:
@@ -264,12 +258,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          override: true
-          default: true
-          profile: minimal
           components: rustfmt
 
       - run: cargo fmt --all -- --check
@@ -283,12 +274,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          override: true
-          default: true
-          profile: minimal
 
       - name: Install cargo-deny
         run: |
@@ -309,12 +297,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          override: true
-          default: true
-          profile: minimal
           components: clippy
 
       - name: Handle Rust dependencies caching

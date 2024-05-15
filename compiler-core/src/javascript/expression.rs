@@ -1295,6 +1295,8 @@ pub(crate) fn constant_expression<'a>(
                 }
             }
         }),
+
+        Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
     }
 }
 

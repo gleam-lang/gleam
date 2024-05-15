@@ -442,6 +442,13 @@ pub enum EmptyListCheckKind {
     NonEmpty,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LiteralCollectionKind {
+    List,
+    Tuple,
+    Record,
+}
+
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Warning {
     Todo {
@@ -543,19 +550,39 @@ pub enum Warning {
     },
 
     /// This happens when someone tries to write a case expression where one of
-    /// the subjects is a literal tuple, for example:
+    /// the subjects is a literal tuple, list or bit array for example:
     ///
     /// ```gleam
     /// case #(wibble, wobble) { ... }
     /// ```
     ///
-    /// The tuple is redundant since we could do this:
+    /// Matching on a literal collection of elements is redundant since we can
+    /// always pass the single items it's made of separated by a comma:
     ///
     /// ```gleam
     /// case wibble, wobble { ... }
     /// ```
     ///
-    CaseMatchOnLiteralTuple {
+    CaseMatchOnLiteralCollection {
+        kind: LiteralCollectionKind,
+        location: SrcSpan,
+    },
+
+    /// This happens if someone tries to match on some kind of literal value
+    /// like an Int, a String, an empty List etc.
+    ///
+    /// ```gleam
+    /// case #() { ... }
+    /// ```
+    ///
+    /// The whole match becomes redundant since one can already tell beforehand
+    /// the structure of the value being matched.
+    ///
+    /// Note: for non-empty literal collection of values we want to provide a
+    ///       better error message that suggests to drop the wrapper, for that
+    ///       we have the `CaseMatchOnLiteralCollection` variant.
+    ///
+    CaseMatchOnLiteralValue {
         location: SrcSpan,
     },
 

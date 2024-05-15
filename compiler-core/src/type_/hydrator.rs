@@ -267,14 +267,14 @@ impl Hydrator {
         &mut self,
         name: &EcoString,
         environment: &mut Environment<'_>,
-    ) -> Result<Arc<Type>, ()> {
+    ) -> Result<Arc<Type>, Arc<Type>> {
         let t = environment.new_generic_var();
         let v = CreatedTypeVariable {
             type_: t.clone(),
             usage_count: 0,
         };
         match self.created_type_variables.insert(name.clone(), v) {
-            Some(_) => Err(()),
+            Some(_) => Err(t),
             None => Ok(t),
         }
     }

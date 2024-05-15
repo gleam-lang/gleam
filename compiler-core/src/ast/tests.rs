@@ -35,19 +35,18 @@ fn compile_module(src: &str) -> TypedModule {
     let line_numbers = LineNumbers::new(src);
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
-    crate::analyse::infer_module::<()>(
-        Target::Erlang,
-        &ids,
-        ast,
-        crate::build::Origin::Src,
-        &modules,
-        &TypeWarningEmitter::null(),
-        &std::collections::HashMap::new(),
-        TargetSupport::Enforced,
-        line_numbers,
-        &config,
-        "".into(),
-    )
+
+    crate::analyse::ModuleAnalyzerConstructor::<()> {
+        target: Target::Erlang,
+        ids: &ids,
+        origin: crate::build::Origin::Src,
+        importable_modules: &modules,
+        warnings: &TypeWarningEmitter::null(),
+        direct_dependencies: &std::collections::HashMap::new(),
+        target_support: TargetSupport::Enforced,
+        package_config: &config,
+    }
+    .infer_module(ast, line_numbers, "".into())
     .expect("should successfully infer")
 }
 
@@ -136,6 +135,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             .into(),
         },
     );
+    let errors = &mut vec![];
     ExprTyper::new(
         &mut environment,
         FunctionDefinition {
@@ -143,6 +143,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             has_erlang_external: false,
             has_javascript_external: false,
         },
+        errors,
     )
     .infer_statements(ast)
     .expect("should successfully infer")

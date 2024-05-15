@@ -5,8 +5,8 @@ use gleam_core::{
     build::{Codegen, Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
     docs::DocContext,
-    hex, paths,
-    paths::ProjectPaths,
+    hex,
+    paths::{self, ProjectPaths},
     requirement::Requirement,
     Error, Result,
 };
@@ -193,6 +193,7 @@ impl ApiKeyCommand for PublishCommand {
 
         runtime.block_on(hex::publish_package(
             std::mem::take(&mut self.package_tarball),
+            self.config.version.to_string(),
             api_key,
             hex_config,
             self.replace,

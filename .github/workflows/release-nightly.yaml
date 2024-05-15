@@ -85,13 +85,10 @@ jobs:
           ./bin/add-nightly-suffix-to-versions.sh
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
-          override: true
-          default: true
-          profile: minimal
 
       - name: Handle Rust dependencies caching
         uses: Swatinem/rust-cache@v2
@@ -99,7 +96,7 @@ jobs:
           key: v1-${{ matrix.target }}
 
       - name: Build release binary
-        uses: actions-rs/cargo@v1
+        uses: clechasseur/rs-cargo@v2
         with:
           command: build
           args: --release --target ${{ matrix.target }}

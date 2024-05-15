@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/erlang/tests/consts.rs
+expression: "\n          fn identity(a) {\n            a\n          }\n\n          pub const funcs = [identity]\n        "
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([identity/1]).
+
+-spec identity(I) -> I.
+identity(A) ->
+    A.

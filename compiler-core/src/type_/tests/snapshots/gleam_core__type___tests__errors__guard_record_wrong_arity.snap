@@ -1,16 +1,14 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 907
-expression: "type X { X(a: Int, b: Float) }\nfn x() {\n  case X(1, 2.0) { x if x == X(1) -> 1 }\n}"
+expression: "type X { X(a: Int, b: Float) }\nfn x() {\n  case X(1, 2.0) { x if x == X(1) -> 1 _ -> 2 }\n}"
 ---
 error: Incorrect arity
   ┌─ /src/one/two.gleam:3:30
   │
-3 │   case X(1, 2.0) { x if x == X(1) -> 1 }
+3 │   case X(1, 2.0) { x if x == X(1) -> 1 _ -> 2 }
   │                              ^^^^ Expected 2 arguments, got 1
 
 This call accepts these additional labelled arguments:
 
   - a
   - b
-

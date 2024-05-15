@@ -1,4 +1,4 @@
-use crate::{assert_module_infer, assert_warning};
+use crate::{assert_module_error, assert_module_infer, assert_warning};
 
 // https://github.com/gleam-lang/gleam/issues/2215
 #[test]
@@ -27,5 +27,35 @@ pub fn name() -> String {
   c.name
 }
         "#
+    );
+}
+
+#[test]
+fn fault_tolerance() {
+    // An error in a custom type does not stop analysis
+    assert_module_error!(
+        r#"
+pub type Cat {
+  Cat(UnknownType)
+}
+
+pub type Kitten = AnotherUnknownType
+        "#
+    );
+}
+
+#[test]
+fn duplicate_variable_error_does_not_stop_analysis() {
+    // Both these aliases have errors! We do not stop on the first one.
+    assert_module_error!(
+        r#"
+type Two(a, a) {
+  Two(a, a)
+}
+
+type Three(a, a) {
+  Three
+}
+"#
     );
 }

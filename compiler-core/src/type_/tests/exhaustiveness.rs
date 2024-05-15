@@ -943,7 +943,7 @@ fn empty_case_of_external() {
     // that an empty case expression is not valid for it.
     assert_module_error!(
         r#"
-type Thingy
+pub type Thingy
 
 pub fn main(x: Thingy) {
   case x {

@@ -1,14 +1,13 @@
-use crate::analyse::{infer_module, TargetSupport};
+use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
         elixir_libraries::ElixirLibraries,
-        module_loader::SourceFingerprint,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader, StaleTracker},
-        Mode, Module, Origin, Package, Target,
+        Mode, Module, Origin, Package, SourceFingerprint, Target,
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
@@ -423,25 +422,24 @@ fn analyse(
         tracing::debug!(module = ?name, "Type checking");
 
         let line_numbers = LineNumbers::new(&code);
-        let inference_result = infer_module(
+
+        let inference_result = crate::analyse::ModuleAnalyzerConstructor {
             target,
             ids,
-            ast,
             origin,
-            module_types,
-            &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
-            &direct_dependencies,
+            importable_modules: module_types,
+            warnings: &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
+            direct_dependencies: &direct_dependencies,
             target_support,
-            line_numbers,
             package_config,
-            path.clone(),
-        );
+        }
+        .infer_module(ast, line_numbers, path.clone());
 
         // TODO: Once we are guaranteed to get an AST back we should change this
         // so that instead of returning immediately we bubble up and
         // do the error check prior to code generation.
         let ast = match inference_result {
-            Err(crate::analyse::InferenceFailure { errors, .. }) => {
+            Err(crate::analyse::AnalysisFailure { errors, .. }) => {
                 return Err(Error::Type {
                     path: path.clone(),
                     src: code.clone(),

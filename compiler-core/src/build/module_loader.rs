@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     package_compiler::{module_name, CacheMetadata, CachedModule, Input, UncompiledModule},
     package_loader::CodegenRequired,
-    Mode, Origin, Target,
+    Mode, Origin, SourceFingerprint, Target,
 };
 use crate::{
     error::{FileIoAction, FileKind},
@@ -19,15 +19,6 @@ use crate::{
     warning::WarningEmitter,
     Error, Result,
 };
-
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub(crate) struct SourceFingerprint(u64);
-
-impl SourceFingerprint {
-    pub(crate) fn new(source: &str) -> Self {
-        SourceFingerprint(xxhash_rust::xxh3::xxh3_64(source.as_bytes()))
-    }
-}
 
 #[derive(Debug)]
 pub(crate) struct ModuleLoader<'a, IO> {
