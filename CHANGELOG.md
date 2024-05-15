@@ -249,6 +249,18 @@
 
   ([Ameen Radwan](https://github.com/Acepie)) and ([Louis Pilfold](https://github.com/Acepie))
 
+- An informative error message is now emitted when attempting to use a function
+  from another module in a constant expression. Previously this would result in
+  a cryptic parse error. ([Nino Annighoefer](https://github.com/nino))
+
+  ```
+  error: Syntax error
+    ┌─ /src/parse/error.gleam:3:18
+    │
+  3 │ const wib: Int = wibble(1, "wobble")
+    │                  ^^^^^^^ Functions can only be called within other functions
+  ```
+
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.
