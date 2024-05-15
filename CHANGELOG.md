@@ -403,6 +403,24 @@
 - `.` is now advertised as a completion trigger character.
   ([Louis Pilfold](https://github.com/lpil))
 
+- A new code action has been added to remove redundant tuples around case
+  expression subjects and patterns when possible.
+  ([Nicky Lim](https://github.com/nicklimmm))
+
+  ```
+  case #(x, y) {
+    #(1, 2) -> 0
+    #(_, _) -> 1
+  }
+  ```
+  Is rewritten to:
+  ```
+  case x, y {
+    1, 2 -> 0
+    _, _ -> 1
+  }
+  ```
+
 ### Bug Fixes
 
 - Fixed [RUSTSEC-2021-0145](https://rustsec.org/advisories/RUSTSEC-2021-0145) by
