@@ -397,7 +397,11 @@
   automatically detected.
   ([Louis Pilfold](https://github.com/lpil))
 
-- Completions are now provided for values and types for use in unqualified imports ([Ameen Radwan](https://github.com/Acepie))
+- Completions are now provided for values and types for use in unqualified
+  imports. ([Ameen Radwan](https://github.com/Acepie))
+
+- `.` is now advertised as a completion trigger character.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ### Bug Fixes
 
