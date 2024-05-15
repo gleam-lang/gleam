@@ -7,6 +7,7 @@ mod pattern;
 mod tests;
 
 use crate::build::Target;
+use crate::strings::convert_string_escape_chars;
 use crate::type_::is_prelude_module;
 use crate::{
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
@@ -498,6 +499,10 @@ fn string_inner(value: &str) -> Document<'_> {
 
 fn string(value: &str) -> Document<'_> {
     string_inner(value).surround("<<\"", "\"/utf8>>")
+}
+
+fn string_length_utf8_bytes(str: &EcoString) -> usize {
+    convert_string_escape_chars(str).len()
 }
 
 fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {

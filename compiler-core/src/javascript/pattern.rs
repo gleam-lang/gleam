@@ -3,6 +3,7 @@ use std::sync::OnceLock;
 use super::{expression::is_js_scalar, *};
 use crate::{
     analyse::Inferred,
+    strings::convert_string_escape_chars,
     type_::{FieldMap, PatternConstructor},
 };
 
@@ -854,57 +855,5 @@ pub(crate) fn assign_subjects<'a>(
 
 /// Calculates the length of str as utf16 without escape characters.
 fn utf16_no_escape_len(str: &EcoString) -> usize {
-    let mut filtered_str = String::new();
-    let mut str_iter = str.chars().peekable();
-    loop {
-        match str_iter.next() {
-            Some('\\') => match str_iter.next() {
-                // Check for Unicode escape sequence, e.g. \u{00012FF}
-                Some('u') => {
-                    if str_iter.peek() != Some(&'{') {
-                        // Invalid Unicode escape sequence
-                        filtered_str.push('u');
-                        continue;
-                    }
-
-                    // Consume the left brace after peeking
-                    let _ = str_iter.next();
-
-                    let codepoint_str = str_iter
-                        .peeking_take_while(char::is_ascii_hexdigit)
-                        .collect::<String>();
-
-                    if codepoint_str.is_empty() || str_iter.peek() != Some(&'}') {
-                        // Invalid Unicode escape sequence
-                        filtered_str.push_str("u{");
-                        filtered_str.push_str(&codepoint_str);
-                        continue;
-                    }
-
-                    let codepoint = u32::from_str_radix(&codepoint_str, 16)
-                        .ok()
-                        .and_then(char::from_u32);
-
-                    if let Some(codepoint) = codepoint {
-                        // Consume the right brace after peeking
-                        let _ = str_iter.next();
-
-                        // Consider this codepoint's length instead of
-                        // that of the Unicode escape sequence itself
-                        filtered_str.push(codepoint);
-                    } else {
-                        // Invalid Unicode escape sequence
-                        // (codepoint value not in base 16 or too large)
-                        filtered_str.push_str("u{");
-                        filtered_str.push_str(&codepoint_str);
-                    }
-                }
-                Some(c) => filtered_str.push(c),
-                None => break,
-            },
-            Some(c) => filtered_str.push(c),
-            None => break,
-        }
-    }
-    return filtered_str.encode_utf16().count();
+    convert_string_escape_chars(str).encode_utf16().count()
 }

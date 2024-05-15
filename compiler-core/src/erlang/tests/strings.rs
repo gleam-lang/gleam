@@ -177,6 +177,113 @@ pub fn go(x) {
     )
 }
 
+// https://github.com/gleam-lang/gleam/issues/3126
+#[test]
+fn string_prefix_assignment_with_escape_sequences() {
+    assert_erl!(
+        r#"
+pub fn go(x) {
+  let _ = case x {
+    "\f" as start <> rest -> "test"
+    "\n" as start <> rest -> "test"
+    "\r" as start <> rest -> "test"
+    "\t" as start <> rest -> "test"
+    "\"" as start <> rest -> "test"
+    "\\" as start <> rest -> "test"
+    "\f \n \r \t \" \\" as start <> rest -> "control chars with prefix assignment"
+    "\u{9}" as start <> rest -> "test"
+    "\u{000009}" as start <> rest -> "test"
+    "\u{21}" as start <> rest -> "test"
+    "\u{100}" as start <> rest -> "test"
+    "\u{1000}" as start <> rest -> "test"
+    "\u{1F600}" as start <> rest -> "test"
+    "\u{1f600}" as start <> rest -> "test"
+    "\u{01F600}" as start <> rest -> "test"
+    "\u{01f600}" as start <> rest -> "test"
+    "\u{9} \u{000009} \u{21} \u{100} \u{1000} \u{1F600} \u{01F600}" as start <> rest -> "test"
+    _ -> "Unknown"
+  }
+}
+"#,
+    )
+}
+
+#[test]
+fn string_prefix_with_escape_sequences() {
+    assert_erl!(
+        r#"
+pub fn go(x) {
+  let _ = case x {
+    "\f" <> rest -> "test"
+    "\n" <> rest -> "test"
+    "\r" <> rest -> "test"
+    "\t" <> rest -> "test"
+    "\"" <> rest -> "test"
+    "\\" <> rest -> "test"
+    "\f \n \r \t \" \\" <> rest -> "control chars with prefix assignment"
+    "\u{9}" <> rest -> "test"
+    "\u{000009}" <> rest -> "test"
+    "\u{21}" <> rest -> "test"
+    "\u{100}" <> rest -> "test"
+    "\u{1000}" <> rest -> "test"
+    "\u{1F600}" <> rest -> "test"
+    "\u{1f600}" <> rest -> "test"
+    "\u{01F600}" <> rest -> "test"
+    "\u{01f600}" <> rest -> "test"
+    "\u{9} \u{000009} \u{21} \u{100} \u{1000} \u{1F600} \u{01F600}" <> rest -> "test"
+    _ -> "Unknown"
+  }
+}
+"#,
+    )
+}
+
+#[test]
+fn string_prefix_assignment_not_unicode_escape_sequence() {
+    assert_erl!(
+        r#"
+pub fn go(x) {
+  let _ = case x {
+    "\\u{9}" as start <> rest -> "test"
+    "\\u{000009}" as start <> rest -> "test"
+    "\\u{21}" as start <> rest -> "test"
+    "\\u{100}" as start <> rest -> "test"
+    "\\u{1000}" as start <> rest -> "test"
+    "\\u{1F600}" as start <> rest -> "test"
+    "\\u{1f600}" as start <> rest -> "test"
+    "\\u{01F600}" as start <> rest -> "test"
+    "\\u{01f600}" as start <> rest -> "test"
+    "\\u{9} \\u{000009} \\u{21} \\u{100} \\u{1000} \\u{1F600} \\u{01F600}" as start <> rest -> "test"
+    _ -> "Unknown"
+  }
+}
+"#,
+    )
+}
+
+#[test]
+fn string_prefix_not_unicode_escape_sequence() {
+    assert_erl!(
+        r#"
+pub fn go(x) {
+  let _ = case x {
+    "\\u{9}" <> rest -> "test"
+    "\\u{000009}" <> rest -> "test"
+    "\\u{21}" <> rest -> "test"
+    "\\u{100}" <> rest -> "test"
+    "\\u{1000}" <> rest -> "test"
+    "\\u{1F600}" <> rest -> "test"
+    "\\u{1f600}" <> rest -> "test"
+    "\\u{01F600}" <> rest -> "test"
+    "\\u{01f600}" <> rest -> "test"
+    "\\u{9} \\u{000009} \\u{21} \\u{100} \\u{1000} \\u{1F600} \\u{01F600}" <> rest -> "test"
+    _ -> "Unknown"
+  }
+}
+"#,
+    )
+}
+
 // https://github.com/gleam-lang/gleam/issues/2471
 #[test]
 fn string_prefix_assignment_with_multiple_subjects() {
