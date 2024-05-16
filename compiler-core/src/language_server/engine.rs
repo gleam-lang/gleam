@@ -26,6 +26,7 @@ use strum::IntoEnumIterator;
 
 use super::{
     code_action::{CodeActionBuilder, RedundantTupleInCaseSubject},
+    reference::ReferenceSearcher,
     src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
@@ -263,6 +264,80 @@ where
             } else {
                 Some(actions)
             })
+        })
+    }
+
+    pub fn references(
+        &mut self,
+        params: lsp::ReferenceParams,
+    ) -> Response<Option<Vec<lsp::Location>>> {
+        self.respond(|this| {
+            let Some(module) =
+                this.module_for_uri(&params.text_document_position.text_document.uri)
+            else {
+                return Ok(None);
+            };
+
+            let Some((_, node)) =
+                this.module_node_at_position(&params.text_document_position, module)
+            else {
+                return Ok(None);
+            };
+
+            let Some((def_module, def_location)) = ({
+                // Convert to have a matching type
+                let modules: im::HashMap<_, _> = this
+                    .compiler
+                    .modules
+                    .iter()
+                    .map(|(name, module)| (name.clone(), module.ast.type_info.clone()))
+                    .collect();
+
+                node.definition_location(&modules).map(|def| {
+                    (
+                        def.module
+                            // defaults to current module
+                            .unwrap_or(&module.name)
+                            .to_string(),
+                        def.span,
+                    )
+                })
+            }) else {
+                return Ok(None);
+            };
+
+            let searcher =
+                ReferenceSearcher::new(&this.compiler.modules, &def_module, def_location);
+            let references = searcher.references();
+
+            let mut locations = vec![];
+            for (module_name, spans) in references.into_iter() {
+                let Some((uri, line_numbers)) = this.module_uri_and_line_numbers(module_name)
+                else {
+                    // Best effort
+                    continue;
+                };
+
+                locations.extend(
+                    spans
+                        .into_iter()
+                        // Convert to LSP locations
+                        .map(|span| lsp::Location {
+                            uri: uri.clone(),
+                            range: src_span_to_lsp_range(span, line_numbers),
+                        }),
+                );
+
+                // Include definition if specified
+                if params.context.include_declaration && module_name == def_module {
+                    locations.push(lsp::Location {
+                        uri: uri.clone(),
+                        range: src_span_to_lsp_range(def_location, line_numbers),
+                    });
+                }
+            }
+
+            Ok(Some(locations))
         })
     }
 
@@ -693,6 +768,12 @@ where
 
     fn root_package_name(&self) -> &str {
         self.compiler.project_compiler.config.name.as_str()
+    }
+
+    fn module_uri_and_line_numbers(&self, name: &str) -> Option<(Url, &LineNumbers)> {
+        let module = self.compiler.get_source(name)?;
+        let uri = Url::parse(&format!("file:///{}", &module.path)).ok()?;
+        Some((uri, &module.line_numbers))
     }
 }
 

@@ -101,6 +101,7 @@ where
             Request::GoToDefinition(param) => self.goto_definition(param),
             Request::Completion(param) => self.completion(param),
             Request::CodeAction(param) => self.code_action(param),
+            Request::References(param) => self.references(param),
         };
 
         self.publish_feedback(feedback);
@@ -319,6 +320,11 @@ where
         self.respond_with_engine(path, |engine| engine.action(params))
     }
 
+    fn references(&mut self, params: lsp::ReferenceParams) -> (Json, Feedback) {
+        let path = super::path(&params.text_document_position.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.references(params))
+    }
+
     fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
         self.project_changed(&path);
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
@@ -388,7 +394,7 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         definition_provider: Some(lsp::OneOf::Left(true)),
         type_definition_provider: None,
         implementation_provider: None,
-        references_provider: None,
+        references_provider: Some(lsp::OneOf::Left(true)),
         document_highlight_provider: None,
         document_symbol_provider: None,
         workspace_symbol_provider: None,
