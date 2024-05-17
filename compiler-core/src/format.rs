@@ -1268,7 +1268,7 @@ impl<'comments> Formatter<'comments> {
             clauses
                 .iter()
                 .enumerate()
-                .map(|(i, c)| self.clause(c, i as u32)),
+                .map(|(i, c)| self.clause(c, i as u32).group()),
         );
 
         // We get all remaining comments that come before the case's closing
@@ -1759,11 +1759,6 @@ impl<'comments> Formatter<'comments> {
                 .append(self.clause_guard(guard).group().nest(INDENT)),
         };
 
-        let clause_doc = match printed_comments(comments, false) {
-            Some(comments) => comments.append(line()).append(clause_doc),
-            None => clause_doc,
-        };
-
         // In case there's a guard or multiple subjects, if we decide to break
         // the patterns on multiple lines we also want the arrow to end up on
         // its own line to improve legibility.
@@ -1778,12 +1773,25 @@ impl<'comments> Formatter<'comments> {
         //   // for patterns with `if` guards.
         // }
         // ```
+
         let has_guard = clause.guard.is_some();
         let has_multiple_subjects = clause.pattern.len() > 1;
         let arrow_break = if has_guard || has_multiple_subjects {
             break_("", " ")
         } else {
             " ".to_doc()
+        };
+
+        let clause_doc = clause_doc
+            .append(arrow_break)
+            .group()
+            .append("->")
+            .append(self.case_clause_value(&clause.then).group())
+            .group();
+
+        let clause_doc = match printed_comments(comments, false) {
+            Some(comments) => comments.append(line()).append(clause_doc),
+            None => clause_doc,
         };
 
         if index == 0 {
@@ -1793,10 +1801,6 @@ impl<'comments> Formatter<'comments> {
         } else {
             lines(1).append(clause_doc)
         }
-        .append(arrow_break)
-        .group()
-        .append("->")
-        .append(self.case_clause_value(&clause.then))
     }
 
     fn alternative_patterns<'a>(&mut self, clause: &'a UntypedClause) -> Document<'a> {

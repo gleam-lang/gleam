@@ -58,11 +58,13 @@
 
   Hint: Rename this module and try again.
   ```
+
 - New subcommand `gleam hex revert` added. ([Pi-Cla](https://github.com/Pi-Cla))
-  * You can specify the options like this: `gleam hex revert --package gling --version 1.2.3`
-  * A new package can be reverted or updated within 24 hours of it's initial publish,
-  a new version of an existing package can be reverted or updated within one hour.
-  * You could already update packages even before this release by running: `gleam publish` again.
+
+  - You can specify the options like this: `gleam hex revert --package gling --version 1.2.3`
+  - A new package can be reverted or updated within 24 hours of it's initial publish,
+    a new version of an existing package can be reverted or updated within one hour.
+  - You could already update packages even before this release by running: `gleam publish` again.
 
 - When the user tries to replace a release without the `--replace` flag
   the error message now mentions the lack of a `--replace` flag.
@@ -233,6 +235,8 @@
 
   Matching on a literal value is redundant since you can already tell which
   branch is going to match with this value.
+
+  ```
 
 - The compiler will now continue module analysis when there are errors in top
   level definitions. This means that when these errors occur the compiler will
@@ -413,7 +417,9 @@
     #(_, _) -> 1
   }
   ```
+
   Is rewritten to:
+
   ```
   case x, y {
     1, 2 -> 0
@@ -479,3 +485,7 @@
 
 - Fixed a bug where local path dependencies could be mishandled on Windows.
   ([Francisco Montanez](https://github.com/Francisco-Montanez))
+
+- Fixed a bug where adding a comment to a case clause would cause it to break
+  on multiple lines.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
