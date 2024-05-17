@@ -185,6 +185,8 @@ pub enum ArgumentKind {
 pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) environment: &'a mut Environment<'b>,
 
+    pub(crate) already_warned_for_unreachable_code: bool,
+
     pub(crate) implementations: Implementations,
     pub(crate) current_function_definition: FunctionDefinition,
 
@@ -217,6 +219,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         hydrator.permit_holes(true);
         Self {
             hydrator,
+            already_warned_for_unreachable_code: false,
             environment,
             implementations,
             current_function_definition: definition,
@@ -432,6 +435,25 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
+    pub(crate) fn warn_for_unreachable_code(
+        &mut self,
+        location: SrcSpan,
+        unreachable_code_kind: PanicPosition,
+        panic_kind: PanicKind,
+    ) {
+        // We don't want to warn twice for unreachable code inside the same
+        // block, so we have to keep track if we've already emitted a warning of
+        // this kind.
+        self.already_warned_for_unreachable_code = true;
+        self.environment
+            .warnings
+            .emit(Warning::UnreachableCodeAfterPanic {
+                location,
+                panic_position: unreachable_code_kind,
+                panic_kind,
+            })
+    }
+
     fn infer_string(&mut self, value: EcoString, location: SrcSpan) -> TypedExpr {
         TypedExpr::String {
             location,
@@ -498,13 +520,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut i = 0;
         let mut statements: Vec<TypedStatement> = Vec::with_capacity(count);
 
+        let mut previous_panic: Option<PanicKind> = None;
+
         while let Some(statement) = untyped.next() {
             i += 1;
 
             match statement {
                 Statement::Use(use_) => {
+                    let use_location = use_.location;
                     let statement = self.infer_use(use_, location, untyped.collect())?;
                     statements.push(statement);
+
+                    // We don't want to emit a warning for unreachable code twice
+                    // in the same block, so we only ever emit one if we haven't already.
+                    if !self.already_warned_for_unreachable_code {
+                        match previous_panic {
+                            None => (),
+                            Some(panic_kind) => self.warn_for_unreachable_code(
+                                use_location,
+                                PanicPosition::PreviousExpression,
+                                panic_kind,
+                            ),
+                        }
+                    }
+
                     break; // Inferring the use has consumed the rest of the exprs
                 }
 
@@ -518,11 +557,40 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         self.expression_discarded(&expression);
                     }
 
+                    // We don't want to emit a warning for unreachable code twice
+                    // in the same block, so we only ever emit one if we haven't already.
+                    if !self.already_warned_for_unreachable_code {
+                        if let Some(panic_kind) = previous_panic {
+                            self.warn_for_unreachable_code(
+                                expression.location(),
+                                PanicPosition::PreviousExpression,
+                                panic_kind,
+                            );
+                        }
+
+                        // Notice how the update of `previous_panic` only takes place
+                        // if we haven't emitted a warning already: if we had we wouldn't
+                        // use this value anyway, so updating it would be wasted work.
+                        previous_panic = expression.panic_kind();
+                    }
+
                     statements.push(Statement::Expression(expression));
                 }
 
                 Statement::Assignment(assignment) => {
                     let assignment = self.infer_assignment(assignment)?;
+
+                    if !self.already_warned_for_unreachable_code {
+                        if let Some(panic_kind) = previous_panic {
+                            self.warn_for_unreachable_code(
+                                assignment.location,
+                                PanicPosition::PreviousExpression,
+                                panic_kind,
+                            );
+                        }
+                        previous_panic = assignment.value.panic_kind();
+                    }
+
                     statements.push(Statement::Assignment(assignment));
                 }
             }
@@ -2493,6 +2561,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             match_fun_type(fun.type_(), args.len(), self.environment)
                 .map_err(|e| convert_not_fun_error(e, fun.location(), location, kind))?;
 
+        let mut previous_arg_panic: Option<PanicKind> = None;
+
         // Ensure that the given args have the correct types
         let args_count = args_types.len();
         let args = args_types
@@ -2524,6 +2594,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 };
                 let value = self.infer_call_argument(value, typ.clone(), argument_kind)?;
 
+                // If we haven't already emitted an unreachable code warning, we
+                // check if the previous argument would result in a panic.
+                if !self.already_warned_for_unreachable_code {
+                    if let Some(panic_kind) = previous_arg_panic {
+                        self.warn_for_unreachable_code(
+                            value.location(),
+                            PanicPosition::PreviousFunctionArgument,
+                            panic_kind,
+                        )
+                    }
+                    previous_arg_panic = value.panic_kind();
+                }
+
                 Ok(CallArg {
                     label,
                     value,
@@ -2532,6 +2615,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             })
             .try_collect()?;
+
+        // We don't want to emit a warning for unreachable function call if the
+        // function being called is itself `panic`, for that we emit a more
+        // specialised warning.
+        if !self.already_warned_for_unreachable_code && !fun.is_panic() {
+            if let Some(panic_kind) = previous_arg_panic {
+                self.warn_for_unreachable_code(
+                    fun.location(),
+                    PanicPosition::LastFunctionArgument,
+                    panic_kind,
+                );
+            }
+        }
+
         Ok((fun, args, return_type))
     }
 

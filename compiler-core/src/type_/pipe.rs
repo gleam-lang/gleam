@@ -52,18 +52,22 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             },
             assignments: Vec::with_capacity(size),
         };
+
+        let first_panic = first.panic_kind();
+
         // No need to update self.argument_* as we set it above
         typer.push_assignment_no_update(first);
 
         // Perform the type checking
-        typer.infer_expressions(expressions)
+        typer.infer_expressions(expressions, first_panic)
     }
 
     fn infer_expressions(
         &mut self,
         expressions: impl IntoIterator<Item = UntypedExpr>,
+        first_panic: Option<PanicKind>,
     ) -> Result<TypedExpr, Error> {
-        let finally = self.infer_each_expression(expressions);
+        let finally = self.infer_each_expression(expressions, first_panic);
 
         // Return any errors after clean-up
         let finally = finally?;
@@ -78,6 +82,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     fn infer_each_expression(
         &mut self,
         expressions: impl IntoIterator<Item = UntypedExpr>,
+        mut previous_panic: Option<PanicKind>,
     ) -> Result<TypedExpr, Error> {
         let mut finally = None;
         for (i, call) in expressions.into_iter().enumerate() {
@@ -104,6 +109,20 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 // right(left)
                 call => self.infer_apply_pipe(call)?,
             };
+
+            // We don't want to emit a warning for unreachable code twice
+            // in the same block, so we only ever emit one if we haven't already.
+            if !self.expr_typer.already_warned_for_unreachable_code {
+                if let Some(panic_kind) = previous_panic {
+                    self.expr_typer.warn_for_unreachable_code(
+                        call.location(),
+                        PanicPosition::PreviousExpression,
+                        panic_kind,
+                    );
+                }
+                previous_panic = call.panic_kind();
+            }
+
             if i + 2 == self.size {
                 finally = Some(call);
             } else {
