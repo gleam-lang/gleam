@@ -3,6 +3,7 @@ mod compilation;
 mod completion;
 mod definition;
 mod hover;
+mod references;
 
 use std::{
     collections::HashMap,
