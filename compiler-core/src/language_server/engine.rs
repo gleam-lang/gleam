@@ -19,6 +19,7 @@ use crate::{
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
+use itertools::Itertools;
 use lsp::CodeAction;
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
 use std::sync::Arc;
@@ -26,7 +27,7 @@ use strum::IntoEnumIterator;
 
 use super::{
     code_action::{CodeActionBuilder, RedundantTupleInCaseSubject},
-    reference::ReferenceSearcher,
+    references::ReferenceSearcher,
     src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
@@ -306,12 +307,19 @@ where
                 return Ok(None);
             };
 
-            let searcher =
-                ReferenceSearcher::new(&this.compiler.modules, &def_module, def_location);
+            let searcher = ReferenceSearcher::new(
+                &this.compiler.modules,
+                &def_module,
+                def_location,
+                params.context.include_declaration,
+            );
             let references = searcher.references();
 
             let mut locations = vec![];
-            for (module_name, spans) in references.into_iter() {
+
+            // Sorted for deterministic ordering
+            for (module_name, spans) in references.into_iter().sorted_by_key(|(k, _)| k.to_string())
+            {
                 let Some((uri, line_numbers)) = this.module_uri_and_line_numbers(module_name)
                 else {
                     // Best effort
@@ -327,14 +335,6 @@ where
                             range: src_span_to_lsp_range(span, line_numbers),
                         }),
                 );
-
-                // Include definition if specified
-                if params.context.include_declaration && module_name == def_module {
-                    locations.push(lsp::Location {
-                        uri: uri.clone(),
-                        range: src_span_to_lsp_range(def_location, line_numbers),
-                    });
-                }
             }
 
             Ok(Some(locations))
