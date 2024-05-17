@@ -265,6 +265,20 @@
     │                  ^^^^^^^ Functions can only be called within other functions
   ```
 
+- The compiler will now provide more helpful error messages when triple equals
+  are used instead of double equals. ([Rabin Gaire](https://github.com/rabingaire))
+
+  ```
+  error: Syntax error
+    ┌─ /src/parse/error.gleam:4:37
+    │
+  4 │   [1,2,3] |> list.filter(fn (a) { a === 3 })
+    │                                     ^^^ Did you mean `==`?
+
+  Gleam uses `==` to check for equality between two values.
+  See: https://tour.gleam.run/basics/equality
+  ```
+
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.
