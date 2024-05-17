@@ -634,6 +634,46 @@ pub enum Warning {
         args_location: Option<SrcSpan>,
         args: usize,
     },
+
+    UnreachableCodeAfterPanic {
+        location: SrcSpan,
+        panic_position: PanicPosition,
+        panic_kind: PanicKind,
+    },
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+
+pub enum PanicPosition {
+    /// When the unreachable part is a function argument, this means that one
+    /// of the previous arguments must be a panic.
+    PreviousFunctionArgument,
+
+    /// When the unreachable part is a function call, this means that its last
+    /// argument must be a panic.
+    LastFunctionArgument,
+
+    /// Any expression that doesn't fall in the previous two categories
+    PreviousExpression,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+pub enum PanicKind {
+    /// If the panicking expression is a literal panic: `panic`
+    LiteralPanic,
+
+    /// If the previous expression is understood to always panic but is not a
+    /// literal `panic`. For example:
+    ///
+    /// ```gleam
+    /// case thing {
+    ///   True -> panic
+    ///   False -> panic
+    /// }
+    /// ```
+    ///
+    /// Is not a literal `panic`, but will always panic nonetheless.
+    PanicExpression,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
