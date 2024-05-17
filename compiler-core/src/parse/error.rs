@@ -29,6 +29,7 @@ pub enum LexicalErrorType {
     BadName { name: String },
     BadDiscardName { name: String },
     BadUpname { name: String },
+    InvalidTripleEqual,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -372,6 +373,13 @@ impl LexicalError {
             LexicalErrorType::InvalidUnicodeEscape(InvalidUnicodeEscapeError::InvalidCodepoint) => {
                 ("Invalid Unicode codepoint", vec![])
             }
+            LexicalErrorType::InvalidTripleEqual => (
+                "Did you mean `==`?",
+                vec![
+                    "Gleam uses `==` to check for equality between two values.".into(),
+                    "See: https://tour.gleam.run/basics/equality".into(),
+                ],
+            ),
         }
     }
 }

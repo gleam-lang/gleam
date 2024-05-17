@@ -191,6 +191,15 @@ where
                     Some('=') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
+                        if let Some('=') = self.chr0 {
+                            return Err(LexicalError {
+                                error: LexicalErrorType::InvalidTripleEqual,
+                                location: SrcSpan {
+                                    start: tok_start,
+                                    end: tok_end + 1,
+                                },
+                            });
+                        };
                         self.emit((tok_start, Token::EqualEqual, tok_end));
                     }
                     _ => {
