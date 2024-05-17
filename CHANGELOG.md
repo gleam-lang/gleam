@@ -279,6 +279,28 @@
   See: https://tour.gleam.run/basics/equality
   ```
 
+  - The compiler will now raise a warning for unreachable code that comes after
+    a panicking expression.
+
+    ```
+    pub fn main() {
+      panic
+      "unreachable!"
+    }
+    ```
+
+    ```
+    warning: Unreachable code
+      ┌─ /src/warning/wrn.gleam:3:11
+      │
+    3 │    "unreachable!"
+      │    ^^^^^^^^^^^^^^
+
+    This code is unreachable because it comes after a `panic`.
+    ```
+
+    ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.
