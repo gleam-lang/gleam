@@ -297,7 +297,7 @@ where
                 node.definition_location(&modules).map(|def| {
                     (
                         def.module
-                            // defaults to current module
+                            // Defaults to current module
                             .unwrap_or(&module.name)
                             .to_string(),
                         def.span,
@@ -317,8 +317,10 @@ where
 
             let mut locations = vec![];
 
-            // Sorted for deterministic ordering
-            for (module_name, spans) in references.into_iter().sorted_by_key(|(k, _)| k.to_string())
+            for (module_name, spans) in references
+                .into_iter()
+                // Sorted for deterministic ordering
+                .sorted_by_key(|(k, _)| (*k).to_string())
             {
                 let Some((uri, line_numbers)) = this.module_uri_and_line_numbers(module_name)
                 else {

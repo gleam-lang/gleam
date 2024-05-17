@@ -40,6 +40,7 @@ impl<'a> ReferenceSearcher<'a> {
             self.add_reference(self.def_location);
         }
 
+        // Collect all references from all modules
         for module in self.modules.values() {
             self.current_module = &module.name;
             self.visit_typed_module(&module.ast);
@@ -106,6 +107,6 @@ impl<'ast> ast::visit::Visit<'ast> for ReferenceSearcher<'_> {
             module_name,
             module_alias,
             constructor,
-        )
+        );
     }
 }
