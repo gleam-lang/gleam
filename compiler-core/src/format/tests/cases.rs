@@ -105,3 +105,17 @@ fn case_pattern_split_on_multiple_lines_is_not_needlessly_nested() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3140
+#[test]
+fn long_comment_before_case_with_multiple_subjects_doesnt_force_a_break() {
+    assert_format!(
+        r#"fn main() {
+  case a, b {
+    // a very long comment a very long comment a very long comment a very long comment
+    _, _ -> True
+  }
+}
+"#
+    );
+}
