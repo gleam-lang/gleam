@@ -203,6 +203,17 @@ where
                 .module_line_numbers
                 .byte_index(params.position.line, params.position.character);
 
+            // Do not suggest in comments
+            if module.extra.is_within_comment(byte_index)
+                || (byte_index > 0
+                    && module
+                        .extra
+                        // Cursor is at the end of the comment
+                        .is_within_comment(byte_index - 1))
+            {
+                return Ok(None);
+            }
+
             let Some(found) = module.find_node(byte_index) else {
                 return Ok(None);
             };
