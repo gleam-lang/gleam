@@ -1145,3 +1145,28 @@ pub fn main() {
         Position::new(2, 16)
     ),);
 }
+
+#[test]
+fn ignore_completions_in_comments() {
+    // Reproducing issue #2161
+    let code = "
+pub fn main() {
+  case 0 {
+    // comment
+    _ -> 1
+  }
+}
+";
+
+    // Inside the comment span
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(3, 7)),
+        vec![],
+    );
+
+    // End of the comment
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(3, 14)),
+        vec![],
+    );
+}
