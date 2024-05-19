@@ -61,3 +61,6 @@ insta = "1"
 # A transitive dependency needed to compile into wasm32-unknown-unknown
 # See https://docs.rs/getrandom/latest/getrandom/index.html#webassembly-support
 getrandom = { version = "0", features = ["js"] }
+
+[workspace.package]
+rust-version = "1.71.1"
