@@ -187,7 +187,7 @@ pub struct Project<A, B> {
     pub engine: LanguageServerEngine<A, B>,
     pub feedback: FeedbackBookKeeper,
     pub gleam_toml_modification_time: SystemTime,
-    pub gleam_toml_fingerprint: SourceFingerprint,
+    pub(crate) gleam_toml_fingerprint: SourceFingerprint,
 }
 
 #[cfg(test)]
