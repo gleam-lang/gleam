@@ -638,7 +638,6 @@ pub enum Warning {
     UnreachableCodeAfterPanic {
         location: SrcSpan,
         panic_position: PanicPosition,
-        panic_kind: PanicKind,
     },
 }
 
@@ -655,25 +654,6 @@ pub enum PanicPosition {
 
     /// Any expression that doesn't fall in the previous two categories
     PreviousExpression,
-}
-
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
-pub enum PanicKind {
-    /// If the panicking expression is a literal panic: `panic`
-    LiteralPanic,
-
-    /// If the previous expression is understood to always panic but is not a
-    /// literal `panic`. For example:
-    ///
-    /// ```gleam
-    /// case thing {
-    ///   True -> panic
-    ///   False -> panic
-    /// }
-    /// ```
-    ///
-    /// Is not a literal `panic`, but will always panic nonetheless.
-    PanicExpression,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]

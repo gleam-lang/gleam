@@ -4,7 +4,7 @@ use crate::{
     error::wrap,
     type_::{
         self,
-        error::{LiteralCollectionKind, PanicKind, PanicPosition, TodoOrPanic},
+        error::{LiteralCollectionKind, PanicPosition, TodoOrPanic},
         pretty::Printer,
     },
 };
@@ -802,13 +802,10 @@ See: https://tour.gleam.run/advanced-features/{name}/"
                 type_::Warning::UnreachableCodeAfterPanic {
                     location,
                     panic_position: unreachable_code_kind,
-                    panic_kind,
                 } => {
                     let text = match unreachable_code_kind {
-                        PanicPosition::PreviousExpression if *panic_kind == PanicKind::LiteralPanic =>
-                            "This code is unreachable because it comes after a `panic`.",
                         PanicPosition::PreviousExpression =>
-                            "This code is unreachable because the expression before it always panics.",
+                            "This code is unreachable because it comes after a `panic`.",
                         PanicPosition::PreviousFunctionArgument =>
                             "This argument is unreachable because the previous one always panics. \
 Your code will crash before reaching this point.",
