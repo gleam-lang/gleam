@@ -54,26 +54,29 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         };
 
         let first_panic = first.always_panics();
+        let first_location = first.location();
 
         // No need to update self.argument_* as we set it above
         typer.push_assignment_no_update(first);
 
         // Perform the type checking
-        typer.infer_expressions(expressions, first_panic)
+        typer.infer_expressions(expressions, first_panic, first_location)
     }
 
     fn infer_expressions(
         &mut self,
         expressions: impl IntoIterator<Item = UntypedExpr>,
         first_panics: bool,
+        first_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let finally = self.infer_each_expression(expressions, first_panics);
+        let finally = self.infer_each_expression(expressions, first_panics, first_location);
 
         // Return any errors after clean-up
         let finally = finally?;
+        let assignments = std::mem::take(&mut self.assignments);
 
         Ok(TypedExpr::Pipeline {
-            assignments: std::mem::take(&mut self.assignments),
+            assignments,
             location: self.location,
             finally: Box::new(finally),
         })
@@ -83,9 +86,15 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         &mut self,
         expressions: impl IntoIterator<Item = UntypedExpr>,
         mut previous_panics: bool,
+        first_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let mut finally = None;
+        let expressions = expressions.into_iter().collect_vec();
+        let mut previous_expression_location: Option<SrcSpan> = None;
+
         for (i, call) in expressions.into_iter().enumerate() {
+            self.warn_if_is_todo_or_panic(&call, first_location, previous_expression_location);
+
             let call = match call {
                 // left |> right(..args)
                 UntypedExpr::Call {
@@ -121,6 +130,8 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 }
                 previous_panics = call.always_panics();
             }
+
+            previous_expression_location = Some(call.location());
 
             if i + 2 == self.size {
                 finally = Some(call);
@@ -322,6 +333,39 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 }
             }
             _ => false,
+        }
+    }
+
+    fn warn_if_is_todo_or_panic(
+        &self,
+        call: &UntypedExpr,
+        first_location: SrcSpan,
+        previous_expression_location: Option<SrcSpan>,
+    ) {
+        let call_todo_or_panic = match call {
+            UntypedExpr::Todo { .. } => Some(TodoOrPanic::Todo),
+            UntypedExpr::Call { fun, .. } if fun.is_todo() => Some(TodoOrPanic::Todo),
+            UntypedExpr::Panic { .. } => Some(TodoOrPanic::Panic),
+            UntypedExpr::Call { fun, .. } if fun.is_panic() => Some(TodoOrPanic::Todo),
+            _ => None,
+        };
+
+        if let Some(kind) = call_todo_or_panic {
+            let args_location = if let Some(previous) = previous_expression_location {
+                Some(SrcSpan::new(first_location.start, previous.end))
+            } else {
+                Some(first_location)
+            };
+
+            self.expr_typer
+                .environment
+                .warnings
+                .emit(Warning::TodoOrPanicUsedAsFunction {
+                    kind,
+                    location: call.location(),
+                    args_location,
+                    args: 1,
+                })
         }
     }
 }

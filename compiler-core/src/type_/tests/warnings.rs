@@ -1818,7 +1818,7 @@ fn unreachable_code_for_panic_as_first_pipeline_item() {
 
 #[test]
 fn panic_used_as_function_inside_pipeline_1() {
-    assert_no_warnings!(
+    assert_warning!(
         "
         pub fn wibble(_) { 1 }
         pub fn main() {
