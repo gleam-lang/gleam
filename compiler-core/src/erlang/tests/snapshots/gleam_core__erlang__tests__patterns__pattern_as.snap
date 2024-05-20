@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
-assertion_line: 70
 expression: "pub fn a(x) {\n  case x {\n    Ok(1 as y) -> 1\n    _ -> 0\n  }\n}"
 ---
 -module(my@mod).
@@ -17,4 +16,3 @@ a(X) ->
         _ ->
             0
     end.
-

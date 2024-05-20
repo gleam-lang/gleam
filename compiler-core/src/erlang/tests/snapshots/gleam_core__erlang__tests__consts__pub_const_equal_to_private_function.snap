@@ -10,4 +10,3 @@ expression: "\n          fn identity(a) {\n            a\n          }\n\n       
 -spec identity(I) -> I.
 identity(A) ->
     A.
-

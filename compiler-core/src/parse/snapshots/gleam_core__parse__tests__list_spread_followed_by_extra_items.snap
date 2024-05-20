@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 718
 expression: "\npub fn main() -> Nil {\n  let xs = [1, 2, 3]\n  [1, 2, ..xs, 3 + 3, 4]\n}\n"
 ---
 error: Syntax error

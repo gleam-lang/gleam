@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 534
 expression: "case #(1, 2) { #(1, _, _, _) -> 1 }"
 ---
 error: Incorrect arity
@@ -8,5 +7,3 @@ error: Incorrect arity
   │
 1 │ case #(1, 2) { #(1, _, _, _) -> 1 }
   │                ^^^^^^^^^^^^^ Expected 2 arguments, got 4
-
-

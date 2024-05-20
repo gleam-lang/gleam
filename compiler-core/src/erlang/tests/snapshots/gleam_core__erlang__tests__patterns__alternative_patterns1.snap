@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
-assertion_line: 25
 expression: "\npub fn main() {\n  case Ok(1) {\n    Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name\n  }\n}"
 ---
 -module(my@mod).
@@ -17,4 +16,3 @@ main() ->
         {error, Duplicate_name} ->
             Duplicate_name
     end.
-

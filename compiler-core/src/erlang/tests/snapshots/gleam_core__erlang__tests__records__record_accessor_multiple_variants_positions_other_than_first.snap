@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 113
 expression: "\npub type Person {\n    Teacher(name: String, age: Int, title: String)\n    Student(name: String, age: Int)\n}\npub fn get_name(person: Person) { person.name }\npub fn get_age(person: Person) { person.age }"
 ---
 -module(my@mod).
@@ -19,4 +18,3 @@ get_name(Person) ->
 -spec get_age(person()) -> integer().
 get_age(Person) ->
     erlang:element(3, Person).
-

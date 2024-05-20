@@ -11,4 +11,3 @@ error: Unknown type
 The type `Foo` is not defined or imported in this module.
 There is a value in scope with the name `Foo`, but no type in scope with
 that name.
-

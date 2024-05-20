@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-assertion_line: 224
 expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1\npub const bool = True\n"
 ---
 {

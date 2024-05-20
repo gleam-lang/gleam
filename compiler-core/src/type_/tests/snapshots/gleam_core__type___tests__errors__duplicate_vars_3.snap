@@ -13,4 +13,3 @@ multiple times.
 If you used the same variable twice deliberately in order to check for
 equality please use a guard clause instead.
 e.g. (x, y) if x == y -> ...
-

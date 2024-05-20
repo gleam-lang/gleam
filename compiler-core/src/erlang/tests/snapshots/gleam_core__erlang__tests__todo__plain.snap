@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/todo.rs
-assertion_line: 5
 expression: "\npub fn main() {\n  todo\n}\n"
 ---
 -module(my@mod).
@@ -15,4 +14,3 @@ main() ->
             module => <<"my/mod"/utf8>>,
             function => <<"main"/utf8>>,
             line => 3}).
-

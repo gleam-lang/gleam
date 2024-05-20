@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-assertion_line: 269
 expression: "\npub type Box(a, b)\npub fn some_type_variables(a: a, b: b, c: Box(c, d)) -> Box(a, d) {}\n"
 ---
 {

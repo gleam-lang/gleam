@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 252
 expression: "\nconst cs = s\n\nfn s() {\n  \"s\"\n}\n\npub fn go() {\n  cs() <> cs()\n}\n"
 ---
 -module(my@mod).
@@ -15,4 +14,3 @@ s() ->
 -spec go() -> binary().
 go() ->
     <<(s())/binary, (s())/binary>>.
-

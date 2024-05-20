@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/custom_types.rs
-assertion_line: 50
 expression: "\ntype Two(a, a) {\n  Two(a, a)\n}\n\ntype Three(a, a) {\n  Three\n}\n"
 ---
 error: Duplicate type parameter

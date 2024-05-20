@@ -44,4 +44,3 @@ function update(cat) {
 const felix = new Cat("Felix", 12);
 
 const tom = new Cat("Tom", 1);
-

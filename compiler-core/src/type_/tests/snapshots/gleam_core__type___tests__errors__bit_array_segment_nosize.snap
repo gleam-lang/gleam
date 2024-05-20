@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 54
 expression: "case <<1>> { <<_:bytes, _:bytes>> -> 1 }"
 ---
 error: Invalid bit array segment

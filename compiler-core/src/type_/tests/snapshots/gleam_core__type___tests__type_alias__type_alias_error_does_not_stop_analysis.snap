@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/type_alias.rs
-assertion_line: 99
 expression: "\ntype UnusedParameter(a) =\n  Int\n\ntype UnknownType =\n  Dunno\n"
 ---
 error: Unused type parameter

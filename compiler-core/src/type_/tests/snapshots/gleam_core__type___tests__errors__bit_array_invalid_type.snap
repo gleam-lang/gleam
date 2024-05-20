@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 7
 expression: "fn x() { \"test\" }\n\nfn main() {\n    let a = <<1:size(x())>>\n    a\n}"
 ---
 error: Type mismatch
@@ -16,4 +15,3 @@ Expected type:
 Found type:
 
     String
-

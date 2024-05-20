@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 564
 expression: "fn(a) { a.2 }"
 ---
 error: Type mismatch
@@ -12,4 +11,3 @@ error: Type mismatch
 To index into a tuple we need to know it size, but we don't know
 anything about this type yet. Please add some type annotations so
 we can continue.
-

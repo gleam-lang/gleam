@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 195
 expression: "pub fn tail(list) {\n  case list {\n    [x, ..] -> x\n    _ -> 0\n  }\n}"
 ---
 -module(my@mod).
@@ -17,4 +16,3 @@ tail(List) ->
         _ ->
             0
     end.
-

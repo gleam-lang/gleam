@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/functions.rs
-assertion_line: 253
 expression: "\n@external(javascript, \"somemodule\", \"() => 123\")\npub fn one() -> Nil {\n  Nil\n}\n\npub fn two() -> Nil {\n  \"\"\n}\n"
 ---
 error: Invalid JavaScript function

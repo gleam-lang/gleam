@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/use_.rs
-assertion_line: 22
 expression: "\npub fn main() {\n  use <- pair(1.0)\n  123\n}\n\nfn pair(x, f) {\n  let y = f()\n  #(x, y)\n}\n"
 ---
 function pair(x, f) {
@@ -11,4 +10,3 @@ function pair(x, f) {
 export function main() {
   return pair(1.0, () => { return 123; });
 }
-

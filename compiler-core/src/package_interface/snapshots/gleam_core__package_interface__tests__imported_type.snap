@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-assertion_line: 247
 expression: "\nimport other_module.{type Element}\npub fn main() -> Element(Int) {}\n"
 ---
 {

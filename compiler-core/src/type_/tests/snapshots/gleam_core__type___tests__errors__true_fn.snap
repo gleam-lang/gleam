@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 368
 expression: let True(x) = 1 x
 ---
 error: Incorrect arity
@@ -8,5 +7,3 @@ error: Incorrect arity
   │
 1 │ let True(x) = 1 x
   │     ^^^^^^^ Expected no arguments, got 1
-
-

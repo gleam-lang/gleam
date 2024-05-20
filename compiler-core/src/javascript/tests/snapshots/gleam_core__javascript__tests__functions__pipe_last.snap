@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 134
 expression: "fn id(x) { x }\npub fn main() {\n  1\n  |> id\n}\n"
 ---
 function id(x) {
@@ -11,4 +10,3 @@ export function main() {
   let _pipe = 1;
   return id(_pipe);
 }
-

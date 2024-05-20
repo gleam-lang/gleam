@@ -2,7 +2,6 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n@deprecated(\"Don't use this!\")\npub type Cat {\n    Cat(name: String)\n}\n\npub fn cat_name(cat: Cat) {\n  cat.name\n}\n        "
 ---
-
 warning: Deprecated type used
   ┌─ /src/warning/wrn.gleam:7:22
   │
@@ -10,4 +9,3 @@ warning: Deprecated type used
   │                      ^^^ This type has been deprecated
 
 It was deprecated with this message: Don't use this!
-

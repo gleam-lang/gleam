@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests.rs
-assertion_line: 1728
 expression: " 1 <> \"2\" "
 ---
 error: Type mismatch
@@ -16,5 +15,3 @@ The <> operator expects arguments of this type:
 But this argument has this type:
 
     Int
-
-

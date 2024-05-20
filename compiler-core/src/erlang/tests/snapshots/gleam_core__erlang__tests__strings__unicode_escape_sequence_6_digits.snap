@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 95
 expression: "\npub fn unicode_escape_sequence_6_digits() -> String {\n  \"\\u{10abcd}\"\n}\n"
 ---
 -module(my@mod).
@@ -11,4 +10,3 @@ expression: "\npub fn unicode_escape_sequence_6_digits() -> String {\n  \"\\u{10
 -spec unicode_escape_sequence_6_digits() -> binary().
 unicode_escape_sequence_6_digits() ->
     <<"\x{10abcd}"/utf8>>.
-

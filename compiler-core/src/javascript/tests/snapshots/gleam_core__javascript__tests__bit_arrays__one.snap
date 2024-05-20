@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 16
 expression: "\nfn go() {\n  <<256>>\n}\n"
 ---
 import { toBitArray } from "../gleam.mjs";
@@ -8,4 +7,3 @@ import { toBitArray } from "../gleam.mjs";
 function go() {
   return toBitArray([256]);
 }
-

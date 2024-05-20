@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/custom_types.rs
-assertion_line: 36
 expression: "\npub type Cat {\n  Cat(UnknownType)\n}\n\npub type Kitten = AnotherUnknownType\n        "
 ---
 error: Unknown type

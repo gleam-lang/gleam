@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/case.rs
-assertion_line: 24
 expression: "\npub fn main(x) {\n  case x {\n    0.0 -> 1\n    _ -> 2\n  }\n}\n"
 ---
 -module(my@mod).
@@ -17,4 +16,3 @@ main(X) ->
         _ ->
             2
     end.
-

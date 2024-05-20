@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 304
 expression: "\n@external(javascript, \"one\", \"one\")\npub fn js() -> Nil\n\n@external(erlang, \"one\", \"one\")\npub fn erl() -> Nil\n\npub fn should_not_be_generated() {\n  js()\n  erl()\n}\n"
 ---
 -module(my@mod).

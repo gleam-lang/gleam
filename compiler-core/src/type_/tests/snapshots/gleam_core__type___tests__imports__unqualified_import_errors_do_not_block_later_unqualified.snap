@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/imports.rs
-assertion_line: 307
 expression: "import gleam.{Unknown, type Int as Integer}\n\npub fn main() -> Integer {\n  Nil\n}"
 ---
 error: Unknown module field

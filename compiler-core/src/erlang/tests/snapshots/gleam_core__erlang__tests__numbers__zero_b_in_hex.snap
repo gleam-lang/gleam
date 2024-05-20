@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/numbers.rs
-assertion_line: 94
 expression: "\npub fn main() {\n  0xffe0bb\n}\n"
 ---
 -module(my@mod).
@@ -11,4 +10,3 @@ expression: "\npub fn main() {\n  0xffe0bb\n}\n"
 -spec main() -> integer().
 main() ->
     16#ffe0bb.
-

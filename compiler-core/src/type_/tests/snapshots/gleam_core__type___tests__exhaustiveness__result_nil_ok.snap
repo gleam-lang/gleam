@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 125
 expression: "\npub fn main(x) {\n  case x {\n    Ok(Nil) -> 1\n  }\n}\n"
 ---
 error: Inexhaustive patterns

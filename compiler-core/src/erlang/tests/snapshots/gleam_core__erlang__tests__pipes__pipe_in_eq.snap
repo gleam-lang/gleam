@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-assertion_line: 92
 expression: "fn id(x) {\n  x\n}\n        \npub fn main() {\n    1 == 1 |> id\n}"
 ---
 -module(my@mod).
@@ -18,4 +17,3 @@ main() ->
         _pipe = 1,
         id(_pipe)
     end.
-

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1385
 expression: "\n@external(erlang, \"a\", \"b\")\nfn main(x: List(_)) -> Nil\n"
 ---
 error: Unexpected type hole
@@ -10,4 +9,3 @@ error: Unexpected type hole
   │                 ^ I need to know what this is
 
 We need to know the exact type here so type holes cannot be used.
-

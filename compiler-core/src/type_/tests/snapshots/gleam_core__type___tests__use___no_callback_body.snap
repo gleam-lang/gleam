@@ -1,9 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/use_.rs
-assertion_line: 104
 expression: "\npub fn main() {\n  let thingy = fn(f) { f() }\n  use <- thingy()\n}\n"
 ---
-
 warning: Incomplete use expression
   ┌─ /src/warning/wrn.gleam:4:3
   │
@@ -14,4 +12,3 @@ This code will crash if it is run. Be sure to finish it before
 running your program.
 A use expression must always be followed by at least one more
 expression.
-

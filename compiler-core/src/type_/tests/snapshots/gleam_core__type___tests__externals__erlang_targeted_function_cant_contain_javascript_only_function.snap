@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/externals.rs
-assertion_line: 144
 expression: "@target(erlang)\npub fn erlang_only() -> Int {\n  javascript_only()\n}\n\n@external(javascript, \"one\", \"two\")\nfn javascript_only() -> Int\n    "
 ---
 error: Unsupported target

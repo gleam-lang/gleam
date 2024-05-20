@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/imports.rs
-assertion_line: 163
 expression: "import one.{Two}\n\npub fn main(x) {\n  let Two = x\n}"
 ---
 error: Unknown module field

@@ -2,7 +2,6 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n        import gleam/list\n\n        pub fn main() {\n            let a_list = []\n            let _ = -0 == list.length(a_list)\n        }\n        "
 ---
-
 warning: Inefficient use of `list.length`
   ┌─ /src/warning/wrn.gleam:6:21
   │
@@ -14,4 +13,3 @@ list to calculate the length, which is wasteful if you only
 need to know if the list is empty or not.
 
 Hint: You can use `the_list == []` instead.
-

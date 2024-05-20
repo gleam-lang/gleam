@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 441
 expression: "\n1 + let a = 5\na\n"
 ---
 error: Syntax error
@@ -10,4 +9,3 @@ error: Syntax error
   │   ^ This operator has no value on its right side
 
 Hint: Remove it or put a value after it.
-

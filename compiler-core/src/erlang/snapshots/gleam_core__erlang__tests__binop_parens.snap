@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 360
 expression: "\npub fn main() {\n    let a = 2 * {3 + 1} / 2\n    let b = 5 + 3 / 3 * 2 - 6 * 4\n    b\n}\n"
 ---
 -module(my@mod).
@@ -13,4 +12,3 @@ main() ->
     A = (2 * (3 + 1)) div 2,
     B = (5 + ((3 div 3) * 2)) - (6 * 4),
     B.
-

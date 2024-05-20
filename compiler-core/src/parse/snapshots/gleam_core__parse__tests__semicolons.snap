@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 412
 expression: "{ 2 + 3; - -5; }"
 ---
 error: Syntax error
@@ -11,4 +10,3 @@ error: Syntax error
 
 Hint: Semicolons used to be whitespace and did nothing.
 You can safely remove them without your program changing.
-

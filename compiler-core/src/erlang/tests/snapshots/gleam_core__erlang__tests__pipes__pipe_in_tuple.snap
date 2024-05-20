@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-assertion_line: 51
 expression: "pub fn x(f) {\n  #(\n    1 |> f\n  )\n}"
 ---
 -module(my@mod).
@@ -14,4 +13,3 @@ x(F) ->
             _pipe = 1,
             F(_pipe)
         end}.
-

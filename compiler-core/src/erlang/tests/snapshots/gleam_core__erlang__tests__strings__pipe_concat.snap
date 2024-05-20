@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 269
 expression: "\nfn id(x) {\n  x\n}\n\npub fn main() {\n  { \"\" |> id } <> { \"\" |> id }\n}\n"
 ---
 -module(my@mod).
@@ -22,4 +21,3 @@ main() ->
             _pipe@1 = <<""/utf8>>,
             id(_pipe@1)
         end)/binary>>.
-

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 278
 expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(name: x, ..) = cat\n  let assert Cat(cuteness: 4, name: x) = cat\n  x\n}\n\n"
 ---
 import { CustomType as $CustomType, makeError } from "../gleam.mjs";
@@ -30,4 +29,3 @@ function go(cat) {
   let x$2 = cat.name;
   return x$2;
 }
-

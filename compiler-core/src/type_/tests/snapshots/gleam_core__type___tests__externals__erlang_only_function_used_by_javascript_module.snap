@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/externals.rs
-assertion_line: 29
 expression: "@external(erlang, \"one\", \"two\")\nfn erlang_only() -> Int\n\npub fn main() {\n  erlang_only()\n}\n"
 ---
 error: Unsupported target

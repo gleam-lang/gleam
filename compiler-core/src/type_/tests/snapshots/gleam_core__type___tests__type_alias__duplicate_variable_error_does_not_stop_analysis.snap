@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/type_alias.rs
-assertion_line: 113
 expression: "\ntype Two(a, a) =\n  #(a, a)\n\ntype UnknownType =\n  Dunno\n"
 ---
 error: Duplicate type parameter

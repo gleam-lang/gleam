@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 485
 expression: fn()
 ---
 error: Syntax error
@@ -8,5 +7,3 @@ error: Syntax error
   │
 1 │ fn()
   │ ^^^^ This function does not have a body
-
-

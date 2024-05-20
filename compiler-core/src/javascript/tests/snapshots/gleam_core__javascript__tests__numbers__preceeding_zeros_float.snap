@@ -1,9 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 222
 expression: "\nfn main() {\n  09_179.1\n}\n"
 ---
 function main() {
   return 9_179.1;
 }
-

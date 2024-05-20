@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/consts.rs
-assertion_line: 168
 expression: "\n              fn identity(a) {\n                a\n              }\n\n              pub type Mapper(b) {\n                Mapper(fn(b) -> b)\n              }\n\n              @internal\n              pub const id_mapper = Mapper(identity)\n        "
 ---
 -module(my@mod).

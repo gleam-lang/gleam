@@ -2,7 +2,6 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\nfn main() { let five = 5 }"
 ---
-
 warning: Unused variable
   ┌─ /src/warning/wrn.gleam:2:17
   │
@@ -18,4 +17,3 @@ warning: Unused private function
   │ ^^^^^^^^^ This private function is never used
 
 Hint: You can safely remove it.
-

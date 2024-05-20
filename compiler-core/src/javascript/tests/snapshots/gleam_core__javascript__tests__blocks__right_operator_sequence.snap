@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-assertion_line: 47
 expression: "\nfn go() {\n  {\n    1\n    2\n  } == 1\n}\n"
 ---
 function go() {
@@ -9,4 +8,3 @@ function go() {
     return 2;
   })() === 1;
 }
-

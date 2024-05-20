@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/results.rs
-assertion_line: 20
 expression: "pub fn main() { Error }"
 ---
 import { Error } from "../gleam.mjs";
@@ -8,4 +7,3 @@ import { Error } from "../gleam.mjs";
 export function main() {
   return (var0) => { return new Error(var0); };
 }
-

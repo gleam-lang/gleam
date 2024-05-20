@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/type_alias.rs
-assertion_line: 56
 expression: "\ntype A = #(A, A)\n"
 ---
 error: Type cycle
@@ -16,4 +15,3 @@ This type alias is defined in terms of itself.
     └─────┘
 If we tried to compile this recursive type it would expand
 forever in a loop, and we'd never get the final type.
-

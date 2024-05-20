@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 38
 expression: "\npub fn main(x) -> String {\n  x <> \"\\\\u{0308}\"\n}\n"
 ---
 -module(my@mod).
@@ -11,4 +10,3 @@ expression: "\npub fn main(x) -> String {\n  x <> \"\\\\u{0308}\"\n}\n"
 -spec main(binary()) -> binary().
 main(X) ->
     <<X/binary, "\\u{0308}"/utf8>>.
-

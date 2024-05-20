@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 271
 expression: "\ntype User { User(id: Int, name: String, age: Int) }\nfn create_user(user_id) { User(age: 22, id: user_id, name: \"\") }\n                    "
 ---
 -module(my@mod).
@@ -13,4 +12,3 @@ expression: "\ntype User { User(id: Int, name: String, age: Int) }\nfn create_us
 -spec create_user(integer()) -> user().
 create_user(User_id) ->
     {user, User_id, <<""/utf8>>, 22}.
-

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 18
 expression: "\nconst a = True\nconst b = False\nconst c = Nil\n"
 ---
 const a = true;
@@ -8,4 +7,3 @@ const a = true;
 const b = false;
 
 const c = undefined;
-

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 348
 expression: "case #(1, 2) { x if x == #(1, 1.0) -> 1 }"
 ---
 error: Type mismatch
@@ -16,4 +15,3 @@ Expected type:
 Found type:
 
     #(Int, Float)
-

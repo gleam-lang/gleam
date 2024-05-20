@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 554
 expression: "#(0, 1).2"
 ---
 error: Out of bounds tuple index
@@ -11,4 +10,3 @@ error: Out of bounds tuple index
 
 The index being accessed for this tuple is 2, but this tuple has 2 elements
 so the highest valid index is 1.
-

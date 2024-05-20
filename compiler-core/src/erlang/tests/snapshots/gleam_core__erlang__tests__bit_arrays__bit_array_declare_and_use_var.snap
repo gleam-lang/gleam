@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 112
 expression: "pub fn go(x) {\n  let assert <<name_size:8, name:bytes-size(name_size)>> = x\n  name\n}"
 ---
 -module(my@mod).
@@ -21,4 +20,3 @@ go(X) ->
                         line => 2})
     end,
     Name.
-

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/let_assert.rs
-assertion_line: 39
 expression: "pub fn go() {\n  let assert Ok(y) = Ok(1)\n  let assert Ok(y) = Ok(1)\n  y\n}"
 ---
 -module(my@mod).
@@ -33,4 +32,3 @@ go() ->
                         line => 3})
     end,
     Y@1.
-

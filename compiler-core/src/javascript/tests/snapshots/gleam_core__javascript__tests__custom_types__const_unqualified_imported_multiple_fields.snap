@@ -1,10 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 592
 expression: "import other.{Two}\npub const main = Two(b: 2, c: 3, a: 1)\n"
 ---
 import * as $other from "../other.mjs";
 import { Two } from "../other.mjs";
 
 export const main = new Two(1, 2, 3);
-

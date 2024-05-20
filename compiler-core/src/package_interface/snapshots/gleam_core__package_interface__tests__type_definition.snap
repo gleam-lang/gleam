@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-assertion_line: 195
 expression: "\n/// Wibble's documentation\npub type Wibble(a, b) {\n  Wob\n  Baz\n}\n"
 ---
 {

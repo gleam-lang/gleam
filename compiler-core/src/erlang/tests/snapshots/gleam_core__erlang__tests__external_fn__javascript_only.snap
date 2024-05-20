@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 271
 expression: "\npub fn should_be_generated(x: Int) -> Int {\n  x\n}\n\n@external(javascript, \"one\", \"one\")\npub fn should_not_be_generated(x: Int) -> Int\n"
 ---
 -module(my@mod).

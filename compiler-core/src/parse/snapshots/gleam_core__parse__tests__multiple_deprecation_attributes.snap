@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 490
 expression: "\n@deprecated(\"1\")\n@deprecated(\"2\")\npub fn main() -> Nil {\n  Nil\n}\n"
 ---
 error: Syntax error
@@ -10,4 +9,3 @@ error: Syntax error
   │ ^^^^^^^^^^^ Duplicate attribute
 
 This attribute has already been given.
-

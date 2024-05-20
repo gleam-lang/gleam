@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 464
 expression: "\n@external(javascript, \"one\", \"two\")\n@external(javascript, \"three\", \"four\")\npub fn one(x: Int) -> Int {\n  todo\n}\n"
 ---
 error: Syntax error
@@ -10,4 +9,3 @@ error: Syntax error
   │ ^^^^^^^^^ Duplicate attribute
 
 This attribute has already been given.
-

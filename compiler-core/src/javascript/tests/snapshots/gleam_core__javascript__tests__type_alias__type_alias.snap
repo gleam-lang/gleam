@@ -1,9 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/type_alias.rs
-assertion_line: 5
 expression: "\npub type Headers = List(#(String, String))\n"
 ---
 import type * as _ from "../gleam.d.mts";
 
 export type Headers = _.List<[string, string]>;
-

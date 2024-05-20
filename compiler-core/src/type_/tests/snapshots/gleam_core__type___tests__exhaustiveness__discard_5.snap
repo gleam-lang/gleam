@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 702
 expression: "\npub type Thing {\n  Thing(a: Bool, b: Bool)\n}\n\npub fn main(x) {\n  case x {\n    Thing(a: False, ..) -> 1\n  }\n}\n"
 ---
 error: Inexhaustive patterns

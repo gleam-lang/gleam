@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 518
 expression: "case [1] { [x] | [x, y] -> 1 }"
 ---
 error: Extra alternative pattern variable
@@ -11,4 +10,3 @@ error: Extra alternative pattern variable
 
 All alternative patterns must define the same variables as the initial
 pattern. This variable `y` has not been previously defined.
-

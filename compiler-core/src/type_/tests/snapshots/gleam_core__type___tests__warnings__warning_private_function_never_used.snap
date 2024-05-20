@@ -2,7 +2,6 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "fn main() { 5 }"
 ---
-
 warning: Unused private function
   ┌─ /src/warning/wrn.gleam:1:1
   │
@@ -10,4 +9,3 @@ warning: Unused private function
   │ ^^^^^^^^^ This private function is never used
 
 Hint: You can safely remove it.
-

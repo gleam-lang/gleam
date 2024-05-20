@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 32
 expression: "pub fn x() { 2 }\nfn main() {\n  let a = -1\n  let b = <<a:unit(2)-size(a * 2), a:size(3 + x())-unit(1)>>\n\n  b\n}\n"
 ---
 -module(my@mod).
@@ -18,4 +17,3 @@ main() ->
     B = <<A:(lists:max([(A * 2), 0]))/unit:2,
         A:(lists:max([(3 + x()), 0]))/unit:1>>,
     B.
-

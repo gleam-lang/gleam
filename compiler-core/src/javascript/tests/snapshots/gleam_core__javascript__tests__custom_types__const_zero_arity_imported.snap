@@ -1,9 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 104
 expression: "import other\nconst x = other.Two\n"
 ---
 import * as $other from "../other.mjs";
 
 const x = new $other.Two();
-

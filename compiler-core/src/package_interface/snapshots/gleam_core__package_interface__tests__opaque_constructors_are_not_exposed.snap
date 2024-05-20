@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-assertion_line: 185
 expression: "pub opaque type Wibble { Wob }"
 ---
 {

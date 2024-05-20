@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 212
 expression: "\npub fn go(x) {\n  x <> \"1\"\n}\n"
 ---
 -module(my@mod).
@@ -11,4 +10,3 @@ expression: "\npub fn go(x) {\n  x <> \"1\"\n}\n"
 -spec go(binary()) -> binary().
 go(X) ->
     <<X/binary, "1"/utf8>>.
-

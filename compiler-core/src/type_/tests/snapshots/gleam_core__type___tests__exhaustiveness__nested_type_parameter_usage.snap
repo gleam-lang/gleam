@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 875
 expression: "\npub type Returned(a) {\n  Returned(List(a))\n}\n\nfn foo(user: Returned(#())) -> Int {\n  let Returned([#()]) = user\n  1\n}\n"
 ---
 error: Inexhaustive pattern
@@ -19,4 +18,3 @@ The missing patterns are:
     Returned([_, _, ..])
 
 Hint: Use a more general pattern or use `let assert` instead.
-

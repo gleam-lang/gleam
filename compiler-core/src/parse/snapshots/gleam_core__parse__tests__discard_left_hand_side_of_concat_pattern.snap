@@ -13,4 +13,3 @@ how to handle this pattern.
 
 If you want to match one character consider using `pop_grapheme`
 from the stdlib's `gleam/string` module.
-

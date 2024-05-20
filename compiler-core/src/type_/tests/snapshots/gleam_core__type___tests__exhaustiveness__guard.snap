@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 754
 expression: "\npub fn main(x, y) {\n  case x {\n    _ if y -> 1\n  }\n}\n"
 ---
 error: Inexhaustive patterns

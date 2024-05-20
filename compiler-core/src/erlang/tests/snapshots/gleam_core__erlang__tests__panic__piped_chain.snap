@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/panic.rs
-assertion_line: 54
 expression: "\n     pub fn main() {\n      \"lets\"\n      |> panic as \"pipe\"\n      |> panic as \"other panic\"\n    }\n    "
 ---
 -module(my@mod).
@@ -21,4 +20,3 @@ main() ->
             module => <<"my/mod"/utf8>>,
             function => <<"main"/utf8>>,
             line => 5}))(_pipe@1).
-

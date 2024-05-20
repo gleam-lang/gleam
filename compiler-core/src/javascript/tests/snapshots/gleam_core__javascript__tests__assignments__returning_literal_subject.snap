@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 83
 expression: "fn go(x) { let assert 1 = x + 1 }"
 ---
 import { makeError } from "../gleam.mjs";
@@ -19,4 +18,3 @@ function go(x) {
   }
   return $;
 }
-

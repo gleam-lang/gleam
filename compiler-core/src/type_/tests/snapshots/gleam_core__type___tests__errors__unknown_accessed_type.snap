@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 569
 expression: "fn(a) { a.field }"
 ---
 error: Unknown type for record access
@@ -12,4 +11,3 @@ error: Unknown type for record access
 In order to access a record field we need to know what type it is,
 but I can't tell the type here. Try adding type annotations to your
 function and try again.
-

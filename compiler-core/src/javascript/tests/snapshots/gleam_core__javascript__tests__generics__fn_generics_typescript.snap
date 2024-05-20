@@ -1,7 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/generics.rs
-assertion_line: 5
 expression: "pub fn identity(a) -> a {\n  a\n}\n"
 ---
 export function identity<J>(a: J): J;
-

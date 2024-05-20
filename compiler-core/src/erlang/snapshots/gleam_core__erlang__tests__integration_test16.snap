@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 262
 expression: "fn go(x xx, y yy) { xx }\npub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"
 ---
 -module(my@mod).
@@ -16,4 +15,3 @@ go(Xx, Yy) ->
 x() ->
     go(1, 2),
     go(4, 3).
-

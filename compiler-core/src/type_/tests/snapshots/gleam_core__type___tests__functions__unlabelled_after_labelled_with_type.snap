@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/functions.rs
-assertion_line: 16
 expression: "fn main(wibble wibber, wobber: Int) {\n  Nil\n}"
 ---
 error: Unlabelled argument after labelled argument
@@ -10,4 +9,3 @@ error: Unlabelled argument after labelled argument
   │                        ^^^^^^^^^^^
 
 All unlabelled arguments must come before any labelled arguments.
-

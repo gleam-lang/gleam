@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 296
 expression: "\npub fn main(x) {\n  let assert \"m-\" <> _ = x\n}\n"
 ---
 -module(my@mod).
@@ -20,4 +19,3 @@ main(X) ->
                         function => <<"main"/utf8>>,
                         line => 3})
     end.
-

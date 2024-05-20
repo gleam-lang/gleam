@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 275
 expression: "pub fn main(with: Int) -> Nil {\n  main(with - 1)\n}\n"
 ---
 export function main(loop$with) {
@@ -9,4 +8,3 @@ export function main(loop$with) {
     loop$with = with$ - 1;
   }
 }
-
