@@ -401,7 +401,7 @@ fn module_const_fn1() {
         r#"
 pub fn int_identity(i: Int) -> Int { i }
 pub const int_identity_alias: fn(Int) -> Int = int_identity
-pub const compound: #(fn(Int) -> Int, fn(Int) -> Int) = 
+pub const compound: #(fn(Int) -> Int, fn(Int) -> Int) =
     #(int_identity, int_identity_alias)"#
     )
 }
@@ -429,21 +429,29 @@ pub fn main() {
 
 // https://github.com/gleam-lang/gleam/issues/2518
 #[test]
-fn function_literals_get_properly_wrapped() {
+fn function_literals_get_properly_wrapped_1() {
     assert_js!(
         r#"pub fn main() {
   fn(n) { n + 1 }(10)
 }
 "#
     );
+}
 
+// https://github.com/gleam-lang/gleam/issues/2518
+#[test]
+fn function_literals_get_properly_wrapped_2() {
     assert_js!(
         r#"pub fn main() {
   { fn(n) { n + 1 } }(10)
 }
 "#
     );
+}
 
+// https://github.com/gleam-lang/gleam/issues/2518
+#[test]
+fn function_literals_get_properly_wrapped_3() {
     assert_js!(
         r#"pub fn main() {
   { let a = fn(n) { n + 1 } }(10)

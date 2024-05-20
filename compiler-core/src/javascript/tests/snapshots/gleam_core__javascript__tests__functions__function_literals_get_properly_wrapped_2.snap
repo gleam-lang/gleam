@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "pub fn main() {\n  { fn(n) { n + 1 } }(10)\n}\n"
+---
+export function main() {
+  return ((n) => { return n + 1; })(10);
+}
