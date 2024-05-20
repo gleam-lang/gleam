@@ -18,7 +18,7 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use lsp::CodeAction;
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
-use std::sync::Arc;
+use std::{cmp::Ordering, sync::Arc};
 
 use super::{
     code_action::{CodeActionBuilder, RedundantTupleInCaseSubject},
@@ -203,13 +203,39 @@ where
                 .module_line_numbers
                 .byte_index(params.position.line, params.position.character);
 
-            // Do not suggest in comments
-            if module.extra.is_within_comment(byte_index)
-                || (byte_index > 0
-                    && module
-                        .extra
-                        // Cursor is at the end of the comment
-                        .is_within_comment(byte_index - 1))
+            // Use binary search to find if the byte_index is
+            // in the range [span.start, span.end]
+            //
+            // Do note that the end is inclusive, because we would like to
+            // detect if the cursor is right after the comment
+            // (when we are typing/insert mode in Vim)
+            let comment_cmp = |span: &SrcSpan| {
+                if byte_index < span.start {
+                    Ordering::Less
+                } else if span.end < byte_index {
+                    // inclusive end
+                    Ordering::Greater
+                } else {
+                    Ordering::Equal
+                }
+            };
+
+            // If in comment context, do not provide completions
+            //
+            // We cannot simply use `module.extra.is_within_comment` as it
+            // cannot detect if we are currently typing/inserting text at the
+            // end of the comment
+            if module.extra.comments.binary_search_by(comment_cmp).is_ok()
+                || module
+                    .extra
+                    .doc_comments
+                    .binary_search_by(comment_cmp)
+                    .is_ok()
+                || module
+                    .extra
+                    .module_comments
+                    .binary_search_by(comment_cmp)
+                    .is_ok()
             {
                 return Ok(None);
             }
