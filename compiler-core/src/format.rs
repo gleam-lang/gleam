@@ -1278,7 +1278,10 @@ impl<'comments> Formatter<'comments> {
         let comments = self.pop_comments(location.end);
         let closing_bracket = match printed_comments(comments, false) {
             None => docvec!(line(), "}"),
-            Some(comment) => docvec!(line().nest(INDENT), comment, line(), "}"),
+            Some(comment) => docvec!(line(), comment)
+                .nest(INDENT)
+                .append(line())
+                .append("}"),
         };
 
         subjects_doc
