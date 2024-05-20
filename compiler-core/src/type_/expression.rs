@@ -2537,6 +2537,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             match_fun_type(fun.type_(), args.len(), self.environment)
                 .map_err(|e| convert_not_fun_error(e, fun.location(), location, kind))?;
 
+        // When typing the function's arguments we don't care if the previous
+        // expression panics or not because we want to provide a specialised
+        // error message for this particular case.
+        // So we set `previous_panics` to false to avoid raising any
+        // unnecessarily generic warning.
         self.previous_panics = false;
 
         // Ensure that the given args have the correct types
