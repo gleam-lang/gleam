@@ -119,3 +119,53 @@ fn long_comment_before_case_with_multiple_subjects_doesnt_force_a_break() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3136
+#[test]
+fn splitting_alternatives_doesnt_force_the_consequence_to_break() {
+    assert_format!(
+        r#"fn main() {
+  case a, b, c {
+    _ignored, _ignored, _ignored
+    | _ignored, _ignored, _ignored
+    | _ignored, _ignored, _ignored -> True
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3136
+#[test]
+fn splitting_the_last_alternative_forces_the_consequence_to_break() {
+    assert_format!(
+        r#"fn main() {
+  case a, b, c {
+    _, _, _
+    | _, _, _
+    | this_is_long_and_is_going_to_split_on_multiple,
+      lines,
+      and_force_the_arrow_to_break
+    -> True
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3136
+#[test]
+fn splitting_an_alternative_in_the_middle_doesnt_force_the_consequence_to_break() {
+    assert_format!(
+        r#"fn main() {
+  case a, b, c {
+    _, _, _
+    | this_is_long_and_is_going_to_split_on_multiple,
+      lines,
+      and_force_the_alternative_to_break
+    | _, _, _ -> True
+  }
+}
+"#
+    );
+}

@@ -1749,19 +1749,19 @@ impl<'comments> Formatter<'comments> {
     fn clause<'a>(&mut self, clause: &'a UntypedClause, index: u32) -> Document<'a> {
         let space_before = self.pop_empty_lines(clause.location.start);
         let comments = self.pop_comments(clause.location.start);
+        let (alternative_patterns, alternatives_separator) = self.alternative_patterns(clause);
 
-        let clause_doc = match &clause.guard {
-            None => self.alternative_patterns(clause),
-            Some(guard) => self
-                .alternative_patterns(clause)
-                .append(break_("", " ").nest(INDENT))
+        let guard = match &clause.guard {
+            None => nil(),
+            Some(guard) => break_("", " ")
+                .nest(INDENT)
                 .append("if ")
                 .append(self.clause_guard(guard).group().nest(INDENT)),
         };
 
         // In case there's a guard or multiple subjects, if we decide to break
-        // the patterns on multiple lines we also want the arrow to end up on
-        // its own line to improve legibility.
+        // the patterns of the last alternative on multiple lines we also want
+        // the arrow to end up on its own line to improve legibility.
         //
         // This looks like this:
         // ```gleam
@@ -1773,7 +1773,6 @@ impl<'comments> Formatter<'comments> {
         //   // for patterns with `if` guards.
         // }
         // ```
-
         let has_guard = clause.guard.is_some();
         let has_multiple_subjects = clause.pattern.len() > 1;
         let arrow_break = if has_guard || has_multiple_subjects {
@@ -1782,16 +1781,25 @@ impl<'comments> Formatter<'comments> {
             " ".to_doc()
         };
 
-        let clause_doc = clause_doc
+        // Now we get a hold of the last alternative and add the guard and `->`
+        // to it in a single group so that they will be broken together.
+        // We always have at least one pattern for each branch so it's safe
+        // to `expect`.
+        let (last_alternative, mut alternatives) =
+            split_last(alternative_patterns).expect("at least one pattern per branch");
+
+        alternatives.append(&mut vec![last_alternative
+            .append(guard)
             .append(arrow_break)
             .group()
             .append("->")
             .append(self.case_clause_value(&clause.then).group())
-            .group();
+            .group()]);
 
+        let alternatives_doc = join(alternatives, alternatives_separator).group();
         let clause_doc = match printed_comments(comments, false) {
-            Some(comments) => comments.append(line()).append(clause_doc),
-            None => clause_doc,
+            Some(comments) => comments.append(line()).append(alternatives_doc),
+            None => alternatives_doc,
         };
 
         if index == 0 {
@@ -1803,7 +1811,10 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn alternative_patterns<'a>(&mut self, clause: &'a UntypedClause) -> Document<'a> {
+    fn alternative_patterns<'a>(
+        &mut self,
+        clause: &'a UntypedClause,
+    ) -> (Vec<Document<'a>>, Document<'a>) {
         let has_guard = clause.guard.is_some();
         let has_multiple_subjects = clause.pattern.len() > 1;
 
@@ -1862,10 +1873,12 @@ impl<'comments> Formatter<'comments> {
                 // going to be nested) and make the subjects into a group to
                 // make sure the formatter tries to keep them on a single line.
                 join(subject_docs, break_(",", ", ").nest(INDENT)).group()
-            });
+            })
+            .collect_vec();
+
         // Last, we make sure that the formatter tries to keep each
         // alternative on a single line by making it a group!
-        join(alternative_patterns, alternatives_separator).group()
+        (alternative_patterns, alternatives_separator)
     }
 
     fn list<'a>(
@@ -2732,4 +2745,11 @@ fn is_breakable_argument(expr: &UntypedExpr, arity: usize) -> bool {
         | UntypedExpr::BitArray { .. } => true,
         _ => false,
     }
+}
+
+fn split_last<A>(mut vec: Vec<A>) -> Option<(A, Vec<A>)> {
+    vec.split_off(vec.len() - 1)
+        .into_iter()
+        .next()
+        .map(|last| (last, vec))
 }
