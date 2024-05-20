@@ -33,9 +33,11 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 use std::time::SystemTime;
 use std::{collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, process};
 use strum::{Display, EnumIter, EnumString, EnumVariantNames, VariantNames};
+use vec1::Vec1;
 
 #[derive(
     Debug,
@@ -417,5 +419,50 @@ pub(crate) struct SourceFingerprint(u64);
 impl SourceFingerprint {
     pub(crate) fn new(source: &str) -> Self {
         SourceFingerprint(xxhash_rust::xxh3::xxh3_64(source.as_bytes()))
+    }
+}
+
+/// Like a `Result`, but the operation can partially succeed or fail.
+///
+#[derive(Debug)]
+pub enum Outcome<T, E> {
+    /// The operation was totally succesful.
+    Ok(T),
+
+    /// The operation was partially successful but there were problems.
+    PartialFailure(T, E),
+
+    /// The operation was entirely unsuccessful.
+    TotalFailure(E),
+}
+
+impl<T, E> Outcome<T, E>
+where
+    E: Debug,
+{
+    #[cfg(test)]
+    /// Panic if there's any errors
+    pub fn unwrap(self) -> T {
+        match self {
+            Outcome::Ok(t) => t,
+            Outcome::PartialFailure(_, errors) => panic!("Error: {:?}", errors),
+            Outcome::TotalFailure(error) => panic!("Error: {:?}", error),
+        }
+    }
+
+    /// Panic if there's any errors
+    pub fn expect(self, e: &'static str) -> T {
+        match self {
+            Outcome::Ok(t) => t,
+            Outcome::PartialFailure(_, errors) => panic!("{e}: {:?}", errors),
+            Outcome::TotalFailure(error) => panic!("{e}: {:?}", error),
+        }
+    }
+
+    pub fn into_result(self) -> Result<T, E> {
+        match self {
+            Outcome::Ok(t) => Ok(t),
+            Outcome::PartialFailure(_, e) | Outcome::TotalFailure(e) => Err(e),
+        }
     }
 }

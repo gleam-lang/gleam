@@ -9,7 +9,7 @@ mod generated_tests;
 
 use gleam_core::{
     build::{
-        ErlangAppCodegenConfiguration, Mode, NullTelemetry, StaleTracker, Target,
+        ErlangAppCodegenConfiguration, Mode, NullTelemetry, Outcome, StaleTracker, Target,
         TargetCodegenConfiguration,
     },
     config::PackageConfig,
@@ -72,7 +72,7 @@ pub fn prepare(path: &str) -> String {
         &NullTelemetry,
     );
     match result {
-        Ok(_) => {
+        Outcome::Ok(_) => {
             for path in initial_files {
                 filesystem.delete_file(&path).unwrap();
             }
@@ -80,7 +80,9 @@ pub fn prepare(path: &str) -> String {
             let warnings = warnings.take();
             TestCompileOutput { files, warnings }.as_overview_text()
         }
-        Err(error) => normalise_diagnostic(&error.pretty_string()),
+        Outcome::TotalFailure(error) | Outcome::PartialFailure(_, error) => {
+            normalise_diagnostic(&error.pretty_string())
+        }
     }
 }
 

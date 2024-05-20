@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     analyse::TargetSupport,
     ast::{TypedModule, TypedStatement, UntypedExpr, UntypedModule},
-    build::{Origin, Target},
+    build::{Origin, Outcome, Target},
     config::PackageConfig,
     error::Error,
     type_::{build_prelude, expression::FunctionDefinition, pretty::Printer},
@@ -437,8 +437,9 @@ pub fn compile_module_with_opts(
     .infer_module(ast, LineNumbers::new(src), "".into());
 
     match inference_result {
-        Ok(ast) => Ok(ast),
-        Err(crate::analyse::AnalysisFailure { errors, .. }) => Err(errors.to_vec()),
+        Outcome::Ok(ast) => Ok(ast),
+        Outcome::PartialFailure(_, errors) => Err(errors.into()),
+        Outcome::TotalFailure(error) => Err(error.into()),
     }
 }
 
