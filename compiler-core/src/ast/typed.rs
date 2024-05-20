@@ -1,7 +1,5 @@
 use std::sync::OnceLock;
 
-use self::type_::error::PanicKind;
-
 use super::*;
 use crate::type_::{bool, HasType, Type, ValueConstructorVariant};
 
@@ -615,14 +613,6 @@ impl TypedExpr {
         match self {
             TypedExpr::Panic { .. } => true,
             _ => false,
-        }
-    }
-
-    pub(crate) fn panic_kind(&self) -> Option<PanicKind> {
-        match self {
-            Self::Panic { .. } => Some(PanicKind::LiteralPanic),
-            _ if self.always_panics() => Some(PanicKind::PanicExpression),
-            _ => None,
         }
     }
 }

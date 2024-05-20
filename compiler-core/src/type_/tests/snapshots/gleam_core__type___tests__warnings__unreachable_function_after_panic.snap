@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 1902
 expression: "\n        pub fn wibble(_) { 1 }\n        pub fn main() {\n            panic\n            wibble(10)\n        }\n        "
 ---
 warning: Unreachable code

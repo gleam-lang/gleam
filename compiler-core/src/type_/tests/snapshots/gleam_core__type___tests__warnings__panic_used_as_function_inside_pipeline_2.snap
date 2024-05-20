@@ -8,4 +8,4 @@ warning: Unreachable code
 4 │             1 |> panic |> wibble
   │                           ^^^^^^
 
-This code is unreachable because the expression before it always panics.
+This code is unreachable because it comes after a `panic`.
