@@ -811,7 +811,7 @@ See: https://tour.gleam.run/advanced-features/{name}/"
 Your code will crash before reaching this point.",
                         PanicPosition::LastFunctionArgument =>
                             "This function call is unreachable because its last argument always panics. \
-Your code will crash before reaching this function call",
+Your code will crash before reaching this point.",
                     };
 
                     Diagnostic {

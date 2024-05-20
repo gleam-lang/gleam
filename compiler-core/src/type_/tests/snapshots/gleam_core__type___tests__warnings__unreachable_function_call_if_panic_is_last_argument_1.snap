@@ -9,4 +9,4 @@ warning: Unreachable code
   │           ^^^^^^
 
 This function call is unreachable because its last argument always panics.
-Your code will crash before reaching this function call
+Your code will crash before reaching this point.
