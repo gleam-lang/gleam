@@ -185,7 +185,16 @@ pub enum ArgumentKind {
 pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) environment: &'a mut Environment<'b>,
 
+    // This is set to true if the previous expression that has been typed is
+    // determined to always panic.
+    // For example when typing a literal `panic`, this flag will be set to true.
+    // The same goes, for example, if the branches of a case expression all
+    // panic.
     pub(crate) previous_panics: bool,
+
+    // This is used to track if we've already warned for unreachable code.
+    // After emitting the first unreachable code warning we never emit another
+    // one to avoid flooding with repetitive warnings.
     pub(crate) already_warned_for_unreachable_code: bool,
 
     pub(crate) implementations: Implementations,
