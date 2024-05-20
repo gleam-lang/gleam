@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/use_.rs
-assertion_line: 69
 expression: "\npub fn main() {\n  use <- 1 |> add\n  1\n}\n\npub fn add(x) {\n  fn(f) { f() + x }\n}\n"
 ---
 -module(my@mod).
@@ -18,4 +17,3 @@ main() ->
         _pipe = 1,
         add(_pipe)
     end(fun() -> 1 end).
-

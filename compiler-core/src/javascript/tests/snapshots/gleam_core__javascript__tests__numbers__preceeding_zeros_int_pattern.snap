@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 254
 expression: "\nfn main(x) {\n  let assert 09_179 = x\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
@@ -18,4 +17,3 @@ function main(x) {
   }
   return x;
 }
-

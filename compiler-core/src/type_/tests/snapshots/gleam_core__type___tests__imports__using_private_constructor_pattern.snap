@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/imports.rs
-assertion_line: 43
 expression: "import one\n\npub fn main(x) {\n  let one.Two = x\n}"
 ---
 error: Unknown module field
@@ -10,4 +9,3 @@ error: Unknown module field
   │       ^^^^^^^
 
 The module `one` does not have a `Two` value.
-

@@ -1,9 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 877
 expression: "\nimport some_module\npub const x = some_module.x\n        "
 ---
-
 warning: Transitive dependency imported
   ┌─ /src/warning/wrn.gleam:2:1
   │
@@ -17,5 +15,3 @@ In a future version of Gleam this may become a compile error.
 Run this command to add it to your dependencies:
 
     gleam add non-dependency-package
-
-

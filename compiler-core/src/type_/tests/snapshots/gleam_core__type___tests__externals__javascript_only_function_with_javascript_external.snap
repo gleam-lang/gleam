@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/externals.rs
-assertion_line: 116
 expression: "@external(javascript, \"one\", \"two\")\nfn javascript_only() -> Int\n\n@external(javascript, \"one\", \"two\")\npub fn uh_oh() -> Int {\n  javascript_only()\n}\n"
 ---
 error: Unsupported target

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 118
 expression: "pub fn go() {\n    let fifteen = 0xF\n    let nine = 0o11\n    let ten = 0b1010\n  fifteen\n}"
 ---
 -module(my@mod).
@@ -14,4 +13,3 @@ go() ->
     Nine = 8#11,
     Ten = 2#1010,
     Fifteen.
-

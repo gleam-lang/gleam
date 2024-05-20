@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 117
 expression: "\npub fn go(x, y) {\n  x <> y\n}\n"
 ---
 -module(my@mod).
@@ -11,4 +10,3 @@ expression: "\npub fn go(x, y) {\n  x <> y\n}\n"
 -spec go(binary(), binary()) -> binary().
 go(X, Y) ->
     <<X/binary, Y/binary>>.
-

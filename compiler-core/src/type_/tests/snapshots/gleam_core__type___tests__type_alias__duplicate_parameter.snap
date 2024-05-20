@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/type_alias.rs
-assertion_line: 78
 expression: "\ntype A(a, a) =\n  List(a)\n"
 ---
 error: Duplicate type parameter
@@ -12,4 +11,3 @@ error: Duplicate type parameter
 
 This definition has multiple type parameters named `a`.
 Rename or remove one of them.
-

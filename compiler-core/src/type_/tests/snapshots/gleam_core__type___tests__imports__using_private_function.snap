@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/imports.rs
-assertion_line: 67
 expression: "import one\n\npub fn main() {\n  one.two\n}"
 ---
 error: Unknown module field
@@ -10,4 +9,3 @@ error: Unknown module field
   │      ^^^^
 
 The module `one` does not have a `two` value.
-

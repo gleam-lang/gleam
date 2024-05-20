@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
-assertion_line: 42
 expression: "\nconst a = []\nconst b = [1, 2, 3]\n"
 ---
 import { toList } from "../gleam.mjs";
@@ -8,4 +7,3 @@ import { toList } from "../gleam.mjs";
 const a = toList([]);
 
 const b = toList([1, 2, 3]);
-

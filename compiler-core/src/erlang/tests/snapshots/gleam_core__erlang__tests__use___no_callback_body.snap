@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/use_.rs
-assertion_line: 56
 expression: "\npub fn main() {\n  let thingy = fn(f) { f() }\n  use <- thingy()\n}\n"
 ---
 -module(my@mod).
@@ -16,4 +15,3 @@ main() ->
                     module => <<"my/mod"/utf8>>,
                     function => <<"main"/utf8>>,
                     line => 4}) end).
-

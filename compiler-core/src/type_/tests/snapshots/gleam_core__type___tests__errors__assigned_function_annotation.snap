@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 286
 expression: "let f = fn(x: Int) { x } f(1.0)"
 ---
 error: Type mismatch
@@ -16,4 +15,3 @@ Expected type:
 Found type:
 
     Float
-

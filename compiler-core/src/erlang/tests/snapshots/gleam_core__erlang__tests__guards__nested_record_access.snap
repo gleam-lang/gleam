@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
-assertion_line: 467
 expression: "\npub type A {\n  A(b: B)\n}\n\npub type B {\n  B(c: C)\n}\n\npub type C {\n  C(d: Bool)\n}\n\npub fn a(a: A) {\n  case a {\n    _ if a.b.c.d -> 1\n    _ -> 0\n  }\n}\n"
 ---
 -module(my@mod).
@@ -24,4 +23,3 @@ a(A) ->
         _ ->
             0
     end.
-

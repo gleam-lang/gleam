@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 373
 expression: "let Ok(1, x) = 1 x"
 ---
 error: Incorrect arity
@@ -8,5 +7,3 @@ error: Incorrect arity
   │
 1 │ let Ok(1, x) = 1 x
   │     ^^^^^^^^ Expected 1 argument, got 2
-
-

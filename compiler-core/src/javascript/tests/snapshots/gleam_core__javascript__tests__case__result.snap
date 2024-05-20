@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 136
 expression: "\nfn go(x) {\n  case x {\n    Ok(_) -> 1\n    Error(_) -> 0\n  }\n}\n"
 ---
 function go(x) {
@@ -10,4 +9,3 @@ function go(x) {
     return 0;
   }
 }
-

@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 247
-expression: "\nfn go(x) {\n  let <<_, b:bytes>> = <<1,2,3>>\n}\n"
+expression: "\nfn go(x) {\n  let assert <<_, b:bytes>> = <<1,2,3>>\n}\n"
 ---
 import { makeError, toBitArray } from "../gleam.mjs";
 
@@ -20,4 +19,3 @@ function go(x) {
   let b = $.sliceAfter(1);
   return $;
 }
-

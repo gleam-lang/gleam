@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 403
 expression: "let x = 1 let y = 1.0 case x { _ if x == y -> 1 }"
 ---
 error: Type mismatch
@@ -16,4 +15,3 @@ Expected type:
 Found type:
 
     Float
-

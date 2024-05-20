@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 26
-expression: "\nfn go(x) {\n  let #(a, #(b, c, 2) as t, _, 1) = x\n}\n"
+expression: "\nfn go(x) {\n  let assert #(a, #(b, c, 2) as t, _, 1) = x\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
 
@@ -22,4 +21,3 @@ function go(x) {
   let c = x[1][1];
   return x;
 }
-

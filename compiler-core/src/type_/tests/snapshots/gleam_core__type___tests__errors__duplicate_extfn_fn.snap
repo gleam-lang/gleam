@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1072
 expression: "\n@external(erlang, \"module1\", \"function1\")\nfn foo() -> Float\n\nfn foo() { 2 }"
 ---
 error: Duplicate definition
@@ -14,4 +13,3 @@ error: Duplicate definition
 
 `foo` has been defined multiple times.
 Names in a Gleam module must be unique so one will need to be renamed.
-

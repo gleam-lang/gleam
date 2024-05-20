@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 46
 expression: "pub fn main() {\n  let a = 1\n  let assert <<b, 1>> = <<1, a>>\n  b\n}\n"
 ---
 -module(my@mod).
@@ -23,4 +22,3 @@ main() ->
                         line => 3})
     end,
     B.
-

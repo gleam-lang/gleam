@@ -8,4 +8,3 @@ function go() {
   let x = "I should " + "do this";
   throw makeError("todo", "my/mod", 4, "go", x, {})
 }
-

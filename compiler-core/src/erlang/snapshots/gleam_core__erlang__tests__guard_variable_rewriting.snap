@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 550
 expression: "pub fn main() {\n  case 1.0 {\n    a if a <. 0.0 -> {\n      let a = a\n      a\n    }\n    _ -> 0.0\n  }\n}\n"
 ---
 -module(my@mod).
@@ -18,4 +17,3 @@ main() ->
         _ ->
             +0.0
     end.
-

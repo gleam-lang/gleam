@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 375
 expression: "let foo\n        foo = 4"
 ---
 error: Syntax error
@@ -8,5 +7,3 @@ error: Syntax error
   │
 1 │ let foo
   │     ^^^ I was expecting a '=' after this
-
-

@@ -8,5 +8,3 @@ error: Syntax error
 2 │ ╭ @deprecated("1")
 3 │ │ @external(erlang, "module", "fun")
   │ ╰──────────────────────────────────^ I was expecting a function definition after this
-
-

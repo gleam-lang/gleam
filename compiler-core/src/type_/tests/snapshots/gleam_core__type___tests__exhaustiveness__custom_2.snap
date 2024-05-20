@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 799
 expression: "\npub type Type {\n  One\n  Two\n  Three(Type)\n}\n\npub fn main(x) {\n  case x {\n    One -> 1\n    Two -> 2\n    Three(One) -> 4\n  }\n}\n"
 ---
 error: Inexhaustive patterns

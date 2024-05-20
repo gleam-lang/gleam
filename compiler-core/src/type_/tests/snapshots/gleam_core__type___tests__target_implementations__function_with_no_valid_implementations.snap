@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/target_implementations.rs
-assertion_line: 254
-expression: "\n@external(javascript, \"foo\", \"bar\")\nfn javascript_only() -> Int\n        \n@external(erlang, \"foo\", \"bar\")\nfn erlang_only() -> Int\n\npub fn main() {\n    javascript_only()\n    erlang_only()\n}\n"
+expression: "\n@external(javascript, \"foo\", \"bar\")\nfn javascript_only() -> Int\n\n@external(erlang, \"foo\", \"bar\")\nfn erlang_only() -> Int\n\npub fn main() {\n    javascript_only()\n    erlang_only()\n}\n"
 ---
 error: Unsupported target
   ┌─ /src/one/two.gleam:9:5

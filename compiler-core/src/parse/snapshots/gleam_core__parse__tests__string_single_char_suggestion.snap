@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 782
 expression: "\n    pub fn main() {\n        let a = 'example'\n      }\n    "
 ---
 error: Syntax error

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 711
 expression: "\npub fn main() {\n  add(_name, 1)\n}\n\nfn add(x, y) {\n  x + y\n}\n"
 ---
 error: Syntax error
@@ -12,4 +11,3 @@ error: Syntax error
 Expected one of: 
 An expression
 An underscore
-

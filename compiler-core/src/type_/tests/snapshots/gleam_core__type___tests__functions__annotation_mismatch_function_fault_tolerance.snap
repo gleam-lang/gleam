@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/functions.rs
-assertion_line: 212
 expression: "\npub fn bad(x: Int) -> Float {\n  // This does not match the return annotation\n  1\n}\n\npub fn user() -> Float {\n  // This checks that the bad function is still usable, the types coming from\n  // its annotations. This function is valid.\n  bad(1)\n}\n\n// Another bad function to make sure that analysis has not stopped. This error\n// should also be emitted.\npub fn bad_2() {\n  bad(Nil)\n}\n"
 ---
 error: Type mismatch

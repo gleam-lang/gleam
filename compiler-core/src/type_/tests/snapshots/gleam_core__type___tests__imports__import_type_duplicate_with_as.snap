@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/imports.rs
-assertion_line: 226
 expression: "import one.{type One as MyOne, type One as MyOne}\n\npub type X = One\n"
 ---
 error: Duplicate type definition

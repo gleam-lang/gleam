@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 139
 expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" <> name -> name\n    _ -> \"Unknown\"\n  }\n}\n"
 ---
 -module(my@mod).
@@ -17,4 +16,3 @@ go(X) ->
         _ ->
             <<"Unknown"/utf8>>
     end.
-

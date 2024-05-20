@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 69
 expression: "let x = <<1:int-bytes>> x"
 ---
 error: Invalid bit array segment

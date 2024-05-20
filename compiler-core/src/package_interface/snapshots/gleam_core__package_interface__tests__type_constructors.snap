@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-assertion_line: 263
 expression: "\npub type Box(a, b) {\n  Box(b, Int)\n  OtherBox(message: String, a: a)\n}\n"
 ---
 {

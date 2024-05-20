@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/let_assert.rs
-assertion_line: 17
 expression: "pub fn go(x) {\n  let assert [1, a, b, c] = x\n  [a, b, c]\n}"
 ---
 -module(my@mod).
@@ -21,4 +20,3 @@ go(X) ->
                         line => 2})
     end,
     [A, B, C].
-

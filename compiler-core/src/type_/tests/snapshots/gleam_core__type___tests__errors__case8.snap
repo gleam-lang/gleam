@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 453
 expression: "case [3.33], 1 { x, y if x <= y -> 1 }"
 ---
 error: Type mismatch
@@ -16,4 +15,3 @@ Expected type:
 Found type:
 
     List(Float)
-

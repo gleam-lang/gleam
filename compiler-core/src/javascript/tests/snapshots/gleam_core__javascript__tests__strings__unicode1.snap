@@ -5,4 +5,3 @@ expression: "\npub fn emoji() -> String {\n  \"\\u{1f600}\"\n}\n"
 export function emoji() {
   return "\u{1f600}";
 }
-

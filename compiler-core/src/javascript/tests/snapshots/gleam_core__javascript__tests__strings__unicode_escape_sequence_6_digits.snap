@@ -5,4 +5,3 @@ expression: "\npub fn unicode_escape_sequence_6_digits() -> String {\n  \"\\u{10
 export function unicode_escape_sequence_6_digits() {
   return "\u{10abcd}";
 }
-

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-expression: "\ntype A { \n    A(type: String)\n}\n"
+expression: "\ntype A {\n    A(type: String)\n}\n"
 ---
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:7

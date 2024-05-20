@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 52
 expression: "\nfn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
@@ -38,4 +37,3 @@ function go(x, y) {
   }
   return y;
 }
-

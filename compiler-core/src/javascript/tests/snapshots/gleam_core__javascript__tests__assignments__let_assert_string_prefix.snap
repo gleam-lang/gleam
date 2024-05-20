@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 179
 expression: "\npub fn main() {\n  let assert \"Game \" <> id = \"Game 1\"\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
@@ -20,4 +19,3 @@ export function main() {
   let id = $.slice(5);
   return $;
 }
-

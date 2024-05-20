@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/variables.rs
-assertion_line: 34
 expression: "\npub fn main(x) {\n  fn(x) { x }(x)\n}\n"
 ---
 -module(my@mod).
@@ -11,4 +10,3 @@ expression: "\npub fn main(x) {\n  fn(x) { x }(x)\n}\n"
 -spec main(I) -> I.
 main(X) ->
     (fun(X@1) -> X@1 end)(X).
-

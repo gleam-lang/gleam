@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-assertion_line: 275
 expression: "pub fn main() { 1 }"
 ---
 {

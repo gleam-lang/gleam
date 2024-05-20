@@ -1,9 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 955
 expression: "\nimport module.{a}\n\npub fn b() {\n  a\n}\n"
 ---
-
 warning: Deprecated value used
   ┌─ /src/warning/wrn.gleam:5:3
   │
@@ -11,4 +9,3 @@ warning: Deprecated value used
   │   ^ This value has been deprecated
 
 It was deprecated with this message: Don't use this!
-

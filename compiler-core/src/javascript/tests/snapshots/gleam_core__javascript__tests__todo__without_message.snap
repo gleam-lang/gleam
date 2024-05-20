@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/todo.rs
-assertion_line: 5
 expression: "\nfn go() {\n    todo\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
@@ -15,4 +14,3 @@ function go() {
     {}
   )
 }
-

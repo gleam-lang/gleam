@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 602
 expression: "\npub fn main() {\n  0.0\n}\n"
 ---
 -module(my@mod).
@@ -11,4 +10,3 @@ expression: "\npub fn main() {\n  0.0\n}\n"
 -spec main() -> float().
 main() ->
     +0.0.
-

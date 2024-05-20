@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 478
 expression: "pub type X { Fun(Int) }"
 ---
 -module(my@mod).
@@ -9,6 +8,3 @@ expression: "pub type X { Fun(Int) }"
 -export_type([x/0]).
 
 -type x() :: {'fun', integer()}.
-
-
-

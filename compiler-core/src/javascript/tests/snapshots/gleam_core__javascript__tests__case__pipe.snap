@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 122
 expression: "\nfn go(x, f) {\n  case x |> f {\n    0 -> 1\n    _ -> 2\n  }\n}\n"
 ---
 function go(x, f) {
@@ -14,4 +13,3 @@ function go(x, f) {
     return 2;
   }
 }
-

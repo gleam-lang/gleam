@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 29
 expression: "let <<x:utf32>> = <<1>> x"
 ---
 error: Invalid bit array segment

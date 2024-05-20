@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1161
 expression: "const pair = #(1, 2.0)\nfn main() { 1 == pair }"
 ---
 error: Type mismatch
@@ -16,4 +15,3 @@ Expected type:
 Found type:
 
     #(Int, Float)
-

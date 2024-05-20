@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 82
 expression: "const bit_size = 8\npub fn main() {\n  let a = <<10:size(bit_size)>>\n  a\n}\n"
 ---
 -module(my@mod).

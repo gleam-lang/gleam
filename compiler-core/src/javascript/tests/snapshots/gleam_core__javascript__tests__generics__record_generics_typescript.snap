@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/generics.rs
-assertion_line: 15
 expression: "pub type Animal(t) {\n  Cat(type_: t)\n  Dog(type_: t)\n}\n\npub fn main() {\n  Cat(type_: 6)\n}\n"
 ---
 import type * as _ from "../gleam.d.mts";
@@ -20,4 +19,3 @@ export class Dog<I> extends _.CustomType {
 export type Animal$<I> = Cat<I> | Dog<I>;
 
 export function main(): Animal$<number>;
-

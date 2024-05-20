@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 49
 expression: "\nfn go() {\n  <<1.1:float>>\n}\n"
 ---
 import { toBitArray, float64Bits } from "../gleam.mjs";
@@ -8,4 +7,3 @@ import { toBitArray, float64Bits } from "../gleam.mjs";
 function go() {
   return toBitArray([float64Bits(1.1)]);
 }
-

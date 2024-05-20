@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 650
 expression: "pub type Cat { Cat(name: String) }\n\npub fn return_unapplied_cat() {\n  Cat\n}\n"
 ---
 import type * as _ from "../gleam.d.mts";
@@ -14,4 +13,3 @@ export class Cat extends _.CustomType {
 export type Cat$ = Cat;
 
 export function return_unapplied_cat(): (x0: string) => Cat$;
-

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/case_clause_guards.rs
-assertion_line: 275
 expression: "\n          import hero\n          pub fn main() {\n            let name = \"Bruce Wayne\"\n            case name {\n              n if n == hero.batman.secret_identity.name -> True\n              _ -> False\n            }\n          }\n        "
 ---
 import * as $hero from "../../package/hero.mjs";
@@ -14,4 +13,3 @@ export function main() {
     return false;
   }
 }
-

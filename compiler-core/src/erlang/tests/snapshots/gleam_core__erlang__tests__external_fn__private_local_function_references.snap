@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 52
 expression: "\n@external(erlang, \"m\", \"f\")\nfn go(x: Int, y: Int) -> Int\npub fn x() { go }\n"
 ---
 -module(my@mod).
@@ -11,4 +10,3 @@ expression: "\n@external(erlang, \"m\", \"f\")\nfn go(x: Int, y: Int) -> Int\npu
 -spec x() -> fun((integer(), integer()) -> integer()).
 x() ->
     fun m:f/2.
-

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 787
 expression: "type PrivateType\n@external(erlang, \"a\", \"b\")\nfn go() -> PrivateType\npub fn leak_type() { [go()] }"
 ---
 error: Private type used in public interface
@@ -14,4 +13,3 @@ The following type is private, but is being used by this public export.
     PrivateType
 
 Private types can only be used within the module that defines them.
-

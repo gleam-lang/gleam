@@ -1,9 +1,0 @@
----
-source: compiler-core/src/javascript/tests/functions.rs
-expression: "pub fn main() {\n  \n  \n    let a = fn(a) { a + 1 } (10)\n}\n"
----
-export function main() {
-  let a = ((a) => { return a + 1; })(10);
-  return a;
-}
-

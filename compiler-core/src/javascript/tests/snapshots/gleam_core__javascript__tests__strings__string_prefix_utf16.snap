@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-assertion_line: 81
 expression: "\npub fn go(x) {\n  case \"Θ foo bar\" {\n    \"Θ\" <> rest -> rest\n    _ -> \"\"\n  }\n  case \"🫥 is neutral dotted\" {\n    \"🫥\" <> rest -> rest\n    _ -> \"\"\n  }\n  case \"🇺🇸 is a cluster\" {\n    \"🇺🇸\" <> rest -> rest\n    _ -> \"\"\n  }\n  case \"\\\" is a an escaped quote\" {\n    \"\\\"\" <> rest -> rest\n    _ -> \"\"\n  }\n  case \"\\\\ is a an escaped backslash\" {\n    \"\\\\\" <> rest -> rest\n    _ -> \"\"\n  }\n}\n"
 ---
 export function go(x) {
@@ -40,4 +39,3 @@ export function go(x) {
     return "";
   }
 }
-

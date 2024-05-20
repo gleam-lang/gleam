@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/variables.rs
-assertion_line: 58
 expression: "pub fn go() {\n  let _r = 1\n  let _r = 2\n  Nil\n}"
 ---
 -module(my@mod).
@@ -13,4 +12,3 @@ go() ->
     _ = 1,
     _ = 2,
     nil.
-

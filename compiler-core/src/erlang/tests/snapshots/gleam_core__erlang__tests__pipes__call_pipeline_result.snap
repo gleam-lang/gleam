@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-assertion_line: 106
 expression: "\npub fn main() {\n  { 1 |> add }(1)\n}\n\npub fn add(x) {\n  fn(y) { x + y }\n}\n"
 ---
 -module(my@mod).
@@ -18,4 +17,3 @@ main() ->
         _pipe = 1,
         add(_pipe)
     end(1).
-

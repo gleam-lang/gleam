@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-assertion_line: 208
 expression: "\nfn b() {\n  {\n    1 + 2\n  }\n}\n"
 ---
 function b() {

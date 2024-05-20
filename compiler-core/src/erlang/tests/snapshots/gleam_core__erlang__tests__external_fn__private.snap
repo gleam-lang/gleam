@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 233
 expression: "\npub fn main() {\n  do()\n}\n\n@external(erlang, \"library\", \"main\")\nfn do() -> Int\n"
 ---
 -module(my@mod).
@@ -11,4 +10,3 @@ expression: "\npub fn main() {\n  do()\n}\n\n@external(erlang, \"library\", \"ma
 -spec main() -> integer().
 main() ->
     library:main().
-

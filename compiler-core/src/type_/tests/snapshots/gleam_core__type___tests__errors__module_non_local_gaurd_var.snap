@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 850
 expression: "fn one() { 1 }\nfn main() { case 1 { _ if one -> 1 } }"
 ---
 error: Invalid guard variable
@@ -11,4 +10,3 @@ error: Invalid guard variable
 
 Variables used in guards must be either defined in the function, or be an
 argument to the function. The variable `one` is not defined locally.
-

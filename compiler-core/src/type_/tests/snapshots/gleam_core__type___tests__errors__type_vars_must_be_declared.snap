@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1359
 expression: "type A(a) { A }\ntype B = a"
 ---
 error: Unknown type
@@ -10,4 +9,3 @@ error: Unknown type
   │          ^ Did you mean `A`?
 
 The type `a` is not defined or imported in this module.
-

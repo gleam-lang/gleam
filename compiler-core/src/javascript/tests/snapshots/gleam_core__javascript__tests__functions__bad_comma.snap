@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 412
 expression: "\nfn function_with_a_long_name_that_is_intended_to_sit_right_on_the_limit() {\n  Nil\n}\n\nfn identity(x) {\n  x\n}\n\npub fn main() {\n  function_with_a_long_name_that_is_intended_to_sit_right_on_the_limit()\n  |> identity\n}\n"
 ---
 function function_with_a_long_name_that_is_intended_to_sit_right_on_the_limit() {
@@ -15,4 +14,3 @@ export function main() {
   let _pipe = function_with_a_long_name_that_is_intended_to_sit_right_on_the_limit();
   return identity(_pipe);
 }
-

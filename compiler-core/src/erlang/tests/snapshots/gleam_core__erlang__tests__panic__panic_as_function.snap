@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/panic.rs
-assertion_line: 27
 expression: "\npub fn retstring() {\n  \"wibble\"\n}\npub fn main() {\n  panic as { retstring() <> \"wobble\" }\n}\n"
 ---
 -module(my@mod).
@@ -19,4 +18,3 @@ main() ->
             module => <<"my/mod"/utf8>>,
             function => <<"main"/utf8>>,
             line => 6}).
-

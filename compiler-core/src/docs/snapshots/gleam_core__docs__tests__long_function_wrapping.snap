@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/docs/tests.rs
-assertion_line: 76
 expression: "compile(config, modules)"
 ---
 //// app.html

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 49
 expression: "case <<1>> { <<a:utf16_codepoint>> if a == \"test\" -> 1 }"
 ---
 error: Type mismatch
@@ -16,4 +15,3 @@ Expected type:
 Found type:
 
     String
-

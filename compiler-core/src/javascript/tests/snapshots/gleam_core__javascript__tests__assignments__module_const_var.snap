@@ -15,4 +15,3 @@ export const compound = [int, int_alias];
 export function use_compound() {
   return compound[0] + compound[1];
 }
-

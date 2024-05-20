@@ -14,4 +14,3 @@ function go() {
   let a$1 = 10;
   return a$1 + 20;
 }
-

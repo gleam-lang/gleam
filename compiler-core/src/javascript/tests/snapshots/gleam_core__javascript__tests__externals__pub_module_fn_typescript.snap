@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
-assertion_line: 28
 expression: "\n@external(javascript, \"utils\", \"inspect\")\npub fn show(x: anything) -> Nil"
 ---
 export function show(x: any): undefined;

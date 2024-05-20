@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-assertion_line: 62
 expression: "pub fn x(f) {\n  case 1 |> f {\n    x -> x\n  }\n}"
 ---
 -module(my@mod).
@@ -17,4 +16,3 @@ x(F) ->
         X ->
             X
     end.
-

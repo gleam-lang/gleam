@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 627
 expression: "pub type Thing {\n  Thing(in: Int, class: Nil)\n}\n"
 ---
 import { CustomType as $CustomType } from "../gleam.mjs";
@@ -12,4 +11,3 @@ export class Thing extends $CustomType {
     this.class = class$;
   }
 }
-

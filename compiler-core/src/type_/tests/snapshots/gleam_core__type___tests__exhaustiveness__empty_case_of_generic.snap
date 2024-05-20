@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 909
 expression: "\npub fn main(x: something) {\n  case x {\n  }\n}\n"
 ---
 error: Inexhaustive patterns

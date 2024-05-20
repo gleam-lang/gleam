@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 578
 expression: pub type Dynamic
 ---
 -module(my@mod).
@@ -9,6 +8,3 @@ expression: pub type Dynamic
 -export_type([dynamic_/0]).
 
 -type dynamic_() :: any().
-
-
-

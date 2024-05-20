@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 662
 expression: "pub opaque type Animal {\n  Cat(goes_outside: Bool)\n  Dog(plays_fetch: Bool)\n}\n"
 ---
 import type * as _ from "../gleam.d.mts";
@@ -18,4 +17,3 @@ class Dog extends _.CustomType {
 }
 
 export type Animal$ = Cat | Dog;
-

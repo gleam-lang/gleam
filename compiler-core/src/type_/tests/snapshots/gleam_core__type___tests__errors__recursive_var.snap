@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 363
 expression: "let id = fn(x) { x(x) } 1"
 ---
 error: Recursive type
@@ -13,4 +12,3 @@ I don't know how to work out what type this value has. It seems
 to be defined in terms of itself.
 
 Hint: Add some type annotations and try again.
-

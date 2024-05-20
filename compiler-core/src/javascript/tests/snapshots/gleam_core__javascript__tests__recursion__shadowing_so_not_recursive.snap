@@ -1,9 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/recursion.rs
-assertion_line: 54
 expression: "\npub fn map(map) {\n  map()\n}\n"
 ---
 export function map(map) {
   return map();
 }
-

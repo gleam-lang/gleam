@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/externals.rs
-assertion_line: 178
 expression: "import module\npub fn main() {\n  module.javascript_only_constant()\n}"
 ---
 error: Unsupported target

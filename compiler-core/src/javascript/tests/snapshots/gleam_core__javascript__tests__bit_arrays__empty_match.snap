@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 181
 expression: "\nfn go(x) {\n  let assert <<>> = x\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
@@ -18,4 +17,3 @@ function go(x) {
   }
   return x;
 }
-

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 476
 expression: "let bar:Int = 32\n        bar = 42"
 ---
 error: Syntax error

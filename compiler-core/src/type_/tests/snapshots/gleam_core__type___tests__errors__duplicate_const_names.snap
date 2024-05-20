@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1026
 expression: "const duplicate = 1\npub const duplicate = 1"
 ---
 error: Duplicate definition
@@ -13,4 +12,3 @@ error: Duplicate definition
 
 `duplicate` has been defined multiple times.
 Names in a Gleam module must be unique so one will need to be renamed.
-

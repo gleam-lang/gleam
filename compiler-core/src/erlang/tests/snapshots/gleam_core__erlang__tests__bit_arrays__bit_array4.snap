@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 70
 expression: "fn x() { 1 }\npub fn main() {\n  let a = <<x():int>>\n  a\n}\n"
 ---
 -module(my@mod).
@@ -16,4 +15,3 @@ x() ->
 main() ->
     A = <<(x())/integer>>,
     A.
-

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 390
 expression: "\npub fn main() {\n    let t = #(fn(x) { x })\n\n    t.0(5)\n}\n"
 ---
 -module(my@mod).
@@ -12,4 +11,3 @@ expression: "\npub fn main() {\n    let t = #(fn(x) { x })\n\n    t.0(5)\n}\n"
 main() ->
     T = {fun(X) -> X end},
     (erlang:element(1, T))(5).
-

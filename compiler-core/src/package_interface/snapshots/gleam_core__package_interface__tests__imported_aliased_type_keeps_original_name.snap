@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-assertion_line: 258
 expression: "\nimport other_module.{type Element as Alias} as module_alias\npub fn main() -> Alias(module_alias.Element(a)) {}\n"
 ---
 {

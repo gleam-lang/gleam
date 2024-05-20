@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-assertion_line: 190
 expression: pub type Wibble(a) = List(a)
 ---
 {

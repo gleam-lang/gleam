@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 247
 expression: "type Point { Point(x: Int, y: Int) } fn x(y) { let Point(a, b) = y a }"
 ---
 -module(my@mod).
@@ -14,4 +13,3 @@ expression: "type Point { Point(x: Int, y: Int) } fn x(y) { let Point(a, b) = y 
 x(Y) ->
     {point, A, B} = Y,
     A.
-

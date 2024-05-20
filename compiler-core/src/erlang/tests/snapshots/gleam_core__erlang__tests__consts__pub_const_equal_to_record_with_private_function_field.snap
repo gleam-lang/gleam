@@ -13,4 +13,3 @@ expression: "\n          fn identity(a) {\n            a\n          }\n\n       
 -spec identity(J) -> J.
 identity(A) ->
     A.
-

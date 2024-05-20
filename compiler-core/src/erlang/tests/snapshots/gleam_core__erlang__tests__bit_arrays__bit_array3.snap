@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 58
 expression: "pub fn main() {\n  let a = <<\"test\":utf8>>\n  let assert <<b:utf8_codepoint, \"st\":utf8>> = a\n  b\n}\n"
 ---
 -module(my@mod).
@@ -22,4 +21,3 @@ main() ->
                         line => 3})
     end,
     B.
-

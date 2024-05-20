@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-assertion_line: 173
 expression: "\nconst float = 1.1\nfn main() {}\ntype Wibble\ntype Wob = Int\n"
 ---
 {

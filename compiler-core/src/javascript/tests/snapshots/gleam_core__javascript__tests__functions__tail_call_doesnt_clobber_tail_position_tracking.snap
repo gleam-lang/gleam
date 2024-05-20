@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 120
 expression: "\npub fn loop(indentation) {\n  case indentation > 0 {\n    True -> loop(indentation - 1)\n    False -> Nil\n  }\n}\n"
 ---
 export function loop(loop$indentation) {
@@ -14,4 +13,3 @@ export function loop(loop$indentation) {
     }
   }
 }
-

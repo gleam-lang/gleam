@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/tuples.rs
-assertion_line: 16
 expression: "\nfn go() {\n  #(\n    \"1111111111111111111111111111111\",\n    #(\"1111111111111111111111111111111\", \"2\", \"3\"),\n    \"3\",\n  )\n}\n"
 ---
 function go() {
@@ -10,4 +9,3 @@ function go() {
     "3",
   ];
 }
-

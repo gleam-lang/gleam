@@ -7,4 +7,3 @@ export function int_identity(i: number): number;
 export const int_identity_alias: (x0: number) => number;
 
 export const compound: [(x0: number) => number, (x0: number) => number];
-

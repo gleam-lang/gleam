@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 167
 expression: "fn add(x, y) { x + y }\n                    pub fn go() { 1 |> add(_, 1) |> add(2, _) |> add(_, 3) }"
 ---
 -module(my@mod).
@@ -18,4 +17,3 @@ go() ->
     _pipe@1 = add(_pipe, 1),
     _pipe@2 = add(2, _pipe@1),
     add(_pipe@2, 3).
-

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 849
 expression: "\npub fn main(x) {\n  let True = x\n  0\n}\n"
 ---
 error: Inexhaustive pattern
@@ -18,4 +17,3 @@ The missing patterns are:
     False
 
 Hint: Use a more general pattern or use `let assert` instead.
-

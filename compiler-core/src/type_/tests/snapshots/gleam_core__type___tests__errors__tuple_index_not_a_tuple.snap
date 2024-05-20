@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 559
 expression: Nil.2
 ---
 error: Type mismatch
@@ -12,4 +11,3 @@ error: Type mismatch
 To index into this value it needs to be a tuple, however it has this type:
 
     Nil
-

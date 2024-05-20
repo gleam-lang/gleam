@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 219
 expression: "pub type Pair(x, y) { Pair(x: x, y: y) } pub fn x() { Pair(1, 2) Pair(3., 4.) }"
 ---
 -module(my@mod).
@@ -15,4 +14,3 @@ expression: "pub type Pair(x, y) { Pair(x: x, y: y) } pub fn x() { Pair(1, 2) Pa
 x() ->
     {pair, 1, 2},
     {pair, 3.0, 4.0}.
-

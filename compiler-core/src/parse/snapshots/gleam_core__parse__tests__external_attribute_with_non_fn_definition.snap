@@ -7,5 +7,3 @@ error: Syntax error
   │
 2 │ @external(erlang, "module", "fun")
   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ I was expecting a function definition after this
-
-

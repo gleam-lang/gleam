@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/case.rs
-assertion_line: 79
 expression: "\npub fn main() {\n  case [] {\n    [..] -> 1\n  }\n}\n"
 ---
 -module(my@mod).

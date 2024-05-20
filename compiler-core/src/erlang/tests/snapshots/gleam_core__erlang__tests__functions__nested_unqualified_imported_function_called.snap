@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/functions.rs
-assertion_line: 87
 expression: "\nimport some/other.{wibble}\n\npub fn main() {\n  wibble()\n}\n"
 ---
 -module(my@mod).
@@ -11,4 +10,3 @@ expression: "\nimport some/other.{wibble}\n\npub fn main() {\n  wibble()\n}\n"
 -spec main() -> nil.
 main() ->
     some@other:wibble().
-
