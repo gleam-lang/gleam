@@ -1896,3 +1896,76 @@ fn unreachable_use_after_panic() {
         "#
     );
 }
+
+#[test]
+fn unreachable_code_after_case_subject_panics_1() {
+    assert_warning!(
+        r#"
+        pub fn main(a, b) {
+            case a, panic, b {
+                _, _, _ -> "no warning here!"
+            }
+        }
+        "#
+    );
+}
+
+#[test]
+fn unreachable_code_after_case_subject_panics_2() {
+    assert_warning!(
+        r#"
+        pub fn main(a, b) {
+            case a, b, panic {
+                _, _, _ -> "no warning here!"
+            }
+            "warning here!"
+        }
+        "#
+    );
+}
+
+#[test]
+fn unreachable_code_analysis_treats_anonymous_functions_independently_1() {
+    assert_no_warnings!(
+        r#"
+        pub fn main() {
+            let _ = fn() {
+              panic
+            }
+            "no warning here!"
+        }
+        "#
+    );
+}
+
+#[test]
+fn unreachable_code_analysis_treats_anonymous_functions_independently_2() {
+    assert_warning!(
+        r#"
+        pub fn main() {
+            let _ = fn() {
+              panic
+              "warning here!"
+            }
+            panic
+            "warning here!"
+        }
+        "#
+    );
+}
+
+#[test]
+fn unreachable_code_analysis_treats_anonymous_functions_independently_3() {
+    assert_warning!(
+        r#"
+        pub fn main() {
+            panic
+            let _ = "warning here!"
+            let _ = fn() {
+              panic
+              "warning here!"
+            }
+        }
+        "#
+    );
+}

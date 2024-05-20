@@ -53,23 +53,21 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             assignments: Vec::with_capacity(size),
         };
 
-        let first_panic = first.always_panics();
         let first_location = first.location();
 
         // No need to update self.argument_* as we set it above
         typer.push_assignment_no_update(first);
 
         // Perform the type checking
-        typer.infer_expressions(expressions, first_panic, first_location)
+        typer.infer_expressions(expressions, first_location)
     }
 
     fn infer_expressions(
         &mut self,
         expressions: impl IntoIterator<Item = UntypedExpr>,
-        first_panics: bool,
         first_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let finally = self.infer_each_expression(expressions, first_panics, first_location);
+        let finally = self.infer_each_expression(expressions, first_location);
 
         // Return any errors after clean-up
         let finally = finally?;
@@ -85,7 +83,6 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     fn infer_each_expression(
         &mut self,
         expressions: impl IntoIterator<Item = UntypedExpr>,
-        mut previous_panics: bool,
         first_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let mut finally = None;
@@ -94,6 +91,10 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
 
         for (i, call) in expressions.into_iter().enumerate() {
             self.warn_if_is_todo_or_panic(&call, first_location, previous_expression_location);
+            if self.expr_typer.previous_panics {
+                self.expr_typer
+                    .warn_for_unreachable_code(call.location(), PanicPosition::PreviousExpression);
+            }
 
             let call = match call {
                 // left |> right(..args)
@@ -118,18 +119,6 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 // right(left)
                 call => self.infer_apply_pipe(call)?,
             };
-
-            // We don't want to emit a warning for unreachable code twice
-            // in the same block, so we only ever emit one if we haven't already.
-            if !self.expr_typer.already_warned_for_unreachable_code {
-                if previous_panics {
-                    self.expr_typer.warn_for_unreachable_code(
-                        call.location(),
-                        PanicPosition::PreviousExpression,
-                    );
-                }
-                previous_panics = call.always_panics();
-            }
 
             previous_expression_location = Some(call.location());
 

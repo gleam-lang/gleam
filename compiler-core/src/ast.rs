@@ -1853,17 +1853,6 @@ impl<T, E> Statement<T, E> {
     }
 }
 
-impl<T> Statement<T, TypedExpr> {
-    #[must_use]
-    pub fn always_panics(&self) -> bool {
-        match self {
-            Statement::Expression(expression) => expression.always_panics(),
-            Statement::Assignment(Assignment { value, .. }) => value.always_panics(),
-            Statement::Use(Use { .. }) => unreachable!("no untyped use in typed statement"),
-        }
-    }
-}
-
 impl UntypedStatement {
     pub fn location(&self) -> SrcSpan {
         match self {

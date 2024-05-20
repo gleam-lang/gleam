@@ -551,64 +551,6 @@ impl TypedExpr {
     }
 
     #[must_use]
-    pub(crate) fn always_panics(&self) -> bool {
-        match self {
-            TypedExpr::Panic { .. } => true,
-
-            TypedExpr::Int { .. }
-            | TypedExpr::Float { .. }
-            | TypedExpr::String { .. }
-            | TypedExpr::Todo { .. }
-            | TypedExpr::BitArray { .. }
-            | TypedExpr::Fn { .. }
-            | TypedExpr::Var { .. }
-            | TypedExpr::ModuleSelect { .. } => false,
-
-            TypedExpr::NegateBool { value, .. } => value.always_panics(),
-            TypedExpr::NegateInt { value, .. } => value.always_panics(),
-            TypedExpr::TupleIndex { tuple, .. } => tuple.always_panics(),
-            TypedExpr::RecordAccess { record, .. } => record.always_panics(),
-            TypedExpr::BinOp { left, right, .. } => left.always_panics() || right.always_panics(),
-            TypedExpr::Tuple { elems, .. } => elems.iter().any(|elem| elem.always_panics()),
-
-            TypedExpr::Block { statements, .. } => {
-                statements.iter().any(|statement| statement.always_panics())
-            }
-
-            TypedExpr::List { elements, tail, .. } => {
-                elements.iter().any(|element| element.always_panics())
-                    || tail.as_ref().map_or(false, |tail| tail.always_panics())
-            }
-
-            TypedExpr::Call { fun, args, .. } => {
-                fun.always_panics() || args.iter().any(|arg| arg.value.always_panics())
-            }
-
-            TypedExpr::RecordUpdate { spread, args, .. } => {
-                spread.as_ref().always_panics() || args.iter().any(|arg| arg.value.always_panics())
-            }
-
-            TypedExpr::Case {
-                subjects, clauses, ..
-            } => {
-                subjects.iter().any(|subject| subject.always_panics())
-                    || clauses.iter().all(|clause| clause.then.always_panics())
-            }
-
-            TypedExpr::Pipeline {
-                assignments,
-                finally,
-                ..
-            } => {
-                assignments
-                    .iter()
-                    .any(|assignment| assignment.value.always_panics())
-                    || finally.as_ref().always_panics()
-            }
-        }
-    }
-
-    #[must_use]
     pub(crate) fn is_panic(&self) -> bool {
         match self {
             TypedExpr::Panic { .. } => true,

@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n        pub fn main() {\n            panic\n            let _ = \"warning here!\"\n            let _ = fn() {\n              panic\n              \"warning here!\"\n            }\n        }\n        "
+---
+warning: Unreachable code
+  ┌─ /src/warning/wrn.gleam:4:21
+  │
+4 │             let _ = "warning here!"
+  │                     ^^^^^^^^^^^^^^^
+
+This code is unreachable because it comes after a `panic`.
+
+warning: Unreachable code
+  ┌─ /src/warning/wrn.gleam:7:15
+  │
+7 │               "warning here!"
+  │               ^^^^^^^^^^^^^^^
+
+This code is unreachable because it comes after a `panic`.
