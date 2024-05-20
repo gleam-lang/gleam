@@ -489,3 +489,6 @@
 - Fixed a bug where adding a comment to a case clause would cause it to break
   on multiple lines.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the formatter would not indent a case branch's arrow.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
