@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n        pub fn wibble(_) { 1 }\n        pub fn main() {\n            panic |> wibble\n        }\n        "
+---
+warning: Unreachable code
+  ┌─ /src/warning/wrn.gleam:4:22
+  │
+4 │             panic |> wibble
+  │                      ^^^^^^
+
+This code is unreachable because it comes after a `panic`.

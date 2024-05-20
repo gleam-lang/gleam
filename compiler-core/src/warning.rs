@@ -4,7 +4,7 @@ use crate::{
     error::wrap,
     type_::{
         self,
-        error::{LiteralCollectionKind, TodoOrPanic},
+        error::{LiteralCollectionKind, PanicPosition, TodoOrPanic},
         pretty::Printer,
     },
 };
@@ -789,8 +789,40 @@ See: https://tour.gleam.run/advanced-features/{name}/"
                         level: diagnostic::Level::Warning,
                         location: Some(Location {
                             label: diagnostic::Label {
-                                text: Some("".into()),
+                                text: None,
                                 span: *label_location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                type_::Warning::UnreachableCodeAfterPanic {
+                    location,
+                    panic_position: unreachable_code_kind,
+                } => {
+                    let text = match unreachable_code_kind {
+                        PanicPosition::PreviousExpression =>
+                            "This code is unreachable because it comes after a `panic`.",
+                        PanicPosition::PreviousFunctionArgument =>
+                            "This argument is unreachable because the previous one always panics. \
+Your code will crash before reaching this point.",
+                        PanicPosition::LastFunctionArgument =>
+                            "This function call is unreachable because its last argument always panics. \
+Your code will crash before reaching this point.",
+                    };
+
+                    Diagnostic {
+                        title: "Unreachable code".into(),
+                        text: wrap(text),
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
                             },
                             path: path.clone(),
                             src: src.clone(),

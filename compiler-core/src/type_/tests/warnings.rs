@@ -1670,3 +1670,290 @@ fn todo_used_as_function_3() {
         }"
     );
 }
+
+#[test]
+fn unreachable_warning_1() {
+    assert_warning!(
+        "pub fn main() {
+          panic
+          1
+        }"
+    );
+}
+
+#[test]
+fn unreachable_warning_2() {
+    assert_warning!(
+        "pub fn main() {
+          let _ = panic
+          1
+        }"
+    );
+}
+
+#[test]
+fn unreachable_warning_if_all_branches_panic() {
+    assert_warning!(
+        "pub fn main() {
+          let n = 1
+          case n {
+            0 -> panic
+            _ -> panic
+          }
+          1
+        }"
+    );
+}
+
+#[test]
+fn unreachable_warning_if_all_branches_panic_2() {
+    assert_warning!(
+        "pub fn main() {
+          let n = 1
+          case n {
+            0 -> {
+              panic
+              2
+            }
+            _ -> panic
+          }
+          1
+        }"
+    );
+}
+
+#[test]
+fn no_unreachable_warning_if_at_least_a_branch_is_reachable() {
+    assert_no_warnings!(
+        "pub fn main() {
+          let n = 1
+          case n {
+            0 -> panic
+            _ -> 1
+          }
+          1
+        }"
+    );
+}
+
+#[test]
+fn unreachable_warning_doesnt_escape_out_of_a_block_if_panic_is_not_last() {
+    assert_warning!(
+        "pub fn main() {
+          let n = {
+            panic
+            1
+          }
+          n
+        }"
+    );
+}
+
+#[test]
+fn unreachable_warning_on_following_expression_if_panic_is_last_in_a_block() {
+    assert_warning!(
+        "pub fn main() {
+          let _ = {
+            panic
+          }
+          1
+        }"
+    );
+}
+
+#[test]
+fn unreachable_function_argument_if_panic_is_argument() {
+    assert_warning!(
+        "
+        pub fn wibble(_, _) { 1 }
+        pub fn main() {
+          wibble(panic, 1)
+        }"
+    );
+}
+
+#[test]
+fn unreachable_function_call_if_panic_is_last_argument_1() {
+    assert_warning!(
+        "
+        pub fn wibble(_, _) { 1 }
+        pub fn main() {
+          wibble(1, panic)
+          1
+        }"
+    );
+}
+
+#[test]
+fn unreachable_function_call_if_panic_is_last_argument_2() {
+    assert_warning!(
+        "
+        pub fn wibble(_, _) { 1 }
+        pub fn main() {
+          wibble(1, panic)
+        }"
+    );
+}
+
+#[test]
+fn no_unreachable_warning_if_panic_comes_last_in_function_body() {
+    assert_no_warnings!(
+        "
+        pub fn wibble() { panic }
+        pub fn main() { panic }"
+    );
+}
+
+#[test]
+fn unreachable_code_for_panic_as_first_pipeline_item() {
+    assert_warning!(
+        "
+        pub fn wibble(_) { 1 }
+        pub fn main() {
+            panic |> wibble
+        }
+        "
+    );
+}
+
+#[test]
+fn panic_used_as_function_inside_pipeline() {
+    assert_warning!(
+        "
+        pub fn wibble(_) { 1 }
+        pub fn main() {
+            1 |> panic |> wibble
+        }
+        "
+    );
+}
+
+#[test]
+fn unreachable_warning_for_panic_as_last_item_of_pipe_on_next_expression() {
+    assert_warning!(
+        r#"
+        pub fn wibble(_) { 1 }
+        pub fn main() {
+            1 |> wibble |> panic
+            "unreachable"
+        }
+        "#
+    );
+}
+
+#[test]
+fn doesnt_warn_twice_for_unreachable_code_if_has_already_warned_in_a_block_1() {
+    assert_warning!(
+        r#"
+        pub fn wibble(_) { 1 }
+        pub fn main() {
+            panic
+            let _ = "unreachable" // warning here
+            panic
+            "no warning here!"
+        }
+        "#
+    );
+}
+
+#[test]
+fn doesnt_warn_twice_for_unreachable_code_if_has_already_warned_in_a_block_2() {
+    assert_warning!(
+        r#"
+        pub fn main() {
+            let _ = {
+              panic
+              1 // warning here
+            }
+            "no warning here!"
+        }
+        "#
+    );
+}
+
+#[test]
+fn unreachable_use_after_panic() {
+    assert_warning!(
+        r#"
+        pub fn wibble(_) { 1 }
+        pub fn main() {
+            panic
+            use <- wibble
+            1
+        }
+        "#
+    );
+}
+
+#[test]
+fn unreachable_code_after_case_subject_panics_1() {
+    assert_warning!(
+        r#"
+        pub fn main(a, b) {
+            case a, panic, b {
+                _, _, _ -> "no warning here!"
+            }
+        }
+        "#
+    );
+}
+
+#[test]
+fn unreachable_code_after_case_subject_panics_2() {
+    assert_warning!(
+        r#"
+        pub fn main(a, b) {
+            case a, b, panic {
+                _, _, _ -> "no warning here!"
+            }
+            "warning here!"
+        }
+        "#
+    );
+}
+
+#[test]
+fn unreachable_code_analysis_treats_anonymous_functions_independently_1() {
+    assert_no_warnings!(
+        r#"
+        pub fn main() {
+            let _ = fn() {
+              panic
+            }
+            "no warning here!"
+        }
+        "#
+    );
+}
+
+#[test]
+fn unreachable_code_analysis_treats_anonymous_functions_independently_2() {
+    assert_warning!(
+        r#"
+        pub fn main() {
+            let _ = fn() {
+              panic
+              "warning here!"
+            }
+            panic
+            "warning here!"
+        }
+        "#
+    );
+}
+
+#[test]
+fn unreachable_code_analysis_treats_anonymous_functions_independently_3() {
+    assert_warning!(
+        r#"
+        pub fn main() {
+            panic
+            let _ = "warning here!"
+            let _ = fn() {
+              panic
+              "warning here!"
+            }
+        }
+        "#
+    );
+}

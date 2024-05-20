@@ -549,6 +549,14 @@ impl TypedExpr {
             _ => None,
         }
     }
+
+    #[must_use]
+    pub(crate) fn is_panic(&self) -> bool {
+        match self {
+            TypedExpr::Panic { .. } => true,
+            _ => false,
+        }
+    }
 }
 
 impl<'a> From<&'a TypedExpr> for Located<'a> {

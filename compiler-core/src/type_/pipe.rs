@@ -52,6 +52,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             },
             assignments: Vec::with_capacity(size),
         };
+
         // No need to update self.argument_* as we set it above
         typer.push_assignment_no_update(first);
 
@@ -67,9 +68,10 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
 
         // Return any errors after clean-up
         let finally = finally?;
+        let assignments = std::mem::take(&mut self.assignments);
 
         Ok(TypedExpr::Pipeline {
-            assignments: std::mem::take(&mut self.assignments),
+            assignments,
             location: self.location,
             finally: Box::new(finally),
         })
@@ -80,7 +82,14 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         expressions: impl IntoIterator<Item = UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let mut finally = None;
+        let expressions = expressions.into_iter().collect_vec();
+
         for (i, call) in expressions.into_iter().enumerate() {
+            if self.expr_typer.previous_panics {
+                self.expr_typer
+                    .warn_for_unreachable_code(call.location(), PanicPosition::PreviousExpression);
+            }
+
             let call = match call {
                 // left |> right(..args)
                 UntypedExpr::Call {
@@ -104,6 +113,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 // right(left)
                 call => self.infer_apply_pipe(call)?,
             };
+
             if i + 2 == self.size {
                 finally = Some(call);
             } else {

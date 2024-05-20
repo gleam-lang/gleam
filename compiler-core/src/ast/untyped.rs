@@ -225,6 +225,16 @@ impl UntypedExpr {
     pub fn is_pipeline(&self) -> bool {
         matches!(self, Self::PipeLine { .. })
     }
+
+    #[must_use]
+    pub fn is_todo(&self) -> bool {
+        matches!(self, Self::Todo { .. })
+    }
+
+    #[must_use]
+    pub fn is_panic(&self) -> bool {
+        matches!(self, Self::Panic { .. })
+    }
 }
 
 impl HasLocation for UntypedExpr {

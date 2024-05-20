@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n        pub fn wibble(_) { 1 }\n        pub fn main() {\n            1 |> wibble |> panic\n        }\n        "
+---
+warning: Panic used as a function
+  ┌─ /src/warning/wrn.gleam:4:13
+  │
+4 │             1 |> wibble |> panic
+  │             ^^^^^^^^^^^
+
+`panic` is not a function and will crash before it can do anything with
+this argument.
+
+Hint: if you want to display an error message you should write
+`panic as "my error message"`
+See: https://tour.gleam.run/advanced-features/panic/
