@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n        pub fn main(a, b) {\n            case a, panic, b {\n                _, _, _ -> \"no warning here!\"\n            }\n        }\n        "
+---
+warning: Unreachable code
+  ┌─ /src/warning/wrn.gleam:3:28
+  │
+3 │             case a, panic, b {
+  │                            ^
+
+This code is unreachable because it comes after a `panic`.
