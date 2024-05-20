@@ -1,5 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
-use crate::build::{Runtime, Target};
+use crate::build::{Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, Label, Location};
 use crate::type_::error::RecordVariants;
 use crate::type_::error::{MissingAnnotation, UnknownTypeHint};
@@ -390,6 +390,12 @@ impl Error {
         Self::ExpandTar {
             error: error.to_string(),
         }
+    }
+}
+
+impl<T> From<Error> for Outcome<T, Error> {
+    fn from(error: Error) -> Self {
+        Outcome::TotalFailure(error)
     }
 }
 

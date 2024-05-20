@@ -28,7 +28,7 @@ use std::{
     time::Instant,
 };
 
-use super::{elixir_libraries::ElixirLibraries, Codegen, ErlangAppCodegenConfiguration};
+use super::{elixir_libraries::ElixirLibraries, Codegen, ErlangAppCodegenConfiguration, Outcome};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -561,15 +561,15 @@ where
         };
 
         // Compile project to Erlang or JavaScript source code
-        let compiled = compiler.compile(
-            &mut self.warnings,
-            &mut self.importable_modules,
-            &mut self.defined_modules,
-            &mut self.stale_modules,
-            self.telemetry.as_ref(),
-        )?;
-
-        Ok(compiled)
+        compiler
+            .compile(
+                &mut self.warnings,
+                &mut self.importable_modules,
+                &mut self.defined_modules,
+                &mut self.stale_modules,
+                self.telemetry.as_ref(),
+            )
+            .into_result()
     }
 }
 

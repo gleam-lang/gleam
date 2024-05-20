@@ -10,7 +10,7 @@ use crate::{
         TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
         TypedFunction, TypedModule, UntypedArg, UntypedFunction, UntypedModule, UntypedStatement,
     },
-    build::{Origin, Target},
+    build::{Origin, Outcome, Target},
     call_graph::{into_dependency_order, CallGraphNode},
     config::PackageConfig,
     dep_tree,
@@ -112,23 +112,9 @@ impl TargetSupport {
     }
 }
 
-#[derive(Debug)]
-pub struct AnalysisFailure {
-    // Right now this is an option because we don't complete the module typing on error
-    // Once we add proper type holes and always return a module this should not be an option
-    pub ast: Option<TypedModule>,
-    // All the inference errors that occurred during type inference
-    pub errors: Vec1<Error>,
-}
-
-impl From<Error> for AnalysisFailure {
-    // Used to create InferenceFailure from a singe error.
-    // Should not be needed once we start actually collecting all the errors.
+impl<T> From<Error> for Outcome<T, Vec1<Error>> {
     fn from(error: Error) -> Self {
-        AnalysisFailure {
-            ast: None,
-            errors: vec1::vec1![error],
-        }
+        Outcome::TotalFailure(Vec1::new(error))
     }
 }
 
@@ -157,7 +143,7 @@ impl<'a, A> ModuleAnalyzerConstructor<'a, A> {
         module: UntypedModule,
         line_numbers: LineNumbers,
         src_path: Utf8PathBuf,
-    ) -> Result<TypedModule, AnalysisFailure> {
+    ) -> Outcome<TypedModule, Vec1<Error>> {
         ModuleAnalyzer {
             target: self.target,
             ids: self.ids,
@@ -198,11 +184,10 @@ struct ModuleAnalyzer<'a, A> {
 }
 
 impl<'a, A> ModuleAnalyzer<'a, A> {
-    pub fn infer_module(
-        mut self,
-        mut module: UntypedModule,
-    ) -> Result<TypedModule, AnalysisFailure> {
-        validate_module_name(&self.module_name)?;
+    pub fn infer_module(mut self, mut module: UntypedModule) -> Outcome<TypedModule, Vec1<Error>> {
+        if let Err(e) = validate_module_name(&self.module_name) {
+            return e.into();
+        }
 
         let documentation = std::mem::take(&mut module.documentation);
         let env = Environment::new(
@@ -226,15 +211,23 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Register types so they can be used in constructors and functions
         // earlier in the module.
         for t in &statements.custom_types {
-            self.register_types_from_custom_type(t, &mut env)?;
+            if let Err(e) = self.register_types_from_custom_type(t, &mut env) {
+                return e.into();
+            }
         }
-        let sorted_aliases = sorted_type_aliases(&statements.type_aliases)?;
+
+        let sorted_aliases = match sorted_type_aliases(&statements.type_aliases) {
+            Ok(it) => it,
+            Err(err) => return err.into(),
+        };
         for t in sorted_aliases {
             self.register_type_alias(t, &mut env);
         }
 
         for f in &statements.functions {
-            self.register_value_from_function(f, &mut env)?;
+            if let Err(e) = self.register_value_from_function(f, &mut env) {
+                return e.into();
+            }
         }
 
         // Infer the types of each statement in the module
@@ -252,7 +245,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Sort functions and constants into dependency order for inference. Definitions that do
         // not depend on other definitions are inferred first, then ones that depend
         // on those, etc.
-        let definition_groups = into_dependency_order(statements.functions, statements.constants)?;
+        let definition_groups =
+            match into_dependency_order(statements.functions, statements.constants) {
+                Ok(it) => it,
+                Err(err) => return err.into(),
+            };
         let mut working_group = vec![];
 
         for group in definition_groups {
@@ -306,7 +303,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Sort the errors by location so that they are easier to debug.
         self.errors.sort_by_key(|e| e.start_location());
 
-        let ast = ast::Module {
+        let module = ast::Module {
             documentation,
             name: self.module_name.clone(),
             definitions: typed_statements,
@@ -327,11 +324,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         };
 
         match Vec1::try_from_vec(self.errors) {
-            Err(_) => Ok(ast),
-            Ok(errors) => Err(AnalysisFailure {
-                ast: Some(ast),
-                errors,
-            }),
+            Err(_) => Outcome::Ok(module),
+            Ok(errors) => Outcome::PartialFailure(module, errors),
         }
     }
 
