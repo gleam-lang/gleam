@@ -440,7 +440,7 @@
 - Completions are now provided for values and types for use in unqualified
   imports. ([Ameen Radwan](https://github.com/Acepie))
 
-- `.` is now advertised as a completion trigger character.
+- The character `.` is now advertised as a completion trigger character.
   ([Louis Pilfold](https://github.com/lpil))
 
 - A new code action has been added to remove redundant tuples around case
@@ -462,6 +462,12 @@
     _, _ -> 1
   }
   ```
+
+- The language server will now register information about code even when there
+  was a type error or similar. This means that the language server will be able
+  to produce some up-to-date information about the project, even when errors are
+  present. This should greatly improve the experience using the language serer.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ### Bug Fixes
 
