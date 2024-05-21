@@ -465,4 +465,12 @@ where
             Outcome::PartialFailure(_, e) | Outcome::TotalFailure(e) => Err(e),
         }
     }
+
+    pub fn map<T2>(self, f: impl FnOnce(T) -> T2) -> Outcome<T2, E> {
+        match self {
+            Outcome::Ok(t) => Outcome::Ok(f(t)),
+            Outcome::PartialFailure(t, e) => Outcome::PartialFailure(f(t), e),
+            Outcome::TotalFailure(e) => Outcome::TotalFailure(e),
+        }
+    }
 }

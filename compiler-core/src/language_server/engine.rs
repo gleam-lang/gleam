@@ -130,13 +130,14 @@ where
         self.compiled_since_last_feedback = true;
 
         self.progress_reporter.compilation_started();
-        let result = self.compiler.compile();
+        let outcome = self.compiler.compile();
         self.progress_reporter.compilation_finished();
 
-        let modules = result?;
-        self.modules_compiled_since_last_feedback.extend(modules);
-
-        Ok(())
+        outcome
+            // Register which modules have changed
+            .map(|modules| self.modules_compiled_since_last_feedback.extend(modules))
+            // Return the error, if present
+            .into_result()
     }
 
     fn take_warnings(&mut self) -> Vec<Warning> {
