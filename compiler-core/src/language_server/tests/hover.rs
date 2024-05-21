@@ -33,15 +33,9 @@ fn(Int) -> Int
                 .to_string()
             )),
             range: Some(Range {
-                start: Position {
-                    line: 1,
-                    character: 0,
-                },
-                end: Position {
-                    line: 1,
-                    character: 11,
-                },
-            },),
+                start: Position::new(1, 0),
+                end: Position::new(1, 11)
+            }),
         })
     );
 }
@@ -830,4 +824,25 @@ pub type MyType {
             range: Some(Range::new(Position::new(1, 23), Position::new(1, 34))),
         })
     )
+}
+
+#[test]
+fn hover_works_even_for_invalid_code() {
+    let code = "
+fn invalid() { 1 + Nil }
+fn valid() { Nil }
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(2, 3)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nfn() -> Nil\n```\n".to_string()
+            )),
+            range: Some(Range {
+                start: Position::new(2, 0),
+                end: Position::new(2, 10)
+            }),
+        })
+    );
 }

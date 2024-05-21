@@ -529,8 +529,7 @@ impl<'a> TestProject<'a> {
         // Add the final module we're going to be positioning the cursor in.
         _ = io.src_module("app", self.src);
 
-        let response = engine.compile_please();
-        response.result.expect("failed to compile");
+        let _response = engine.compile_please();
 
         let param = self.build_path(position);
 
