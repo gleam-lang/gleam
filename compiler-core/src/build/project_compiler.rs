@@ -167,7 +167,7 @@ where
         // dependency has warnings, only if the root package does.
         self.warnings.reset_count();
 
-        let root_package = self.compile_root_package()?;
+        let root_package = self.compile_root_package().into_result()?;
 
         // TODO: test
         if self.options.warnings_as_errors && self.warnings.count() > 0 {
@@ -183,10 +183,10 @@ where
         })
     }
 
-    pub fn compile_root_package(&mut self) -> Result<Package, Error> {
+    pub fn compile_root_package(&mut self) -> Outcome<Package, Error> {
         let config = self.config.clone();
-        let modules = self.compile_gleam_package(&config, true, self.paths.root().to_path_buf())?;
-        Ok(Package { config, modules })
+        self.compile_gleam_package(&config, true, self.paths.root().to_path_buf())
+            .map(|modules| Package { config, modules })
     }
 
     /// Checks that version file found in the build directory matches the
@@ -490,6 +490,7 @@ where
         let config_path = package_root.join("gleam.toml");
         let config = PackageConfig::read(config_path, &self.io)?;
         self.compile_gleam_package(&config, false, package_root)
+            .into_result()
     }
 
     fn compile_gleam_package(
@@ -497,7 +498,7 @@ where
         config: &PackageConfig,
         is_root: bool,
         root_path: Utf8PathBuf,
-    ) -> Result<Vec<Module>, Error> {
+    ) -> Outcome<Vec<Module>, Error> {
         let out_path =
             self.paths
                 .build_directory_for_package(self.mode(), self.target(), &config.name);
@@ -561,15 +562,13 @@ where
         };
 
         // Compile project to Erlang or JavaScript source code
-        compiler
-            .compile(
-                &mut self.warnings,
-                &mut self.importable_modules,
-                &mut self.defined_modules,
-                &mut self.stale_modules,
-                self.telemetry.as_ref(),
-            )
-            .into_result()
+        compiler.compile(
+            &mut self.warnings,
+            &mut self.importable_modules,
+            &mut self.defined_modules,
+            &mut self.stale_modules,
+            self.telemetry.as_ref(),
+        )
     }
 }
 

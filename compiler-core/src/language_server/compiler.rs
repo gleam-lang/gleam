@@ -4,7 +4,7 @@ use itertools::Itertools;
 
 use crate::{
     analyse::TargetSupport,
-    build::{self, Mode, Module, NullTelemetry, ProjectCompiler},
+    build::{self, Mode, Module, NullTelemetry, Outcome, ProjectCompiler},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     language_server::Locker,
@@ -95,16 +95,21 @@ where
         })
     }
 
-    pub fn compile(&mut self) -> Result<Vec<Utf8PathBuf>, Error> {
+    pub fn compile(&mut self) -> Outcome<Vec<Utf8PathBuf>, Error> {
         // Lock the build directory to ensure to ensure we are the only one compiling
         let _lock_guard = self.locker.lock_for_build();
 
         // Verify that the build directory was created using the same version of
         // Gleam as we are running. If it is not then we discard the build
         // directory as the cache files may be in a different format.
-        self.project_compiler.check_gleam_version()?;
+        if let Err(e) = self.project_compiler.check_gleam_version() {
+            return e.into();
+        }
 
-        let compiled_dependencies = self.project_compiler.compile_dependencies()?;
+        let compiled_dependencies = match self.project_compiler.compile_dependencies() {
+            Ok(it) => it,
+            Err(err) => return err.into(),
+        };
 
         // Store the compiled dependency module information
         for module in &compiled_dependencies {
@@ -145,13 +150,13 @@ where
         // we don't bother them with diagnostics for them.
         let _ = self.take_warnings();
 
-        // Do that there compilation. We don't use `?` to return early in the
-        // event of an error because we _always_ want to do the restoration of
-        // state afterwards.
-        let result = self.project_compiler.compile_root_package();
-
-        // Return any error
-        let package = result?;
+        // Compile the root package, that is, the one that the programmer is
+        // working in.
+        let (modules, error) = match self.project_compiler.compile_root_package() {
+            Outcome::Ok(package) => (package.modules, None),
+            Outcome::PartialFailure(package, error) => (package.modules, Some(error)),
+            Outcome::TotalFailure(error) => (vec![], Some(error)),
+        };
 
         // Record the compiled dependency modules
         let mut compiled_modules = compiled_dependencies
@@ -160,16 +165,22 @@ where
             .collect_vec();
 
         // Store the compiled module information
-        for module in package.modules {
+        for module in modules {
             let path = module.input_path.as_os_str().to_string_lossy().to_string();
             let line_numbers = LineNumbers::new(&module.code);
             let source = ModuleSourceInformation { path, line_numbers };
+            // Record that this one has been compiled. This is returned by this
+            // function and is used to determine what diagnostics to reset.
             compiled_modules.push(module.input_path.clone());
+            // Register information for the LS to use
             _ = self.sources.insert(module.name.clone(), source);
             _ = self.modules.insert(module.name.clone(), module);
         }
 
-        Ok(compiled_modules)
+        match error {
+            None => Outcome::Ok(compiled_modules),
+            Some(error) => Outcome::PartialFailure(compiled_modules, error),
+        }
     }
 
     pub fn get_module_inferface(&self, name: &str) -> Option<&ModuleInterface> {
