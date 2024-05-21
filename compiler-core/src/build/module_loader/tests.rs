@@ -86,6 +86,27 @@ fn cache_present_and_stale_but_source_is_the_same() {
 }
 
 #[test]
+fn cache_present_and_stale_source_is_the_same_lsp_mode() {
+    let name = "package".into();
+    let src = Utf8Path::new("/src");
+    let artefact = Utf8Path::new("/artefact");
+    let fs = InMemoryFileSystem::new();
+    let warnings = WarningEmitter::null();
+    let mut loader = make_loader(&warnings, &name, &fs, src, artefact);
+    loader.mode = Mode::Lsp;
+
+    // The mtime of the source is newer than that of the cache
+    write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 2);
+    write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
+
+    let result = loader
+        .load(Utf8Path::new("/src/main.gleam").to_path_buf())
+        .unwrap();
+
+    assert!(result.is_new());
+}
+
+#[test]
 fn cache_present_without_codegen_when_required() {
     let name = "package".into();
     let src = Utf8Path::new("/src");
