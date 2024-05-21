@@ -538,3 +538,6 @@
 - Fixed a bug where pattern matching on a string prefix containing an escape
   code could generate incorrect Erlang code.
   ([Nashwan Azhari](https://github.com/aznashwan))
+
+- Fixed a bug where the formatter would produce uneven indentation within multi-line comments at the bottom of case blocks.
+  ([Race Williams](https://github.com/raquentin))
