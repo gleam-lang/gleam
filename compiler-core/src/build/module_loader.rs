@@ -73,6 +73,11 @@ where
             if meta.fingerprint != SourceFingerprint::new(&source_module.code) {
                 tracing::debug!(?name, "cache_stale");
                 return Ok(Input::New(source_module));
+            } else if self.mode == Mode::Lsp {
+                // Since the lsp can have valid but incorrect intermediate code states between
+                // successful compilations, we need to invalidate the cache even if the fingerprint matches
+                tracing::debug!(?name, "cache_stale for lsp");
+                return Ok(Input::New(source_module));
             }
         }
 
