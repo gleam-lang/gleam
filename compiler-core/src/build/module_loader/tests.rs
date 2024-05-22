@@ -13,7 +13,8 @@ fn no_cache_present() {
     let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
-    let loader = make_loader(&warnings, &name, &fs, src, artefact);
+    let incomplete_modules = HashSet::new();
+    let loader = make_loader(&warnings, &name, &fs, src, artefact, &incomplete_modules);
 
     fs.write(&Utf8Path::new("/src/main.gleam"), "const x = 1")
         .unwrap();
@@ -32,7 +33,8 @@ fn cache_present_and_fresh() {
     let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
-    let loader = make_loader(&warnings, &name, &fs, src, artefact);
+    let incomplete_modules = HashSet::new();
+    let loader = make_loader(&warnings, &name, &fs, src, artefact, &incomplete_modules);
 
     // The mtime of the source is older than that of the cache
     write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 0);
@@ -52,7 +54,8 @@ fn cache_present_and_stale() {
     let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
-    let loader = make_loader(&warnings, &name, &fs, src, artefact);
+    let incomplete_modules = HashSet::new();
+    let loader = make_loader(&warnings, &name, &fs, src, artefact, &incomplete_modules);
 
     // The mtime of the source is newer than that of the cache
     write_src(&fs, TEST_SOURCE_2, "/src/main.gleam", 2);
@@ -72,7 +75,8 @@ fn cache_present_and_stale_but_source_is_the_same() {
     let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
-    let loader = make_loader(&warnings, &name, &fs, src, artefact);
+    let incomplete_modules = HashSet::new();
+    let loader = make_loader(&warnings, &name, &fs, src, artefact, &incomplete_modules);
 
     // The mtime of the source is newer than that of the cache
     write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 2);
@@ -92,7 +96,31 @@ fn cache_present_and_stale_source_is_the_same_lsp_mode() {
     let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
-    let mut loader = make_loader(&warnings, &name, &fs, src, artefact);
+    let incomplete_modules = HashSet::new();
+    let mut loader = make_loader(&warnings, &name, &fs, src, artefact, &incomplete_modules);
+    loader.mode = Mode::Lsp;
+
+    // The mtime of the source is newer than that of the cache
+    write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 2);
+    write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
+
+    let result = loader
+        .load(Utf8Path::new("/src/main.gleam").to_path_buf())
+        .unwrap();
+
+    assert!(result.is_cached());
+}
+
+#[test]
+fn cache_present_and_stale_source_is_the_same_lsp_mode_and_invalidated() {
+    let name = "package".into();
+    let src = Utf8Path::new("/src");
+    let artefact = Utf8Path::new("/artefact");
+    let fs = InMemoryFileSystem::new();
+    let warnings = WarningEmitter::null();
+    let mut incomplete_modules = HashSet::new();
+    let _ = incomplete_modules.insert("main".into());
+    let mut loader = make_loader(&warnings, &name, &fs, src, artefact, &incomplete_modules);
     loader.mode = Mode::Lsp;
 
     // The mtime of the source is newer than that of the cache
@@ -113,7 +141,8 @@ fn cache_present_without_codegen_when_required() {
     let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
-    let mut loader = make_loader(&warnings, &name, &fs, src, artefact);
+    let incomplete_modules = HashSet::new();
+    let mut loader = make_loader(&warnings, &name, &fs, src, artefact, &incomplete_modules);
     loader.codegen = CodegenRequired::Yes;
 
     // The mtime of the cache is newer than that of the source
@@ -134,7 +163,8 @@ fn cache_present_with_codegen_when_required() {
     let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
-    let mut loader = make_loader(&warnings, &name, &fs, src, artefact);
+    let incomplete_modules = HashSet::new();
+    let mut loader = make_loader(&warnings, &name, &fs, src, artefact, &incomplete_modules);
     loader.codegen = CodegenRequired::Yes;
 
     // The mtime of the cache is newer than that of the source
@@ -155,7 +185,8 @@ fn cache_present_without_codegen_when_not_required() {
     let artefact = Utf8Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
     let warnings = WarningEmitter::null();
-    let mut loader = make_loader(&warnings, &name, &fs, src, artefact);
+    let incomplete_modules = HashSet::new();
+    let mut loader = make_loader(&warnings, &name, &fs, src, artefact, &incomplete_modules);
     loader.codegen = CodegenRequired::No;
 
     // The mtime of the cache is newer than that of the source
@@ -203,6 +234,7 @@ fn make_loader<'a>(
     fs: &InMemoryFileSystem,
     src: &'a Utf8Path,
     artefact: &'a Utf8Path,
+    incomplete_modules: &'a HashSet<EcoString>,
 ) -> ModuleLoader<'a, InMemoryFileSystem> {
     ModuleLoader {
         warnings,
@@ -214,5 +246,6 @@ fn make_loader<'a>(
         source_directory: &src,
         artefact_directory: &artefact,
         origin: Origin::Src,
+        incomplete_modules,
     }
 }

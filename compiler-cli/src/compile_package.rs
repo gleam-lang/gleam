@@ -16,7 +16,7 @@ use gleam_core::{
     warning::WarningEmitter,
     Error, Result,
 };
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 pub fn command(options: CompilePackage) -> Result<()> {
     let ids = UniqueIdGenerator::new();
@@ -57,6 +57,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
             &mut type_manifests,
             &mut defined_modules,
             &mut StaleTracker::default(),
+            &HashSet::new(),
             &NullTelemetry,
         )
         .into_result()

@@ -84,6 +84,9 @@ pub struct ProjectCompiler<IO> {
     importable_modules: im::HashMap<EcoString, type_::ModuleInterface>,
     defined_modules: im::HashMap<EcoString, Utf8PathBuf>,
     stale_modules: StaleTracker,
+    /// The set of modules that have had partial compilation done since the last
+    /// successful compilation.
+    incomplete_modules: HashSet<EcoString>,
     warnings: WarningEmitter,
     telemetry: Box<dyn Telemetry>,
     options: Options,
@@ -120,6 +123,7 @@ where
             importable_modules: im::HashMap::new(),
             defined_modules: im::HashMap::new(),
             stale_modules: StaleTracker::default(),
+            incomplete_modules: HashSet::new(),
             ids: UniqueIdGenerator::new(),
             warnings: WarningEmitter::new(warning_emitter),
             subprocess_stdio: Stdio::Inherit,
@@ -562,13 +566,31 @@ where
         };
 
         // Compile project to Erlang or JavaScript source code
-        compiler.compile(
+        let outcome = compiler.compile(
             &mut self.warnings,
             &mut self.importable_modules,
             &mut self.defined_modules,
             &mut self.stale_modules,
+            &self.incomplete_modules,
             self.telemetry.as_ref(),
-        )
+        );
+        let outcome = match outcome {
+            Outcome::Ok(modules) => {
+                // On successful compilation we remove the module from the incomplete set
+                modules.iter().for_each(|m| {
+                    let _ = self.incomplete_modules.remove(&m.name);
+                });
+                Outcome::Ok(modules)
+            }
+            Outcome::PartialFailure(modules, errors) => {
+                // On partial compilation failure we add all the module to the incomplete set
+                self.incomplete_modules
+                    .extend(modules.iter().map(|m| m.name.clone()));
+                Outcome::PartialFailure(modules, errors)
+            }
+            Outcome::TotalFailure(_) => outcome,
+        };
+        outcome
     }
 }
 
