@@ -73,7 +73,7 @@ pub fn prepare(path: &str) -> String {
         &mut modules,
         &mut im::HashMap::new(),
         &mut StaleTracker::default(),
-        &HashSet::new(),
+        &mut HashSet::new(),
         &NullTelemetry,
     );
     match result {
