@@ -88,6 +88,12 @@ fn make_request(
 }
 
 /// Create a request that creates a Hex API key.
+///
+/// API Docs:
+///
+/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.ex#L137
+///
+/// https://github.com/hexpm/hex/blob/main/lib/hex/api/key.ex#L6
 pub fn create_api_key_request(
     username: &str,
     password: &str,
@@ -125,6 +131,12 @@ pub fn create_api_key_response(response: http::Response<Vec<u8>>) -> Result<Stri
 }
 
 /// Create a request that deletes an Hex API key.
+///
+/// API Docs:
+///
+/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.user.ex#L291
+///
+/// https://github.com/hexpm/hex/blob/main/lib/hex/api/key.ex#L15
 pub fn remove_api_key_request(
     name_of_key_to_delete: &str,
     api_key: &str,
@@ -137,7 +149,7 @@ pub fn remove_api_key_request(
             Some(api_key),
         )
         .body(vec![])
-        .expect("get_package_tarball_request request")
+        .expect("remove_api_key_request request")
 }
 
 /// Parses a request that deleted a Hex API key.
@@ -152,6 +164,12 @@ pub fn remove_api_key_response(response: http::Response<Vec<u8>>) -> Result<(), 
 }
 
 /// Retire an existing package release from Hex.
+///
+/// API Docs:
+///
+/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.retire.ex#L75
+///
+/// https://github.com/hexpm/hex/blob/main/lib/hex/api/release.ex#L28
 pub fn retire_release_request(
     package: &str,
     version: &str,
@@ -171,7 +189,7 @@ pub fn retire_release_request(
             Some(api_key),
         )
         .body(body.to_string().into_bytes())
-        .expect("require_release_request request")
+        .expect("retire_release_request request")
 }
 
 /// Parses a request that retired a release.
@@ -186,6 +204,12 @@ pub fn retire_release_response(response: http::Response<Vec<u8>>) -> Result<(), 
 }
 
 /// Un-retire an existing retired package release from Hex.
+///
+/// API Docs:
+///
+/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.retire.ex#L89
+///
+/// https://github.com/hexpm/hex/blob/main/lib/hex/api/release.ex#L35
 pub fn unretire_release_request(
     package: &str,
     version: &str,
@@ -199,7 +223,7 @@ pub fn unretire_release_request(
             Some(api_key),
         )
         .body(vec![])
-        .expect("require_release_request request")
+        .expect("unretire_release_request request")
 }
 
 /// Parses a request that un-retired a package version.
@@ -215,7 +239,7 @@ pub fn unretire_release_response(response: http::Response<Vec<u8>>) -> Result<()
 
 /// Create a request that get the names and versions of all of the packages on
 /// the package registry.
-///
+/// TODO: Where are the API docs for this?
 pub fn get_repository_versions_request(
     api_key: Option<&str>,
     config: &Config,
@@ -224,7 +248,7 @@ pub fn get_repository_versions_request(
         .repository_request(Method::GET, "versions", api_key)
         .header("accept", "application/json")
         .body(vec![])
-        .expect("create_api_key_request request")
+        .expect("get_repository_versions_request request")
 }
 
 /// Parse a request that get the names and versions of all of the packages on
@@ -269,6 +293,11 @@ pub fn get_repository_versions_response(
 
 /// Create a request to get the information for a package in the repository.
 ///
+/// API Docs:
+///
+/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.package.ex#L348
+///
+/// https://github.com/hexpm/hex/blob/main/lib/hex/api/package.ex#L36
 pub fn get_package_request(
     name: &str,
     api_key: Option<&str>,
@@ -321,7 +350,7 @@ pub fn get_package_response(
 }
 
 /// Create a request to download a version of a package as a tarball
-///
+/// TODO: Where are the API docs for this?
 pub fn get_package_tarball_request(
     name: &str,
     version: &str,
@@ -358,6 +387,11 @@ pub fn get_package_tarball_response(
     Ok(body)
 }
 
+/// API Docs:
+///
+/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.publish.ex#L384
+///
+/// https://github.com/hexpm/hex/blob/main/lib/hex/api/release_docs.ex#L19
 pub fn remove_docs_request(
     package_name: &str,
     version: &str,
@@ -373,7 +407,7 @@ pub fn remove_docs_request(
             Some(api_key),
         )
         .body(vec![])
-        .expect("get_package_tarball_request request"))
+        .expect("remove_docs_request request"))
 }
 
 pub fn remove_docs_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
@@ -388,6 +422,11 @@ pub fn remove_docs_response(response: http::Response<Vec<u8>>) -> Result<(), Api
     }
 }
 
+/// API Docs:
+///
+/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.publish.ex#L429
+///
+/// https://github.com/hexpm/hex/blob/main/lib/hex/api/release_docs.ex#L11
 pub fn publish_docs_request(
     package_name: &str,
     version: &str,
@@ -421,6 +460,11 @@ pub fn publish_docs_response(response: http::Response<Vec<u8>>) -> Result<(), Ap
     }
 }
 
+/// API Docs:
+///
+/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.publish.ex#L512
+///
+/// https://github.com/hexpm/hex/blob/main/lib/hex/api/release.ex#L13
 pub fn publish_package_request(
     release_tarball: Vec<u8>,
     api_key: &str,
@@ -459,6 +503,11 @@ pub fn publish_package_response(response: http::Response<Vec<u8>>) -> Result<(),
     }
 }
 
+/// API Docs:
+///
+/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.publish.ex#L371
+///
+/// https://github.com/hexpm/hex/blob/main/lib/hex/api/release.ex#L21
 pub fn revert_release_request(
     package_name: &str,
     version: &str,
