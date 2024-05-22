@@ -6,7 +6,7 @@ error: Type cycle
   ┌─ /src/one/two.gleam:2:1
   │
 2 │ type A = #(A, A)
-  │ ^^^^^^^^^^
+  │ ^^^^^^^^^^^^^^^^
 
 This type alias is defined in terms of itself.
 
