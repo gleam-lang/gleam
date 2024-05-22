@@ -92,6 +92,7 @@ where
         existing_modules: &mut im::HashMap<EcoString, type_::ModuleInterface>,
         already_defined_modules: &mut im::HashMap<EcoString, Utf8PathBuf>,
         stale_modules: &mut StaleTracker,
+        incomplete_modules: &HashSet<EcoString>,
         telemetry: &dyn Telemetry,
     ) -> Outcome<Vec<Module>, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
@@ -120,6 +121,7 @@ where
             &self.config.name,
             stale_modules,
             already_defined_modules,
+            incomplete_modules,
         );
         let loaded = match loader.run() {
             Ok(loaded) => loaded,

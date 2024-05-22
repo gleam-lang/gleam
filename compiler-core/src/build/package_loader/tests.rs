@@ -80,6 +80,7 @@ fn run_loader(fs: InMemoryFileSystem, root: &Utf8Path, artefact: &Utf8Path) -> L
         target: Target::JavaScript,
         stale_modules: &mut StaleTracker::default(),
         already_defined_modules: &mut defined,
+        incomplete_modules: &mut HashSet::new(),
     };
     let loaded = loader.run().unwrap();
 

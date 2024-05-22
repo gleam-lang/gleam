@@ -1,4 +1,4 @@
-use std::time::SystemTime;
+use std::{collections::HashSet, time::SystemTime};
 
 use crate::{
     build::{Mode, NullTelemetry, PackageCompiler, StaleTracker, TargetCodegenConfiguration},
@@ -58,6 +58,7 @@ fn compile_with_markdown_pages(
             &mut type_manifests,
             &mut defined_modules,
             &mut StaleTracker::default(),
+            &mut HashSet::new(),
             &NullTelemetry,
         )
         .unwrap();

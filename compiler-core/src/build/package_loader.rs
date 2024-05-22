@@ -60,6 +60,7 @@ pub struct PackageLoader<'a, IO> {
     target: Target,
     stale_modules: &'a mut StaleTracker,
     already_defined_modules: &'a mut im::HashMap<EcoString, Utf8PathBuf>,
+    incomplete_modules: &'a HashSet<EcoString>,
 }
 
 impl<'a, IO> PackageLoader<'a, IO>
@@ -78,6 +79,7 @@ where
         package_name: &'a EcoString,
         stale_modules: &'a mut StaleTracker,
         already_defined_modules: &'a mut im::HashMap<EcoString, Utf8PathBuf>,
+        incomplete_modules: &'a HashSet<EcoString>,
     ) -> Self {
         Self {
             io,
@@ -91,6 +93,7 @@ where
             artefact_directory,
             stale_modules,
             already_defined_modules,
+            incomplete_modules,
         }
     }
 
@@ -198,6 +201,7 @@ where
             artefact_directory: self.artefact_directory,
             source_directory: &src,
             origin: Origin::Src,
+            incomplete_modules: self.incomplete_modules,
         };
 
         // Src

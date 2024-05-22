@@ -18,7 +18,11 @@ use gleam_core::{
 };
 use itertools::Itertools;
 use regex::Regex;
-use std::{collections::HashMap, fmt::Write, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Write,
+    sync::Arc,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -69,6 +73,7 @@ pub fn prepare(path: &str) -> String {
         &mut modules,
         &mut im::HashMap::new(),
         &mut StaleTracker::default(),
+        &HashSet::new(),
         &NullTelemetry,
     );
     match result {

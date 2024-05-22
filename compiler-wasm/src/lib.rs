@@ -16,7 +16,7 @@ use gleam_core::{
 };
 use hexpm::version::Version;
 use im::HashMap;
-use std::{cell::RefCell, sync::Arc};
+use std::{cell::RefCell, collections::HashSet, sync::Arc};
 use wasm_filesystem::WasmFileSystem;
 
 use wasm_bindgen::prelude::*;
@@ -209,6 +209,7 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
             &mut type_manifests,
             &mut defined_modules,
             &mut StaleTracker::default(),
+            &HashSet::new(),
             &NullTelemetry,
         )
         .into_result()

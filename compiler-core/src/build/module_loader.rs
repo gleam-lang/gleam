@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use std::time::SystemTime;
+use std::{collections::HashSet, time::SystemTime};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -31,6 +31,9 @@ pub(crate) struct ModuleLoader<'a, IO> {
     pub source_directory: &'a Utf8Path,
     pub artefact_directory: &'a Utf8Path,
     pub origin: Origin,
+    /// The set of modules that have had partial compilation done since the last
+    /// successful compilation.
+    pub incomplete_modules: &'a HashSet<EcoString>,
 }
 
 impl<'a, IO> ModuleLoader<'a, IO>
@@ -73,7 +76,7 @@ where
             if meta.fingerprint != SourceFingerprint::new(&source_module.code) {
                 tracing::debug!(?name, "cache_stale");
                 return Ok(Input::New(source_module));
-            } else if self.mode == Mode::Lsp {
+            } else if self.mode == Mode::Lsp && self.incomplete_modules.contains(&name) {
                 // Since the lsp can have valid but incorrect intermediate code states between
                 // successful compilations, we need to invalidate the cache even if the fingerprint matches
                 tracing::debug!(?name, "cache_stale for lsp");
