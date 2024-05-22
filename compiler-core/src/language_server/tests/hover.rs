@@ -634,6 +634,27 @@ fn append(x: String, y: String) -> String {
 }
 
 #[test]
+fn hover_function_return_annotation_with_tuple() {
+    let code = "
+/// Exciting documentation
+/// Maybe even multiple lines
+fn append(x: String, y: String) -> #(String, String) {
+  #(x, y)
+}
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(3, 39)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nString\n```\n".to_string()
+            )),
+            range: Some(Range::new(Position::new(3, 37), Position::new(3, 43))),
+        })
+    );
+}
+
+#[test]
 fn hover_module_constant_annotation() {
     let code = "
 /// Exciting documentation
