@@ -15,7 +15,12 @@ use regex::Regex;
 use ring::digest::{Context, SHA256};
 use serde::Deserialize;
 use serde_json::json;
-use std::{collections::HashMap, convert::TryFrom, convert::TryInto, io::BufReader};
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    fmt::Display,
+    io::BufReader,
+};
 use thiserror::Error;
 use version::{Range, Version};
 use x509_parser::prelude::FromDer;
@@ -538,23 +543,123 @@ pub fn revert_release_response(response: http::Response<Vec<u8>>) -> Result<(), 
     }
 }
 
-pub fn revert_package_request(
+/// See: https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.owner.ex#L47
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum OwnerLevel {
+    /// Has every package permission EXCEPT the ability to change who owns the package
+    Maintainer,
+    /// Has every package permission including the ability to change who owns the package
+    Full,
+}
+
+impl Display for OwnerLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OwnerLevel::Maintainer => write!(f, "maintainer"),
+            OwnerLevel::Full => write!(f, "full"),
+        }
+    }
+}
+
+/// API Docs:
+///
+/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.owner.ex#L107
+///
+/// https://github.com/hexpm/hex/blob/main/lib/hex/api/package.ex#L19
+pub fn add_owner_request(
+    package_name: &str,
+    owner: &str,
+    level: OwnerLevel,
+    api_key: &str,
+    config: &Config,
+) -> http::Request<Vec<u8>> {
+    let body = json!({
+        "level": level.to_string(),
+        "transfer": false,
+    });
+
+    config
+        .api_request(
+            Method::PUT,
+            &format!("packages/{}/owners/{}", package_name, owner),
+            Some(api_key),
+        )
+        .body(body.to_string().into_bytes())
+        .expect("add_owner_request request")
+}
+
+pub fn add_owner_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+    let (parts, body) = response.into_parts();
+    match parts.status {
+        StatusCode::NO_CONTENT => Ok(()),
+        StatusCode::NOT_FOUND => Err(ApiError::NotFound),
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        status => Err(ApiError::unexpected_response(status, body)),
+    }
+}
+
+/// API Docs:
+///
+/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.owner.ex#L125
+///
+/// https://github.com/hexpm/hex/blob/main/lib/hex/api/package.ex#L19
+pub fn transfer_owner_request(
     package_name: &str,
     owner: &str,
     api_key: &str,
     config: &Config,
-) -> Result<http::Request<Vec<u8>>, ApiError> {
-    Ok(config
+) -> http::Request<Vec<u8>> {
+    let body = json!({
+        "level": OwnerLevel::Full.to_string(),
+        "transfer": true,
+    });
+
+    config
+        .api_request(
+            Method::PUT,
+            &format!("packages/{}/owners/{}", package_name, owner),
+            Some(api_key),
+        )
+        .body(body.to_string().into_bytes())
+        .expect("transfer_owner_request request")
+}
+
+pub fn transfer_owner_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+    let (parts, body) = response.into_parts();
+    match parts.status {
+        StatusCode::NO_CONTENT => Ok(()),
+        StatusCode::NOT_FOUND => Err(ApiError::NotFound),
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        status => Err(ApiError::unexpected_response(status, body)),
+    }
+}
+
+/// API Docs:
+///
+/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.owner.ex#L139
+///
+/// https://github.com/hexpm/hex/blob/main/lib/hex/api/package.ex#L28
+pub fn remove_owner_request(
+    package_name: &str,
+    owner: &str,
+    api_key: &str,
+    config: &Config,
+) -> http::Request<Vec<u8>> {
+    config
         .api_request(
             Method::DELETE,
             &format!("packages/{}/owners/{}", package_name, owner),
             Some(api_key),
         )
         .body(vec![])
-        .expect("publish_package_request request"))
+        .expect("remove_owner_request request")
 }
 
-pub fn revert_package_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+pub fn remove_owner_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::NO_CONTENT => Ok(()),

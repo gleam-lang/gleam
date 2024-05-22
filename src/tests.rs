@@ -229,7 +229,84 @@ async fn revert_release_success() {
 }
 
 #[tokio::test]
-async fn revert_package_success() {
+async fn add_owner_success() {
+    let key = "my-api-key-here";
+    let package = "gleam_experimental_stdlib";
+    let owner = "lpil";
+    let level = OwnerLevel::Maintainer;
+
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock(
+            "PUT",
+            format!("/packages/{}/owners/{}", package, owner).as_str(),
+        )
+        .expect(1)
+        .match_header("authorization", key)
+        .match_header("accept", "application/json")
+        .match_body(Matcher::Json(json!({
+            "level": "maintainer",
+            "transfer": false,
+        })))
+        .with_status(204)
+        .create_async()
+        .await;
+
+    let mut config = Config::new();
+    config.api_base = http::Uri::try_from(server.url()).unwrap();
+
+    let result = crate::add_owner_response(
+        http_send(crate::add_owner_request(
+            package, owner, level, key, &config,
+        ))
+        .await
+        .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(result, ());
+    mock.assert();
+}
+
+#[tokio::test]
+async fn transfer_owner_success() {
+    let key = "my-api-key-here";
+    let package = "gleam_experimental_stdlib";
+    let owner = "lpil";
+
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock(
+            "PUT",
+            format!("/packages/{}/owners/{}", package, owner).as_str(),
+        )
+        .expect(1)
+        .match_header("authorization", key)
+        .match_header("accept", "application/json")
+        .match_body(Matcher::Json(json!({
+            "level": "full",
+            "transfer": true,
+        })))
+        .with_status(204)
+        .create_async()
+        .await;
+
+    let mut config = Config::new();
+    config.api_base = http::Uri::try_from(server.url()).unwrap();
+
+    let result = crate::transfer_owner_response(
+        http_send(crate::transfer_owner_request(package, owner, key, &config))
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(result, ());
+    mock.assert();
+}
+
+#[tokio::test]
+async fn remove_owner_success() {
     let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib";
     let owner = "lpil";
@@ -250,8 +327,8 @@ async fn revert_package_success() {
     let mut config = Config::new();
     config.api_base = http::Uri::try_from(server.url()).unwrap();
 
-    let result = crate::revert_package_response(
-        http_send(crate::revert_package_request(package, owner, key, &config).unwrap())
+    let result = crate::remove_owner_response(
+        http_send(crate::remove_owner_request(package, owner, key, &config))
             .await
             .unwrap(),
     )
