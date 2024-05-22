@@ -209,7 +209,7 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
             &mut type_manifests,
             &mut defined_modules,
             &mut StaleTracker::default(),
-            &HashSet::new(),
+            &mut HashSet::new(),
             &NullTelemetry,
         )
         .into_result()

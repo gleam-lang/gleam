@@ -57,7 +57,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
             &mut type_manifests,
             &mut defined_modules,
             &mut StaleTracker::default(),
-            &HashSet::new(),
+            &mut HashSet::new(),
             &NullTelemetry,
         )
         .into_result()
