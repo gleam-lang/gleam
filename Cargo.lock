@@ -802,7 +802,7 @@ checksum = "4271d37baee1b8c7e4b708028c57d816cf9d2434acb33a549475f78c181f6253"
 
 [[package]]
 name = "gleam"
-version = "1.1.0"
+version = "1.2.0-rc1"
 dependencies = [
  "async-trait",
  "base16",
@@ -822,7 +822,7 @@ dependencies = [
  "http",
  "ignore",
  "im",
- "itertools 0.12.1",
+ "itertools",
  "lsp-server",
  "lsp-types",
  "opener",
@@ -849,7 +849,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "1.1.0"
+version = "1.2.0-rc1"
 dependencies = [
  "askama",
  "async-trait",
@@ -866,13 +866,13 @@ dependencies = [
  "flate2",
  "futures",
  "globset",
- "heck 0.5.0",
+ "heck 0.4.1",
  "hexpm",
  "http",
  "id-arena",
  "im",
  "insta",
- "itertools 0.12.1",
+ "itertools",
  "lsp-server",
  "lsp-types",
  "pathdiff",
@@ -900,7 +900,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "1.1.0"
+version = "1.2.0-rc1"
 dependencies = [
  "camino",
  "console_error_panic_hook",
@@ -908,7 +908,7 @@ dependencies = [
  "gleam-core",
  "hexpm",
  "im",
- "itertools 0.12.1",
+ "itertools",
  "serde",
  "serde-wasm-bindgen",
  "termcolor",
@@ -1209,15 +1209,6 @@ name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
 dependencies = [
  "either",
 ]
@@ -2247,13 +2238,13 @@ dependencies = [
 
 [[package]]
 name = "test-package-compiler"
-version = "1.1.0"
+version = "1.2.0-rc1"
 dependencies = [
  "camino",
  "gleam-core",
  "im",
  "insta",
- "itertools 0.12.1",
+ "itertools",
  "regex",
  "toml",
  "walkdir",
@@ -2391,7 +2382,7 @@ checksum = "6b26d63d75583ce572323a963b850d2121cf47a03b1f6c5fc96d641d3b0412b3"
 dependencies = [
  "combine",
  "indexmap 1.9.3",
- "itertools 0.10.5",
+ "itertools",
  "kstring",
 ]
 

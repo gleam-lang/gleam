@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.0-rc1 - 2024-05-23
 
 ### Build tool
 
