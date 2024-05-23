@@ -15,6 +15,15 @@ fn show(x: anything) -> Nil"#,
 }
 
 #[test]
+fn at_namespace_module() {
+    assert_js!(
+        r#"
+@external(javascript, "@namespace/package", "inspect")
+fn show(x: anything) -> Nil"#,
+    );
+}
+
+#[test]
 fn pub_module_fn() {
     assert_js!(
         r#"

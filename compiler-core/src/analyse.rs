@@ -578,7 +578,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             Some(external) => external,
         };
         if !MODULE
-            .get_or_init(|| Regex::new("^[a-zA-Z0-9\\./:_-]+$").expect("regex"))
+            .get_or_init(|| Regex::new("^[@a-zA-Z0-9\\./:_-]+$").expect("regex"))
             .is_match(module)
         {
             self.errors.push(Error::InvalidExternalJavascriptModule {

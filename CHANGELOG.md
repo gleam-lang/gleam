@@ -301,6 +301,9 @@
 
     ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- JavaScript external module names may now include the character `@`.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Formatter
 
 - Redundant alias names for imported modules are now removed.
