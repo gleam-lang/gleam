@@ -4,7 +4,13 @@
 
 ### Bug fixes
 
-- Fixed a bug where the formatter would incorrectly move comments at the start of an anonymous function to the end of the arguments. ([Ameen Radwan](https://github.com/Acepie))
+- Fixed a bug where the formatter would incorrectly move comments at the start
+  of an anonymous function to the end of the arguments.
+  ([Ameen Radwan](https://github.com/Acepie))
+
+- Fixed a bug where the formatter would not indent a multiline function used
+  in a pipeline.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ## v1.2.0-rc1 - 2024-05-23
 
