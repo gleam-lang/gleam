@@ -53,3 +53,54 @@ pub fn adding_a_newline_to_a_pipeline_splits_all() {
 "#,
     );
 }
+
+#[test]
+pub fn multiline_function_inside_pipeline_function_argument_is_indented_properly() {
+    assert_format!(
+        r#"pub fn main() {
+  function(
+    arg0,
+    thing
+      |> string.replace(
+        "{something something}",
+        date.month_to_string(month, config.l10n.context),
+      ),
+  )
+}
+"#,
+    );
+}
+
+#[test]
+pub fn multiline_function_inside_pipeline_in_list_is_indented_properly() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    item1,
+    thing
+      |> string.replace(
+        "{something something}",
+        date.month_to_string(month, config.l10n.context),
+      ),
+  ]
+}
+"#,
+    );
+}
+
+#[test]
+pub fn multiline_function_inside_pipeline_in_tuple_is_indented_properly() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    item1,
+    thing
+      |> string.replace(
+        "{something something}",
+        date.month_to_string(month, config.l10n.context),
+      ),
+  )
+}
+"#,
+    );
+}
