@@ -298,27 +298,27 @@
   See: https://tour.gleam.run/basics/equality
   ```
 
-  - The compiler will now raise a warning for unreachable code that comes after
-    a panicking expression.
+- The compiler will now raise a warning for unreachable code that comes after
+  a panicking expression.
 
-    ```
-    pub fn main() {
-      panic
-      "unreachable!"
-    }
-    ```
+  ```
+  pub fn main() {
+    panic
+    "unreachable!"
+  }
+  ```
 
-    ```
-    warning: Unreachable code
-      ┌─ /src/warning/wrn.gleam:3:11
-      │
-    3 │    "unreachable!"
-      │    ^^^^^^^^^^^^^^
+  ```
+  warning: Unreachable code
+    ┌─ /src/warning/wrn.gleam:3:11
+    │
+  3 │    "unreachable!"
+    │    ^^^^^^^^^^^^^^
 
-    This code is unreachable because it comes after a `panic`.
-    ```
+  This code is unreachable because it comes after a `panic`.
+  ```
 
-    ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - JavaScript external module names may now include the character `@`.
   ([Louis Pilfold](https://github.com/lpil))
