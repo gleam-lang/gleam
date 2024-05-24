@@ -169,3 +169,33 @@ fn splitting_an_alternative_in_the_middle_doesnt_force_the_consequence_to_break(
 "#
     );
 }
+
+#[test]
+fn alternatives_are_not_split_if_not_necessary() {
+    assert_format!(
+        r#"fn main() {
+  case thing {
+    Wibble | Wobble -> {
+      todo
+      todo
+    }
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn alternatives_are_not_split_if_not_necessary_2() {
+    assert_format!(
+        r#"fn main() {
+  case thing {
+    Wibble
+    | Wobble
+    | Wabble ->
+      loooooooong_function_call_that_barely_goes_over_the_limit()
+  }
+}
+"#
+    );
+}
