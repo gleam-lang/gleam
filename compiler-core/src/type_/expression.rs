@@ -1253,11 +1253,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             typed_subjects.push(subject);
         }
 
+        let mut has_a_guard = false;
+        let mut all_patterns_are_discards = true;
         let mut all_clauses_panic = true;
         for clause in clauses {
+            has_a_guard = has_a_guard || clause.guard.is_some();
+            all_patterns_are_discards =
+                all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
+
             self.previous_panics = false;
             let typed_clause = self.infer_clause(clause, &subject_types)?;
             all_clauses_panic = all_clauses_panic && self.previous_panics;
+
             unify(return_type.clone(), typed_clause.then.type_())
                 .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))?;
             typed_clauses.push(typed_clause);
@@ -1266,9 +1273,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.previous_panics = all_clauses_panic || any_subject_panics;
 
         self.check_case_exhaustiveness(location, &subject_types, &typed_clauses)?;
+
+        // We track if the case expression is used like an if: that is all its
+        // patterns are discarded and there's at least a guard. For example:
+        // ```gleam
+        // case True {
+        //   _ if condition -> todo
+        //   _ if other_condition -> todo
+        //   _ -> todo
+        // }
+        // ```
+        // This is the only case were it actually makes sense to match on a
+        // constant value so when checking, we won't emit warnings for matching
+        // on a literal value in this case.
+        let case_used_like_if = all_patterns_are_discards && has_a_guard;
         typed_subjects
             .iter()
-            .filter_map(check_subject_for_redundant_match)
+            .filter_map(|subject| check_subject_for_redundant_match(subject, case_used_like_if))
             .for_each(|warning| self.environment.warnings.emit(warning));
 
         Ok(TypedExpr::Case {
@@ -2866,7 +2887,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     }
 }
 
-fn check_subject_for_redundant_match(subject: &TypedExpr) -> Option<Warning> {
+fn check_subject_for_redundant_match(
+    subject: &TypedExpr,
+    case_used_like_if: bool,
+) -> Option<Warning> {
     match subject {
         TypedExpr::Tuple { elems, .. } if !elems.is_empty() => {
             Some(Warning::CaseMatchOnLiteralCollection {
@@ -2890,17 +2914,29 @@ fn check_subject_for_redundant_match(subject: &TypedExpr) -> Option<Warning> {
             None
         }
 
+        // We make sure to not emit warnings if the case is being used like an
+        // if expression:
+        // ```gleam
+        // case True {
+        //   _ if condition -> todo
+        //   _ if other_condition -> todo
+        //   _ -> todo
+        // }
+        // ```
         _ => match subject.record_constructor_arity() {
-            Some(0) => Some(Warning::CaseMatchOnLiteralValue {
+            Some(0) if !case_used_like_if => Some(Warning::CaseMatchOnLiteralValue {
                 location: subject.location(),
             }),
+            Some(0) => None,
             Some(_) => Some(Warning::CaseMatchOnLiteralCollection {
                 kind: LiteralCollectionKind::Record,
                 location: subject.location(),
             }),
-            None if subject.is_literal() => Some(Warning::CaseMatchOnLiteralValue {
-                location: subject.location(),
-            }),
+            None if subject.is_literal() && !case_used_like_if => {
+                Some(Warning::CaseMatchOnLiteralValue {
+                    location: subject.location(),
+                })
+            }
             None => None,
         },
     }
