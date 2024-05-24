@@ -1432,7 +1432,7 @@ impl<'comments> Formatter<'comments> {
 
                 _ => self.expr(expr),
             };
-
+            let doc = if nest_pipe { doc.nest(INDENT) } else { doc };
             let space = if try_to_keep_on_one_line {
                 break_("", " ")
             } else {
