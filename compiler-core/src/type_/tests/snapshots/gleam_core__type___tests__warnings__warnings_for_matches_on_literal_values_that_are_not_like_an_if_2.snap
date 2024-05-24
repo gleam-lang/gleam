@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n    pub fn main() {\n        case True {\n          True -> 1\n          _ -> 2\n        }\n    }\n        "
+---
+warning: Match on a literal value
+  ┌─ /src/warning/wrn.gleam:3:14
+  │
+3 │         case True {
+  │              ^^^^ There's no need to pattern match on this value
+
+Matching on a literal value is redundant since you can already tell which
+branch is going to match with this value.

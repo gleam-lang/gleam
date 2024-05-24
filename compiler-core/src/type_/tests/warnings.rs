@@ -1957,3 +1957,58 @@ fn unreachable_code_analysis_treats_anonymous_functions_independently_3() {
         "#
     );
 }
+
+#[test]
+fn no_warnings_for_matches_used_like_ifs() {
+    assert_no_warnings!(
+        r#"
+    pub fn main() {
+        case True {
+          _ if True -> 1
+          _ -> 2
+        }
+    }
+        "#
+    );
+}
+
+#[test]
+fn no_warnings_for_matches_used_like_ifs_2() {
+    assert_no_warnings!(
+        r#"
+    pub fn main() {
+        case 1 {
+          _ if True -> 1
+          _ -> 2
+        }
+    }
+        "#
+    );
+}
+
+#[test]
+fn warnings_for_matches_on_literal_values_that_are_not_like_an_if_1() {
+    assert_warning!(
+        r#"
+    pub fn main() {
+        case True {
+          _ -> 1
+        }
+    }
+        "#
+    );
+}
+
+#[test]
+fn warnings_for_matches_on_literal_values_that_are_not_like_an_if_2() {
+    assert_warning!(
+        r#"
+    pub fn main() {
+        case True {
+          True -> 1
+          _ -> 2
+        }
+    }
+        "#
+    );
+}
