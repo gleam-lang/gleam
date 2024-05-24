@@ -12,6 +12,10 @@
   in a pipeline.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would raise a warning for matching on a literal
+  value if the case expression is used just for its guards.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.2.0-rc1 - 2024-05-23
 
 ### Build tool
