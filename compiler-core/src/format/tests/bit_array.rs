@@ -99,6 +99,7 @@ fn comments_inside_non_empty_bit_arrays_are_not_moved() {
     <<
       // Three is below me.
       3,
+      // Trailing comment is kept inside bit array.
     >>,
   )
 }
