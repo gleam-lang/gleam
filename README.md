@@ -51,6 +51,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/amscotti">Anthony Scotti</a> -
   <a href="https://github.com/oz">Arnaud Berthomier</a> -
   <a href="https://github.com/aweagel">Arthur Weagel</a> -
+  <a href="https://github.com/austindaily">Austin Daily</a> -
   <a href="https://github.com/chiroptical">Barry Moore</a> -
   <a href="https://github.com/bartekgorny">Bartek Górny</a> -
   <a href="https://github.com/benkenawell">Ben</a> -
@@ -184,6 +185,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/wowi42">Loïc Tosser</a> -
   <a href="https://github.com/lucaspellegrinelli">Lucas Pellegrinelli</a> -
   <a href="https://github.com/lpetic">Lucian Petic</a> -
+  <a href="https://github.com/2kool4idkwhat">Luna</a> -
   <a href="https://github.com/lunagl">Luna Schwalbe</a> -
   <a href="https://github.com/manuel-rubio">Manuel Rubio</a> -
   <a href="https://github.com/marcusandre">Marcus André</a> -
@@ -242,6 +244,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/renovatorruler">Renovator</a> -
   <a href="https://github.com/richard-viney">Richard Viney</a> -
   <a href="https://github.com/rico">Rico Leuthold</a> -
+  <a href="https://github.com/ripta">Ripta Pasay</a> -
   <a href="https://github.com/TanklesXL">Robert Attard</a> -
   <a href="https://github.com/rellen">Robert Ellen</a> -
   <a href="https://github.com/malkomalko">Robert Malko</a> -
