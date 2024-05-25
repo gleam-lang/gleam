@@ -1,6 +1,3 @@
 FROM elixir:latest
-
-ARG TARGETARCH
-COPY gleam-${TARGETARCH} /bin/gleam
-
+COPY gleam /bin
 CMD ["gleam"]
