@@ -225,7 +225,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         for f in &statements.functions {
-            if let Err(error) = dbg!(self.register_value_from_function(f, &mut env)) {
+            if let Err(error) = self.register_value_from_function(f, &mut env) {
                 return self.all_errors(error);
             }
         }
