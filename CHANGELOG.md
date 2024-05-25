@@ -16,6 +16,9 @@
   value if the case expression is used just for its guards.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where not all the analysis errors would be presented to the
+  programmer. ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.2.0-rc1 - 2024-05-23
 
 ### Build tool
