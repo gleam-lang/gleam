@@ -120,3 +120,20 @@ type UnknownType =
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3191
+#[test]
+fn both_errors_are_shown() {
+    // The alias has an error, and it causes the function to have an error as it
+    // refers to the type that does not exist.
+    assert_module_error!(
+        r#"
+type X =
+  List(Intt)
+
+fn example(a: X) {
+  todo
+}
+"#
+    );
+}

@@ -185,8 +185,8 @@ struct ModuleAnalyzer<'a, A> {
 
 impl<'a, A> ModuleAnalyzer<'a, A> {
     pub fn infer_module(mut self, mut module: UntypedModule) -> Outcome<TypedModule, Vec1<Error>> {
-        if let Err(e) = validate_module_name(&self.module_name) {
-            return e.into();
+        if let Err(error) = validate_module_name(&self.module_name) {
+            return self.all_errors(error);
         }
 
         let documentation = std::mem::take(&mut module.documentation);
@@ -211,22 +211,22 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Register types so they can be used in constructors and functions
         // earlier in the module.
         for t in &statements.custom_types {
-            if let Err(e) = self.register_types_from_custom_type(t, &mut env) {
-                return e.into();
+            if let Err(error) = self.register_types_from_custom_type(t, &mut env) {
+                return self.all_errors(error);
             }
         }
 
         let sorted_aliases = match sorted_type_aliases(&statements.type_aliases) {
             Ok(it) => it,
-            Err(err) => return err.into(),
+            Err(error) => return self.all_errors(error),
         };
         for t in sorted_aliases {
             self.register_type_alias(t, &mut env);
         }
 
         for f in &statements.functions {
-            if let Err(e) = self.register_value_from_function(f, &mut env) {
-                return e.into();
+            if let Err(error) = dbg!(self.register_value_from_function(f, &mut env)) {
+                return self.all_errors(error);
             }
         }
 
@@ -248,7 +248,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let definition_groups =
             match into_dependency_order(statements.functions, statements.constants) {
                 Ok(it) => it,
-                Err(err) => return err.into(),
+                Err(error) => return self.all_errors(error),
             };
         let mut working_group = vec![];
 
@@ -327,6 +327,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             Err(_) => Outcome::Ok(module),
             Ok(errors) => Outcome::PartialFailure(module, errors),
         }
+    }
+
+    fn all_errors<T>(&mut self, error: Error) -> Outcome<T, Vec1<Error>> {
+        Outcome::TotalFailure(Vec1::from_vec_push(std::mem::take(&mut self.errors), error))
     }
 
     fn infer_module_constant(
