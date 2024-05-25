@@ -221,7 +221,7 @@
     │        ^^^^^^^ Expected 2 arguments, got 3
 
   The function on the right of `<-` here takes 2 arguments.
-  All the arguments have already been supplied, so it cannot take the the
+  All the arguments have already been supplied, so it cannot take the
   `use` callback function as a final argument.
 
   See: https://tour.gleam.run/advanced-features/use/
@@ -229,14 +229,14 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Improve error message when a the callback function of a `use` expression
-  returns a value with the wrong type.
+- Improve error message when the callback function of a `use` expression returns
+  a value with the wrong type.
   Now the error will point precisely to the last statement and not complain
   about the whole block saying it has the wrong function type.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The compiler will now raise a warning when pattern matching on a literal value
-  like a list, a tuple, integers, strings etc.
+  like a list, a tuple, integers, strings, etc.
 
   ```
   warning: Redundant list
@@ -408,7 +408,7 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Comments appearing after arguments are not longer moved to different place.
+- Comments appearing after arguments are no longer moved to a different place.
   You can now write all of those:
 
   ```gleam
@@ -509,7 +509,7 @@
 - The language server will now register information about code even when there
   was a type error or similar. This means that the language server will be able
   to produce some up-to-date information about the project, even when errors are
-  present. This should greatly improve the experience using the language serer.
+  present. This should greatly improve the experience using the language server.
   ([Louis Pilfold](https://github.com/lpil))
 
 ### Bug Fixes
@@ -522,7 +522,7 @@
   the `application_start_module` property in `gleam.toml`.
   ([Alex Manning](https://github.com/rawhat))
 
-- Fixed some reserved keywords would resulting in confusing error messages.
+- Fixed a confusing error message when using some reserved keywords.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Fixed variables in constant expressions not being escaped correctly when
@@ -532,8 +532,8 @@
 - Fixed a typo when attempting to publish a package with non-Hex dependencies
   ([inoas](https://github.com/inoas))
 
-- Fixed import completions not appearing in some editors due to range being
-  longer than line.
+- Fixed import completions not appearing in some editors due to the range being
+  longer than the line.
   ([Ameen Radwan](https://github.com/Acepie))
 
 - Fixed a bug where TypeScript definitions files would use `null` instead of
@@ -549,7 +549,7 @@
   correctly for js target.
   ([Ameen Radwan](https://github.com/Acepie))
 
-- Fixed a bug where formatting constant lists of tuples would be force th
+- Fixed a bug where formatting constant lists of tuples would force the
   tuples to be broken across multiple lines, even when they could fit on a
   single line.
   ([Isaac Harris-Holt](https://github.com/isaacharrisholt))
