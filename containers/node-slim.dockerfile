@@ -1,6 +1,3 @@
 FROM node:slim
-
-ARG TARGETARCH
-COPY gleam-${TARGETARCH} /bin/gleam
-
+COPY gleam /bin
 CMD ["gleam"]
