@@ -19,3 +19,6 @@
 - Fixed a bug where dependency version resolution could crash for certain
   release candidate versions.
   ([Marshall Bowers](https://github.com/maxdeviant))
+
+- Fixed a bug where trailing comments would be moved out of a bit array.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

@@ -2272,13 +2272,16 @@ impl<'comments> Formatter<'comments> {
         is_simple: bool,
         location: &SrcSpan,
     ) -> Document<'a> {
+        let comments = self.pop_comments(location.end);
+        let comments_doc = printed_comments(comments, false);
+
         // Avoid adding illegal comma in empty bit array by explicitly handling it
         if segments.is_empty() {
             // We take all comments that come _before_ the end of the bit array,
             // that is all comments that are inside "<<" and ">>", if there's
             // any comment we want to put it inside the empty bit array!
             // Refer to the `list` function for a similar procedure.
-            return match printed_comments(self.pop_comments(location.end), false) {
+            return match comments_doc {
                 None => "<<>>".to_doc(),
                 Some(comments) => "<<"
                     .to_doc()
@@ -2297,12 +2300,25 @@ impl<'comments> Formatter<'comments> {
         } else {
             break_(",", ", ")
         };
-        break_("<<", "<<")
+
+        let last_break = break_(",", "");
+        let doc = break_("<<", "<<")
             .append(join(segments, comma))
-            .nest(INDENT)
-            .append(break_(",", ""))
-            .append(">>")
-            .group()
+            .nest(INDENT);
+
+        match comments_doc {
+            None => doc.append(last_break).append(">>").group(),
+            Some(comments) => doc
+                .append(last_break.nest(INDENT))
+                // ^ Notice how in this case we nest the final break before
+                //   adding it: this way the comments are going to be as
+                //   indented as the bit array items.
+                .append(comments.nest(INDENT))
+                .append(line())
+                .append(">>")
+                .force_break()
+                .group(),
+        }
     }
 
     fn bit_array_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
