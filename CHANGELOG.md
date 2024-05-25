@@ -78,16 +78,20 @@
   Hint: Rename this module and try again.
   ```
 
-- New subcommand `gleam hex revert` added. ([Pi-Cla](https://github.com/Pi-Cla))
+- New subcommand `gleam hex revert` added.
 
-  - You can specify the options like this: `gleam hex revert --package gling --version 1.2.3`
-  - A new package can be reverted or updated within 24 hours of it's initial publish,
-    a new version of an existing package can be reverted or updated within one hour.
-  - You could already update packages even before this release by running: `gleam publish` again.
+  - You can specify the options like this:
+    `gleam hex revert --package gling --version 1.2.3`
+  - A new package can be reverted or updated within 24 hours of it's initial
+    publish, a new version of an existing package can be reverted or updated
+    within one hour.
+  - You could already update packages even before this release by running:
+    `gleam publish` again.
+
+  ([Pi-Cla](https://github.com/Pi-Cla))
 
 - When the user tries to replace a release without the `--replace` flag
   the error message now mentions the lack of a `--replace` flag.
-  ([Pi-Cla](https://github.com/Pi-Cla))
 
   ```
   error: Version already published
@@ -98,6 +102,8 @@
 
   Hint: Please add the --replace flag if you want to replace the release.
   ```
+
+  ([Pi-Cla](https://github.com/Pi-Cla))
 
 ### Compiler
 
@@ -117,11 +123,14 @@
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Empty case expressions are no longer parse errors and will instead be
-  exhaustiveness errors. ([Race Williams](https://github.com/raquentin))
+  exhaustiveness errors.
+  ([Race Williams](https://github.com/raquentin))
 
-- Initial support for type analysis returning multiple errors. ([Ameen Radwan](https://github.com/Acepie))
+- Initial support for type analysis returning multiple errors.
+  ([Ameen Radwan](https://github.com/Acepie))
 
-- Improve error message if importing type using the value import syntax or vice versa.
+- Improve error message if importing type using the value import syntax or vice
+  versa.
 
   ```
   error: Unknown module field
@@ -150,7 +159,6 @@
   since one might expect the arguments to be printed in the error message.
   The error message now suggests the correct way to add an error message to
   `todo` and `panic`.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
   ```
   warning: Todo used as a function
@@ -167,9 +175,10 @@
   See: https://tour.gleam.run/advanced-features/todo/
   ```
 
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Improve error message when something that is not a function appears on the
   right hand side of `<-` in a `use` expression.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
   ```txt
   error: Type mismatch
@@ -186,9 +195,10 @@
   See: https://tour.gleam.run/advanced-features/use/
   ```
 
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Improve error message when a function with the wrong number of arguments
   appears on the right hand side of `<-` in a `use` expression.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
   ```txt
   error: Incorrect arity
@@ -217,6 +227,8 @@
   See: https://tour.gleam.run/advanced-features/use/
   ```
 
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Improve error message when a the callback function of a `use` expression
   returns a value with the wrong type.
   Now the error will point precisely to the last statement and not complain
@@ -225,7 +237,6 @@
 
 - The compiler will now raise a warning when pattern matching on a literal value
   like a list, a tuple, integers, strings etc.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
   ```
   warning: Redundant list
@@ -257,6 +268,8 @@
 
   ```
 
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler will now continue module analysis when there are errors in top
   level definitions. This means that when these errors occur the compiler will
   continue analysing the rest of the code to find other errors and type
@@ -269,12 +282,12 @@
   the compiler will get updated type information about the code even when there
   are errors. This should improve the accuracy of feedback and suggestions from
   the language server as its information about the code will be more up-to-date.
-
-  ([Ameen Radwan](https://github.com/Acepie)) and ([Louis Pilfold](https://github.com/Acepie))
+  ([Ameen Radwan](https://github.com/Acepie)) and
+  ([Louis Pilfold](https://github.com/Acepie))
 
 - An informative error message is now emitted when attempting to use a function
   from another module in a constant expression. Previously this would result in
-  a cryptic parse error. ([Nino Annighoefer](https://github.com/nino))
+  a cryptic parse error.
 
   ```
   error: Syntax error
@@ -284,8 +297,10 @@
     │                  ^^^^^^^ Functions can only be called within other functions
   ```
 
+  ([Nino Annighoefer](https://github.com/nino))
+
 - The compiler will now provide more helpful error messages when triple equals
-  are used instead of double equals. ([Rabin Gaire](https://github.com/rabingaire))
+  are used instead of double equals.
 
   ```
   error: Syntax error
@@ -297,6 +312,8 @@
   Gleam uses `==` to check for equality between two values.
   See: https://tour.gleam.run/basics/equality
   ```
+
+  ([Rabin Gaire](https://github.com/rabingaire))
 
 - The compiler will now raise a warning for unreachable code that comes after
   a panicking expression.
@@ -447,11 +464,14 @@
 - Hover for type annotations is now separate from the thing being annotated.
   ([Ameen Radwan](https://github.com/Acepie))
 
-- Go to definition now works for direct type annotations. ([Ameen Radwan](https://github.com/Acepie))
+- Go to definition now works for direct type annotations.
+  ([Ameen Radwan](https://github.com/Acepie))
 
-- Go to definition now works for import statements. ([Ameen Radwan](https://github.com/Acepie))
+- Go to definition now works for import statements.
+  ([Ameen Radwan](https://github.com/Acepie))
 
-- Hover now works for unqualified imports. ([Ameen Radwan](https://github.com/Acepie))
+- Hover now works for unqualified imports.
+  ([Ameen Radwan](https://github.com/Acepie))
 
 - The language server now detects when the `gleam.toml` config file has changed
   even if the client does not support watching files. This means that changes to
@@ -460,7 +480,8 @@
   ([Louis Pilfold](https://github.com/lpil))
 
 - Completions are now provided for values and types for use in unqualified
-  imports. ([Ameen Radwan](https://github.com/Acepie))
+  imports.
+  ([Ameen Radwan](https://github.com/Acepie))
 
 - The character `.` is now advertised as a completion trigger character.
   ([Louis Pilfold](https://github.com/lpil))
@@ -497,21 +518,23 @@
   using Rust's `std::io::IsTerminal` instead of the `atty` library.
   ([Pi-Cla](https://github.com/Pi-Cla))
 
-- Fixed the generated `mod` property in the Erlang application file when using the
-  `application_start_module` property in `gleam.toml`.
+- Fixed the generated `mod` property in the Erlang application file when using
+  the `application_start_module` property in `gleam.toml`.
   ([Alex Manning](https://github.com/rawhat))
 
 - Fixed some reserved keywords would resulting in confusing error messages.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Fixed variables in constant expressions not being escaped correctly when
-  exporting to JavaScript. ([PgBiel](https://github.com/PgBiel))
+  exporting to JavaScript.
+  ([PgBiel](https://github.com/PgBiel))
 
 - Fixed a typo when attempting to publish a package with non-Hex dependencies
   ([inoas](https://github.com/inoas))
 
 - Fixed import completions not appearing in some editors due to range being
-  longer than line. ([Ameen Radwan](https://github.com/Acepie))
+  longer than line.
+  ([Ameen Radwan](https://github.com/Acepie))
 
 - Fixed a bug where TypeScript definitions files would use `null` instead of
   `undefined`.
@@ -519,13 +542,16 @@
 
 - Fixed a bug where unreachable infinite cases would not be detected when
   after a discard or variable pattern.
-  ([Ameen Radwan](https://github.com/Acepie)) and ([Pi-Cla](https://github.com/Pi-Cla))
+  ([Ameen Radwan](https://github.com/Acepie)) and
+  ([Pi-Cla](https://github.com/Pi-Cla))
 
 - Fixed a bug where module imports in guard clauses would not be generated
-  correctly for js target. ([Ameen Radwan](https://github.com/Acepie))
+  correctly for js target.
+  ([Ameen Radwan](https://github.com/Acepie))
 
-- Fixed a bug where formatting constant lists of tuples would be force the tuples
-  to be broken across multiple lines, even when they could fit on a single line.
+- Fixed a bug where formatting constant lists of tuples would be force th
+  tuples to be broken across multiple lines, even when they could fit on a
+  single line.
   ([Isaac Harris-Holt](https://github.com/isaacharrisholt))
 
 - Fixed a bug where floating points in scientific notation with no trailing
@@ -558,5 +584,6 @@
   code could generate incorrect Erlang code.
   ([Nashwan Azhari](https://github.com/aznashwan))
 
-- Fixed a bug where the formatter would produce uneven indentation within multi-line comments at the bottom of case blocks.
+- Fixed a bug where the formatter would produce uneven indentation within
+  multi-line comments at the bottom of case blocks.
   ([Race Williams](https://github.com/raquentin))
