@@ -554,9 +554,6 @@
   on multiple lines.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Fixed a bug where the formatter would not indent a case branch's arrow.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
 - Fixed a bug where pattern matching on a string prefix containing an escape
   code could generate incorrect Erlang code.
   ([Nashwan Azhari](https://github.com/aznashwan))
