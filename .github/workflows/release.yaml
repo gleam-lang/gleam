@@ -104,3 +104,46 @@ jobs:
             ${{ env.ASSET }}
             ${{ env.ASSET }}.sha256
             ${{ env.ASSET }}.sha512
+
+  build-release-wasm:
+    name: build-release-wasm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          profile: minimal
+          override: true
+
+      - name: Install wasm-pack
+        run: curl -sSL https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+
+      - name: Build wasm
+        run: wasm-pack build --release --target web compiler-wasm
+
+      - name: Build wasm archive
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          ARCHIVE="gleam-$VERSION-browser.tar.gz"
+
+          tar -C compiler-wasm/pkg/ -czvf $ARCHIVE .
+
+          openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
+          openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
+          echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
+
+      - name: Upload release archive
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: false
+          fail_on_unmatched_files: true
+          files: |
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256
+            ${{ env.ASSET }}.sha512
