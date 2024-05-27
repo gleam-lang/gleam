@@ -126,9 +126,6 @@
   exhaustiveness errors.
   ([Race Williams](https://github.com/raquentin))
 
-- Initial support for type analysis returning multiple errors.
-  ([Ameen Radwan](https://github.com/Acepie))
-
 - Improve error message if importing type using the value import syntax or vice
   versa.
 
