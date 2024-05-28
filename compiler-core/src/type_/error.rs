@@ -55,6 +55,12 @@ pub enum Error {
         type_with_name_in_scope: bool,
     },
 
+    IncorrectName {
+        location: SrcSpan,
+        name: EcoString,
+        variables: Vec<EcoString>,
+    },
+
     UnknownType {
         location: SrcSpan,
         name: EcoString,
@@ -669,6 +675,7 @@ impl Error {
             Error::SrcImportingTest { location, .. }
             | Error::BitArraySegmentError { location, .. }
             | Error::UnknownVariable { location, .. }
+            | Error::IncorrectName { location, .. }
             | Error::UnknownType { location, .. }
             | Error::UnknownModule { location, .. }
             | Error::UnknownModuleType { location, .. }
@@ -773,7 +780,6 @@ pub enum UnknownValueConstructorError {
     Variable {
         name: EcoString,
         variables: Vec<EcoString>,
-        type_with_name_in_scope: bool,
     },
 
     Module {
@@ -797,12 +803,10 @@ pub fn convert_get_value_constructor_error(
         UnknownValueConstructorError::Variable {
             name,
             variables,
-            type_with_name_in_scope,
-        } => Error::UnknownVariable {
+        } => Error::IncorrectName {
             location,
             name,
             variables,
-            type_with_name_in_scope,
         },
 
         UnknownValueConstructorError::Module {

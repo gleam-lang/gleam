@@ -1866,6 +1866,29 @@ constructing a new record with its values."
                     }
                 }
 
+                TypeError::IncorrectName {
+                    location,
+                    variables,
+                    name,
+                } => {
+                    let text = wrap_format!("The name `{name}` is not valid. I'm expecting a lowercase name here");
+                    Diagnostic {
+                        title: "Incorrect Variable Name".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: did_you_mean(name, variables),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
                 TypeError::PrivateTypeLeak { location, leaked } => {
                     let mut printer = Printer::new();
 

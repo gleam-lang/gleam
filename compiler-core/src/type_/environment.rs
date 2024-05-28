@@ -396,11 +396,9 @@ impl<'a> Environment<'a> {
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
             None => self.scope.get(name).ok_or_else(|| {
-                let type_with_name_in_scope = self.module_types.keys().any(|typ| typ == name);
                 UnknownValueConstructorError::Variable {
                     name: name.clone(),
                     variables: self.local_value_names(),
-                    type_with_name_in_scope,
                 }
             }),
 
