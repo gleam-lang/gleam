@@ -3,6 +3,8 @@ use std::{
     collections::HashMap,
 };
 
+use pubgrub::version::Version as _;
+
 use crate::{ApiError, Release, RetirementReason, RetirementStatus};
 
 use super::{
@@ -388,6 +390,30 @@ assert_order!(ord_pre_smaller_than_zero, "1.0.0", Greater, "1.0.0-rc1");
 assert_order!(ord_pre_smaller_than_zero_flip, "1.0.0-rc1", Less, "1.0.0");
 
 assert_order!(ord_pre_rc1_2, "1.0.0-rc1", Less, "1.0.0-rc2");
+
+#[test]
+fn test_pubgrub_bump_patch() {
+    assert_eq!(
+        Version::parse("1.0.0").unwrap().bump(),
+        Version::parse("1.0.1").unwrap()
+    );
+}
+
+#[test]
+fn test_pubgrub_bump_prerelease_ending_with_a_number() {
+    assert_eq!(
+        Version::parse("1.0.0-rc2").unwrap().bump(),
+        Version::parse("1.0.0-rc3").unwrap()
+    );
+}
+
+#[test]
+fn test_pubgrub_bump_prerelease_ending_with_a_letter() {
+    assert_eq!(
+        Version::parse("1.0.0-rc2a").unwrap().bump(),
+        Version::parse("1.0.0-rc2a1").unwrap()
+    );
+}
 
 struct Remote {
     deps: HashMap<String, Package>,

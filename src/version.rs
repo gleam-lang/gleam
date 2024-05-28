@@ -180,8 +180,96 @@ impl pubgrub::version::Version for Version {
     }
 
     fn bump(&self) -> Self {
-        self.bump_patch()
+        if self.is_pre() {
+            let mut pre = self.pre.clone();
+            let last_component = pre
+                .last_mut()
+                // This `.expect` is safe, as we know there to be at least
+                // one pre-release component.
+                .expect("no pre-release components");
+
+            match last_component {
+                Identifier::Numeric(pre) => *pre += 1,
+                Identifier::AlphaNumeric(pre) => {
+                    let mut segments = split_alphanumeric(&pre);
+                    let last_segment = segments.last_mut().unwrap();
+
+                    match last_segment {
+                        AlphaOrNumeric::Numeric(n) => *n += 1,
+                        AlphaOrNumeric::Alpha(alpha) => {
+                            // We should potentially be smarter about this (for instance, pick the next letter in the
+                            // alphabetic sequence), however, this seems like it could be quite a bit more complex.
+                            alpha.push_str("1")
+                        }
+                    }
+
+                    *pre = segments
+                        .into_iter()
+                        .map(|segment| match segment {
+                            AlphaOrNumeric::Alpha(segment) => segment,
+                            AlphaOrNumeric::Numeric(segment) => segment.to_string(),
+                        })
+                        .collect::<Vec<_>>()
+                        .join("");
+                }
+            }
+
+            Self {
+                major: self.major,
+                minor: self.minor,
+                patch: self.patch,
+                pre,
+                build: None,
+            }
+        } else {
+            self.bump_patch()
+        }
     }
+}
+
+enum AlphaOrNumeric {
+    Alpha(String),
+    Numeric(u32),
+}
+
+/// Splits the given string into alphabetic and numeric segments.
+fn split_alphanumeric(str: &str) -> Vec<AlphaOrNumeric> {
+    let mut segments = Vec::new();
+    let mut current_segment = String::new();
+    let mut previous_char_was_numeric = None;
+
+    for char in str.chars() {
+        let is_numeric = char.is_ascii_digit();
+        match previous_char_was_numeric {
+            Some(previous_char_was_numeric) if previous_char_was_numeric == is_numeric => {
+                current_segment.push(char)
+            }
+            _ => {
+                if !current_segment.is_empty() {
+                    if current_segment.chars().any(|char| char.is_ascii_digit()) {
+                        segments.push(AlphaOrNumeric::Numeric(current_segment.parse().unwrap()));
+                    } else {
+                        segments.push(AlphaOrNumeric::Alpha(current_segment));
+                    }
+
+                    current_segment = String::new();
+                }
+
+                current_segment.push(char);
+                previous_char_was_numeric = Some(is_numeric);
+            }
+        }
+    }
+
+    if !current_segment.is_empty() {
+        if current_segment.chars().any(|char| char.is_ascii_digit()) {
+            segments.push(AlphaOrNumeric::Numeric(current_segment.parse().unwrap()));
+        } else {
+            segments.push(AlphaOrNumeric::Alpha(current_segment));
+        }
+    }
+
+    segments
 }
 
 impl<'a> TryFrom<&'a str> for Version {
