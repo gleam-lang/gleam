@@ -1871,7 +1871,7 @@ constructing a new record with its values."
                     variables,
                     name,
                 } => {
-                    let text = wrap_format!("The name `{name}` is not valid. I'm expecting a lowercase name here");
+                    let text = wrap_format!("The name `{name}` is not valid. I'm expecting a lowercase name here.");
                     Diagnostic {
                         title: "Incorrect Variable Name".into(),
                         text,
