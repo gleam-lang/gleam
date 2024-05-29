@@ -1866,14 +1866,14 @@ constructing a new record with its values."
                     }
                 }
 
-                TypeError::IncorrectName {
+                TypeError::UnknownConstructorName {
                     location,
                     variables,
                     name,
                 } => {
-                    let text = wrap_format!("The name `{name}` is not valid. I'm expecting a lowercase name here.");
+                    let text = wrap_format!("This pattern is matching a constructor named `{name}`, but there is no constructor in scope with that name.");
                     Diagnostic {
-                        title: "Incorrect Variable Name".into(),
+                        title: "Unknown Constructor Name".into(),
                         text,
                         hint: None,
                         level: Level::Error,
