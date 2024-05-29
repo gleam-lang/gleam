@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.4.1 - 2025-05-01
+
+- Fixed a bug where prerelease versions would not `bump` correctly. This caused
+  a panic in the Gleam compiler.
+
 ## v2.4.0 - 2024-05-01
 
 - Added the `revert_release_request`, `revert_release_response`,
