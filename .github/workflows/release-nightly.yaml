@@ -155,10 +155,18 @@ jobs:
       - name: Upload x86_64-unknown-linux-musl artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gleam
+          name: gleam-amd64
           path: target/${{ matrix.target }}/release/gleam
           overwrite: true
         if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+
+      - name: Upload aarch64-unknown-linux-musl artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gleam-arm64
+          path: target/${{ matrix.target }}/release/gleam
+          overwrite: true
+        if: ${{ matrix.target == 'aarch64-unknown-linux-musl' }}
 
   build-nightly-container-images:
     runs-on: ubuntu-latest
@@ -181,11 +189,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download Gleam binary from previous job
+      - name: Download Gleam amd binary from previous job
         uses: actions/download-artifact@v4
         with:
-          name: gleam
-          path: ./
+          name: gleam-amd64
+          path: ./gleam-amd64
+
+      - name: Download Gleam arm binary from previous job
+        uses: actions/download-artifact@v4
+        with:
+          name: gleam-arm64
+          path: ./gleam-arm64
 
       - name: Authenticate with GitHub container registry
         uses: docker/login-action@v3
@@ -201,6 +215,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           file: containers/${{ matrix.base-image }}.dockerfile
           push: true
           tags: ${{ steps.versions.outputs.container_tag }}

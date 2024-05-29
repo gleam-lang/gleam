@@ -6124,3 +6124,17 @@ fn multiline_comment_in_case_block() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3190
+#[test]
+fn trailing_comments_inside_non_empty_bit_arrays_are_not_moved() {
+    assert_format!(
+        r#"pub fn main() {
+  <<
+    1, 2,
+    // One and two are above me.
+  >>
+}
+"#
+    );
+}

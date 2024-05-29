@@ -55,20 +55,32 @@ jobs:
           echo "platform_version=$PLATFORM_VERSION" >> $GITHUB_OUTPUT
           echo "container_tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Download Gleam archive from GitHub release
+      - name: Download Gleam archives from GitHub release
         run: |
           VERSION=${{ steps.versions.outputs.v_version }}
-          URL=https://github.com/${{ github.repository }}/releases/download/$VERSION/gleam-$VERSION-x86_64-unknown-linux-musl.tar.gz
-          echo Downloading $URL
-          curl -Lo gleam.tar.gz $URL
+
+          AMD_URL=https://github.com/${{ github.repository }}/releases/download/$VERSION/gleam-$VERSION-x86_64-unknown-linux-musl.tar.gz
+          ARM_URL=https://github.com/${{ github.repository }}/releases/download/$VERSION/gleam-$VERSION-aarch64-unknown-linux-musl.tar.gz
+
+          echo Downloading amd $AMD_URL
+          curl -Lo gleam-amd.tar.gz $AMD_URL
+
+          echo Downloading arm $ARM_URL
+          curl -Lo gleam-arm.tar.gz $ARM_URL
 
       - name: Unpack Gleam binary from archive
-        run: tar xf gleam.tar.gz
+        run: |
+          tar xf gleam-amd.tar.gz
+          mv gleam gleam-amd64
+
+          tar xf gleam-arm.tar.gz
+          mv gleam gleam-arm64
 
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           file: containers/${{ matrix.base-image }}.dockerfile
           push: true
           tags: ${{ steps.versions.outputs.container_tag }}
