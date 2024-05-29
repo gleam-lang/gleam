@@ -800,10 +800,7 @@ pub fn convert_get_value_constructor_error(
     location: SrcSpan,
 ) -> Error {
     match e {
-        UnknownValueConstructorError::Variable {
-            name,
-            variables,
-        } => Error::IncorrectName {
+        UnknownValueConstructorError::Variable { name, variables } => Error::IncorrectName {
             location,
             name,
             variables,
