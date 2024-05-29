@@ -237,6 +237,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             .module_types
                             .keys()
                             .any(|typ| typ == &name),
+                        situation: None,
                     })?;
                 self.environment.increment_usage(&name);
                 let typ =

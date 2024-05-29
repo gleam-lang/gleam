@@ -395,13 +395,15 @@ impl<'a> Environment<'a> {
         name: &EcoString,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
-            None => self
-                .scope
-                .get(name)
-                .ok_or_else(|| UnknownValueConstructorError::Variable {
+            None => self.scope.get(name).ok_or_else(|| {
+                let type_with_name_in_scope = self.module_types.keys().any(|typ| typ == name);
+                UnknownValueConstructorError::Variable {
                     name: name.clone(),
                     variables: self.local_value_names(),
-                }),
+                    type_with_name_in_scope,
+                    situation: Some(UnknownValueConstructorErrorSituation::UnknownConstructorName),
+                }
+            }),
 
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {

@@ -2093,6 +2093,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                 .module_types
                                 .keys()
                                 .any(|typ| typ == name),
+                            situation: None,
                         })?;
 
                 // Register the value as seen for detection of unused values

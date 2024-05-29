@@ -53,12 +53,7 @@ pub enum Error {
         name: EcoString,
         variables: Vec<EcoString>,
         type_with_name_in_scope: bool,
-    },
-
-    UnknownConstructorName {
-        location: SrcSpan,
-        name: EcoString,
-        variables: Vec<EcoString>,
+        situation: Option<UnknownValueConstructorErrorSituation>,
     },
 
     UnknownType {
@@ -675,7 +670,6 @@ impl Error {
             Error::SrcImportingTest { location, .. }
             | Error::BitArraySegmentError { location, .. }
             | Error::UnknownVariable { location, .. }
-            | Error::UnknownConstructorName { location, .. }
             | Error::UnknownType { location, .. }
             | Error::UnknownModule { location, .. }
             | Error::UnknownModuleType { location, .. }
@@ -780,6 +774,8 @@ pub enum UnknownValueConstructorError {
     Variable {
         name: EcoString,
         variables: Vec<EcoString>,
+        type_with_name_in_scope: bool,
+        situation: Option<UnknownValueConstructorErrorSituation>,
     },
 
     Module {
@@ -795,18 +791,37 @@ pub enum UnknownValueConstructorError {
     },
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum UnknownValueConstructorErrorSituation {
+    /// A value using ```let``` is assigned to a variable having a capital case.
+    UnknownConstructorName,
+}
+
+impl UnknownValueConstructorErrorSituation {
+    pub fn description(&self) -> Option<&'static str> {
+        match self {
+            Self::UnknownConstructorName => None,
+        }
+    }
+}
+
 pub fn convert_get_value_constructor_error(
     e: UnknownValueConstructorError,
     location: SrcSpan,
 ) -> Error {
     match e {
-        UnknownValueConstructorError::Variable { name, variables } => {
-            Error::UnknownConstructorName {
-                location,
-                name,
-                variables,
-            }
-        }
+        UnknownValueConstructorError::Variable {
+            name,
+            variables,
+            type_with_name_in_scope,
+            situation,
+        } => Error::UnknownVariable {
+            location,
+            name,
+            variables,
+            type_with_name_in_scope,
+            situation,
+        },
 
         UnknownValueConstructorError::Module {
             name,

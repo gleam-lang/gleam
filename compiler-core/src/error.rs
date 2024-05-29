@@ -1,8 +1,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, Label, Location};
-use crate::type_::error::RecordVariants;
 use crate::type_::error::{MissingAnnotation, UnknownTypeHint};
+use crate::type_::error::{RecordVariants, UnknownValueConstructorErrorSituation};
 use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{
@@ -1843,37 +1843,24 @@ constructing a new record with its values."
                     variables,
                     name,
                     type_with_name_in_scope,
+                    situation
                 } => {
                     let text = if *type_with_name_in_scope {
                         wrap_format!("`{name}` is a type, it cannot be used as a value.")
                     } else {
-                        wrap_format!("The name `{name}` is not in scope here.")
+                        let mut situation_text = wrap_format!("The name `{name}` is not in scope here.");
+                        match situation {
+                            Some(UnknownValueConstructorErrorSituation::UnknownConstructorName) => {
+                                situation_text.push_str(&wrap_format!("\n\nThis pattern is matching a constructor named `{name}`, but there is no constructor in scope with that name."));
+                                situation_text
+                            }
+                            _ => situation_text
+                        }
                     };
+
+
                     Diagnostic {
                         title: "Unknown variable".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: did_you_mean(name, variables),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::UnknownConstructorName {
-                    location,
-                    variables,
-                    name,
-                } => {
-                    let text = wrap_format!("This pattern is matching a constructor named `{name}`, but there is no constructor in scope with that name.");
-                    Diagnostic {
-                        title: "Unknown constructor name".into(),
                         text,
                         hint: None,
                         level: Level::Error,

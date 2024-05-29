@@ -10,11 +10,13 @@ error: Unknown module field
 
 The module `one` does not have a `Two` value.
 
-error: Unknown constructor name
+error: Unknown variable
   ┌─ /src/one/two.gleam:4:7
   │
 4 │   let Two = x
   │       ^^^
+
+The name `Two` is not in scope here.
 
 This pattern is matching a constructor named `Two`, but there is no
 constructor in scope with that name.
