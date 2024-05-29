@@ -1873,7 +1873,7 @@ constructing a new record with its values."
                 } => {
                     let text = wrap_format!("This pattern is matching a constructor named `{name}`, but there is no constructor in scope with that name.");
                     Diagnostic {
-                        title: "Unknown Constructor Name".into(),
+                        title: "Unknown constructor name".into(),
                         text,
                         hint: None,
                         level: Level::Error,

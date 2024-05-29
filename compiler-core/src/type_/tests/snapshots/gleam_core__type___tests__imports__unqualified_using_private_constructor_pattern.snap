@@ -10,7 +10,7 @@ error: Unknown module field
 
 The module `one` does not have a `Two` value.
 
-error: Unknown Constructor Name
+error: Unknown constructor name
   ┌─ /src/one/two.gleam:4:7
   │
 4 │   let Two = x
