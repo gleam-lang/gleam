@@ -6138,3 +6138,21 @@ fn trailing_comments_inside_non_empty_bit_arrays_are_not_moved() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3210
+#[test]
+fn newlines_are_not_stripped_if_two_consecutive_anonymous_function_are_passed_as_arguments() {
+    assert_format!(
+        r#"pub fn main() {
+  fun(
+    fn() {
+      wibble
+
+      wobble
+    },
+    fn() { wibble },
+  )
+}
+"#
+    );
+}
