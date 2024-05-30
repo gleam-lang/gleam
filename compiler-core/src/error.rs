@@ -1850,7 +1850,7 @@ constructing a new record with its values."
                     } else {
                         let mut situation_text = wrap_format!("The name `{name}` is not in scope here.");
                         match situation {
-                            Some(UnknownValueConstructorErrorSituation::UnknownConstructorName) => {
+                            Some(UnknownValueConstructorErrorSituation::NotFoundPattern) => {
                                 situation_text.push_str(&wrap_format!("\n\nThis pattern is matching a constructor named `{name}`, but there is no constructor in scope with that name."));
                                 situation_text
                             }

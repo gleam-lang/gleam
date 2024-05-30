@@ -1969,7 +1969,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let value_constructor = self
             .environment
-            .get_value_constructor(module.as_ref(), &name)
+            .get_value_constructor(module.as_ref(), &name, None)
             .map_err(|e| convert_get_value_constructor_error(e, location))?
             .clone();
 
@@ -2514,7 +2514,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         Ok(self
             .environment
-            .get_value_constructor(module.as_ref(), name)?
+            .get_value_constructor(module.as_ref(), name, None)?
             .field_map())
     }
 

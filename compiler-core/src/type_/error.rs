@@ -794,15 +794,7 @@ pub enum UnknownValueConstructorError {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum UnknownValueConstructorErrorSituation {
     /// A value using ```let``` is assigned to a variable having a capital case.
-    UnknownConstructorName,
-}
-
-impl UnknownValueConstructorErrorSituation {
-    pub fn description(&self) -> Option<&'static str> {
-        match self {
-            Self::UnknownConstructorName => None,
-        }
-    }
+    NotFoundPattern,
 }
 
 pub fn convert_get_value_constructor_error(

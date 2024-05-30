@@ -6,15 +6,15 @@
 
 ### Compiler
 
+- Added more detail on the constructor error
+  where a variable starting with an uppercase is defined by let binding.
+  ([Arian Pourarian](https://github.com/Arian94))
+
 ### Formatter
 
 ### Language Server
 
 ### Bug Fixes
-
-- Fixed a bug where a wrong error message would be thrown on
-  naming variables starting with uppercase.
-  ([Arian Pourarian](https://github.com/Arian94))
 
 - Fixed a bug where the compiler could fail to detect modules that would clash
   with Erlang modules.

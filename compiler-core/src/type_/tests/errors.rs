@@ -231,6 +231,16 @@ fn unknown_variable() {
 }
 
 #[test]
+fn unknown_capital_case_variable() {
+    assert_error!("let One = 1");
+}
+
+#[test]
+fn unknown_capital_case_tuple_variable() {
+    assert_error!("let triple = #(1, 2.2, \"three\") let #(One, _, _) = triple");
+}
+
+#[test]
 fn unknown_variable_type() {
     assert_error!("Int");
 }

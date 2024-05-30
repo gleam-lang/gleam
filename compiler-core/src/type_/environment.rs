@@ -393,6 +393,7 @@ impl<'a> Environment<'a> {
         &mut self,
         module: Option<&EcoString>,
         name: &EcoString,
+        situation: Option<UnknownValueConstructorErrorSituation>,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
             None => self.scope.get(name).ok_or_else(|| {
@@ -401,7 +402,7 @@ impl<'a> Environment<'a> {
                     name: name.clone(),
                     variables: self.local_value_names(),
                     type_with_name_in_scope,
-                    situation: Some(UnknownValueConstructorErrorSituation::UnknownConstructorName),
+                    situation,
                 }
             }),
 

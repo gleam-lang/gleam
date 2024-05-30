@@ -428,7 +428,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                 let cons = self
                     .environment
-                    .get_value_constructor(module.as_ref(), &name)
+                    .get_value_constructor(
+                        module.as_ref(),
+                        &name,
+                        Some(UnknownValueConstructorErrorSituation::NotFoundPattern),
+                    )
                     .map_err(|e| convert_get_value_constructor_error(e, location))?;
 
                 match cons.field_map() {
