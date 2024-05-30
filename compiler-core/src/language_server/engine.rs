@@ -214,17 +214,17 @@ where
                 Located::Pattern(_pattern) => None,
 
                 Located::Statement(_) | Located::Expression(_) => {
-                    Some(this.completion_values(module))
+                    Some(this.completion_values(module, &line_numbers))
                 }
 
                 Located::ModuleStatement(Definition::Function(_)) => {
-                    Some(this.completion_types(module))
+                    Some(this.completion_types(module, &line_numbers))
                 }
 
-                Located::FunctionBody(_) => Some(this.completion_values(module)),
+                Located::FunctionBody(_) => Some(this.completion_values(module, &line_numbers)),
 
                 Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_)) => {
-                    Some(this.completion_types(module))
+                    Some(this.completion_types(module, &line_numbers))
                 }
 
                 // If the import completions returned no results and we are in an import then
@@ -242,7 +242,7 @@ where
 
                 Located::Arg(_) => None,
 
-                Located::Annotation(_, _) => Some(this.completion_types(module)),
+                Located::Annotation(_, _) => Some(this.completion_types(module, &line_numbers)),
             };
 
             Ok(completions)
@@ -415,7 +415,11 @@ where
         }
     }
 
-    fn completion_types<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
+    fn completion_types<'b>(
+        &'b self,
+        module: &'b Module,
+        line_numbers: &LineNumbers,
+    ) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
 
         // Prelude types
@@ -466,6 +470,7 @@ where
         }
 
         // Importable modules
+        let import_location = self.first_import_line_in_module(module, line_numbers);
         for (module_full_name, module) in self.completable_modules_for_import(module) {
             if module_full_name == "gleam" {
                 continue;
@@ -486,14 +491,8 @@ where
                 let mut completion = type_completion(Some(&mod_import_name), name, type_);
                 completion.additional_text_edits = Some(vec![lsp::TextEdit {
                     range: lsp::Range {
-                        start: lsp::Position {
-                            character: 0,
-                            line: 0,
-                        },
-                        end: lsp::Position {
-                            character: 0,
-                            line: 0,
-                        },
+                        start: import_location,
+                        end: import_location,
                     },
                     new_text: ["import ", module_full_name, "\n"].concat(),
                 }]);
@@ -504,7 +503,11 @@ where
         completions
     }
 
-    fn completion_values<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
+    fn completion_values<'b>(
+        &'b self,
+        module: &'b Module,
+        line_numbers: &LineNumbers,
+    ) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
 
         // Module functions
@@ -548,6 +551,7 @@ where
         }
 
         // Importable modules
+        let import_location = self.first_import_line_in_module(module, line_numbers);
         for (module_full_name, module) in self.completable_modules_for_import(module) {
             if module_full_name == "gleam" {
                 continue;
@@ -561,16 +565,11 @@ where
 
                 let mut completion =
                     value_completion(module_full_name.split('/').last(), name, value);
+
                 completion.additional_text_edits = Some(vec![lsp::TextEdit {
                     range: lsp::Range {
-                        start: lsp::Position {
-                            character: 0,
-                            line: 0,
-                        },
-                        end: lsp::Position {
-                            character: 0,
-                            line: 0,
-                        },
+                        start: import_location,
+                        end: import_location,
                     },
                     new_text: ["import ", module_full_name, "\n"].concat(),
                 }]);
@@ -766,6 +765,22 @@ where
                 ..Default::default()
             })
             .collect()
+    }
+
+    // Gets the position of the line with the first import statement in the file.
+    fn first_import_line_in_module<'b>(
+        &'b self,
+        module: &'b Module,
+        line_numbers: &LineNumbers,
+    ) -> lsp::Position {
+        let import_location = module
+            .ast
+            .definitions
+            .iter()
+            .find_map(get_import)
+            .map_or(0, |i| i.location.start);
+        let import_location = line_numbers.line_number(import_location);
+        lsp::Position::new(import_location - 1, 0)
     }
 
     fn root_package_name(&self) -> &str {
