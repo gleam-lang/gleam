@@ -791,6 +791,18 @@ pub fn main() -> Nil {
     );
 }
 
+#[test]
+fn list_spread_as_first_item_followed_by_other_items() {
+    assert_module_error!(
+        r#"
+pub fn main() -> Nil {
+  let xs = [1, 2, 3]
+  [..xs, 3 + 3, 4]
+}
+"#
+    );
+}
+
 // Tests for nested tuples and structs in tuples
 // https://github.com/gleam-lang/gleam/issues/1980
 
