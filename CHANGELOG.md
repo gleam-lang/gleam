@@ -1,15 +1,15 @@
 # Changelog
 
-## Unreleased
+## v3.0.0 - 2024-05-30
 
 - Added `add_owner_request`, `add_owner_response`
-  `transfer_owner_request`, `transfer_owner_response`
+  `transfer_owner_request`, `transfer_owner_response`,
 
 - `revert_package_request`, and `revert_package_response`
   are renamed to `remove_package_request`, and `remove_package_response`
-  to accurately describe what they actuallly do
+  to accurately describe what they do.
 
-## v2.4.1 - 2025-05-01
+## v2.4.1 - 2024-05-01
 
 - Fixed a bug where prerelease versions would not `bump` correctly. This caused
   a panic in the Gleam compiler.
