@@ -5,7 +5,7 @@ use im::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::{
-    ast::{TypeAst, UnqualifiedImport},
+    ast::UnqualifiedImport,
     type_::{Type, TypeVar, PRELUDE_MODULE_NAME},
 };
 
@@ -62,7 +62,10 @@ pub struct TypeNames {
     /// key:   <some id int>
     /// value: `"something"`
     ///
-    pub generic_annotations: HashMap<u64, TypeAst>,
+    // NOTE: I think we may need to turn this into an immutable hash map in
+    // future to be able to push-on and pop-off scopes as local assignments
+    // could introduce their own named type parameters.
+    pub type_parameters: HashMap<u64, EcoString>,
 
     /// These are unqualified types that are imported in the current module.
     ///
@@ -189,8 +192,8 @@ impl<'a> AnnotationPrinter<'a> {
             Type::Var { type_: typ, .. } => match *typ.borrow() {
                 TypeVar::Link { type_: ref typ, .. } => self.print(typ, buffer),
                 TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
-                    if let Some(TypeAst::Var(type_var)) = self.names.generic_annotations.get(&id) {
-                        buffer.push_str(&type_var.name);
+                    if let Some(name) = self.names.type_parameters.get(&id) {
+                        buffer.push_str(&name);
                         return;
                     }
                     self.print_generic_type_var(id, buffer);
@@ -273,20 +276,14 @@ fn test_type_alias() {
 #[test]
 fn test_generic_type_annotation() {
     let mut names = TypeNames::default();
-    let _ = names.generic_annotations.insert(
-        0,
-        TypeAst::Var(crate::ast::TypeAstVar {
-            name: EcoString::from("foo"),
-            location: crate::ast::SrcSpan::default(),
-        }),
-    );
+    let _ = names.type_parameters.insert(0, "one".into());
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Var {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
     };
 
-    assert_eq!(printer.print_type(&typ), "foo");
+    assert_eq!(printer.print_type(&typ), "one");
 }
 
 #[test]
@@ -457,12 +454,7 @@ fn test_type_alias_and_generics() {
         EcoString::from("Cat"),
     );
 
-    let type_var = TypeAst::Var(crate::ast::TypeAstVar {
-        name: EcoString::from("foo"),
-        location: crate::ast::SrcSpan::default(),
-    });
-
-    let _ = names.generic_annotations.insert(0, type_var);
+    let _ = names.type_parameters.insert(0, "one".into());
 
     let mut printer = AnnotationPrinter::new(&names);
 
@@ -476,7 +468,7 @@ fn test_type_alias_and_generics() {
         package: EcoString::from(""),
     };
 
-    assert_eq!(printer.print_type(&typ), "Cat(foo)");
+    assert_eq!(printer.print_type(&typ), "Cat(one)");
 }
 
 #[test]
@@ -494,12 +486,7 @@ fn test_unqualified_import_and_generic() {
         unqualified_import,
     );
 
-    let type_var = TypeAst::Var(crate::ast::TypeAstVar {
-        name: EcoString::from("foo"),
-        location: crate::ast::SrcSpan::default(),
-    });
-
-    let _ = names.generic_annotations.insert(0, type_var);
+    let _ = names.type_parameters.insert(0, "one".into());
 
     let mut printer = AnnotationPrinter::new(&names);
 
@@ -513,7 +500,7 @@ fn test_unqualified_import_and_generic() {
         package: EcoString::from(""),
     };
 
-    assert_eq!(printer.print_type(&typ), "C(foo)");
+    assert_eq!(printer.print_type(&typ), "C(one)");
 }
 
 #[test]
@@ -582,18 +569,8 @@ fn test_module_imports() {
 fn test_multiple_generic_annotations() {
     let mut names = TypeNames::default();
 
-    let type_var = TypeAst::Var(crate::ast::TypeAstVar {
-        name: EcoString::from("foo"),
-        location: crate::ast::SrcSpan::default(),
-    });
-
-    let type_var2 = TypeAst::Var(crate::ast::TypeAstVar {
-        name: EcoString::from("bar"),
-        location: crate::ast::SrcSpan::default(),
-    });
-
-    let _ = names.generic_annotations.insert(0, type_var);
-    let _ = names.generic_annotations.insert(1, type_var2);
+    let _ = names.type_parameters.insert(0, "one".into());
+    let _ = names.type_parameters.insert(1, "two".into());
 
     let mut printer = AnnotationPrinter::new(&names);
 
@@ -616,6 +593,9 @@ fn test_multiple_generic_annotations() {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 2 })),
     };
 
-    assert_eq!(printer.print_type(&typ), "Tiger(foo, bar)");
+    assert_eq!(printer.print_type(&typ), "Tiger(one, two)");
     assert_eq!(printer.print_type(&typ1), "a");
 }
+
+// TODO: test for generating generic type names when there's already an `a` in
+// scope
