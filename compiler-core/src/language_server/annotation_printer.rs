@@ -4,10 +4,7 @@ use ecow::EcoString;
 use im::{HashMap, HashSet};
 use std::sync::Arc;
 
-use crate::{
-    ast::UnqualifiedImport,
-    type_::{Type, TypeVar, PRELUDE_MODULE_NAME},
-};
+use crate::type_::{Type, TypeVar, PRELUDE_MODULE_NAME};
 
 #[derive(Debug, Default)]
 pub struct TypeNames {
@@ -29,7 +26,7 @@ pub struct TypeNames {
     ///
     pub type_aliases: HashMap<(EcoString, EcoString), EcoString>,
 
-    /// Mapping of imported modules to their aliased named
+    /// Mapping of imported modules to their locally used named
     ///
     /// key:   The name of the module
     /// value: The name the module is aliased to
@@ -43,7 +40,16 @@ pub struct TypeNames {
     /// - key:   "mod1"
     /// - value: "my_mod"
     ///
-    pub module_aliases: HashMap<EcoString, EcoString>,
+    /// # Example 2
+    ///
+    /// ```gleam
+    /// import mod1
+    /// ```
+    /// would result in:
+    /// - key:   "mod1"
+    /// - value: "mod1"
+    ///
+    pub imported_modules: HashMap<EcoString, EcoString>,
 
     /// Generic type parameters that have been annotated in the current
     /// function.
@@ -90,7 +96,7 @@ pub struct TypeNames {
     /// - key:   `("some/module", "Wibble")`
     /// - value: `"Wobble"`
     ///
-    pub unqualified_imports: HashMap<(EcoString, EcoString), UnqualifiedImport>,
+    pub unqualified_imports: HashMap<(EcoString, EcoString), EcoString>,
 
     /// A set of the names of types that are defined in this module. Used to
     /// identify any prelude types that have been shadowed.
@@ -111,28 +117,29 @@ impl TypeNames {
             return (None, type_alias.as_str());
         }
 
-        // This is a prelude type and it has not been shadowed.
-        if module == PRELUDE_MODULE_NAME && !self.locally_defined_types.contains(name) {
+        // This is a type defined in this module
+        if module == &self.current_module {
             return (None, name.as_str());
         }
 
-        // This is a type that has been imported in an unqualified fashion
-        if let Some(unqualified_import) = self.unqualified_imports.get(&key) {
-            if let Some(as_name) = &unqualified_import.as_name {
-                return (None, as_name.as_str());
+        // This is a prelude type
+        if module == PRELUDE_MODULE_NAME {
+            if self.locally_defined_types.contains(name) {
+                return (Some("gleam"), name.as_str());
             } else {
                 return (None, name.as_str());
             }
         }
 
-        // This type is from a module that has been imported
-        if let Some(module_alias) = self.module_aliases.get(module) {
-            return (Some(module_alias), name.as_str());
-        };
-
-        if module != &self.current_module {
-            return (Some(module), name.as_str());
+        // This is a type that has been imported in an unqualified fashion
+        if let Some(name) = self.unqualified_imports.get(&key) {
+            return (None, name.as_str());
         }
+
+        // This type is from a module that has been imported
+        if let Some(module) = self.imported_modules.get(module) {
+            return (Some(module), name.as_str());
+        };
 
         // TODO: handle the module having not been imported. I guess it should
         // be qualified?
@@ -256,18 +263,17 @@ impl<'a> AnnotationPrinter<'a> {
 #[test]
 fn test_type_alias() {
     let mut names = TypeNames::default();
-    let _ = names.type_aliases.insert(
-        (EcoString::from("mod"), EcoString::from("Tiger")),
-        EcoString::from("Cat"),
-    );
+    let _ = names
+        .type_aliases
+        .insert(("mod".into(), "Tiger".into()), "Cat".into());
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
-        name: EcoString::from("Tiger"),
+        name: "Tiger".into(),
         args: vec![],
-        module: EcoString::from("mod"),
+        module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
-        package: EcoString::from(""),
+        package: "".into(),
     };
 
     assert_eq!(printer.print_type(&typ), "Cat");
@@ -289,23 +295,18 @@ fn test_generic_type_annotation() {
 #[test]
 fn test_unqualified_import() {
     let mut names = TypeNames::default();
-    let _ = names.unqualified_imports.insert(
-        (EcoString::from("mod"), EcoString::from("Cat")),
-        UnqualifiedImport {
-            name: EcoString::from("Cat"),
-            as_name: Some(EcoString::from("C")),
-            location: crate::ast::SrcSpan::default(),
-        },
-    );
+    let _ = names
+        .unqualified_imports
+        .insert(("mod".into(), "Cat".into()), "C".into());
 
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
-        name: EcoString::from("Cat"),
+        name: "Cat".into(),
         args: vec![],
-        module: EcoString::from("mod"),
+        module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
-        package: EcoString::from(""),
+        package: "".into(),
     };
 
     assert_eq!(printer.print_type(&typ), "C");
@@ -314,16 +315,16 @@ fn test_unqualified_import() {
 #[test]
 fn test_prelude_type_shadowed() {
     let mut names = TypeNames::default();
-    let _ = names.locally_defined_types.insert(EcoString::from("Int"));
+    let _ = names.locally_defined_types.insert("Int".into());
 
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
-        name: EcoString::from("Int"),
+        name: "Int".into(),
         args: vec![],
         module: PRELUDE_MODULE_NAME.into(),
         publicity: crate::ast::Publicity::Public,
-        package: EcoString::from(""),
+        package: "".into(),
     };
 
     assert_eq!(printer.print_type(&typ), "gleam.Int");
@@ -335,11 +336,11 @@ fn test_prelude_type_not_shadowed() {
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
-        name: EcoString::from("Int"),
+        name: "Int".into(),
         args: vec![],
         module: PRELUDE_MODULE_NAME.into(),
         publicity: crate::ast::Publicity::Public,
-        package: EcoString::from(""),
+        package: "".into(),
     };
 
     assert_eq!(printer.print_type(&typ), "Int");
@@ -370,18 +371,18 @@ fn test_tuple_type() {
     let typ = Type::Tuple {
         elems: vec![
             Arc::new(Type::Named {
-                name: EcoString::from("Int"),
+                name: "Int".into(),
                 args: vec![],
                 module: PRELUDE_MODULE_NAME.into(),
                 publicity: crate::ast::Publicity::Public,
-                package: EcoString::from(""),
+                package: "".into(),
             }),
             Arc::new(Type::Named {
-                name: EcoString::from("String"),
+                name: "String".into(),
                 args: vec![],
                 module: PRELUDE_MODULE_NAME.into(),
                 publicity: crate::ast::Publicity::Public,
-                package: EcoString::from(""),
+                package: "".into(),
             }),
         ],
     };
@@ -392,34 +393,32 @@ fn test_tuple_type() {
 #[test]
 fn test_fn_type() {
     let mut names = TypeNames::default();
-    let _ = names
-        .locally_defined_types
-        .insert(EcoString::from("String"));
+    let _ = names.locally_defined_types.insert("String".into());
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Fn {
         args: vec![
             Arc::new(Type::Named {
-                name: EcoString::from("Int"),
+                name: "Int".into(),
                 args: vec![],
                 module: PRELUDE_MODULE_NAME.into(),
                 publicity: crate::ast::Publicity::Public,
-                package: EcoString::from(""),
+                package: "".into(),
             }),
             Arc::new(Type::Named {
-                name: EcoString::from("String"),
+                name: "String".into(),
                 args: vec![],
                 module: PRELUDE_MODULE_NAME.into(),
                 publicity: crate::ast::Publicity::Public,
-                package: EcoString::from(""),
+                package: "".into(),
             }),
         ],
         retrn: Arc::new(Type::Named {
-            name: EcoString::from("Bool"),
+            name: "Bool".into(),
             args: vec![],
             module: PRELUDE_MODULE_NAME.into(),
             publicity: crate::ast::Publicity::Public,
-            package: EcoString::from(""),
+            package: "".into(),
         }),
     };
 
@@ -430,16 +429,16 @@ fn test_fn_type() {
 fn test_module_alias() {
     let mut names = TypeNames::default();
     let _ = names
-        .module_aliases
-        .insert(EcoString::from("mod1"), EcoString::from("animals"));
+        .imported_modules
+        .insert("mod1".into(), "animals".into());
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
-        name: EcoString::from("Cat"),
+        name: "Cat".into(),
         args: vec![],
-        module: EcoString::from("mod1"),
+        module: "mod1".into(),
         publicity: crate::ast::Publicity::Public,
-        package: EcoString::from(""),
+        package: "".into(),
     };
 
     assert_eq!(printer.print_type(&typ), "animals.Cat");
@@ -449,23 +448,22 @@ fn test_module_alias() {
 fn test_type_alias_and_generics() {
     let mut names = TypeNames::default();
 
-    let _ = names.type_aliases.insert(
-        (EcoString::from("mod"), EcoString::from("Tiger")),
-        EcoString::from("Cat"),
-    );
+    let _ = names
+        .type_aliases
+        .insert(("mod".into(), "Tiger".into()), "Cat".into());
 
     let _ = names.type_parameters.insert(0, "one".into());
 
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
-        name: EcoString::from("Tiger"),
+        name: "Tiger".into(),
         args: vec![Arc::new(Type::Var {
             type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
         })],
-        module: EcoString::from("mod"),
+        module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
-        package: EcoString::from(""),
+        package: "".into(),
     };
 
     assert_eq!(printer.print_type(&typ), "Cat(one)");
@@ -475,29 +473,22 @@ fn test_type_alias_and_generics() {
 fn test_unqualified_import_and_generic() {
     let mut names = TypeNames::default();
 
-    let unqualified_import = UnqualifiedImport {
-        name: EcoString::from("Cat"),
-        as_name: Some(EcoString::from("C")),
-        location: crate::ast::SrcSpan::default(),
-    };
-
-    let _ = names.unqualified_imports.insert(
-        (EcoString::from("mod"), EcoString::from("Cat")),
-        unqualified_import,
-    );
+    let _ = names
+        .unqualified_imports
+        .insert(("mod".into(), "Cat".into()), "C".into());
 
     let _ = names.type_parameters.insert(0, "one".into());
 
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
-        name: EcoString::from("Cat"),
+        name: "Cat".into(),
         args: vec![Arc::new(Type::Var {
             type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
         })],
-        module: EcoString::from("mod"),
+        module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
-        package: EcoString::from(""),
+        package: "".into(),
     };
 
     assert_eq!(printer.print_type(&typ), "C(one)");
@@ -508,28 +499,21 @@ fn test_unqualified_import_and_module_alias() {
     let mut names = TypeNames::default();
 
     let _ = names
-        .module_aliases
-        .insert(EcoString::from("mod1"), EcoString::from("animals"));
+        .imported_modules
+        .insert("mod1".into(), "animals".into());
 
-    let unqualified_import = UnqualifiedImport {
-        name: EcoString::from("Cat"),
-        as_name: Some(EcoString::from("C")),
-        location: crate::ast::SrcSpan::default(),
-    };
-
-    let _ = names.unqualified_imports.insert(
-        (EcoString::from("mod1"), EcoString::from("Cat")),
-        unqualified_import,
-    );
+    let _ = names
+        .unqualified_imports
+        .insert(("mod1".into(), "Cat".into()), "C".into());
 
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
-        name: EcoString::from("Cat"),
+        name: "Cat".into(),
         args: vec![],
-        module: EcoString::from("mod1"),
+        module: "mod1".into(),
         publicity: crate::ast::Publicity::Public,
-        package: EcoString::from(""),
+        package: "".into(),
     };
 
     assert_eq!(printer.print_type(&typ), "C");
@@ -539,26 +523,26 @@ fn test_unqualified_import_and_module_alias() {
 fn test_module_imports() {
     let mut names = TypeNames::default();
     let _ = names
-        .module_aliases
-        .insert(EcoString::from("mod"), EcoString::from("animals"));
-    let _ = names.locally_defined_types.insert(EcoString::from("Cat"));
+        .imported_modules
+        .insert("mod".into(), "animals".into());
+    let _ = names.locally_defined_types.insert("Cat".into());
 
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
-        name: EcoString::from("Cat"),
+        name: "Cat".into(),
         args: vec![],
-        module: EcoString::from("mod"),
+        module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
-        package: EcoString::from(""),
+        package: "".into(),
     };
 
     let typ1 = Type::Named {
-        name: EcoString::from("Cat"),
+        name: "Cat".into(),
         args: vec![],
-        module: EcoString::from(""),
+        module: "".into(),
         publicity: crate::ast::Publicity::Public,
-        package: EcoString::from(""),
+        package: "".into(),
     };
 
     assert_eq!(printer.print_type(&typ), "animals.Cat");
@@ -575,7 +559,7 @@ fn test_multiple_generic_annotations() {
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
-        name: EcoString::from("Tiger"),
+        name: "Tiger".into(),
         args: vec![
             Arc::new(Type::Var {
                 type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
@@ -584,9 +568,9 @@ fn test_multiple_generic_annotations() {
                 type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 1 })),
             }),
         ],
-        module: EcoString::from(""),
+        module: "".into(),
         publicity: crate::ast::Publicity::Public,
-        package: EcoString::from(""),
+        package: "".into(),
     };
 
     let typ1 = Type::Var {
