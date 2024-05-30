@@ -11,6 +11,8 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub struct TypeNames {
+    pub current_module: EcoString,
+
     /// Type aliases that are defined in the current module.
     ///
     /// key:   (Defining module name, type name)
@@ -93,21 +95,61 @@ pub struct TypeNames {
     pub locally_defined_types: HashSet<EcoString>,
 }
 
+impl TypeNames {
+    fn named_type<'a>(
+        &'a self,
+        module: &'a EcoString,
+        name: &'a EcoString,
+    ) -> (Option<&'a str>, &'a str) {
+        let key = (module.clone(), name.clone());
+
+        // There is a local type alias for this type, use that.
+        if let Some(type_alias) = self.type_aliases.get(&key) {
+            return (None, type_alias.as_str());
+        }
+
+        // This is a prelude type and it has not been shadowed.
+        if module == PRELUDE_MODULE_NAME && !self.locally_defined_types.contains(name) {
+            return (None, name.as_str());
+        }
+
+        // This is a type that has been imported in an unqualified fashion
+        if let Some(unqualified_import) = self.unqualified_imports.get(&key) {
+            if let Some(as_name) = &unqualified_import.as_name {
+                return (None, as_name.as_str());
+            } else {
+                return (None, name.as_str());
+            }
+        }
+
+        // This type is from a module that has been imported
+        if let Some(module_alias) = self.module_aliases.get(module) {
+            return (Some(module_alias), name.as_str());
+        };
+
+        if module != &self.current_module {
+            return (Some(module), name.as_str());
+        }
+
+        // TODO: handle the module having not been imported. I guess it should
+        // be qualified?
+        return (None, name.as_str());
+    }
+}
+
 #[derive(Debug)]
 pub struct AnnotationPrinter<'a> {
     generated_names: HashMap<u64, EcoString>,
     uid: u64,
     names: &'a TypeNames,
-    current_module: EcoString,
 }
 
 impl<'a> AnnotationPrinter<'a> {
-    pub fn new(names: &'a TypeNames, current_module: EcoString) -> Self {
+    pub fn new(names: &'a TypeNames) -> Self {
         AnnotationPrinter {
             generated_names: HashMap::new(),
             uid: u64::default(),
             names,
-            current_module,
         }
     }
 
@@ -122,30 +164,13 @@ impl<'a> AnnotationPrinter<'a> {
             Type::Named {
                 name, args, module, ..
             } => {
-                let key = (module.clone(), name.clone());
+                let (module, name) = self.names.named_type(module, name);
 
-                if let Some(typ_alias) = self.names.type_aliases.get(&key) {
-                    buffer.push_str(typ_alias.as_str());
-                } else if module == PRELUDE_MODULE_NAME
-                    && !self.names.locally_defined_types.contains(name)
-                {
-                    buffer.push_str(name.as_str());
-                } else if let Some(unqualified_import) = self.names.unqualified_imports.get(&key) {
-                    if let Some(as_name) = &unqualified_import.as_name {
-                        buffer.push_str(as_name.as_str());
-                    } else {
-                        buffer.push_str(name.as_str());
-                    }
-                } else {
-                    if let Some(module_alias) = self.names.module_aliases.get(module) {
-                        buffer.push_str(module_alias);
-                        buffer.push('.');
-                    } else if module != &self.current_module {
-                        buffer.push_str(module);
-                        buffer.push('.');
-                    }
-                    buffer.push_str(name);
+                if let Some(module) = module {
+                    buffer.push_str(module);
+                    buffer.push('.');
                 }
+                buffer.push_str(name);
 
                 if !args.is_empty() {
                     buffer.push('(');
@@ -232,7 +257,7 @@ fn test_type_alias() {
         (EcoString::from("mod"), EcoString::from("Tiger")),
         EcoString::from("Cat"),
     );
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
         name: EcoString::from("Tiger"),
@@ -255,7 +280,7 @@ fn test_generic_type_annotation() {
             location: crate::ast::SrcSpan::default(),
         }),
     );
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Var {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
@@ -276,7 +301,7 @@ fn test_unqualified_import() {
         },
     );
 
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
         name: EcoString::from("Cat"),
@@ -294,7 +319,7 @@ fn test_prelude_type_shadowed() {
     let mut names = TypeNames::default();
     let _ = names.locally_defined_types.insert(EcoString::from("Int"));
 
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
         name: EcoString::from("Int"),
@@ -310,7 +335,7 @@ fn test_prelude_type_shadowed() {
 #[test]
 fn test_prelude_type_not_shadowed() {
     let names = TypeNames::default();
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
         name: EcoString::from("Int"),
@@ -326,7 +351,7 @@ fn test_prelude_type_not_shadowed() {
 #[test]
 fn test_generic_type_var() {
     let names = TypeNames::default();
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Var {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Unbound { id: 0 })),
@@ -343,7 +368,7 @@ fn test_generic_type_var() {
 #[test]
 fn test_tuple_type() {
     let names = TypeNames::default();
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Tuple {
         elems: vec![
@@ -373,7 +398,7 @@ fn test_fn_type() {
     let _ = names
         .locally_defined_types
         .insert(EcoString::from("String"));
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Fn {
         args: vec![
@@ -410,7 +435,7 @@ fn test_module_alias() {
     let _ = names
         .module_aliases
         .insert(EcoString::from("mod1"), EcoString::from("animals"));
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
         name: EcoString::from("Cat"),
@@ -439,7 +464,7 @@ fn test_type_alias_and_generics() {
 
     let _ = names.generic_annotations.insert(0, type_var);
 
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
         name: EcoString::from("Tiger"),
@@ -476,7 +501,7 @@ fn test_unqualified_import_and_generic() {
 
     let _ = names.generic_annotations.insert(0, type_var);
 
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
         name: EcoString::from("Cat"),
@@ -510,7 +535,7 @@ fn test_unqualified_import_and_module_alias() {
         unqualified_import,
     );
 
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
         name: EcoString::from("Cat"),
@@ -531,7 +556,7 @@ fn test_module_imports() {
         .insert(EcoString::from("mod"), EcoString::from("animals"));
     let _ = names.locally_defined_types.insert(EcoString::from("Cat"));
 
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
         name: EcoString::from("Cat"),
@@ -570,7 +595,7 @@ fn test_multiple_generic_annotations() {
     let _ = names.generic_annotations.insert(0, type_var);
     let _ = names.generic_annotations.insert(1, type_var2);
 
-    let mut printer = AnnotationPrinter::new(&names, EcoString::from(""));
+    let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Named {
         name: EcoString::from("Tiger"),
