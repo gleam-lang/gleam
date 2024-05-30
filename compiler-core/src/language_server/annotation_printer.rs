@@ -1,16 +1,17 @@
 #![allow(dead_code)]
 
 use ecow::EcoString;
-use im::{HashMap, HashSet};
+use im::HashMap;
 use std::sync::Arc;
 
-use crate::type_::{Type, TypeVar, PRELUDE_MODULE_NAME};
+use crate::type_::{Type, TypeVar};
 
 #[derive(Debug, Default)]
 pub struct TypeNames {
     pub current_module: EcoString,
 
-    /// Type aliases that are defined in the current module.
+    /// Types that exist in the current module, either defined or imported in an
+    /// unqualified fashion.
     ///
     /// key:   (Defining module name, type name)
     /// value: Alias name
@@ -24,7 +25,25 @@ pub struct TypeNames {
     /// - key:   `("wibble", "Woo")`
     /// - value: `"Wibble"`
     ///
-    pub type_aliases: HashMap<(EcoString, EcoString), EcoString>,
+    /// # Example 2
+    ///
+    /// ```gleam
+    /// import some/module.{type Wibble}
+    /// ```
+    /// would result in
+    /// - key:   `("some/module", "Wibble")`
+    /// - value: `"Wibble"`
+    ///
+    /// # Example 3
+    ///
+    /// ```gleam
+    /// import some/module.{type Wibble as Wobble}
+    /// ```
+    /// would result in
+    /// - key:   `("some/module", "Wibble")`
+    /// - value: `"Wobble"`
+    ///
+    pub local_types: HashMap<(EcoString, EcoString), EcoString>,
 
     /// Mapping of imported modules to their locally used named
     ///
@@ -68,40 +87,7 @@ pub struct TypeNames {
     /// key:   <some id int>
     /// value: `"something"`
     ///
-    // NOTE: I think we may need to turn this into an immutable hash map in
-    // future to be able to push-on and pop-off scopes as local assignments
-    // could introduce their own named type parameters.
     pub type_parameters: HashMap<u64, EcoString>,
-
-    /// These are unqualified types that are imported in the current module.
-    ///
-    /// key:   (Defining module name, type name)
-    /// value: The name that was used, either its original name or an alias
-    ///
-    /// # Example 1
-    ///
-    /// ```gleam
-    /// import some/module.{type Wibble}
-    /// ```
-    /// would result in
-    /// - key:   `("some/module", "Wibble")`
-    /// - value: `"Wibble"`
-    ///
-    /// # Example 2
-    ///
-    /// ```gleam
-    /// import some/module.{type Wibble as Wobble}
-    /// ```
-    /// would result in
-    /// - key:   `("some/module", "Wibble")`
-    /// - value: `"Wobble"`
-    ///
-    pub unqualified_imports: HashMap<(EcoString, EcoString), EcoString>,
-
-    /// A set of the names of types that are defined in this module. Used to
-    /// identify any prelude types that have been shadowed.
-    ///
-    pub locally_defined_types: HashSet<EcoString>,
 }
 
 impl TypeNames {
@@ -112,27 +98,8 @@ impl TypeNames {
     ) -> (Option<&'a str>, &'a str) {
         let key = (module.clone(), name.clone());
 
-        // There is a local type alias for this type, use that.
-        if let Some(type_alias) = self.type_aliases.get(&key) {
-            return (None, type_alias.as_str());
-        }
-
-        // This is a type defined in this module
-        if module == &self.current_module {
-            return (None, name.as_str());
-        }
-
-        // This is a prelude type
-        if module == PRELUDE_MODULE_NAME {
-            if self.locally_defined_types.contains(name) {
-                return (Some("gleam"), name.as_str());
-            } else {
-                return (None, name.as_str());
-            }
-        }
-
-        // This is a type that has been imported in an unqualified fashion
-        if let Some(name) = self.unqualified_imports.get(&key) {
+        // There is a local name for this type, use that.
+        if let Some(name) = self.local_types.get(&key) {
             return (None, name.as_str());
         }
 
@@ -141,9 +108,8 @@ impl TypeNames {
             return (Some(module), name.as_str());
         };
 
-        // TODO: handle the module having not been imported. I guess it should
-        // be qualified?
-        return (None, name.as_str());
+        let module = module.split('/').last().unwrap_or(module);
+        return (Some(module), name.as_str());
     }
 }
 
@@ -261,10 +227,10 @@ impl<'a> AnnotationPrinter<'a> {
 }
 
 #[test]
-fn test_type_alias() {
+fn test_local_type() {
     let mut names = TypeNames::default();
     let _ = names
-        .type_aliases
+        .local_types
         .insert(("mod".into(), "Tiger".into()), "Cat".into());
     let mut printer = AnnotationPrinter::new(&names);
 
@@ -290,60 +256,6 @@ fn test_generic_type_annotation() {
     };
 
     assert_eq!(printer.print_type(&typ), "one");
-}
-
-#[test]
-fn test_unqualified_import() {
-    let mut names = TypeNames::default();
-    let _ = names
-        .unqualified_imports
-        .insert(("mod".into(), "Cat".into()), "C".into());
-
-    let mut printer = AnnotationPrinter::new(&names);
-
-    let typ = Type::Named {
-        name: "Cat".into(),
-        args: vec![],
-        module: "mod".into(),
-        publicity: crate::ast::Publicity::Public,
-        package: "".into(),
-    };
-
-    assert_eq!(printer.print_type(&typ), "C");
-}
-
-#[test]
-fn test_prelude_type_shadowed() {
-    let mut names = TypeNames::default();
-    let _ = names.locally_defined_types.insert("Int".into());
-
-    let mut printer = AnnotationPrinter::new(&names);
-
-    let typ = Type::Named {
-        name: "Int".into(),
-        args: vec![],
-        module: PRELUDE_MODULE_NAME.into(),
-        publicity: crate::ast::Publicity::Public,
-        package: "".into(),
-    };
-
-    assert_eq!(printer.print_type(&typ), "gleam.Int");
-}
-
-#[test]
-fn test_prelude_type_not_shadowed() {
-    let names = TypeNames::default();
-    let mut printer = AnnotationPrinter::new(&names);
-
-    let typ = Type::Named {
-        name: "Int".into(),
-        args: vec![],
-        module: PRELUDE_MODULE_NAME.into(),
-        publicity: crate::ast::Publicity::Public,
-        package: "".into(),
-    };
-
-    assert_eq!(printer.print_type(&typ), "Int");
 }
 
 #[test]
@@ -373,27 +285,32 @@ fn test_tuple_type() {
             Arc::new(Type::Named {
                 name: "Int".into(),
                 args: vec![],
-                module: PRELUDE_MODULE_NAME.into(),
+                module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
             }),
             Arc::new(Type::Named {
                 name: "String".into(),
                 args: vec![],
-                module: PRELUDE_MODULE_NAME.into(),
+                module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
             }),
         ],
     };
 
-    assert_eq!(printer.print_type(&typ), "#(Int, String)");
+    assert_eq!(printer.print_type(&typ), "#(gleam.Int, gleam.String)");
 }
 
 #[test]
 fn test_fn_type() {
     let mut names = TypeNames::default();
-    let _ = names.locally_defined_types.insert("String".into());
+    let _ = names
+        .local_types
+        .insert(("gleam".into(), "Int".into()), "Int".into());
+    let _ = names
+        .local_types
+        .insert(("gleam".into(), "Bool".into()), "Bool".into());
     let mut printer = AnnotationPrinter::new(&names);
 
     let typ = Type::Fn {
@@ -401,14 +318,14 @@ fn test_fn_type() {
             Arc::new(Type::Named {
                 name: "Int".into(),
                 args: vec![],
-                module: PRELUDE_MODULE_NAME.into(),
+                module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
             }),
             Arc::new(Type::Named {
                 name: "String".into(),
                 args: vec![],
-                module: PRELUDE_MODULE_NAME.into(),
+                module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
             }),
@@ -416,7 +333,7 @@ fn test_fn_type() {
         retrn: Arc::new(Type::Named {
             name: "Bool".into(),
             args: vec![],
-            module: PRELUDE_MODULE_NAME.into(),
+            module: "gleam".into(),
             publicity: crate::ast::Publicity::Public,
             package: "".into(),
         }),
@@ -449,7 +366,7 @@ fn test_type_alias_and_generics() {
     let mut names = TypeNames::default();
 
     let _ = names
-        .type_aliases
+        .local_types
         .insert(("mod".into(), "Tiger".into()), "Cat".into());
 
     let _ = names.type_parameters.insert(0, "one".into());
@@ -474,7 +391,7 @@ fn test_unqualified_import_and_generic() {
     let mut names = TypeNames::default();
 
     let _ = names
-        .unqualified_imports
+        .local_types
         .insert(("mod".into(), "Cat".into()), "C".into());
 
     let _ = names.type_parameters.insert(0, "one".into());
@@ -495,6 +412,21 @@ fn test_unqualified_import_and_generic() {
 }
 
 #[test]
+fn nested_module() {
+    let names = TypeNames::default();
+    let mut printer = AnnotationPrinter::new(&names);
+    let typ = Type::Named {
+        name: "Cat".into(),
+        args: vec![],
+        module: "one/two/three".into(),
+        publicity: crate::ast::Publicity::Public,
+        package: "".into(),
+    };
+
+    assert_eq!(printer.print_type(&typ), "three.Cat");
+}
+
+#[test]
 fn test_unqualified_import_and_module_alias() {
     let mut names = TypeNames::default();
 
@@ -503,7 +435,7 @@ fn test_unqualified_import_and_module_alias() {
         .insert("mod1".into(), "animals".into());
 
     let _ = names
-        .unqualified_imports
+        .local_types
         .insert(("mod1".into(), "Cat".into()), "C".into());
 
     let mut printer = AnnotationPrinter::new(&names);
@@ -525,7 +457,9 @@ fn test_module_imports() {
     let _ = names
         .imported_modules
         .insert("mod".into(), "animals".into());
-    let _ = names.locally_defined_types.insert("Cat".into());
+    let _ = names
+        .local_types
+        .insert(("mod2".into(), "Cat".into()), "Cat".into());
 
     let mut printer = AnnotationPrinter::new(&names);
 
@@ -540,7 +474,7 @@ fn test_module_imports() {
     let typ1 = Type::Named {
         name: "Cat".into(),
         args: vec![],
-        module: "".into(),
+        module: "mod2".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
     };
@@ -568,7 +502,7 @@ fn test_multiple_generic_annotations() {
                 type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 1 })),
             }),
         ],
-        module: "".into(),
+        module: "tigermodule".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
     };
@@ -577,7 +511,7 @@ fn test_multiple_generic_annotations() {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 2 })),
     };
 
-    assert_eq!(printer.print_type(&typ), "Tiger(one, two)");
+    assert_eq!(printer.print_type(&typ), "tigermodule.Tiger(one, two)");
     assert_eq!(printer.print_type(&typ1), "a");
 }
 
