@@ -465,6 +465,42 @@ where
             }
         }
 
+        // Importable modules
+        for (module_full_name, module) in self.completable_modules_for_import(module) {
+            if module_full_name == "gleam" {
+                continue;
+            }
+
+            // Qualified types
+            for (name, type_) in &module.types {
+                if !self.is_suggestable_import(&type_.publicity, module.package.as_str()) {
+                    continue;
+                }
+
+                let mod_import_name = module_full_name
+                    .split('/')
+                    .last()
+                    .map(EcoString::from)
+                    .unwrap_or(module_full_name.clone());
+
+                let mut completion = type_completion(Some(&mod_import_name), name, type_);
+                completion.additional_text_edits = Some(vec![lsp::TextEdit {
+                    range: lsp::Range {
+                        start: lsp::Position {
+                            character: 0,
+                            line: 0,
+                        },
+                        end: lsp::Position {
+                            character: 0,
+                            line: 0,
+                        },
+                    },
+                    new_text: ["import ", module_full_name, "\n"].concat(),
+                }]);
+                completions.push(completion);
+            }
+        }
+
         completions
     }
 
@@ -508,6 +544,37 @@ where
                     }
                     None => continue,
                 }
+            }
+        }
+
+        // Importable modules
+        for (module_full_name, module) in self.completable_modules_for_import(module) {
+            if module_full_name == "gleam" {
+                continue;
+            }
+
+            // Qualified values
+            for (name, value) in &module.values {
+                if !self.is_suggestable_import(&value.publicity, module.package.as_str()) {
+                    continue;
+                }
+
+                let mut completion =
+                    value_completion(module_full_name.split('/').last(), name, value);
+                completion.additional_text_edits = Some(vec![lsp::TextEdit {
+                    range: lsp::Range {
+                        start: lsp::Position {
+                            character: 0,
+                            line: 0,
+                        },
+                        end: lsp::Position {
+                            character: 0,
+                            line: 0,
+                        },
+                    },
+                    new_text: ["import ", module_full_name, "\n"].concat(),
+                }]);
+                completions.push(completion);
             }
         }
 
@@ -630,12 +697,11 @@ where
         }
     }
 
-    fn complete_modules_for_import<'b>(
+    // Get all the modules that can be imported that have not already been imported.
+    fn completable_modules_for_import<'b>(
         &'b self,
         current_module: &'b Module,
-        start: lsp::Position,
-        end: lsp::Position,
-    ) -> Vec<lsp::CompletionItem> {
+    ) -> Vec<(&EcoString, &ModuleInterface)> {
         let mut direct_dep_packages: std::collections::HashSet<&EcoString> =
             std::collections::HashSet::from_iter(
                 self.compiler.project_compiler.config.dependencies.keys(),
@@ -678,8 +744,18 @@ where
             //
             // You cannot import yourself
             .filter(|(name, _)| *name != &current_module.name)
-            //
-            // Everything else we suggest as a completion
+            .collect()
+    }
+
+    // Get all the completions for modules that can be imported
+    fn complete_modules_for_import<'b>(
+        &'b self,
+        current_module: &'b Module,
+        start: lsp::Position,
+        end: lsp::Position,
+    ) -> Vec<lsp::CompletionItem> {
+        self.completable_modules_for_import(current_module)
+            .iter()
             .map(|(name, _)| lsp::CompletionItem {
                 label: name.to_string(),
                 kind: Some(lsp::CompletionItemKind::MODULE),

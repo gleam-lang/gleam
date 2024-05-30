@@ -285,6 +285,76 @@ pub fn wobble() {
 }
 
 #[test]
+fn importable_module_function() {
+    let code = "
+";
+    let dep = "
+pub fn wobble() {
+  Nil
+}
+";
+
+    assert_eq!(
+        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
+        vec![CompletionItem {
+            label: "dep.wobble".into(),
+            kind: Some(CompletionItemKind::FUNCTION),
+            detail: Some("fn() -> Nil".into()),
+            documentation: None,
+            additional_text_edits: Some(vec![TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 0
+                    }
+                },
+                new_text: "import dep\n".into()
+            }]),
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
+fn importable_module_function_from_deep_module() {
+    let code = "
+";
+    let dep = "
+pub fn wobble() {
+  Nil
+}
+";
+
+    assert_eq!(
+        completion_at_default_position(TestProject::for_source(code).add_module("a/b/dep", dep)),
+        vec![CompletionItem {
+            label: "dep.wobble".into(),
+            kind: Some(CompletionItemKind::FUNCTION),
+            detail: Some("fn() -> Nil".into()),
+            documentation: None,
+            additional_text_edits: Some(vec![TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 0
+                    }
+                },
+                new_text: "import a/b/dep\n".into()
+            }]),
+            ..Default::default()
+        }]
+    );
+}
+
+#[test]
 fn imported_public_enum() {
     let code = "
 import dep
@@ -643,6 +713,101 @@ pub fn wibble(
                 kind: Some(CompletionItemKind::CLASS),
                 detail: Some("Type".into()),
                 documentation: None,
+                ..Default::default()
+            },]
+        ]
+        .concat()
+    );
+}
+
+#[test]
+fn importable_type() {
+    let dep = "
+pub type Zoo = List(String)
+type Private = List(String)
+";
+    let code = "
+
+pub fn wibble(
+  _: String,
+) -> Nil {
+  Nil
+}
+";
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code).add_module("dep", dep),
+            Position::new(3, 0)
+        ),
+        [
+            prelude_type_completions(),
+            vec![CompletionItem {
+                label: "dep.Zoo".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                additional_text_edits: Some(vec![TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 0,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 0,
+                            character: 0
+                        }
+                    },
+                    new_text: "import dep\n".into()
+                }]),
+                ..Default::default()
+            },]
+        ]
+        .concat()
+    );
+}
+
+#[test]
+fn importable_type_from_deep_module() {
+    let dep = "
+pub type Zoo = List(String)
+type Private = List(String)
+";
+    let code = "
+
+pub fn wibble(
+  _: String,
+) -> Nil {
+  Nil
+}
+";
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code).add_module("a/b/dep", dep),
+            Position::new(3, 0)
+        ),
+        [
+            prelude_type_completions(),
+            vec![CompletionItem {
+                label: "dep.Zoo".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                additional_text_edits: Some(vec![TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 0,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 0,
+                            character: 0
+                        }
+                    },
+                    new_text: "import a/b/dep\n".into()
+                }]),
+
                 ..Default::default()
             },]
         ]
