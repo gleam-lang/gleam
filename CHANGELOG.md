@@ -12,6 +12,9 @@
 
 ### Bug Fixes
 
+- Fixed a bug where the compiler would output a confusing error message when
+  trying to use the spread syntax to append to a list.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ## v1.2.1 - 2024-05-30
 
