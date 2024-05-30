@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.3.0 - Unreleased
 
 ### Build tool
 
@@ -9,6 +9,11 @@
 ### Formatter
 
 ### Language Server
+
+### Bug Fixes
+
+
+## v1.2.1 - 2024-05-30
 
 ### Bug Fixes
 
