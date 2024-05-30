@@ -16,6 +16,10 @@
   trying to use the spread syntax to append to a list.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the formatter would strip empty lines out of the body of an
+  anonymous function passed as an argument.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.2.1 - 2024-05-30
 
 ### Bug Fixes
