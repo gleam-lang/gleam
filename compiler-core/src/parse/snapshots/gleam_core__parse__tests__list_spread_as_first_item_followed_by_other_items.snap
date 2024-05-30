@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main() -> Nil {\n  let xs = [1, 2, 3]\n  [..xs, 3 + 3, 4]\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:4:4
+  │
+4 │   [..xs, 3 + 3, 4]
+  │    ^^^^ I wasn't expecting elements after this spread
+
+A spread can only be used to prepend elements to lists like this: `[first, ..rest]`.
+
+Hint: If you need to append elements to a list you can use `list.append`.
+See: https://hexdocs.pm/gleam_stdlib/gleam/list.html#append
