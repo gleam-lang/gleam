@@ -2077,3 +2077,13 @@ fn redundant_function_capture_in_pipe_5() {
 "
     );
 }
+
+fn deprecated_list_append_syntax() {
+    assert_warning!(
+        r#"
+    pub fn main() {
+      ["a", "b",, ..todo]
+    }
+        "#
+    );
+}

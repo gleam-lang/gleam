@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 2018
+expression: "\n    pub fn main() {\n      [\"a\", \"b\" ..todo]\n    }\n        "
+---
+warning: Todo found
+  ┌─ /src/warning/wrn.gleam:3:19
+  │
+3 │       ["a", "b" ..todo]
+  │                   ^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before
+running your program.
+
+Hint: I think its type is `List(String)`.
