@@ -6,6 +6,24 @@
 
 ### Compiler
 
+- The compiler now emits a warning for redundant function captures in a
+  pipeline:
+
+  ```
+  warning: Redundant function capture
+    ┌─ /src/warning/wrn.gleam:5:17
+    │
+  5 │     1 |> wibble(_, 2) |> wibble(2)
+    │                 ^ You can safely remove this
+
+  This function capture is redundant since the value is already piped as the
+  first argument of this call.
+
+  See: https://tour.gleam.run/functions/pipelines/
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Language Server
