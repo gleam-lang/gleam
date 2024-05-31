@@ -85,19 +85,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     .warn_for_unreachable_code(call.location(), PanicPosition::PreviousExpression);
             }
 
-            match &call {
-                UntypedExpr::Fn { arguments, .. } => match arguments.as_slice() {
-                    [first] | [first, ..] if first.is_capture_hole() => {
-                        self.expr_typer.environment.warnings.emit(
-                            Warning::RedundantPipeFunctionCapture {
-                                location: first.location,
-                            },
-                        )
-                    }
-                    _ => (),
-                },
-                _ => (),
-            }
+            self.warn_if_call_first_argument_is_hole(&call);
 
             let call = match call {
                 // left |> right(..args)
@@ -324,6 +312,22 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 }
             }
             _ => false,
+        }
+    }
+
+    fn warn_if_call_first_argument_is_hole(&mut self, call: &UntypedExpr) {
+        match &call {
+            UntypedExpr::Fn { arguments, .. } => match arguments.as_slice() {
+                [first] | [first, ..] if first.is_capture_hole() => {
+                    self.expr_typer.environment.warnings.emit(
+                        Warning::RedundantPipeFunctionCapture {
+                            location: first.location,
+                        },
+                    )
+                }
+                _ => (),
+            },
+            _ => (),
         }
     }
 }
