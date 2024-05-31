@@ -1,9 +1,11 @@
 name: ci
+
 on:
   pull_request:
   push:
     branches:
       - main
+
 jobs:
   test:
     name: test
@@ -13,43 +15,43 @@ jobs:
         toolchain: [stable]
         build: [linux-amd64, macos, windows]
         include:
-        - build: linux-amd64
-          os: ubuntu-latest
-          target: x86_64-unknown-linux-gnu
-        - build: macos
-          os: macos-latest
-          target: x86_64-apple-darwin
-        - build: windows
-          os: windows-latest
-          target: x86_64-pc-windows-msvc
+          - build: linux-amd64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - build: macos
+            os: macos-latest
+            target: x86_64-apple-darwin
+          - build: windows
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: ${{ matrix.toolchain }}
-        target: ${{ matrix.target }}
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          target: ${{ matrix.target }}
 
-    - name: Run tests
-      uses: clechasseur/rs-cargo@v2
-      with:
-        command: test
-        args: --workspace --target ${{ matrix.target }}
+      - name: Run tests
+        uses: clechasseur/rs-cargo@v2
+        with:
+          command: test
+          args: --workspace --target ${{ matrix.target }}
 
   rustfmt:
     name: rustfmt
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: stable
-        components: rustfmt
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt
 
-    - name: Check formatting
-      run: cargo fmt --all -- --check
+      - name: Check formatting
+        run: cargo fmt --all -- --check
