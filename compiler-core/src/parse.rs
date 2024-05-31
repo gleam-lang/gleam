@@ -495,21 +495,16 @@ where
             // list
             Some((start, Token::LeftSquare, _)) => {
                 self.advance();
-                let (elements_end_with_sep, elements) =
+                let (elements_end_with_comma, elements) =
                     self.sep_series_of(&Parser::parse_expression, Some(&Token::Comma))?;
 
                 // Parse an optional tail
                 let mut tail = None;
                 let mut elements_after_tail = None;
-                let mut dot_dot_location = None;
-                let mut uses_deprecated_append_syntax = false;
+                let mut spread_location = None;
 
-                if let Some(location) = self.maybe_one(&Token::DotDot) {
-                    if !elements_end_with_sep {
-                        uses_deprecated_append_syntax = true;
-                    }
-
-                    dot_dot_location = Some(location);
+                if let Some((start, end)) = self.maybe_one(&Token::DotDot) {
+                    spread_location = Some(SrcSpan { start, end });
                     tail = self.parse_expression()?.map(Box::new);
                     if self.maybe_one(&Token::Comma).is_some() {
                         // See if there's a list of items after the tail,
@@ -528,8 +523,8 @@ where
                 let (_, end) = self.expect_one(&Token::RightSquare)?;
 
                 // Return errors for malformed lists
-                match dot_dot_location {
-                    Some((start, end)) if tail.is_none() => {
+                match spread_location {
+                    Some(SrcSpan { start, end }) if tail.is_none() => {
                         return parse_error(
                             ParseErrorType::ListSpreadWithoutTail,
                             SrcSpan { start, end },
@@ -549,8 +544,10 @@ where
 
                 match elements_after_tail {
                     Some(elements) if !elements.is_empty() => {
-                        let (start, end) = match (dot_dot_location, tail) {
-                            (Some((start, _)), Some(tail)) => (start, tail.location().end),
+                        let (start, end) = match (spread_location, tail) {
+                            (Some(SrcSpan { start, end: _ }), Some(tail)) => {
+                                (start, tail.location().end)
+                            }
                             (_, _) => (start, end),
                         };
                         return parse_error(
@@ -563,6 +560,8 @@ where
 
                 UntypedExpr::List {
                     location: SrcSpan { start, end },
+                    uses_deprecated_append_syntax: tail.is_some() && !elements_end_with_comma,
+                    spread_location,
                     elements,
                     tail,
                 }
@@ -1159,8 +1158,8 @@ where
             // List
             Some((start, Token::LeftSquare, _)) => {
                 self.advance();
-                let elements =
-                    Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
+                let (elements_end_with_comma, elements) =
+                    self.sep_series_of(&Parser::parse_pattern, Some(&Token::Comma))?;
                 let mut elements_after_tail = None;
                 let mut dot_dot_location = None;
                 let tail = if let Some((start, Token::DotDot, end)) = self.tok0 {
