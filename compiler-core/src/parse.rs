@@ -495,21 +495,27 @@ where
             // list
             Some((start, Token::LeftSquare, _)) => {
                 self.advance();
-                let elements =
-                    Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
+                let (elements_end_with_sep, elements) =
+                    self.sep_series_of(&Parser::parse_expression, Some(&Token::Comma))?;
 
                 // Parse an optional tail
                 let mut tail = None;
                 let mut elements_after_tail = None;
                 let mut dot_dot_location = None;
+                let mut uses_deprecated_append_syntax = false;
+
                 if let Some(location) = self.maybe_one(&Token::DotDot) {
+                    if !elements_end_with_sep {
+                        uses_deprecated_append_syntax = true;
+                    }
+
                     dot_dot_location = Some(location);
                     tail = self.parse_expression()?.map(Box::new);
                     if self.maybe_one(&Token::Comma).is_some() {
                         // See if there's a list of items after the tail,
                         // like `[..wibble, wobble, wabble]`
                         let elements =
-                            Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma));
+                            self.series_of(&Parser::parse_expression, Some(&Token::Comma));
                         match elements {
                             Err(_) => {}
                             Ok(elements) => {
@@ -2851,12 +2857,27 @@ where
         parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
         sep: Option<&Token>,
     ) -> Result<Vec<A>, ParseError> {
+        let (_, res) = self.sep_series_of(parser, sep)?;
+        Ok(res)
+    }
+
+    // Parse a series by repeating a parser, and a separator. Returns true if
+    // the series ends with the trailing separator.
+    fn sep_series_of<A>(
+        &mut self,
+        parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
+        sep: Option<&Token>,
+    ) -> Result<(bool, Vec<A>), ParseError> {
         let mut results = vec![];
+        let mut ends_with_sep = false;
         while let Some(result) = parser(self)? {
             results.push(result);
             if let Some(sep) = sep {
                 if self.maybe_one(sep).is_none() {
+                    ends_with_sep = false;
                     break;
+                } else {
+                    ends_with_sep = true;
                 }
                 // Helpful error if extra separator
                 if let Some((start, end)) = self.maybe_one(sep) {
@@ -2865,7 +2886,7 @@ where
             }
         }
 
-        Ok(results)
+        Ok((ends_with_sep, results))
     }
 
     // If next token is a Name, consume it and return relevant info, otherwise, return none
