@@ -2078,11 +2078,28 @@ fn redundant_function_capture_in_pipe_5() {
     );
 }
 
+#[test]
 fn deprecated_list_append_syntax() {
     assert_warning!(
         r#"
     pub fn main() {
-      ["a", "b",, ..todo]
+      let letters = ["b", "c"]
+      ["a"..letters]
+    }
+        "#
+    );
+}
+
+#[test]
+fn deprecated_list_pattern_syntax() {
+    assert_warning!(
+        r#"
+    pub fn main() {
+      let letters = ["b", "c"]
+      case letters {
+        ["a"..rest] -> rest
+        _ -> []
+      }
     }
         "#
     );

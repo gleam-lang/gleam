@@ -835,7 +835,7 @@ Your code will crash before reaching this point.",
                     title: "Redundant function capture".into(),
                     text: wrap(
                         "This function capture is redundant since the value is already piped as \
-                        the first argument of this call.
+the first argument of this call.
 
 See: https://tour.gleam.run/functions/pipelines/",
                     ),
@@ -844,6 +844,47 @@ See: https://tour.gleam.run/functions/pipelines/",
                     location: Some(Location {
                         label: diagnostic::Label {
                             text: Some("You can safely remove this".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
+
+                type_::Warning::DeprecatedListPrependSyntax { location } => Diagnostic {
+                    title: "Deprecated prepend syntax".into(),
+                    text: wrap(
+                        "This syntax for prepending to a list is deprecated.
+When prepending an item to a list it should be preceded by a comma, \
+like this: `[item, ..list]`.",
+                    ),
+
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some("You can safely remove this".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
+
+                type_::Warning::DeprecatedListPatternSyntax { location } => Diagnostic {
+                    title: "Deprecated list pattern matching syntax".into(),
+                    text: wrap(
+                        "This syntax for pattern matching on a list is deprecated.
+When matching on the rest of a list it should always be preceded by a comma, \
+like this: `[item, ..list]`.",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some("This spread should be preceded by a comma".into()),
                             span: *location,
                         },
                         path: path.clone(),

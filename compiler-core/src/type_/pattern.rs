@@ -318,49 +318,63 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
             Pattern::List {
                 location,
+                spread_location,
+                uses_deprecated_tail_pattern_syntax,
                 elements,
                 tail,
                 ..
-            } => match type_.get_app_args(
-                Publicity::Public,
-                PRELUDE_PACKAGE_NAME,
-                PRELUDE_MODULE_NAME,
-                "List",
-                1,
-                self.environment,
-            ) {
-                Some(args) => {
-                    let type_ = args
-                        .first()
-                        .expect("Failed to get type argument of List")
-                        .clone();
-                    let elements = elements
-                        .into_iter()
-                        .map(|element| self.unify(element, type_.clone()))
-                        .try_collect()?;
-                    let type_ = list(type_);
-
-                    let tail = match tail {
-                        Some(tail) => Some(Box::new(self.unify(*tail, type_.clone())?)),
-                        None => None,
-                    };
-
-                    Ok(Pattern::List {
-                        location,
-                        elements,
-                        tail,
-                        type_,
-                    })
+            } => {
+                if uses_deprecated_tail_pattern_syntax {
+                    self.environment
+                        .warnings
+                        .emit(Warning::DeprecatedListPatternSyntax {
+                            location: spread_location.unwrap_or(location),
+                        });
                 }
 
-                None => Err(Error::CouldNotUnify {
-                    given: list(self.environment.new_unbound_var()),
-                    expected: type_.clone(),
-                    situation: None,
-                    location,
-                    rigid_type_names: hashmap![],
-                }),
-            },
+                match type_.get_app_args(
+                    Publicity::Public,
+                    PRELUDE_PACKAGE_NAME,
+                    PRELUDE_MODULE_NAME,
+                    "List",
+                    1,
+                    self.environment,
+                ) {
+                    Some(args) => {
+                        let type_ = args
+                            .first()
+                            .expect("Failed to get type argument of List")
+                            .clone();
+                        let elements = elements
+                            .into_iter()
+                            .map(|element| self.unify(element, type_.clone()))
+                            .try_collect()?;
+                        let type_ = list(type_);
+
+                        let tail = match tail {
+                            Some(tail) => Some(Box::new(self.unify(*tail, type_.clone())?)),
+                            None => None,
+                        };
+
+                        Ok(Pattern::List {
+                            location,
+                            spread_location,
+                            uses_deprecated_tail_pattern_syntax,
+                            elements,
+                            tail,
+                            type_,
+                        })
+                    }
+
+                    None => Err(Error::CouldNotUnify {
+                        given: list(self.environment.new_unbound_var()),
+                        expected: type_.clone(),
+                        situation: None,
+                        location,
+                        rigid_type_names: hashmap![],
+                    }),
+                }
+            }
 
             Pattern::Tuple { elems, location } => match collapse_links(type_.clone()).deref() {
                 Type::Tuple { elems: type_elems } => {
