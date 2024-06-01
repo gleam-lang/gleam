@@ -56,6 +56,9 @@
 - LSP can now suggest completions for values and types from importable modules and adds the import to the top of the file.
   ([Ameen Radwan](https://github.com/Acepie)
 
+- LSP completions now use the "text_edit" language server API resulting in better/more accurate insertions.
+  ([Ameen Radwan](https://github.com/Acepie)
+
 ### Bug Fixes
 
 - Fixed a bug where the compiler would output a confusing error message when

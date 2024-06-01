@@ -125,6 +125,19 @@ pub fn main() {
                 description: Some("app".into()),
             }),
             documentation: None,
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 0
+                    }
+                },
+                new_text: "main".into()
+            })),
             ..Default::default()
         }]
     );
@@ -152,6 +165,19 @@ pub fn main() {
                 kind: MarkupKind::Markdown,
                 value: " Hello\n".into(),
             })),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 0
+                    }
+                },
+                new_text: "main".into()
+            })),
             ..Default::default()
         }]
     );
@@ -178,6 +204,19 @@ pub type Direction {
                 }),
                 detail: Some("Direction".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "Left".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -189,6 +228,19 @@ pub type Direction {
                 }),
                 detail: Some("Direction".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "Right".into()
+                })),
                 ..Default::default()
             }
         ]
@@ -217,6 +269,19 @@ pub type Box {
             documentation: Some(Documentation::MarkupContent(MarkupContent {
                 kind: MarkupKind::Markdown,
                 value: " Hello\n".into(),
+            })),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 0
+                    }
+                },
+                new_text: "Box".into()
             })),
             ..Default::default()
         }]
@@ -249,6 +314,19 @@ pub type Direction {
                     kind: MarkupKind::Markdown,
                     value: " Hello\n".into(),
                 })),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "Left".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -262,6 +340,19 @@ pub type Direction {
                 documentation: Some(Documentation::MarkupContent(MarkupContent {
                     kind: MarkupKind::Markdown,
                     value: " Goodbye\n".into(),
+                })),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "Right".into()
                 })),
                 ..Default::default()
             }
@@ -288,6 +379,19 @@ pub type Box {
                 detail: None,
                 description: Some("app".into()),
             }),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 0
+                    }
+                },
+                new_text: "Box".into()
+            })),
             ..Default::default()
         }]
     );
@@ -315,6 +419,19 @@ pub fn wobble() {
                 description: Some("app".into()),
             }),
             documentation: None,
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 0
+                    }
+                },
+                new_text: "dep.wobble".into()
+            })),
             ..Default::default()
         }]
     );
@@ -354,6 +471,19 @@ pub fn wobble() {
                 },
                 new_text: "import dep\n".into()
             }]),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 0
+                    }
+                },
+                new_text: "dep.wobble".into()
+            })),
             ..Default::default()
         }]
     );
@@ -401,6 +531,19 @@ pub fn wobble() {
                     },
                     new_text: "import dep\n".into()
                 }]),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.wobble".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -412,6 +555,19 @@ pub fn wobble() {
                     detail: None,
                     description: Some("app".into()),
                 }),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep2.wobble".into()
+                })),
                 ..Default::default()
             }
         ]
@@ -446,6 +602,19 @@ pub fn wobble() {
                 },
                 new_text: "import a/b/dep\n".into()
             }]),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 0
+                    }
+                },
+                new_text: "dep.wobble".into()
+            })),
             ..Default::default()
         }]
     );
@@ -475,6 +644,19 @@ pub type Direction {
                     description: Some("app".into())
                 }),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.Left".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -486,6 +668,19 @@ pub type Direction {
                     description: Some("app".into())
                 }),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.Right".into()
+                })),
                 ..Default::default()
             }
         ]
@@ -514,6 +709,19 @@ pub type Box {
             }),
             detail: Some("fn(Int) -> Box".into()),
             documentation: None,
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 0
+                    }
+                },
+                new_text: "dep.Box".into()
+            })),
             ..Default::default()
         }]
     );
@@ -542,6 +750,19 @@ pub fn wobble() {
                     description: Some("app".into())
                 }),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.wobble".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -553,6 +774,19 @@ pub fn wobble() {
                     description: Some("app".into())
                 }),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "wobble".into()
+                })),
                 ..Default::default()
             },
         ]
@@ -583,6 +817,19 @@ pub type Direction {
                     detail: None,
                     description: Some("app".into())
                 }),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "Left".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -594,6 +841,19 @@ pub type Direction {
                     detail: None,
                     description: Some("app".into())
                 }),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.Left".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -605,6 +865,19 @@ pub type Direction {
                     detail: None,
                     description: Some("app".into())
                 }),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.Right".into()
+                })),
                 ..Default::default()
             },
         ]
@@ -634,6 +907,19 @@ pub type Box {
                     detail: None,
                     description: Some("app".into()),
                 }),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "Box".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -645,6 +931,19 @@ pub type Box {
                     detail: None,
                     description: Some("app".into()),
                 }),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.Box".into()
+                })),
                 ..Default::default()
             },
         ]
@@ -671,6 +970,19 @@ fn private() {
                 description: Some("app".into()),
             }),
             documentation: None,
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 0
+                    }
+                },
+                new_text: "private".into()
+            })),
             ..Default::default()
         },]
     );
@@ -696,6 +1008,19 @@ type Wibble {
                 detail: None,
                 description: Some("app".into()),
             }),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 0
+                    }
+                },
+                new_text: "Wobble".into()
+            })),
             ..Default::default()
         },]
     );
@@ -721,6 +1046,19 @@ pub opaque type Wibble {
                 detail: None,
                 description: Some("app".into()),
             }),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 0
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 0
+                    }
+                },
+                new_text: "Wobble".into()
+            })),
             ..Default::default()
         },]
     );
@@ -787,6 +1125,19 @@ pub type Wibble {
                 kind: Some(CompletionItemKind::CLASS),
                 detail: Some("Type".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 2,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 2,
+                            character: 0
+                        }
+                    },
+                    new_text: "Wibble".into()
+                })),
                 ..Default::default()
             },]
         ]
@@ -812,6 +1163,19 @@ pub type Wibble = Result(
                 kind: Some(CompletionItemKind::CLASS),
                 detail: Some("Type".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 2,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 2,
+                            character: 0
+                        }
+                    },
+                    new_text: "Wibble".into()
+                })),
                 ..Default::default()
             },]
         ]
@@ -862,6 +1226,248 @@ pub fn wibble(
                 kind: Some(CompletionItemKind::CLASS),
                 detail: Some("Type".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 3,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 3,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.Zoo".into()
+                })),
+                ..Default::default()
+            },]
+        ]
+        .concat()
+    );
+}
+
+#[test]
+fn imported_type_cursor_after_dot() {
+    let dep = "
+pub type Zoo = List(String)
+type Private = List(String)
+";
+    let code = "import dep
+
+pub fn wibble(
+  _: dep.Zoo,
+) -> Nil {
+  Nil
+}
+";
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code).add_module("dep", dep),
+            Position::new(3, 12)
+        ),
+        [
+            prelude_type_completions(),
+            vec![CompletionItem {
+                label: "dep.Zoo".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 3,
+                            character: 5
+                        },
+                        end: Position {
+                            line: 3,
+                            character: 12
+                        }
+                    },
+                    new_text: "dep.Zoo".into()
+                })),
+                ..Default::default()
+            },]
+        ]
+        .concat()
+    );
+}
+
+#[test]
+fn imported_type_cursor_after_dot_other_matching_modules() {
+    let dep = "
+pub type Zoo = List(String)
+type Private = List(String)
+";
+    let dep2 = "
+pub type Zoo = List(String)
+type Private = List(String)
+";
+    let code = "import dep
+import dep2
+
+pub fn wibble(
+  _: dep.Zoo,
+) -> Nil {
+  Nil
+}
+";
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code)
+                .add_module("dep", dep)
+                .add_module("dep2", dep2),
+            Position::new(4, 12)
+        ),
+        [
+            prelude_type_completions(),
+            vec![
+                CompletionItem {
+                    label: "dep.Zoo".into(),
+                    kind: Some(CompletionItemKind::CLASS),
+                    detail: Some("Type".into()),
+                    documentation: None,
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: Range {
+                            start: Position {
+                                line: 4,
+                                character: 5
+                            },
+                            end: Position {
+                                line: 4,
+                                character: 12
+                            }
+                        },
+                        new_text: "dep.Zoo".into()
+                    })),
+                    ..Default::default()
+                },
+                CompletionItem {
+                    label: "dep2.Zoo".into(),
+                    kind: Some(CompletionItemKind::CLASS),
+                    detail: Some("Type".into()),
+                    documentation: None,
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: Range {
+                            start: Position {
+                                line: 4,
+                                character: 5
+                            },
+                            end: Position {
+                                line: 4,
+                                character: 12
+                            }
+                        },
+                        new_text: "dep2.Zoo".into()
+                    })),
+                    ..Default::default()
+                },
+            ]
+        ]
+        .concat()
+    );
+}
+
+#[test]
+fn imported_type_cursor_after_dot_other_modules() {
+    let dep = "
+pub type Zoo = List(String)
+type Private = List(String)
+";
+    let other = "
+pub type Zoo = List(String)
+type Private = List(String)
+";
+    let code = "import dep
+
+pub fn wibble(
+  _: dep.Zoo,
+) -> Nil {
+  Nil
+}
+";
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code)
+                .add_module("dep", dep)
+                .add_module("other", other),
+            Position::new(3, 12)
+        ),
+        [
+            prelude_type_completions(),
+            vec![CompletionItem {
+                label: "dep.Zoo".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 3,
+                            character: 5
+                        },
+                        end: Position {
+                            line: 3,
+                            character: 12
+                        }
+                    },
+                    new_text: "dep.Zoo".into()
+                })),
+                ..Default::default()
+            },]
+        ]
+        .concat()
+    );
+}
+
+#[test]
+fn imported_type_cursor_mid_phrase_other_modules() {
+    let dep = "
+pub type Zoo = List(String)
+type Private = List(String)
+";
+    let other = "
+pub type Zoo = List(String)
+type Private = List(String)
+";
+    let code = "import dep
+
+pub fn wibble(
+  _: dep.Zoo,
+) -> Nil {
+  Nil
+}
+";
+
+    assert_eq!(
+        completion(
+            TestProject::for_source(code)
+                .add_module("dep", dep)
+                .add_module("other", other),
+            Position::new(3, 8)
+        ),
+        [
+            prelude_type_completions(),
+            vec![CompletionItem {
+                label: "dep.Zoo".into(),
+                kind: Some(CompletionItemKind::CLASS),
+                detail: Some("Type".into()),
+                documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 3,
+                            character: 5
+                        },
+                        end: Position {
+                            line: 3,
+                            character: 12
+                        }
+                    },
+                    new_text: "dep.Zoo".into()
+                })),
                 ..Default::default()
             },]
         ]
@@ -896,6 +1502,19 @@ pub fn wibble(
                 kind: Some(CompletionItemKind::CLASS),
                 detail: Some("Type".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 3,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 3,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.Zoo".into()
+                })),
                 additional_text_edits: Some(vec![TextEdit {
                     range: Range {
                         start: Position {
@@ -950,6 +1569,19 @@ pub fn wibble(
                     kind: Some(CompletionItemKind::CLASS),
                     detail: Some("Type".into()),
                     documentation: None,
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: Range {
+                            start: Position {
+                                line: 3,
+                                character: 0
+                            },
+                            end: Position {
+                                line: 3,
+                                character: 0
+                            }
+                        },
+                        new_text: "dep.Zoo".into()
+                    })),
                     additional_text_edits: Some(vec![TextEdit {
                         range: Range {
                             start: Position {
@@ -970,6 +1602,19 @@ pub fn wibble(
                     kind: Some(CompletionItemKind::CLASS),
                     detail: Some("Type".into()),
                     documentation: None,
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: Range {
+                            start: Position {
+                                line: 3,
+                                character: 0
+                            },
+                            end: Position {
+                                line: 3,
+                                character: 0
+                            }
+                        },
+                        new_text: "dep2.Zoo".into()
+                    })),
                     ..Default::default()
                 },
             ]
@@ -1016,6 +1661,19 @@ pub fn wibble(
                     kind: Some(CompletionItemKind::CLASS),
                     detail: Some("Type".into()),
                     documentation: None,
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: Range {
+                            start: Position {
+                                line: 7,
+                                character: 0
+                            },
+                            end: Position {
+                                line: 7,
+                                character: 0
+                            }
+                        },
+                        new_text: "dep.Zoo".into()
+                    })),
                     additional_text_edits: Some(vec![TextEdit {
                         range: Range {
                             start: Position {
@@ -1036,6 +1694,19 @@ pub fn wibble(
                     kind: Some(CompletionItemKind::CLASS),
                     detail: Some("Type".into()),
                     documentation: None,
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: Range {
+                            start: Position {
+                                line: 7,
+                                character: 0
+                            },
+                            end: Position {
+                                line: 7,
+                                character: 0
+                            }
+                        },
+                        new_text: "dep2.Zoo".into()
+                    })),
                     ..Default::default()
                 },
             ]
@@ -1071,6 +1742,19 @@ pub fn wibble(
                 kind: Some(CompletionItemKind::CLASS),
                 detail: Some("Type".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 3,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 3,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.Zoo".into()
+                })),
                 additional_text_edits: Some(vec![TextEdit {
                     range: Range {
                         start: Position {
@@ -1084,7 +1768,6 @@ pub fn wibble(
                     },
                     new_text: "import a/b/dep\n".into()
                 }]),
-
                 ..Default::default()
             },]
         ]
@@ -1120,6 +1803,19 @@ pub fn wibble(
                     kind: Some(CompletionItemKind::CLASS),
                     detail: Some("Type".into()),
                     documentation: None,
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: Range {
+                            start: Position {
+                                line: 3,
+                                character: 0
+                            },
+                            end: Position {
+                                line: 3,
+                                character: 0
+                            }
+                        },
+                        new_text: "Zoo".into()
+                    })),
                     ..Default::default()
                 },
                 CompletionItem {
@@ -1127,6 +1823,19 @@ pub fn wibble(
                     kind: Some(CompletionItemKind::CLASS),
                     detail: Some("Type".into()),
                     documentation: None,
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: Range {
+                            start: Position {
+                                line: 3,
+                                character: 0
+                            },
+                            end: Position {
+                                line: 3,
+                                character: 0
+                            }
+                        },
+                        new_text: "dep.Zoo".into()
+                    })),
                     ..Default::default()
                 },
             ]
@@ -1156,6 +1865,19 @@ pub fn wibble(
                 kind: Some(CompletionItemKind::CLASS),
                 detail: Some("Type".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 4,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 4,
+                            character: 0
+                        }
+                    },
+                    new_text: "Zoo".into()
+                })),
                 ..Default::default()
             }],
         ]
@@ -1187,6 +1909,19 @@ fn internal_values_from_root_package_are_in_the_completions() {
                 }),
                 detail: Some("Foo".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.Bar".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -1198,6 +1933,19 @@ fn internal_values_from_root_package_are_in_the_completions() {
                 kind: Some(CompletionItemKind::CONSTANT),
                 detail: Some("Int".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.foo".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -1209,6 +1957,19 @@ fn internal_values_from_root_package_are_in_the_completions() {
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Int".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.main".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -1220,6 +1981,19 @@ fn internal_values_from_root_package_are_in_the_completions() {
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Float".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "dep.random_float".into()
+                })),
                 ..Default::default()
             },
         ]
@@ -1247,6 +2021,19 @@ pub fn wibble(
             label_details: None,
             kind: Some(CompletionItemKind::CLASS),
             detail: Some("Type".into()),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 3,
+                        character: 0,
+                    },
+                    end: Position {
+                        line: 3,
+                        character: 0,
+                    },
+                },
+                new_text: "dep.Alias".into(),
+            })),
             ..Default::default()
         },
         CompletionItem {
@@ -1254,6 +2041,19 @@ pub fn wibble(
             label_details: None,
             kind: Some(CompletionItemKind::CLASS),
             detail: Some("Type".into()),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 3,
+                        character: 0,
+                    },
+                    end: Position {
+                        line: 3,
+                        character: 0,
+                    },
+                },
+                new_text: "dep.AnotherType".into(),
+            })),
             ..Default::default()
         },
     ]);
@@ -1289,6 +2089,19 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
                 }),
                 detail: Some("Foo".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "Bar".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -1300,6 +2113,19 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
                 kind: Some(CompletionItemKind::CONSTANT),
                 detail: Some("Int".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "foo".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -1311,6 +2137,19 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Int".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "main".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -1322,6 +2161,19 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Float".into()),
                 documentation: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0
+                        }
+                    },
+                    new_text: "random_float".into()
+                })),
                 ..Default::default()
             },
         ]
@@ -1346,6 +2198,19 @@ fn internal_types_from_the_same_module_are_in_the_completions() {
                     kind: Some(CompletionItemKind::CLASS),
                     detail: Some("Type".into()),
                     documentation: None,
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: Range {
+                            start: Position {
+                                line: 3,
+                                character: 0
+                            },
+                            end: Position {
+                                line: 3,
+                                character: 0
+                            }
+                        },
+                        new_text: "Alias".into()
+                    })),
                     ..Default::default()
                 },
                 CompletionItem {
@@ -1353,6 +2218,19 @@ fn internal_types_from_the_same_module_are_in_the_completions() {
                     kind: Some(CompletionItemKind::CLASS),
                     detail: Some("Type".into()),
                     documentation: None,
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: Range {
+                            start: Position {
+                                line: 3,
+                                character: 0
+                            },
+                            end: Position {
+                                line: 3,
+                                character: 0
+                            }
+                        },
+                        new_text: "AnotherType".into()
+                    })),
                     ..Default::default()
                 },
             ],
@@ -1952,8 +2830,20 @@ pub type Wibble = String
                 label: "Wibble".into(),
                 kind: Some(CompletionItemKind::CLASS),
                 detail: Some("Type".into()),
-                insert_text: Some("type Wibble".into()),
                 label_details: None,
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 12
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 12
+                        }
+                    },
+                    new_text: "type Wibble".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -1964,6 +2854,19 @@ pub type Wibble = String
                     detail: None,
                     description: Some("myfun".into()),
                 }),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 12
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 12
+                        }
+                    },
+                    new_text: "myfun".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -1974,6 +2877,19 @@ pub type Wibble = String
                     detail: None,
                     description: Some("wabble".into()),
                 }),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 12
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 12
+                        }
+                    },
+                    new_text: "wabble".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -1984,6 +2900,19 @@ pub type Wibble = String
                     detail: None,
                     description: Some("wibble".into()),
                 }),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 12
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 12
+                        }
+                    },
+                    new_text: "wibble".into()
+                })),
                 ..Default::default()
             },
         ]
@@ -2023,7 +2952,19 @@ pub type Wibble = String
                 label: "Wibble".into(),
                 kind: Some(CompletionItemKind::CLASS),
                 detail: Some("Type".into()),
-                insert_text: Some("type Wibble".into()),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 3,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 3,
+                            character: 0
+                        }
+                    },
+                    new_text: "type Wibble".into()
+                })),
                 ..Default::default()
             },
             CompletionItem {
@@ -2034,6 +2975,19 @@ pub type Wibble = String
                     detail: None,
                     description: Some("myfun".into()),
                 }),
+                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 3,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 3,
+                            character: 0
+                        }
+                    },
+                    new_text: "myfun".into()
+                })),
                 ..Default::default()
             },
         ]
@@ -2073,6 +3027,19 @@ pub type Wibble = String
                 detail: None,
                 description: Some("myfun".into()),
             }),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 11
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 17
+                    }
+                },
+                new_text: "myfun".into()
+            })),
             ..Default::default()
         },]
     );
