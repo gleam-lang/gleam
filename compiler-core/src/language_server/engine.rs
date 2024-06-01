@@ -198,10 +198,12 @@ where
             // Check current filercontents if the user is writing an import
             // and handle separately from the rest of the completion flow
             // Check if an import is being written
-            if let Some(value) = this.import_completions(src, &params, module) {
+            let src_line_numbers = LineNumbers::new(src.as_str());
+            if let Some(value) = this.import_completions(&src, &src_line_numbers, &params, module) {
                 return value;
             }
-
+            let surrounding_completion =
+                this.get_phrase_surrounding_completion(&src, &src_line_numbers, &params);
             let line_numbers = LineNumbers::new(&module.code);
             let byte_index =
                 line_numbers.byte_index(params.position.line, params.position.character);
@@ -214,17 +216,19 @@ where
                 Located::Pattern(_pattern) => None,
 
                 Located::Statement(_) | Located::Expression(_) => {
-                    Some(this.completion_values(module, &line_numbers))
+                    Some(this.completion_values(module, &line_numbers, surrounding_completion))
                 }
 
                 Located::ModuleStatement(Definition::Function(_)) => {
-                    Some(this.completion_types(module, &line_numbers))
+                    Some(this.completion_types(module, &line_numbers, surrounding_completion))
                 }
 
-                Located::FunctionBody(_) => Some(this.completion_values(module, &line_numbers)),
+                Located::FunctionBody(_) => {
+                    Some(this.completion_values(module, &line_numbers, surrounding_completion))
+                }
 
                 Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_)) => {
-                    Some(this.completion_types(module, &line_numbers))
+                    Some(this.completion_types(module, &line_numbers, surrounding_completion))
                 }
 
                 // If the import completions returned no results and we are in an import then
@@ -233,7 +237,17 @@ where
                     .compiler
                     .get_module_inferface(import.module.as_str())
                     .map(|importing_module| {
-                        this.unqualified_completions_from_module(importing_module, module, true)
+                        let word_being_completed = this
+                            .get_phrase_surrounding_completion_for_import(
+                                &src,
+                                &line_numbers,
+                                &params,
+                            );
+                        this.unqualified_completions_from_module(
+                            importing_module,
+                            module,
+                            word_being_completed,
+                        )
                     }),
 
                 Located::ModuleStatement(Definition::ModuleConstant(_)) => None,
@@ -242,7 +256,9 @@ where
 
                 Located::Arg(_) => None,
 
-                Located::Annotation(_, _) => Some(this.completion_types(module, &line_numbers)),
+                Located::Annotation(_, _) => {
+                    Some(this.completion_types(module, &line_numbers, surrounding_completion))
+                }
             };
 
             Ok(completions)
@@ -419,8 +435,11 @@ where
         &'b self,
         module: &'b Module,
         line_numbers: &LineNumbers,
+        surrounding_completion: (lsp::Range, Option<String>),
     ) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
+
+        let (insert_range, module_select) = surrounding_completion;
 
         // Prelude types
         for type_ in PreludeType::iter() {
@@ -433,15 +452,17 @@ where
         }
 
         // Module types
-        for (name, type_) in &module.ast.type_info.types {
-            completions.push(type_completion(None, name, type_));
+        // Do not complete direct module types if the user has already started typing a module select.
+        if module_select.is_none() {
+            for (name, type_) in &module.ast.type_info.types {
+                completions.push(type_completion(None, name, type_, insert_range, false));
+            }
         }
 
         // Imported modules
         for import in module.ast.definitions.iter().filter_map(get_import) {
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
-            // TODO: test getting completions from modules defined in other packages
             let Some(module) = self.compiler.get_module_inferface(&import.module) else {
                 continue;
             };
@@ -452,19 +473,37 @@ where
                     continue;
                 }
 
-                let module = import.used_name();
-                if module.is_some() {
-                    completions.push(type_completion(module.as_ref(), name, type_));
+                if let Some(module) = import.used_name() {
+                    // If the user has already started a module select then don't show irrelevant modules.
+                    if let Some(input_mod_name) = &module_select {
+                        if !module.contains(input_mod_name.as_str()) {
+                            continue;
+                        }
+                    }
+                    completions.push(type_completion(
+                        Some(&module),
+                        name,
+                        type_,
+                        insert_range,
+                        false,
+                    ));
                 }
             }
 
             // Unqualified types
-            for unqualified in &import.unqualified_types {
-                match module.get_public_type(&unqualified.name) {
-                    Some(type_) => {
-                        completions.push(type_completion(None, unqualified.used_name(), type_))
+            // Do not complete unqualified types if the user has already started typing a module select.
+            if module_select.is_none() {
+                for unqualified in &import.unqualified_types {
+                    match module.get_public_type(&unqualified.name) {
+                        Some(type_) => completions.push(type_completion(
+                            None,
+                            unqualified.used_name(),
+                            type_,
+                            insert_range,
+                            false,
+                        )),
+                        None => continue,
                     }
-                    None => continue,
                 }
             }
         }
@@ -472,8 +511,16 @@ where
         // Importable modules
         let import_location = self.first_import_line_in_module(module, line_numbers);
         for (module_full_name, module) in self.completable_modules_for_import(module) {
+            // Do not try to import the prelude.
             if module_full_name == "gleam" {
                 continue;
+            }
+
+            // If the user has already started a module select then don't show irrelevant modules.
+            if let Some(input_mod_name) = &module_select {
+                if !module_full_name.contains(input_mod_name.as_str()) {
+                    continue;
+                }
             }
 
             // Qualified types
@@ -482,13 +529,13 @@ where
                     continue;
                 }
 
-                let mod_import_name = module_full_name
-                    .split('/')
-                    .last()
-                    .map(EcoString::from)
-                    .unwrap_or(module_full_name.clone());
-
-                let mut completion = type_completion(Some(&mod_import_name), name, type_);
+                let mut completion = type_completion(
+                    module_full_name.split('/').last(),
+                    name,
+                    type_,
+                    insert_range,
+                    false,
+                );
                 completion.additional_text_edits = Some(vec![lsp::TextEdit {
                     range: lsp::Range {
                         start: import_location,
@@ -507,23 +554,28 @@ where
         &'b self,
         module: &'b Module,
         line_numbers: &LineNumbers,
+        surrounding_completion: (lsp::Range, Option<String>),
     ) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
         let mod_name = module.name.as_str();
 
-        // Module functions
-        for (name, value) in &module.ast.type_info.values {
-            // Here we do not check for the internal attribute: we always want
-            // to show autocompletions for values defined in the same module,
-            // even if those are internal.
-            completions.push(value_completion(None, mod_name, name, value));
+        let (insert_range, module_select) = surrounding_completion;
+
+        // Module values
+        // Do not complete direct module values if the user has already started typing a module select.
+        if module_select.is_none() {
+            for (name, value) in &module.ast.type_info.values {
+                // Here we do not check for the internal attribute: we always want
+                // to show autocompletions for values defined in the same module,
+                // even if those are internal.
+                completions.push(value_completion(None, mod_name, name, value, insert_range));
+            }
         }
 
         // Imported modules
         for import in module.ast.definitions.iter().filter_map(get_import) {
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
-            // TODO: test getting completions from modules defined in other packages
             let Some(module) = self.compiler.get_module_inferface(&import.module) else {
                 continue;
             };
@@ -534,20 +586,40 @@ where
                     continue;
                 }
 
-                let module = import.used_name();
-                if module.is_some() {
-                    completions.push(value_completion(module.as_deref(), mod_name, name, value));
+                if let Some(module) = import.used_name() {
+                    // If the user has already started a module select then don't show irrelevant modules.
+                    if let Some(input_mod_name) = &module_select {
+                        if !module.contains(input_mod_name.as_str()) {
+                            continue;
+                        }
+                    }
+                    completions.push(value_completion(
+                        Some(&module),
+                        mod_name,
+                        name,
+                        value,
+                        insert_range,
+                    ));
                 }
             }
 
             // Unqualified values
-            for unqualified in &import.unqualified_values {
-                match module.get_public_value(&unqualified.name) {
-                    Some(value) => {
-                        let name = unqualified.used_name();
-                        completions.push(value_completion(None, mod_name, name, value))
+            // Do not complete unqualified values if the user has already started typing a module select.
+            if module_select.is_none() {
+                for unqualified in &import.unqualified_values {
+                    match module.get_public_value(&unqualified.name) {
+                        Some(value) => {
+                            let name = unqualified.used_name();
+                            completions.push(value_completion(
+                                None,
+                                mod_name,
+                                name,
+                                value,
+                                insert_range,
+                            ))
+                        }
+                        None => continue,
                     }
-                    None => continue,
                 }
             }
         }
@@ -555,10 +627,18 @@ where
         // Importable modules
         let import_location = self.first_import_line_in_module(module, line_numbers);
         for (module_full_name, module) in self.completable_modules_for_import(module) {
+            // Do not try to import the prelude.
             if module_full_name == "gleam" {
                 continue;
             }
             let qualifier = module_full_name.split('/').last();
+
+            // If the user has already started a module select then don't show irrelevant modules.
+            if let Some(input_mod_name) = &module_select {
+                if !module_full_name.contains(input_mod_name.as_str()) {
+                    continue;
+                }
+            }
 
             // Qualified values
             for (name, value) in &module.values {
@@ -566,7 +646,8 @@ where
                     continue;
                 }
 
-                let mut completion = value_completion(qualifier, module_full_name, name, value);
+                let mut completion =
+                    value_completion(qualifier, module_full_name, name, value, insert_range);
 
                 completion.additional_text_edits = Some(vec![lsp::TextEdit {
                     range: lsp::Range {
@@ -586,8 +667,7 @@ where
         &'b self,
         importing_module: &'b ModuleInterface,
         module: &'b Module,
-        // should type completions include the word "type" in the completion
-        include_type_in_completion: bool,
+        insert_range: lsp::Range,
     ) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
 
@@ -622,17 +702,7 @@ where
                 continue;
             }
 
-            let completion: lsp::CompletionItem = if !include_type_in_completion {
-                type_completion(None, name, type_)
-            } else {
-                let completion = type_completion(None, name, type_);
-                lsp::CompletionItem {
-                    // Add type prior to unqualified import for types
-                    insert_text: Some("type ".to_string() + &completion.label),
-                    ..completion
-                }
-            };
-            completions.push(completion);
+            completions.push(type_completion(None, name, type_, insert_range, true));
         }
 
         // Get completable values
@@ -646,24 +716,101 @@ where
             if already_imported_values.contains(name) {
                 continue;
             }
-            completions.push(value_completion(None, name, name, value));
+            completions.push(value_completion(None, name, name, value, insert_range));
         }
 
         completions
     }
 
+    // Gets the current range around the cursor to place a completion
+    // and the phrase surrounding the cursor to use for completion.
+    // This method takes in a helper to determine what qualifies as
+    // a phrase depending on context.
+    fn get_phrase_surrounding_for_completion<'b>(
+        &'b self,
+        src: &'b str,
+        line_num: &'b LineNumbers,
+        params: &lsp::TextDocumentPositionParams,
+        valid_phrase_char: &impl Fn(char) -> bool,
+    ) -> (lsp::Range, String) {
+        let cursor = line_num.byte_index(params.position.line, params.position.character);
+
+        // Get part of phrase prior to cursor
+        let before = src
+            .get(..cursor as usize)
+            .and_then(|line| line.rsplit_once(valid_phrase_char).map(|r| r.1))
+            .unwrap_or("");
+        // Get part of phrase following cursor
+        let after = src
+            .get(cursor as usize..)
+            .and_then(|line| line.split_once(valid_phrase_char).map(|r| r.0))
+            .unwrap_or("");
+
+        (
+            lsp::Range {
+                start: lsp::Position {
+                    line: params.position.line,
+                    character: params.position.character - before.len() as u32,
+                },
+                end: lsp::Position {
+                    line: params.position.line,
+                    character: params.position.character + after.len() as u32,
+                },
+            },
+            format!("{}{}", before, after),
+        )
+    }
+
+    // Gets the current range around the cursor to place a completion
+    // and any part of the phrase preceeding a dot if a module is being selected from.
+    // A continuous phrase in this case is a name or typename that may have a dot in it.
+    // This is used to match the exact location to fill in the completion.
+    fn get_phrase_surrounding_completion<'b>(
+        &'b self,
+        src: &'b EcoString,
+        line_num: &'b LineNumbers,
+        params: &lsp::TextDocumentPositionParams,
+    ) -> (lsp::Range, Option<String>) {
+        let valid_phrase_char = |c: char| {
+            // Checks if a character is not a valid name/upname character or a dot.
+            !c.is_ascii_alphanumeric() && c != '.' && c != '_'
+        };
+        let (range, word) =
+            self.get_phrase_surrounding_for_completion(src, line_num, params, &valid_phrase_char);
+        (range, word.split_once('.').map(|c| String::from(c.0)))
+    }
+
+    // Gets the current range around the cursor to place a completion.
+    // For unqualified imports we special case the word being completed to allow for whitespace but not dots.
+    // This is to allow `type MyType` to be treated as 1 "phrase" for the sake of completion.
+    fn get_phrase_surrounding_completion_for_import<'b>(
+        &'b self,
+        src: &'b str,
+        line_num: &'b LineNumbers,
+        params: &lsp::TextDocumentPositionParams,
+    ) -> lsp::Range {
+        let valid_phrase_char = |c: char| {
+            // Checks if a character is not a valid name/upname character or whitespace.
+            // The newline character is not included as well.
+            !c.is_ascii_alphanumeric() && c != '_' && c != ' ' && c != '\t'
+        };
+        let (range, _) =
+            self.get_phrase_surrounding_for_completion(src, line_num, params, &valid_phrase_char);
+        range
+    }
+
     fn import_completions<'b>(
         &'b self,
-        src: EcoString,
+        src: &'b EcoString,
+        line_num: &'b LineNumbers,
         params: &lsp::TextDocumentPositionParams,
         module: &'b Module,
     ) -> Option<Result<Option<Vec<lsp::CompletionItem>>>> {
-        let line_num = LineNumbers::new(src.as_str());
         let start_of_line = line_num.byte_index(params.position.line, 0);
         let end_of_line = line_num.byte_index(params.position.line + 1, 0);
 
         // Drop all lines except the line the cursor is on
-        let src = &src.get(start_of_line as usize..end_of_line as usize)?;
+        let src = src.get(start_of_line as usize..end_of_line as usize)?;
 
         // If this isn't an import line then we don't offer import completions
         if !src.trim_start().starts_with("import") {
@@ -677,14 +824,12 @@ where
             let importing_module: &ModuleInterface =
                 self.compiler.get_module_inferface(importing_module_name)?;
 
-            // Check if the cursor is proceeded by the word "type".
-            // We want to make sure suggestions don't include the word "type"
-            // if the cursor is proceeded by it.
-            let cursor = src.get(..params.position.character as usize)?;
+            let word_being_completed =
+                self.get_phrase_surrounding_completion_for_import(src, line_num, params);
             Some(Ok(Some(self.unqualified_completions_from_module(
                 importing_module,
                 module,
-                !cursor.trim().ends_with("type"),
+                word_being_completed,
             ))))
         } else {
             // Find where to start and end the import completion
@@ -791,9 +936,11 @@ where
 }
 
 fn type_completion(
-    module: Option<&EcoString>,
+    module: Option<&str>,
     name: &str,
     type_: &TypeConstructor,
+    insert_range: lsp::Range,
+    include_type_in_completion: bool,
 ) -> lsp::CompletionItem {
     let label = match module {
         Some(module) => format!("{module}.{name}"),
@@ -807,9 +954,17 @@ fn type_completion(
     });
 
     lsp::CompletionItem {
-        label,
+        label: label.clone(),
         kind,
         detail: Some("Type".into()),
+        text_edit: Some(lsp::CompletionTextEdit::Edit(lsp::TextEdit {
+            range: insert_range,
+            new_text: if include_type_in_completion {
+                format!("type {label}")
+            } else {
+                label.clone()
+            },
+        })),
         ..Default::default()
     }
 }
@@ -819,6 +974,7 @@ fn value_completion(
     module_name: &str,
     name: &str,
     value: &crate::type_::ValueConstructor,
+    insert_range: lsp::Range,
 ) -> lsp::CompletionItem {
     let label = match module_qualifier {
         Some(module) => format!("{module}.{name}"),
@@ -844,7 +1000,7 @@ fn value_completion(
     });
 
     lsp::CompletionItem {
-        label,
+        label: label.clone(),
         kind,
         detail: Some(type_),
         label_details: Some(lsp::CompletionItemLabelDetails {
@@ -852,6 +1008,10 @@ fn value_completion(
             description: Some(module_name.into()),
         }),
         documentation,
+        text_edit: Some(lsp::CompletionTextEdit::Edit(lsp::TextEdit {
+            range: insert_range,
+            new_text: label.clone(),
+        })),
         ..Default::default()
     }
 }
