@@ -1763,6 +1763,7 @@ pub fn is_erlang_reserved_word(name: &str) -> bool {
             | "if"
             | "of"
             | "case"
+            | "maybe"
     )
 }
 
