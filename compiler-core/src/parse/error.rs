@@ -236,7 +236,8 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             "Invalid pattern", vec![
                 "I was expecting the end of the list.".into(),
                 "The spread pattern precesing this consumes the remaining elements of the list".into(),
-                "therefore there is nothing left to match.".into()
+                "therefore there is nothing left to match.".into(),
+                "A spread can only be used to prepend elements to lists like this: `[first, ..rest]`".into()
 
             ]
         )
