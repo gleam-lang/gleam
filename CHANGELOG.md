@@ -6,6 +6,22 @@
 
 ### Compiler
 
+- Added more a verbose error when a pattern is attempted to be used after a spread.
+
+```
+error: Syntax error
+  ┌─ /src/parse/error.gleam:4:17
+  │
+4 │         [1, .., last] -> 0
+  │                 ^^^^ Invalid pattern
+
+I was expecting the end of the list.
+The spread pattern precesing this consumes the remaining elements of the list
+therefore there is nothing left to match.
+```
+
+([Antonio Iaccarino])[https://github.com/eingin]
+
 - The compiler now emits a warning for redundant function captures in a
   pipeline:
 
