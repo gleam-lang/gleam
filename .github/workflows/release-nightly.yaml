@@ -226,4 +226,3 @@ jobs:
             org.opencontainers.image.source=https://github.com/gleam-lang/gleam
             org.opencontainers.image.version=nightly-${{ matrix.base-image }}
             org.opencontainers.image.licenses=Apache-2.0
-
