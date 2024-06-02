@@ -33,6 +33,27 @@
 
 ### Language Server
 
+- The language server will now suggest the "Remove redundant tuple" action even
+  if the case expression contains some catch all patterns:
+
+  ```
+  case #(a, b) {
+    #(1, 2) -> todo
+    _ -> todo
+  }
+  ```
+
+  Becomes:
+
+  ```
+  case a, b {
+    1, 2 -> todo
+    _, _ -> todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug Fixes
 
 - Fixed a bug where the compiler would output a confusing error message when
