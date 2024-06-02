@@ -1155,28 +1155,47 @@ where
                 self.advance();
                 let elements =
                     Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
-                let tail = if let Some((_, Token::DotDot, _)) = self.tok0 {
+                let mut elements_after_tail = None;
+                let mut dot_dot_location = None;
+                let tail = if let Some((start, Token::DotDot, end)) = self.tok0 {
+                    dot_dot_location = Some((start, end));
                     self.advance();
                     let pat = self.parse_pattern()?;
-                    let _ = self.maybe_one(&Token::Comma);
+                    if self.maybe_one(&Token::Comma).is_some() {
+                        // See if there's a list of items after the tail,
+                        // like `[..wibble, wobble, wabble]`
+                        let elements =
+                            Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma));
+                        match elements {
+                            Err(_) => {}
+                            Ok(elements) => {
+                                elements_after_tail = Some(elements);
+                            }
+                        };
+                    };
                     Some(pat)
                 } else {
                     None
                 };
 
-                let (end, rsqb_e) = match self.maybe_one(&Token::RightSquare) {
-                    Some((start, end)) => Ok((start, end)),
-                    None => {
-                        if tail.is_some() {
-                            self.next_tok_error(ParseErrorType::ListPatternAfterSpread)
-                        } else {
-                            self.next_tok_unexpected(vec![
-                                Token::RightSquare.to_string().into(),
-                                "a pattern".into(),
-                            ])
-                        }
+                let (end, rsqb_e) =
+                    self.expect_one_following_series(&Token::RightSquare, "a pattern")?;
+
+                // If there are elements after the tail, return an error
+                match elements_after_tail {
+                    Some(elements) if !elements.is_empty() => {
+                        let (start, end) = match (dot_dot_location, tail) {
+                            (Some((start, _)), Some(Some(tail))) => (start, tail.location().end),
+                            (Some((start, end)), Some(None)) => (start, end),
+                            (_, _) => (start, end),
+                        };
+                        return parse_error(
+                            ParseErrorType::ListPatternAfterSpread,
+                            SrcSpan { start, end },
+                        );
                     }
-                }?;
+                    _ => {}
+                }
 
                 let tail = match tail {
                     // There is a tail and it has a Pattern::Var or Pattern::Discard
