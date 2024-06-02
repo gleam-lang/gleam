@@ -232,6 +232,14 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://tour.gleam.run/flow-control/case-expressions/".into(),
                 ],
             ),
+            ParseErrorType::ListPatternAfterSpread => (
+            "Invaild pattern", vec![
+                "I was expecting the end of the list pattern.".into(),
+                "The spread pattern precesing this consumes the remaining elements of the list".into(),
+                "therefore there is nothing left to match.".into()
+
+            ]
+        )
         }
     }
 }
@@ -288,6 +296,7 @@ pub enum ParseErrorType {
     ExpectedFunctionBody,       // let x = fn()
     RedundantInternalAttribute, // for a private definition marked as internal
     InvalidModuleTypePattern,   // for patterns that have a dot like: `name.thing`
+    ListPatternAfterSpread,     // When there is a pattern after a spread [..rest, pattern]
 }
 
 impl LexicalError {
