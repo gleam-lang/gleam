@@ -1969,7 +1969,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let value_constructor = self
             .environment
-            .get_value_constructor(module.as_ref(), &name, None)
+            .get_value_constructor(module.as_ref(), &name)
             .map_err(|e| convert_get_value_constructor_error(e, location))?
             .clone();
 
@@ -2077,60 +2077,65 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         name: &EcoString,
         location: &SrcSpan,
     ) -> Result<ValueConstructor, Error> {
-        let constructor = match module {
-            // Look in the current scope for a binding with this name
-            None => {
-                let constructor =
-                    self.environment
-                        .get_variable(name)
-                        .cloned()
-                        .ok_or_else(|| Error::UnknownVariable {
+        let constructor =
+            match module {
+                // Look in the current scope for a binding with this name
+                None => {
+                    let constructor = self.environment.get_variable(name).cloned().ok_or_else(
+                        || {
+                            let type_with_name_in_scope =
+                                self.environment.module_types.keys().any(|typ| typ == name);
+
+                            let situation = if type_with_name_in_scope {
+                                Some(UnknownValueConstructorErrorSituation::TypeWithNameIsInScope)
+                            } else {
+                                None
+                            };
+
+                            Error::UnknownVariable {
+                                location: *location,
+                                name: name.clone(),
+                                variables: self.environment.local_value_names(),
+                                situation,
+                            }
+                        },
+                    )?;
+
+                    // Register the value as seen for detection of unused values
+                    self.environment.increment_usage(name);
+
+                    constructor
+                }
+
+                // Look in an imported module for a binding with this name
+                Some(module_name) => {
+                    let (_, module) = &self
+                        .environment
+                        .imported_modules
+                        .get(module_name)
+                        .ok_or_else(|| Error::UnknownModule {
                             location: *location,
-                            name: name.clone(),
-                            variables: self.environment.local_value_names(),
-                            type_with_name_in_scope: self
+                            name: module_name.clone(),
+                            imported_modules: self
                                 .environment
-                                .module_types
+                                .imported_modules
                                 .keys()
-                                .any(|typ| typ == name),
-                            situation: None,
+                                .cloned()
+                                .collect(),
                         })?;
-
-                // Register the value as seen for detection of unused values
-                self.environment.increment_usage(name);
-
-                constructor
-            }
-
-            // Look in an imported module for a binding with this name
-            Some(module_name) => {
-                let (_, module) = &self
-                    .environment
-                    .imported_modules
-                    .get(module_name)
-                    .ok_or_else(|| Error::UnknownModule {
-                        location: *location,
-                        name: module_name.clone(),
-                        imported_modules: self
-                            .environment
-                            .imported_modules
-                            .keys()
-                            .cloned()
-                            .collect(),
-                    })?;
-                module
-                    .values
-                    .get(name)
-                    .cloned()
-                    .ok_or_else(|| Error::UnknownModuleValue {
-                        location: *location,
-                        module_name: module_name.clone(),
-                        name: name.clone(),
-                        value_constructors: module.public_value_names(),
-                        type_with_same_name: false,
-                    })?
-            }
-        };
+                    module
+                        .values
+                        .get(name)
+                        .cloned()
+                        .ok_or_else(|| Error::UnknownModuleValue {
+                            location: *location,
+                            module_name: module_name.clone(),
+                            name: name.clone(),
+                            value_constructors: module.public_value_names(),
+                            type_with_same_name: false,
+                        })?
+                }
+            };
 
         let ValueConstructor {
             publicity,
@@ -2514,7 +2519,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         Ok(self
             .environment
-            .get_value_constructor(module.as_ref(), name, None)?
+            .get_value_constructor(module.as_ref(), name)?
             .field_map())
     }
 

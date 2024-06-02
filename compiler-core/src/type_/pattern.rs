@@ -228,16 +228,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     .environment
                     .get_variable(&name)
                     .cloned()
-                    .ok_or_else(|| Error::UnknownVariable {
-                        location,
-                        name: name.clone(),
-                        variables: self.environment.local_value_names(),
-                        type_with_name_in_scope: self
-                            .environment
-                            .module_types
-                            .keys()
-                            .any(|typ| typ == &name),
-                        situation: None,
+                    .ok_or_else(|| {
+                        let type_with_name_in_scope =
+                            self.environment.module_types.keys().any(|typ| typ == &name);
+
+                        let situation = if type_with_name_in_scope {
+                            Some(UnknownValueConstructorErrorSituation::TypeWithNameIsInScope)
+                        } else {
+                            None
+                        };
+
+                        Error::UnknownVariable {
+                            location,
+                            name: name.clone(),
+                            variables: self.environment.local_value_names(),
+                            situation,
+                        }
                     })?;
                 self.environment.increment_usage(&name);
                 let typ =
@@ -426,13 +432,27 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // Register the value as seen for detection of unused values
                 self.environment.increment_usage(&name);
 
+                let map_error_variables = &self.environment.local_value_names();
                 let cons = self
                     .environment
-                    .get_value_constructor(
-                        module.as_ref(),
-                        &name,
-                        Some(UnknownValueConstructorErrorSituation::NotFoundPattern),
-                    )
+                    .get_value_constructor(module.as_ref(), &name)
+                    .map_err(|e| {
+                        if e == (UnknownValueConstructorError::Variable {
+                            name: name.clone(),
+                            variables: map_error_variables.clone(),
+                            situation: None,
+                        }) {
+                            UnknownValueConstructorError::Variable {
+                                name: name.clone(),
+                                variables: map_error_variables.clone(),
+                                situation: Some(
+                                    UnknownValueConstructorErrorSituation::NameStartsWithCapitalCase,
+                                ),
+                            }
+                        } else {
+                            e
+                        }
+                    })
                     .map_err(|e| convert_get_value_constructor_error(e, location))?;
 
                 match cons.field_map() {

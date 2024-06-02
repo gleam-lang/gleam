@@ -1233,15 +1233,16 @@ impl<'comments> Formatter<'comments> {
                 if is_breakable_argument(to_expr(last_value), values.len())
                     && !self.any_comments(last_value.location().start) =>
             {
+                let mut docs = initial_values
+                    .iter()
+                    .map(|value| to_doc(self, value))
+                    .collect_vec();
+
                 let last_value_doc = to_doc(self, last_value)
                     .group()
                     .next_break_fits(NextBreakFitsMode::Enabled);
 
-                let docs = initial_values
-                    .iter()
-                    .map(|value| to_doc(self, value))
-                    .chain(std::iter::once(last_value_doc))
-                    .collect_vec();
+                docs.append(&mut vec![last_value_doc]);
 
                 doc.append(self.wrap_function_call_args(docs, location))
                     .next_break_fits(NextBreakFitsMode::Disabled)

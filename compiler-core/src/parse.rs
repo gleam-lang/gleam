@@ -505,7 +505,6 @@ where
                 if let Some(location) = self.maybe_one(&Token::DotDot) {
                     dot_dot_location = Some(location);
                     tail = self.parse_expression()?.map(Box::new);
-
                     if self.maybe_one(&Token::Comma).is_some() {
                         // See if there's a list of items after the tail,
                         // like `[..wibble, wobble, wabble]`
@@ -532,7 +531,10 @@ where
                     }
                     _ => {}
                 }
-                if tail.is_some() && elements.is_empty() {
+                if tail.is_some()
+                    && elements.is_empty()
+                    && elements_after_tail.as_ref().map_or(true, |e| e.is_empty())
+                {
                     return parse_error(
                         ParseErrorType::ListSpreadWithoutElements,
                         SrcSpan { start, end },
@@ -3502,6 +3504,8 @@ pub fn make_call(
     end: u32,
 ) -> Result<UntypedExpr, ParseError> {
     let mut num_holes = 0;
+    let mut hole_location = None;
+
     let args = args
         .into_iter()
         .map(|a| match a {
@@ -3512,6 +3516,7 @@ pub fn make_call(
                 label,
             } => {
                 num_holes += 1;
+                hole_location = Some(location);
 
                 if name != "_" {
                     return parse_error(
@@ -3550,7 +3555,7 @@ pub fn make_call(
             end_of_head_byte_index: call.location().end,
             is_capture: true,
             arguments: vec![Arg {
-                location: SrcSpan { start: 0, end: 0 },
+                location: hole_location.expect("At least a capture hole"),
                 annotation: None,
                 names: ArgNames::Named {
                     name: CAPTURE_VARIABLE.into(),

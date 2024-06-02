@@ -52,7 +52,6 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
         variables: Vec<EcoString>,
-        type_with_name_in_scope: bool,
         situation: Option<UnknownValueConstructorErrorSituation>,
     },
 
@@ -640,6 +639,18 @@ pub enum Warning {
         location: SrcSpan,
         panic_position: PanicPosition,
     },
+
+    /// When a function capture is used in a pipe to pipe into the first
+    /// argument of a function:
+    ///
+    /// ```gleam
+    /// wibble |> wobble(_, 1)
+    ///                  ^ Redundant and can be removed
+    /// ```
+    ///
+    RedundantPipeFunctionCapture {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
@@ -774,7 +785,6 @@ pub enum UnknownValueConstructorError {
     Variable {
         name: EcoString,
         variables: Vec<EcoString>,
-        type_with_name_in_scope: bool,
         situation: Option<UnknownValueConstructorErrorSituation>,
     },
 
@@ -794,7 +804,9 @@ pub enum UnknownValueConstructorError {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum UnknownValueConstructorErrorSituation {
     /// A value using ```let``` is assigned to a variable having a capital case.
-    NotFoundPattern,
+    NameStartsWithCapitalCase,
+
+    TypeWithNameIsInScope,
 }
 
 pub fn convert_get_value_constructor_error(
@@ -805,13 +817,11 @@ pub fn convert_get_value_constructor_error(
         UnknownValueConstructorError::Variable {
             name,
             variables,
-            type_with_name_in_scope,
             situation,
         } => Error::UnknownVariable {
             location,
             name,
             variables,
-            type_with_name_in_scope,
             situation,
         },
 

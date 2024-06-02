@@ -802,7 +802,7 @@ checksum = "4271d37baee1b8c7e4b708028c57d816cf9d2434acb33a549475f78c181f6253"
 
 [[package]]
 name = "gleam"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "async-trait",
  "base16",
@@ -849,7 +849,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "askama",
  "async-trait",
@@ -866,7 +866,7 @@ dependencies = [
  "flate2",
  "futures",
  "globset",
- "heck 0.4.1",
+ "heck 0.5.0",
  "hexpm",
  "http",
  "id-arena",
@@ -900,7 +900,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "camino",
  "console_error_panic_hook",
@@ -1188,9 +1188,9 @@ dependencies = [
 
 [[package]]
 name = "insta"
-version = "1.38.0"
+version = "1.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3eab73f58e59ca6526037208f0e98851159ec1633cf17b6cd2e1f2c3fd5d53cc"
+checksum = "810ae6042d48e2c9e9215043563a58a80b877bc863228a74cf10c49d4620a6f5"
 dependencies = [
  "console",
  "lazy_static",
@@ -2101,9 +2101,9 @@ dependencies = [
 
 [[package]]
 name = "spdx"
-version = "0.10.4"
+version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29ef1a0fa1e39ac22972c8db23ff89aea700ab96aa87114e1fb55937a631a0c9"
+checksum = "47317bbaf63785b53861e1ae2d11b80d6b624211d42cb20efcd210ee6f8a14bc"
 dependencies = [
  "smallvec",
 ]
@@ -2238,7 +2238,7 @@ dependencies = [
 
 [[package]]
 name = "test-package-compiler"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "camino",
  "gleam-core",
@@ -2579,9 +2579,9 @@ checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
 
 [[package]]
 name = "vec1"
-version = "1.12.0"
+version = "1.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffb60dcfffc189bfd4e2a81333c268619fee9db53da71bce2bcbd8e129c56936"
+checksum = "eab68b56840f69efb0fefbe3ab6661499217ffdc58e2eef7c3f6f69835386322"
 
 [[package]]
 name = "version_check"

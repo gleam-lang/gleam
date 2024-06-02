@@ -154,6 +154,13 @@ impl<A> Arg<A> {
     pub fn get_variable_name(&self) -> Option<&EcoString> {
         self.names.get_variable_name()
     }
+
+    pub fn is_capture_hole(&self) -> bool {
+        match &self.names {
+            ArgNames::Named { name } if name == CAPTURE_VARIABLE => true,
+            _ => false,
+        }
+    }
 }
 
 impl TypedArg {
