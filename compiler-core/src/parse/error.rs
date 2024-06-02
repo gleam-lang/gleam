@@ -233,12 +233,11 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ],
             ),
             ParseErrorType::ListPatternAfterSpread => (
-            "Invalid pattern", vec![
+            "I wasn't expecting other patterns after this spread", vec![
                 "I was expecting the end of the list.".into(),
-                "The spread pattern precesing this consumes the remaining elements of the list".into(),
-                "therefore there is nothing left to match.".into(),
-                "A spread can only be used to prepend elements to lists like this: `[first, ..rest]`".into()
-
+                "A spread can only be used to match on the entire end of a list.".into(),
+                "It is not possible to extract items from the end of a list using pattern".into(),
+                "matching because that would require walking through the entire list.".into(),
             ]
         )
         }
