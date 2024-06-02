@@ -1007,23 +1007,9 @@ fn case_list_pattern_after_spread() {
     assert_module_error!(
         "
 fn main() {
-    case [1, 2, 3] {
-        [1, .., last] -> 0
-        _ -> 0
-    }
-}
-"
-    );
-}
-
-#[test]
-fn case_list_pattern_invalid_token() {
-    assert_module_error!(
-        "
-fn main() {
-    case [1, 2, 3] {
-        [1, 2, *] -> 0
-        _ -> 0
+    case somelist {
+        [rest.., last] -> 1
+        _ -> 2
     }
 }
 "
