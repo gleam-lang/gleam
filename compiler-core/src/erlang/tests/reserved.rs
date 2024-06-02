@@ -28,6 +28,7 @@ pub type End { TestEnd }
 pub type Fun { TestFun }
 pub type If { TestIf }
 pub type Let { TestLet }
+pub type Maybe { TestMaybe }
 pub type Not { TestNot }
 pub type Of { TestOf }
 pub type Or { TestOr }
