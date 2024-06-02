@@ -1,7 +1,4 @@
-use std::sync::Arc;
-
-use ecow::EcoString;
-use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, TextEdit, Url};
+use std::{iter, sync::Arc};
 
 use crate::{
     ast::{self, visit::Visit as _, SrcSpan},
@@ -10,6 +7,8 @@ use crate::{
     parse::extra::ModuleExtra,
     type_::Type,
 };
+use ecow::EcoString;
+use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, TextEdit, Url};
 
 use super::{engine::overlaps, src_span_to_lsp_range};
 
@@ -132,6 +131,10 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
                             *location,
                             elems.last().map(|elem| elem.location()),
                         ))
+                    }
+
+                    Some(ast::Pattern::Discard { location, .. }) => {
+                        clause_edits.push(self.discard_tuple_items(*location, elems.len()))
                     }
 
                     // Do not edit for this subject at all and go to the next subject
@@ -262,5 +265,14 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
         });
 
         edits
+    }
+
+    fn discard_tuple_items(&self, location: SrcSpan, len: usize) -> TextEdit {
+        // Replace the old discard with multiple discard, one for each of the
+        // tuple items.
+        TextEdit {
+            range: src_span_to_lsp_range(location, &self.line_numbers),
+            new_text: itertools::intersperse(iter::repeat("_").take(len), ", ").collect(),
+        }
     }
 }

@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action_with_title(code, 4, REMOVE_REDUNDANT_TUPLES)"
+---
+pub fn main() {
+  case 1, 2 {
+    1, 2 -> 0
+    _, _ -> 1
+  }
+}
