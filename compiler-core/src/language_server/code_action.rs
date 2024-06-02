@@ -267,12 +267,12 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
         edits
     }
 
-    fn discard_tuple_items(&self, location: SrcSpan, len: usize) -> TextEdit {
+    fn discard_tuple_items(&self, discard_location: SrcSpan, tuple_items: usize) -> TextEdit {
         // Replace the old discard with multiple discard, one for each of the
         // tuple items.
         TextEdit {
-            range: src_span_to_lsp_range(location, &self.line_numbers),
-            new_text: itertools::intersperse(iter::repeat("_").take(len), ", ").collect(),
+            range: src_span_to_lsp_range(discard_location, &self.line_numbers),
+            new_text: itertools::intersperse(iter::repeat("_").take(tuple_items), ", ").collect(),
         }
     }
 }
