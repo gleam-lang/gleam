@@ -12,12 +12,13 @@
 error: Syntax error
   ┌─ /src/parse/error.gleam:4:17
   │
-4 │         [1, .., last] -> 0
-  │                 ^^^^ Invalid pattern
+4 │         [rest.., last] -> 1
+  │                  ^^^^ Invalid pattern
 
 I was expecting the end of the list.
 The spread pattern precesing this consumes the remaining elements of the list
 therefore there is nothing left to match.
+A spread can only be used to prepend elements to lists like this: `[first, ..rest]`
 ```
 
 ([Antonio Iaccarino])[https://github.com/eingin]
