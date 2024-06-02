@@ -186,7 +186,13 @@ impl<'a> JavaScript<'a> {
             }
             self.js_module(writer, module, &js_name)?
         }
-        self.write_prelude(writer)?;
+
+        // This check skips unnecessary `gleam.mjs` writes which confuse
+        // watchers and HMR build tools
+        if !modules.is_empty() {
+            self.write_prelude(writer)?;
+        }
+
         Ok(())
     }
 
