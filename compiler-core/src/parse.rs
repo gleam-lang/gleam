@@ -1163,8 +1163,21 @@ where
                 } else {
                     None
                 };
-                let (end, rsqb_e) =
-                    self.expect_one_following_series(&Token::RightSquare, "a pattern")?;
+
+                let (end, rsqb_e) = match self.maybe_one(&Token::RightSquare) {
+                    Some((start, end)) => Ok((start, end)),
+                    None => {
+                        if tail.is_some() {
+                            self.next_tok_error(ParseErrorType::ListPatternAfterSpread)
+                        } else {
+                            self.next_tok_unexpected(vec![
+                                Token::RightSquare.to_string().into(),
+                                "a pattern".into(),
+                            ])
+                        }
+                    }
+                }?;
+
                 let tail = match tail {
                     // There is a tail and it has a Pattern::Var or Pattern::Discard
                     Some(Some(pat @ (Pattern::Variable { .. } | Pattern::Discard { .. }))) => {
@@ -2879,18 +2892,19 @@ where
     }
 
     // Error on the next token or EOF
-    fn next_tok_unexpected<A>(&mut self, expected: Vec<EcoString>) -> Result<A, ParseError> {
+    fn next_tok_error<A>(&mut self, error: ParseErrorType) -> Result<A, ParseError> {
         match self.next_tok() {
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
-
-            Some((start, _, end)) => parse_error(
-                ParseErrorType::UnexpectedToken {
-                    expected,
-                    hint: None,
-                },
-                SrcSpan { start, end },
-            ),
+            Some((start, _, end)) => parse_error(error, SrcSpan { start, end }),
         }
+    }
+
+    // Unexpected token error on the next token or EOF
+    fn next_tok_unexpected<A>(&mut self, expected: Vec<EcoString>) -> Result<A, ParseError> {
+        self.next_tok_error(ParseErrorType::UnexpectedToken {
+            expected,
+            hint: None,
+        })
     }
 
     // Moves the token stream forward

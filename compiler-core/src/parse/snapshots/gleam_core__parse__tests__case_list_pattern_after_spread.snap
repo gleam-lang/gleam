@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nfn main() {\n    case [1, 2, 3] {\n        [1, .., last] -> 0\n        _ -> 0\n    }\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:4:17
+  │
+4 │         [1, .., last] -> 0
+  │                 ^^^^ Invaild pattern
+
+I was expecting the end of the list pattern.
+The spread pattern precesing this consumes the remaining elements of the list
+therefore there is nothing left to match.
