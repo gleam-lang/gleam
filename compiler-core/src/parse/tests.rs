@@ -1008,7 +1008,7 @@ fn case_list_pattern_after_spread() {
         "
 fn main() {
     case somelist {
-        [rest.., last] -> 1
+        [..rest, last] -> 1
         _ -> 2
     }
 }
