@@ -10,15 +10,15 @@
 
 ```
 error: Syntax error
-  ┌─ /src/parse/error.gleam:4:17
+  ┌─ /src/parse/error.gleam:4:14
   │
 4 │         [rest.., last] -> 1
-  │                  ^^^^ Invalid pattern
+  │              ^^ I wasn't expecting other patterns after this spread
 
 I was expecting the end of the list.
-The spread pattern precesing this consumes the remaining elements of the list
-therefore there is nothing left to match.
-A spread can only be used to prepend elements to lists like this: `[first, ..rest]`
+A spread can only be used to match on the entire end of a list.
+It is not possible to extract items from the end of a list using pattern
+matching because that would require walking through the entire list.
 ```
 
 ([Antonio Iaccarino])[https://github.com/eingin]
