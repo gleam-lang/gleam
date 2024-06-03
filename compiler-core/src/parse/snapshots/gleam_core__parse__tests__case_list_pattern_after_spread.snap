@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/parse/tests.rs
-expression: "\nfn main() {\n    case somelist {\n        [rest.., last] -> 1\n        _ -> 2\n    }\n}\n"
+expression: "\nfn main() {\n    case somelist {\n        [..rest, last] -> 1\n        _ -> 2\n    }\n}\n"
 ---
 error: Syntax error
-  ┌─ /src/parse/error.gleam:4:14
+  ┌─ /src/parse/error.gleam:4:10
   │
-4 │         [rest.., last] -> 1
-  │              ^^ I wasn't expecting other patterns after this spread
+4 │         [..rest, last] -> 1
+  │          ^^^^^^ I wasn't expecting other patterns after this spread
 
 I was expecting the end of the list.
 A spread can only be used to match on the entire end of a list.

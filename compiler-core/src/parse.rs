@@ -1165,7 +1165,7 @@ where
                         // See if there's a list of items after the tail,
                         // like `[..wibble, wobble, wabble]`
                         let elements =
-                            Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma));
+                            Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma));
                         match elements {
                             Err(_) => {}
                             Ok(elements) => {
@@ -2910,20 +2910,18 @@ where
         }
     }
 
-    // Error on the next token or EOF
-    fn next_tok_error<A>(&mut self, error: ParseErrorType) -> Result<A, ParseError> {
-        match self.next_tok() {
-            None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
-            Some((start, _, end)) => parse_error(error, SrcSpan { start, end }),
-        }
-    }
-
     // Unexpected token error on the next token or EOF
     fn next_tok_unexpected<A>(&mut self, expected: Vec<EcoString>) -> Result<A, ParseError> {
-        self.next_tok_error(ParseErrorType::UnexpectedToken {
-            expected,
-            hint: None,
-        })
+        match self.next_tok() {
+            None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
+            Some((start, _, end)) => parse_error(
+                ParseErrorType::UnexpectedToken {
+                    expected,
+                    hint: None,
+                },
+                SrcSpan { start, end },
+            ),
+        }
     }
 
     // Moves the token stream forward

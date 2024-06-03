@@ -12,8 +12,8 @@
 error: Syntax error
   ┌─ /src/parse/error.gleam:4:14
   │
-4 │         [rest.., last] -> 1
-  │              ^^ I wasn't expecting other patterns after this spread
+4 │         [..rest, last] -> 1
+  │          ^^^^^ I wasn't expecting other patterns after this spread
 
 I was expecting the end of the list.
 A spread can only be used to match on the entire end of a list.
