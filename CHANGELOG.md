@@ -24,6 +24,11 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Functions etc named `maybe` are now escaped in generated Erlang as it is now a
+  reserved word in Erlang/OTP 27.
+  ([Jake Barszcz](https://github.com/barszcz))
+
+
 ### Formatter
 
 ### Language Server
@@ -37,11 +42,6 @@
 - Fixed a bug where the formatter would strip empty lines out of the body of an
   anonymous function passed as an argument.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- Fixed a bug where the compiler would generate invalid Erlang code when
-  declaring an identifier named `Maybe`/`maybe` and compiling against
-  Erlang/OTP 27, where `maybe` is now a reserved word.
-  ([Jake Barszcz](https://github.com/barszcz))
 
 ## v1.2.1 - 2024-05-30
 
