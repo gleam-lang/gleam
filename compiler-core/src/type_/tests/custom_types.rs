@@ -1,4 +1,4 @@
-use crate::{assert_module_error, assert_module_infer, assert_warning};
+use crate::{assert_module_error, assert_module_infer, assert_warning, assert_with_module_error};
 
 // https://github.com/gleam-lang/gleam/issues/2215
 #[test]
@@ -59,3 +59,13 @@ type Three(a, a) {
 "#
     );
 }
+
+#[test]
+fn conflict_with_import() {
+    // We cannot declare a type with the same name as an imported type
+    assert_with_module_error!(
+        ("foo", "pub type A { B }"),
+        "import foo.{type A} type A { C }",
+    );
+}
+
