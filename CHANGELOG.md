@@ -64,10 +64,6 @@
   anonymous function passed as an argument.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Fixed a bug where the compiler would unnecessarily generate `gleam.mjs`,
-  confusing build tools like Vite
-  ([Ofek Doitch](https://github.com/ofekd))
-
 ## v1.2.1 - 2024-05-30
 
 ### Bug Fixes
