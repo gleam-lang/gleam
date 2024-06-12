@@ -54,6 +54,9 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Added a code action to add `let _ = ` to an unused result value.
+  ([Leah Ulmschneider](https://github.com/leah-u))
+
 ### Bug Fixes
 
 - Fixed a bug where the compiler would output a confusing error message when

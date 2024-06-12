@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action_with_title(code, 2, ASSIGN_UNUSED_RESULT)"
+---
+pub fn main() {
+    let _ = Ok(0)
+    Nil
+}

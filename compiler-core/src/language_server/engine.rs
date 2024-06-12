@@ -25,7 +25,7 @@ use std::sync::Arc;
 use strum::IntoEnumIterator;
 
 use super::{
-    code_action::{CodeActionBuilder, RedundantTupleInCaseSubject},
+    code_action::{CodeActionBuilder, RedundantTupleInCaseSubject, UnusedResultValue},
     src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
@@ -258,6 +258,7 @@ where
 
             code_action_unused_imports(module, &params, &mut actions);
             actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
+            actions.extend(UnusedResultValue::new(module, &params).code_actions());
 
             Ok(if actions.is_empty() {
                 None

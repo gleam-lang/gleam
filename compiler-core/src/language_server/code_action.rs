@@ -276,3 +276,100 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
         }
     }
 }
+
+/// Code action to add `let _ = ` in front of an unused result value
+///
+/// # Example:
+///
+/// ```gleam
+/// fn main() {
+///     Ok(0)
+///     Nil
+/// }
+/// ```
+///
+/// Becomes:
+///
+/// ```gleam
+/// fn main() {
+///     let _ = Ok(0)
+///     Nil
+/// }
+/// ```
+pub struct UnusedResultValue<'a> {
+    line_numbers: LineNumbers,
+    params: &'a CodeActionParams,
+    module: &'a ast::TypedModule,
+    edit: Option<TextEdit>,
+}
+
+impl<'ast> ast::visit::Visit<'ast> for UnusedResultValue<'_> {
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        self.visit_statements(&fun.body);
+        ast::visit::visit_typed_function(self, fun);
+    }
+
+    fn visit_typed_expr_block(
+        &mut self,
+        location: &'ast SrcSpan,
+        statements: &'ast [ast::TypedStatement],
+    ) {
+        self.visit_statements(statements);
+        ast::visit::visit_typed_expr_block(self, location, statements);
+    }
+}
+
+impl<'a> UnusedResultValue<'a> {
+    pub fn new(module: &'a build::Module, params: &'a CodeActionParams) -> Self {
+        Self {
+            line_numbers: LineNumbers::new(&module.code),
+            params,
+            module: &module.ast,
+            edit: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(self.module);
+        let Some(edit) = self.edit else {
+            return vec![];
+        };
+
+        let mut actions = vec![];
+        CodeActionBuilder::new("Assign unused Result value to `_`")
+            .kind(CodeActionKind::QUICKFIX)
+            .changes(self.params.text_document.uri.clone(), vec![edit])
+            .preferred(true)
+            .push_to(&mut actions);
+
+        actions
+    }
+
+    fn visit_statements(&mut self, statements: &[ast::TypedStatement]) {
+        let count = statements.len();
+        for (i, stmt) in statements.iter().enumerate() {
+            // Check all statements except the last in the body
+            if i >= count - 1 {
+                break;
+            }
+
+            if let ast::Statement::Expression(expr) = stmt {
+                if expr.type_().is_result() {
+                    let location = expr.location();
+                    let range = src_span_to_lsp_range(location, &self.line_numbers);
+                    if overlaps(self.params.range, range) {
+                        self.edit =
+                            Some(self.assign_discard(SrcSpan::new(location.start, location.start)));
+                    }
+                }
+            }
+        }
+    }
+
+    fn assign_discard(&self, location: SrcSpan) -> TextEdit {
+        TextEdit {
+            range: src_span_to_lsp_range(location, &self.line_numbers),
+            new_text: "let _ = ".to_owned(),
+        }
+    }
+}
