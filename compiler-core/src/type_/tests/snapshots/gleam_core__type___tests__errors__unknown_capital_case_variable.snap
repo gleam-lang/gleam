@@ -8,7 +8,5 @@ error: Unknown variable
 1 │ let One = 1
   │     ^^^
 
-The name `One` is not in scope here.
-
 This pattern is matching a constructor named `One`, but there is no
 constructor in scope with that name.

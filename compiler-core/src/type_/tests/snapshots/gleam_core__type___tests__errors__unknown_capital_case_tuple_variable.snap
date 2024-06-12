@@ -8,7 +8,5 @@ error: Unknown variable
 1 │ let triple = #(1, 2.2, "three") let #(One, _, _) = triple
   │                                       ^^^
 
-The name `One` is not in scope here.
-
 This pattern is matching a constructor named `One`, but there is no
 constructor in scope with that name.

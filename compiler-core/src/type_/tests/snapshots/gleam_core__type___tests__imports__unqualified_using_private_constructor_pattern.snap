@@ -16,7 +16,5 @@ error: Unknown variable
 4 │   let Two = x
   │       ^^^
 
-The name `Two` is not in scope here.
-
 This pattern is matching a constructor named `Two`, but there is no
 constructor in scope with that name.
