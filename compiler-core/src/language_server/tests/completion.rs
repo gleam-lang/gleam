@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionTextEdit, Documentation, MarkupContent,
-    MarkupKind, Position, Range, TextEdit,
+    CompletionItem, CompletionItemKind, CompletionItemLabelDetails, CompletionTextEdit,
+    Documentation, MarkupContent, MarkupKind, Position, Range, TextEdit,
 };
 
 use super::*;
@@ -120,6 +120,10 @@ pub fn main() {
             label: "main".into(),
             kind: Some(CompletionItemKind::FUNCTION),
             detail: Some("fn() -> Int".into()),
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some("app".into()),
+            }),
             documentation: None,
             ..Default::default()
         }]
@@ -140,6 +144,10 @@ pub fn main() {
             label: "main".into(),
             kind: Some(CompletionItemKind::FUNCTION),
             detail: Some("fn() -> Int".into()),
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some("app".into()),
+            }),
             documentation: Some(Documentation::MarkupContent(MarkupContent {
                 kind: MarkupKind::Markdown,
                 value: " Hello\n".into(),
@@ -164,6 +172,10 @@ pub type Direction {
             CompletionItem {
                 label: "Left".into(),
                 kind: Some(CompletionItemKind::ENUM_MEMBER),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 detail: Some("Direction".into()),
                 documentation: None,
                 ..Default::default()
@@ -171,6 +183,10 @@ pub type Direction {
             CompletionItem {
                 label: "Right".into(),
                 kind: Some(CompletionItemKind::ENUM_MEMBER),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into()),
+                }),
                 detail: Some("Direction".into()),
                 documentation: None,
                 ..Default::default()
@@ -194,6 +210,10 @@ pub type Box {
             label: "Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
             detail: Some("fn(Int, Int, Float) -> Box".into()),
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some("app".into()),
+            }),
             documentation: Some(Documentation::MarkupContent(MarkupContent {
                 kind: MarkupKind::Markdown,
                 value: " Hello\n".into(),
@@ -221,6 +241,10 @@ pub type Direction {
                 label: "Left".into(),
                 kind: Some(CompletionItemKind::ENUM_MEMBER),
                 detail: Some("Direction".into()),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into()),
+                }),
                 documentation: Some(Documentation::MarkupContent(MarkupContent {
                     kind: MarkupKind::Markdown,
                     value: " Hello\n".into(),
@@ -231,6 +255,10 @@ pub type Direction {
                 label: "Right".into(),
                 kind: Some(CompletionItemKind::ENUM_MEMBER),
                 detail: Some("Direction".into()),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into()),
+                }),
                 documentation: Some(Documentation::MarkupContent(MarkupContent {
                     kind: MarkupKind::Markdown,
                     value: " Goodbye\n".into(),
@@ -256,6 +284,10 @@ pub type Box {
             kind: Some(CompletionItemKind::CONSTRUCTOR),
             detail: Some("fn(Int, Int, Float) -> Box".into()),
             documentation: None,
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some("app".into()),
+            }),
             ..Default::default()
         }]
     );
@@ -278,6 +310,10 @@ pub fn wobble() {
             label: "dep.wobble".into(),
             kind: Some(CompletionItemKind::FUNCTION),
             detail: Some("fn() -> Nil".into()),
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some("app".into()),
+            }),
             documentation: None,
             ..Default::default()
         }]
@@ -301,6 +337,10 @@ pub fn wobble() {
             kind: Some(CompletionItemKind::FUNCTION),
             detail: Some("fn() -> Nil".into()),
             documentation: None,
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some("dep".into())
+            }),
             additional_text_edits: Some(vec![TextEdit {
                 range: Range {
                     start: Position {
@@ -350,16 +390,14 @@ pub fn wobble() {
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Nil".into()),
                 documentation: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("dep".into()),
+                }),
                 additional_text_edits: Some(vec![TextEdit {
                     range: Range {
-                        start: Position {
-                            line: 7,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 7,
-                            character: 0
-                        }
+                        start: Position::new(7, 0),
+                        end: Position::new(7, 0)
                     },
                     new_text: "import dep\n".into()
                 }]),
@@ -370,6 +408,10 @@ pub fn wobble() {
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Nil".into()),
                 documentation: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into()),
+                }),
                 ..Default::default()
             }
         ]
@@ -393,16 +435,14 @@ pub fn wobble() {
             kind: Some(CompletionItemKind::FUNCTION),
             detail: Some("fn() -> Nil".into()),
             documentation: None,
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some("a/b/dep".into()),
+            }),
             additional_text_edits: Some(vec![TextEdit {
                 range: Range {
-                    start: Position {
-                        line: 0,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 0,
-                        character: 0
-                    }
+                    start: Position::new(0, 0),
+                    end: Position::new(0, 0)
                 },
                 new_text: "import a/b/dep\n".into()
             }]),
@@ -430,6 +470,10 @@ pub type Direction {
                 label: "dep.Left".into(),
                 kind: Some(CompletionItemKind::ENUM_MEMBER),
                 detail: Some("Direction".into()),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 documentation: None,
                 ..Default::default()
             },
@@ -437,6 +481,10 @@ pub type Direction {
                 label: "dep.Right".into(),
                 kind: Some(CompletionItemKind::ENUM_MEMBER),
                 detail: Some("Direction".into()),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 documentation: None,
                 ..Default::default()
             }
@@ -460,6 +508,10 @@ pub type Box {
         vec![CompletionItem {
             label: "dep.Box".into(),
             kind: Some(CompletionItemKind::CONSTRUCTOR),
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some("app".into()),
+            }),
             detail: Some("fn(Int) -> Box".into()),
             documentation: None,
             ..Default::default()
@@ -485,6 +537,10 @@ pub fn wobble() {
                 label: "dep.wobble".into(),
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Nil".into()),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 documentation: None,
                 ..Default::default()
             },
@@ -492,6 +548,10 @@ pub fn wobble() {
                 label: "wobble".into(),
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Nil".into()),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 documentation: None,
                 ..Default::default()
             },
@@ -519,6 +579,10 @@ pub type Direction {
                 kind: Some(CompletionItemKind::ENUM_MEMBER),
                 detail: Some("Direction".into()),
                 documentation: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 ..Default::default()
             },
             CompletionItem {
@@ -526,6 +590,10 @@ pub type Direction {
                 kind: Some(CompletionItemKind::ENUM_MEMBER),
                 detail: Some("Direction".into()),
                 documentation: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 ..Default::default()
             },
             CompletionItem {
@@ -533,6 +601,10 @@ pub type Direction {
                 kind: Some(CompletionItemKind::ENUM_MEMBER),
                 detail: Some("Direction".into()),
                 documentation: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 ..Default::default()
             },
         ]
@@ -558,6 +630,10 @@ pub type Box {
                 kind: Some(CompletionItemKind::CONSTRUCTOR),
                 detail: Some("fn(Int) -> Box".into()),
                 documentation: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into()),
+                }),
                 ..Default::default()
             },
             CompletionItem {
@@ -565,6 +641,10 @@ pub type Box {
                 kind: Some(CompletionItemKind::CONSTRUCTOR),
                 detail: Some("fn(Int) -> Box".into()),
                 documentation: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into()),
+                }),
                 ..Default::default()
             },
         ]
@@ -586,6 +666,10 @@ fn private() {
             label: "private".into(),
             kind: Some(CompletionItemKind::FUNCTION),
             detail: Some("fn() -> Int".into()),
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some("app".into()),
+            }),
             documentation: None,
             ..Default::default()
         },]
@@ -608,6 +692,10 @@ type Wibble {
             kind: Some(CompletionItemKind::ENUM_MEMBER),
             detail: Some("Wibble".into()),
             documentation: None,
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some("app".into()),
+            }),
             ..Default::default()
         },]
     );
@@ -629,6 +717,10 @@ pub opaque type Wibble {
             kind: Some(CompletionItemKind::ENUM_MEMBER),
             detail: Some("Wibble".into()),
             documentation: None,
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some("app".into()),
+            }),
             ..Default::default()
         },]
     );
@@ -1088,15 +1180,21 @@ fn internal_values_from_root_package_are_in_the_completions() {
         vec![
             CompletionItem {
                 label: "dep.Bar".into(),
-                label_details: None,
                 kind: Some(CompletionItemKind::ENUM_MEMBER),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 detail: Some("Foo".into()),
                 documentation: None,
                 ..Default::default()
             },
             CompletionItem {
                 label: "dep.foo".into(),
-                label_details: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 kind: Some(CompletionItemKind::CONSTANT),
                 detail: Some("Int".into()),
                 documentation: None,
@@ -1104,7 +1202,10 @@ fn internal_values_from_root_package_are_in_the_completions() {
             },
             CompletionItem {
                 label: "dep.main".into(),
-                label_details: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Int".into()),
                 documentation: None,
@@ -1112,7 +1213,10 @@ fn internal_values_from_root_package_are_in_the_completions() {
             },
             CompletionItem {
                 label: "dep.random_float".into(),
-                label_details: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Float".into()),
                 documentation: None,
@@ -1178,15 +1282,21 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
         vec![
             CompletionItem {
                 label: "Bar".into(),
-                label_details: None,
                 kind: Some(CompletionItemKind::ENUM_MEMBER),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 detail: Some("Foo".into()),
                 documentation: None,
                 ..Default::default()
             },
             CompletionItem {
                 label: "foo".into(),
-                label_details: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 kind: Some(CompletionItemKind::CONSTANT),
                 detail: Some("Int".into()),
                 documentation: None,
@@ -1194,7 +1304,10 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
             },
             CompletionItem {
                 label: "main".into(),
-                label_details: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Int".into()),
                 documentation: None,
@@ -1202,7 +1315,10 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
             },
             CompletionItem {
                 label: "random_float".into(),
-                label_details: None,
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("app".into())
+                }),
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Float".into()),
                 documentation: None,
@@ -1837,24 +1953,37 @@ pub type Wibble = String
                 kind: Some(CompletionItemKind::CLASS),
                 detail: Some("Type".into()),
                 insert_text: Some("type Wibble".into()),
+                label_details: None,
                 ..Default::default()
             },
             CompletionItem {
                 label: "myfun".into(),
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Int".into()),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("myfun".into()),
+                }),
                 ..Default::default()
             },
             CompletionItem {
                 label: "wabble".into(),
                 kind: Some(CompletionItemKind::CONSTANT),
                 detail: Some("String".into()),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("wabble".into()),
+                }),
                 ..Default::default()
             },
             CompletionItem {
                 label: "wibble".into(),
                 kind: Some(CompletionItemKind::CONSTANT),
                 detail: Some("String".into()),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("wibble".into()),
+                }),
                 ..Default::default()
             },
         ]
@@ -1901,6 +2030,10 @@ pub type Wibble = String
                 label: "myfun".into(),
                 kind: Some(CompletionItemKind::FUNCTION),
                 detail: Some("fn() -> Int".into()),
+                label_details: Some(CompletionItemLabelDetails {
+                    detail: None,
+                    description: Some("myfun".into()),
+                }),
                 ..Default::default()
             },
         ]
@@ -1936,6 +2069,10 @@ pub type Wibble = String
             label: "myfun".into(),
             kind: Some(CompletionItemKind::FUNCTION),
             detail: Some("fn() -> Int".into()),
+            label_details: Some(CompletionItemLabelDetails {
+                detail: None,
+                description: Some("myfun".into()),
+            }),
             ..Default::default()
         },]
     );

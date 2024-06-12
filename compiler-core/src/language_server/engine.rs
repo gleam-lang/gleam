@@ -509,13 +509,14 @@ where
         line_numbers: &LineNumbers,
     ) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
+        let mod_name = module.name.as_str();
 
         // Module functions
         for (name, value) in &module.ast.type_info.values {
             // Here we do not check for the internal attribute: we always want
             // to show autocompletions for values defined in the same module,
             // even if those are internal.
-            completions.push(value_completion(None, name, value));
+            completions.push(value_completion(None, mod_name, name, value));
         }
 
         // Imported modules
@@ -535,7 +536,7 @@ where
 
                 let module = import.used_name();
                 if module.is_some() {
-                    completions.push(value_completion(module.as_deref(), name, value));
+                    completions.push(value_completion(module.as_deref(), mod_name, name, value));
                 }
             }
 
@@ -543,7 +544,8 @@ where
             for unqualified in &import.unqualified_values {
                 match module.get_public_value(&unqualified.name) {
                     Some(value) => {
-                        completions.push(value_completion(None, unqualified.used_name(), value))
+                        let name = unqualified.used_name();
+                        completions.push(value_completion(None, mod_name, name, value))
                     }
                     None => continue,
                 }
@@ -556,6 +558,7 @@ where
             if module_full_name == "gleam" {
                 continue;
             }
+            let qualifier = module_full_name.split('/').last();
 
             // Qualified values
             for (name, value) in &module.values {
@@ -563,8 +566,7 @@ where
                     continue;
                 }
 
-                let mut completion =
-                    value_completion(module_full_name.split('/').last(), name, value);
+                let mut completion = value_completion(qualifier, module_full_name, name, value);
 
                 completion.additional_text_edits = Some(vec![lsp::TextEdit {
                     range: lsp::Range {
@@ -644,7 +646,7 @@ where
             if already_imported_values.contains(name) {
                 continue;
             }
-            completions.push(value_completion(None, name, value));
+            completions.push(value_completion(None, name, name, value));
         }
 
         completions
@@ -813,11 +815,12 @@ fn type_completion(
 }
 
 fn value_completion(
-    module: Option<&str>,
+    module_qualifier: Option<&str>,
+    module_name: &str,
     name: &str,
     value: &crate::type_::ValueConstructor,
 ) -> lsp::CompletionItem {
-    let label = match module {
+    let label = match module_qualifier {
         Some(module) => format!("{module}.{name}"),
         None => name.to_string(),
     };
@@ -836,7 +839,7 @@ fn value_completion(
     let documentation = value.get_documentation().map(|d| {
         lsp::Documentation::MarkupContent(lsp::MarkupContent {
             kind: lsp::MarkupKind::Markdown,
-            value: d.to_string(),
+            value: d.into(),
         })
     });
 
@@ -844,6 +847,10 @@ fn value_completion(
         label,
         kind,
         detail: Some(type_),
+        label_details: Some(lsp::CompletionItemLabelDetails {
+            detail: None,
+            description: Some(module_name.into()),
+        }),
         documentation,
         ..Default::default()
     }
