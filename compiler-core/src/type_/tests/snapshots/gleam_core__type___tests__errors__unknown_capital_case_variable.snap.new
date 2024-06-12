@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 235
+expression: let One = 1
+---
+error: Unknown variable
+  ┌─ /src/one/two.gleam:1:5
+  │
+1 │ let One = 1
+  │     ^^^
+
+This pattern is matching a constructor named `One`, but there is no
+constructor in scope with that name.

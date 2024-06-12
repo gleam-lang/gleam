@@ -1849,9 +1849,9 @@ constructing a new record with its values."
                             wrap_format!("`{name}` is a type, it cannot be used as a value.")
                         }
                         Some(UnknownValueConstructorErrorSituation::NameStartsWithCapitalCase) => {
-                            wrap_format!("The name `{name}` is not in scope here.\n\nThis pattern is matching a constructor named `{name}`, but there is no constructor in scope with that name.")
+                            wrap_format!("This pattern is matching a constructor named `{name}`, but there is no constructor in scope with that name.")
                         }
-                        _ =>  wrap_format!("The name `{name}` is not in scope here.")
+                        None =>  wrap_format!("The name `{name}` is not in scope here.")
                     };
 
                     Diagnostic {

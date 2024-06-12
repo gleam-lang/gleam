@@ -817,6 +817,17 @@ pub fn convert_get_value_constructor_error(
         UnknownValueConstructorError::Variable {
             name,
             variables,
+            situation: None,
+        } => Error::UnknownVariable {
+            location,
+            name,
+            variables,
+            situation: Some(UnknownValueConstructorErrorSituation::NameStartsWithCapitalCase),
+        },
+
+        UnknownValueConstructorError::Variable {
+            name,
+            variables,
             situation,
         } => Error::UnknownVariable {
             location,
@@ -848,6 +859,57 @@ pub fn convert_get_value_constructor_error(
         },
     }
 }
+
+// pub fn convert_get_value_constructor_error(
+//     e: UnknownValueConstructorError,
+//     location: SrcSpan,
+// ) -> Error {
+//     match e {
+//         UnknownValueConstructorError::Variable {
+//             name,
+//             variables,
+//             situation: None,
+//         } => Error::UnknownVariable {
+//             location,
+//             name,
+//             variables,
+//             situation: Some(UnknownValueConstructorErrorSituation::NameStartsWithCapitalCase),
+//         },
+
+//         UnknownValueConstructorError::Variable {
+//             name,
+//             variables,
+//             situation,
+//         } => Error::UnknownVariable {
+//             location,
+//             name,
+//             variables,
+//             situation,
+//         },
+
+//         UnknownValueConstructorError::Module {
+//             name,
+//             imported_modules,
+//         } => Error::UnknownModule {
+//             location,
+//             name,
+//             imported_modules,
+//         },
+
+//         UnknownValueConstructorError::ModuleValue {
+//             name,
+//             module_name,
+//             value_constructors,
+//             imported_value_as_type,
+//         } => Error::UnknownModuleValue {
+//             location,
+//             name,
+//             module_name,
+//             value_constructors,
+//             type_with_same_name: imported_value_as_type,
+//         },
+//     }
+// }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum UnknownTypeHint {

@@ -7,7 +7,7 @@
 ### Compiler
 
 - Added more detail on the constructor error
-  where a variable starting with an uppercase is defined by let binding.
+  when a pattern references a value constructor that is out of scope or does not exist.
   ([Arian Pourarian](https://github.com/Arian94))
 
 - The compiler now emits a warning for redundant function captures in a

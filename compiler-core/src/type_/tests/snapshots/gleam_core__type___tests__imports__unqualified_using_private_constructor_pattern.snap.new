@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/imports.rs
+assertion_line: 163
+expression: "import one.{Two}\n\npub fn main(x) {\n  let Two = x\n}"
+---
+error: Unknown module field
+  ┌─ /src/one/two.gleam:1:13
+  │
+1 │ import one.{Two}
+  │             ^^^
+
+The module `one` does not have a `Two` value.
+
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:7
+  │
+4 │   let Two = x
+  │       ^^^
+
+This pattern is matching a constructor named `Two`, but there is no
+constructor in scope with that name.

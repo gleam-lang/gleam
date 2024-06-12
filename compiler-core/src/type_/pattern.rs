@@ -432,27 +432,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // Register the value as seen for detection of unused values
                 self.environment.increment_usage(&name);
 
-                let map_error_variables = &self.environment.local_value_names();
                 let cons = self
                     .environment
                     .get_value_constructor(module.as_ref(), &name)
-                    .map_err(|e| {
-                        if e == (UnknownValueConstructorError::Variable {
-                            name: name.clone(),
-                            variables: map_error_variables.clone(),
-                            situation: None,
-                        }) {
-                            UnknownValueConstructorError::Variable {
-                                name: name.clone(),
-                                variables: map_error_variables.clone(),
-                                situation: Some(
-                                    UnknownValueConstructorErrorSituation::NameStartsWithCapitalCase,
-                                ),
-                            }
-                        } else {
-                            e
-                        }
-                    })
                     .map_err(|e| convert_get_value_constructor_error(e, location))?;
 
                 match cons.field_map() {
