@@ -64,6 +64,10 @@
   anonymous function passed as an argument.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would crash when a type was defined with
+  the same name as an imported type.
+  ([Gears](https://github.com/gearsdatapacks))
+
 ## v1.2.1 - 2024-05-30
 
 ### Bug Fixes
