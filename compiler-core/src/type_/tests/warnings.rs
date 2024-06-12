@@ -2064,3 +2064,16 @@ fn redundant_function_capture_in_pipe_4() {
 "
     );
 }
+
+#[test]
+fn redundant_function_capture_in_pipe_5() {
+    assert_no_warnings!(
+        "
+  pub fn wibble(_, _) { 1 }
+
+  pub fn main() {
+    1 |> wibble(2, _)
+  }
+"
+    );
+}

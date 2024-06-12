@@ -156,7 +156,6 @@ impl<'a, A> ModuleAnalyzerConstructor<'a, A> {
             line_numbers,
             src_path,
             errors: vec![],
-            type_names: HashMap::with_capacity(module.definitions.len()),
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
@@ -177,7 +176,6 @@ struct ModuleAnalyzer<'a, A> {
     line_numbers: LineNumbers,
     src_path: Utf8PathBuf,
     errors: Vec<Error>,
-    type_names: HashMap<EcoString, SrcSpan>,
     value_names: HashMap<EcoString, SrcSpan>,
     hydrators: HashMap<EcoString, Hydrator>,
     module_name: EcoString,
@@ -947,7 +945,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // former. I think we want to really keep the former both times.
         // The fact we can't straightforwardly do this indicated to me that we
         // could improve our approach here somewhat.
-        self.assert_unique_type_name(name, *location)?;
+        environment.assert_unique_type_name(name, *location)?;
 
         let mut hydrator = Hydrator::new();
         let parameters = self.make_type_vars(parameters, *location, &mut hydrator, environment);
@@ -1017,7 +1015,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = t;
 
         // A type alias must not have the same name as any other type in the module.
-        if let Err(error) = self.assert_unique_type_name(name, *location) {
+        if let Err(error) = environment.assert_unique_type_name(name, *location) {
             self.errors.push(error);
             // A type already exists with the name so we cannot continue and
             // register this new type with the same name.
@@ -1087,21 +1085,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     fn record_if_error(&mut self, result: Result<(), Error>) {
         if let Err(error) = result {
             self.errors.push(error);
-        }
-    }
-
-    fn assert_unique_type_name(
-        &mut self,
-        name: &EcoString,
-        location: SrcSpan,
-    ) -> Result<(), Error> {
-        match self.type_names.insert(name.clone(), location) {
-            Some(previous_location) => Err(Error::DuplicateTypeName {
-                name: name.clone(),
-                previous_location,
-                location,
-            }),
-            None => Ok(()),
         }
     }
 

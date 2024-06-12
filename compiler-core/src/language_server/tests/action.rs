@@ -96,7 +96,8 @@ fn apply_code_edit(
             let end =
                 line_numbers.byte_index(edit.range.end.line, edit.range.end.character) - offset;
             let range = (start as usize)..(end as usize);
-            offset += end - start - edit.new_text.len() as u32;
+            offset += end - start;
+            offset -= edit.new_text.len() as u32;
             result.replace_range(range, &edit.new_text);
         }
     }
@@ -196,6 +197,44 @@ pub fn main() {
         apply_first_code_action_with_title(code, 7, REMOVE_REDUNDANT_TUPLES),
         expected
     );
+}
+
+#[test]
+fn test_remove_redundant_tuple_with_catch_all_pattern() {
+    let code = "
+pub fn main() {
+  case #(1, 2) {
+    #(1, 2) -> 0
+    _ -> 1
+  }
+}
+";
+
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        code,
+        4,
+        REMOVE_REDUNDANT_TUPLES
+    ));
+}
+
+#[test]
+fn test_remove_multiple_redundant_tuple_with_catch_all_pattern() {
+    let code = "
+pub fn main() {
+  case #(1, 2), #(3, 4) {
+    #(2, 2), #(2, 2) -> 0
+    #(1, 2), _ -> 0
+    _, #(1, 2) -> 0
+    _, _ -> 1
+  }
+}
+";
+
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        code,
+        4,
+        REMOVE_REDUNDANT_TUPLES
+    ));
 }
 
 #[test]

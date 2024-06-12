@@ -28,9 +28,35 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Functions etc named `maybe` are now escaped in generated Erlang as it is now a
+  reserved word in Erlang/OTP 27.
+  ([Jake Barszcz](https://github.com/barszcz))
+
+
 ### Formatter
 
 ### Language Server
+
+- The language server will now suggest the "Remove redundant tuple" action even
+  if the case expression contains some catch all patterns:
+
+  ```
+  case #(a, b) {
+    #(1, 2) -> todo
+    _ -> todo
+  }
+  ```
+
+  Becomes:
+
+  ```
+  case a, b {
+    1, 2 -> todo
+    _, _ -> todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Bug Fixes
 
@@ -41,6 +67,10 @@
 - Fixed a bug where the formatter would strip empty lines out of the body of an
   anonymous function passed as an argument.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would crash when a type was defined with
+  the same name as an imported type.
+  ([Gears](https://github.com/gearsdatapacks))
 
 ## v1.2.1 - 2024-05-30
 

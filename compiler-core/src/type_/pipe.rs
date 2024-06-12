@@ -1,7 +1,9 @@
 use self::expression::CallKind;
 
 use super::*;
-use crate::ast::{Assignment, AssignmentKind, TypedAssignment, UntypedExpr, PIPE_VARIABLE};
+use crate::ast::{
+    Assignment, AssignmentKind, Statement, TypedAssignment, UntypedExpr, PIPE_VARIABLE,
+};
 use vec1::Vec1;
 
 #[derive(Debug)]
@@ -316,16 +318,23 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     }
 
     fn warn_if_call_first_argument_is_hole(&mut self, call: &UntypedExpr) {
-        if let UntypedExpr::Fn { arguments, .. } = &call {
-            match arguments.as_slice() {
-                [first] | [first, ..] if first.is_capture_hole() => {
-                    self.expr_typer.environment.warnings.emit(
-                        Warning::RedundantPipeFunctionCapture {
-                            location: first.location,
-                        },
-                    )
+        if let UntypedExpr::Fn {
+            is_capture: true,
+            body,
+            ..
+        } = &call
+        {
+            if let Statement::Expression(UntypedExpr::Call { arguments, .. }) = body.first() {
+                match arguments.as_slice() {
+                    [first] | [first, ..] if first.is_capture_hole() => {
+                        self.expr_typer.environment.warnings.emit(
+                            Warning::RedundantPipeFunctionCapture {
+                                location: first.location,
+                            },
+                        )
+                    }
+                    _ => (),
                 }
-                _ => (),
             }
         }
     }
