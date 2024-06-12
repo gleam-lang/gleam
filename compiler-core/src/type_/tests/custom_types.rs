@@ -68,4 +68,3 @@ fn conflict_with_import() {
         "import foo.{type A} type A { C }",
     );
 }
-

@@ -1,4 +1,6 @@
-use crate::{assert_infer_with_module, assert_module_error, assert_module_infer, assert_with_module_error};
+use crate::{
+    assert_infer_with_module, assert_module_error, assert_module_infer, assert_with_module_error,
+};
 
 #[test]
 fn alias_dep() {
@@ -137,7 +139,6 @@ fn example(a: X) {
 "#
     );
 }
-
 
 #[test]
 fn conflict_with_import() {
