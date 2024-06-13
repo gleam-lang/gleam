@@ -308,7 +308,7 @@ where
                     }),
 
                     Definition::CustomType(type_) => {
-                        symbols.push(this.custom_type_symbol(type_, &line_numbers))
+                        symbols.push(custom_type_symbol(type_, &line_numbers));
                     }
 
                     Definition::Import(_) => {}
@@ -329,67 +329,6 @@ where
 
             Ok(symbols)
         })
-    }
-
-    fn custom_type_symbol(
-        &self,
-        type_: &CustomType<Arc<Type>>,
-        line_numbers: &LineNumbers,
-    ) -> DocumentSymbol {
-        let constructors = type_
-            .constructors
-            .iter()
-            .map(|constructor| {
-                let mut arguments = vec![];
-
-                // List named arguments as field symbols.
-                for argument in &constructor.arguments {
-                    let Some(label) = &argument.label else {
-                        continue;
-                    };
-
-                    #[allow(deprecated)]
-                    arguments.push(DocumentSymbol {
-                        name: label.to_string(),
-                        detail: Some(Printer::new().pretty_print(&argument.type_, 0)),
-                        kind: SymbolKind::FIELD,
-                        tags: None,
-                        deprecated: None,
-                        range: src_span_to_lsp_range(argument.location, line_numbers),
-                        selection_range: src_span_to_lsp_range(argument.location, line_numbers),
-                        children: None,
-                    });
-                }
-
-                #[allow(deprecated)]
-                DocumentSymbol {
-                    name: constructor.name.to_string(),
-                    detail: None,
-                    kind: if constructor.arguments.is_empty() {
-                        SymbolKind::ENUM_MEMBER
-                    } else {
-                        SymbolKind::CONSTRUCTOR
-                    },
-                    tags: None,
-                    deprecated: None,
-                    range: src_span_to_lsp_range(constructor.location, line_numbers),
-                    selection_range: src_span_to_lsp_range(constructor.location, line_numbers),
-                    children: Some(arguments),
-                }
-            })
-            .collect_vec();
-
-        #[allow(deprecated)]
-        DocumentSymbol {
-            name: type_.name.to_string(),
-            detail: None,
-            kind: SymbolKind::CLASS,
-            tags: make_deprecated_symbol_tag(&type_.deprecation),
-            deprecated: None,
-            range: src_span_to_lsp_range(type_.location, line_numbers),
-            selection_range: src_span_to_lsp_range(type_.location, line_numbers),
-            children: Some(constructors),
-        }
     }
 
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
@@ -978,6 +917,63 @@ fn value_completion(
         }),
         documentation,
         ..Default::default()
+    }
+}
+
+fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers) -> DocumentSymbol {
+    let constructors = type_
+        .constructors
+        .iter()
+        .map(|constructor| {
+            let mut arguments = vec![];
+
+            // List named arguments as field symbols.
+            for argument in &constructor.arguments {
+                let Some(label) = &argument.label else {
+                    continue;
+                };
+
+                #[allow(deprecated)]
+                arguments.push(DocumentSymbol {
+                    name: label.to_string(),
+                    detail: Some(Printer::new().pretty_print(&argument.type_, 0)),
+                    kind: SymbolKind::FIELD,
+                    tags: None,
+                    deprecated: None,
+                    range: src_span_to_lsp_range(argument.location, line_numbers),
+                    selection_range: src_span_to_lsp_range(argument.location, line_numbers),
+                    children: None,
+                });
+            }
+
+            #[allow(deprecated)]
+            DocumentSymbol {
+                name: constructor.name.to_string(),
+                detail: None,
+                kind: if constructor.arguments.is_empty() {
+                    SymbolKind::ENUM_MEMBER
+                } else {
+                    SymbolKind::CONSTRUCTOR
+                },
+                tags: None,
+                deprecated: None,
+                range: src_span_to_lsp_range(constructor.location, line_numbers),
+                selection_range: src_span_to_lsp_range(constructor.location, line_numbers),
+                children: Some(arguments),
+            }
+        })
+        .collect_vec();
+
+    #[allow(deprecated)]
+    DocumentSymbol {
+        name: type_.name.to_string(),
+        detail: None,
+        kind: SymbolKind::CLASS,
+        tags: make_deprecated_symbol_tag(&type_.deprecation),
+        deprecated: None,
+        range: src_span_to_lsp_range(type_.location, line_numbers),
+        selection_range: src_span_to_lsp_range(type_.location, line_numbers),
+        children: Some(constructors),
     }
 }
 
