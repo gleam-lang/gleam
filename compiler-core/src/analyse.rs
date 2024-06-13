@@ -4,7 +4,7 @@ mod tests;
 
 use crate::{
     ast::{
-        self, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
+        self, Arg, ArgNames, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
         RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypeAstConstructor,
         TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
@@ -346,6 +346,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             deprecation,
             ..
         } = c;
+        if let Err(e) = check_valid_name(location, &name) {
+            self.errors.push(e);
+        }
 
         let definition = FunctionDefinition {
             has_body: true,
@@ -419,6 +422,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_type: (),
             implementations: _,
         } = f;
+
         let target = environment.target;
         let body_location = body.last().location();
         let preregistered_fn = environment
@@ -735,6 +739,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                      arguments: args,
                      documentation,
                  }| {
+                    if let Err(e) = check_valid_upname(location, &name) {
+                        self.errors.push(e);
+                    }
+
                     let preregistered_fn = environment
                         .get_variable(&name)
                         .expect("Could not find preregistered type for function");
@@ -744,12 +752,20 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         if let Some((args_types, _return_type)) = preregistered_type.fn_types() {
                             args.into_iter()
                                 .zip(&args_types)
-                                .map(|(argument, t)| RecordConstructorArg {
-                                    label: argument.label,
-                                    ast: argument.ast,
-                                    location: argument.location,
-                                    type_: t.clone(),
-                                    doc: None,
+                                .map(|(argument, t)| {
+                                    if let Some(label) = &argument.label {
+                                        if let Err(e) = check_valid_name(argument.location, label) {
+                                            self.errors.push(e);
+                                        }
+                                    }
+
+                                    RecordConstructorArg {
+                                        label: argument.label,
+                                        ast: argument.ast,
+                                        location: argument.location,
+                                        type_: t.clone(),
+                                        doc: None,
+                                    }
                                 })
                                 .collect()
                         } else {
@@ -957,6 +973,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // could improve our approach here somewhat.
         environment.assert_unique_type_name(name, *location)?;
 
+        if let Err(e) = check_valid_upname(*location, name) {
+            self.errors.push(e);
+        }
+
         let mut hydrator = Hydrator::new();
         let parameters = self.make_type_vars(parameters, *location, &mut hydrator, environment);
 
@@ -1030,6 +1050,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             // A type already exists with the name so we cannot continue and
             // register this new type with the same name.
             return;
+        }
+
+        if let Err(e) = check_valid_upname(*location, name) {
+            self.errors.push(e);
         }
 
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
@@ -1118,9 +1142,46 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_type: _,
             implementations,
         } = f;
+
+        if let Err(e) = check_valid_name(*location, name) {
+            self.errors.push(e);
+        }
+
         let mut builder = FieldMapBuilder::new(args.len() as u32);
-        for arg in args.iter() {
-            builder.add(arg.names.get_label(), arg.location)?;
+        for Arg {
+            names, location, ..
+        } in args.iter()
+        {
+            match names {
+                ArgNames::Discard { name } => {
+                    if let Err(e) = check_valid_discard_name(*location, name) {
+                        self.errors.push(e);
+                    }
+                }
+                ArgNames::LabelledDiscard { label, name } => {
+                    if let Err(e) = check_valid_name(*location, label) {
+                        self.errors.push(e);
+                    }
+                    if let Err(e) = check_valid_discard_name(*location, name) {
+                        self.errors.push(e);
+                    }
+                }
+                ArgNames::Named { name } => {
+                    if let Err(e) = check_valid_name(*location, name) {
+                        self.errors.push(e);
+                    }
+                }
+                ArgNames::NamedLabelled { name, label } => {
+                    if let Err(e) = check_valid_name(*location, label) {
+                        self.errors.push(e);
+                    }
+                    if let Err(e) = check_valid_name(*location, name) {
+                        self.errors.push(e);
+                    }
+                }
+            }
+
+            builder.add(names.get_label(), *location)?;
         }
         let field_map = builder.finish();
         let mut hydrator = Hydrator::new();
@@ -1604,4 +1665,34 @@ fn sorted_type_aliases(aliases: &Vec<TypeAlias<()>>) -> Result<Vec<&TypeAlias<()
         .iter()
         .sorted_by_key(|alias| sorted_deps.iter().position(|x| x == &alias.alias))
         .collect())
+}
+
+pub(crate) fn check_valid_name(location: SrcSpan, name: &EcoString) -> Result<(), Error> {
+    if name.contains(|c: char| c.is_ascii_uppercase()) {
+        return Err(Error::BadName {
+            location,
+            name: name.clone(),
+        });
+    }
+    Ok(())
+}
+
+pub(crate) fn check_valid_discard_name(location: SrcSpan, name: &EcoString) -> Result<(), Error> {
+    if name.contains(|c: char| c.is_ascii_uppercase()) {
+        return Err(Error::BadDiscardName {
+            location,
+            name: name.clone(),
+        });
+    }
+    Ok(())
+}
+
+fn check_valid_upname(location: SrcSpan, name: &EcoString) -> Result<(), Error> {
+    if name.contains('_') {
+        return Err(Error::BadUpName {
+            location,
+            name: name.clone(),
+        });
+    }
+    Ok(())
 }

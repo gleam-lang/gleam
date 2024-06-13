@@ -422,6 +422,43 @@ pub enum Error {
         location: SrcSpan,
         actual_type: Option<Type>,
     },
+
+    /// When the name assigned to a variable or function doesn't follow the gleam
+    /// naming conventions.
+    ///
+    /// For example:
+    ///
+    /// ```gleam
+    /// let myBadName = 42
+    /// ```
+    BadName {
+        location: SrcSpan,
+        name: EcoString,
+    },
+
+    /// When a name that is discarded doesn't follow the gleam naming conventions.
+    ///
+    /// For example:
+    ///
+    /// ```gleam
+    /// let _discardMe = 25
+    /// ```
+    BadDiscardName {
+        location: SrcSpan,
+        name: EcoString,
+    },
+
+    /// When the name assigned to a type doesn't follow the gleam naming conventions.
+    ///
+    /// For example:
+    ///
+    /// ```gleam
+    /// pub type Foo_Bar
+    /// ```
+    BadUpName {
+        location: SrcSpan,
+        name: EcoString,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -735,7 +772,10 @@ impl Error {
                 ..
             }
             | Error::UseFnDoesntTakeCallback { location, .. }
-            | Error::UseFnIncorrectArity { location, .. } => location.start,
+            | Error::UseFnIncorrectArity { location, .. }
+            | Error::BadName { location, .. }
+            | Error::BadDiscardName { location, .. }
+            | Error::BadUpName { location, .. } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
