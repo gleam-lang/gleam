@@ -56,6 +56,9 @@
 - LSP can now suggest completions for values and types from importable modules and adds the import to the top of the file.
   ([Ameen Radwan](https://github.com/Acepie)
 
+- LSP now supports listing document symbols, such as functions and constants, for the current Gleam file.
+  ([PgBiel](https://github.com/PgBiel)
+
 ### Bug Fixes
 
 - Fixed a bug where the compiler would output a confusing error message when
