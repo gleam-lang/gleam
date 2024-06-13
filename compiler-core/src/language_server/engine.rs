@@ -343,7 +343,11 @@ where
             .map(|constructor| DocumentSymbol {
                 name: constructor.name.to_string(),
                 detail: None,
-                kind: SymbolKind::CONSTRUCTOR,
+                kind: if constructor.arguments.is_empty() {
+                    SymbolKind::ENUM_MEMBER
+                } else {
+                    SymbolKind::CONSTRUCTOR
+                },
                 tags: None,
                 deprecated: None,
                 range: src_span_to_lsp_range(constructor.location, line_numbers),
