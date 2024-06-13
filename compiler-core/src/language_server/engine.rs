@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, Import, ModuleConstant, Publicity, SrcSpan, TypedDefinition, TypedExpr,
-        TypedFunction, TypedModule, TypedPattern,
+        Arg, CustomType, Definition, Import, ModuleConstant, Publicity, SrcSpan, TypedDefinition,
+        TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
     config::PackageConfig,
@@ -12,15 +12,18 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        pretty::Printer, ModuleInterface, PreludeType, Type, TypeConstructor,
+        pretty::Printer, Deprecation, ModuleInterface, PreludeType, Type, TypeConstructor,
         ValueConstructorVariant,
     },
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
+use itertools::Itertools;
 use lsp::CodeAction;
-use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
+use lsp_types::{
+    self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, SymbolKind, SymbolTag, Url,
+};
 use std::sync::Arc;
 use strum::IntoEnumIterator;
 
@@ -265,6 +268,99 @@ where
                 Some(actions)
             })
         })
+    }
+
+    pub fn document_symbol(
+        &mut self,
+        params: lsp::DocumentSymbolParams,
+    ) -> Response<Vec<DocumentSymbol>> {
+        self.respond(|this| {
+            let mut symbols = vec![];
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(symbols);
+            };
+            let line_numbers = LineNumbers::new(&module.code);
+
+            for definition in &module.ast.definitions {
+                match definition {
+                    #[allow(deprecated)]
+                    Definition::Function(function) => symbols.push(DocumentSymbol {
+                        name: function.name.to_string(),
+                        detail: None,
+                        kind: SymbolKind::FUNCTION,
+                        tags: make_deprecated_symbol_tag(&function.deprecation),
+                        deprecated: None,
+                        range: src_span_to_lsp_range(function.location, &line_numbers),
+                        selection_range: src_span_to_lsp_range(function.location, &line_numbers),
+                        children: None,
+                    }),
+
+                    #[allow(deprecated)]
+                    Definition::TypeAlias(alias) => symbols.push(DocumentSymbol {
+                        name: alias.alias.to_string(),
+                        detail: None,
+                        kind: SymbolKind::CLASS,
+                        tags: make_deprecated_symbol_tag(&alias.deprecation),
+                        deprecated: None,
+                        range: src_span_to_lsp_range(alias.location, &line_numbers),
+                        selection_range: src_span_to_lsp_range(alias.location, &line_numbers),
+                        children: None,
+                    }),
+                    Definition::CustomType(type_) => {
+                        symbols.push(this.custom_type_symbol(type_, &line_numbers))
+                    }
+                    Definition::Import(_) => {}
+
+                    #[allow(deprecated)]
+                    Definition::ModuleConstant(constant) => symbols.push(DocumentSymbol {
+                        name: constant.name.to_string(),
+                        detail: None,
+                        kind: SymbolKind::CONSTANT,
+                        tags: make_deprecated_symbol_tag(&constant.deprecation),
+                        deprecated: None,
+                        range: src_span_to_lsp_range(constant.location, &line_numbers),
+                        selection_range: src_span_to_lsp_range(constant.location, &line_numbers),
+                        children: None,
+                    }),
+                }
+            }
+
+            Ok(symbols)
+        })
+    }
+
+    fn custom_type_symbol(
+        &self,
+        type_: &CustomType<Arc<Type>>,
+        line_numbers: &LineNumbers,
+    ) -> DocumentSymbol {
+        #[allow(deprecated)]
+        let constructors = type_
+            .constructors
+            .iter()
+            .map(|constructor| DocumentSymbol {
+                name: constructor.name.to_string(),
+                detail: None,
+                kind: SymbolKind::CONSTRUCTOR,
+                tags: None,
+                deprecated: None,
+                range: src_span_to_lsp_range(constructor.location, line_numbers),
+                selection_range: src_span_to_lsp_range(constructor.location, line_numbers),
+                children: None,
+            })
+            .collect_vec();
+
+        #[allow(deprecated)]
+        DocumentSymbol {
+            name: type_.name.to_string(),
+            detail: None,
+            kind: SymbolKind::CLASS,
+            tags: make_deprecated_symbol_tag(&type_.deprecation),
+            deprecated: None,
+            range: src_span_to_lsp_range(type_.location, line_numbers),
+            selection_range: src_span_to_lsp_range(type_.location, line_numbers),
+            children: Some(constructors),
+        }
     }
 
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
@@ -1115,4 +1211,10 @@ fn get_hexdocs_link_section(
     })?;
 
     Some(format_hexdocs_link_section(package_name, module_name, name))
+}
+
+fn make_deprecated_symbol_tag(deprecation: &Deprecation) -> Option<Vec<SymbolTag>> {
+    deprecation
+        .is_deprecated()
+        .then(|| vec![SymbolTag::DEPRECATED])
 }
