@@ -284,7 +284,7 @@ where
         if let Some(error) = self.lex_errors.first() {
             // Lex errors first
             let location = error.location;
-            let error = error.clone();
+            let error = *error;
             parse_error(ParseErrorType::LexError { error }, location)
         } else {
             // Return any existing parse error

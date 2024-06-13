@@ -473,31 +473,6 @@ where
             name.push(self.next_char().expect("lex_name continue"))
         }
 
-        // Finish lexing the name and return an error if an uppercase letter is used
-        if self.is_name_error_continuation() {
-            while self.is_name_error_continuation() {
-                name.push(self.next_char().expect("lex_name error"))
-            }
-            let end_pos = self.get_pos();
-            if name.starts_with('_') {
-                return Err(LexicalError {
-                    error: LexicalErrorType::BadDiscardName { name },
-                    location: SrcSpan {
-                        start: start_pos,
-                        end: end_pos,
-                    },
-                });
-            } else {
-                return Err(LexicalError {
-                    error: LexicalErrorType::BadName { name },
-                    location: SrcSpan {
-                        start: start_pos,
-                        end: end_pos,
-                    },
-                });
-            }
-        }
-
         let end_pos = self.get_pos();
 
         if let Some(tok) = str_to_keyword(&name) {
@@ -513,23 +488,8 @@ where
         let mut name = String::new();
         let start_pos = self.get_pos();
 
-        while self.is_upname_continuation() {
+        while self.is_name_continuation() {
             name.push(self.next_char().expect("lex_upname upname"));
-        }
-
-        // Finish lexing the upname and return an error if an underscore is used
-        if self.is_name_error_continuation() {
-            while self.is_name_error_continuation() {
-                name.push(self.next_char().expect("lex_upname name error"))
-            }
-            let end_pos = self.get_pos();
-            return Err(LexicalError {
-                error: LexicalErrorType::BadUpname { name },
-                location: SrcSpan {
-                    start: start_pos,
-                    end: end_pos,
-                },
-            });
         }
 
         let end_pos = self.get_pos();
@@ -931,18 +891,6 @@ where
     }
 
     fn is_name_continuation(&self) -> bool {
-        self.chr0
-            .map(|c| matches!(c, '_' | '0'..='9' | 'a'..='z'))
-            .unwrap_or(false)
-    }
-
-    fn is_upname_continuation(&self) -> bool {
-        self.chr0
-            .map(|c| matches!(c, '0'..='9' | 'a'..='z' | 'A'..='Z'))
-            .unwrap_or(false)
-    }
-
-    fn is_name_error_continuation(&self) -> bool {
         self.chr0
             .map(|c| matches!(c, '_' | '0'..='9' | 'a'..='z' | 'A'..='Z'))
             .unwrap_or(false)

@@ -1,14 +1,14 @@
 use super::{pipe::PipeTyper, *};
 use crate::{
-    analyse::infer_bit_array_option,
+    analyse::{check_valid_discard_name, check_valid_name, infer_bit_array_option},
     ast::{
-        Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
-        ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan, Statement,
-        TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
-        TypedExpr, TypedMultiPattern, TypedStatement, UntypedArg, UntypedAssignment, UntypedClause,
-        UntypedClauseGuard, UntypedConstant, UntypedConstantBitArraySegment, UntypedExpr,
-        UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, Use, UseAssignment,
-        USE_ASSIGNMENT_VARIABLE,
+        Arg, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
+        CallArg, Clause, ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan,
+        Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedClauseGuard,
+        TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement, UntypedArg, UntypedAssignment,
+        UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBitArraySegment,
+        UntypedExpr, UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, Use,
+        UseAssignment, USE_ASSIGNMENT_VARIABLE,
     },
     build::Target,
     exhaustiveness,
@@ -741,6 +741,27 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
+        for Arg {
+            names, location, ..
+        } in args.iter()
+        {
+            match names {
+                ArgNames::Discard { name } => {
+                    if let Err(e) = check_valid_discard_name(*location, name) {
+                        self.errors.push(e);
+                    }
+                }
+                ArgNames::Named { name } => {
+                    if let Err(e) = check_valid_name(*location, name) {
+                        self.errors.push(e);
+                    }
+                }
+                ArgNames::LabelledDiscard { .. } => unreachable!("Labelled names are not allowed in anonymous functions"),
+                ArgNames::NamedLabelled { .. } => unreachable!("Labelled names are not allowed in anonymous functions"),
+
+            }
+        }
+
         let already_warned_for_unreachable_code = self.already_warned_for_unreachable_code;
         self.already_warned_for_unreachable_code = false;
         self.previous_panics = false;
@@ -1277,6 +1298,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         };
 
+        self.errors.extend(check_valid_pattern_names(&pattern));
+
         // Check that any type annotation is accurate.
         if let Some(annotation) = &annotation {
             match self
@@ -1355,6 +1378,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // NOTE: if there are 0 clauses then there are 0 panics
         let mut all_clauses_panic = !clauses.is_empty();
         for clause in clauses {
+            for pattern in clause.pattern.iter() {
+                self.errors.extend(check_valid_pattern_names(pattern));
+            }
+            for multi_pattern in clause.alternative_patterns.iter() {
+                for pattern in multi_pattern {
+                    self.errors.extend(check_valid_pattern_names(pattern));
+                }
+            }
+
             has_a_guard = has_a_guard || clause.guard.is_some();
             all_patterns_are_discards =
                 all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
@@ -3439,5 +3471,58 @@ impl UseAssignments {
         }
 
         assignments
+    }
+}
+
+fn check_valid_pattern_names<T>(pattern: &Pattern<T>) -> Vec<Error> {
+    match pattern {
+        Pattern::Variable { name, location, .. } => check_valid_name(*location, name)
+            .map_err(|e| vec![e])
+            .err()
+            .unwrap_or_default(),
+        Pattern::Discard { name, location, .. } => check_valid_discard_name(*location, name)
+            .map_err(|e| vec![e])
+            .err()
+            .unwrap_or_default(),
+        Pattern::Assign { name, location, .. } => check_valid_name(*location, name)
+            .map_err(|e| vec![e])
+            .err()
+            .unwrap_or_default(),
+        Pattern::List { elements, .. } => elements
+            .iter()
+            .flat_map(|element| check_valid_pattern_names(element))
+            .collect(),
+        Pattern::Constructor { arguments, .. } => arguments
+            .iter()
+            .flat_map(|arg| check_valid_pattern_names(&arg.value))
+            .collect(),
+        Pattern::Tuple { elems, .. } => elems
+            .iter()
+            .flat_map(|element| check_valid_pattern_names(element))
+            .collect(),
+        Pattern::BitArray { segments, .. } => segments
+            .iter()
+            .flat_map(|element| check_valid_pattern_names(&element.value))
+            .collect(),
+        Pattern::StringPrefix {
+            left_side_assignment,
+            right_location,
+            right_side_assignment,
+            ..
+        } => {
+            let mut errors = Vec::new();
+
+            if let Some((name, location)) = left_side_assignment {
+                let _ = check_valid_name(*location, name).map_err(|e| errors.push(e));
+            }
+
+            let _ = match right_side_assignment {
+                AssignName::Variable(name) => check_valid_name(*right_location, name),
+                AssignName::Discard(name) => check_valid_discard_name(*right_location, name),
+            }
+            .map_err(|e| errors.push(e));
+            errors
+        }
+        _ => Vec::new(),
     }
 }

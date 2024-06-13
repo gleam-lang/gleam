@@ -318,54 +318,6 @@ fn bit_array2() {
     );
 }
 
-#[test]
-fn name() {
-    assert_error!(
-        "let xS = 1",
-        ParseError {
-            error: ParseErrorType::LexError {
-                error: LexicalError {
-                    error: LexicalErrorType::BadName { name: "xS".into() },
-                    location: SrcSpan { start: 4, end: 6 },
-                }
-            },
-            location: SrcSpan { start: 4, end: 6 },
-        }
-    );
-}
-
-#[test]
-fn name1() {
-    assert_error!(
-        "let _xS = 1",
-        ParseError {
-            error: ParseErrorType::LexError {
-                error: LexicalError {
-                    error: LexicalErrorType::BadDiscardName { name: "_xS".into() },
-                    location: SrcSpan { start: 4, end: 7 },
-                }
-            },
-            location: SrcSpan { start: 4, end: 7 },
-        }
-    );
-}
-
-#[test]
-fn name2() {
-    assert_error!(
-        "type S_m = String",
-        ParseError {
-            error: ParseErrorType::LexError {
-                error: LexicalError {
-                    error: LexicalErrorType::BadUpname { name: "S_m".into() },
-                    location: SrcSpan { start: 5, end: 8 },
-                }
-            },
-            location: SrcSpan { start: 5, end: 8 },
-        }
-    );
-}
-
 // https://github.com/gleam-lang/gleam/issues/3125
 #[test]
 fn triple_equals() {
