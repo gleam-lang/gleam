@@ -336,23 +336,46 @@ where
         type_: &CustomType<Arc<Type>>,
         line_numbers: &LineNumbers,
     ) -> DocumentSymbol {
-        #[allow(deprecated)]
         let constructors = type_
             .constructors
             .iter()
-            .map(|constructor| DocumentSymbol {
-                name: constructor.name.to_string(),
-                detail: None,
-                kind: if constructor.arguments.is_empty() {
-                    SymbolKind::ENUM_MEMBER
-                } else {
-                    SymbolKind::CONSTRUCTOR
-                },
-                tags: None,
-                deprecated: None,
-                range: src_span_to_lsp_range(constructor.location, line_numbers),
-                selection_range: src_span_to_lsp_range(constructor.location, line_numbers),
-                children: None,
+            .map(|constructor| {
+                let mut arguments = vec![];
+
+                // List named arguments as field symbols.
+                for argument in &constructor.arguments {
+                    let Some(label) = &argument.label else {
+                        continue;
+                    };
+
+                    #[allow(deprecated)]
+                    arguments.push(DocumentSymbol {
+                        name: label.to_string(),
+                        detail: Some(Printer::new().pretty_print(&argument.type_, 0)),
+                        kind: SymbolKind::FIELD,
+                        tags: None,
+                        deprecated: None,
+                        range: src_span_to_lsp_range(argument.location, line_numbers),
+                        selection_range: src_span_to_lsp_range(argument.location, line_numbers),
+                        children: None,
+                    });
+                }
+
+                #[allow(deprecated)]
+                DocumentSymbol {
+                    name: constructor.name.to_string(),
+                    detail: None,
+                    kind: if constructor.arguments.is_empty() {
+                        SymbolKind::ENUM_MEMBER
+                    } else {
+                        SymbolKind::CONSTRUCTOR
+                    },
+                    tags: None,
+                    deprecated: None,
+                    range: src_span_to_lsp_range(constructor.location, line_numbers),
+                    selection_range: src_span_to_lsp_range(constructor.location, line_numbers),
+                    children: Some(arguments),
+                }
             })
             .collect_vec();
 
