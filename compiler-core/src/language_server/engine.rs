@@ -286,7 +286,7 @@ where
                     #[allow(deprecated)]
                     Definition::Function(function) => symbols.push(DocumentSymbol {
                         name: function.name.to_string(),
-                        detail: None,
+                        detail: Some(Printer::new().pretty_print(&get_function_type(function), 0)),
                         kind: SymbolKind::FUNCTION,
                         tags: make_deprecated_symbol_tag(&function.deprecation),
                         deprecated: None,
@@ -298,7 +298,7 @@ where
                     #[allow(deprecated)]
                     Definition::TypeAlias(alias) => symbols.push(DocumentSymbol {
                         name: alias.alias.to_string(),
-                        detail: None,
+                        detail: Some(Printer::new().pretty_print(&alias.type_, 0)),
                         kind: SymbolKind::CLASS,
                         tags: make_deprecated_symbol_tag(&alias.deprecation),
                         deprecated: None,
@@ -306,15 +306,17 @@ where
                         selection_range: src_span_to_lsp_range(alias.location, &line_numbers),
                         children: None,
                     }),
+
                     Definition::CustomType(type_) => {
                         symbols.push(this.custom_type_symbol(type_, &line_numbers))
                     }
+
                     Definition::Import(_) => {}
 
                     #[allow(deprecated)]
                     Definition::ModuleConstant(constant) => symbols.push(DocumentSymbol {
                         name: constant.name.to_string(),
-                        detail: None,
+                        detail: Some(Printer::new().pretty_print(&constant.type_, 0)),
                         kind: SymbolKind::CONSTANT,
                         tags: make_deprecated_symbol_tag(&constant.deprecation),
                         deprecated: None,
@@ -976,13 +978,17 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover
     }
 }
 
+fn get_function_type(fun: &TypedFunction) -> Type {
+    Type::Fn {
+        args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
+        retrn: fun.return_type.clone(),
+    }
+}
+
 fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Hover {
     let empty_str = EcoString::from("");
     let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
-    let function_type = Type::Fn {
-        args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
-        retrn: fun.return_type.clone(),
-    };
+    let function_type = get_function_type(fun);
     let formatted_type = Printer::new().pretty_print(&function_type, 0);
     let contents = format!(
         "```gleam
