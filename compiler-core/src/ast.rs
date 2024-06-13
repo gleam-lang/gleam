@@ -219,6 +219,7 @@ pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructorArg<T> {
     pub label: Option<EcoString>,
+    pub label_location: Option<SrcSpan>,
     pub ast: TypeAst,
     pub location: SrcSpan,
     pub type_: T,
@@ -467,6 +468,7 @@ pub struct Function<T, Expr> {
     pub location: SrcSpan,
     pub end_position: u32,
     pub name: EcoString,
+    pub name_location: Option<SrcSpan>,
     pub arguments: Vec<Arg<T>>,
     pub body: Vec1<Statement<T, Expr>>,
     pub publicity: Publicity,
@@ -570,6 +572,7 @@ pub struct CustomType<T> {
     pub location: SrcSpan,
     pub end_position: u32,
     pub name: EcoString,
+    pub name_location: SrcSpan,
     pub publicity: Publicity,
     pub constructors: Vec<RecordConstructor<T>>,
     pub documentation: Option<EcoString>,
@@ -605,6 +608,7 @@ pub type UntypedTypeAlias = TypeAlias<()>;
 pub struct TypeAlias<T> {
     pub location: SrcSpan,
     pub alias: EcoString,
+    pub alias_location: SrcSpan,
     pub parameters: Vec<EcoString>,
     pub type_ast: TypeAst,
     pub type_: T,

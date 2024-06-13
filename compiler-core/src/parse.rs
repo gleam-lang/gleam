@@ -1566,9 +1566,14 @@ where
             self.take_documentation(start)
         };
         let mut name = EcoString::from("");
+        let mut name_location = None;
         if !is_anon {
-            let (_, n, _) = self.expect_name()?;
+            let (name_start, n, name_end) = self.expect_name()?;
             name = n;
+            name_location = Some(SrcSpan {
+                start: name_start,
+                end: name_end,
+            });
         }
         let _ = self.expect_one(&Token::LeftParen)?;
         let args = Parser::series_of(
@@ -1618,6 +1623,7 @@ where
         Ok(Some(Definition::Function(Function {
             documentation,
             location: SrcSpan { start, end },
+            name_location,
             end_position,
             publicity: self.publicity(public, attributes.internal)?,
             name,
@@ -1812,7 +1818,7 @@ where
         attributes: &mut Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
-        let (_, name, parameters, end) = self.expect_type_name()?;
+        let (name_start, name, parameters, end) = self.expect_type_name()?;
         let (constructors, end_position) = if self.maybe_one(&Token::LeftBrace).is_some() {
             // Custom Type
             let constructors = Parser::series_of(
@@ -1851,6 +1857,7 @@ where
                     location: SrcSpan::new(start, type_end),
                     publicity: self.publicity(public, attributes.internal)?,
                     alias: name,
+                    alias_location: SrcSpan::new(name_start, end),
                     parameters,
                     type_ast: t,
                     type_: (),
@@ -1869,6 +1876,10 @@ where
             publicity: self.publicity(public, attributes.internal)?,
             opaque,
             name,
+            name_location: SrcSpan {
+                start: name_start,
+                end,
+            },
             parameters,
             constructors,
             typed_parameters: vec![],
@@ -1903,7 +1914,10 @@ where
             let args = Parser::series_of(
                 self,
                 &|p| match (p.tok0.take(), p.tok1.take()) {
-                    (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
+                    (
+                        Some((start, Token::Name { name }, name_end)),
+                        Some((_, Token::Colon, end)),
+                    ) => {
                         let _ = Parser::next_tok(p);
                         let _ = Parser::next_tok(p);
                         let doc = p.take_documentation(start);
@@ -1912,6 +1926,10 @@ where
                                 let end = type_ast.location().end;
                                 Ok(Some(RecordConstructorArg {
                                     label: Some(name),
+                                    label_location: Some(SrcSpan {
+                                        start,
+                                        end: name_end,
+                                    }),
                                     ast: type_ast,
                                     location: SrcSpan { start, end },
                                     type_: (),
@@ -1935,6 +1953,7 @@ where
                                 let type_location = type_ast.location();
                                 Ok(Some(RecordConstructorArg {
                                     label: None,
+                                    label_location: None,
                                     ast: type_ast,
                                     location: type_location,
                                     type_: (),

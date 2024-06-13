@@ -284,16 +284,28 @@ where
             for definition in &module.ast.definitions {
                 match definition {
                     #[allow(deprecated)]
-                    Definition::Function(function) => symbols.push(DocumentSymbol {
-                        name: function.name.to_string(),
-                        detail: Some(Printer::new().pretty_print(&get_function_type(function), 0)),
-                        kind: SymbolKind::FUNCTION,
-                        tags: make_deprecated_symbol_tag(&function.deprecation),
-                        deprecated: None,
-                        range: src_span_to_lsp_range(function.location, &line_numbers),
-                        selection_range: src_span_to_lsp_range(function.location, &line_numbers),
-                        children: None,
-                    }),
+                    Definition::Function(function) => {
+                        // By default, the function's location ends right after the return type.
+                        // For the full symbol range, have it end at the end of the body.
+                        let full_function_span =
+                            SrcSpan::new(function.location.start, function.end_position);
+
+                        symbols.push(DocumentSymbol {
+                            name: function.name.to_string(),
+                            detail: Some(
+                                Printer::new().pretty_print(&get_function_type(function), 0),
+                            ),
+                            kind: SymbolKind::FUNCTION,
+                            tags: make_deprecated_symbol_tag(&function.deprecation),
+                            deprecated: None,
+                            range: src_span_to_lsp_range(full_function_span, &line_numbers),
+                            selection_range: src_span_to_lsp_range(
+                                function.name_location.unwrap_or(function.location),
+                                &line_numbers,
+                            ),
+                            children: None,
+                        });
+                    }
 
                     #[allow(deprecated)]
                     Definition::TypeAlias(alias) => symbols.push(DocumentSymbol {
@@ -303,7 +315,7 @@ where
                         tags: make_deprecated_symbol_tag(&alias.deprecation),
                         deprecated: None,
                         range: src_span_to_lsp_range(alias.location, &line_numbers),
-                        selection_range: src_span_to_lsp_range(alias.location, &line_numbers),
+                        selection_range: src_span_to_lsp_range(alias.alias_location, &line_numbers),
                         children: None,
                     }),
 
@@ -314,16 +326,28 @@ where
                     Definition::Import(_) => {}
 
                     #[allow(deprecated)]
-                    Definition::ModuleConstant(constant) => symbols.push(DocumentSymbol {
-                        name: constant.name.to_string(),
-                        detail: Some(Printer::new().pretty_print(&constant.type_, 0)),
-                        kind: SymbolKind::CONSTANT,
-                        tags: make_deprecated_symbol_tag(&constant.deprecation),
-                        deprecated: None,
-                        range: src_span_to_lsp_range(constant.location, &line_numbers),
-                        selection_range: src_span_to_lsp_range(constant.location, &line_numbers),
-                        children: None,
-                    }),
+                    Definition::ModuleConstant(constant) => {
+                        // `ModuleConstant.location` gives us the span of the constant's name.
+                        // Therefore, it is only suitable for `selection_range` below.
+                        // For the full symbol span, necessary for `range`, include the
+                        // constant value as well.
+                        let full_constant_span =
+                            SrcSpan::new(constant.location.start, constant.value.location().end);
+
+                        symbols.push(DocumentSymbol {
+                            name: constant.name.to_string(),
+                            detail: Some(Printer::new().pretty_print(&constant.type_, 0)),
+                            kind: SymbolKind::CONSTANT,
+                            tags: make_deprecated_symbol_tag(&constant.deprecation),
+                            deprecated: None,
+                            range: src_span_to_lsp_range(full_constant_span, &line_numbers),
+                            selection_range: src_span_to_lsp_range(
+                                constant.location,
+                                &line_numbers,
+                            ),
+                            children: None,
+                        });
+                    }
                 }
             }
 
@@ -941,10 +965,23 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
                     tags: None,
                     deprecated: None,
                     range: src_span_to_lsp_range(argument.location, line_numbers),
-                    selection_range: src_span_to_lsp_range(argument.location, line_numbers),
+                    selection_range: src_span_to_lsp_range(
+                        argument.label_location.unwrap_or(argument.location),
+                        line_numbers,
+                    ),
                     children: None,
                 });
             }
+
+            // The constructor's location only contains its name by default.
+            // For the full symbol range, take from the start of the name to right after
+            // the last argument.
+            let full_constructor_span = match constructor.arguments.last() {
+                Some(last_argument) => {
+                    SrcSpan::new(constructor.location.start, last_argument.location.end + 1)
+                }
+                None => constructor.location,
+            };
 
             #[allow(deprecated)]
             DocumentSymbol {
@@ -957,12 +994,16 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
                 },
                 tags: None,
                 deprecated: None,
-                range: src_span_to_lsp_range(constructor.location, line_numbers),
+                range: src_span_to_lsp_range(full_constructor_span, line_numbers),
                 selection_range: src_span_to_lsp_range(constructor.location, line_numbers),
                 children: Some(arguments),
             }
         })
         .collect_vec();
+
+    // The type's location, by default, ranges from "(pub) type" to the end of its name.
+    // We need it to range to the end of its constructors instead for the full symbol range.
+    let full_type_span = SrcSpan::new(type_.location.start, type_.end_position);
 
     #[allow(deprecated)]
     DocumentSymbol {
@@ -971,8 +1012,8 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
         kind: SymbolKind::CLASS,
         tags: make_deprecated_symbol_tag(&type_.deprecation),
         deprecated: None,
-        range: src_span_to_lsp_range(type_.location, line_numbers),
-        selection_range: src_span_to_lsp_range(type_.location, line_numbers),
+        range: src_span_to_lsp_range(full_type_span, line_numbers),
+        selection_range: src_span_to_lsp_range(type_.name_location, line_numbers),
         children: Some(constructors),
     }
 }

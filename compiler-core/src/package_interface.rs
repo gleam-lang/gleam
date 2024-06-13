@@ -392,6 +392,7 @@ impl ModuleInterface {
                     typed_parameters,
                     parameters: _,
                     location: _,
+                    name_location: _,
                     end_position: _,
                 }) => {
                     let mut id_map = IdMap::new();
@@ -442,6 +443,7 @@ impl ModuleInterface {
                     type_,
                     documentation,
                     deprecation,
+                    alias_location: _,
                     location: _,
                     type_ast: _,
                 }) => {
@@ -491,6 +493,7 @@ impl ModuleInterface {
                     documentation,
                     implementations,
                     location: _,
+                    name_location: _,
                     end_position: _,
                     body: _,
                     return_annotation: _,
