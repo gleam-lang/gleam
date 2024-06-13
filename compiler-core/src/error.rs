@@ -12,6 +12,7 @@ use crate::{
     type_::{pretty::Printer, UnifyErrorSituation},
 };
 use ecow::EcoString;
+use heck::{ToSnakeCase, ToUpperCamelCase};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
 use pubgrub::package::Package;
@@ -2949,9 +2950,78 @@ See: https://tour.gleam.run/advanced-features/use/");
                         }),
                     }
                 },
+                TypeError::BadName { location, name } => {
+                    let label = "This is not a valid name";
+
+                let text = wrap_format!("Hint: Names start with a lowercase letter and contain a-z, 0-9, or _.
+Try: {}", name.to_snake_case());
+
+                Diagnostic {
+                    title: "Invalid name".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: Some(label.to_string()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                }
+                },
+
+                TypeError::BadDiscardName { location, name } => {
+                    let label = "This is not a valid discard name";
+
+                let text = wrap_format!("Hint: Discard names start with _ and contain a-z, 0-9, or _.
+Try: _{}", name.to_snake_case());
+
+                Diagnostic {
+                    title: "Invalid discard name".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: Some(label.to_string()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                }
+                },
+
+                TypeError::BadUpName { location, name } => {
+                    let label = "This is not a valid upname";
+
+                let text = wrap_format!("Hint: Upnames start with an uppercase letter and contain only lowercase letters, numbers, and uppercase letters.
+Try: {}", name.to_upper_camel_case());
+
+                Diagnostic {
+                    title: "Invalid discard name".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: Some(label.to_string()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                }
+                },
             }
                 })
                 .collect_vec(),
+
 
             Error::Parse { path, src, error } => {
                 let (label, extra) = error.details();
