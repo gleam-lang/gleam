@@ -123,15 +123,29 @@ impl FeedbackBookKeeper {
         self.unset_errors(&mut feedback);
 
         for diagnostic in diagnostics {
-            match diagnostic.location.as_ref().map(|l| l.path.clone()) {
-                Some(path) => {
-                    _ = self.files_with_errors.insert(path.clone());
-                    feedback.append_diagnostic(path, diagnostic);
-                }
+            if let Some(l) = &diagnostic.location {
+                _ = self.files_with_errors.insert(l.path.clone());
+                feedback.append_diagnostic(l.path.clone(), diagnostic.clone());
 
-                None => {
-                    feedback.append_message(diagnostic);
+                for extra in &l.extra_labels {
+                    _ = self.files_with_errors.insert(extra.path.clone());
+                    feedback.append_diagnostic(
+                        extra.path.clone(),
+                        Diagnostic {
+                            text: format!(""),
+                            hint: None,
+                            location: Some(crate::diagnostic::Location {
+                                label: extra.label.clone(),
+                                path: extra.path.clone(),
+                                src: extra.src.clone(),
+                                extra_labels: vec![],
+                            }),
+                            ..diagnostic.clone()
+                        },
+                    );
                 }
+            } else {
+                feedback.append_message(diagnostic);
             }
         }
 

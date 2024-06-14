@@ -1,16 +1,23 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-expression: "./cases/import_cycle"
+expression: "./cases/import_cycle_multi"
 ---
 error: Import cycle
-  ┌─ src/one.gleam:1:1
+  ┌─ src/two.gleam:1:1
   │
 1 │ import one
+  │ ^
+  │
+  ┌─ src/one.gleam:1:1
+  │
+1 │ import two
   │ ^
 
 The import statements for these modules form a cycle:
 
     ┌─────┐
+    │     two
+    │     ↓
     │     one
     └─────┘
 Gleam doesn't support dependency cycles like these, please break the
