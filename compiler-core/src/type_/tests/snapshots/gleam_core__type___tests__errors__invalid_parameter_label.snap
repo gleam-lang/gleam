@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn foo(thisIsALabel param: Int) { param }"
+---
+error: Invalid name
+  ┌─ /src/one/two.gleam:1:8
+  │
+1 │ fn foo(thisIsALabel param: Int) { param }
+  │        ^^^^^^^^^^^^^^^^^^^^^^^ This is not a valid name
+
+Hint: Names start with a lowercase letter and contain a-z, 0-9, or _.
+Try: this_is_a_label

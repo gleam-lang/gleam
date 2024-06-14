@@ -756,9 +756,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         self.errors.push(e);
                     }
                 }
-                ArgNames::LabelledDiscard { .. } => unreachable!("Labelled names are not allowed in anonymous functions"),
-                ArgNames::NamedLabelled { .. } => unreachable!("Labelled names are not allowed in anonymous functions"),
-
+                ArgNames::LabelledDiscard { .. } => {
+                    unreachable!("Labelled names are not allowed in anonymous functions")
+                }
+                ArgNames::NamedLabelled { .. } => {
+                    unreachable!("Labelled names are not allowed in anonymous functions")
+                }
             }
         }
 
