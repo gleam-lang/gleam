@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: let assert <<_iDontCare>> = <<97>>
+---
+error: Invalid discard name
+  ┌─ /src/one/two.gleam:1:14
+  │
+1 │ let assert <<_iDontCare>> = <<97>>
+  │              ^^^^^^^^^^ This is not a valid discard name
+
+Hint: Discard names start with _ and contain a-z, 0-9, or _.
+Try: _i_dont_care
