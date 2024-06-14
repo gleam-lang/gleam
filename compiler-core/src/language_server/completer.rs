@@ -276,7 +276,9 @@ where
         }
 
         let already_imported: std::collections::HashSet<EcoString> =
-            std::collections::HashSet::from_iter(self.module.dependencies_list());
+            std::collections::HashSet::from_iter(
+                self.module.dependencies.iter().map(|d| d.0.clone()),
+            );
         self.compiler
             .project_compiler
             .get_importable_modules()

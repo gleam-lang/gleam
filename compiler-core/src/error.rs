@@ -89,8 +89,7 @@ pub enum Error {
 
     #[error("cyclical module imports")]
     ImportCycle {
-        modules: Vec<EcoString>,
-        locations: Vec1<ImportCycleLocationDetails>,
+        modules: Vec1<(EcoString, ImportCycleLocationDetails)>,
     },
 
     #[error("cyclical package dependencies")]
@@ -1252,8 +1251,8 @@ modules cannot import them. Perhaps move the `{test_module}` module to the src d
                     });
                     let label = labels.next().expect("Unknown labels first label");
                     let extra_labels = labels.map(|label| ExtraLocation {
-                      path: path.clone(),
-                      src: src.clone(),
+                      path: None,
+                      src: None,
                       label,
                     }).collect();
                     let text = if valid.is_empty() {
@@ -1350,8 +1349,8 @@ Names in a Gleam module must be unique so one will need to be renamed."
                             path: path.clone(),
                             src: src.clone(),
                             extra_labels: vec![ExtraLocation {
-                              path: path.clone(),
-                              src: src.clone(),
+                              path: None,
+                              src: None,
                               label: Label {
                                   text: Some("First imported here".into()),
                                   span: *previous_location,
@@ -1389,8 +1388,8 @@ Names in a Gleam module must be unique so one will need to be renamed."
                             path: path.clone(),
                             src: src.clone(),
                             extra_labels: vec![ExtraLocation {
-                              path: path.clone(),
-                              src: src.clone(),
+                              path: None,
+                              src: None,
                               label: Label {
                                 text: Some("First defined here".into()),
                                 span: *first_location,
@@ -1423,8 +1422,8 @@ Names in a Gleam module must be unique so one will need to be renamed."
                             path: path.clone(),
                             src: src.clone(),
                             extra_labels: vec![ExtraLocation {
-                              path: path.clone(),
-                              src: src.clone(),
+                              path: None,
+                              src: None,
                               label: Label {
                                 text: Some("First defined here".into()),
                                 span: *previous_location,
@@ -2945,8 +2944,8 @@ See: https://tour.gleam.run/advanced-features/use/");
                             path: path.clone(),
                             src: src.clone(),
                             extra_labels: vec![ExtraLocation {
-                              path: path.clone(),
-                              src: src.clone(),
+                              path: None,
+                              src: None,
                               label: Label {
                                   text: Some(format!("Expected {expected}, got {given}")),
                                   span: *pattern_location
@@ -2989,20 +2988,21 @@ See: https://tour.gleam.run/advanced-features/use/");
                 }]
             }
 
-            Error::ImportCycle { modules, locations } => {
-                let first_location = locations.first();
-                let rest_locations = locations.iter().skip(1).map(|l| ExtraLocation {
-                  label: Label {
-                    text: None,
-                    span: l.location
-                  },
-                  path: l.path.clone(),
-                  src: l.src.clone(),
+            Error::ImportCycle { modules } => {
+                let first_location = &modules.first().1;
+                let rest_locations = modules.iter().skip(1).map(|(_, l)| ExtraLocation {
+                    label: Label {
+                        text: Some("Imported here".into()),
+                        span: l.location
+                    },
+                    path: Some(l.path.clone()),
+                    src: Some(l.src.clone()),
                 }).collect_vec();
                 let mut text = "The import statements for these modules form a cycle:
 "
                 .into();
-                write_cycle(&mut text, modules);
+                let mod_names = modules.iter().map(|m| m.0.clone()).collect_vec();
+                write_cycle(&mut text, &mod_names);
                 text.push_str(
                     "Gleam doesn't support dependency cycles like these, please break the
 cycle to continue.",
@@ -3014,7 +3014,7 @@ cycle to continue.",
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
-                            text: None,
+                            text: Some("Imported here".into()),
                             span: first_location.location,
                         },
                         path: first_location.path.clone(),

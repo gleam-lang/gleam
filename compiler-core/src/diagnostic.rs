@@ -21,11 +21,7 @@ pub struct Label {
     pub span: SrcSpan,
 }
 
-trait ToCodespanLabel {
-    fn to_codespan_label(&self, fileid: usize) -> CodespanLabel<usize>;
-}
-
-impl ToCodespanLabel for Label {
+impl Label {
     fn to_codespan_label(&self, fileid: usize) -> CodespanLabel<usize> {
         let label = CodespanLabel::new(
             LabelStyle::Primary,
@@ -41,8 +37,8 @@ impl ToCodespanLabel for Label {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExtraLocation {
-    pub src: EcoString,
-    pub path: Utf8PathBuf,
+    pub src: Option<EcoString>,
+    pub path: Option<Utf8PathBuf>,
     pub label: Label,
 }
 
@@ -85,8 +81,9 @@ impl Diagnostic {
         let mut file_map = HashMap::new();
         let mut files = SimpleFiles::new();
 
-        let main_location_path = location.path.to_string();
-        let main_file_id = files.add(main_location_path.clone(), location.src.as_str());
+        let main_location_path = location.path.as_str();
+        let main_location_src = location.src.as_str();
+        let main_file_id = files.add(main_location_path, main_location_src);
         let _ = file_map.insert(main_location_path, main_file_id);
 
         let mut labels = vec![location.label.to_codespan_label(main_file_id)];
@@ -95,10 +92,19 @@ impl Diagnostic {
             .extra_labels
             .iter()
             .map(|l| {
-                let location_path = l.path.to_string();
-                match file_map.get(&location_path) {
+                let location_path = if let Some(p) = &l.path {
+                    p.as_str()
+                } else {
+                    main_location_path
+                };
+                let location_src = if let Some(s) = &l.src {
+                    s.as_str()
+                } else {
+                    main_location_src
+                };
+                match file_map.get(location_path) {
                     None => {
-                        let file_id = files.add(location_path.clone(), l.src.as_str());
+                        let file_id = files.add(location_path, location_src);
                         let _ = file_map.insert(location_path, file_id);
                         l.label.to_codespan_label(file_id)
                     }
