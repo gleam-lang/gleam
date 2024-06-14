@@ -12,12 +12,13 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use ecow::EcoString;
 use itertools::Itertools;
+use vec1::Vec1;
 
 use crate::{
     build::{module_loader::ModuleLoader, package_compiler::module_name, Module, Origin},
     config::PackageConfig,
     dep_tree,
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileKind, ImportCycleLocationDetails},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     metadata, type_,
     uid::UniqueIdGenerator,
@@ -104,16 +105,22 @@ where
         let mut inputs = self.read_sources_and_caches()?;
 
         // Determine order in which modules are to be processed
+        let mut dep_location_map = HashMap::new();
         let deps = inputs
             .values()
-            .map(|m| (m.name().clone(), m.dependencies()))
+            .map(|m| {
+                let name = m.name().clone();
+                let _ = dep_location_map.insert(name.clone(), m);
+                (name, m.dependencies())
+            })
             // Making sure that the module order is deterministic, to prevent different
             // compilations of the same project compiling in different orders. This could impact
             // any bugged outcomes, though not any where the compiler is working correctly, so it's
             // mostly to aid debugging.
             .sorted_by(|(a, _), (b, _)| a.cmp(b))
             .collect();
-        let sequence = dep_tree::toposort_deps(deps).map_err(convert_deps_tree_error)?;
+        let sequence = dep_tree::toposort_deps(deps)
+            .map_err(|e| convert_deps_tree_error(e, dep_location_map))?;
 
         // Now that we have loaded sources and caches we check to see if any of
         // the caches need to be invalidated because their dependencies have
@@ -1548,9 +1555,35 @@ fn ensure_gleam_module_does_not_overwrite_standard_erlang_module(input: &Input) 
     })
 }
 
-fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
+fn convert_deps_tree_error(
+    e: dep_tree::Error,
+    dep_location_map: HashMap<EcoString, &Input>,
+) -> Error {
     match e {
-        dep_tree::Error::Cycle(modules) => Error::ImportCycle { modules },
+        dep_tree::Error::Cycle(modules) => {
+            let mut locations = vec![];
+            for (i, module) in modules.iter().enumerate() {
+                // cycles are in order of reference so get next in list or loop back to first
+                let ind = if i == modules.len() - 1 { 0 } else { i + 1 };
+                let next = modules.get(ind).expect("next module must exist");
+                // HACK: for cached modules we do not have the location of the import
+                if let Some(Input::New(module)) = dep_location_map.get(module) {
+                    if let Some((_, location)) = module.dependencies.iter().find(|d| &d.0 == next) {
+                        locations.push(ImportCycleLocationDetails {
+                            location: *location,
+                            path: module.path.clone(),
+                            src: module.code.clone(),
+                        });
+                    }
+                }
+            }
+            tracing::info!(?locations);
+            Error::ImportCycle {
+                modules,
+                locations: Vec1::try_from(locations)
+                    .expect("at least 2 modules must exist in cycle"),
+            }
+        }
     }
 }
 
