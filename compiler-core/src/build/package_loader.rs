@@ -15,6 +15,7 @@ use itertools::Itertools;
 use vec1::Vec1;
 
 use crate::{
+    ast::SrcSpan,
     build::{module_loader::ModuleLoader, package_compiler::module_name, Module, Origin},
     config::PackageConfig,
     dep_tree,
@@ -120,7 +121,7 @@ where
             .sorted_by(|(a, _), (b, _)| a.cmp(b))
             .collect();
         let sequence = dep_tree::toposort_deps(deps)
-            .map_err(|e| convert_deps_tree_error(e, dep_location_map))?;
+            .map_err(|e| self.convert_deps_tree_error(e, dep_location_map))?;
 
         // Now that we have loaded sources and caches we check to see if any of
         // the caches need to be invalidated because their dependencies have
@@ -271,6 +272,63 @@ where
             mtime,
             self.warnings.clone(),
         )
+    }
+
+    fn convert_deps_tree_error(
+        &self,
+        e: dep_tree::Error,
+        dep_location_map: HashMap<EcoString, &Input>,
+    ) -> Error {
+        match e {
+            dep_tree::Error::Cycle(modules) => {
+                let modules = modules
+                    .iter()
+                    .enumerate()
+                    .map(|(i, module)| {
+                        // cycles are in order of reference so get next in list or loop back to first
+                        let ind = if i == modules.len() - 1 { 0 } else { i + 1 };
+                        let next = modules.get(ind).expect("next module must exist");
+                        let input = dep_location_map.get(module).expect("dependency must exist");
+                        let location = match input {
+                            Input::New(module) => {
+                                let (_, location) = module
+                                    .dependencies
+                                    .iter()
+                                    .find(|d| &d.0 == next)
+                                    .expect("import must exist for there to be a cycle");
+                                ImportCycleLocationDetails {
+                                    location: *location,
+                                    path: module.path.clone(),
+                                    src: module.code.clone(),
+                                }
+                            }
+                            Input::Cached(cached_module) => {
+                                let (_, location) = cached_module
+                                    .dependencies
+                                    .iter()
+                                    .find(|d| &d.0 == next)
+                                    .expect("import must exist for there to be a cycle");
+                                let src = self
+                                    .io
+                                    .read(&cached_module.source_path)
+                                    .expect("failed to read source")
+                                    .into();
+                                ImportCycleLocationDetails {
+                                    location: *location,
+                                    path: cached_module.source_path.clone(),
+                                    src,
+                                }
+                            }
+                        };
+                        (module.clone(), location)
+                    })
+                    .collect_vec();
+                Error::ImportCycle {
+                    modules: Vec1::try_from(modules)
+                        .expect("at least 1 module must exist in cycle"),
+                }
+            }
+        }
     }
 }
 
@@ -1554,39 +1612,6 @@ fn ensure_gleam_module_does_not_overwrite_standard_erlang_module(input: &Input) 
         path: input.path.to_owned(),
     })
 }
-
-fn convert_deps_tree_error(
-    e: dep_tree::Error,
-    dep_location_map: HashMap<EcoString, &Input>,
-) -> Error {
-    match e {
-        dep_tree::Error::Cycle(modules) => {
-            let mut locations = vec![];
-            for (i, module) in modules.iter().enumerate() {
-                // cycles are in order of reference so get next in list or loop back to first
-                let ind = if i == modules.len() - 1 { 0 } else { i + 1 };
-                let next = modules.get(ind).expect("next module must exist");
-                // HACK: for cached modules we do not have the location of the import
-                if let Some(Input::New(module)) = dep_location_map.get(module) {
-                    if let Some((_, location)) = module.dependencies.iter().find(|d| &d.0 == next) {
-                        locations.push(ImportCycleLocationDetails {
-                            location: *location,
-                            path: module.path.clone(),
-                            src: module.code.clone(),
-                        });
-                    }
-                }
-            }
-            tracing::info!(?locations);
-            Error::ImportCycle {
-                modules,
-                locations: Vec1::try_from(locations)
-                    .expect("at least 2 modules must exist in cycle"),
-            }
-        }
-    }
-}
-
 #[derive(Debug, Default)]
 pub struct StaleTracker(HashSet<EcoString>);
 
@@ -1595,8 +1620,8 @@ impl StaleTracker {
         _ = self.0.insert(name);
     }
 
-    fn includes_any(&self, names: &[EcoString]) -> bool {
-        names.iter().any(|n| self.0.contains(n.as_str()))
+    fn includes_any(&self, names: &[(EcoString, SrcSpan)]) -> bool {
+        names.iter().any(|n| self.0.contains(n.0.as_str()))
     }
 
     pub fn empty(&mut self) {

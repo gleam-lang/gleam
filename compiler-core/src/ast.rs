@@ -1399,7 +1399,7 @@ impl TypedClauseGuard {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Default, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Default, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct SrcSpan {
     pub start: u32,
     pub end: u32,
