@@ -985,7 +985,7 @@ fn type_completion(
             range: insert_range,
             new_text: match include_type_in_completion {
                 TypeCompletionForm::UnqualifiedImport => format!("type {label}"),
-                _ => label.clone(),
+                TypeCompletionForm::Default => label.clone(),
             },
         })),
         ..Default::default()

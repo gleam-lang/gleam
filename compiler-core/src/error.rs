@@ -553,18 +553,18 @@ fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
                 _ => panic!("Index out of bounds"),
             };
 
-            let insertion = current.get(j - 1).map_or(std::usize::MAX, |&x| x + 1);
+            let insertion = current.get(j - 1).map_or(usize::MAX, |&x| x + 1);
 
             if let Some(value) = current.get_mut(j) {
                 *value = std::cmp::min(
                     // deletion
-                    prev.get(j).map_or(std::usize::MAX, |&x| x + 1),
+                    prev.get(j).map_or(usize::MAX, |&x| x + 1),
                     std::cmp::min(
                         // insertion
                         insertion,
                         // substitution
                         prev.get(j - 1)
-                            .map_or(std::usize::MAX, |&x| x + substitution_cost),
+                            .map_or(usize::MAX, |&x| x + substitution_cost),
                     ),
                 );
             }
@@ -595,7 +595,7 @@ fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
     // `prev` because we already rotated the buffers.
     let distance = match prev.get(b.len()) {
         Some(&d) => d,
-        None => std::usize::MAX,
+        None => usize::MAX,
     };
     (distance <= limit).then_some(distance)
 }
