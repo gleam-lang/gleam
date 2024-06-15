@@ -453,9 +453,16 @@ where
 
         // Module types
         // Do not complete direct module types if the user has already started typing a module select.
+        // e.x. when the user has typed mymodule.| we know local module types are no longer relevant
         if module_select.is_none() {
             for (name, type_) in &module.ast.type_info.types {
-                completions.push(type_completion(None, name, type_, insert_range, false));
+                completions.push(type_completion(
+                    None,
+                    name,
+                    type_,
+                    insert_range,
+                    TypeCompletionForm::Default,
+                ));
             }
         }
 
@@ -475,6 +482,8 @@ where
 
                 if let Some(module) = import.used_name() {
                     // If the user has already started a module select then don't show irrelevant modules.
+                    // e.x. when the user has typed mymodule.| we should only show items from mymodule
+                    // or modules containing mymodule.
                     if let Some(input_mod_name) = &module_select {
                         if !module.contains(input_mod_name.as_str()) {
                             continue;
@@ -485,7 +494,7 @@ where
                         name,
                         type_,
                         insert_range,
-                        false,
+                        TypeCompletionForm::Default,
                     ));
                 }
             }
@@ -500,7 +509,7 @@ where
                             unqualified.used_name(),
                             type_,
                             insert_range,
-                            false,
+                            TypeCompletionForm::Default,
                         )),
                         None => continue,
                     }
@@ -534,7 +543,7 @@ where
                     name,
                     type_,
                     insert_range,
-                    false,
+                    TypeCompletionForm::Default,
                 );
                 completion.additional_text_edits = Some(vec![lsp::TextEdit {
                     range: lsp::Range {
@@ -563,6 +572,7 @@ where
 
         // Module values
         // Do not complete direct module values if the user has already started typing a module select.
+        // e.x. when the user has typed mymodule.| we know local module values are no longer relevant
         if module_select.is_none() {
             for (name, value) in &module.ast.type_info.values {
                 // Here we do not check for the internal attribute: we always want
@@ -702,7 +712,13 @@ where
                 continue;
             }
 
-            completions.push(type_completion(None, name, type_, insert_range, true));
+            completions.push(type_completion(
+                None,
+                name,
+                type_,
+                insert_range,
+                TypeCompletionForm::UnqualifiedImport,
+            ));
         }
 
         // Get completable values
@@ -935,12 +951,20 @@ where
     }
 }
 
+// The form in which a type completion is needed in context.
+// Mainly used to determine if the "type" keyword should be appended to the completion
+enum TypeCompletionForm {
+    // The type completion is for an unqualified import.
+    UnqualifiedImport,
+    Default,
+}
+
 fn type_completion(
     module: Option<&str>,
     name: &str,
     type_: &TypeConstructor,
     insert_range: lsp::Range,
-    include_type_in_completion: bool,
+    include_type_in_completion: TypeCompletionForm,
 ) -> lsp::CompletionItem {
     let label = match module {
         Some(module) => format!("{module}.{name}"),
@@ -959,10 +983,9 @@ fn type_completion(
         detail: Some("Type".into()),
         text_edit: Some(lsp::CompletionTextEdit::Edit(lsp::TextEdit {
             range: insert_range,
-            new_text: if include_type_in_completion {
-                format!("type {label}")
-            } else {
-                label.clone()
+            new_text: match include_type_in_completion {
+                TypeCompletionForm::UnqualifiedImport => format!("type {label}"),
+                _ => label.clone(),
             },
         })),
         ..Default::default()
