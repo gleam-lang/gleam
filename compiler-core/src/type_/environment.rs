@@ -162,7 +162,7 @@ impl<'a> Environment<'a> {
         // been used beyond the point where the error occurred, so we don't want
         // to incorrectly warn about them.
         if was_successful {
-            self.handle_unused(unused);
+            self.handle_unused(unused, None);
         }
         self.scope = data.local_values;
     }
@@ -533,7 +533,7 @@ impl<'a> Environment<'a> {
                 // an entity was overwritten in the top most scope without being used
                 let mut unused = HashMap::with_capacity(1);
                 let _ = unused.insert(name, (kind, location, false));
-                self.handle_unused(unused);
+                self.handle_unused(unused, None);
             }
 
             _ => {}
@@ -569,9 +569,10 @@ impl<'a> Environment<'a> {
             .entity_usages
             .pop()
             .expect("Expected a bottom level of entity usages.");
-        self.handle_unused(unused);
 
         let mut locations = Vec::new();
+        self.handle_unused(unused, Some(&mut locations));
+
         for (name, location) in self.unused_modules.clone().into_iter() {
             self.warnings.emit(Warning::UnusedImportedModule {
                 name: name.clone(),
@@ -593,14 +594,24 @@ impl<'a> Environment<'a> {
         locations
     }
 
-    fn handle_unused(&mut self, unused: HashMap<EcoString, (EntityKind, SrcSpan, bool)>) {
+    fn handle_unused(
+        &mut self,
+        unused: HashMap<EcoString, (EntityKind, SrcSpan, bool)>,
+        locations: Option<&mut Vec<SrcSpan>>,
+    ) {
+        let init_locs = &mut Vec::<SrcSpan>::new();
+        let local_locations = locations.unwrap_or(init_locs);
+
         for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
             let warning = match kind {
-                EntityKind::ImportedType => Warning::UnusedType {
-                    name,
-                    imported: true,
-                    location,
-                },
+                EntityKind::ImportedType => {
+                    local_locations.push(location);
+                    Warning::UnusedType {
+                        name,
+                        imported: true,
+                        location,
+                    }
+                }
                 EntityKind::ImportedConstructor => Warning::UnusedConstructor {
                     name,
                     imported: true,
@@ -620,7 +631,10 @@ impl<'a> Environment<'a> {
                     imported: false,
                     location,
                 },
-                EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
+                EntityKind::ImportedValue => {
+                    local_locations.push(location);
+                    Warning::UnusedImportedValue { name, location }
+                }
                 EntityKind::Variable => Warning::UnusedVariable { name, location },
             };
 

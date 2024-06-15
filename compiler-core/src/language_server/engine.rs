@@ -1037,7 +1037,18 @@ fn code_action_unused_imports(
         let adjusted_end = if delete_line(unused, &line_numbers) {
             end + 1
         } else {
-            end
+            let comma_or_brace =  module.code
+                .get(end as usize..(end + 1) as usize)
+                .expect("comma_or_brace");
+
+            if "," == comma_or_brace {
+                end + 2
+            } else if "}" == comma_or_brace {
+                hovered = overlaps(params.range, src_span_to_lsp_range(SrcSpan::new(start, end + 1), &line_numbers));
+                end
+            } else {
+                end
+            }
         };
 
         let range = src_span_to_lsp_range(SrcSpan::new(start, adjusted_end), &line_numbers);
