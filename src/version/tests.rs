@@ -3,6 +3,7 @@ use std::{
     collections::HashMap,
 };
 
+use parser::Error;
 use pubgrub::version::Version as _;
 
 use crate::{ApiError, Release, RetirementReason, RetirementStatus};
@@ -818,4 +819,14 @@ gleam_stdlib = "0.17.1"
 thingy = "0.1.0"
 "#;
     assert!(&manifest == expected1 || &manifest == expected2);
+}
+
+#[test]
+fn missing_minor_has_correct_error_type() {
+    assert_eq!(Version::parse("1"), Err(Error::MinorVersionMissing(1)))
+}
+
+#[test]
+fn missing_patch_has_correct_error_type() {
+    assert_eq!(Version::parse("1.2"), Err(Error::PatchVersionMissing(1, 2)))
 }
