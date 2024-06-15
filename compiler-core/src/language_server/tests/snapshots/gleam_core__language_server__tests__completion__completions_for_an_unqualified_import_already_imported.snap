@@ -1,0 +1,53 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "completion(TestProject::for_source(code).add_module(\"dep\", dep),\n    Position::new(1, 12))"
+---
+[
+    CompletionItem {
+        label: "myfun",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "myfun",
+                ),
+            },
+        ),
+        kind: Some(
+            Function,
+        ),
+        detail: Some(
+            "fn() -> Int",
+        ),
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 11,
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 17,
+                        },
+                    },
+                    new_text: "myfun",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+]
