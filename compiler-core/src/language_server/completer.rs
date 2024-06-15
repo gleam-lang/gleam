@@ -182,9 +182,9 @@ where
     }
 
     /// Gets the completes for unqualified imports from a module.
-    pub fn unqualified_completions_from_module<'b>(
-        &'b self,
-        module_being_imported_from: &'b ModuleInterface,
+    pub fn unqualified_completions_from_module(
+        &'a self,
+        module_being_imported_from: &'a ModuleInterface,
     ) -> Vec<CompletionItem> {
         let insert_range = self.get_phrase_surrounding_completion_for_import();
         let mut completions = vec![];
@@ -253,7 +253,7 @@ where
     }
 
     // Get all the modules that can be imported that have not already been imported.
-    fn completable_modules_for_import<'b>(&'b self) -> Vec<(&EcoString, &ModuleInterface)> {
+    fn completable_modules_for_import(&'a self) -> Vec<(&EcoString, &ModuleInterface)> {
         let mut direct_dep_packages: std::collections::HashSet<&EcoString> =
             std::collections::HashSet::from_iter(
                 self.compiler.project_compiler.config.dependencies.keys(),
@@ -300,8 +300,8 @@ where
     }
 
     // Get all the completions for modules that can be imported
-    fn complete_modules_for_import<'b>(
-        &'b self,
+    fn complete_modules_for_import(
+        &'a self,
         start: Position,
         end: Position,
     ) -> Vec<CompletionItem> {
@@ -325,7 +325,7 @@ where
     // For now I've left it as is but might be worth revisiting.
 
     /// Provides completions for when the context being editted is a type.
-    pub fn completion_types<'b>(&'b self) -> Vec<CompletionItem> {
+    pub fn completion_types(&'a self) -> Vec<CompletionItem> {
         let surrounding_completion = self.get_phrase_surrounding_completion();
         let mut completions = vec![];
 
@@ -447,7 +447,7 @@ where
     }
 
     /// Provides completions for when the context being editted is a value.
-    pub fn completion_values<'b>(&'b self) -> Vec<CompletionItem> {
+    pub fn completion_values(&'a self) -> Vec<CompletionItem> {
         let surrounding_completion = self.get_phrase_surrounding_completion();
         let mut completions = vec![];
         let mod_name = self.module.name.as_str();
@@ -574,7 +574,7 @@ where
     }
 
     // Gets the position of the line with the first import statement in the file.
-    fn first_import_line_in_module<'b>(&'b self) -> Position {
+    fn first_import_line_in_module(&'a self) -> Position {
         let import_location = self
             .module
             .ast
