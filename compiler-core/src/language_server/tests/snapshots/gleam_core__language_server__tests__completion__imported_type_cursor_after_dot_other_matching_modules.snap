@@ -259,44 +259,4 @@ expression: "completion(TestProject::for_source(code).add_module(\"dep\",\n     
         data: None,
         tags: None,
     },
-    CompletionItem {
-        label: "dep2.Zoo",
-        label_details: None,
-        kind: Some(
-            Class,
-        ),
-        detail: Some(
-            "Type",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: None,
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 4,
-                            character: 5,
-                        },
-                        end: Position {
-                            line: 4,
-                            character: 12,
-                        },
-                    },
-                    new_text: "dep2.Zoo",
-                },
-            ),
-        ),
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
 ]
