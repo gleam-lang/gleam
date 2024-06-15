@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added specific errors for missing minor or patch versions
+
 ## v3.0.0 - 2024-05-30
 
 - Added `add_owner_request`, `add_owner_response`
