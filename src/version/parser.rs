@@ -24,8 +24,10 @@ pub enum Error {
     EmptyPredicate,
     /// Encountered an empty range.
     EmptyRange,
-    /// Encountered an invalid range (missing patch version, for example)
-    InvalidRange(String),
+    /// Encountered a semver that's missing the minor and patch version.
+    MinorVersionMissing(u32),
+    /// Encountered a semver that's missing the patch version.
+    PatchVersionMissing(u32, u32),
 }
 
 impl From<lexer::Error> for Error {
@@ -45,7 +47,12 @@ impl fmt::Display for Error {
             MoreInput(ref tokens) => write!(fmt, "expected end of input, but got: {:?}", tokens),
             EmptyPredicate => write!(fmt, "encountered empty predicate"),
             EmptyRange => write!(fmt, "encountered empty range"),
-            InvalidRange(ref range) => write!(fmt, "encountered invalid range: {:?}", range),
+            MinorVersionMissing(major) => {
+                write!(fmt, "missing minor and patch versions: {:?}", major)
+            }
+            PatchVersionMissing(major, minor) => {
+                write!(fmt, "missing patch version: {:?}.{:?}", major, minor)
+            }
         }
     }
 }
@@ -225,16 +232,12 @@ impl<'input> Parser<'input> {
         self.skip_whitespace()?;
 
         let major = self.numeric()?;
-        let minor = self.dot_numeric().map_err(|_| {
-            let error_message = format!("{:?} <- Missing minor and patch versions.", major);
-
-            Error::InvalidRange(error_message)
-        })?;
-        let patch = self.dot_numeric().map_err(|_| {
-            let error_message = format!("{:?}.{:?} <- Missing patch version.", major, minor);
-
-            Error::InvalidRange(error_message)
-        })?;
+        let minor = self
+            .dot_numeric()
+            .map_err(|_| Error::MinorVersionMissing(major))?;
+        let patch = self
+            .dot_numeric()
+            .map_err(|_| Error::PatchVersionMissing(major, minor))?;
         let pre = self.pre()?;
         let build = self.plus_build_metadata()?;
 
