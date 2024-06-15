@@ -33,11 +33,11 @@ expression: "completion(TestProject::for_source(code).add_module(\"dep\", dep),\
                     range: Range {
                         start: Position {
                             line: 1,
-                            character: 11,
+                            character: 12,
                         },
                         end: Position {
                             line: 1,
-                            character: 17,
+                            character: 18,
                         },
                     },
                     new_text: "myfun",
