@@ -49,7 +49,7 @@ expression: "completion(TestProject::for_source(code).add_module(\"dep\", dep),\
             CompletionItemLabelDetails {
                 detail: None,
                 description: Some(
-                    "myfun",
+                    "dep",
                 ),
             },
         ),

@@ -246,7 +246,13 @@ where
             if already_imported_values.contains(name) {
                 continue;
             }
-            completions.push(value_completion(None, name, name, value, insert_range));
+            completions.push(value_completion(
+                None,
+                &module_being_imported_from.name,
+                name,
+                value,
+                insert_range,
+            ));
         }
 
         completions
