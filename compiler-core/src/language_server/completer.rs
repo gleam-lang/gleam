@@ -378,10 +378,9 @@ where
 
                 if let Some(module) = import.used_name() {
                     // If the user has already started a module select then don't show irrelevant modules.
-                    // e.x. when the user has typed mymodule.| we should only show items from mymodule
-                    // or modules containing mymodule.
+                    // e.x. when the user has typed mymodule.| we should only show items from mymodule.
                     if let Some(input_mod_name) = &module_select {
-                        if !module.contains(input_mod_name.as_str()) {
+                        if &module != input_mod_name {
                             continue;
                         }
                     }
@@ -422,11 +421,15 @@ where
                 continue;
             }
 
+            let qualifier = module_full_name
+                .split('/')
+                .last()
+                .unwrap_or(module_full_name);
+
             // If the user has already started a module select then don't show irrelevant modules.
-            // e.x. when the user has typed mymodule.| we should only show items from mymodule
-            // or modules containing mymodule.
+            // e.x. when the user has typed mymodule.| we should only show items from mymodule.
             if let Some(input_mod_name) = &module_select {
-                if !module_full_name.contains(input_mod_name.as_str()) {
+                if qualifier != input_mod_name {
                     continue;
                 }
             }
@@ -438,7 +441,7 @@ where
                 }
 
                 let mut completion = type_completion(
-                    module_full_name.split('/').last(),
+                    Some(qualifier),
                     name,
                     type_,
                     insert_range,
@@ -488,8 +491,9 @@ where
 
                 if let Some(module) = import.used_name() {
                     // If the user has already started a module select then don't show irrelevant modules.
+                    // e.x. when the user has typed mymodule.| we should only show items from mymodule.
                     if let Some(input_mod_name) = &module_select {
-                        if !module.contains(input_mod_name.as_str()) {
+                        if &module != input_mod_name {
                             continue;
                         }
                     }
@@ -532,13 +536,15 @@ where
             if module_full_name == "gleam" {
                 continue;
             }
-            let qualifier = module_full_name.split('/').last();
+            let qualifier = module_full_name
+                .split('/')
+                .last()
+                .unwrap_or(module_full_name);
 
             // If the user has already started a module select then don't show irrelevant modules.
-            // e.x. when the user has typed mymodule.| we should only show items from mymodule
-            // or modules containing mymodule.
+            // e.x. when the user has typed mymodule.| we should only show items from mymodule.
             if let Some(input_mod_name) = &module_select {
-                if !module_full_name.contains(input_mod_name.as_str()) {
+                if qualifier != input_mod_name {
                     continue;
                 }
             }
@@ -550,7 +556,7 @@ where
                 }
 
                 let mut completion =
-                    value_completion(qualifier, module_full_name, name, value, insert_range);
+                    value_completion(Some(qualifier), module_full_name, name, value, insert_range);
 
                 add_import_to_completion(&mut completion, import_location, module_full_name);
                 completions.push(completion);
