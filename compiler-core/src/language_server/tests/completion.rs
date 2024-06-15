@@ -1,8 +1,6 @@
+use insta::assert_debug_snapshot;
 use itertools::Itertools;
-use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionItemLabelDetails, CompletionTextEdit,
-    Documentation, MarkupContent, MarkupKind, Position, Range, TextEdit,
-};
+use lsp_types::{CompletionItem, Position};
 
 use super::*;
 
@@ -25,74 +23,6 @@ fn completion_at_default_position(tester: TestProject<'_>) -> Vec<CompletionItem
         .collect_vec()
 }
 
-fn prelude_type_completions() -> Vec<CompletionItem> {
-    vec![
-        CompletionItem {
-            label: "BitArray".into(),
-            kind: Some(CompletionItemKind::CLASS),
-            detail: Some("Type".into()),
-            documentation: None,
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "Bool".into(),
-            kind: Some(CompletionItemKind::CLASS),
-            detail: Some("Type".into()),
-            documentation: None,
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "Float".into(),
-            kind: Some(CompletionItemKind::CLASS),
-            detail: Some("Type".into()),
-            documentation: None,
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "Int".into(),
-            kind: Some(CompletionItemKind::CLASS),
-            detail: Some("Type".into()),
-            documentation: None,
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "List".into(),
-            kind: Some(CompletionItemKind::CLASS),
-            detail: Some("Type".into()),
-            documentation: None,
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "Nil".into(),
-            kind: Some(CompletionItemKind::CLASS),
-            detail: Some("Type".into()),
-            documentation: None,
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "Result".into(),
-            kind: Some(CompletionItemKind::CLASS),
-            detail: Some("Type".into()),
-            documentation: None,
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "String".into(),
-            kind: Some(CompletionItemKind::CLASS),
-            detail: Some("Type".into()),
-            documentation: None,
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "UtfCodepoint".into(),
-            kind: Some(CompletionItemKind::CLASS),
-            detail: Some("Type".into()),
-            documentation: None,
-            ..Default::default()
-        },
-    ]
-}
-
 #[test]
 fn completions_for_outside_a_function() {
     let code = "
@@ -101,10 +31,10 @@ pub fn main() {
   0
 }";
 
-    assert_eq!(
-        completion(TestProject::for_source(code), Position::new(0, 0)),
-        vec![]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(0, 0)
+    ));
 }
 
 #[test]
@@ -114,33 +44,9 @@ pub fn main() {
   0
 }";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code)),
-        vec![CompletionItem {
-            label: "main".into(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some("fn() -> Int".into()),
-            label_details: Some(CompletionItemLabelDetails {
-                detail: None,
-                description: Some("app".into()),
-            }),
-            documentation: None,
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 1,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 1,
-                        character: 0
-                    }
-                },
-                new_text: "main".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion_at_default_position(TestProject::for_source(
+        code
+    )),);
 }
 
 #[test]
@@ -151,36 +57,9 @@ pub fn main() {
   0
 }";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code)),
-        vec![CompletionItem {
-            label: "main".into(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some("fn() -> Int".into()),
-            label_details: Some(CompletionItemLabelDetails {
-                detail: None,
-                description: Some("app".into()),
-            }),
-            documentation: Some(Documentation::MarkupContent(MarkupContent {
-                kind: MarkupKind::Markdown,
-                value: " Hello\n".into(),
-            })),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 1,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 1,
-                        character: 0
-                    }
-                },
-                new_text: "main".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion_at_default_position(TestProject::for_source(
+        code
+    )),);
 }
 
 #[test]
@@ -192,59 +71,9 @@ pub type Direction {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code)),
-        vec![
-            CompletionItem {
-                label: "Left".into(),
-                kind: Some(CompletionItemKind::ENUM_MEMBER),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                detail: Some("Direction".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "Left".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "Right".into(),
-                kind: Some(CompletionItemKind::ENUM_MEMBER),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into()),
-                }),
-                detail: Some("Direction".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "Right".into()
-                })),
-                ..Default::default()
-            }
-        ]
-    );
+    assert_debug_snapshot!(completion_at_default_position(TestProject::for_source(
+        code
+    )),);
 }
 
 #[test]
@@ -256,36 +85,9 @@ pub type Box {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code)),
-        vec![CompletionItem {
-            label: "Box".into(),
-            kind: Some(CompletionItemKind::CONSTRUCTOR),
-            detail: Some("fn(Int, Int, Float) -> Box".into()),
-            label_details: Some(CompletionItemLabelDetails {
-                detail: None,
-                description: Some("app".into()),
-            }),
-            documentation: Some(Documentation::MarkupContent(MarkupContent {
-                kind: MarkupKind::Markdown,
-                value: " Hello\n".into(),
-            })),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 1,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 1,
-                        character: 0
-                    }
-                },
-                new_text: "Box".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion_at_default_position(TestProject::for_source(
+        code
+    )),);
 }
 
 #[test]
@@ -299,65 +101,9 @@ pub type Direction {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code)),
-        vec![
-            CompletionItem {
-                label: "Left".into(),
-                kind: Some(CompletionItemKind::ENUM_MEMBER),
-                detail: Some("Direction".into()),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into()),
-                }),
-                documentation: Some(Documentation::MarkupContent(MarkupContent {
-                    kind: MarkupKind::Markdown,
-                    value: " Hello\n".into(),
-                })),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "Left".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "Right".into(),
-                kind: Some(CompletionItemKind::ENUM_MEMBER),
-                detail: Some("Direction".into()),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into()),
-                }),
-                documentation: Some(Documentation::MarkupContent(MarkupContent {
-                    kind: MarkupKind::Markdown,
-                    value: " Goodbye\n".into(),
-                })),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "Right".into()
-                })),
-                ..Default::default()
-            }
-        ]
-    );
+    assert_debug_snapshot!(completion_at_default_position(TestProject::for_source(
+        code
+    )),);
 }
 
 #[test]
@@ -368,33 +114,9 @@ pub type Box {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code)),
-        vec![CompletionItem {
-            label: "Box".into(),
-            kind: Some(CompletionItemKind::CONSTRUCTOR),
-            detail: Some("fn(Int, Int, Float) -> Box".into()),
-            documentation: None,
-            label_details: Some(CompletionItemLabelDetails {
-                detail: None,
-                description: Some("app".into()),
-            }),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 1,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 1,
-                        character: 0
-                    }
-                },
-                new_text: "Box".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion_at_default_position(TestProject::for_source(
+        code
+    )),);
 }
 
 #[test]
@@ -408,33 +130,9 @@ pub fn wobble() {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![CompletionItem {
-            label: "dep.wobble".into(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some("fn() -> Nil".into()),
-            label_details: Some(CompletionItemLabelDetails {
-                detail: None,
-                description: Some("app".into()),
-            }),
-            documentation: None,
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 1,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 1,
-                        character: 0
-                    }
-                },
-                new_text: "dep.wobble".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -447,46 +145,9 @@ pub fn wobble() {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![CompletionItem {
-            label: "dep.wobble".into(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some("fn() -> Nil".into()),
-            documentation: None,
-            label_details: Some(CompletionItemLabelDetails {
-                detail: None,
-                description: Some("dep".into())
-            }),
-            additional_text_edits: Some(vec![TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 0,
-                        character: 0
-                    }
-                },
-                new_text: "import dep\n".into()
-            }]),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 1,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 1,
-                        character: 0
-                    }
-                },
-                new_text: "dep.wobble".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -508,70 +169,11 @@ pub fn wobble() {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(
-            TestProject::for_source(code)
-                .add_module("dep", dep)
-                .add_module("dep2", dep2)
-        ),
-        vec![
-            CompletionItem {
-                label: "dep.wobble".into(),
-                kind: Some(CompletionItemKind::FUNCTION),
-                detail: Some("fn() -> Nil".into()),
-                documentation: None,
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("dep".into()),
-                }),
-                additional_text_edits: Some(vec![TextEdit {
-                    range: Range {
-                        start: Position::new(7, 0),
-                        end: Position::new(7, 0)
-                    },
-                    new_text: "import dep\n".into()
-                }]),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.wobble".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "dep2.wobble".into(),
-                kind: Some(CompletionItemKind::FUNCTION),
-                detail: Some("fn() -> Nil".into()),
-                documentation: None,
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into()),
-                }),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep2.wobble".into()
-                })),
-                ..Default::default()
-            }
-        ]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("dep2", dep2)
+    ),);
 }
 
 #[test]
@@ -584,40 +186,9 @@ pub fn wobble() {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("a/b/dep", dep)),
-        vec![CompletionItem {
-            label: "dep.wobble".into(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some("fn() -> Nil".into()),
-            documentation: None,
-            label_details: Some(CompletionItemLabelDetails {
-                detail: None,
-                description: Some("a/b/dep".into()),
-            }),
-            additional_text_edits: Some(vec![TextEdit {
-                range: Range {
-                    start: Position::new(0, 0),
-                    end: Position::new(0, 0)
-                },
-                new_text: "import a/b/dep\n".into()
-            }]),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 1,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 1,
-                        character: 0
-                    }
-                },
-                new_text: "dep.wobble".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("a/b/dep", dep)
+    ),);
 }
 
 #[test]
@@ -632,59 +203,9 @@ pub type Direction {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![
-            CompletionItem {
-                label: "dep.Left".into(),
-                kind: Some(CompletionItemKind::ENUM_MEMBER),
-                detail: Some("Direction".into()),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.Left".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "dep.Right".into(),
-                kind: Some(CompletionItemKind::ENUM_MEMBER),
-                detail: Some("Direction".into()),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.Right".into()
-                })),
-                ..Default::default()
-            }
-        ]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -698,33 +219,9 @@ pub type Box {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![CompletionItem {
-            label: "dep.Box".into(),
-            kind: Some(CompletionItemKind::CONSTRUCTOR),
-            label_details: Some(CompletionItemLabelDetails {
-                detail: None,
-                description: Some("app".into()),
-            }),
-            detail: Some("fn(Int) -> Box".into()),
-            documentation: None,
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 1,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 1,
-                        character: 0
-                    }
-                },
-                new_text: "dep.Box".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -738,59 +235,9 @@ pub fn wobble() {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![
-            CompletionItem {
-                label: "dep.wobble".into(),
-                kind: Some(CompletionItemKind::FUNCTION),
-                detail: Some("fn() -> Nil".into()),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.wobble".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "wobble".into(),
-                kind: Some(CompletionItemKind::FUNCTION),
-                detail: Some("fn() -> Nil".into()),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "wobble".into()
-                })),
-                ..Default::default()
-            },
-        ]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -805,83 +252,9 @@ pub type Direction {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![
-            CompletionItem {
-                label: "Left".into(),
-                kind: Some(CompletionItemKind::ENUM_MEMBER),
-                detail: Some("Direction".into()),
-                documentation: None,
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "Left".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "dep.Left".into(),
-                kind: Some(CompletionItemKind::ENUM_MEMBER),
-                detail: Some("Direction".into()),
-                documentation: None,
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.Left".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "dep.Right".into(),
-                kind: Some(CompletionItemKind::ENUM_MEMBER),
-                detail: Some("Direction".into()),
-                documentation: None,
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.Right".into()
-                })),
-                ..Default::default()
-            },
-        ]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -895,59 +268,9 @@ pub type Box {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![
-            CompletionItem {
-                label: "Box".into(),
-                kind: Some(CompletionItemKind::CONSTRUCTOR),
-                detail: Some("fn(Int) -> Box".into()),
-                documentation: None,
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into()),
-                }),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "Box".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "dep.Box".into(),
-                kind: Some(CompletionItemKind::CONSTRUCTOR),
-                detail: Some("fn(Int) -> Box".into()),
-                documentation: None,
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into()),
-                }),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.Box".into()
-                })),
-                ..Default::default()
-            },
-        ]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -959,33 +282,9 @@ fn private() {
 ";
     let dep = "";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![CompletionItem {
-            label: "private".into(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some("fn() -> Int".into()),
-            label_details: Some(CompletionItemLabelDetails {
-                detail: None,
-                description: Some("app".into()),
-            }),
-            documentation: None,
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 1,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 1,
-                        character: 0
-                    }
-                },
-                new_text: "private".into()
-            })),
-            ..Default::default()
-        },]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -997,33 +296,9 @@ type Wibble {
 ";
     let dep = "";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![CompletionItem {
-            label: "Wobble".into(),
-            kind: Some(CompletionItemKind::ENUM_MEMBER),
-            detail: Some("Wibble".into()),
-            documentation: None,
-            label_details: Some(CompletionItemLabelDetails {
-                detail: None,
-                description: Some("app".into()),
-            }),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 1,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 1,
-                        character: 0
-                    }
-                },
-                new_text: "Wobble".into()
-            })),
-            ..Default::default()
-        },]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -1035,33 +310,9 @@ pub opaque type Wibble {
 ";
     let dep = "";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![CompletionItem {
-            label: "Wobble".into(),
-            kind: Some(CompletionItemKind::ENUM_MEMBER),
-            detail: Some("Wibble".into()),
-            documentation: None,
-            label_details: Some(CompletionItemLabelDetails {
-                detail: None,
-                description: Some("app".into()),
-            }),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 1,
-                        character: 0
-                    },
-                    end: Position {
-                        line: 1,
-                        character: 0
-                    }
-                },
-                new_text: "Wobble".into()
-            })),
-            ..Default::default()
-        },]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -1073,10 +324,9 @@ fn private() {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -1088,10 +338,9 @@ type Wibble {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -1103,10 +352,9 @@ type Wibble {
 }
 ";
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code).add_module("dep", dep)),
-        vec![]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source(code).add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -1116,33 +364,10 @@ pub type Wibble {
   Wobble
 }";
 
-    assert_eq!(
-        completion(TestProject::for_source(code), Position::new(2, 0)),
-        [
-            prelude_type_completions(),
-            vec![CompletionItem {
-                label: "Wibble".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 2,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 2,
-                            character: 0
-                        }
-                    },
-                    new_text: "Wibble".into()
-                })),
-                ..Default::default()
-            },]
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(2, 0)
+    ),);
 }
 
 #[test]
@@ -1154,33 +379,10 @@ pub type Wibble = Result(
 )
 ";
 
-    assert_eq!(
-        completion(TestProject::for_source(code), Position::new(2, 0)),
-        [
-            prelude_type_completions(),
-            vec![CompletionItem {
-                label: "Wibble".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 2,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 2,
-                            character: 0
-                        }
-                    },
-                    new_text: "Wibble".into()
-                })),
-                ..Default::default()
-            },]
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(2, 0)
+    ),);
 }
 
 #[test]
@@ -1193,10 +395,10 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(TestProject::for_source(code), Position::new(2, 0)),
-        prelude_type_completions(),
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(2, 0)
+    ),);
 }
 
 #[test]
@@ -1214,36 +416,10 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_module("dep", dep),
-            Position::new(3, 0)
-        ),
-        [
-            prelude_type_completions(),
-            vec![CompletionItem {
-                label: "dep.Zoo".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 3,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 3,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.Zoo".into()
-                })),
-                ..Default::default()
-            },]
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(3, 0)
+    ),);
 }
 
 #[test]
@@ -1261,36 +437,10 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_module("dep", dep),
-            Position::new(3, 12)
-        ),
-        [
-            prelude_type_completions(),
-            vec![CompletionItem {
-                label: "dep.Zoo".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 3,
-                            character: 5
-                        },
-                        end: Position {
-                            line: 3,
-                            character: 12
-                        }
-                    },
-                    new_text: "dep.Zoo".into()
-                })),
-                ..Default::default()
-            },]
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(3, 12)
+    ),);
 }
 
 #[test]
@@ -1313,60 +463,12 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code)
-                .add_module("dep", dep)
-                .add_module("dep2", dep2),
-            Position::new(4, 12)
-        ),
-        [
-            prelude_type_completions(),
-            vec![
-                CompletionItem {
-                    label: "dep.Zoo".into(),
-                    kind: Some(CompletionItemKind::CLASS),
-                    detail: Some("Type".into()),
-                    documentation: None,
-                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: Range {
-                            start: Position {
-                                line: 4,
-                                character: 5
-                            },
-                            end: Position {
-                                line: 4,
-                                character: 12
-                            }
-                        },
-                        new_text: "dep.Zoo".into()
-                    })),
-                    ..Default::default()
-                },
-                CompletionItem {
-                    label: "dep2.Zoo".into(),
-                    kind: Some(CompletionItemKind::CLASS),
-                    detail: Some("Type".into()),
-                    documentation: None,
-                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: Range {
-                            start: Position {
-                                line: 4,
-                                character: 5
-                            },
-                            end: Position {
-                                line: 4,
-                                character: 12
-                            }
-                        },
-                        new_text: "dep2.Zoo".into()
-                    })),
-                    ..Default::default()
-                },
-            ]
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("dep2", dep2),
+        Position::new(4, 12)
+    ),);
 }
 
 #[test]
@@ -1388,38 +490,12 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code)
-                .add_module("dep", dep)
-                .add_module("other", other),
-            Position::new(3, 12)
-        ),
-        [
-            prelude_type_completions(),
-            vec![CompletionItem {
-                label: "dep.Zoo".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 3,
-                            character: 5
-                        },
-                        end: Position {
-                            line: 3,
-                            character: 12
-                        }
-                    },
-                    new_text: "dep.Zoo".into()
-                })),
-                ..Default::default()
-            },]
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("other", other),
+        Position::new(3, 12)
+    ),);
 }
 
 #[test]
@@ -1441,38 +517,12 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code)
-                .add_module("dep", dep)
-                .add_module("other", other),
-            Position::new(3, 8)
-        ),
-        [
-            prelude_type_completions(),
-            vec![CompletionItem {
-                label: "dep.Zoo".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 3,
-                            character: 5
-                        },
-                        end: Position {
-                            line: 3,
-                            character: 12
-                        }
-                    },
-                    new_text: "dep.Zoo".into()
-                })),
-                ..Default::default()
-            },]
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("other", other),
+        Position::new(3, 8)
+    ),);
 }
 
 #[test]
@@ -1490,49 +540,10 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_module("dep", dep),
-            Position::new(3, 0)
-        ),
-        [
-            prelude_type_completions(),
-            vec![CompletionItem {
-                label: "dep.Zoo".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 3,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 3,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.Zoo".into()
-                })),
-                additional_text_edits: Some(vec![TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 0,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 0,
-                            character: 0
-                        }
-                    },
-                    new_text: "import dep\n".into()
-                }]),
-                ..Default::default()
-            },]
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(3, 0)
+    ),);
 }
 
 #[test]
@@ -1554,73 +565,12 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code)
-                .add_module("dep", dep)
-                .add_module("dep2", dep2),
-            Position::new(3, 0)
-        ),
-        [
-            prelude_type_completions(),
-            vec![
-                CompletionItem {
-                    label: "dep.Zoo".into(),
-                    kind: Some(CompletionItemKind::CLASS),
-                    detail: Some("Type".into()),
-                    documentation: None,
-                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: Range {
-                            start: Position {
-                                line: 3,
-                                character: 0
-                            },
-                            end: Position {
-                                line: 3,
-                                character: 0
-                            }
-                        },
-                        new_text: "dep.Zoo".into()
-                    })),
-                    additional_text_edits: Some(vec![TextEdit {
-                        range: Range {
-                            start: Position {
-                                line: 0,
-                                character: 0
-                            },
-                            end: Position {
-                                line: 0,
-                                character: 0
-                            }
-                        },
-                        new_text: "import dep\n".into()
-                    }]),
-                    ..Default::default()
-                },
-                CompletionItem {
-                    label: "dep2.Zoo".into(),
-                    kind: Some(CompletionItemKind::CLASS),
-                    detail: Some("Type".into()),
-                    documentation: None,
-                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: Range {
-                            start: Position {
-                                line: 3,
-                                character: 0
-                            },
-                            end: Position {
-                                line: 3,
-                                character: 0
-                            }
-                        },
-                        new_text: "dep2.Zoo".into()
-                    })),
-                    ..Default::default()
-                },
-            ]
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("dep2", dep2),
+        Position::new(3, 0)
+    ),);
 }
 
 #[test]
@@ -1646,73 +596,12 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code)
-                .add_module("dep", dep)
-                .add_module("dep2", dep2),
-            Position::new(7, 0)
-        ),
-        [
-            prelude_type_completions(),
-            vec![
-                CompletionItem {
-                    label: "dep.Zoo".into(),
-                    kind: Some(CompletionItemKind::CLASS),
-                    detail: Some("Type".into()),
-                    documentation: None,
-                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: Range {
-                            start: Position {
-                                line: 7,
-                                character: 0
-                            },
-                            end: Position {
-                                line: 7,
-                                character: 0
-                            }
-                        },
-                        new_text: "dep.Zoo".into()
-                    })),
-                    additional_text_edits: Some(vec![TextEdit {
-                        range: Range {
-                            start: Position {
-                                line: 4,
-                                character: 0
-                            },
-                            end: Position {
-                                line: 4,
-                                character: 0
-                            }
-                        },
-                        new_text: "import dep\n".into()
-                    }]),
-                    ..Default::default()
-                },
-                CompletionItem {
-                    label: "dep2.Zoo".into(),
-                    kind: Some(CompletionItemKind::CLASS),
-                    detail: Some("Type".into()),
-                    documentation: None,
-                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: Range {
-                            start: Position {
-                                line: 7,
-                                character: 0
-                            },
-                            end: Position {
-                                line: 7,
-                                character: 0
-                            }
-                        },
-                        new_text: "dep2.Zoo".into()
-                    })),
-                    ..Default::default()
-                },
-            ]
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("dep2", dep2),
+        Position::new(7, 0)
+    ),);
 }
 
 #[test]
@@ -1730,49 +619,10 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_module("a/b/dep", dep),
-            Position::new(3, 0)
-        ),
-        [
-            prelude_type_completions(),
-            vec![CompletionItem {
-                label: "dep.Zoo".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 3,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 3,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.Zoo".into()
-                })),
-                additional_text_edits: Some(vec![TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 0,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 0,
-                            character: 0
-                        }
-                    },
-                    new_text: "import a/b/dep\n".into()
-                }]),
-                ..Default::default()
-            },]
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_module("a/b/dep", dep),
+        Position::new(3, 0)
+    ),);
 }
 
 #[test]
@@ -1790,58 +640,10 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_module("dep", dep),
-            Position::new(3, 0)
-        ),
-        [
-            prelude_type_completions(),
-            vec![
-                CompletionItem {
-                    label: "Zoo".into(),
-                    kind: Some(CompletionItemKind::CLASS),
-                    detail: Some("Type".into()),
-                    documentation: None,
-                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: Range {
-                            start: Position {
-                                line: 3,
-                                character: 0
-                            },
-                            end: Position {
-                                line: 3,
-                                character: 0
-                            }
-                        },
-                        new_text: "Zoo".into()
-                    })),
-                    ..Default::default()
-                },
-                CompletionItem {
-                    label: "dep.Zoo".into(),
-                    kind: Some(CompletionItemKind::CLASS),
-                    detail: Some("Type".into()),
-                    documentation: None,
-                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: Range {
-                            start: Position {
-                                line: 3,
-                                character: 0
-                            },
-                            end: Position {
-                                line: 3,
-                                character: 0
-                            }
-                        },
-                        new_text: "dep.Zoo".into()
-                    })),
-                    ..Default::default()
-                },
-            ]
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(3, 0)
+    ),);
 }
 
 #[test]
@@ -1856,33 +658,10 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(TestProject::for_source(code), Position::new(4, 0)),
-        [
-            prelude_type_completions(),
-            vec![CompletionItem {
-                label: "Zoo".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 4,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 4,
-                            character: 0
-                        }
-                    },
-                    new_text: "Zoo".into()
-                })),
-                ..Default::default()
-            }],
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(4, 0)
+    ),);
 }
 
 #[test]
@@ -1895,109 +674,9 @@ fn internal_values_from_root_package_are_in_the_completions() {
 @internal pub const foo = 1
 "#;
 
-    assert_eq!(
-        completion_at_default_position(
-            TestProject::for_source("import dep").add_module("dep", dep)
-        ),
-        vec![
-            CompletionItem {
-                label: "dep.Bar".into(),
-                kind: Some(CompletionItemKind::ENUM_MEMBER),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                detail: Some("Foo".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.Bar".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "dep.foo".into(),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                kind: Some(CompletionItemKind::CONSTANT),
-                detail: Some("Int".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.foo".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "dep.main".into(),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                kind: Some(CompletionItemKind::FUNCTION),
-                detail: Some("fn() -> Int".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.main".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "dep.random_float".into(),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                kind: Some(CompletionItemKind::FUNCTION),
-                detail: Some("fn() -> Float".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "dep.random_float".into()
-                })),
-                ..Default::default()
-            },
-        ]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source("import dep").add_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -2014,57 +693,10 @@ pub fn wibble(
 @internal pub type Alias = Int
 @internal pub type AnotherType { Constructor }
 "#;
-    let mut expected_completions = prelude_type_completions();
-    expected_completions.append(&mut vec![
-        CompletionItem {
-            label: "dep.Alias".into(),
-            label_details: None,
-            kind: Some(CompletionItemKind::CLASS),
-            detail: Some("Type".into()),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 3,
-                        character: 0,
-                    },
-                    end: Position {
-                        line: 3,
-                        character: 0,
-                    },
-                },
-                new_text: "dep.Alias".into(),
-            })),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "dep.AnotherType".into(),
-            label_details: None,
-            kind: Some(CompletionItemKind::CLASS),
-            detail: Some("Type".into()),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 3,
-                        character: 0,
-                    },
-                    end: Position {
-                        line: 3,
-                        character: 0,
-                    },
-                },
-                new_text: "dep.AnotherType".into(),
-            })),
-            ..Default::default()
-        },
-    ]);
-
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_module("dep", dep),
-            Position::new(3, 0)
-        ),
-        expected_completions,
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(3, 0)
+    ),);
 }
 
 #[test]
@@ -2077,107 +709,9 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
 @internal pub const foo = 1
 "#;
 
-    assert_eq!(
-        completion_at_default_position(TestProject::for_source(code)),
-        vec![
-            CompletionItem {
-                label: "Bar".into(),
-                kind: Some(CompletionItemKind::ENUM_MEMBER),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                detail: Some("Foo".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "Bar".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "foo".into(),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                kind: Some(CompletionItemKind::CONSTANT),
-                detail: Some("Int".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "foo".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "main".into(),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                kind: Some(CompletionItemKind::FUNCTION),
-                detail: Some("fn() -> Int".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "main".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "random_float".into(),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("app".into())
-                }),
-                kind: Some(CompletionItemKind::FUNCTION),
-                detail: Some("fn() -> Float".into()),
-                documentation: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0
-                        }
-                    },
-                    new_text: "random_float".into()
-                })),
-                ..Default::default()
-            },
-        ]
-    );
+    assert_debug_snapshot!(completion_at_default_position(TestProject::for_source(
+        code
+    )),);
 }
 
 #[test]
@@ -2189,55 +723,10 @@ fn internal_types_from_the_same_module_are_in_the_completions() {
 }
 ";
 
-    assert_eq!(
-        completion(TestProject::for_source(code), Position::new(3, 0)),
-        [
-            vec![
-                CompletionItem {
-                    label: "Alias".into(),
-                    kind: Some(CompletionItemKind::CLASS),
-                    detail: Some("Type".into()),
-                    documentation: None,
-                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: Range {
-                            start: Position {
-                                line: 3,
-                                character: 0
-                            },
-                            end: Position {
-                                line: 3,
-                                character: 0
-                            }
-                        },
-                        new_text: "Alias".into()
-                    })),
-                    ..Default::default()
-                },
-                CompletionItem {
-                    label: "AnotherType".into(),
-                    kind: Some(CompletionItemKind::CLASS),
-                    detail: Some("Type".into()),
-                    documentation: None,
-                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: Range {
-                            start: Position {
-                                line: 3,
-                                character: 0
-                            },
-                            end: Position {
-                                line: 3,
-                                character: 0
-                            }
-                        },
-                        new_text: "AnotherType".into()
-                    })),
-                    ..Default::default()
-                },
-            ],
-            prelude_type_completions(),
-        ]
-        .concat()
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(3, 0)
+    ),);
 }
 
 #[test]
@@ -2255,13 +744,10 @@ pub fn wibble(
 @internal pub type AnotherType { Constructor }
 "#;
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_dep_module("dep", dep),
-            Position::new(3, 0)
-        ),
-        prelude_type_completions(),
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_dep_module("dep", dep),
+        Position::new(3, 0)
+    ),);
 }
 
 #[test]
@@ -2274,12 +760,9 @@ fn internal_values_from_a_dependency_are_ignored() {
 @internal pub const foo = 1
 "#;
 
-    assert_eq!(
-        completion_at_default_position(
-            TestProject::for_source("import dep").add_dep_module("dep", dep)
-        ),
-        vec![]
-    );
+    assert_debug_snapshot!(completion_at_default_position(
+        TestProject::for_source("import dep").add_dep_module("dep", dep)
+    ),);
 }
 
 #[test]
@@ -2291,30 +774,10 @@ pub fn main() {
 }";
     let dep = "";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_module("dep", dep),
-            Position::new(0, 10)
-        ),
-        vec![CompletionItem {
-            label: "gleam".into(),
-            kind: Some(CompletionItemKind::MODULE),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: 7
-                    },
-                    end: Position {
-                        line: 0,
-                        character: 10
-                    }
-                },
-                new_text: "gleam".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(0, 10)
+    ),);
 }
 
 #[test]
@@ -2332,13 +795,10 @@ pub fn main() {
 }
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_test_module("my_tests", test),
-            Position::new(0, 10)
-        ),
-        vec![]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_test_module("my_tests", test),
+        Position::new(0, 10)
+    ),);
 }
 
 #[test]
@@ -2371,47 +831,7 @@ pub fn test_helper() {
     let mut completions = response.result.unwrap().unwrap_or_default();
     completions.sort_by(|a, b| a.label.cmp(&b.label));
 
-    assert_eq!(
-        completions,
-        vec![
-            CompletionItem {
-                label: "app".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 0,
-                            character: 7
-                        },
-                        end: Position {
-                            line: 0,
-                            character: 12
-                        }
-                    },
-                    new_text: "app".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "test_helper".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 0,
-                            character: 7
-                        },
-                        end: Position {
-                            line: 0,
-                            character: 12
-                        }
-                    },
-                    new_text: "test_helper".into()
-                })),
-                ..Default::default()
-            }
-        ]
-    );
+    assert_debug_snapshot!(completions,);
 }
 
 #[test]
@@ -2427,30 +847,10 @@ pub fn main() {
 pub fn main() { 1 }
     ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_dep_module("dep", dep),
-            Position::new(0, 10)
-        ),
-        vec![CompletionItem {
-            label: "dep".into(),
-            kind: Some(CompletionItemKind::MODULE),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: 7
-                    },
-                    end: Position {
-                        line: 0,
-                        character: 12
-                    }
-                },
-                new_text: "dep".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_dep_module("dep", dep),
+        Position::new(0, 10)
+    ),);
 }
 
 #[test]
@@ -2462,30 +862,10 @@ pub fn main() {
 }";
     let dep = "";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_hex_module("example_module", dep),
-            Position::new(0, 10)
-        ),
-        vec![CompletionItem {
-            label: "example_module".into(),
-            kind: Some(CompletionItemKind::MODULE),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: 7
-                    },
-                    end: Position {
-                        line: 0,
-                        character: 12
-                    }
-                },
-                new_text: "example_module".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_hex_module("example_module", dep),
+        Position::new(0, 10)
+    ),);
 }
 
 #[test]
@@ -2497,32 +877,12 @@ pub fn main() {
 }";
     let dep = "";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code)
-                .add_hex_module("example_module", dep)
-                .add_indirect_hex_module("indirect_module", ""),
-            Position::new(0, 10)
-        ),
-        vec![CompletionItem {
-            label: "example_module".into(),
-            kind: Some(CompletionItemKind::MODULE),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: 7
-                    },
-                    end: Position {
-                        line: 0,
-                        character: 12
-                    }
-                },
-                new_text: "example_module".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code)
+            .add_hex_module("example_module", dep)
+            .add_indirect_hex_module("indirect_module", ""),
+        Position::new(0, 10)
+    ),);
 }
 
 #[test]
@@ -2534,32 +894,12 @@ pub fn main() {
 }";
     let dep = "";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code)
-                .add_hex_module("example_module", dep)
-                .add_dev_hex_module("indirect_module", ""),
-            Position::new(0, 10)
-        ),
-        vec![CompletionItem {
-            label: "example_module".into(),
-            kind: Some(CompletionItemKind::MODULE),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: 7
-                    },
-                    end: Position {
-                        line: 0,
-                        character: 12
-                    }
-                },
-                new_text: "example_module".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code)
+            .add_hex_module("example_module", dep)
+            .add_dev_hex_module("indirect_module", ""),
+        Position::new(0, 10)
+    ),);
 }
 
 #[test]
@@ -2588,65 +928,7 @@ pub fn main() {
     let mut completions = response.result.unwrap().unwrap_or_default();
     completions.sort_by(|a, b| a.label.cmp(&b.label));
 
-    assert_eq!(
-        completions,
-        vec![
-            CompletionItem {
-                label: "app".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 0,
-                            character: 7
-                        },
-                        end: Position {
-                            line: 0,
-                            character: 12
-                        }
-                    },
-                    new_text: "app".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "example_module".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 0,
-                            character: 7
-                        },
-                        end: Position {
-                            line: 0,
-                            character: 12
-                        }
-                    },
-                    new_text: "example_module".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "indirect_module".into(),
-                kind: Some(CompletionItemKind::MODULE),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 0,
-                            character: 7
-                        },
-                        end: Position {
-                            line: 0,
-                            character: 12
-                        }
-                    },
-                    new_text: "indirect_module".into()
-                })),
-                ..Default::default()
-            }
-        ]
-    );
+    assert_debug_snapshot!(completions,);
 }
 
 #[test]
@@ -2665,30 +947,10 @@ pub fn main() {
 pub fn main() { 1 }
     ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_hex_module("example_module", dep),
-            Position::new(3, 10)
-        ),
-        vec![CompletionItem {
-            label: "example_module".into(),
-            kind: Some(CompletionItemKind::MODULE),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 3,
-                        character: 7
-                    },
-                    end: Position {
-                        line: 3,
-                        character: 12
-                    }
-                },
-                new_text: "example_module".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_hex_module("example_module", dep),
+        Position::new(3, 10)
+    ),);
 }
 
 #[test]
@@ -2700,30 +962,10 @@ pub fn main() {
 }";
     let dep = "";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_dep_module("dep", dep),
-            Position::new(0, 0)
-        ),
-        vec![CompletionItem {
-            label: "dep".into(),
-            kind: Some(CompletionItemKind::MODULE),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: 7
-                    },
-                    end: Position {
-                        line: 0,
-                        character: 12
-                    }
-                },
-                new_text: "dep".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_dep_module("dep", dep),
+        Position::new(0, 0)
+    ),);
 }
 
 #[test]
@@ -2735,30 +977,10 @@ pub fn main() {
 }";
     let dep = "";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_dep_module("dep", dep),
-            Position::new(0, 2)
-        ),
-        vec![CompletionItem {
-            label: "dep".into(),
-            kind: Some(CompletionItemKind::MODULE),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: 7
-                    },
-                    end: Position {
-                        line: 0,
-                        character: 13
-                    }
-                },
-                new_text: "dep".into()
-            })),
-            ..Default::default()
-        }]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_dep_module("dep", dep),
+        Position::new(0, 2)
+    ),);
 }
 
 #[test]
@@ -2770,34 +992,14 @@ pub fn main() {
 }";
     let internal_name = format!("{}/internal", LSP_TEST_ROOT_PACKAGE_NAME);
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code)
-                // Not included
-                .add_dep_module("dep/internal", "")
-                // Included
-                .add_module(&internal_name, ""),
-            Position::new(0, 0)
-        ),
-        vec![CompletionItem {
-            label: internal_name.clone(),
-            kind: Some(CompletionItemKind::MODULE),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: 7
-                    },
-                    end: Position {
-                        line: 0,
-                        character: 12
-                    }
-                },
-                new_text: internal_name.clone(),
-            })),
-            ..Default::default()
-        },]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code)
+            // Not included
+            .add_dep_module("dep/internal", "")
+            // Included
+            .add_module(&internal_name, ""),
+        Position::new(0, 0)
+    ),);
 }
 
 #[test]
@@ -2820,103 +1022,10 @@ pub fn myfun() {
 pub type Wibble = String
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_module("dep", dep),
-            Position::new(1, 12)
-        ),
-        vec![
-            CompletionItem {
-                label: "Wibble".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                label_details: None,
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 12
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 12
-                        }
-                    },
-                    new_text: "type Wibble".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "myfun".into(),
-                kind: Some(CompletionItemKind::FUNCTION),
-                detail: Some("fn() -> Int".into()),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("myfun".into()),
-                }),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 12
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 12
-                        }
-                    },
-                    new_text: "myfun".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "wabble".into(),
-                kind: Some(CompletionItemKind::CONSTANT),
-                detail: Some("String".into()),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("wabble".into()),
-                }),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 12
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 12
-                        }
-                    },
-                    new_text: "wabble".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "wibble".into(),
-                kind: Some(CompletionItemKind::CONSTANT),
-                detail: Some("String".into()),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("wibble".into()),
-                }),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 12
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 12
-                        }
-                    },
-                    new_text: "wibble".into()
-                })),
-                ..Default::default()
-            },
-        ]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(1, 12)
+    ),);
 }
 
 #[test]
@@ -2939,59 +1048,13 @@ pub fn myfun() {
 pub type Wibble = String
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_module("dep", dep),
-            // putting cursor at beginning of line because some formatters
-            // remove the empty whitespace in the test code.
-            // Does also work with (3, 2) when empty spaces are not removed.
-            Position::new(3, 0)
-        ),
-        vec![
-            CompletionItem {
-                label: "Wibble".into(),
-                kind: Some(CompletionItemKind::CLASS),
-                detail: Some("Type".into()),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 3,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 3,
-                            character: 0
-                        }
-                    },
-                    new_text: "type Wibble".into()
-                })),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "myfun".into(),
-                kind: Some(CompletionItemKind::FUNCTION),
-                detail: Some("fn() -> Int".into()),
-                label_details: Some(CompletionItemLabelDetails {
-                    detail: None,
-                    description: Some("myfun".into()),
-                }),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 3,
-                            character: 0
-                        },
-                        end: Position {
-                            line: 3,
-                            character: 0
-                        }
-                    },
-                    new_text: "myfun".into()
-                })),
-                ..Default::default()
-            },
-        ]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_module("dep", dep),
+        // putting cursor at beginning of line because some formatters
+        // remove the empty whitespace in the test code.
+        // Does also work with (3, 2) when empty spaces are not removed.
+        Position::new(3, 0)
+    ),);
 }
 
 #[test]
@@ -3014,35 +1077,10 @@ pub fn myfun() {
 pub type Wibble = String
 ";
 
-    assert_eq!(
-        completion(
-            TestProject::for_source(code).add_module("dep", dep),
-            Position::new(1, 12)
-        ),
-        vec![CompletionItem {
-            label: "myfun".into(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some("fn() -> Int".into()),
-            label_details: Some(CompletionItemLabelDetails {
-                detail: None,
-                description: Some("myfun".into()),
-            }),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 1,
-                        character: 11
-                    },
-                    end: Position {
-                        line: 1,
-                        character: 17
-                    }
-                },
-                new_text: "myfun".into()
-            })),
-            ..Default::default()
-        },]
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(1, 12)
+    ),);
 }
 
 #[test]
@@ -3055,10 +1093,10 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(TestProject::for_source(code), Position::new(2, 11)),
-        prelude_type_completions(),
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(2, 11)
+    ),);
 }
 
 #[test]
@@ -3071,10 +1109,10 @@ pub fn wibble(
 }
 ";
 
-    assert_eq!(
-        completion(TestProject::for_source(code), Position::new(3, 7)),
-        prelude_type_completions(),
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(3, 7)
+    ),);
 }
 
 #[test]
@@ -3085,10 +1123,10 @@ pub fn main() {
 }
 ";
 
-    assert_eq!(
-        completion(TestProject::for_source(code), Position::new(2, 16)),
-        prelude_type_completions(),
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(2, 16)
+    ),);
 }
 
 #[test]
@@ -3102,8 +1140,8 @@ pub fn main() {
 }
 ";
 
-    assert_eq!(
-        completion(TestProject::for_source(code), Position::new(2, 16)),
-        prelude_type_completions(),
-    );
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(2, 16)
+    ),);
 }

@@ -1,0 +1,116 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "completion_at_default_position(TestProject::for_source(code).add_module(\"dep\",\n            dep).add_module(\"dep2\", dep2))"
+---
+[
+    CompletionItem {
+        label: "dep.wobble",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "dep",
+                ),
+            },
+        ),
+        kind: Some(
+            Function,
+        ),
+        detail: Some(
+            "fn() -> Nil",
+        ),
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0,
+                        },
+                    },
+                    new_text: "dep.wobble",
+                },
+            ),
+        ),
+        additional_text_edits: Some(
+            [
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 7,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 7,
+                            character: 0,
+                        },
+                    },
+                    new_text: "import dep\n",
+                },
+            ],
+        ),
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "dep2.wobble",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Function,
+        ),
+        detail: Some(
+            "fn() -> Nil",
+        ),
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0,
+                        },
+                    },
+                    new_text: "dep2.wobble",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+]
