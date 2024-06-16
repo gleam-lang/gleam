@@ -13,6 +13,7 @@ use crate::{
     build::Target,
     exhaustiveness,
 };
+use heck::ToSnakeCase;
 use id_arena::Arena;
 use im::hashmap;
 use itertools::Itertools;
@@ -205,6 +206,7 @@ pub(crate) struct ExprTyper<'a, 'b> {
 
     // Accumulated errors found while typing the expression
     pub(crate) errors: &'a mut Vec<Error>,
+    pub(crate) bad_names: &'a mut Vec<(SrcSpan, EcoString)>,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
@@ -212,6 +214,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         environment: &'a mut Environment<'b>,
         definition: FunctionDefinition,
         errors: &'a mut Vec<Error>,
+        bad_names: &'a mut Vec<(SrcSpan, EcoString)>,
     ) -> Self {
         let mut hydrator = Hydrator::new();
 
@@ -235,6 +238,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             implementations,
             current_function_definition: definition,
             errors,
+            bad_names,
         }
     }
 
@@ -749,11 +753,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ArgNames::Discard { name } => {
                     if let Err(e) = check_valid_discard_name(*location, name) {
                         self.errors.push(e);
+                        self.bad_names.push((
+                            *location,
+                            EcoString::from(format!("_{}", name.to_snake_case())),
+                        ));
                     }
                 }
                 ArgNames::Named { name } => {
                     if let Err(e) = check_valid_name(*location, name) {
                         self.errors.push(e);
+                        self.bad_names
+                            .push((*location, EcoString::from(name.to_snake_case())));
                     }
                 }
                 ArgNames::LabelledDiscard { .. } => {
@@ -1301,7 +1311,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         };
 
-        self.errors.extend(check_valid_pattern_names(&pattern));
+        let errors = self.check_valid_pattern_names(&pattern);
+        self.errors.extend(errors);
 
         // Check that any type annotation is accurate.
         if let Some(annotation) = &annotation {
@@ -1382,11 +1393,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut all_clauses_panic = !clauses.is_empty();
         for clause in clauses {
             for pattern in clause.pattern.iter() {
-                self.errors.extend(check_valid_pattern_names(pattern));
+                let errors = self.check_valid_pattern_names(pattern);
+                self.errors.extend(errors);
             }
             for multi_pattern in clause.alternative_patterns.iter() {
                 for pattern in multi_pattern {
-                    self.errors.extend(check_valid_pattern_names(pattern));
+                    let errors = self.check_valid_pattern_names(pattern);
+                    self.errors.extend(errors);
                 }
             }
 
@@ -3268,6 +3281,89 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         Ok(())
     }
+
+    fn check_valid_pattern_names<T>(&mut self, pattern: &Pattern<T>) -> Vec<Error> {
+        match pattern {
+            Pattern::Variable { name, location, .. } => check_valid_name(*location, name)
+                .map_err(|e| {
+                    self.bad_names
+                        .push((*location, EcoString::from(name.to_snake_case())));
+                    vec![e]
+                })
+                .err()
+                .unwrap_or_default(),
+            Pattern::Discard { name, location, .. } => check_valid_discard_name(*location, name)
+                .map_err(|e| {
+                    self.bad_names.push((
+                        *location,
+                        EcoString::from(format!("_{}", name.to_snake_case())),
+                    ));
+                    vec![e]
+                })
+                .err()
+                .unwrap_or_default(),
+            Pattern::Assign { name, location, .. } => check_valid_name(*location, name)
+                .map_err(|e| {
+                    self.bad_names
+                        .push((*location, EcoString::from(name.to_snake_case())));
+                    vec![e]
+                })
+                .err()
+                .unwrap_or_default(),
+            Pattern::List { elements, .. } => elements
+                .iter()
+                .flat_map(|element| self.check_valid_pattern_names(element))
+                .collect(),
+            Pattern::Constructor { arguments, .. } => arguments
+                .iter()
+                .flat_map(|arg| self.check_valid_pattern_names(&arg.value))
+                .collect(),
+            Pattern::Tuple { elems, .. } => elems
+                .iter()
+                .flat_map(|element| self.check_valid_pattern_names(element))
+                .collect(),
+            Pattern::BitArray { segments, .. } => segments
+                .iter()
+                .flat_map(|element| self.check_valid_pattern_names(&element.value))
+                .collect(),
+            Pattern::StringPrefix {
+                left_side_assignment,
+                right_location,
+                right_side_assignment,
+                ..
+            } => {
+                let mut errors = Vec::new();
+
+                if let Some((name, location)) = left_side_assignment {
+                    let _ = check_valid_name(*location, name).map_err(|e| {
+                        errors.push(e);
+                        self.bad_names
+                            .push((*location, EcoString::from(name.to_snake_case())));
+                    });
+                }
+
+                let _ = match right_side_assignment {
+                    AssignName::Variable(name) => {
+                        check_valid_name(*right_location, name).map_err(|e| {
+                            errors.push(e);
+                            self.bad_names
+                                .push((*right_location, EcoString::from(name.to_snake_case())));
+                        })
+                    }
+                    AssignName::Discard(name) => check_valid_discard_name(*right_location, name)
+                        .map_err(|e| {
+                            errors.push(e);
+                            self.bad_names.push((
+                                *right_location,
+                                EcoString::from(format!("_{}", name.to_snake_case())),
+                            ));
+                        }),
+                };
+                errors
+            }
+            _ => Vec::new(),
+        }
+    }
 }
 
 fn check_subject_for_redundant_match(
@@ -3474,58 +3570,5 @@ impl UseAssignments {
         }
 
         assignments
-    }
-}
-
-fn check_valid_pattern_names<T>(pattern: &Pattern<T>) -> Vec<Error> {
-    match pattern {
-        Pattern::Variable { name, location, .. } => check_valid_name(*location, name)
-            .map_err(|e| vec![e])
-            .err()
-            .unwrap_or_default(),
-        Pattern::Discard { name, location, .. } => check_valid_discard_name(*location, name)
-            .map_err(|e| vec![e])
-            .err()
-            .unwrap_or_default(),
-        Pattern::Assign { name, location, .. } => check_valid_name(*location, name)
-            .map_err(|e| vec![e])
-            .err()
-            .unwrap_or_default(),
-        Pattern::List { elements, .. } => elements
-            .iter()
-            .flat_map(|element| check_valid_pattern_names(element))
-            .collect(),
-        Pattern::Constructor { arguments, .. } => arguments
-            .iter()
-            .flat_map(|arg| check_valid_pattern_names(&arg.value))
-            .collect(),
-        Pattern::Tuple { elems, .. } => elems
-            .iter()
-            .flat_map(|element| check_valid_pattern_names(element))
-            .collect(),
-        Pattern::BitArray { segments, .. } => segments
-            .iter()
-            .flat_map(|element| check_valid_pattern_names(&element.value))
-            .collect(),
-        Pattern::StringPrefix {
-            left_side_assignment,
-            right_location,
-            right_side_assignment,
-            ..
-        } => {
-            let mut errors = Vec::new();
-
-            if let Some((name, location)) = left_side_assignment {
-                let _ = check_valid_name(*location, name).map_err(|e| errors.push(e));
-            }
-
-            let _ = match right_side_assignment {
-                AssignName::Variable(name) => check_valid_name(*right_location, name),
-                AssignName::Discard(name) => check_valid_discard_name(*right_location, name),
-            }
-            .map_err(|e| errors.push(e));
-            errors
-        }
-        _ => Vec::new(),
     }
 }

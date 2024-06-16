@@ -259,6 +259,7 @@ fn compile_statement_sequence(
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let errors = &mut vec![];
+    let bad_names = &mut vec![];
     let res = ExprTyper::new(
         &mut Environment::new(
             ids,
@@ -275,6 +276,7 @@ fn compile_statement_sequence(
             has_javascript_external: false,
         },
         errors,
+        bad_names
     )
     .infer_statements(ast);
     match Vec1::try_from_vec(errors.to_vec()) {
@@ -717,6 +719,7 @@ fn infer_module_type_retention_test() {
             values: HashMap::new(),
             accessors: HashMap::new(),
             unused_imports: Vec::new(),
+            bad_names: Vec::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "".into(),
         }
