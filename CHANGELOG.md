@@ -73,6 +73,10 @@
   the same name as an imported type.
   ([Gears](https://github.com/gearsdatapacks))
 
+- Fixed a bug where a horizontal scrollbar would appear on code blocks in built
+  documentation when they contained lines 79 or 80 characters long.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ## v1.2.1 - 2024-05-30
 
 ### Bug Fixes
