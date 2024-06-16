@@ -33,6 +33,7 @@ use crate::{
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
+use heck::{ToSnakeCase, ToUpperCamelCase};
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -159,6 +160,7 @@ impl<'a, A> ModuleAnalyzerConstructor<'a, A> {
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
+            bad_names: vec![],
         }
         .infer_module(module)
     }
@@ -177,6 +179,7 @@ struct ModuleAnalyzer<'a, A> {
     src_path: Utf8PathBuf,
     errors: Vec<Error>,
     value_names: HashMap<EcoString, SrcSpan>,
+    bad_names: Vec<(SrcSpan, EcoString)>,
     hydrators: HashMap<EcoString, Hydrator>,
     module_name: EcoString,
 }
@@ -315,6 +318,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 package: self.package_config.name.clone(),
                 is_internal,
                 unused_imports,
+                bad_names: self.bad_names,
                 contains_todo,
                 line_numbers: self.line_numbers,
                 src_path: self.src_path,
@@ -348,6 +352,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = c;
         if let Err(e) = check_valid_name(location, &name) {
             self.errors.push(e);
+            self.bad_names
+                .push((location, EcoString::from(name.to_snake_case())));
         }
 
         let definition = FunctionDefinition {
@@ -355,7 +361,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             has_erlang_external: false,
             has_javascript_external: false,
         };
-        let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors);
+        let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors, &mut self.bad_names);
         let typed_expr = expr_typer.infer_const(&annotation, *value);
         let type_ = typed_expr.type_();
         let implementations = expr_typer.implementations;
@@ -474,7 +480,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(|environment| {
-            let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors);
+            let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors, &mut self.bad_names);
             expr_typer.hydrator = self
                 .hydrators
                 .remove(&name)
@@ -741,6 +747,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                  }| {
                     if let Err(e) = check_valid_upname(location, &name) {
                         self.errors.push(e);
+                        self.bad_names
+                            .push((location, EcoString::from(name.to_upper_camel_case())));
                     }
 
                     let preregistered_fn = environment
@@ -756,6 +764,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                                     if let Some(label) = &argument.label {
                                         if let Err(e) = check_valid_name(argument.location, label) {
                                             self.errors.push(e);
+                                            self.bad_names.push((
+                                                location,
+                                                EcoString::from(name.to_snake_case()),
+                                            ));
                                         }
                                     }
 
@@ -975,6 +987,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         if let Err(e) = check_valid_upname(*location, name) {
             self.errors.push(e);
+            self.bad_names
+                .push((*location, EcoString::from(name.to_upper_camel_case())));
         }
 
         let mut hydrator = Hydrator::new();
@@ -1054,6 +1068,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         if let Err(e) = check_valid_upname(*location, name) {
             self.errors.push(e);
+            self.bad_names
+                .push((*location, EcoString::from(name.to_upper_camel_case())));
         }
 
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
@@ -1145,6 +1161,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         if let Err(e) = check_valid_name(*location, name) {
             self.errors.push(e);
+            self.bad_names
+                .push((*location, EcoString::from(name.to_snake_case())));
         }
 
         let mut builder = FieldMapBuilder::new(args.len() as u32);
@@ -1156,27 +1174,43 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 ArgNames::Discard { name } => {
                     if let Err(e) = check_valid_discard_name(*location, name) {
                         self.errors.push(e);
+                        self.bad_names.push((
+                            *location,
+                            EcoString::from(format!("_{}", name.to_snake_case())),
+                        ));
                     }
                 }
                 ArgNames::LabelledDiscard { label, name } => {
                     if let Err(e) = check_valid_name(*location, label) {
                         self.errors.push(e);
+                        self.bad_names
+                            .push((*location, EcoString::from(name.to_snake_case())));
                     }
                     if let Err(e) = check_valid_discard_name(*location, name) {
                         self.errors.push(e);
+                        self.bad_names.push((
+                            *location,
+                            EcoString::from(format!("_{}", name.to_snake_case())),
+                        ));
                     }
                 }
                 ArgNames::Named { name } => {
                     if let Err(e) = check_valid_name(*location, name) {
                         self.errors.push(e);
+                        self.bad_names
+                            .push((*location, EcoString::from(name.to_snake_case())));
                     }
                 }
                 ArgNames::NamedLabelled { name, label } => {
                     if let Err(e) = check_valid_name(*location, label) {
                         self.errors.push(e);
+                        self.bad_names
+                            .push((*location, EcoString::from(name.to_snake_case())));
                     }
                     if let Err(e) = check_valid_name(*location, name) {
                         self.errors.push(e);
+                        self.bad_names
+                            .push((*location, EcoString::from(name.to_snake_case())));
                     }
                 }
             }

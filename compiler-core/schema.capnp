@@ -19,6 +19,11 @@ struct Option(Value) {
   }
 }
 
+struct BadName {
+  location @0 :SrcSpan;
+  name @1 :Text;
+}
+
 struct Module {
   name @0 :Text;
   types @1 :List(Property(TypeConstructor));
@@ -27,10 +32,11 @@ struct Module {
   package @4 :Text;
   typesConstructors @5 :List(Property(TypesVariantConstructors));
   unusedImports @6 :List(SrcSpan);
-  containsTodo @7 :Bool;
-  lineNumbers @8 :LineNumbers;
-  srcPath @9 :Text;
-  isInternal @10 :Bool;
+  badNames @7 :List(BadName);
+  containsTodo @8 :Bool;
+  lineNumbers @9 :LineNumbers;
+  srcPath @10 :Text;
+  isInternal @11 :Bool;
 }
 
 struct TypesVariantConstructors {

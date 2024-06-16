@@ -597,6 +597,7 @@ pub struct ModuleInterface {
     pub values: HashMap<EcoString, ValueConstructor>,
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
+    pub bad_names: Vec<(SrcSpan, EcoString)>,
     pub contains_todo: bool,
     /// Used for mapping to original source locations on disk
     pub line_numbers: LineNumbers,
@@ -687,6 +688,7 @@ impl ModuleInterface {
             values: Default::default(),
             accessors: Default::default(),
             unused_imports: Default::default(),
+            bad_names: Default::default(),
             contains_todo: false,
             is_internal: false,
             line_numbers,
