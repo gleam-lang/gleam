@@ -36,6 +36,7 @@ fn parse_and_order(
             end_position: src.len() as u32,
             return_type: (),
             documentation: None,
+            doc_position: None,
             external_erlang: None,
             external_javascript: None,
             implementations: Implementations {
@@ -53,6 +54,7 @@ fn parse_and_order(
             let const_value = crate::parse::parse_const_value(value).expect("syntax error");
             ModuleConstant {
                 documentation: None,
+                doc_position: None,
                 location: Default::default(),
                 publicity: Publicity::Public,
                 name: EcoString::from(*name),

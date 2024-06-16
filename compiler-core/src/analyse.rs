@@ -338,6 +338,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     ) -> TypedDefinition {
         let ModuleConstant {
             documentation: doc,
+            doc_position,
             location,
             name,
             annotation,
@@ -385,6 +386,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         Definition::ModuleConstant(ModuleConstant {
             documentation: doc,
+            doc_position,
             location,
             name,
             annotation,
@@ -406,6 +408,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     ) -> TypedDefinition {
         let Function {
             documentation: doc,
+            doc_position,
             location,
             name,
             name_location,
@@ -548,6 +551,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         Definition::Function(Function {
             documentation: doc,
+            doc_position,
             location,
             name,
             name_location,
@@ -713,6 +717,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         let CustomType {
             documentation: doc,
+            doc_position,
             location,
             end_position,
             publicity,
@@ -733,6 +738,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                      name,
                      arguments: args,
                      documentation,
+                     doc_position,
                  }| {
                     let preregistered_fn = environment
                         .get_variable(&name)
@@ -750,6 +756,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                                     location: argument.location,
                                     type_: t.clone(),
                                     doc: None,
+                                    doc_position: None,
                                 })
                                 .collect()
                         } else {
@@ -761,6 +768,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         name,
                         arguments: args,
                         documentation,
+                        doc_position,
                     }
                 },
             )
@@ -773,6 +781,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         Ok(Definition::CustomType(CustomType {
             documentation: doc,
+            doc_position,
             location,
             end_position,
             publicity,
@@ -1018,6 +1027,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             deprecation,
             type_: _,
             documentation,
+            doc_position: _,
         } = t;
 
         // A type alias must not have the same name as any other type in the module.
@@ -1107,6 +1117,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_annotation,
             publicity,
             documentation,
+            doc_position: _,
             external_erlang,
             external_javascript,
             deprecation,
@@ -1231,6 +1242,7 @@ fn target_function_implementation<'a>(
 fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> TypedDefinition {
     let TypeAlias {
         documentation: doc,
+        doc_position,
         location,
         publicity,
         alias,
@@ -1251,6 +1263,7 @@ fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> Ty
     };
     Definition::TypeAlias(TypeAlias {
         documentation: doc,
+        doc_position,
         location,
         publicity,
         alias,
@@ -1333,6 +1346,7 @@ fn generalise_module_constant(
 ) -> TypedDefinition {
     let ModuleConstant {
         documentation: doc,
+        doc_position,
         location,
         name,
         annotation,
@@ -1371,6 +1385,7 @@ fn generalise_module_constant(
 
     Definition::ModuleConstant(ModuleConstant {
         documentation: doc,
+        doc_position,
         location,
         name,
         annotation,
@@ -1389,6 +1404,7 @@ fn generalise_function(
 ) -> TypedDefinition {
     let Function {
         documentation: doc,
+        doc_position,
         location,
         name,
         name_location,
@@ -1446,6 +1462,7 @@ fn generalise_function(
 
     Definition::Function(Function {
         documentation: doc,
+        doc_position,
         location,
         name,
         name_location,

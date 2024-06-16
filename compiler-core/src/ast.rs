@@ -206,6 +206,7 @@ pub struct RecordConstructor<T> {
     pub name: EcoString,
     pub arguments: Vec<RecordConstructorArg<T>>,
     pub documentation: Option<EcoString>,
+    pub doc_position: Option<u32>,
 }
 
 impl<A> RecordConstructor<A> {
@@ -224,6 +225,7 @@ pub struct RecordConstructorArg<T> {
     pub location: SrcSpan,
     pub type_: T,
     pub doc: Option<EcoString>,
+    pub doc_position: Option<u32>,
 }
 
 impl<T: PartialEq> RecordConstructorArg<T> {
@@ -476,6 +478,7 @@ pub struct Function<T, Expr> {
     pub return_annotation: Option<TypeAst>,
     pub return_type: T,
     pub documentation: Option<EcoString>,
+    pub doc_position: Option<u32>,
     pub external_erlang: Option<(EcoString, EcoString)>,
     pub external_javascript: Option<(EcoString, EcoString)>,
     pub implementations: Implementations,
@@ -540,6 +543,7 @@ pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 /// ```
 pub struct ModuleConstant<T, ConstantRecordTag> {
     pub documentation: Option<EcoString>,
+    pub doc_position: Option<u32>,
     pub location: SrcSpan,
     pub publicity: Publicity,
     pub name: EcoString,
@@ -576,6 +580,7 @@ pub struct CustomType<T> {
     pub publicity: Publicity,
     pub constructors: Vec<RecordConstructor<T>>,
     pub documentation: Option<EcoString>,
+    pub doc_position: Option<u32>,
     pub deprecation: Deprecation,
     pub opaque: bool,
     /// The names of the type parameters.
@@ -614,6 +619,7 @@ pub struct TypeAlias<T> {
     pub type_: T,
     pub publicity: Publicity,
     pub documentation: Option<EcoString>,
+    pub doc_position: Option<u32>,
     pub deprecation: Deprecation,
 }
 

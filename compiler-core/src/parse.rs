@@ -1565,6 +1565,7 @@ where
         } else {
             self.take_documentation(start)
         };
+        let (doc_start, documentation) = documentation.unzip();
         let mut name = EcoString::from("");
         let mut name_location = None;
         if !is_anon {
@@ -1622,6 +1623,7 @@ where
 
         Ok(Some(Definition::Function(Function {
             documentation,
+            doc_position: doc_start,
             location: SrcSpan { start, end },
             name_location,
             end_position,
@@ -1817,7 +1819,7 @@ where
         opaque: bool,
         attributes: &mut Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
-        let documentation = self.take_documentation(start);
+        let (doc_start, documentation) = self.take_documentation(start).unzip();
         let (name_start, name, parameters, end) = self.expect_type_name()?;
         let (constructors, end_position) = if self.maybe_one(&Token::LeftBrace).is_some() {
             // Custom Type
@@ -1825,7 +1827,7 @@ where
                 self,
                 &|p| {
                     if let Some((c_s, c_n, c_e)) = Parser::maybe_upname(p) {
-                        let documentation = p.take_documentation(c_s);
+                        let (doc_start, documentation) = p.take_documentation(c_s).unzip();
                         let (args, args_e) = Parser::parse_type_constructor_args(p)?;
                         let end = args_e.max(c_e);
                         Ok(Some(RecordConstructor {
@@ -1833,6 +1835,7 @@ where
                             name: c_n,
                             arguments: args,
                             documentation,
+                            doc_position: doc_start,
                         }))
                     } else {
                         Ok(None)
@@ -1854,6 +1857,7 @@ where
                 let type_end = t.location().end;
                 return Ok(Some(Definition::TypeAlias(TypeAlias {
                     documentation,
+                    doc_position: doc_start,
                     location: SrcSpan::new(start, type_end),
                     publicity: self.publicity(public, attributes.internal)?,
                     alias: name,
@@ -1871,6 +1875,7 @@ where
         };
         Ok(Some(Definition::CustomType(CustomType {
             documentation,
+            doc_position: doc_start,
             location: SrcSpan { start, end },
             end_position,
             publicity: self.publicity(public, attributes.internal)?,
@@ -1920,7 +1925,7 @@ where
                     ) => {
                         let _ = Parser::next_tok(p);
                         let _ = Parser::next_tok(p);
-                        let doc = p.take_documentation(start);
+                        let (doc_start, doc) = p.take_documentation(start).unzip();
                         match Parser::parse_type(p)? {
                             Some(type_ast) => {
                                 let end = type_ast.location().end;
@@ -1934,6 +1939,7 @@ where
                                     location: SrcSpan { start, end },
                                     type_: (),
                                     doc,
+                                    doc_position: doc_start,
                                 }))
                             }
                             None => {
@@ -1946,9 +1952,9 @@ where
                         p.tok1 = t1;
                         match Parser::parse_type(p)? {
                             Some(type_ast) => {
-                                let doc = match &p.tok0 {
-                                    Some((start, _, _)) => p.take_documentation(*start),
-                                    None => None,
+                                let (doc_start, doc) = match &p.tok0 {
+                                    Some((start, _, _)) => p.take_documentation(*start).unzip(),
+                                    None => (None, None),
                                 };
                                 let type_location = type_ast.location();
                                 Ok(Some(RecordConstructorArg {
@@ -1958,6 +1964,7 @@ where
                                     location: type_location,
                                     type_: (),
                                     doc,
+                                    doc_position: doc_start,
                                 }))
                             }
                             None => Ok(None),
@@ -2148,7 +2155,7 @@ where
             }
         }
 
-        let documentation = self.take_documentation(start);
+        let (_, documentation) = self.take_documentation(start).unzip();
 
         // Gather imports
         let mut unqualified_values = vec![];
@@ -2277,7 +2284,7 @@ where
         attributes: &Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let (start, name, end) = self.expect_name()?;
-        let documentation = self.take_documentation(start);
+        let (doc_start, documentation) = self.take_documentation(start).unzip();
 
         let annotation = self.parse_type_annotation(&Token::Colon)?;
 
@@ -2285,6 +2292,7 @@ where
         if let Some(value) = self.parse_const_value()? {
             Ok(Some(Definition::ModuleConstant(ModuleConstant {
                 documentation,
+                doc_position: doc_start,
                 location: SrcSpan { start, end },
                 publicity: self.publicity(public, attributes.internal)?,
                 name,
@@ -2973,9 +2981,13 @@ where
         t
     }
 
-    fn take_documentation(&mut self, until: u32) -> Option<EcoString> {
+    fn take_documentation(&mut self, until: u32) -> Option<(u32, EcoString)> {
         let mut content = String::new();
+        let mut doc_start = u32::MAX;
         while let Some((start, line)) = self.doc_comments.front() {
+            if *start < doc_start {
+                doc_start = *start;
+            }
             if *start >= until {
                 break;
             }
@@ -2986,7 +2998,7 @@ where
         if content.is_empty() {
             None
         } else {
-            Some(content.into())
+            Some((doc_start, content.into()))
         }
     }
 

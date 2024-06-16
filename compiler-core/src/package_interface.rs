@@ -392,6 +392,7 @@ impl ModuleInterface {
                     typed_parameters,
                     parameters: _,
                     location: _,
+                    doc_position: _,
                     name_location: _,
                     end_position: _,
                 }) => {
@@ -444,6 +445,7 @@ impl ModuleInterface {
                     documentation,
                     deprecation,
                     alias_location: _,
+                    doc_position: _,
                     location: _,
                     type_ast: _,
                 }) => {
@@ -467,6 +469,7 @@ impl ModuleInterface {
                     implementations,
                     deprecation,
                     location: _,
+                    doc_position: _,
                     annotation: _,
                     value: _,
                 }) => {
@@ -494,6 +497,7 @@ impl ModuleInterface {
                     implementations,
                     location: _,
                     name_location: _,
+                    doc_position: _,
                     end_position: _,
                     body: _,
                     return_annotation: _,

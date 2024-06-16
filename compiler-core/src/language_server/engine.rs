@@ -287,8 +287,11 @@ where
                     Definition::Function(function) => {
                         // By default, the function's location ends right after the return type.
                         // For the full symbol range, have it end at the end of the body.
-                        let full_function_span =
-                            SrcSpan::new(function.location.start, function.end_position);
+                        // Also include the documentation, if available.
+                        let full_function_span = SrcSpan {
+                            start: function.doc_position.unwrap_or(function.location.start),
+                            end: function.end_position,
+                        };
 
                         symbols.push(DocumentSymbol {
                             name: function.name.to_string(),
@@ -308,16 +311,26 @@ where
                     }
 
                     #[allow(deprecated)]
-                    Definition::TypeAlias(alias) => symbols.push(DocumentSymbol {
-                        name: alias.alias.to_string(),
-                        detail: Some(Printer::new().pretty_print(&alias.type_, 0)),
-                        kind: SymbolKind::CLASS,
-                        tags: make_deprecated_symbol_tag(&alias.deprecation),
-                        deprecated: None,
-                        range: src_span_to_lsp_range(alias.location, &line_numbers),
-                        selection_range: src_span_to_lsp_range(alias.alias_location, &line_numbers),
-                        children: None,
-                    }),
+                    Definition::TypeAlias(alias) => {
+                        let full_alias_span = match alias.doc_position {
+                            Some(doc_position) => SrcSpan::new(doc_position, alias.location.end),
+                            None => alias.location,
+                        };
+
+                        symbols.push(DocumentSymbol {
+                            name: alias.alias.to_string(),
+                            detail: Some(Printer::new().pretty_print(&alias.type_, 0)),
+                            kind: SymbolKind::CLASS,
+                            tags: make_deprecated_symbol_tag(&alias.deprecation),
+                            deprecated: None,
+                            range: src_span_to_lsp_range(full_alias_span, &line_numbers),
+                            selection_range: src_span_to_lsp_range(
+                                alias.alias_location,
+                                &line_numbers,
+                            ),
+                            children: None,
+                        });
+                    }
 
                     Definition::CustomType(type_) => {
                         symbols.push(custom_type_symbol(type_, &line_numbers));
@@ -331,8 +344,11 @@ where
                         // Therefore, it is only suitable for `selection_range` below.
                         // For the full symbol span, necessary for `range`, include the
                         // constant value as well.
-                        let full_constant_span =
-                            SrcSpan::new(constant.location.start, constant.value.location().end);
+                        // Also include the documentation, if available.
+                        let full_constant_span = SrcSpan {
+                            start: constant.doc_position.unwrap_or(constant.location.start),
+                            end: constant.value.location().end,
+                        };
 
                         symbols.push(DocumentSymbol {
                             name: constant.name.to_string(),
@@ -957,6 +973,11 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
                     continue;
                 };
 
+                let full_arg_span = match argument.doc_position {
+                    Some(doc_position) => SrcSpan::new(doc_position, argument.location.end),
+                    None => argument.location,
+                };
+
                 #[allow(deprecated)]
                 arguments.push(DocumentSymbol {
                     name: label.to_string(),
@@ -964,7 +985,7 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
                     kind: SymbolKind::FIELD,
                     tags: None,
                     deprecated: None,
-                    range: src_span_to_lsp_range(argument.location, line_numbers),
+                    range: src_span_to_lsp_range(full_arg_span, line_numbers),
                     selection_range: src_span_to_lsp_range(
                         argument.label_location.unwrap_or(argument.location),
                         line_numbers,
@@ -976,11 +997,17 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
             // The constructor's location only contains its name by default.
             // For the full symbol range, take from the start of the name to right after
             // the last argument.
-            let full_constructor_span = match constructor.arguments.last() {
-                Some(last_argument) => {
-                    SrcSpan::new(constructor.location.start, last_argument.location.end + 1)
-                }
-                None => constructor.location,
+            // Include documentation as well if it is available.
+            let full_constructor_span = SrcSpan {
+                start: constructor
+                    .doc_position
+                    .unwrap_or(constructor.location.start),
+
+                end: constructor
+                    .arguments
+                    .last()
+                    .map(|last_arg| last_arg.location.end + 1)
+                    .unwrap_or(constructor.location.end),
             };
 
             #[allow(deprecated)]
@@ -1003,7 +1030,11 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
 
     // The type's location, by default, ranges from "(pub) type" to the end of its name.
     // We need it to range to the end of its constructors instead for the full symbol range.
-    let full_type_span = SrcSpan::new(type_.location.start, type_.end_position);
+    // We also include documentation, if available, by LSP convention.
+    let full_type_span = SrcSpan {
+        start: type_.doc_position.unwrap_or(type_.location.start),
+        end: type_.end_position,
+    };
 
     #[allow(deprecated)]
     DocumentSymbol {
