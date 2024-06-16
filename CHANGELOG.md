@@ -28,7 +28,6 @@
   reserved word in Erlang/OTP 27.
   ([Jake Barszcz](https://github.com/barszcz))
 
-
 ### Formatter
 
 ### Language Server
@@ -53,6 +52,9 @@
   ```
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- LSP can now suggest completions for values and types from importable modules and adds the import to the top of the file.
+  ([Ameen Radwan](https://github.com/Acepie)
 
 ### Bug Fixes
 

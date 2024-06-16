@@ -214,17 +214,17 @@ where
                 Located::Pattern(_pattern) => None,
 
                 Located::Statement(_) | Located::Expression(_) => {
-                    Some(this.completion_values(module))
+                    Some(this.completion_values(module, &line_numbers))
                 }
 
                 Located::ModuleStatement(Definition::Function(_)) => {
-                    Some(this.completion_types(module))
+                    Some(this.completion_types(module, &line_numbers))
                 }
 
-                Located::FunctionBody(_) => Some(this.completion_values(module)),
+                Located::FunctionBody(_) => Some(this.completion_values(module, &line_numbers)),
 
                 Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_)) => {
-                    Some(this.completion_types(module))
+                    Some(this.completion_types(module, &line_numbers))
                 }
 
                 // If the import completions returned no results and we are in an import then
@@ -242,7 +242,7 @@ where
 
                 Located::Arg(_) => None,
 
-                Located::Annotation(_, _) => Some(this.completion_types(module)),
+                Located::Annotation(_, _) => Some(this.completion_types(module, &line_numbers)),
             };
 
             Ok(completions)
@@ -415,7 +415,11 @@ where
         }
     }
 
-    fn completion_types<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
+    fn completion_types<'b>(
+        &'b self,
+        module: &'b Module,
+        line_numbers: &LineNumbers,
+    ) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
 
         // Prelude types
@@ -465,18 +469,54 @@ where
             }
         }
 
+        // Importable modules
+        let import_location = self.first_import_line_in_module(module, line_numbers);
+        for (module_full_name, module) in self.completable_modules_for_import(module) {
+            if module_full_name == "gleam" {
+                continue;
+            }
+
+            // Qualified types
+            for (name, type_) in &module.types {
+                if !self.is_suggestable_import(&type_.publicity, module.package.as_str()) {
+                    continue;
+                }
+
+                let mod_import_name = module_full_name
+                    .split('/')
+                    .last()
+                    .map(EcoString::from)
+                    .unwrap_or(module_full_name.clone());
+
+                let mut completion = type_completion(Some(&mod_import_name), name, type_);
+                completion.additional_text_edits = Some(vec![lsp::TextEdit {
+                    range: lsp::Range {
+                        start: import_location,
+                        end: import_location,
+                    },
+                    new_text: ["import ", module_full_name, "\n"].concat(),
+                }]);
+                completions.push(completion);
+            }
+        }
+
         completions
     }
 
-    fn completion_values<'b>(&'b self, module: &'b Module) -> Vec<lsp::CompletionItem> {
+    fn completion_values<'b>(
+        &'b self,
+        module: &'b Module,
+        line_numbers: &LineNumbers,
+    ) -> Vec<lsp::CompletionItem> {
         let mut completions = vec![];
+        let mod_name = module.name.as_str();
 
         // Module functions
         for (name, value) in &module.ast.type_info.values {
             // Here we do not check for the internal attribute: we always want
             // to show autocompletions for values defined in the same module,
             // even if those are internal.
-            completions.push(value_completion(None, name, value));
+            completions.push(value_completion(None, mod_name, name, value));
         }
 
         // Imported modules
@@ -496,7 +536,7 @@ where
 
                 let module = import.used_name();
                 if module.is_some() {
-                    completions.push(value_completion(module.as_deref(), name, value));
+                    completions.push(value_completion(module.as_deref(), mod_name, name, value));
                 }
             }
 
@@ -504,10 +544,38 @@ where
             for unqualified in &import.unqualified_values {
                 match module.get_public_value(&unqualified.name) {
                     Some(value) => {
-                        completions.push(value_completion(None, unqualified.used_name(), value))
+                        let name = unqualified.used_name();
+                        completions.push(value_completion(None, mod_name, name, value))
                     }
                     None => continue,
                 }
+            }
+        }
+
+        // Importable modules
+        let import_location = self.first_import_line_in_module(module, line_numbers);
+        for (module_full_name, module) in self.completable_modules_for_import(module) {
+            if module_full_name == "gleam" {
+                continue;
+            }
+            let qualifier = module_full_name.split('/').last();
+
+            // Qualified values
+            for (name, value) in &module.values {
+                if !self.is_suggestable_import(&value.publicity, module.package.as_str()) {
+                    continue;
+                }
+
+                let mut completion = value_completion(qualifier, module_full_name, name, value);
+
+                completion.additional_text_edits = Some(vec![lsp::TextEdit {
+                    range: lsp::Range {
+                        start: import_location,
+                        end: import_location,
+                    },
+                    new_text: ["import ", module_full_name, "\n"].concat(),
+                }]);
+                completions.push(completion);
             }
         }
 
@@ -578,7 +646,7 @@ where
             if already_imported_values.contains(name) {
                 continue;
             }
-            completions.push(value_completion(None, name, value));
+            completions.push(value_completion(None, name, name, value));
         }
 
         completions
@@ -630,12 +698,11 @@ where
         }
     }
 
-    fn complete_modules_for_import<'b>(
+    // Get all the modules that can be imported that have not already been imported.
+    fn completable_modules_for_import<'b>(
         &'b self,
         current_module: &'b Module,
-        start: lsp::Position,
-        end: lsp::Position,
-    ) -> Vec<lsp::CompletionItem> {
+    ) -> Vec<(&EcoString, &ModuleInterface)> {
         let mut direct_dep_packages: std::collections::HashSet<&EcoString> =
             std::collections::HashSet::from_iter(
                 self.compiler.project_compiler.config.dependencies.keys(),
@@ -678,8 +745,18 @@ where
             //
             // You cannot import yourself
             .filter(|(name, _)| *name != &current_module.name)
-            //
-            // Everything else we suggest as a completion
+            .collect()
+    }
+
+    // Get all the completions for modules that can be imported
+    fn complete_modules_for_import<'b>(
+        &'b self,
+        current_module: &'b Module,
+        start: lsp::Position,
+        end: lsp::Position,
+    ) -> Vec<lsp::CompletionItem> {
+        self.completable_modules_for_import(current_module)
+            .iter()
             .map(|(name, _)| lsp::CompletionItem {
                 label: name.to_string(),
                 kind: Some(lsp::CompletionItemKind::MODULE),
@@ -690,6 +767,22 @@ where
                 ..Default::default()
             })
             .collect()
+    }
+
+    // Gets the position of the line with the first import statement in the file.
+    fn first_import_line_in_module<'b>(
+        &'b self,
+        module: &'b Module,
+        line_numbers: &LineNumbers,
+    ) -> lsp::Position {
+        let import_location = module
+            .ast
+            .definitions
+            .iter()
+            .find_map(get_import)
+            .map_or(0, |i| i.location.start);
+        let import_location = line_numbers.line_number(import_location);
+        lsp::Position::new(import_location - 1, 0)
     }
 
     fn root_package_name(&self) -> &str {
@@ -722,11 +815,12 @@ fn type_completion(
 }
 
 fn value_completion(
-    module: Option<&str>,
+    module_qualifier: Option<&str>,
+    module_name: &str,
     name: &str,
     value: &crate::type_::ValueConstructor,
 ) -> lsp::CompletionItem {
-    let label = match module {
+    let label = match module_qualifier {
         Some(module) => format!("{module}.{name}"),
         None => name.to_string(),
     };
@@ -745,7 +839,7 @@ fn value_completion(
     let documentation = value.get_documentation().map(|d| {
         lsp::Documentation::MarkupContent(lsp::MarkupContent {
             kind: lsp::MarkupKind::Markdown,
-            value: d.to_string(),
+            value: d.into(),
         })
     });
 
@@ -753,6 +847,10 @@ fn value_completion(
         label,
         kind,
         detail: Some(type_),
+        label_details: Some(lsp::CompletionItemLabelDetails {
+            detail: None,
+            description: Some(module_name.into()),
+        }),
         documentation,
         ..Default::default()
     }
