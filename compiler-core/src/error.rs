@@ -3003,7 +3003,7 @@ Try: _{}", name.to_snake_case());
 Try: {}", name.to_upper_camel_case());
 
                 Diagnostic {
-                    title: "Invalid discard name".into(),
+                    title: "Invalid upname".into(),
                     text,
                     hint: None,
                     level: Level::Error,
