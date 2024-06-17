@@ -21,22 +21,26 @@ pub fn command(packages: Vec<String>) -> Result<()> {
     // Remove the specified dependencies
     for package_to_remove in packages.iter() {
         #[allow(clippy::indexing_slicing)]
-        let _ = toml["dependencies"]
+        let maybe_removed_item = toml["dependencies"]
             .as_table_like_mut()
             .and_then(|deps| deps.remove(package_to_remove));
+
         #[allow(clippy::indexing_slicing)]
-        let _ = toml["dev-dependencies"]
+        let maybe_removed_dev_item = toml["dev-dependencies"]
             .as_table_like_mut()
             .and_then(|deps| deps.remove(package_to_remove));
+
+        if maybe_removed_item.or(maybe_removed_dev_item).is_some() {
+            cli::print_removed(package_to_remove);
+        } else {
+            cli::print_not_exist(package_to_remove);
+        }
     }
 
     // Write the updated config
     fs::write(Utf8Path::new("gleam.toml"), &toml.to_string())?;
     let paths = crate::find_project_paths()?;
     _ = crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
-    for package_to_remove in packages {
-        cli::print_removed(&package_to_remove);
-    }
 
     Ok(())
 }
