@@ -1709,10 +1709,12 @@ where
         } else {
             self.take_documentation(start)
         };
+        let mut name_location = SrcSpan::new(start, start);
         let mut name = EcoString::from("");
         if !is_anon {
-            let (_, n, _) = self.expect_name()?;
+            let (start, n, end) = self.expect_name()?;
             name = n;
+            name_location = SrcSpan { start, end };
         }
         let _ = self.expect_one(&Token::LeftParen)?;
         let args = Parser::series_of(
@@ -1762,6 +1764,7 @@ where
         Ok(Some(Definition::Function(Function {
             documentation,
             location: SrcSpan { start, end },
+            name_location,
             end_position,
             publicity: self.publicity(public, attributes.internal)?,
             name,
@@ -1812,7 +1815,7 @@ where
             // labeled discard
             (
                 Some((start, Token::Name { name: label }, tok0_end)),
-                Some((_, Token::DiscardName { name }, end)),
+                Some((name_start, Token::DiscardName { name }, end)),
             ) => {
                 if is_anon {
                     return parse_error(
@@ -1826,18 +1829,34 @@ where
 
                 self.advance();
                 self.advance();
-                (start, ArgNames::LabelledDiscard { name, label }, end)
+                (
+                    start,
+                    ArgNames::LabelledDiscard {
+                        name,
+                        name_location: SrcSpan::new(name_start, end),
+                        label,
+                        label_location: SrcSpan::new(start, tok0_end),
+                    },
+                    end,
+                )
             }
             // discard
             (Some((start, Token::DiscardName { name }, end)), t1) => {
                 self.tok1 = t1;
                 self.advance();
-                (start, ArgNames::Discard { name }, end)
+                (
+                    start,
+                    ArgNames::Discard {
+                        name,
+                        location: SrcSpan { start, end },
+                    },
+                    end,
+                )
             }
             // labeled name
             (
                 Some((start, Token::Name { name: label }, tok0_end)),
-                Some((_, Token::Name { name }, end)),
+                Some((name_start, Token::Name { name }, end)),
             ) => {
                 if is_anon {
                     return parse_error(
@@ -1851,13 +1870,29 @@ where
 
                 self.advance();
                 self.advance();
-                (start, ArgNames::NamedLabelled { name, label }, end)
+                (
+                    start,
+                    ArgNames::NamedLabelled {
+                        name,
+                        name_location: SrcSpan::new(name_start, end),
+                        label,
+                        label_location: SrcSpan::new(start, tok0_end),
+                    },
+                    end,
+                )
             }
             // name
             (Some((start, Token::Name { name }, end)), t1) => {
                 self.tok1 = t1;
                 self.advance();
-                (start, ArgNames::Named { name }, end)
+                (
+                    start,
+                    ArgNames::Named {
+                        name,
+                        location: SrcSpan { start, end },
+                    },
+                    end,
+                )
             }
             (t0, t1) => {
                 self.tok0 = t0;
@@ -1956,7 +1991,7 @@ where
         attributes: &mut Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
-        let (_, name, parameters, end) = self.expect_type_name()?;
+        let (name_start, name, parameters, end, name_end) = self.expect_type_name()?;
         let (constructors, end_position) = if self.maybe_one(&Token::LeftBrace).is_some() {
             // Custom Type
             let constructors = Parser::series_of(
@@ -1968,6 +2003,10 @@ where
                         let end = args_e.max(c_e);
                         Ok(Some(RecordConstructor {
                             location: SrcSpan { start: c_s, end },
+                            name_location: SrcSpan {
+                                start: c_s,
+                                end: c_e,
+                            },
                             name: c_n,
                             arguments: args,
                             documentation,
@@ -1992,6 +2031,7 @@ where
                 return Ok(Some(Definition::TypeAlias(TypeAlias {
                     documentation,
                     location: SrcSpan::new(start, type_end),
+                    name_location: SrcSpan::new(name_start, name_end),
                     publicity: self.publicity(public, attributes.internal)?,
                     alias: name,
                     parameters,
@@ -2008,6 +2048,10 @@ where
         Ok(Some(Definition::CustomType(CustomType {
             documentation,
             location: SrcSpan { start, end },
+            name_location: SrcSpan {
+                start: name_start,
+                end: name_end,
+            },
             end_position,
             publicity: self.publicity(public, attributes.internal)?,
             opaque,
@@ -2022,16 +2066,18 @@ where
     // examples:
     //   A
     //   A(one, two)
-    fn expect_type_name(&mut self) -> Result<(u32, EcoString, Vec<EcoString>, u32), ParseError> {
+    fn expect_type_name(
+        &mut self,
+    ) -> Result<(u32, EcoString, Vec<EcoString>, u32, u32), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args =
                 Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Token::Comma))?;
             let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
             let args2 = args.into_iter().map(|(_, a, _)| a).collect();
-            Ok((start, upname, args2, par_e))
+            Ok((start, upname, args2, par_e, end))
         } else {
-            Ok((start, upname, vec![], end))
+            Ok((start, upname, vec![], end, end))
         }
     }
 
@@ -2046,7 +2092,10 @@ where
             let args = Parser::series_of(
                 self,
                 &|p| match (p.tok0.take(), p.tok1.take()) {
-                    (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
+                    (
+                        Some((start, Token::Name { name }, name_end)),
+                        Some((_, Token::Colon, end)),
+                    ) => {
                         let _ = Parser::next_tok(p);
                         let _ = Parser::next_tok(p);
                         let doc = p.take_documentation(start);
@@ -2054,7 +2103,13 @@ where
                             Some(type_ast) => {
                                 let end = type_ast.location().end;
                                 Ok(Some(RecordConstructorArg {
-                                    label: Some(name),
+                                    label: Some((
+                                        name,
+                                        SrcSpan {
+                                            start,
+                                            end: name_end,
+                                        },
+                                    )),
                                     ast: type_ast,
                                     location: SrcSpan { start, end },
                                     type_: (),
@@ -3774,6 +3829,7 @@ pub fn make_call(
                 annotation: None,
                 names: ArgNames::Named {
                     name: CAPTURE_VARIABLE.into(),
+                    location: hole_location.expect("At least a capture hole"),
                 },
                 type_: (),
             }],

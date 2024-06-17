@@ -392,6 +392,7 @@ impl ModuleInterface {
                     typed_parameters,
                     parameters: _,
                     location: _,
+                    name_location: _,
                     end_position: _,
                 }) => {
                     let mut id_map = IdMap::new();
@@ -421,7 +422,10 @@ impl ModuleInterface {
                                             .arguments
                                             .iter()
                                             .map(|arg| ParameterInterface {
-                                                label: arg.label.clone(),
+                                                label: arg
+                                                    .label
+                                                    .as_ref()
+                                                    .map(|(label, _)| label.clone()),
                                                 // We share the same id_map between each step so that the
                                                 // incremental ids assigned are consisten with each other
                                                 type_: from_type_helper(&arg.type_, &mut id_map),
@@ -443,6 +447,7 @@ impl ModuleInterface {
                     documentation,
                     deprecation,
                     location: _,
+                    name_location: _,
                     type_ast: _,
                 }) => {
                     let _ = type_aliases.insert(
@@ -491,6 +496,7 @@ impl ModuleInterface {
                     documentation,
                     implementations,
                     location: _,
+                    name_location: _,
                     end_position: _,
                     body: _,
                     return_annotation: _,
