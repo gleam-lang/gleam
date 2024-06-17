@@ -615,7 +615,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
                         .arguments
                         .iter()
                         .filter_map(|arg| arg.label.as_ref().map(|label| (arg, label)))
-                        .map(|(argument, label)| TypeConstructorArg {
+                        .map(|(argument, (label, _))| TypeConstructorArg {
                             name: label.trim_end().to_string(),
                             doc: markdown_documentation(&argument.doc),
                         })

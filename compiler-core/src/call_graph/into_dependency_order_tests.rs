@@ -21,6 +21,7 @@ fn parse_and_order(
                 .map(|name| Arg {
                     names: crate::ast::ArgNames::Named {
                         name: EcoString::from(*name),
+                        location: Default::default(),
                     },
                     location: Default::default(),
                     annotation: None,
@@ -29,6 +30,7 @@ fn parse_and_order(
                 .collect_vec(),
             body: crate::parse::parse_statement_sequence(src).expect("syntax error"),
             location: Default::default(),
+            name_location: Default::default(),
             return_annotation: None,
             publicity: Publicity::Public,
             deprecation: Deprecation::NotDeprecated,
