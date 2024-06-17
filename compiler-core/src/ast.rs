@@ -158,7 +158,7 @@ impl<A> Arg<A> {
 
     pub fn is_capture_hole(&self) -> bool {
         match &self.names {
-            ArgNames::Named { name } if name == CAPTURE_VARIABLE => true,
+            ArgNames::Named { name, .. } if name == CAPTURE_VARIABLE => true,
             _ => false,
         }
     }
@@ -176,10 +176,26 @@ impl TypedArg {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgNames {
-    Discard { name: EcoString },
-    LabelledDiscard { label: EcoString, name: EcoString },
-    Named { name: EcoString },
-    NamedLabelled { name: EcoString, label: EcoString },
+    Discard {
+        name: EcoString,
+        location: SrcSpan,
+    },
+    LabelledDiscard {
+        label: EcoString,
+        label_location: SrcSpan,
+        name: EcoString,
+        name_location: SrcSpan,
+    },
+    Named {
+        name: EcoString,
+        location: SrcSpan,
+    },
+    NamedLabelled {
+        label: EcoString,
+        label_location: SrcSpan,
+        name: EcoString,
+        name_location: SrcSpan,
+    },
 }
 
 impl ArgNames {
@@ -194,7 +210,7 @@ impl ArgNames {
     pub fn get_variable_name(&self) -> Option<&EcoString> {
         match self {
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
-            ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name } => Some(name),
+            ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name, .. } => Some(name),
         }
     }
 }
@@ -204,6 +220,7 @@ pub type TypedRecordConstructor = RecordConstructor<Arc<Type>>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructor<T> {
     pub location: SrcSpan,
+    pub name_location: SrcSpan,
     pub name: EcoString,
     pub arguments: Vec<RecordConstructorArg<T>>,
     pub documentation: Option<EcoString>,
@@ -219,7 +236,7 @@ pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructorArg<T> {
-    pub label: Option<EcoString>,
+    pub label: Option<(EcoString, SrcSpan)>,
     pub ast: TypeAst,
     pub location: SrcSpan,
     pub type_: T,
@@ -606,6 +623,7 @@ impl Publicity {
 /// ```
 pub struct Function<T, Expr> {
     pub location: SrcSpan,
+    pub name_location: SrcSpan,
     pub end_position: u32,
     pub name: EcoString,
     pub arguments: Vec<Arg<T>>,
@@ -709,6 +727,7 @@ pub type UntypedCustomType = CustomType<()>;
 /// ```
 pub struct CustomType<T> {
     pub location: SrcSpan,
+    pub name_location: SrcSpan,
     pub end_position: u32,
     pub name: EcoString,
     pub publicity: Publicity,
@@ -745,6 +764,7 @@ pub type UntypedTypeAlias = TypeAlias<()>;
 /// ```
 pub struct TypeAlias<T> {
     pub location: SrcSpan,
+    pub name_location: SrcSpan,
     pub alias: EcoString,
     pub parameters: Vec<EcoString>,
     pub type_ast: TypeAst,
@@ -1680,10 +1700,10 @@ impl AssignName {
         }
     }
 
-    pub fn to_arg_names(self) -> ArgNames {
+    pub fn to_arg_names(self, location: SrcSpan) -> ArgNames {
         match self {
-            AssignName::Variable(name) => ArgNames::Named { name },
-            AssignName::Discard(name) => ArgNames::Discard { name },
+            AssignName::Variable(name) => ArgNames::Named { name, location },
+            AssignName::Discard(name) => ArgNames::Discard { name, location },
         }
     }
 

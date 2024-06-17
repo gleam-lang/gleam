@@ -113,7 +113,9 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
                          type_,
                          ..
                      }| {
-                        label.as_deref().map(|label| (label, type_.clone()))
+                        label
+                            .as_ref()
+                            .map(|label| (label.0.as_str(), type_.clone()))
                     },
                 )
                 .collect::<Option<Vec<_>>>()
@@ -419,7 +421,7 @@ fn module_function<'a>(
 fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
     wrap_args(args.iter().map(|a| match &a.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
-        ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
+        ArgNames::Named { name, .. } | ArgNames::NamedLabelled { name, .. } => {
             env.next_local_var_name(name)
         }
     }))

@@ -276,7 +276,7 @@ fn compile_statement_sequence(
             has_javascript_external: false,
         },
         errors,
-        bad_names
+        bad_names,
     )
     .infer_statements(ast);
     match Vec1::try_from_vec(errors.to_vec()) {

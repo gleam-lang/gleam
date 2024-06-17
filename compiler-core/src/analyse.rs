@@ -361,7 +361,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             has_erlang_external: false,
             has_javascript_external: false,
         };
-        let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors, &mut self.bad_names);
+        let mut expr_typer = ExprTyper::new(
+            environment,
+            definition,
+            &mut self.errors,
+            &mut self.bad_names,
+        );
         let typed_expr = expr_typer.infer_const(&annotation, *value);
         let type_ = typed_expr.type_();
         let implementations = expr_typer.implementations;
@@ -416,6 +421,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let Function {
             documentation: doc,
             location,
+            name_location,
             name,
             publicity,
             arguments,
@@ -480,7 +486,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(|environment| {
-            let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors, &mut self.bad_names);
+            let mut expr_typer = ExprTyper::new(
+                environment,
+                definition,
+                &mut self.errors,
+                &mut self.bad_names,
+            );
             expr_typer.hydrator = self
                 .hydrators
                 .remove(&name)
@@ -575,6 +586,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_erlang,
             external_javascript,
             implementations,
+            name_location,
         })
     }
 
@@ -726,6 +738,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let CustomType {
             documentation: doc,
             location,
+            name_location,
             end_position,
             publicity,
             opaque,
@@ -741,14 +754,15 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .map(
                 |RecordConstructor {
                      location,
+                     name_location,
                      name,
                      arguments: args,
                      documentation,
                  }| {
-                    if let Err(e) = check_valid_upname(location, &name) {
+                    if let Err(e) = check_valid_upname(name_location, &name) {
                         self.errors.push(e);
                         self.bad_names
-                            .push((location, EcoString::from(name.to_upper_camel_case())));
+                            .push((name_location, EcoString::from(name.to_upper_camel_case())));
                     }
 
                     let preregistered_fn = environment
@@ -761,12 +775,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                             args.into_iter()
                                 .zip(&args_types)
                                 .map(|(argument, t)| {
-                                    if let Some(label) = &argument.label {
-                                        if let Err(e) = check_valid_name(argument.location, label) {
+                                    if let Some((label, location)) = &argument.label {
+                                        if let Err(e) = check_valid_name(*location, label) {
                                             self.errors.push(e);
                                             self.bad_names.push((
-                                                location,
-                                                EcoString::from(name.to_snake_case()),
+                                                *location,
+                                                EcoString::from(label.to_snake_case()),
                                             ));
                                         }
                                     }
@@ -786,6 +800,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
                     RecordConstructor {
                         location,
+                        name_location,
                         name,
                         arguments: args,
                         documentation,
@@ -802,6 +817,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         Ok(Definition::CustomType(CustomType {
             documentation: doc,
             location,
+            name_location,
             end_position,
             publicity,
             opaque,
@@ -886,7 +902,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 args_types.push(t);
 
                 // Register the label for this parameter, if there is one
-                if let Some(label) = label {
+                if let Some((label, _)) = label {
                     field_map.insert(label.clone(), i as u32).map_err(|_| {
                         Error::DuplicateField {
                             label: label.clone(),
@@ -970,6 +986,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             publicity,
             parameters,
             location,
+            name_location,
             deprecation,
             opaque,
             constructors,
@@ -985,10 +1002,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // could improve our approach here somewhat.
         environment.assert_unique_type_name(name, *location)?;
 
-        if let Err(e) = check_valid_upname(*location, name) {
+        if let Err(e) = check_valid_upname(*name_location, name) {
             self.errors.push(e);
             self.bad_names
-                .push((*location, EcoString::from(name.to_upper_camel_case())));
+                .push((*name_location, EcoString::from(name.to_upper_camel_case())));
         }
 
         let mut hydrator = Hydrator::new();
@@ -1049,6 +1066,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     fn register_type_alias(&mut self, t: &TypeAlias<()>, environment: &mut Environment<'_>) {
         let TypeAlias {
             location,
+            name_location,
             publicity,
             parameters: args,
             alias: name,
@@ -1066,10 +1084,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return;
         }
 
-        if let Err(e) = check_valid_upname(*location, name) {
+        if let Err(e) = check_valid_upname(*name_location, name) {
             self.errors.push(e);
             self.bad_names
-                .push((*location, EcoString::from(name.to_upper_camel_case())));
+                .push((*name_location, EcoString::from(name.to_upper_camel_case())));
         }
 
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
@@ -1147,6 +1165,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name,
             arguments: args,
             location,
+            name_location,
             return_annotation,
             publicity,
             documentation,
@@ -1159,10 +1178,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             implementations,
         } = f;
 
-        if let Err(e) = check_valid_name(*location, name) {
+        if let Err(e) = check_valid_name(*name_location, name) {
             self.errors.push(e);
             self.bad_names
-                .push((*location, EcoString::from(name.to_snake_case())));
+                .push((*name_location, EcoString::from(name.to_snake_case())));
         }
 
         let mut builder = FieldMapBuilder::new(args.len() as u32);
@@ -1171,7 +1190,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } in args.iter()
         {
             match names {
-                ArgNames::Discard { name } => {
+                ArgNames::Discard { name, location } => {
                     if let Err(e) = check_valid_discard_name(*location, name) {
                         self.errors.push(e);
                         self.bad_names.push((
@@ -1180,37 +1199,47 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         ));
                     }
                 }
-                ArgNames::LabelledDiscard { label, name } => {
-                    if let Err(e) = check_valid_name(*location, label) {
+                ArgNames::LabelledDiscard {
+                    label,
+                    label_location,
+                    name,
+                    name_location,
+                } => {
+                    if let Err(e) = check_valid_name(*label_location, label) {
                         self.errors.push(e);
                         self.bad_names
-                            .push((*location, EcoString::from(name.to_snake_case())));
+                            .push((*label_location, EcoString::from(label.to_snake_case())));
                     }
-                    if let Err(e) = check_valid_discard_name(*location, name) {
+                    if let Err(e) = check_valid_discard_name(*name_location, name) {
                         self.errors.push(e);
                         self.bad_names.push((
-                            *location,
+                            *name_location,
                             EcoString::from(format!("_{}", name.to_snake_case())),
                         ));
                     }
                 }
-                ArgNames::Named { name } => {
+                ArgNames::Named { name, location } => {
                     if let Err(e) = check_valid_name(*location, name) {
                         self.errors.push(e);
                         self.bad_names
                             .push((*location, EcoString::from(name.to_snake_case())));
                     }
                 }
-                ArgNames::NamedLabelled { name, label } => {
-                    if let Err(e) = check_valid_name(*location, label) {
+                ArgNames::NamedLabelled {
+                    name,
+                    name_location,
+                    label,
+                    label_location,
+                } => {
+                    if let Err(e) = check_valid_name(*label_location, label) {
                         self.errors.push(e);
                         self.bad_names
-                            .push((*location, EcoString::from(name.to_snake_case())));
+                            .push((*label_location, EcoString::from(label.to_snake_case())));
                     }
-                    if let Err(e) = check_valid_name(*location, name) {
+                    if let Err(e) = check_valid_name(*name_location, name) {
                         self.errors.push(e);
                         self.bad_names
-                            .push((*location, EcoString::from(name.to_snake_case())));
+                            .push((*name_location, EcoString::from(name.to_snake_case())));
                     }
                 }
             }
@@ -1321,6 +1350,7 @@ fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> Ty
     let TypeAlias {
         documentation: doc,
         location,
+        name_location,
         publicity,
         alias,
         parameters: args,
@@ -1340,6 +1370,7 @@ fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> Ty
     Definition::TypeAlias(TypeAlias {
         documentation: doc,
         location,
+        name_location,
         publicity,
         alias,
         parameters: args,
@@ -1477,6 +1508,7 @@ fn generalise_function(
     let Function {
         documentation: doc,
         location,
+        name_location,
         name,
         publicity,
         deprecation,
@@ -1533,6 +1565,7 @@ fn generalise_function(
     Definition::Function(Function {
         documentation: doc,
         location,
+        name_location,
         name,
         publicity,
         deprecation,
@@ -1600,7 +1633,7 @@ fn get_compatible_record_fields<A>(
     'next_argument: for (index, first_argument) in first.arguments.iter().enumerate() {
         // Fields without labels do not have accessors
         let label = match first_argument.label.as_ref() {
-            Some(label) => label,
+            Some((label, _)) => label,
             None => continue 'next_argument,
         };
 
@@ -1613,8 +1646,13 @@ fn get_compatible_record_fields<A>(
                 None => continue 'next_argument,
             };
 
+            let arg_label = match argument.label.as_ref() {
+                Some((label, _)) => label,
+                None => continue 'next_argument,
+            };
+
             // The labels must be the same
-            if argument.label != first_argument.label {
+            if arg_label != label {
                 continue 'next_argument;
             }
 

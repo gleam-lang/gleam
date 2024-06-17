@@ -745,12 +745,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        for Arg {
-            names, location, ..
-        } in args.iter()
-        {
+        for Arg { names, .. } in args.iter() {
             match names {
-                ArgNames::Discard { name } => {
+                ArgNames::Discard { name, location } => {
                     if let Err(e) = check_valid_discard_name(*location, name) {
                         self.errors.push(e);
                         self.bad_names.push((
@@ -759,7 +756,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         ));
                     }
                 }
-                ArgNames::Named { name } => {
+                ArgNames::Named { name, location } => {
                     if let Err(e) = check_valid_name(*location, name) {
                         self.errors.push(e);
                         self.bad_names
@@ -3120,7 +3117,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.type_.clone())) {
                 match &arg.names {
-                    ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
+                    ArgNames::Named { name, .. } | ArgNames::NamedLabelled { name, .. } => {
                         // Check that this name has not already been used for
                         // another argument
                         if !argument_names.insert(name) {
@@ -3521,7 +3518,7 @@ impl UseAssignments {
                 // For discards we add a discard function arguments.
                 Pattern::Discard { name, .. } => assignments.function_arguments.push(Arg {
                     location,
-                    names: ArgNames::Discard { name },
+                    names: ArgNames::Discard { name, location },
                     annotation: None,
                     type_: (),
                 }),
@@ -3531,7 +3528,7 @@ impl UseAssignments {
                 Pattern::Variable { name, .. } => assignments.function_arguments.push(Arg {
                     location,
                     annotation,
-                    names: ArgNames::Named { name },
+                    names: ArgNames::Named { name, location },
                     type_: (),
                 }),
 
@@ -3551,7 +3548,10 @@ impl UseAssignments {
                     let name: EcoString = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
                     assignments.function_arguments.push(Arg {
                         location,
-                        names: ArgNames::Named { name: name.clone() },
+                        names: ArgNames::Named {
+                            name: name.clone(),
+                            location,
+                        },
                         annotation: None,
                         type_: (),
                     });

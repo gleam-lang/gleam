@@ -6,7 +6,7 @@ error: Invalid upname
   ┌─ /src/one/two.gleam:1:15
   │
 1 │ type MyType { Foo_Bar(Int) }
-  │               ^^^^^^^^^^^^ This is not a valid upname
+  │               ^^^^^^^ This is not a valid upname
 
 Hint: Upnames start with an uppercase letter and contain only lowercase
 letters, numbers, and uppercase letters.
