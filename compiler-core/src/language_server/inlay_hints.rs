@@ -42,7 +42,6 @@ impl<'a> Buf<'a> {
         match typed_st {
             Statement::Expression(e) => self.get_inlay_hints_expr(e),
             Statement::Assignment(assig) => self.get_inlay_hints_expr(*assig.value),
-            // TODO
             Statement::Use(_) => (),
         }
     }
@@ -296,6 +295,35 @@ mod tests {
                 0
                 |> identity()
               })
+            }
+        "#;
+
+        assert_inlay_hints(
+            src,
+            vec![
+                InlayHint {
+                    label: "Int".to_string(),
+                    offset: index_of_end(src, "0"),
+                },
+                InlayHint {
+                    label: "Int".to_string(),
+                    offset: index_of_end(src, "|> identity()"),
+                },
+            ],
+        );
+    }
+
+    #[test]
+    fn hints_in_use() {
+        let src = r#"
+            fn identity(x) {
+              x
+            }
+
+            fn main(f) {
+              use a <- f()
+              0
+              |> identity()
             }
         "#;
 
