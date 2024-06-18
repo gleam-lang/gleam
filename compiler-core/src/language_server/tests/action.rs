@@ -29,7 +29,7 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
     _ = io.src_module("option", "");
 
     _ = io.src_module("app", src);
-    engine.compile_please().result.expect("compiled");
+    let _ = engine.compile_please();
 
     let params = CodeActionParams {
         text_document: TextDocumentIdentifier::new(test_file_url()),
@@ -65,6 +65,18 @@ fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> Stri
     }
 }
 
+fn apply_first_code_action(src: &str, line: u32) -> String {
+    let response = engine_response(src, line)
+        .result
+        .unwrap()
+        .and_then(|actions| actions.into_iter().nth(0));
+    if let Some(action) = response {
+        apply_code_action(src, &test_file_url(), &action)
+    } else {
+        panic!("No code action produced by the engine")
+    }
+}
+
 fn apply_code_action(src: &str, url: &Url, action: &lsp_types::CodeAction) -> String {
     match &action.edit {
         Some(WorkspaceEdit { changes, .. }) => match changes {
@@ -89,13 +101,14 @@ fn apply_code_edit(
             panic!("Unknown url {}", change_url)
         }
         for edit in change {
-            let start =
-                line_numbers.byte_index(edit.range.start.line, edit.range.start.character) - offset;
-            let end =
-                line_numbers.byte_index(edit.range.end.line, edit.range.end.character) - offset;
+            let start = line_numbers.byte_index(edit.range.start.line, edit.range.start.character)
+                as i32
+                - offset;
+            let end = line_numbers.byte_index(edit.range.end.line, edit.range.end.character) as i32
+                - offset;
             let range = (start as usize)..(end as usize);
             offset += end - start;
-            offset -= edit.new_text.len() as u32;
+            offset -= edit.new_text.len() as i32;
             result.replace_range(range, &edit.new_text);
         }
     }
@@ -118,7 +131,7 @@ fn test_remove_unused_simple() {
         "
 // test
 import // comment
-  list as lispy
+    list as lispy
 import result
 import option
 
@@ -290,6 +303,269 @@ pub fn main() {
 }
 "
     );
+}
+
+#[test]
+fn rename_invalid_const() {
+    let code = "const myInvalid_Constant = 42";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 0));
+}
+
+#[test]
+fn rename_invalid_parameter() {
+    let code = "fn add(numA: Int, num_b: Int) { numA + num_b }";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 0));
+}
+
+#[test]
+fn rename_invalid_parameter_name2() {
+    let code = "fn pass(label paramName: Bool) { paramName }";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 0));
+}
+
+#[test]
+fn rename_invalid_parameter_name3() {
+    let code = "pub fn main() {
+    let add = fn(numA: Int, num_b: Int) { numA + num_b }
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_parameter_discard() {
+    let code = "fn ignore(_ignoreMe: Bool) { 98 }";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 0));
+}
+
+#[test]
+fn rename_invalid_parameter_discard_name2() {
+    let code = "fn ignore(labelled_discard _ignoreMe: Bool) { 98 }";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 0));
+}
+
+#[test]
+fn rename_invalid_parameter_discard_name3() {
+    let code = "pub fn main() {
+    let ignore = fn(_ignoreMe: Bool) { 98 }
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_parameter_label() {
+    let code = "fn foo(thisIsALabel param: Int) { param }";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 0));
+}
+
+#[test]
+fn rename_invalid_parameter_label2() {
+    let code = "fn ignore(thisIsALabel _ignore: Int) { 25 }";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 0));
+}
+
+#[test]
+fn rename_invalid_constructor() {
+    let code = "type MyType { Foo_Bar(Int) }";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 0));
+}
+
+#[test]
+fn rename_invalid_constructor_arg() {
+    let code = "type IntWrapper { IntWrapper(innerInt: Int) }";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 0));
+}
+
+#[test]
+fn rename_invalid_custom_type() {
+    let code = "type Boxed_value { Box(Int) }";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 0));
+}
+
+#[test]
+fn rename_invalid_type_alias() {
+    let code = "type Fancy_Bool = Bool";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 0));
+}
+
+#[test]
+fn rename_invalid_function() {
+    let code = "fn doStuff() {}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 0));
+}
+
+#[test]
+fn rename_invalid_variable() {
+    let code = "pub fn main() {
+    let theAnswer = 42
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_variable_discard() {
+    let code = "pub fn main() {
+    let _boringNumber = 72
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_use() {
+    let code = "fn use_test(f) { f(Nil) }
+pub fn main() {use useVar <- use_test()}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_use_discard() {
+    let code = "fn use_test(f) { f(Nil) }
+pub fn main() {use _discardVar <- use_test()}";
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_pattern_assignment() {
+    let code = "pub fn main() {
+    let assert 42 as theAnswer = 42
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_list_pattern() {
+    let code = "pub fn main() {
+    let assert [theElement] = [9.4]
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_list_pattern_discard() {
+    let code = "pub fn main() {
+    let assert [_elemOne] = [False]
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_constructor_pattern() {
+    let code = "pub type Box { Box(Int) }
+pub fn main() {
+    let Box(fooBar) = Box(203)
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 2));
+}
+
+#[test]
+fn rename_invalid_constructor_pattern_discard() {
+    let code = "pub type Box { Box(Int) }
+pub fn main() {
+    let Box(_ignoredInner) = Box(203)
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 2));
+}
+
+#[test]
+fn rename_invalid_tuple_pattern() {
+    let code = "pub fn main() {
+    let #(a, secondValue) = #(1, 2)
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_tuple_pattern_discard() {
+    let code = "pub fn main() {
+    let #(a, _secondValue) = #(1, 2)
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_bit_array_pattern() {
+    let code = "pub fn main() {
+    let assert <<bitValue>> = <<73>>
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_bit_array_pattern_discard() {
+    let code = "pub fn main() {
+    let assert <<_iDontCare>> = <<97>>
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_string_prefix_pattern() {
+    let code = r#"pub fn main() {
+    let assert "prefix" <> coolSuffix = "prefix-suffix"
+}"#;
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_string_prefix_pattern_discard() {
+    let code = r#"pub fn main() {
+    let assert "prefix" <> _boringSuffix = "prefix-suffix"
+}"#;
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_string_prefix_pattern_alias() {
+    let code = r#"pub fn main() {
+    let assert "prefix" as thePrefix <> _suffix = "prefix-suffix"
+}"#;
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_case_variable() {
+    let code = "pub fn main() {
+    case 21 { twentyOne -> {Nil} }
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
+}
+
+#[test]
+fn rename_invalid_case_variable_discard() {
+    let code = "pub fn main() {
+    case 21 { _twentyOne -> {Nil} }
+}";
+
+    insta::assert_snapshot!(apply_first_code_action(code, 1));
 }
 
 /* TODO: implement qualified unused location
