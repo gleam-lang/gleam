@@ -417,7 +417,7 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         experimental: None,
         position_encoding: None,
         inline_value_provider: None,
-        inlay_hint_provider: None,
+        inlay_hint_provider: Some(lsp::OneOf::Left(true)),
         diagnostic_provider: None,
     };
     let server_capabilities_json =
