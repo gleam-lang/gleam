@@ -1,5 +1,8 @@
 use crate::{
-    ast::{Definition, Statement, TypedDefinition, TypedExpr, TypedModule, TypedStatement},
+    ast::{
+        Definition, SrcSpan, Statement, TypedDefinition, TypedExpr, TypedModule, TypedStatement,
+    },
+    line_numbers::LineNumbers,
     type_::pretty::Printer,
 };
 
@@ -9,12 +12,21 @@ pub struct InlayHint {
     pub offset: u32,
 }
 
-#[derive(Default)]
-struct Buf {
+struct Buf<'a> {
     hints: Vec<InlayHint>,
+    line_numbers: &'a LineNumbers,
 }
 
-impl Buf {
+impl<'a> Buf<'a> {
+    fn new(line_numbers: &'a LineNumbers) -> Buf<'a> {
+        Buf {
+            hints: vec![],
+            line_numbers,
+        }
+    }
+}
+
+impl<'a> Buf<'a> {
     pub fn get_inlay_hints_definition(&mut self, typed_def: TypedDefinition) {
         match typed_def {
             Definition::Function(f) => {
@@ -29,8 +41,9 @@ impl Buf {
     fn get_inlay_hints_statement(&mut self, typed_st: TypedStatement) {
         match typed_st {
             Statement::Expression(e) => self.get_inlay_hints_expr(e),
-            Statement::Assignment(_) => todo!(),
-            Statement::Use(_) => todo!(),
+            // TODO
+            Statement::Assignment(_) => (),
+            Statement::Use(_) => (),
         }
     }
 
@@ -48,20 +61,40 @@ impl Buf {
                 assignments,
                 finally,
             } => {
+                fn get_this_line(this: &Buf<'_>, span: &SrcSpan) -> u32 {
+                    this.line_numbers.line_and_column_number(span.end).line
+                }
+
+                let mut prev_hint = None;
+
                 for assign in assignments {
                     let str_type = Printer::new().pretty_print(assign.type_().as_ref(), 0);
 
-                    self.hints.push(InlayHint {
+                    let this_line = get_this_line(self, &assign.location);
+
+                    if let Some((prev_line, prev_hint)) = prev_hint {
+                        if prev_line != this_line {
+                            self.hints.push(prev_hint);
+                        }
+                    };
+
+                    let this_hint = InlayHint {
                         label: str_type,
                         offset: assign.location.end,
-                    })
+                    };
+                    prev_hint = Some((this_line, this_hint));
                 }
 
-                let str_type_finally = Printer::new().pretty_print(finally.type_().as_ref(), 0);
-                self.hints.push(InlayHint {
-                    label: str_type_finally,
-                    offset: finally.location().end,
-                })
+                let (prev_line, prev_hint) = prev_hint.expect("Expected a non-empty arr");
+                let this_line = get_this_line(self, &finally.location());
+                if this_line != prev_line {
+                    let str_type_finally = Printer::new().pretty_print(finally.type_().as_ref(), 0);
+                    self.hints.push(prev_hint);
+                    self.hints.push(InlayHint {
+                        label: str_type_finally,
+                        offset: finally.location().end,
+                    })
+                }
             }
 
             TypedExpr::Case { clauses, .. } => {
@@ -82,8 +115,8 @@ impl Buf {
     }
 }
 
-pub fn get_inlay_hints(typed_module: TypedModule) -> Vec<InlayHint> {
-    let mut buf = Buf::default();
+pub fn get_inlay_hints(typed_module: TypedModule, line_numbers: &LineNumbers) -> Vec<InlayHint> {
+    let mut buf = Buf::new(line_numbers);
     for def in typed_module.definitions {
         buf.get_inlay_hints_definition(def);
     }
@@ -104,7 +137,6 @@ mod tests {
         warning::TypeWarningEmitter,
     };
 
-    #[ignore]
     #[test]
     fn no_hints_when_same_line() {
         let src = r#"
@@ -121,10 +153,7 @@ mod tests {
       }
   "#;
 
-        let typed_module = compile_module(src);
-        let inlay_hints = get_inlay_hints(typed_module);
-
-        assert_eq!(inlay_hints, vec![]);
+        assert_inlay_hints(src, vec![]);
     }
 
     #[test]
@@ -145,12 +174,8 @@ mod tests {
             }
         "#;
 
-        let typed_module = compile_module(src);
-        let inlay_hints = get_inlay_hints(typed_module);
-
-        assert_eq!(inlay_hints.len(), 3);
-        assert_eq!(
-            inlay_hints,
+        assert_inlay_hints(
+            src,
             vec![
                 InlayHint {
                     label: "Int".to_string(),
@@ -163,8 +188,8 @@ mod tests {
                 InlayHint {
                     label: "String".to_string(),
                     offset: index_of_end(src, "|> identity()"),
-                }
-            ]
+                },
+            ],
         );
     }
 
@@ -185,12 +210,8 @@ mod tests {
             }
         "#;
 
-        let typed_module = compile_module(src);
-        let inlay_hints = get_inlay_hints(typed_module);
-
-        assert_eq!(inlay_hints.len(), 2);
-        assert_eq!(
-            inlay_hints,
+        assert_inlay_hints(
+            src,
             vec![
                 InlayHint {
                     label: "Int".to_string(),
@@ -200,7 +221,7 @@ mod tests {
                     label: "Int".to_string(),
                     offset: index_of_end(src, "|> identity()"),
                 },
-            ]
+            ],
         );
     }
 
@@ -243,5 +264,13 @@ mod tests {
         }
         .infer_module(ast, line_numbers, "".into())
         .expect("should successfully infer")
+    }
+
+    fn assert_inlay_hints(src: &str, expected_inlay_hints: Vec<InlayHint>) {
+        let typed_module = compile_module(src);
+        let line_numbers = LineNumbers::new(src);
+        let inlay_hints = get_inlay_hints(typed_module, &line_numbers);
+
+        assert_eq!(inlay_hints, expected_inlay_hints);
     }
 }

@@ -278,7 +278,7 @@ where
 
             let line_numbers = LineNumbers::new(&module.code);
 
-            let hints = get_inlay_hints(module.ast.clone())
+            let hints = get_inlay_hints(module.ast.clone(), &line_numbers)
                 .iter()
                 .map(|hint| InlayHint {
                     position: src_offset_to_lsp_position(hint.offset, &line_numbers),
