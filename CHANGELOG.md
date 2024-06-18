@@ -101,6 +101,21 @@
 - The language server no longer shows completions when inside a literal string.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- LSP now suggests a code a action to rename variables, types and functions when they
+  don't match the gleam naming conventions:
+
+  ```
+  let fooBar = 10
+  ```
+
+  Becomes:
+
+  ```
+  let foo_bar = 10
+  ```
+
+  ([Gears](https://github.com/gearsdatapacks))
+
 ### Bug Fixes
 
 - Fixed a bug where the compiler would report errors for duplicate `@external`
