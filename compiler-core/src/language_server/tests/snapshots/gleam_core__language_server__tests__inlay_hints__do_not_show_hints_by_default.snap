@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/inlay_hints.rs
+expression: hints
+---
+[]
