@@ -846,10 +846,12 @@ If you want to overwrite these files, delete them and run the command again.
 
             Error::RemovedPackagesNotExist { packages } => vec![
                 Diagnostic {
-                    title: "Package(s) not exist as (dev-)dependencies in gleam.toml".into(),
+                    title: "Package not found".into(),
                     text: format!(
-                        "{}
-Above package not exist, you don't need to remove them.
+"These packages are not dependencies of your package so they could not
+be removed.
+
+{}
 ",
                     packages
                         .iter()
