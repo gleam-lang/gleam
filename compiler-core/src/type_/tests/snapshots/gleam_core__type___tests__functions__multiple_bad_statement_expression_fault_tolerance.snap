@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\npub fn main() {\n  1 + 2.0\n  3 + 4.0\n  let c = 1 + 2\n}\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:7
+  │
+3 │   1 + 2.0
+  │       ^^^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    Float
+
+Hint: the +. operator can be used with Floats
+
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:7
+  │
+4 │   3 + 4.0
+  │       ^^^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    Float
+
+Hint: the +. operator can be used with Floats
