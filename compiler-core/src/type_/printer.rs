@@ -200,14 +200,16 @@ pub enum NamedTypeNames<'a> {
     Qualified(&'a str, &'a str),
 }
 
+/// A type printer that does not wrap and indent, but does take into account the
+/// names that types and modules have been aliased with in the current module.
 #[derive(Debug)]
-pub struct AnnotationPrinter<'a> {
+pub struct Printer<'a> {
     names: &'a mut TypeNames,
 }
 
-impl<'a> AnnotationPrinter<'a> {
+impl<'a> Printer<'a> {
     pub fn new(names: &'a mut TypeNames) -> Self {
-        AnnotationPrinter { names }
+        Printer { names }
     }
 
     pub fn print_type(&mut self, type_: &Type) -> EcoString {
@@ -280,7 +282,7 @@ impl<'a> AnnotationPrinter<'a> {
 fn test_local_type() {
     let mut names = TypeNames::new("module".into());
     names.named_type_in_scope("mod".into(), "Tiger".into(), "Cat".into());
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
 
     let typ = Type::Named {
         name: "Tiger".into(),
@@ -297,7 +299,7 @@ fn test_local_type() {
 fn test_generic_type_annotation() {
     let mut names = TypeNames::new("module".into());
     names.type_variable_in_scope(0, "one".into());
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
 
     let typ = Type::Var {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
@@ -309,7 +311,7 @@ fn test_generic_type_annotation() {
 #[test]
 fn test_generic_type_var() {
     let mut names = TypeNames::new("module".into());
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
 
     let typ = Type::Var {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Unbound { id: 0 })),
@@ -326,7 +328,7 @@ fn test_generic_type_var() {
 #[test]
 fn test_tuple_type() {
     let mut names = TypeNames::new("module".into());
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
 
     let typ = Type::Tuple {
         elems: vec![
@@ -355,7 +357,7 @@ fn test_fn_type() {
     let mut names = TypeNames::new("module".into());
     names.named_type_in_scope("gleam".into(), "Int".into(), "Int".into());
     names.named_type_in_scope("gleam".into(), "Bool".into(), "Bool".into());
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
 
     let typ = Type::Fn {
         args: vec![
@@ -390,7 +392,7 @@ fn test_fn_type() {
 fn test_module_alias() {
     let mut names = TypeNames::new("module".into());
     names.imported_module("mod1".into(), "animals".into());
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
 
     let typ = Type::Named {
         name: "Cat".into(),
@@ -411,7 +413,7 @@ fn test_type_alias_and_generics() {
 
     names.type_variable_in_scope(0, "one".into());
 
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
 
     let typ = Type::Named {
         name: "Tiger".into(),
@@ -434,7 +436,7 @@ fn test_unqualified_import_and_generic() {
 
     names.type_variable_in_scope(0, "one".into());
 
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
 
     let typ = Type::Named {
         name: "Cat".into(),
@@ -452,7 +454,7 @@ fn test_unqualified_import_and_generic() {
 #[test]
 fn nested_module() {
     let mut names = TypeNames::new("module".into());
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
     let typ = Type::Named {
         name: "Cat".into(),
         args: vec![],
@@ -474,7 +476,7 @@ fn test_unqualified_import_and_module_alias() {
         .local_types
         .insert(("mod1".into(), "Cat".into()), "C".into());
 
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
 
     let typ = Type::Named {
         name: "Cat".into(),
@@ -495,7 +497,7 @@ fn test_module_imports() {
         .local_types
         .insert(("mod2".into(), "Cat".into()), "Cat".into());
 
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
 
     let typ = Type::Named {
         name: "Cat".into(),
@@ -524,7 +526,7 @@ fn test_multiple_generic_annotations() {
     names.type_variable_in_scope(0, "one".into());
     names.type_variable_in_scope(1, "two".into());
 
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
 
     let typ = Type::Named {
         name: "Tiger".into(),
@@ -556,7 +558,7 @@ fn test_variable_name_already_in_scope() {
     names.type_variable_in_scope(1, "a".into());
     names.type_variable_in_scope(2, "b".into());
 
-    let mut printer = AnnotationPrinter::new(&mut names);
+    let mut printer = Printer::new(&mut names);
 
     let type_ = |id| Type::Var {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id })),

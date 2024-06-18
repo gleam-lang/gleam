@@ -1,4 +1,3 @@
-mod annotation_printer;
 mod code_action;
 mod compiler;
 mod completer;
