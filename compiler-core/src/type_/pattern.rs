@@ -212,6 +212,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 name,
                 location,
             }),
+            Pattern::Invalid { location, .. } => Ok(Pattern::Invalid { type_, location }),
 
             Pattern::Variable { name, location, .. } => {
                 self.insert_variable(&name, type_.clone(), location)

@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\npub fn main() {\n  // Since the pattern is invalid no variable is created\n  let Junk(a) = 7\n  // Pattern is valid but does not type check\n  let Ok(b) = 1\n  let c = a + b\n}\n"
+---
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:7
+  │
+4 │   let Junk(a) = 7
+  │       ^^^^^^^
+
+The name `Junk` is not in scope here.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:6:7
+  │
+6 │   let Ok(b) = 1
+  │       ^^^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Result(a, b)
+
+error: Unknown variable
+  ┌─ /src/one/two.gleam:7:11
+  │
+7 │   let c = a + b
+  │           ^ Did you mean `b`?
+
+The name `a` is not in scope here.

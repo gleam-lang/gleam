@@ -1106,6 +1106,8 @@ pub trait PatternFolder {
                 left_side_string,
                 right_side_assignment,
             ),
+
+            Pattern::Invalid { location, .. } => self.fold_pattern_invalid(location),
         }
     }
 
@@ -1227,6 +1229,13 @@ pub trait PatternFolder {
         }
     }
 
+    fn fold_pattern_invalid(&mut self, location: SrcSpan) -> UntypedPattern {
+        Pattern::Invalid {
+            location,
+            type_: (),
+        }
+    }
+
     /// You probably don't want to override this method.
     fn walk_pattern(&mut self, m: UntypedPattern) -> UntypedPattern {
         match m {
@@ -1236,7 +1245,8 @@ pub trait PatternFolder {
             | Pattern::String { .. }
             | Pattern::Discard { .. }
             | Pattern::VarUsage { .. }
-            | Pattern::StringPrefix { .. } => m,
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => m,
 
             Pattern::Assign {
                 name,

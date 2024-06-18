@@ -9,3 +9,11 @@ error: Unknown module field
   │       ^
 
 The module `one` does not have a `User` value.
+
+error: Unknown variable
+  ┌─ src/two.gleam:8:5
+  │
+8 │   #(name, score)
+  │     ^
+
+The name `name` is not in scope here.

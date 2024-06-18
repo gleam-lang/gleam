@@ -836,5 +836,4 @@ pub fn visit_typed_expr_invalid<'a, V>(_v: &mut V, _location: &'a SrcSpan, _typ:
 where
     V: Visit<'a> + ?Sized,
 {
-    /* TODO */
 }

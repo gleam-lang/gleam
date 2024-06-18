@@ -289,14 +289,9 @@ fn compile_statement_sequence(
         errors,
     )
     .infer_statements(ast);
-    match (res, Vec1::try_from_vec(errors.to_vec())) {
-        (Ok(res), Err(_)) => Ok(res),
-        (Ok(_), Ok(errors)) => Err(errors),
-        (Err(err), Ok(mut errors)) => {
-            errors.push(err);
-            Err(errors)
-        }
-        (Err(err), Err(_)) => Err(Vec1::new(err)),
+    match Vec1::try_from_vec(errors.to_vec()) {
+        Err(_) => Ok(res),
+        Ok(errors) => Err(errors),
     }
 }
 

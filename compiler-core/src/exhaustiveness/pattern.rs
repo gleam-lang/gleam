@@ -104,6 +104,7 @@ impl PatternArena {
 
     pub fn register(&mut self, pattern: &TypedPattern) -> PatternId {
         match pattern {
+            TypedPattern::Invalid { .. } => self.insert(Pattern::Discard),
             TypedPattern::Discard { .. } => self.insert(Pattern::Discard),
 
             TypedPattern::Int { value, .. } => {
