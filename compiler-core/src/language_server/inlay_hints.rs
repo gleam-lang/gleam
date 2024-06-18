@@ -54,7 +54,9 @@ impl<'a> Buf<'a> {
             | TypedExpr::String { .. }
             | TypedExpr::Todo { .. }
             | TypedExpr::Panic { .. }
-            | TypedExpr::Var { .. } => (),
+            | TypedExpr::Var { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::ModuleSelect { .. } => (),
 
             TypedExpr::Pipeline {
                 location: _,
@@ -126,8 +128,48 @@ impl<'a> Buf<'a> {
                 }
             }
 
-            // TODO
-            _ => (),
+            TypedExpr::List { elements, tail, .. } => {
+                for el in elements {
+                    self.get_inlay_hints_expr(el);
+                }
+                if let Some(tail) = tail {
+                    self.get_inlay_hints_expr(*tail);
+                }
+            }
+
+            TypedExpr::BinOp { left, right, .. } => {
+                self.get_inlay_hints_expr(*left);
+                self.get_inlay_hints_expr(*right);
+            }
+
+            TypedExpr::RecordAccess { record, .. } => {
+                self.get_inlay_hints_expr(*record);
+            }
+
+            TypedExpr::Tuple { elems, .. } => {
+                for el in elems {
+                    self.get_inlay_hints_expr(el);
+                }
+            }
+
+            TypedExpr::TupleIndex { tuple, .. } => {
+                self.get_inlay_hints_expr(*tuple);
+            }
+
+            TypedExpr::RecordUpdate { spread, args, .. } => {
+                for arg in args {
+                    self.get_inlay_hints_expr(arg.value);
+                }
+                self.get_inlay_hints_expr(*spread);
+            }
+
+            TypedExpr::NegateBool { value, .. } => {
+                self.get_inlay_hints_expr(*value);
+            }
+
+            TypedExpr::NegateInt { value, .. } => {
+                self.get_inlay_hints_expr(*value);
+            }
         }
     }
 }
