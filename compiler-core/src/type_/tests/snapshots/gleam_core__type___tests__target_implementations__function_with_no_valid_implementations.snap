@@ -3,16 +3,6 @@ source: compiler-core/src/type_/tests/target_implementations.rs
 expression: "\n@external(javascript, \"foo\", \"bar\")\nfn javascript_only() -> Int\n\n@external(erlang, \"foo\", \"bar\")\nfn erlang_only() -> Int\n\npub fn main() {\n    javascript_only()\n    erlang_only()\n}\n"
 ---
 error: Unsupported target
-  ┌─ /src/one/two.gleam:8:1
-  │
-8 │ pub fn main() {
-  │ ^^^^^^^^^^^^^
-
-The `main` function is public but doesn't have an implementation for the
-Erlang target. All public functions of a package must be able to compile
-for a module to be valid.
-
-error: Unsupported target
   ┌─ /src/one/two.gleam:9:5
   │
 9 │     javascript_only()
