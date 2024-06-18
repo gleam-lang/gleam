@@ -41,8 +41,8 @@ impl<'a> Buf<'a> {
     fn get_inlay_hints_statement(&mut self, typed_st: TypedStatement) {
         match typed_st {
             Statement::Expression(e) => self.get_inlay_hints_expr(e),
+            Statement::Assignment(assig) => self.get_inlay_hints_expr(*assig.value),
             // TODO
-            Statement::Assignment(_) => (),
             Statement::Use(_) => (),
         }
     }
@@ -109,6 +109,20 @@ impl<'a> Buf<'a> {
                     self.get_inlay_hints_statement(st);
                 }
             }
+
+            TypedExpr::Call { fun: _, args, .. } => {
+                // TODO should we iterate the caller?
+                for arg in args {
+                    self.get_inlay_hints_expr(arg.value);
+                }
+            }
+
+            TypedExpr::Fn { body, .. } => {
+                for st in body {
+                    self.get_inlay_hints_statement(st);
+                }
+            }
+
             // TODO
             _ => (),
         }
@@ -226,6 +240,36 @@ mod tests {
     }
 
     #[test]
+    fn hints_nested_for_apply_fn_let() {
+        let src = r#"
+            fn identity(x) {
+              x
+            }
+
+            fn main() {
+              let f = identity(fn() {
+                0
+                |> identity()
+              })
+            }
+        "#;
+
+        assert_inlay_hints(
+            src,
+            vec![
+                InlayHint {
+                    label: "Int".to_string(),
+                    offset: index_of_end(src, "0"),
+                },
+                InlayHint {
+                    label: "Int".to_string(),
+                    offset: index_of_end(src, "|> identity()"),
+                },
+            ],
+        );
+    }
+
+    #[test]
     fn test_index_of() {
         let src = r#"a[Z]c"#;
         assert_eq!(index_of_end(src, "[Z]"), 4);
@@ -236,6 +280,7 @@ mod tests {
         (lookup + search_for.len()) as u32
     }
 
+    // TODO dedup this function
     fn compile_module(src: &str) -> TypedModule {
         let parsed = crate::parse::parse_module(src).expect("syntax error");
         let ast = parsed.module;
