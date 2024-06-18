@@ -7,7 +7,8 @@ use crate::{
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        compiler::LspProjectCompiler, files::FileSystemProxy, progress::ProgressReporter,
+        compiler::LspProjectCompiler, files::FileSystemProxy, inlay_hints::get_inlay_hints,
+        progress::ProgressReporter,
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
@@ -17,13 +18,15 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use lsp::CodeAction;
-use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
+use lsp_types::{
+    self as lsp, Hover, HoverContents, InlayHint, InlayHintKind, InlayHintLabel, MarkedString, Url,
+};
 use std::sync::Arc;
 
 use super::{
     code_action::{CodeActionBuilder, RedundantTupleInCaseSubject},
     completer::Completer,
-    src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+    src_offset_to_lsp_position, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -264,6 +267,32 @@ where
             } else {
                 Some(actions)
             })
+        })
+    }
+
+    pub fn inlay_hints(&mut self, params: lsp::InlayHintParams) -> Response<Vec<InlayHint>> {
+        self.respond(|this| {
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(vec![]);
+            };
+
+            let line_numbers = LineNumbers::new(&module.code);
+
+            let hints = get_inlay_hints(module.ast.clone())
+                .iter()
+                .map(|hint| InlayHint {
+                    position: src_offset_to_lsp_position(hint.offset, &line_numbers),
+                    label: InlayHintLabel::String(hint.label.to_string()),
+                    kind: Some(InlayHintKind::TYPE),
+                    text_edits: None,
+                    tooltip: None,
+                    padding_left: Some(true),
+                    padding_right: None,
+                    data: None,
+                })
+                .collect();
+
+            Ok(hints)
         })
     }
 

@@ -101,6 +101,7 @@ where
             Request::GoToDefinition(param) => self.goto_definition(param),
             Request::Completion(param) => self.completion(param),
             Request::CodeAction(param) => self.code_action(param),
+            Request::ShowInlayHints(param) => self.show_inlay_hints(param),
         };
 
         self.publish_feedback(feedback);
@@ -317,6 +318,11 @@ where
     fn code_action(&mut self, params: lsp::CodeActionParams) -> (Json, Feedback) {
         let path = super::path(&params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.code_actions(params))
+    }
+
+    fn show_inlay_hints(&mut self, params: lsp::InlayHintParams) -> (Json, Feedback) {
+        let path = super::path(&params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.inlay_hints(params))
     }
 
     fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {

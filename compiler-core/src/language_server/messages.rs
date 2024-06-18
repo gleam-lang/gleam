@@ -6,7 +6,7 @@ use lsp::{
 use lsp_types::{
     self as lsp,
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
-    request::{CodeActionRequest, Completion, Formatting, HoverRequest},
+    request::{CodeActionRequest, Completion, Formatting, HoverRequest, InlayHintRequest},
 };
 use std::time::Duration;
 
@@ -23,6 +23,7 @@ pub enum Request {
     GoToDefinition(lsp::GotoDefinitionParams),
     Completion(lsp::CompletionParams),
     CodeAction(lsp::CodeActionParams),
+    ShowInlayHints(lsp::InlayHintParams),
 }
 
 impl Request {
@@ -48,6 +49,10 @@ impl Request {
             "textDocument/codeAction" => {
                 let params = cast_request::<CodeActionRequest>(request);
                 Some(Message::Request(id, Request::CodeAction(params)))
+            }
+            "textDocument/inlayHint" => {
+                let params = cast_request::<InlayHintRequest>(request);
+                Some(Message::Request(id, Request::ShowInlayHints(params)))
             }
             _ => None,
         }
