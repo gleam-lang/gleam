@@ -40,6 +40,11 @@ pub trait DownloadDependencies {
     fn download_dependencies(&self, paths: &ProjectPaths) -> Result<Manifest>;
 }
 
+pub fn src_offset_to_lsp_position(offset: u32, line_numbers: &LineNumbers) -> Position {
+    let line_col = line_numbers.line_and_column_number(offset);
+    Position::new(line_col.line - 1, line_col.column - 1)
+}
+
 pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range {
     let start = line_numbers.line_and_column_number(location.start);
     let end = line_numbers.line_and_column_number(location.end);

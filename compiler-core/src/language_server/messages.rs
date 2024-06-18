@@ -9,7 +9,7 @@ use lsp_types::{
     request::{
         CodeActionRequest, Completion, DocumentSymbolRequest, Formatting, HoverRequest,
         SignatureHelpRequest,
-    },
+    , InlayHintRequest},
 };
 use std::time::Duration;
 
@@ -28,6 +28,7 @@ pub enum Request {
     CodeAction(lsp::CodeActionParams),
     SignatureHelp(lsp::SignatureHelpParams),
     DocumentSymbol(lsp::DocumentSymbolParams),
+    ShowInlayHints(lsp::InlayHintParams),
 }
 
 impl Request {
@@ -61,6 +62,10 @@ impl Request {
             "textDocument/documentSymbol" => {
                 let params = cast_request::<DocumentSymbolRequest>(request);
                 Some(Message::Request(id, Request::DocumentSymbol(params)))
+            }
+            "textDocument/inlayHint" => {
+                let params = cast_request::<InlayHintRequest>(request);
+                Some(Message::Request(id, Request::ShowInlayHints(params)))
             }
             _ => None,
         }

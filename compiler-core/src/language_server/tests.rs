@@ -4,6 +4,7 @@ mod completion;
 mod definition;
 mod document_symbols;
 mod hover;
+mod inlay_hints;
 mod signature_help;
 
 use std::{

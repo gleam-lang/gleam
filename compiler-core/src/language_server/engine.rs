@@ -8,7 +8,8 @@ use crate::{
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        compiler::LspProjectCompiler, files::FileSystemProxy, progress::ProgressReporter,
+        compiler::LspProjectCompiler, files::FileSystemProxy, inlay_hints::get_inlay_hints,
+        progress::ProgressReporter,
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
@@ -23,8 +24,10 @@ use ecow::EcoString;
 use itertools::Itertools;
 use lsp::CodeAction;
 use lsp_types::{
-    self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, Position, Range,
+    
+    self as lsp, DocumentSymbol, Hover, HoverContents, InlayHint, InlayHintKind, InlayHintLabel, MarkedString, Position, Range,
     SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
+,
 };
 use std::sync::Arc;
 
@@ -35,7 +38,7 @@ use super::{
         RedundantTupleInCaseSubject,
     },
     completer::Completer,
-    signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+    signature_help, src_offset_to_lsp_position, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -444,6 +447,32 @@ where
         })
     }
 
+    pub fn inlay_hints(&mut self, params: lsp::InlayHintParams) -> Response<Vec<InlayHint>> {
+        self.respond(|this| {
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(vec![]);
+            };
+
+            let line_numbers = LineNumbers::new(&module.code);
+
+            let hints = get_inlay_hints(module.ast.clone())
+                .iter()
+                .map(|hint| InlayHint {
+                    position: src_offset_to_lsp_position(hint.offset, &line_numbers),
+                    label: InlayHintLabel::String(hint.label.to_string()),
+                    kind: Some(InlayHintKind::TYPE),
+                    text_edits: None,
+                    tooltip: None,
+                    padding_left: Some(true),
+                    padding_right: None,
+                    data: None,
+                })
+                .collect();
+
+            Ok(hints)
+        })
+    }
+
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
         let result = handler(self);
         let warnings = self.take_warnings();
@@ -756,6 +785,14 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(pattern.location(), &line_numbers)),
+    }
+}
+
+
+fn get_function_type(fun: &TypedFunction) -> Type {
+    Type::Fn {
+        args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
+        retrn: fun.return_type.clone(),
     }
 }
 

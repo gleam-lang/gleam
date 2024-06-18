@@ -104,6 +104,7 @@ where
             Request::CodeAction(param) => self.code_action(param),
             Request::SignatureHelp(param) => self.signature_help(param),
             Request::DocumentSymbol(param) => self.document_symbol(param),
+            Request::ShowInlayHints(param) => self.show_inlay_hints(param),
         };
 
         self.publish_feedback(feedback);
@@ -330,6 +331,11 @@ where
     fn document_symbol(&mut self, params: lsp::DocumentSymbolParams) -> (Json, Feedback) {
         let path = super::path(&params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.document_symbol(params))
+    }
+
+    fn show_inlay_hints(&mut self, params: lsp::InlayHintParams) -> (Json, Feedback) {
+        let path = super::path(&params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.inlay_hints(params))
     }
 
     fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
