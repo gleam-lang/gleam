@@ -14,3 +14,14 @@ The value being accessed has this type:
 
 It does not have any fields.
 
+error: Unknown record field
+  ┌─ src/two.gleam:8:19
+  │
+8 │   let score = user.score
+  │                   ^ This field does not exist
+
+The value being accessed has this type:
+
+    User
+
+It does not have any fields.
