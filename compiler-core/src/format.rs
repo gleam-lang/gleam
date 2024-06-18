@@ -2060,6 +2060,8 @@ impl<'comments> Formatter<'comments> {
                     None => docvec![left, " <> ", right],
                 }
             }
+
+            Pattern::Invalid { .. } => panic!("invalid patterns can not be in an untyped ast"),
         };
         commented(doc, comments)
     }

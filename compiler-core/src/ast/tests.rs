@@ -146,7 +146,6 @@ fn compile_expression(src: &str) -> TypedStatement {
         errors,
     )
     .infer_statements(ast)
-    .expect("should successfully infer")
     .first()
     .clone()
 }

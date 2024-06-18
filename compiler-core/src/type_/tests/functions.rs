@@ -289,6 +289,21 @@ pub fn main() {
 }
 
 #[test]
+fn multiple_bad_statement_assignment_with_pattern_fault_tolerance2() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  // Since the pattern is invalid no variable is created
+  let Junk(a) = 7
+  // Pattern is valid but does not type check
+  let Ok(b) = 1
+  let c = a + b
+}
+"#
+    );
+}
+
+#[test]
 fn multiple_bad_statement_expression_fault_tolerance() {
     assert_module_error!(
         r#"

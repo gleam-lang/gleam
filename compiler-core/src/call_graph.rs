@@ -292,7 +292,8 @@ impl<'a> CallGraphBuilder<'a> {
             | Pattern::StringPrefix {
                 right_side_assignment: AssignName::Discard(_),
                 ..
-            } => (),
+            }
+            | Pattern::Invalid { .. } => (),
 
             Pattern::StringPrefix {
                 right_side_assignment: AssignName::Variable(name),

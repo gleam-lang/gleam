@@ -142,6 +142,8 @@ fn print<'a>(
                 ],
             }
         }
+
+        Pattern::Invalid { .. } => panic!("invalid patterns should not reach code generation"),
     }
 }
 
