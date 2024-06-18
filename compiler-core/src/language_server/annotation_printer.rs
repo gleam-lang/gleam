@@ -152,7 +152,7 @@ impl TypeNames {
     }
 
     /// A suitable name of a type variable.
-    pub fn type_variable<'a>(&'a mut self, id: u64) -> EcoString {
+    pub fn type_variable(&mut self, id: u64) -> EcoString {
         if let Some(name) = self.type_variables.get(&id) {
             return name.clone();
         }
@@ -227,7 +227,7 @@ impl<'a> AnnotationPrinter<'a> {
                     // TODO: indicate that the module is not import and as such
                     // needs to be, as well as how.
                     NamedTypeNames::Unimported(n) => {
-                        (Some(module.split("/").last().unwrap_or(module)), n)
+                        (Some(module.split('/').last().unwrap_or(module)), n)
                     }
                 };
 
@@ -279,7 +279,7 @@ impl<'a> AnnotationPrinter<'a> {
 #[test]
 fn test_local_type() {
     let mut names = TypeNames::new("module".into());
-    let _ = names.named_type_in_scope("mod".into(), "Tiger".into(), "Cat".into());
+    names.named_type_in_scope("mod".into(), "Tiger".into(), "Cat".into());
     let mut printer = AnnotationPrinter::new(&mut names);
 
     let typ = Type::Named {
@@ -296,7 +296,7 @@ fn test_local_type() {
 #[test]
 fn test_generic_type_annotation() {
     let mut names = TypeNames::new("module".into());
-    let _ = names.type_variable_in_scope(0, "one".into());
+    names.type_variable_in_scope(0, "one".into());
     let mut printer = AnnotationPrinter::new(&mut names);
 
     let typ = Type::Var {
@@ -353,8 +353,8 @@ fn test_tuple_type() {
 #[test]
 fn test_fn_type() {
     let mut names = TypeNames::new("module".into());
-    let _ = names.named_type_in_scope("gleam".into(), "Int".into(), "Int".into());
-    let _ = names.named_type_in_scope("gleam".into(), "Bool".into(), "Bool".into());
+    names.named_type_in_scope("gleam".into(), "Int".into(), "Int".into());
+    names.named_type_in_scope("gleam".into(), "Bool".into(), "Bool".into());
     let mut printer = AnnotationPrinter::new(&mut names);
 
     let typ = Type::Fn {
@@ -389,7 +389,7 @@ fn test_fn_type() {
 #[test]
 fn test_module_alias() {
     let mut names = TypeNames::new("module".into());
-    let _ = names.imported_module("mod1".into(), "animals".into());
+    names.imported_module("mod1".into(), "animals".into());
     let mut printer = AnnotationPrinter::new(&mut names);
 
     let typ = Type::Named {
@@ -407,9 +407,9 @@ fn test_module_alias() {
 fn test_type_alias_and_generics() {
     let mut names = TypeNames::new("module".into());
 
-    let _ = names.named_type_in_scope("mod".into(), "Tiger".into(), "Cat".into());
+    names.named_type_in_scope("mod".into(), "Tiger".into(), "Cat".into());
 
-    let _ = names.type_variable_in_scope(0, "one".into());
+    names.type_variable_in_scope(0, "one".into());
 
     let mut printer = AnnotationPrinter::new(&mut names);
 
@@ -430,9 +430,9 @@ fn test_type_alias_and_generics() {
 fn test_unqualified_import_and_generic() {
     let mut names = TypeNames::new("module".into());
 
-    let _ = names.named_type_in_scope("mod".into(), "Cat".into(), "C".into());
+    names.named_type_in_scope("mod".into(), "Cat".into(), "C".into());
 
-    let _ = names.type_variable_in_scope(0, "one".into());
+    names.type_variable_in_scope(0, "one".into());
 
     let mut printer = AnnotationPrinter::new(&mut names);
 
@@ -468,7 +468,7 @@ fn nested_module() {
 fn test_unqualified_import_and_module_alias() {
     let mut names = TypeNames::new("module".into());
 
-    let _ = names.imported_module("mod1".into(), "animals".into());
+    names.imported_module("mod1".into(), "animals".into());
 
     let _ = names
         .local_types
@@ -490,7 +490,7 @@ fn test_unqualified_import_and_module_alias() {
 #[test]
 fn test_module_imports() {
     let mut names = TypeNames::new("module".into());
-    let _ = names.imported_module("mod".into(), "animals".into());
+    names.imported_module("mod".into(), "animals".into());
     let _ = names
         .local_types
         .insert(("mod2".into(), "Cat".into()), "Cat".into());
@@ -521,8 +521,8 @@ fn test_module_imports() {
 fn test_multiple_generic_annotations() {
     let mut names = TypeNames::new("module".into());
 
-    let _ = names.type_variable_in_scope(0, "one".into());
-    let _ = names.type_variable_in_scope(1, "two".into());
+    names.type_variable_in_scope(0, "one".into());
+    names.type_variable_in_scope(1, "two".into());
 
     let mut printer = AnnotationPrinter::new(&mut names);
 
@@ -553,8 +553,8 @@ fn test_multiple_generic_annotations() {
 fn test_variable_name_already_in_scope() {
     let mut names = TypeNames::new("module".into());
 
-    let _ = names.type_variable_in_scope(1, "a".into());
-    let _ = names.type_variable_in_scope(2, "b".into());
+    names.type_variable_in_scope(1, "a".into());
+    names.type_variable_in_scope(2, "b".into());
 
     let mut printer = AnnotationPrinter::new(&mut names);
 
