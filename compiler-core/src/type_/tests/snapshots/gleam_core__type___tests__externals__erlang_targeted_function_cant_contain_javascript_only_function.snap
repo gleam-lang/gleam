@@ -3,16 +3,6 @@ source: compiler-core/src/type_/tests/externals.rs
 expression: "@target(erlang)\npub fn erlang_only() -> Int {\n  javascript_only()\n}\n\n@external(javascript, \"one\", \"two\")\nfn javascript_only() -> Int\n    "
 ---
 error: Unsupported target
-  ┌─ /src/one/two.gleam:2:1
-  │
-2 │ pub fn erlang_only() -> Int {
-  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The `erlang_only` function is public but doesn't have an implementation
-for the Erlang target. All public functions of a package must be able to
-compile for a module to be valid.
-
-error: Unsupported target
   ┌─ /src/one/two.gleam:3:3
   │
 3 │   javascript_only()
