@@ -37,7 +37,9 @@ pub fn command(packages: Vec<String>) -> Result<()> {
     }
 
     if !packages_not_exist.is_empty() {
-        return Err(Error::RemovedPackagesNotExist { packages: packages_not_exist });
+        return Err(Error::RemovedPackagesNotExist {
+            packages: packages_not_exist,
+        });
     }
 
     // Write the updated config
