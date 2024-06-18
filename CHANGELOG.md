@@ -176,6 +176,21 @@
   `..` in a record pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- LSP now suggests a code a action to rename variables, types and functions when they
+  don't match the gleam naming conventions:
+
+  ```
+  let fooBar = 10
+  ```
+
+  Becomes:
+
+  ```
+  let foo_bar = 10
+  ```
+
+  ([Gears](https://github.com/gearsdatapacks))
+
 ### Bug Fixes
 
 - Fixed a bug where the compiler would output a confusing error message when
