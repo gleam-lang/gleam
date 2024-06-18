@@ -28,13 +28,10 @@ impl<'a> Buf<'a> {
 
 impl<'a> Buf<'a> {
     pub fn push_inlay_hints_definition(&mut self, typed_def: TypedDefinition) {
-        match typed_def {
-            Definition::Function(f) => {
-                for st in f.body {
-                    self.push_inlay_hints_statement(st)
-                }
+        if let Definition::Function(f) = typed_def {
+            for st in f.body {
+                self.push_inlay_hints_statement(st)
             }
-            _ => (),
         }
     }
 
