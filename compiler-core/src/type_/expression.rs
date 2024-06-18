@@ -547,7 +547,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
 
                 Statement::Expression(expression) => {
-                    let expression = self.infer(expression)?;
+                    let location = expression.location();
+                    let expression = match self.infer(expression) {
+                        Ok(expression) => expression,
+                        Err(error) => {
+                            let rigid_names = self.hydrator.rigid_names();
+                            self.errors
+                                .push(error.with_unify_error_rigid_names(&rigid_names));
+                            TypedExpr::Invalid {
+                                location,
+                                typ: self.new_unbound_var(),
+                            }
+                        }
+                    };
 
                     // This isn't the final expression in the sequence, so call the
                     // `expression_discarded` function to see if anything is being
@@ -575,7 +587,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         mut following_expressions: Vec<UntypedStatement>,
     ) -> Result<TypedStatement, Error> {
         let use_call_location = use_.call.location();
-        let mut call = get_use_expression_call(*use_.call)?;
+        let mut call = get_use_expression_call(*use_.call);
         let assignments = UseAssignments::from_use_expression(use_.assignments);
 
         let mut statements = assignments.body_assignments;
@@ -1191,7 +1203,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             annotation,
             location,
         } = assignment;
-        let value = self.in_new_scope(|value_typer| value_typer.infer(*value))?;
+        let value_location = value.location();
+        let value = match self.in_new_scope(|value_typer| value_typer.infer(*value)) {
+            Ok(value) => value,
+            Err(error) => {
+                let rigid_names = self.hydrator.rigid_names();
+                self.errors
+                    .push(error.with_unify_error_rigid_names(&rigid_names));
+                TypedExpr::Invalid {
+                    location: value_location,
+                    typ: self.new_unbound_var(),
+                }
+            }
+        };
+
         let value_typ = value.type_();
 
         // Ensure the pattern matches the type of the value
@@ -1200,11 +1225,25 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Check that any type annotation is accurate.
         if let Some(annotation) = &annotation {
-            let ann_typ = self
+            match self
                 .type_from_ast(annotation)
-                .map(|t| self.instantiate(t, &mut hashmap![]))?;
-            unify(ann_typ, value_typ.clone())
-                .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
+                .map(|t| self.instantiate(t, &mut hashmap![]))
+            {
+                Ok(ann_typ) => {
+                    if let Err(error) = unify(ann_typ, value_typ.clone())
+                        .map_err(|e| convert_unify_error(e, value.type_defining_location()))
+                    {
+                        let rigid_names = self.hydrator.rigid_names();
+                        self.errors
+                            .push(error.with_unify_error_rigid_names(&rigid_names));
+                    }
+                }
+                Err(error) => {
+                    let rigid_names = self.hydrator.rigid_names();
+                    self.errors
+                        .push(error.with_unify_error_rigid_names(&rigid_names));
+                }
+            }
         }
 
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
@@ -2983,7 +3022,7 @@ struct UseCall {
     arguments: Vec<CallArg<UntypedExpr>>,
 }
 
-fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
+fn get_use_expression_call(call: UntypedExpr) -> UseCall {
     // Ensure that the use's call is of the right structure. i.e. it is a
     // call to a function.
     match call {
@@ -2991,15 +3030,15 @@ fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
             fun: function,
             arguments,
             ..
-        } => Ok(UseCall {
+        } => UseCall {
             arguments,
             function,
-        }),
+        },
 
-        other => Ok(UseCall {
+        other => UseCall {
             function: Box::new(other),
             arguments: vec![],
-        }),
+        },
     }
 }
 

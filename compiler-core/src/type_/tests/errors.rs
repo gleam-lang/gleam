@@ -715,7 +715,7 @@ fn module_could_not_unify8() {
 
 #[test]
 fn module_could_not_unify9() {
-    assert_module_error!("fn main() { let [1, 2, ..x]: List(String) = [1,2,3] x }");
+    assert_module_error!("fn main() { let assert [1, 2, ..x]: List(String) = [1,2,3] x }");
 }
 
 #[test]

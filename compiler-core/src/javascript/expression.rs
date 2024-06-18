@@ -202,6 +202,10 @@ impl<'module> Generator<'module> {
             TypedExpr::NegateBool { value, .. } => self.negate_with("!", value),
 
             TypedExpr::NegateInt { value, .. } => self.negate_with("- ", value),
+
+            TypedExpr::Invalid { .. } => {
+                panic!("invalid expressions should not reach code generation")
+            }
         }?;
         Ok(if expression.handles_own_return() {
             document
@@ -1487,7 +1491,8 @@ impl TypedExpr {
             | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
-            | TypedExpr::NegateInt { .. } => false,
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => false,
         }
     }
 }
@@ -1551,7 +1556,8 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             TypedExpr::Todo { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::Panic { .. }
-            | TypedExpr::Pipeline { .. },
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Invalid { .. },
         ) => false,
 
         Statement::Assignment(_) => false,
