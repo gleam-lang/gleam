@@ -4,6 +4,10 @@
 
 ### Build tool
 
+- `gleam remove` will now present an error if a package being removed does not
+  exist as a dependency in the project.
+  ([Changfeng Lou](https://github.com/hnlcf))
+
 ### Compiler
 
 - The compiler now emits a warning for redundant function captures in a
