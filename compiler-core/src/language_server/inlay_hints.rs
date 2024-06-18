@@ -83,6 +83,7 @@ impl<'a> Buf<'a> {
                         offset: assign.location.end,
                     };
                     prev_hint = Some((this_line, this_hint));
+                    self.get_inlay_hints_expr(*assign.value);
                 }
 
                 let (prev_line, prev_hint) = prev_hint.expect("Expected a non-empty arr");
@@ -95,6 +96,8 @@ impl<'a> Buf<'a> {
                         offset: finally.location().end,
                     })
                 }
+
+                self.get_inlay_hints_expr(*finally);
             }
 
             TypedExpr::Case { clauses, .. } => {
