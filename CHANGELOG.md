@@ -50,6 +50,55 @@
 
   Else any functions which rely on this will not be compiled into Javascript.
 
+- Fault tolerance is now at a statement level instead of a function level in most cases. This means that even if there are errors in a single statement, the compiler will attempt to infer the rest of the function. The exceptions to this are if the right hand side of a use is an invalid function or if the left hand side of an assignment is an invalid pattern.
+
+  ```
+  pub fn main() {
+    let a = 1 + 2.0
+    let b = a + 2.0
+    a + b
+  }
+  ```
+
+  Would output:
+
+  ```
+  error: Type mismatch
+    ┌─ /path/src/test_gleam.gleam:2:15
+    │
+  2 │   let a = 1 + 2.0
+    │               ^^^
+
+  The + operator expects arguments of this type:
+
+      Int
+
+  But this argument has this type:
+
+      Float
+
+  Hint: the +. operator can be used with Floats
+
+
+  error: Type mismatch
+    ┌─ /path/src/test_gleam.gleam:3:15
+    │
+  3 │   let b = a + 2.0
+    │               ^^^
+
+  The + operator expects arguments of this type:
+
+      Int
+
+  But this argument has this type:
+
+      Float
+
+  Hint: the +. operator can be used with Floats
+  ```
+
+  ([Ameen Radwan](https://github.com/Acepie))
+
 ### Formatter
 
 ### Language Server
@@ -76,10 +125,10 @@
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - LSP can now suggest completions for values and types from importable modules and adds the import to the top of the file.
-  ([Ameen Radwan](https://github.com/Acepie)
+  ([Ameen Radwan](https://github.com/Acepie))
 
 - LSP completions now use the "text_edit" language server API resulting in better/more accurate insertions.
-  ([Ameen Radwan](https://github.com/Acepie)
+  ([Ameen Radwan](https://github.com/Acepie))
 
 ### Bug Fixes
 
