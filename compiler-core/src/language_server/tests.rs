@@ -4,38 +4,47 @@ mod completion;
 mod definition;
 mod document_symbols;
 mod hover;
+mod inlay_hints;
 mod reference;
 mod rename;
 mod signature_help;
 
-use std::{
-    collections::{HashMap, HashSet},
-    sync::{Arc, Mutex},
-    time::SystemTime,
-};
-
-use ecow::EcoString;
-use hexpm::version::{Range, Version};
-
-use camino::{Utf8Path, Utf8PathBuf};
-use itertools::Itertools;
-use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
-
+use super::configuration::Configuration;
 use crate::{
-    Result,
     config::PackageConfig,
     io::{
-        BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
-        WrappedReader, memory::InMemoryFileSystem,
+        memory::InMemoryFileSystem, BeamCompiler, Command, CommandExecutor, FileSystemReader,
+        FileSystemWriter, ReadDir, WrappedReader,
     },
     language_server::{
-        DownloadDependencies, LockGuard, Locker, MakeLocker, engine::LanguageServerEngine,
-        files::FileSystemProxy, progress::ProgressReporter,
+        engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
+        DownloadDependencies, LockGuard, Locker, MakeLocker,
     },
     line_numbers::LineNumbers,
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
     requirement::Requirement,
+    Result,
+};
+use camino::{Utf8Path, Utf8PathBuf};
+use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
+use ecow::EcoString;
+use hexpm::version::{Range, Version};
+use hexpm::version::{Range, Version};
+use itertools::Itertools;
+use itertools::Itertools;
+use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
+use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, Mutex, RwLock},
+    time::SystemTime,
+};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, Mutex, RwLock},
+    time::SystemTime,
 };
 
 pub const LSP_TEST_ROOT_PACKAGE_NAME: &str = "app";
@@ -385,6 +394,7 @@ fn setup_engine(
         io.clone(),
         FileSystemProxy::new(io.clone()),
         io.paths.clone(),
+        Arc::new(RwLock::new(Configuration::default())),
     )
     .unwrap()
 }
@@ -547,7 +557,7 @@ impl<'a> TestProject<'a> {
         engine
     }
 
-    pub fn build_path(&self, position: Position) -> TextDocumentPositionParams {
+    pub fn build_path() -> TextDocumentIdentifier {
         let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
             r"\\?\C:\src\app.gleam"
         } else {
@@ -556,7 +566,7 @@ impl<'a> TestProject<'a> {
 
         let url = Url::from_file_path(path).unwrap();
 
-        TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position)
+        TextDocumentIdentifier::new(url)
     }
 
     pub fn build_test_path(
@@ -590,7 +600,7 @@ impl<'a> TestProject<'a> {
 
         let _response = engine.compile_please();
 
-        let param = self.build_path(position);
+        let param = TextDocumentPositionParams::new(Self::build_path(), position);
 
         (engine, param)
     }

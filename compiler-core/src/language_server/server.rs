@@ -1,27 +1,27 @@
 use super::{
-    messages::{Message, MessageBuffer, Next, Notification, Request},
+    configuration::SharedConfig,
+    messages::{Message, MessageBuffer, Next, Notification, Request, Response, ResponseHandler},
     progress::ConnectionProgressReporter,
 };
 use crate::{
-    Result,
     diagnostic::{Diagnostic, Level},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        DownloadDependencies, MakeLocker,
         engine::{self, LanguageServerEngine},
         feedback::{Feedback, FeedbackBookKeeper},
         files::FileSystemProxy,
         router::Router,
-        src_span_to_lsp_range,
+        src_span_to_lsp_range, DownloadDependencies, MakeLocker,
     },
     line_numbers::LineNumbers,
+    Result,
 };
 use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
 use itertools::Itertools;
 use lsp_types::{
-    self as lsp, HoverProviderCapability, InitializeParams, Position, PublishDiagnosticsParams,
-    Range, RenameOptions, TextEdit, Url,
+    self as lsp, ConfigurationItem, HoverProviderCapability, InitializeParams, Position,
+    PublishDiagnosticsParams, Range, RenameOptions, TextEdit, Url,
 };
 use serde_json::Value as Json;
 use std::collections::{HashMap, HashSet};
@@ -44,6 +44,8 @@ pub struct LanguageServer<'a, IO> {
     router: Router<IO, ConnectionProgressReporter<'a>>,
     changed_projects: HashSet<Utf8PathBuf>,
     io: FileSystemProxy<IO>,
+    message_buffer: MessageBuffer,
+    config: SharedConfig,
 }
 
 impl<'a, IO> LanguageServer<'a, IO>
@@ -60,23 +62,29 @@ where
         let initialise_params = initialisation_handshake(connection);
         let reporter = ConnectionProgressReporter::new(connection, &initialise_params);
         let io = FileSystemProxy::new(io);
-        let router = Router::new(reporter, io.clone());
+
+        let config = SharedConfig::default();
+        let router = Router::new(reporter, io.clone(), config.clone());
+
         Ok(Self {
             connection: connection.into(),
             initialise_params,
             changed_projects: HashSet::new(),
             outside_of_project_feedback: FeedbackBookKeeper::default(),
+            message_buffer: MessageBuffer::new(),
             router,
             io,
+            config,
         })
     }
 
     pub fn run(&mut self) -> Result<()> {
         self.start_watching_gleam_toml();
-        let mut buffer = MessageBuffer::new();
+        self.start_watching_config();
+        let _ = self.request_configuration();
 
         loop {
-            match buffer.receive(*self.connection) {
+            match self.message_buffer.receive(*self.connection) {
                 Next::Stop => break,
                 Next::MorePlease => (),
                 Next::Handle(messages) => {
@@ -94,7 +102,35 @@ where
         match message {
             Message::Request(id, request) => self.handle_request(id, request),
             Message::Notification(notification) => self.handle_notification(notification),
+            Message::Response(response) => self.handle_response(response),
         }
+    }
+
+    fn handle_response(&mut self, response: Response) {
+        match response {
+            Response::Configuration(updated_config) => {
+                {
+                    let mut config = self.config.write().expect("cannot write config");
+                    *config = updated_config;
+                }
+
+                let _ = self.inlay_hints_refresh();
+            }
+        }
+    }
+
+    fn send_request(
+        &mut self,
+        method: &str,
+        params: impl serde::Serialize,
+        handler: Option<ResponseHandler>,
+    ) {
+        let request = self.message_buffer.make_request(method, params, handler);
+
+        self.connection
+            .sender
+            .send(lsp_server::Message::Request(request))
+            .unwrap_or_else(|_| panic!("send {method}"));
     }
 
     fn handle_request(&mut self, id: lsp_server::RequestId, request: Request) {
@@ -106,6 +142,7 @@ where
             Request::CodeAction(param) => self.code_action(param),
             Request::SignatureHelp(param) => self.signature_help(param),
             Request::DocumentSymbol(param) => self.document_symbol(param),
+            Request::ShowInlayHints(param) => self.show_inlay_hints(param),
             Request::PrepareRename(param) => self.prepare_rename(param),
             Request::Rename(param) => self.rename(param),
             Request::GoToTypeDefinition(param) => self.goto_type_definition(param),
@@ -133,6 +170,7 @@ where
                 self.cache_file_in_memory(path, text)
             }
             Notification::ConfigFileChanged { path } => self.watched_files_changed(path),
+            Notification::ConfigChanged => self.request_configuration(),
         };
         self.publish_feedback(feedback);
     }
@@ -168,6 +206,35 @@ where
         }
     }
 
+    fn start_watching_config(&mut self) {
+        let supports_configuration = self
+            .initialise_params
+            .capabilities
+            .workspace
+            .as_ref()
+            .and_then(|w| w.did_change_configuration)
+            .map(|wf| wf.dynamic_registration == Some(true))
+            .unwrap_or(false);
+
+        if !supports_configuration {
+            tracing::warn!("lsp_client_cannot_watch_configuration");
+            return;
+        }
+
+        let watch_config = lsp::Registration {
+            id: "watch-user-configuration".into(),
+            method: "workspace/didChangeConfiguration".into(),
+            register_options: None,
+        };
+        self.send_request(
+            "client/registerCapability",
+            lsp::RegistrationParams {
+                registrations: vec![watch_config],
+            },
+            None,
+        );
+    }
+
     fn start_watching_gleam_toml(&mut self) {
         let supports_watch_files = self
             .initialise_params
@@ -198,18 +265,14 @@ where
                 .expect("workspace/didChangeWatchedFiles to json"),
             ),
         };
-        let request = lsp_server::Request {
-            id: 1.into(),
-            method: "client/registerCapability".into(),
-            params: serde_json::value::to_value(lsp::RegistrationParams {
+
+        self.send_request(
+            "client/registerCapability",
+            lsp::RegistrationParams {
                 registrations: vec![watch_config],
-            })
-            .expect("client/registerCapability to json"),
-        };
-        self.connection
-            .sender
-            .send(lsp_server::Message::Request(request))
-            .expect("send client/registerCapability");
+            },
+            None,
+        );
     }
 
     fn publish_messages(&self, messages: Vec<Diagnostic>) {
@@ -267,6 +330,54 @@ where
 
             Err(error) => (Json::Null, self.outside_of_project_feedback.error(error)),
         }
+    }
+
+    fn inlay_hints_refresh(&mut self) -> Feedback {
+        let supports_refresh = self
+            .initialise_params
+            .capabilities
+            .workspace
+            .as_ref()
+            .and_then(|capabilties| {
+                capabilties
+                    .inlay_hint
+                    .as_ref()
+                    .and_then(|h| h.refresh_support)
+            })
+            .unwrap_or(false);
+
+        if supports_refresh {
+            self.send_request("workspace/inlayHint/refresh", (), None);
+        }
+        Feedback::default()
+    }
+
+    fn request_configuration(&mut self) -> Feedback {
+        let supports_configuration = self
+            .initialise_params
+            .capabilities
+            .workspace
+            .as_ref()
+            .and_then(|w| w.configuration)
+            .unwrap_or(false);
+
+        if !supports_configuration {
+            tracing::warn!("lsp_client_cannot_request_configuration");
+            return Feedback::default();
+        }
+
+        self.send_request(
+            "workspace/configuration",
+            lsp::ConfigurationParams {
+                items: vec![ConfigurationItem {
+                    scope_uri: None,
+                    section: Some("gleam".into()),
+                }],
+            },
+            Some(ResponseHandler::UpdateConfiguration),
+        );
+
+        Feedback::default()
     }
 
     fn path_error_response(&mut self, path: Utf8PathBuf, error: crate::Error) -> (Json, Feedback) {
@@ -344,6 +455,11 @@ where
     fn document_symbol(&mut self, params: lsp::DocumentSymbolParams) -> (Json, Feedback) {
         let path = super::path(&params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.document_symbol(params))
+    }
+
+    fn show_inlay_hints(&mut self, params: lsp::InlayHintParams) -> (Json, Feedback) {
+        let path = super::path(&params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.inlay_hints(params))
     }
 
     fn prepare_rename(&mut self, params: lsp::TextDocumentPositionParams) -> (Json, Feedback) {
@@ -464,7 +580,7 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         experimental: None,
         position_encoding: None,
         inline_value_provider: None,
-        inlay_hint_provider: None,
+        inlay_hint_provider: Some(lsp::OneOf::Left(true)),
         diagnostic_provider: None,
     };
     let server_capabilities_json =

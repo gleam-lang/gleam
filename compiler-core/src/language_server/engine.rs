@@ -23,14 +23,13 @@ use ecow::EcoString;
 use itertools::Itertools;
 use lsp::CodeAction;
 use lsp_types::{
-    self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, Position,
+    self as lsp, DocumentSymbol, Hover, HoverContents, InlayHint, MarkedString, Position,
     PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
     WorkspaceEdit,
 };
 use std::{collections::HashSet, sync::Arc};
 
 use super::{
-    DownloadDependencies, MakeLocker,
     code_action::{
         AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
         ConvertToUse, ExpandFunctionCapture, ExtractVariable, FillInMissingLabelledArgs,
@@ -87,6 +86,9 @@ pub struct LanguageServerEngine<IO, Reporter> {
     /// Used to know if to show the "View on HexDocs" link
     /// when hovering on an imported value
     hex_deps: HashSet<EcoString>,
+
+    /// Configuration the user has set in their editor.
+    pub(crate) user_config: SharedConfig,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -107,6 +109,7 @@ where
         progress_reporter: Reporter,
         io: FileSystemProxy<IO>,
         paths: ProjectPaths,
+        user_config: SharedConfig,
     ) -> Result<Self> {
         let locker = io.inner().make_locker(&paths, config.target)?;
 
@@ -143,6 +146,7 @@ where
             paths,
             error: None,
             hex_deps,
+            user_config,
         })
     }
 
@@ -547,6 +551,28 @@ where
             }
 
             Ok(symbols)
+        })
+    }
+
+    pub fn inlay_hints(&mut self, params: lsp::InlayHintParams) -> Response<Vec<InlayHint>> {
+        self.respond(|this| {
+            let Ok(config) = this.user_config.read() else {
+                return Ok(vec![]);
+            };
+
+            if !config.inlay_hints.pipelines {
+                return Ok(vec![]);
+            }
+
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(vec![]);
+            };
+
+            let line_numbers = LineNumbers::new(&module.code);
+
+            let hints = inlay_hints::get_inlay_hints(module.ast.clone(), &line_numbers);
+
+            Ok(hints)
         })
     }
 
