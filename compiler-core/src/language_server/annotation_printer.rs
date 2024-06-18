@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use ecow::EcoString;
-use im::HashMap;
+use im::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::type_::{Type, TypeVar};
@@ -92,7 +92,7 @@ pub struct TypeNames {
     /// value: `"something"`
     ///
     type_variables: HashMap<u64, EcoString>,
-    // TODO: handle type parameter collisions
+    type_variable_names: HashSet<EcoString>,
 }
 
 impl TypeNames {
@@ -103,6 +103,7 @@ impl TypeNames {
             local_types: Default::default(),
             imported_modules: Default::default(),
             type_variables: Default::default(),
+            type_variable_names: Default::default(),
         }
     }
 
@@ -120,7 +121,8 @@ impl TypeNames {
 
     /// Record a type variable in this module.
     pub fn type_variable_in_scope(&mut self, id: u64, local_alias: EcoString) {
-        _ = self.type_variables.insert(id, local_alias);
+        _ = self.type_variables.insert(id, local_alias.clone());
+        _ = self.type_variable_names.insert(local_alias);
     }
 
     /// Record an imported module in this module.
@@ -133,34 +135,36 @@ impl TypeNames {
         &'a self,
         module: &'a EcoString,
         name: &'a EcoString,
-    ) -> (Option<&'a str>, &'a str) {
+    ) -> NamedTypeNames<'a> {
         let key = (module.clone(), name.clone());
 
         // There is a local name for this type, use that.
         if let Some(name) = self.local_types.get(&key) {
-            return (None, name.as_str());
+            return NamedTypeNames::Unqualified(name.as_str());
         }
 
         // This type is from a module that has been imported
         if let Some(module) = self.imported_modules.get(module) {
-            return (Some(module), name.as_str());
+            return NamedTypeNames::Qualified(module, name.as_str());
         };
 
-        // TODO: indicate if the type has not been imported.
-        let module = module.split('/').last().unwrap_or(module);
-        return (Some(module), name.as_str());
+        return NamedTypeNames::Unimported(name.as_str());
     }
 
     /// A suitable name of a type variable.
-    pub fn type_variable<'a>(&'a mut self, id: u64, buffer: &mut EcoString) {
+    pub fn type_variable<'a>(&'a mut self, id: u64) -> EcoString {
         if let Some(name) = self.type_variables.get(&id) {
-            buffer.push_str(&name);
-            return;
+            return name.clone();
         }
 
-        let n = self.next_letter();
-        let _ = self.type_variables.insert(id, n.clone());
-        buffer.push_str(&n)
+        loop {
+            let name = self.next_letter();
+            if !self.type_variable_names.contains(&name) {
+                _ = self.type_variable_names.insert(name.clone());
+                _ = self.type_variables.insert(id, name.clone());
+                return name;
+            }
+        }
     }
 
     fn next_letter(&mut self) -> EcoString {
@@ -187,6 +191,16 @@ impl TypeNames {
 }
 
 #[derive(Debug)]
+pub enum NamedTypeNames<'a> {
+    /// This type is from a module that has not been imported in this module.
+    Unimported(&'a str),
+    /// This type has been imported in an unqualifid fashion in this module.
+    Unqualified(&'a str),
+    /// This type is from a module that has been imported.
+    Qualified(&'a str, &'a str),
+}
+
+#[derive(Debug)]
 pub struct AnnotationPrinter<'a> {
     names: &'a mut TypeNames,
 }
@@ -207,7 +221,15 @@ impl<'a> AnnotationPrinter<'a> {
             Type::Named {
                 name, args, module, ..
             } => {
-                let (module, name) = self.names.named_type(module, name);
+                let (module, name) = match self.names.named_type(module, name) {
+                    NamedTypeNames::Qualified(m, n) => (Some(m), n),
+                    NamedTypeNames::Unqualified(n) => (None, n),
+                    // TODO: indicate that the module is not import and as such
+                    // needs to be, as well as how.
+                    NamedTypeNames::Unimported(n) => {
+                        (Some(module.split("/").last().unwrap_or(module)), n)
+                    }
+                };
 
                 if let Some(module) = module {
                     buffer.push_str(module);
@@ -232,7 +254,7 @@ impl<'a> AnnotationPrinter<'a> {
             Type::Var { type_: typ, .. } => match *typ.borrow() {
                 TypeVar::Link { type_: ref typ, .. } => self.print(typ, buffer),
                 TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
-                    self.names.type_variable(id, buffer)
+                    buffer.push_str(&self.names.type_variable(id))
                 }
             },
 
@@ -527,5 +549,21 @@ fn test_multiple_generic_annotations() {
     assert_eq!(printer.print_type(&typ1), "a");
 }
 
-// TODO: test for generating generic type names when there's already an `a` in
-// scope
+#[test]
+fn test_variable_name_already_in_scope() {
+    let mut names = TypeNames::new("module".into());
+
+    let _ = names.type_variable_in_scope(1, "a".into());
+    let _ = names.type_variable_in_scope(2, "b".into());
+
+    let mut printer = AnnotationPrinter::new(&mut names);
+
+    let type_ = |id| Type::Var {
+        type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id })),
+    };
+
+    assert_eq!(printer.print_type(&type_(0)), "c");
+    assert_eq!(printer.print_type(&type_(1)), "a");
+    assert_eq!(printer.print_type(&type_(2)), "b");
+    assert_eq!(printer.print_type(&type_(3)), "d");
+}
