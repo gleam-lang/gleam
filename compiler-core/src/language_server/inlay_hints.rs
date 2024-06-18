@@ -27,26 +27,26 @@ impl<'a> Buf<'a> {
 }
 
 impl<'a> Buf<'a> {
-    pub fn get_inlay_hints_definition(&mut self, typed_def: TypedDefinition) {
+    pub fn push_inlay_hints_definition(&mut self, typed_def: TypedDefinition) {
         match typed_def {
             Definition::Function(f) => {
                 for st in f.body {
-                    self.get_inlay_hints_statement(st)
+                    self.push_inlay_hints_statement(st)
                 }
             }
             _ => (),
         }
     }
 
-    fn get_inlay_hints_statement(&mut self, typed_st: TypedStatement) {
+    fn push_inlay_hints_statement(&mut self, typed_st: TypedStatement) {
         match typed_st {
-            Statement::Expression(e) => self.get_inlay_hints_expr(e),
-            Statement::Assignment(assig) => self.get_inlay_hints_expr(*assig.value),
+            Statement::Expression(e) => self.push_inlay_hints_expr(e),
+            Statement::Assignment(assig) => self.push_inlay_hints_expr(*assig.value),
             Statement::Use(_) => (),
         }
     }
 
-    fn get_inlay_hints_expr(&mut self, typed_st: TypedExpr) {
+    fn push_inlay_hints_expr(&mut self, typed_st: TypedExpr) {
         match typed_st {
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
@@ -84,7 +84,7 @@ impl<'a> Buf<'a> {
                         offset: assign.location.end,
                     };
                     prev_hint = Some((this_line, this_hint));
-                    self.get_inlay_hints_expr(*assign.value);
+                    self.push_inlay_hints_expr(*assign.value);
                 }
 
                 let (prev_line, prev_hint) = prev_hint.expect("Expected a non-empty arr");
@@ -98,76 +98,76 @@ impl<'a> Buf<'a> {
                     })
                 }
 
-                self.get_inlay_hints_expr(*finally);
+                self.push_inlay_hints_expr(*finally);
             }
 
             TypedExpr::Case { clauses, .. } => {
                 // TODO iterate on clauses?
                 for clause in clauses {
-                    self.get_inlay_hints_expr(clause.then)
+                    self.push_inlay_hints_expr(clause.then)
                 }
             }
 
             TypedExpr::Block { statements, .. } => {
                 for st in statements {
-                    self.get_inlay_hints_statement(st);
+                    self.push_inlay_hints_statement(st);
                 }
             }
 
             TypedExpr::Call { fun: _, args, .. } => {
                 // TODO should we iterate the caller?
                 for arg in args {
-                    self.get_inlay_hints_expr(arg.value);
+                    self.push_inlay_hints_expr(arg.value);
                 }
             }
 
             TypedExpr::Fn { body, .. } => {
                 for st in body {
-                    self.get_inlay_hints_statement(st);
+                    self.push_inlay_hints_statement(st);
                 }
             }
 
             TypedExpr::List { elements, tail, .. } => {
                 for el in elements {
-                    self.get_inlay_hints_expr(el);
+                    self.push_inlay_hints_expr(el);
                 }
                 if let Some(tail) = tail {
-                    self.get_inlay_hints_expr(*tail);
+                    self.push_inlay_hints_expr(*tail);
                 }
             }
 
             TypedExpr::BinOp { left, right, .. } => {
-                self.get_inlay_hints_expr(*left);
-                self.get_inlay_hints_expr(*right);
+                self.push_inlay_hints_expr(*left);
+                self.push_inlay_hints_expr(*right);
             }
 
             TypedExpr::RecordAccess { record, .. } => {
-                self.get_inlay_hints_expr(*record);
+                self.push_inlay_hints_expr(*record);
             }
 
             TypedExpr::Tuple { elems, .. } => {
                 for el in elems {
-                    self.get_inlay_hints_expr(el);
+                    self.push_inlay_hints_expr(el);
                 }
             }
 
             TypedExpr::TupleIndex { tuple, .. } => {
-                self.get_inlay_hints_expr(*tuple);
+                self.push_inlay_hints_expr(*tuple);
             }
 
             TypedExpr::RecordUpdate { spread, args, .. } => {
                 for arg in args {
-                    self.get_inlay_hints_expr(arg.value);
+                    self.push_inlay_hints_expr(arg.value);
                 }
-                self.get_inlay_hints_expr(*spread);
+                self.push_inlay_hints_expr(*spread);
             }
 
             TypedExpr::NegateBool { value, .. } => {
-                self.get_inlay_hints_expr(*value);
+                self.push_inlay_hints_expr(*value);
             }
 
             TypedExpr::NegateInt { value, .. } => {
-                self.get_inlay_hints_expr(*value);
+                self.push_inlay_hints_expr(*value);
             }
         }
     }
@@ -176,7 +176,7 @@ impl<'a> Buf<'a> {
 pub fn get_inlay_hints(typed_module: TypedModule, line_numbers: &LineNumbers) -> Vec<InlayHint> {
     let mut buf = Buf::new(line_numbers);
     for def in typed_module.definitions {
-        buf.get_inlay_hints_definition(def);
+        buf.push_inlay_hints_definition(def);
     }
     buf.hints
 }
