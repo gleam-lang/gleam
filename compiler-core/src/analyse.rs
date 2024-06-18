@@ -844,7 +844,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 constructor.arguments.iter().enumerate()
             {
                 // Build a type from the annotation AST
-                let t = hydrator.type_from_ast(ast, environment)?;
+                let t = match hydrator.type_from_ast(ast, environment) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        self.errors.push(e);
+                        continue;
+                    }
+                };
 
                 fields.push(TypeValueConstructorField { type_: t.clone() });
 
