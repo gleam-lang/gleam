@@ -140,6 +140,10 @@
   aliasing it and then using it in a constant expression would generate invalid
   JavaScript.
   ([Louis Pilfold](https://github.com/lpil))
+  
+- Fixed a bug where the compiler would crash because types weren't registered if
+  they referenced a non-existent type.
+  ([Gears](https://github.com/gearsdatapacks))
 
 ## v1.2.1 - 2024-05-30
 
