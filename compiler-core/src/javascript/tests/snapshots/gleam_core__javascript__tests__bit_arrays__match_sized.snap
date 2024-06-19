@@ -15,7 +15,7 @@ function go(x) {
       { value: x }
     )
   }
-  let a = x.intFromSlice(0, 2);
-  let b = x.intFromSlice(2, 3);
+  let a = x.intFromSlice(0, 2, true, false);
+  let b = x.byteAt(2);
   return x;
 }

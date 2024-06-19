@@ -178,7 +178,7 @@ where
         }
     }
 
-    // Endianness is only valid for int, utf6, utf32 and float
+    // Endianness is only valid for int, utf16, utf32 and float
     match categories {
         SegmentOptionCategories {
             typ: None | Some(Int { .. } | Utf16 { .. } | Utf32 { .. } | Float { .. }),
