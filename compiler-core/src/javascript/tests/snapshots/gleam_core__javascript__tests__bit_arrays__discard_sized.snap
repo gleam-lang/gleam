@@ -15,5 +15,15 @@ function go(x) {
       { value: x }
     )
   }
+  if (!(x.length == 3)) {
+    throw makeError(
+      "assignment_no_match",
+      "my/mod",
+      4,
+      "go",
+      "Assignment pattern did not match",
+      { value: x }
+    )
+  }
   return x;
 }

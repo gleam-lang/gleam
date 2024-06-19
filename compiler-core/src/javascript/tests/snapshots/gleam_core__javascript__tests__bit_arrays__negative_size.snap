@@ -5,5 +5,5 @@ expression: "\nfn go() {\n  <<1:size(-1)>>\n}\n"
 import { toBitArray, sizedInt } from "../gleam.mjs";
 
 function go() {
-  return toBitArray([sizedInt(1, -1)]);
+  return toBitArray([sizedInt(1, -1, true)]);
 }

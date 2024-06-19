@@ -15,7 +15,7 @@ function go(x) {
       { value: x }
     )
   }
-  let a = x.floatAt(0);
+  let a = x.floatFromSlice(0, 8, true);
   let b = x.byteAt(8);
   return x;
 }

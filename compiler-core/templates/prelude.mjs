@@ -109,13 +109,13 @@ export class BitArray {
   }
 
   // @internal
-  floatAt(index) {
-    return byteArrayToFloat(this.buffer.slice(index, index + 8));
+  floatFromSlice(start, end, isBigEndian) {
+    return byteArrayToFloat(this.buffer, start, end, isBigEndian);
   }
 
   // @internal
-  intFromSlice(start, end) {
-    return byteArrayToInt(this.buffer.slice(start, end));
+  intFromSlice(start, end, isBigEndian, isSigned) {
+    return byteArrayToInt(this.buffer, start, end, isBigEndian, isSigned);
   }
 
   // @internal
@@ -156,8 +156,7 @@ export function toBitArray(segments) {
 
 // @internal
 // Derived from this answer https://stackoverflow.com/questions/8482309/converting-javascript-integer-to-byte-array-and-back
-export function sizedInt(int, size) {
-  let value = int;
+export function sizedInt(value, size, isBigEndian) {
   if (size < 0) {
     return new Uint8Array();
   }
@@ -165,29 +164,75 @@ export function sizedInt(int, size) {
     const msg = `Bit arrays must be byte aligned on JavaScript, got size of ${size} bits`;
     throw new globalThis.Error(msg);
   }
+
   const byteArray = new Uint8Array(size / 8);
 
-  for (let index = 0; index < byteArray.length; index++) {
-    const byte = value & 0xff;
-    byteArray[index] = byte;
-    value = (value - byte) / 256;
+  // Convert negative number to two's complement representation
+  if (value < 0) {
+    value = (2 ** size) + value;
   }
+
+  if (isBigEndian) {
+    for (let i = 0; i < byteArray.length; i++) {
+      const byte = value % 256
+      byteArray[i] = byte;
+      value = (value - byte) / 256;
+    }
+  } else {
+    for (let i = byteArray.length - 1; i >= 0; i--) {
+      const byte = value % 256
+      byteArray[i] = byte;
+      value = (value - byte) / 256;
+    }
+  }
+
   return byteArray.reverse();
 }
 
 // @internal
-export function byteArrayToInt(byteArray) {
-  byteArray = byteArray.reverse();
+export function byteArrayToInt(byteArray, start, end, isBigEndian, isSigned) {
   let value = 0;
-  for (let i = byteArray.length - 1; i >= 0; i--) {
-    value = value * 256 + byteArray[i];
+
+  // Read bytes as an unsigned integer value
+  if (isBigEndian) {
+    for (let i = start; i < end; i++) {
+      value = value * 256 + byteArray[i];
+    }
+  } else {
+    for (let i = end - 1; i >= start; i--) {
+      value = value * 256 + byteArray[i];
+    }
   }
+
+  if (isSigned) {
+    const byteSize = end - start;
+
+    const highBit = 2 ** (byteSize * 8 - 1);
+
+    // If the high bit is set and this is a signed integer, reinterpret as
+    // two's complement
+    if (value >= highBit) {
+      value -= highBit * 2;
+    }
+  }
+
   return value;
 }
 
 // @internal
-export function byteArrayToFloat(byteArray) {
-  return new Float64Array(byteArray.reverse().buffer)[0];
+export function byteArrayToFloat(byteArray, start, end, isBigEndian) {
+  const view = new DataView(byteArray.buffer);
+
+  const byteSize = end - start;
+
+  if (byteSize === 8) {
+    return view.getFloat64(start, !isBigEndian)
+  } else if (byteSize === 4) {
+    return view.getFloat32(start, !isBigEndian)
+  } else {
+    const msg = `Sized floats must be 32-bit or 64-bit on JavaScript, got size of ${byteSize * 8} bits`;
+    throw new globalThis.Error(msg);
+  }
 }
 
 // @internal
@@ -201,8 +246,23 @@ export function codepointBits(codepoint) {
 }
 
 // @internal
-export function float64Bits(float) {
-  return new Uint8Array(Float64Array.from([float]).buffer).reverse();
+export function sizedFloat(float, size, isBigEndian) {
+  if (size !== 32 && size !== 64) {
+    const msg = `Sized floats must be 32-bit or 64-bit on JavaScript, got size of ${size} bits`;
+    throw new globalThis.Error(msg);
+  }
+
+  const byteArray = new Uint8Array(size / 8);
+
+  const view = new DataView(byteArray.buffer);
+
+  if (size == 64) {
+    view.setFloat64(0, float, !isBigEndian);
+  } else if (size === 32) {
+    view.setFloat32(0, float, !isBigEndian);
+  }
+  
+  return byteArray;
 }
 
 export class Result extends CustomType {
