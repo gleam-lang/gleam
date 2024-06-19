@@ -6,5 +6,5 @@ import { toBitArray, sizedInt } from "../gleam.mjs";
 
 function go() {
   let x = 4;
-  return toBitArray([sizedInt(256, x)]);
+  return toBitArray([sizedInt(256, x, true)]);
 }

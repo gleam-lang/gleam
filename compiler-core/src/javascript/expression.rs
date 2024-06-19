@@ -6,6 +6,7 @@ use super::{
 };
 use crate::{
     ast::*,
+    javascript::endianness::Endianness,
     line_numbers::LineNumbers,
     pretty::*,
     type_::{ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant},
@@ -226,61 +227,136 @@ impl<'module> Generator<'module> {
         // Collect all the values used in segments.
         let segments_array = array(segments.iter().map(|segment| {
             let value = self.not_in_tail_position(|gen| gen.wrap_expression(&segment.value))?;
-            match segment.options.as_slice() {
-                // Ints
-                [] | [Opt::Int { .. }] => Ok(value),
 
-                // Sized ints
-                [Opt::Size { value: size, .. }] => {
-                    let size_int = match *size.clone() {
-                        TypedExpr::Int {
-                            location: _,
-                            typ: _,
+            if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
+                let details = self.sized_bit_array_segment_details(segment)?;
+
+                if segment.type_ == crate::type_::int() {
+                    if details.has_explicit_size {
+                        self.tracker.sized_integer_segment_used = true;
+                        Ok(docvec![
+                            "sizedInt(",
                             value,
-                        } => value.parse().unwrap_or(0),
-                        _ => 0,
-                    };
-                    if size_int > 0 && size_int % 8 != 0 {
-                        return Err(Error::Unsupported {
-                            feature: "Non byte aligned array".into(),
-                            location: segment.location,
-                        });
+                            ", ",
+                            details.size,
+                            ", ",
+                            details.endianness.is_big(),
+                            ")"
+                        ])
+                    } else {
+                        Ok(value)
                     }
-                    self.tracker.sized_integer_segment_used = true;
-                    let size = self.not_in_tail_position(|gen| gen.wrap_expression(size))?;
-                    Ok(docvec!["sizedInt(", value, ", ", size, ")"])
-                }
-
-                // Floats
-                [Opt::Float { .. }] => {
+                } else {
                     self.tracker.float_bit_array_segment_used = true;
-                    Ok(docvec!["float64Bits(", value, ")"])
+                    Ok(docvec![
+                        "sizedFloat(",
+                        value,
+                        ", ",
+                        details.size,
+                        ", ",
+                        details.endianness.is_big(),
+                        ")"
+                    ])
                 }
+            } else {
+                match segment.options.as_slice() {
+                    // UTF8 strings
+                    [Opt::Utf8 { .. }] => {
+                        self.tracker.string_bit_array_segment_used = true;
+                        Ok(docvec!["stringBits(", value, ")"])
+                    }
 
-                // UTF8 strings
-                [Opt::Utf8 { .. }] => {
-                    self.tracker.string_bit_array_segment_used = true;
-                    Ok(docvec!["stringBits(", value, ")"])
+                    // UTF8 codepoints
+                    [Opt::Utf8Codepoint { .. }] => {
+                        self.tracker.codepoint_bit_array_segment_used = true;
+                        Ok(docvec!["codepointBits(", value, ")"])
+                    }
+
+                    // Bit arrays
+                    [Opt::Bytes { .. } | Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
+
+                    // Anything else
+                    _ => Err(Error::Unsupported {
+                        feature: "This bit array segment option".into(),
+                        location: segment.location,
+                    }),
                 }
-
-                // UTF8 codepoints
-                [Opt::Utf8Codepoint { .. }] => {
-                    self.tracker.codepoint_bit_array_segment_used = true;
-                    Ok(docvec!["codepointBits(", value, ")"])
-                }
-
-                // Bit arrays
-                [Opt::Bytes { .. } | Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
-
-                // Anything else
-                _ => Err(Error::Unsupported {
-                    feature: "This bit array segment option".into(),
-                    location: segment.location,
-                }),
             }
         }))?;
 
         Ok(docvec!["toBitArray(", segments_array, ")"])
+    }
+
+    fn sized_bit_array_segment_details<'a>(
+        &mut self,
+        segment: &'a TypedExprBitArraySegment,
+    ) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
+        use BitArrayOption as Opt;
+
+        if segment
+            .options
+            .iter()
+            .any(|x| matches!(x, Opt::Native { .. }))
+        {
+            return Err(Error::Unsupported {
+                feature: "This bit array segment option".into(),
+                location: segment.location,
+            });
+        }
+
+        let endianness = if segment
+            .options
+            .iter()
+            .any(|x| matches!(x, Opt::Little { .. }))
+        {
+            Endianness::Little
+        } else {
+            Endianness::Big
+        };
+
+        let size = segment
+            .options
+            .iter()
+            .find(|x| matches!(x, Opt::Size { .. }));
+
+        let has_explicit_size = size.is_some();
+
+        let size = match size {
+            Some(Opt::Size { value: size, .. }) => {
+                let size_int = match *size.clone() {
+                    TypedExpr::Int {
+                        location: _,
+                        typ: _,
+                        value,
+                    } => value.parse().unwrap_or(0),
+                    _ => 0,
+                };
+
+                if size_int > 0 && size_int % 8 != 0 {
+                    return Err(Error::Unsupported {
+                        feature: "Non byte aligned array".into(),
+                        location: segment.location,
+                    });
+                }
+
+                self.not_in_tail_position(|gen| gen.wrap_expression(size))?
+            }
+            _ => {
+                let default_size = if segment.type_ == crate::type_::int() {
+                    8usize
+                } else {
+                    64usize
+                };
+
+                docvec![default_size]
+            }
+        };
+
+        Ok(SizedBitArraySegmentDetails {
+            has_explicit_size,
+            size,
+            endianness,
+        })
     }
 
     pub fn wrap_return<'a>(&mut self, document: Document<'a>) -> Document<'a> {
@@ -1364,57 +1440,140 @@ fn bit_array<'a>(
 
     let segments_array = array(segments.iter().map(|segment| {
         let value = constant_expr_fun(tracker, &segment.value)?;
-        match segment.options.as_slice() {
-            // Ints
-            [] | [Opt::Int { .. }] => Ok(value),
 
-            // Sized ints
-            [Opt::Size { value: size, .. }] => {
-                let size_int = match *size.clone() {
-                    Constant::Int { location: _, value } => value.parse().unwrap_or(0),
-                    _ => 0,
-                };
-                if size_int > 0 && size_int % 8 != 0 {
-                    return Err(Error::Unsupported {
-                        feature: "Non byte aligned array".into(),
-                        location: segment.location,
-                    });
+        if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
+            let details =
+                sized_bit_array_segment_details(segment, tracker, &mut constant_expr_fun)?;
+
+            if segment.type_ == crate::type_::int() {
+                if details.has_explicit_size {
+                    tracker.sized_integer_segment_used = true;
+                    Ok(docvec![
+                        "sizedInt(",
+                        value,
+                        ", ",
+                        details.size,
+                        ", ",
+                        details.endianness.is_big(),
+                        ")"
+                    ])
+                } else {
+                    Ok(value)
                 }
-                tracker.sized_integer_segment_used = true;
-                let size = constant_expr_fun(tracker, size)?;
-                Ok(docvec!["sizedInt(", value, ", ", size, ")"])
-            }
-
-            // Floats
-            [Opt::Float { .. }] => {
+            } else {
                 tracker.float_bit_array_segment_used = true;
-                Ok(docvec!["float64Bits(", value, ")"])
+                Ok(docvec![
+                    "sizedFloat(",
+                    value,
+                    ", ",
+                    details.size,
+                    ", ",
+                    details.endianness.is_big(),
+                    ")"
+                ])
             }
+        } else {
+            match segment.options.as_slice() {
+                // UTF8 strings
+                [Opt::Utf8 { .. }] => {
+                    tracker.string_bit_array_segment_used = true;
+                    Ok(docvec!["stringBits(", value, ")"])
+                }
 
-            // UTF8 strings
-            [Opt::Utf8 { .. }] => {
-                tracker.string_bit_array_segment_used = true;
-                Ok(docvec!["stringBits(", value, ")"])
+                // UTF8 codepoints
+                [Opt::Utf8Codepoint { .. }] => {
+                    tracker.codepoint_bit_array_segment_used = true;
+                    Ok(docvec!["codepointBits(", value, ")"])
+                }
+
+                // Bit strings
+                [Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
+
+                // Anything else
+                _ => Err(Error::Unsupported {
+                    feature: "This bit array segment option".into(),
+                    location: segment.location,
+                }),
             }
-
-            // UTF8 codepoints
-            [Opt::Utf8Codepoint { .. }] => {
-                tracker.codepoint_bit_array_segment_used = true;
-                Ok(docvec!["codepointBits(", value, ")"])
-            }
-
-            // Bit strings
-            [Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
-
-            // Anything else
-            _ => Err(Error::Unsupported {
-                feature: "This bit array segment option".into(),
-                location: segment.location,
-            }),
         }
     }))?;
 
     Ok(docvec!["toBitArray(", segments_array, ")"])
+}
+
+#[derive(Debug)]
+struct SizedBitArraySegmentDetails<'a> {
+    has_explicit_size: bool,
+    size: Document<'a>,
+    endianness: Endianness,
+}
+
+fn sized_bit_array_segment_details<'a>(
+    segment: &'a BitArraySegment<TypedConstant, Arc<Type>>,
+    tracker: &mut UsageTracker,
+    constant_expr_fun: &mut impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
+) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
+    use BitArrayOption as Opt;
+
+    if segment
+        .options
+        .iter()
+        .any(|x| matches!(x, Opt::Native { .. }))
+    {
+        return Err(Error::Unsupported {
+            feature: "This bit array segment option".into(),
+            location: segment.location,
+        });
+    }
+
+    let endianness = if segment
+        .options
+        .iter()
+        .any(|x| matches!(x, Opt::Little { .. }))
+    {
+        Endianness::Little
+    } else {
+        Endianness::Big
+    };
+
+    let size = segment
+        .options
+        .iter()
+        .find(|x| matches!(x, Opt::Size { .. }));
+
+    let has_explicit_size = size.is_some();
+
+    let size = match size {
+        Some(Opt::Size { value: size, .. }) => {
+            let size_int = match *size.clone() {
+                Constant::Int { location: _, value } => value.parse().unwrap_or(0),
+                _ => 0,
+            };
+            if size_int > 0 && size_int % 8 != 0 {
+                return Err(Error::Unsupported {
+                    feature: "Non byte aligned array".into(),
+                    location: segment.location,
+                });
+            }
+
+            constant_expr_fun(tracker, size)?
+        }
+        _ => {
+            let default_size = if segment.type_ == crate::type_::int() {
+                8usize
+            } else {
+                64usize
+            };
+
+            docvec![default_size]
+        }
+    };
+
+    Ok(SizedBitArraySegmentDetails {
+        has_explicit_size,
+        size,
+        endianness,
+    })
 }
 
 pub fn string(value: &str) -> Document<'_> {

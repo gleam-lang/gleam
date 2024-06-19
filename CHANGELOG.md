@@ -135,6 +135,11 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The `little` and `big` endianness options, the `signed` and `unsigned` integer
+  options, and sized floats (32-bit and 64-bit), can now be used in bit array
+  expressions and patterns on the JavaScript target.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Formatter
 
 - The formatter will no longer move a documentation comment below a regular

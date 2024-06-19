@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 290
+expression: "\nfn go(x) {\n  let assert <<a:float-32, b:int>> = x\n  let assert <<a:float-32-big, b:int>> = x\n  let assert <<a:float-32-little, b:int>> = x\n  let assert <<a:float-32-native, b:int>> = x\n  let assert <<a:float-64, b:int>> = x\n  let assert <<a:float-64-big, b:int>> = x\n  let assert <<a:float-64-little, b:int>> = x\n  let assert <<a:float-64-native, b:int>> = x\n}\n"
+---
+import { makeError } from "../gleam.mjs";
+
+function go(x) {
+  if (!(x.length == 5)) {
+    throw makeError(
+      "assignment_no_match",
+      "my/mod",
+      3,
+      "go",
+      "Assignment pattern did not match",
+      { value: x }
+    )
+  }
+  let a = x.floatFromSlice(0, 4, true);
+  let b = x.byteAt(4);
+  return x;
+}

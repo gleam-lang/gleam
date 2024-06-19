@@ -1,3 +1,4 @@
+mod endianness;
 mod expression;
 mod import;
 mod pattern;
@@ -167,7 +168,7 @@ impl<'a> Generator<'a> {
         };
 
         if self.tracker.float_bit_array_segment_used {
-            self.register_prelude_usage(&mut imports, "float64Bits", None);
+            self.register_prelude_usage(&mut imports, "sizedFloat", None);
         };
 
         // Put it all together

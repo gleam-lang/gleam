@@ -56,11 +56,88 @@ fn go() {
 }
 
 #[test]
+fn float_big_endian() {
+    assert_js!(
+        r#"
+fn go() {
+  <<1.1:float-big>>
+}
+"#,
+    );
+}
+
+#[test]
+fn float_little_endian() {
+    assert_js!(
+        r#"
+fn go() {
+  <<1.1:float-little>>
+}
+"#,
+    );
+}
+
+#[test]
+fn float_sized() {
+    assert_js!(
+        r#"
+fn go() {
+  <<1.1:float-32>>
+}
+"#,
+    );
+}
+
+#[test]
+fn float_sized_big_endian() {
+    assert_js!(
+        r#"
+fn go() {
+  <<1.1:float-32-big>>
+}
+"#,
+    );
+}
+
+#[test]
+fn float_sized_little_endian() {
+    assert_js!(
+        r#"
+fn go() {
+  <<1.1:float-32-little>>
+}
+"#,
+    );
+}
+
+#[test]
 fn sized() {
     assert_js!(
         r#"
 fn go() {
   <<256:64>>
+}
+"#,
+    );
+}
+
+#[test]
+fn sized_big_endian() {
+    assert_js!(
+        r#"
+fn go() {
+  <<256:16-big>>
+}
+"#,
+    );
+}
+
+#[test]
+fn sized_little_endian() {
+    assert_js!(
+        r#"
+fn go() {
+  <<256:16-little>>
 }
 "#,
     );
@@ -210,11 +287,100 @@ fn go(x) {
 }
 
 #[test]
+fn match_unsigned() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:unsigned>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_signed() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:signed>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_sized_big_endian() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:16-big>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_sized_little_endian() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:16-little>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_sized_big_endian_unsigned() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:16-big-unsigned>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_sized_big_endian_signed() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:16-big-signed>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_sized_little_endian_unsigned() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:16-little-unsigned>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_sized_little_endian_signed() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:16-little-signed>> = x
+}
+"#,
+    );
+}
+
+#[test]
 fn discard_sized() {
     assert_js!(
         r#"
 fn go(x) {
   let assert <<_:16, _:8>> = x
+  let assert <<_:16-little-signed, _:8>> = x
 }
 "#,
     );
@@ -237,6 +403,61 @@ fn match_float() {
         r#"
 fn go(x) {
   let assert <<a:float, b:int>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_float_big_endian() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:float-big, b:int>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_float_little_endian() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:float-little, b:int>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_float_sized() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:float-32, b:int>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_float_sized_big_endian() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:float-32-big, b:int>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_float_sized_little_endian() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<a:float-32-little, b:int>> = x
 }
 "#,
     );
@@ -285,8 +506,10 @@ fn as_module_const() {
             2,
             2:size(16),
             0x4:size(32),
+            -1:32,
             "Gleam":utf8,
             4.2:float,
+            4.2:32-float,
             <<
               <<1, 2, 3>>:bits,
               "Gleam":utf8,
