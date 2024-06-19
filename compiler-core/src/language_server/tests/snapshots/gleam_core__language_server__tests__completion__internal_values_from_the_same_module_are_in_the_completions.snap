@@ -98,7 +98,7 @@ expression: "completion_at_default_position(TestProject::for_source(code))"
         tags: None,
     },
     CompletionItem {
-        label: "main",
+        label: "main()",
         label_details: Some(
             CompletionItemLabelDetails {
                 detail: None,
@@ -134,7 +134,7 @@ expression: "completion_at_default_position(TestProject::for_source(code))"
                             character: 0,
                         },
                     },
-                    new_text: "main",
+                    new_text: "main()",
                 },
             ),
         ),
@@ -145,7 +145,7 @@ expression: "completion_at_default_position(TestProject::for_source(code))"
         tags: None,
     },
     CompletionItem {
-        label: "random_float",
+        label: "random_float()",
         label_details: Some(
             CompletionItemLabelDetails {
                 detail: None,
@@ -181,7 +181,7 @@ expression: "completion_at_default_position(TestProject::for_source(code))"
                             character: 0,
                         },
                     },
-                    new_text: "random_float",
+                    new_text: "random_float()",
                 },
             ),
         ),

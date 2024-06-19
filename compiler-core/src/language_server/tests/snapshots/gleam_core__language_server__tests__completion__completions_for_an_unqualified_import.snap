@@ -44,7 +44,7 @@ expression: "completion(TestProject::for_source(code).add_module(\"dep\", dep),\
         tags: None,
     },
     CompletionItem {
-        label: "myfun",
+        label: "myfun()",
         label_details: Some(
             CompletionItemLabelDetails {
                 detail: None,
@@ -80,7 +80,7 @@ expression: "completion(TestProject::for_source(code).add_module(\"dep\", dep),\
                             character: 12,
                         },
                     },
-                    new_text: "myfun",
+                    new_text: "myfun()",
                 },
             ),
         ),

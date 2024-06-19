@@ -4,7 +4,7 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
 ---
 [
     CompletionItem {
-        label: "dep.wobble",
+        label: "dep.wobble()",
         label_details: Some(
             CompletionItemLabelDetails {
                 detail: None,
@@ -40,7 +40,7 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
                             character: 0,
                         },
                     },
-                    new_text: "dep.wobble",
+                    new_text: "dep.wobble()",
                 },
             ),
         ),

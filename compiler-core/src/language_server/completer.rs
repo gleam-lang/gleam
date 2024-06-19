@@ -653,10 +653,14 @@ fn value_completion(
     value: &crate::type_::ValueConstructor,
     insert_range: Range,
 ) -> CompletionItem {
-    let label = match module_qualifier {
+    let mut label = match module_qualifier {
         Some(module) => format!("{module}.{name}"),
         None => name.to_string(),
     };
+    // Append "()" if the value is a function.
+    if let ValueConstructorVariant::ModuleFn { .. } = value.variant {
+        label.push_str("()");
+    }
 
     let type_ = Printer::new().pretty_print(&value.type_, 0);
 

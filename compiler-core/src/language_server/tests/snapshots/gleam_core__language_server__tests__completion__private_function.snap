@@ -4,7 +4,7 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
 ---
 [
     CompletionItem {
-        label: "private",
+        label: "private()",
         label_details: Some(
             CompletionItemLabelDetails {
                 detail: None,
@@ -40,7 +40,7 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
                             character: 0,
                         },
                     },
-                    new_text: "private",
+                    new_text: "private()",
                 },
             ),
         ),
