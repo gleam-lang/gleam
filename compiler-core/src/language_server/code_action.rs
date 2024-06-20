@@ -1,8 +1,8 @@
 use std::{iter, sync::Arc};
 
 use crate::{
-    ast::{self, visit::Visit as _, SrcSpan},
-    build,
+    ast::{self, visit::Visit as _, AssignmentKind, Pattern, SrcSpan},
+    build::Module,
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
     type_::Type,
@@ -126,14 +126,14 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
             let mut clause_edits = vec![];
             for clause in clauses {
                 match clause.pattern.get(subject_idx) {
-                    Some(ast::Pattern::Tuple { location, elems }) => {
+                    Some(Pattern::Tuple { location, elems }) => {
                         clause_edits.extend(self.delete_tuple_tokens(
                             *location,
                             elems.last().map(|elem| elem.location()),
                         ))
                     }
 
-                    Some(ast::Pattern::Discard { location, .. }) => {
+                    Some(Pattern::Discard { location, .. }) => {
                         clause_edits.push(self.discard_tuple_items(*location, elems.len()))
                     }
 
@@ -156,7 +156,7 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
 }
 
 impl<'a> RedundantTupleInCaseSubject<'a> {
-    pub fn new(module: &'a build::Module, params: &'a CodeActionParams) -> Self {
+    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
         Self {
             line_numbers: LineNumbers::new(&module.code),
             code: &module.code,
@@ -274,5 +274,91 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
             range: src_span_to_lsp_range(discard_location, &self.line_numbers),
             new_text: itertools::intersperse(iter::repeat("_").take(tuple_items), ", ").collect(),
         }
+    }
+}
+
+pub struct AssertResultToCase<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    actions: Vec<CodeAction>,
+    line_numbers: LineNumbers,
+}
+
+impl<'ast> ast::visit::Visit<'ast> for AssertResultToCase<'_> {
+    fn visit_typed_assignment(&mut self, assignment: &'ast ast::TypedAssignment) {
+        let range = src_span_to_lsp_range(assignment.location, &self.line_numbers);
+
+        if !overlaps(range, self.params.range) {
+            return;
+        }
+
+        if !matches!(assignment.kind, AssignmentKind::Assert { .. }) {
+            return;
+        };
+
+        let Pattern::Constructor {
+            name,
+            arguments,
+            type_,
+            ..
+        } = &assignment.pattern
+        else {
+            return;
+        };
+
+        if type_.is_result() && name == "Ok" {
+            let location = assignment.value.location();
+            let expr = self
+                .module
+                .code
+                .get(location.start as usize..location.end as usize)
+                .expect("Location must be valid");
+
+            let var = match (arguments.first(), arguments.last()) {
+                (Some(first), Some(last)) => self
+                    .module
+                    .code
+                    .get(first.location.start as usize..last.location.end as usize)
+                    .expect("Location must be valid"),
+                _ => "",
+            };
+
+            let indent = " ".repeat(range.start.character as usize);
+
+            let edit = TextEdit {
+                range,
+                new_text: format!(
+                    "let {var} = case {expr} {{
+{indent}  Ok({var}) -> {var}
+{indent}  Error(e) -> panic as \"Expected Ok value\"
+{indent}}}"
+                ),
+            };
+
+            let uri = &self.params.text_document.uri;
+
+            CodeActionBuilder::new("Convert to case")
+                .kind(CodeActionKind::REFACTOR)
+                .changes(uri.clone(), vec![edit])
+                .preferred(true)
+                .push_to(&mut self.actions);
+        }
+    }
+}
+
+impl<'a> AssertResultToCase<'a> {
+    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
+        let line_numbers = LineNumbers::new(&module.code);
+        Self {
+            module,
+            params,
+            actions: Vec::new(),
+            line_numbers,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+        self.actions
     }
 }
