@@ -1,8 +1,8 @@
 use crate::ast::SrcSpan;
 use crate::error::wrap;
-use std::fmt;
 use ecow::EcoString;
 use heck::{ToSnakeCase, ToUpperCamelCase};
+use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LexicalError {
@@ -411,8 +411,7 @@ impl fmt::Display for UnexpectedTokenInfo {
         let base = self.display.replace("\"", "");
         if self.is_keyword {
             write!(f, "the keyword `{}`", base)
-        }
-        else {
+        } else {
             write!(f, "\"{}\"", base)
         }
     }
