@@ -85,6 +85,10 @@
   statements in a function when there is an error in a previous one.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- Fixed a bug where the compiler would unnecessarily generate `gleam.mjs`,
+  confusing build tools like Vite.
+  ([Ofek Doitch](https://github.com/ofekd))
+
 ### Formatter
 
 ### Language Server

@@ -70,6 +70,10 @@ impl FileSystemWriter for WasmFileSystem {
         tracing::trace!("write_bytes {:?}", path);
         self.imfs.write_bytes(path, content)
     }
+
+    fn exists(&self, path: &Utf8Path) -> bool {
+        self.imfs.exists(path)
+    }
 }
 
 impl FileSystemReader for WasmFileSystem {
