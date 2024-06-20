@@ -76,7 +76,8 @@
   Unsupported feature for Javascript since they would already cause
   a runtime error on Javascript.
 
-  This means if you compile specifically for Javascript you will now recieve this error:
+  This means if you compile specifically for Javascript you will now recieve
+  this error:
 
   ```
   error: Unsupported feature for compilation target
@@ -89,6 +90,7 @@
   ```
 
   Else any functions which rely on this will not be compiled into Javascript.
+  ([Pi-Cla](https://github.com/Pi-Cla))
 
 - Compilation fault tolerance is now at a statement level instead of a function
   level. This means that the compiler will attempt to infer the rest of the
@@ -137,11 +139,13 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- LSP can now suggest completions for values and types from importable modules and adds the import to the top of the file.
-  ([Ameen Radwan](https://github.com/Acepie))
+- LSP can now suggest completions for values and types from importable modules
+  and adds the import to the top of the file.
+  ([Ameen Radwan](https://github.com/Acepie)
 
-- LSP completions now use the "text_edit" language server API resulting in better/more accurate insertions.
-  ([Ameen Radwan](https://github.com/Acepie))
+- LSP completions now use the "text_edit" language server API resulting in
+  better/more accurate insertions.
+  ([Ameen Radwan](https://github.com/Acepie)
 
 ### Bug Fixes
 
