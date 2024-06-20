@@ -21,7 +21,8 @@ use super::{Publicity, Statement, TypedModule, TypedStatement};
 
 fn compile_module(src: &str) -> TypedModule {
     use crate::type_::build_prelude;
-    let parsed = crate::parse::parse_module(src).expect("syntax error");
+    let parsed =
+        crate::parse::parse_module(src, &TypeWarningEmitter::null()).expect("syntax error");
     let ast = parsed.module;
     let ids = UniqueIdGenerator::new();
     let mut config = PackageConfig::default();

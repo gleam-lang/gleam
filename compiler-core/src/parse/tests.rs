@@ -4,6 +4,7 @@ use crate::parse::error::{
 };
 use crate::parse::lexer::make_tokenizer;
 use crate::parse::token::Token;
+use crate::warning::TypeWarningEmitter;
 use camino::Utf8PathBuf;
 
 use itertools::Itertools;
@@ -29,7 +30,8 @@ macro_rules! assert_module_error {
 
 macro_rules! assert_parse_module {
     ($src:expr) => {
-        let result = crate::parse::parse_module($src).expect("should parse");
+        let result = crate::parse::parse_module($src, &crate::warning::TypeWarningEmitter::null())
+            .expect("should parse");
         insta::assert_snapshot!(insta::internals::AutoName, &format!("{:#?}", result), $src);
     };
 }
@@ -42,7 +44,8 @@ macro_rules! assert_parse {
 }
 
 pub fn expect_module_error(src: &str) -> String {
-    let result = crate::parse::parse_module(src).expect_err("should not parse");
+    let result =
+        crate::parse::parse_module(src, &TypeWarningEmitter::null()).expect_err("should not parse");
     let error = crate::error::Error::Parse {
         src: src.into(),
         path: Utf8PathBuf::from("/src/parse/error.gleam"),

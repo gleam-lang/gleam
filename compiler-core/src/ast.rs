@@ -116,6 +116,7 @@ fn module_dependencies_test() {
          import three
 
          import four",
+        &crate::warning::TypeWarningEmitter::null(),
     )
     .expect("syntax error");
     let module = parsed.module;

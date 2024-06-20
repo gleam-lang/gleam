@@ -68,7 +68,8 @@ pub fn compile_package(
     );
     let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
     if let Some((dep_package, dep_name, dep_src)) = dep {
-        let parsed = crate::parse::parse_module(dep_src).expect("dep syntax error");
+        let parsed = crate::parse::parse_module(dep_src, &TypeWarningEmitter::null())
+            .expect("dep syntax error");
         let mut ast = parsed.module;
         ast.name = dep_name.into();
         let line_numbers = LineNumbers::new(dep_src);
@@ -90,7 +91,8 @@ pub fn compile_package(
         let _ = modules.insert(dep_name.into(), dep.type_info);
         let _ = direct_dependencies.insert(dep_package.into(), ());
     }
-    let parsed = crate::parse::parse_module(src).expect("syntax error");
+    let parsed =
+        crate::parse::parse_module(src, &TypeWarningEmitter::null()).expect("syntax error");
 
     let mut ast = parsed.module;
     let module_name = module_name

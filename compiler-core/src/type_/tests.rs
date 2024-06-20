@@ -389,7 +389,7 @@ pub fn compile_module_with_opts(
     let mut direct_dependencies = HashMap::from_iter(vec![]);
 
     for (package, name, module_src) in dep {
-        let parsed = crate::parse::parse_module(module_src).expect("syntax error");
+        let parsed = crate::parse::parse_module(module_src, &warnings).expect("syntax error");
         let mut ast = parsed.module;
         ast.name = name.into();
         let line_numbers = LineNumbers::new(module_src);
@@ -414,7 +414,7 @@ pub fn compile_module_with_opts(
         }
     }
 
-    let parsed = crate::parse::parse_module(src).expect("syntax error");
+    let parsed = crate::parse::parse_module(src, &warnings).expect("syntax error");
     let mut ast = parsed.module;
     ast.name = module_name.into();
     let mut config = PackageConfig::default();
@@ -465,7 +465,8 @@ pub fn module_error_with_target(
 }
 
 pub fn syntax_error(src: &str) -> String {
-    let error = crate::parse::parse_module(src).expect_err("should trigger an error when parsing");
+    let error = crate::parse::parse_module(src, &TypeWarningEmitter::null())
+        .expect_err("should trigger an error when parsing");
     let error = Error::Parse {
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),

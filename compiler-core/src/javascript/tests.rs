@@ -99,7 +99,8 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
     deps.iter().for_each(|(dep_package, dep_name, dep_src)| {
         let mut dep_config = PackageConfig::default();
         dep_config.name = (*dep_package).into();
-        let parsed = crate::parse::parse_module(dep_src).expect("dep syntax error");
+        let parsed = crate::parse::parse_module(dep_src, &TypeWarningEmitter::null())
+            .expect("dep syntax error");
         let mut ast = parsed.module;
         ast.name = (*dep_name).into();
         let line_numbers = LineNumbers::new(dep_src);
@@ -120,7 +121,8 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         let _ = direct_dependencies.insert((*dep_package).into(), ());
     });
 
-    let parsed = crate::parse::parse_module(src).expect("syntax error");
+    let parsed =
+        crate::parse::parse_module(src, &TypeWarningEmitter::null()).expect("syntax error");
     let mut ast = parsed.module;
     ast.name = "my/mod".into();
     let line_numbers = LineNumbers::new(src);
