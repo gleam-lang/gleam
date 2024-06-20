@@ -1402,11 +1402,9 @@ pub enum Pattern<Type> {
 
     List {
         location: SrcSpan,
-        spread_location: Option<SrcSpan>,
         elements: Vec<Self>,
         tail: Option<Box<Self>>,
         type_: Type,
-        uses_deprecated_tail_pattern_syntax: bool,
     },
 
     /// The constructor for a custom type. Starts with an uppercase letter.

@@ -318,19 +318,18 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
             Pattern::List {
                 location,
-                spread_location,
-                uses_deprecated_tail_pattern_syntax,
                 elements,
                 tail,
                 ..
             } => {
-                if uses_deprecated_tail_pattern_syntax {
-                    self.environment
-                        .warnings
-                        .emit(Warning::DeprecatedListPatternSyntax {
-                            location: spread_location.unwrap_or(location),
-                        });
-                }
+                // TODO))
+                //if uses_deprecated_tail_pattern_syntax {
+                //    self.environment
+                //        .warnings
+                //        .emit(Warning::DeprecatedListPatternSyntax {
+                //            location: spread_location.unwrap_or(location),
+                //        });
+                //}
 
                 match type_.get_app_args(
                     Publicity::Public,
@@ -358,8 +357,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                         Ok(Pattern::List {
                             location,
-                            spread_location,
-                            uses_deprecated_tail_pattern_syntax,
                             elements,
                             tail,
                             type_,
