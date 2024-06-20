@@ -844,15 +844,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         tail: Option<Box<UntypedExpr>>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        // TODO))
-        // if uses_deprecated_append_syntax {
-        //     self.environment
-        //         .warnings
-        //         .emit(Warning::DeprecatedListPrependSyntax {
-        //             location: spread_location.unwrap_or(location),
-        //         })
-        // }
-
         let typ = self.new_unbound_var();
         // Type check each elements
         let elements = elements

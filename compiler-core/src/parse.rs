@@ -518,6 +518,13 @@ where
                             }
                         };
                     };
+
+                    if tail.is_some() && !elements_end_with_comma {
+                        // TODO)) Raise warning!
+                        // Warning::DeprecatedListPrependSyntax {
+                        //   location: SrcSpan { start, end },
+                        // })
+                    }
                 }
 
                 let (_, end) = self.expect_one(&Token::RightSquare)?;
@@ -558,8 +565,6 @@ where
 
                 UntypedExpr::List {
                     location: SrcSpan { start, end },
-                    // todo)) uses_deprecated_append_syntax: tail.is_some() && !elements_end_with_comma,
-                    // TODO)) spread_location,
                     elements,
                     tail,
                 }
@@ -1163,6 +1168,13 @@ where
                 let mut dot_dot_location = None;
                 let tail = if let Some((start, Token::DotDot, end)) = self.tok0 {
                     dot_dot_location = Some((start, end));
+                    if !elements_end_with_comma {
+                        // TODO)) Raise warning
+                        // Warning::DeprecatedListPatternSyntax {
+                        //   location: SrcSpan { start, end },
+                        // }
+                    }
+
                     self.advance();
                     let pat = self.parse_pattern()?;
                     if self.maybe_one(&Token::Comma).is_some() {
