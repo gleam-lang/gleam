@@ -334,17 +334,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::List {
                 location,
-                spread_location,
                 elements,
                 tail,
-                uses_deprecated_append_syntax,
-            } => self.infer_list(
-                elements,
-                tail,
-                location,
-                spread_location,
-                uses_deprecated_append_syntax,
-            ),
+            } => self.infer_list(elements, tail, location),
 
             UntypedExpr::Call {
                 location,
@@ -851,16 +843,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         elements: Vec<UntypedExpr>,
         tail: Option<Box<UntypedExpr>>,
         location: SrcSpan,
-        spread_location: Option<SrcSpan>,
-        uses_deprecated_append_syntax: bool,
     ) -> Result<TypedExpr, Error> {
-        if uses_deprecated_append_syntax {
-            self.environment
-                .warnings
-                .emit(Warning::DeprecatedListPrependSyntax {
-                    location: spread_location.unwrap_or(location),
-                })
-        }
+        // TODO))
+        // if uses_deprecated_append_syntax {
+        //     self.environment
+        //         .warnings
+        //         .emit(Warning::DeprecatedListPrependSyntax {
+        //             location: spread_location.unwrap_or(location),
+        //         })
+        // }
 
         let typ = self.new_unbound_var();
         // Type check each elements
