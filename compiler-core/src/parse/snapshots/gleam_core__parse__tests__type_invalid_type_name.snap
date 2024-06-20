@@ -8,6 +8,6 @@ error: Syntax error
 2 │ type A(a, type) {
   │           ^^^^ I was not expecting this
 
-Found "type" (a keyword), expected one of: 
+Found the keyword `type`, expected one of: 
 ")"
 a name

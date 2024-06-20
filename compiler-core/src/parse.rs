@@ -73,7 +73,7 @@ use crate::warning::{DeprecatedSyntaxWarning, WarningEmitter};
 use crate::Warning;
 use camino::Utf8PathBuf;
 use ecow::EcoString;
-use error::{LexicalError, ParseError, ParseErrorType};
+use error::{LexicalError, ParseError, ParseErrorType, UnexpectedTokenInfo};
 use lexer::{LexResult, Spanned};
 use std::cmp::Ordering;
 use std::collections::VecDeque;
@@ -246,7 +246,10 @@ where
             let expected = vec!["An import, const, type, or function.".into()];
             return parse_error(
                 ParseErrorType::UnexpectedToken {
-                    found: format_found_token(tok),
+                    found: UnexpectedTokenInfo {
+                        display: tok.to_string(),
+                        is_keyword: is_reserved_word(tok),
+                    },
                     expected,
                     hint: None,
                 },
@@ -2479,7 +2482,10 @@ where
                     }
                     Some((start, tok, end)) => parse_error(
                         ParseErrorType::UnexpectedToken {
-                            found: format_found_token(tok),
+                            found: UnexpectedTokenInfo {
+                                display: tok.to_string(),
+                                is_keyword: is_reserved_word(tok),
+                            },
                             expected: vec!["UpName".into(), "Name".into()],
                             hint: None,
                         },
@@ -2972,7 +2978,10 @@ where
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
             Some((start, tok, end)) => parse_error(
                 ParseErrorType::UnexpectedToken {
-                    found: format_found_token(tok),
+                    found: UnexpectedTokenInfo {
+                        display: tok.to_string(),
+                        is_keyword: is_reserved_word(tok),
+                    },
                     expected,
                     hint: None,
                 },
@@ -3574,19 +3583,6 @@ fn is_reserved_word(tok: Token) -> bool {
     }
 }
 
-/// Formats a token into a debug-style string and specifies whether
-/// the token is a reserved word (i.e., keyword).
-fn format_found_token(tok: Token) -> String {
-    let base = tok.to_string();
-    if is_reserved_word(tok) {
-        format!("{base} (a keyword)")
-    }
-    else {
-        format!("{base}")
-    }
-}
-
-
 // Parsing a function call into the appropriate structure
 #[derive(Debug)]
 pub enum ParserArg {
@@ -3622,7 +3618,10 @@ pub fn make_call(
                 if name != "_" {
                     return parse_error(
                         ParseErrorType::UnexpectedToken {
-                            found: format!("{name:?}"),
+                            found: UnexpectedTokenInfo {
+                                display: name.into(),
+                                is_keyword: false,
+                            },
                             expected: vec!["An expression".into(), "An underscore".into()],
 
                             hint: None,
