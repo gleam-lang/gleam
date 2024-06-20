@@ -44,9 +44,7 @@ pub enum UntypedExpr {
 
     List {
         location: SrcSpan,
-        spread_location: Option<SrcSpan>,
         elements: Vec<Self>,
-        uses_deprecated_append_syntax: bool,
         tail: Option<Box<Self>>,
     },
 

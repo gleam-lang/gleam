@@ -560,8 +560,8 @@ where
 
                 UntypedExpr::List {
                     location: SrcSpan { start, end },
-                    uses_deprecated_append_syntax: tail.is_some() && !elements_end_with_comma,
-                    spread_location,
+                    // todo)) uses_deprecated_append_syntax: tail.is_some() && !elements_end_with_comma,
+                    // TODO)) spread_location,
                     elements,
                     tail,
                 }

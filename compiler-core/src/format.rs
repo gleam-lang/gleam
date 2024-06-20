@@ -946,8 +946,6 @@ impl<'comments> Formatter<'comments> {
                 elements,
                 tail,
                 location,
-                uses_deprecated_append_syntax: _,
-                spread_location: _,
             } => self.list(elements, tail.as_deref(), location),
 
             UntypedExpr::Call {
