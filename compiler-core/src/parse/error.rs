@@ -1,5 +1,6 @@
 use crate::ast::SrcSpan;
 use crate::error::wrap;
+use std::fmt;
 use ecow::EcoString;
 use heck::{ToSnakeCase, ToUpperCamelCase};
 
@@ -7,6 +8,12 @@ use heck::{ToSnakeCase, ToUpperCamelCase};
 pub struct LexicalError {
     pub error: LexicalErrorType,
     pub location: SrcSpan,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct UnexpectedTokenInfo {
+    pub display: String,
+    pub is_keyword: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -290,7 +297,7 @@ pub enum ParseErrorType {
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken {
-        found: String,
+        found: UnexpectedTokenInfo,
         expected: Vec<EcoString>,
         hint: Option<EcoString>,
     },
@@ -395,6 +402,18 @@ impl LexicalError {
                     "See: https://tour.gleam.run/basics/equality".into(),
                 ],
             ),
+        }
+    }
+}
+
+impl fmt::Display for UnexpectedTokenInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let base = self.display.replace("\"", "");
+        if self.is_keyword {
+            write!(f, "the keyword `{}`", base)
+        }
+        else {
+            write!(f, "\"{}\"", base)
         }
     }
 }

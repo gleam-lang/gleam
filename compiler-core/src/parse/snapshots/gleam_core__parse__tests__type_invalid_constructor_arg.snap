@@ -8,6 +8,6 @@ error: Syntax error
 3 │     A(type: String)
   │       ^^^^ I was not expecting this
 
-Found "type" (a keyword), expected one of: 
+Found the keyword `type`, expected one of: 
 ")"
 a constructor argument name

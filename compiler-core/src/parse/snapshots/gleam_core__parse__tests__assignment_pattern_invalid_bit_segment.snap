@@ -8,6 +8,6 @@ error: Syntax error
 3 │     let <<b1, pub>> = <<24, 3>>
   │               ^^^ I was not expecting this
 
-Found "pub" (a keyword), expected one of: 
+Found the keyword `pub`, expected one of: 
 ">>"
 a bit array segment pattern
