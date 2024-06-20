@@ -6,7 +6,7 @@ use lsp_types::{
 };
 
 #[test]
-fn example_t() {
+fn render_inlay_hints() {
     let code = "
   fn to_str(x) { \"abc\" }
 
