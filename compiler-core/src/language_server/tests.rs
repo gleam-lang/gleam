@@ -198,6 +198,10 @@ impl FileSystemWriter for LanguageServerTestIO {
     fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<(), crate::Error> {
         self.io.write_bytes(path, content)
     }
+
+    fn exists(&self, path: &Utf8Path) -> bool {
+        self.io.exists(path)
+    }
 }
 
 impl DownloadDependencies for LanguageServerTestIO {

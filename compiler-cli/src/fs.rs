@@ -181,6 +181,10 @@ impl FileSystemWriter for ProjectIO {
     fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<(), Error> {
         write_bytes(path, content)
     }
+
+    fn exists(&self, path: &Utf8Path) -> bool {
+        path.exists()
+    }
 }
 
 impl CommandExecutor for ProjectIO {
