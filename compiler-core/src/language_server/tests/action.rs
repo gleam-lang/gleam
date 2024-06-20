@@ -54,6 +54,7 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
 
 const REMOVE_UNUSED_IMPORTS_TITLE: &str = "Remove unused imports";
 const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
+const CONVERT_TO_CASE: &str = "Convert to case";
 
 fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> String {
     let response = engine_response(src, line)
@@ -91,13 +92,14 @@ fn apply_code_edit(
             panic!("Unknown url {}", change_url)
         }
         for edit in change {
-            let start =
-                line_numbers.byte_index(edit.range.start.line, edit.range.start.character) - offset;
-            let end =
-                line_numbers.byte_index(edit.range.end.line, edit.range.end.character) - offset;
+            let start = line_numbers.byte_index(edit.range.start.line, edit.range.start.character)
+                as i32
+                - offset;
+            let end = line_numbers.byte_index(edit.range.end.line, edit.range.end.character) as i32
+                - offset;
             let range = (start as usize)..(end as usize);
             offset += end - start;
-            offset -= edit.new_text.len() as u32;
+            offset -= edit.new_text.len() as i32;
             result.replace_range(range, &edit.new_text);
         }
     }
@@ -336,6 +338,30 @@ pub fn main() {
         apply_first_code_action_with_title(code, 11, REMOVE_REDUNDANT_TUPLES),
         expected
     );
+}
+
+#[test]
+fn test_convert_assert_result_to_case() {
+    let code = "
+pub fn main() {
+  let assert Ok(foo) = Ok(1)
+}
+";
+
+    insta::assert_snapshot!(apply_first_code_action_with_title(code, 2, CONVERT_TO_CASE));
+}
+
+#[test]
+fn test_convert_assert_result_to_case_indented() {
+    let code = "
+pub fn main() {
+  {
+    let assert Ok(foo) = Ok(1)
+  }
+}
+";
+
+    insta::assert_snapshot!(apply_first_code_action_with_title(code, 3, CONVERT_TO_CASE));
 }
 
 /* TODO: implement qualified unused location
