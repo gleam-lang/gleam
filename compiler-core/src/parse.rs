@@ -501,10 +501,10 @@ where
                 // Parse an optional tail
                 let mut tail = None;
                 let mut elements_after_tail = None;
-                let mut spread_location = None;
+                let mut dot_dot_location = None;
 
                 if let Some((start, end)) = self.maybe_one(&Token::DotDot) {
-                    spread_location = Some(SrcSpan { start, end });
+                    dot_dot_location = Some((start, end));
                     tail = self.parse_expression()?.map(Box::new);
                     if self.maybe_one(&Token::Comma).is_some() {
                         // See if there's a list of items after the tail,
@@ -523,8 +523,8 @@ where
                 let (_, end) = self.expect_one(&Token::RightSquare)?;
 
                 // Return errors for malformed lists
-                match spread_location {
-                    Some(SrcSpan { start, end }) if tail.is_none() => {
+                match dot_dot_location {
+                    Some((start, end)) if tail.is_none() => {
                         return parse_error(
                             ParseErrorType::ListSpreadWithoutTail,
                             SrcSpan { start, end },
@@ -544,10 +544,8 @@ where
 
                 match elements_after_tail {
                     Some(elements) if !elements.is_empty() => {
-                        let (start, end) = match (spread_location, tail) {
-                            (Some(SrcSpan { start, end: _ }), Some(tail)) => {
-                                (start, tail.location().end)
-                            }
+                        let (start, end) = match (dot_dot_location, tail) {
+                            (Some((start, _)), Some(tail)) => (start, tail.location().end),
                             (_, _) => (start, end),
                         };
                         return parse_error(
@@ -1160,6 +1158,7 @@ where
                 self.advance();
                 let (elements_end_with_comma, elements) =
                     self.sep_series_of(&Parser::parse_pattern, Some(&Token::Comma))?;
+
                 let mut elements_after_tail = None;
                 let mut dot_dot_location = None;
                 let tail = if let Some((start, Token::DotDot, end)) = self.tok0 {

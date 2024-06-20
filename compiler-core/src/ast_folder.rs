@@ -1070,18 +1070,10 @@ pub trait PatternFolder {
 
             Pattern::List {
                 location,
-                spread_location,
                 elements,
                 tail,
-                uses_deprecated_tail_pattern_syntax,
                 type_: (),
-            } => self.fold_pattern_list(
-                location,
-                spread_location,
-                uses_deprecated_tail_pattern_syntax,
-                elements,
-                tail,
-            ),
+            } => self.fold_pattern_list(location, elements, tail),
 
             Pattern::Constructor {
                 location,
@@ -1172,15 +1164,11 @@ pub trait PatternFolder {
     fn fold_pattern_list(
         &mut self,
         location: SrcSpan,
-        spread_location: Option<SrcSpan>,
-        uses_deprecated_tail_pattern_syntax: bool,
         elements: Vec<UntypedPattern>,
         tail: Option<Box<UntypedPattern>>,
     ) -> UntypedPattern {
         Pattern::List {
             location,
-            spread_location,
-            uses_deprecated_tail_pattern_syntax,
             elements,
             tail,
             type_: (),
@@ -1275,8 +1263,6 @@ pub trait PatternFolder {
 
             Pattern::List {
                 location,
-                spread_location,
-                uses_deprecated_tail_pattern_syntax,
                 elements,
                 tail,
                 type_,
@@ -1285,8 +1271,6 @@ pub trait PatternFolder {
                 let tail = tail.map(|p| Box::new(self.fold_pattern(*p)));
                 Pattern::List {
                     location,
-                    spread_location,
-                    uses_deprecated_tail_pattern_syntax,
                     elements,
                     tail,
                     type_,
