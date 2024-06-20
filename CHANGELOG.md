@@ -10,20 +10,21 @@
 
 ### Compiler
 
-- Added more a verbose error when a pattern is attempted to be used after a spread.
+- Added more an informative error message for when attempting to use the `..`
+  syntax to append to a list rather than prepend.
 
-```
-error: Syntax error
-  ┌─ /src/parse/error.gleam:4:14
-  │
-4 │         [..rest, last] -> 1
-  │          ^^^^^ I wasn't expecting other patterns after this spread
+  ```
+  error: Syntax error
+    ┌─ /src/parse/error.gleam:4:14
+    │
+  4 │         [..rest, last] -> 1
+    │          ^^^^^ I wasn't expecting other patterns after this spread
 
-I was expecting the end of the list.
-A spread can only be used to match on the entire end of a list.
-It is not possible to extract items from the end of a list using pattern
-matching because that would require walking through the entire list.
-```
+  I was expecting the end of the list.
+  A spread can only be used to match on the entire end of a list.
+  It is not possible to extract items from the end of a list using pattern
+  matching because that would require walking through the entire list.
+  ```
 
 ([Antonio Iaccarino])[https://github.com/eingin]
 
