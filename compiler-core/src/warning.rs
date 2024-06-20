@@ -864,7 +864,7 @@ like this: `[item, ..list]`.",
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         label: diagnostic::Label {
-                            text: Some("You can safely remove this".into()),
+                            text: Some("This spread should be preceded by a comma".into()),
                             span: *location,
                         },
                         path: path.clone(),
