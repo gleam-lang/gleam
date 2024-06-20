@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/erlang/tests/patterns.rs
+expression: "pub fn a(x) {\n  case x, x {\n    _, \"a\" as a <> rest if rest == \"a\" -> a\n    _, _ -> \"a\"\n  }\n}"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([a/1]).
+
+-spec a(binary()) -> binary().
+a(X) ->
+    case {X, X} of
+        {_, <<A:1/binary, Rest/binary>>} when (A =:= <<"a"/utf8>>) andalso (Rest =:= <<"a"/utf8>>) ->
+            A;
+
+        {_, _} ->
+            <<"a"/utf8>>
+    end.
