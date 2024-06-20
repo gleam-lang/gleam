@@ -31,7 +31,7 @@
   match on the start of the list instead.
   ```
 
-([Antonio Iaccarino])[https://github.com/eingin]
+  ([Antonio Iaccarino])[https://github.com/eingin]
 
 - The compiler now emits a warning for redundant function captures in a
   pipeline:
@@ -126,6 +126,11 @@
 - Fixed a bug where a horizontal scrollbar would appear on code blocks in built
   documentation when they contained lines 79 or 80 characters long.
   ([Richard Viney](https://github.com/richard-viney))
+
+- Fixed a bug where importing a record constructor in an unqualified fashion and
+  aliasing it and then using it in a constant expression would generate invalid
+  JavaScript.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ## v1.2.1 - 2024-05-30
 
