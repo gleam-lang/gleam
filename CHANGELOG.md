@@ -73,7 +73,9 @@
 
   Else any functions which rely on this will not be compiled into Javascript.
 
-- Fault tolerance is now at a statement level instead of a function level in most cases. This means that even if there are errors in a single statement, the compiler will attempt to infer the rest of the function. NOTE: In the case of use expressions, if the right hand side of the use expression is invalid (not a function or incorrect arity), the entire use expression is treated as a single statement.
+- Compilation fault tolerance is now at a statement level instead of a function
+  level. This means that the compiler will attempt to infer the rest of the
+  statements in a function when there is an error in a previous one.
   ([Ameen Radwan](https://github.com/Acepie))
 
 ### Formatter
