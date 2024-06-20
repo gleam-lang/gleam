@@ -1190,7 +1190,7 @@ where
                             (_, _) => (start, end),
                         };
                         return parse_error(
-                            ParseErrorType::ListPatternAfterSpread,
+                            ParseErrorType::ListPatternSpreadFollowedByElements,
                             SrcSpan { start, end },
                         );
                     }
