@@ -51,21 +51,9 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The compiler will now raise a warning when using deprecated syntax to
-  prepend to a list:
-
-  ```
-  warning: Deprecated prepend syntax
-    ┌─ /src/warning/wrn.gleam:4:11
-    │
-  4 │       ["a"..letters]
-    │           ^^ This spread should be preceded by a comma
-
-  This syntax for prepending to a list is deprecated.
-  When prepending an item to a list it should be preceded by a comma, like
-  this: `[item, ..list]`.
-  ```
-
+- The syntax `[a..b]` is now deprecated in favour of the `[a, ..b]` syntax.
+  This was to avoid it being mistaken for a range syntax, which Gleam does
+  not have.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Functions etc named `maybe` are now escaped in generated Erlang as it is now a
@@ -96,23 +84,6 @@
   level. This means that the compiler will attempt to infer the rest of the
   statements in a function when there is an error in a previous one.
   ([Ameen Radwan](https://github.com/Acepie))
-
-- The compiler will now raise a warning when using deprecated syntax to
-  pattern match on the end of a list:
-
-  ```
-  warning: Deprecated list pattern matching syntax
-    ┌─ /src/warning/wrn.gleam:5:13
-    │
-  5 │         ["a"..rest] -> rest
-    │             ^^ This spread should be preceded by a comma
-
-  This syntax for pattern matching on a list is deprecated.
-  When matching on the rest of a list it should always be preceded by a
-  comma, like this: `[item, ..list]`.
-  ```
-
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Formatter
 
