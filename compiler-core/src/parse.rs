@@ -503,8 +503,10 @@ where
             // list
             Some((start, Token::LeftSquare, _)) => {
                 self.advance();
-                let (elements_end_with_comma, elements) =
-                    self.sep_series_of(&Parser::parse_expression, Some(&Token::Comma))?;
+                let (elements, elements_end_with_comma) = self.series_of_has_trailing_separator(
+                    &Parser::parse_expression,
+                    Some(&Token::Comma),
+                )?;
 
                 // Parse an optional tail
                 let mut tail = None;
@@ -1168,8 +1170,10 @@ where
             // List
             Some((start, Token::LeftSquare, _)) => {
                 self.advance();
-                let (elements_end_with_comma, elements) =
-                    self.sep_series_of(&Parser::parse_pattern, Some(&Token::Comma))?;
+                let (elements, elements_end_with_comma) = self.series_of_has_trailing_separator(
+                    &Parser::parse_pattern,
+                    Some(&Token::Comma),
+                )?;
 
                 let mut elements_after_tail = None;
                 let mut dot_dot_location = None;
@@ -2873,17 +2877,17 @@ where
         parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
         sep: Option<&Token>,
     ) -> Result<Vec<A>, ParseError> {
-        let (_, res) = self.sep_series_of(parser, sep)?;
+        let (res, _) = self.series_of_has_trailing_separator(parser, sep)?;
         Ok(res)
     }
 
-    // Parse a series by repeating a parser, and a separator. Returns true if
-    // the series ends with the trailing separator.
-    fn sep_series_of<A>(
+    /// Parse a series by repeating a parser, and a separator. Returns true if
+    /// the series ends with the trailing separator.
+    fn series_of_has_trailing_separator<A>(
         &mut self,
         parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
         sep: Option<&Token>,
-    ) -> Result<(bool, Vec<A>), ParseError> {
+    ) -> Result<(Vec<A>, bool), ParseError> {
         let mut results = vec![];
         let mut ends_with_sep = false;
         while let Some(result) = parser(self)? {
@@ -2902,7 +2906,7 @@ where
             }
         }
 
-        Ok((ends_with_sep, results))
+        Ok((results, ends_with_sep))
     }
 
     // If next token is a Name, consume it and return relevant info, otherwise, return none
