@@ -52,6 +52,7 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
 
 const REMOVE_UNUSED_IMPORTS: &str = "Remove unused imports";
 const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
+const CONVERT_TO_CASE: &str = "Convert to case";
 
 fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> String {
     let response = engine_response(src, line)
@@ -587,6 +588,29 @@ fn rename_invalid_case_variable_discard() {
 }",
         1
     ));
+}
+
+fn test_convert_assert_result_to_case() {
+    let code = "
+pub fn main() {
+  let assert Ok(foo) = Ok(1)
+}
+";
+
+    insta::assert_snapshot!(apply_first_code_action_with_title(code, 2, CONVERT_TO_CASE));
+}
+
+#[test]
+fn test_convert_assert_result_to_case_indented() {
+    let code = "
+pub fn main() {
+  {
+    let assert Ok(foo) = Ok(1)
+  }
+}
+";
+
+    insta::assert_snapshot!(apply_first_code_action_with_title(code, 3, CONVERT_TO_CASE));
 }
 
 /* TODO: implement qualified unused location
