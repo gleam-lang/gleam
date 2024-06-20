@@ -8,6 +8,6 @@ error: Syntax error
 3 │     let #(a, case, c) = #(1, 2, 3)
   │              ^^^^ I was not expecting this
 
-Expected one of: 
+Found "case" (a keyword), expected one of: 
 ")"
 a pattern

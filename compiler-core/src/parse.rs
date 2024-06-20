@@ -241,11 +241,12 @@ where
         parse_result: Result<A, ParseError>,
     ) -> Result<A, ParseError> {
         let parse_result = self.ensure_no_errors(parse_result)?;
-        if let Some((start, _, end)) = self.next_tok() {
+        if let Some((start, tok, end)) = self.next_tok() {
             // there are still more tokens
             let expected = vec!["An import, const, type, or function.".into()];
             return parse_error(
                 ParseErrorType::UnexpectedToken {
+                    found: format_found_token(tok),
                     expected,
                     hint: None,
                 },
@@ -2476,8 +2477,9 @@ where
                             })),
                         }
                     }
-                    Some((start, _, end)) => parse_error(
+                    Some((start, tok, end)) => parse_error(
                         ParseErrorType::UnexpectedToken {
+                            found: format_found_token(tok),
                             expected: vec!["UpName".into(), "Name".into()],
                             hint: None,
                         },
@@ -2968,8 +2970,9 @@ where
     fn next_tok_unexpected<A>(&mut self, expected: Vec<EcoString>) -> Result<A, ParseError> {
         match self.next_tok() {
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
-            Some((start, _, end)) => parse_error(
+            Some((start, tok, end)) => parse_error(
                 ParseErrorType::UnexpectedToken {
+                    found: format_found_token(tok),
                     expected,
                     hint: None,
                 },
@@ -3625,6 +3628,19 @@ fn is_reserved_word(tok: Token) -> bool {
     }
 }
 
+/// Formats a token into a debug-style string and specifies whether
+/// the token is a reserved word (i.e., keyword).
+fn format_found_token(tok: Token) -> String {
+    let base = tok.to_string();
+    if is_reserved_word(tok) {
+        format!("{base} (a keyword)")
+    }
+    else {
+        format!("{base}")
+    }
+}
+
+
 // Parsing a function call into the appropriate structure
 #[derive(Debug)]
 pub enum ParserArg {
@@ -3660,7 +3676,9 @@ pub fn make_call(
                 if name != "_" {
                     return parse_error(
                         ParseErrorType::UnexpectedToken {
+                            found: format!("{name:?}"),
                             expected: vec!["An expression".into(), "An underscore".into()],
+
                             hint: None,
                         },
                         location,
