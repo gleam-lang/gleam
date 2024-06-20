@@ -8,6 +8,6 @@ error: Syntax error
 3 │     #(1, 2, const)
   │             ^^^^^ I was not expecting this
 
-Expected one of: 
+Found "const" (a keyword), expected one of: 
 ")"
 an expression

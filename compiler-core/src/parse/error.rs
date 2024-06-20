@@ -187,8 +187,8 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "Argument labels are not allowed for anonymous functions",
                 vec!["Please remove the argument label.".into()],
             ),
-            ParseErrorType::UnexpectedToken { expected, hint } => {
-                let messages = std::iter::once("Expected one of: ".to_string())
+            ParseErrorType::UnexpectedToken { found, expected, hint } => {
+                let messages = std::iter::once(format!("Found {}, expected one of: ", found))
                     .chain(expected.iter().map(|s| s.to_string()));
 
                 let messages = match hint {
@@ -290,6 +290,7 @@ pub enum ParseErrorType {
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken {
+        found: String,
         expected: Vec<EcoString>,
         hint: Option<EcoString>,
     },
