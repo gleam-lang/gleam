@@ -2,19 +2,13 @@ use crate::analyse::Inferred;
 
 use super::*;
 
-pub(super) fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
+pub(super) fn pattern<'a>(
+    p: &'a TypedPattern,
+    env: &mut Env<'a>,
+    guards: &mut Vec<Document<'a>>,
+) -> Document<'a> {
     let mut vars = vec![];
-    to_doc(p, &mut vars, env)
-}
-
-pub(super) fn requires_guard(p: &TypedPattern) -> bool {
-    match p {
-        Pattern::StringPrefix {
-            left_side_assignment: Some(_),
-            ..
-        } => true,
-        _ => false,
-    }
+    to_doc(p, &mut vars, env, guards)
 }
 
 fn print<'a>(
@@ -22,22 +16,28 @@ fn print<'a>(
     vars: &mut Vec<&'a str>,
     define_variables: bool,
     env: &mut Env<'a>,
+    guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
     match p {
         Pattern::Assign {
             name, pattern: p, ..
         } if define_variables => {
             vars.push(name);
-            print(p, vars, define_variables, env)
+            print(p, vars, define_variables, env, guards)
                 .append(" = ")
                 .append(env.next_local_var_name(name))
         }
 
-        Pattern::Assign { pattern: p, .. } => print(p, vars, define_variables, env),
+        Pattern::Assign { pattern: p, .. } => print(p, vars, define_variables, env, guards),
 
-        Pattern::List { elements, tail, .. } => {
-            pattern_list(elements, tail.as_deref(), vars, define_variables, env)
-        }
+        Pattern::List { elements, tail, .. } => pattern_list(
+            elements,
+            tail.as_deref(),
+            vars,
+            define_variables,
+            env,
+            guards,
+        ),
 
         Pattern::Discard { .. } => "_".to_doc(),
 
@@ -73,7 +73,7 @@ fn print<'a>(
             arguments: args,
             constructor: Inferred::Known(PatternConstructor { name, .. }),
             ..
-        } => tag_tuple_pattern(name, args, vars, define_variables, env),
+        } => tag_tuple_pattern(name, args, vars, define_variables, env, guards),
 
         Pattern::Constructor {
             constructor: Inferred::Unknown,
@@ -82,15 +82,17 @@ fn print<'a>(
             panic!("Erlang generation performed with uninferred pattern constructor")
         }
 
-        Pattern::Tuple { elems, .. } => {
-            tuple(elems.iter().map(|p| print(p, vars, define_variables, env)))
-        }
-
-        Pattern::BitArray { segments, .. } => bit_array(
-            segments
+        Pattern::Tuple { elems, .. } => tuple(
+            elems
                 .iter()
-                .map(|s| pattern_segment(&s.value, &s.options, vars, define_variables, env)),
+                .map(|p| print(p, vars, define_variables, env, guards)),
         ),
+
+        Pattern::BitArray { segments, .. } => {
+            bit_array(segments.iter().map(|s| {
+                pattern_segment(&s.value, &s.options, vars, define_variables, env, guards)
+            }))
+        }
 
         Pattern::StringPrefix {
             left_side_string,
@@ -117,6 +119,7 @@ fn print<'a>(
                     //   bytes, then use a guard clause to verify the content.
                     //
                     let name = env.next_local_var_name(left_name);
+                    guards.push(docvec![name.clone(), " =:= ", string(left_side_string)]);
                     docvec![
                         "<<",
                         name.clone(),
@@ -126,10 +129,6 @@ fn print<'a>(
                         ", ",
                         right,
                         "/binary>>",
-                        " when ",
-                        name,
-                        " =:= ",
-                        string(left_side_string)
                     ]
                 }
                 None => docvec![
@@ -151,16 +150,18 @@ pub(super) fn to_doc<'a>(
     p: &'a TypedPattern,
     vars: &mut Vec<&'a str>,
     env: &mut Env<'a>,
+    guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
-    print(p, vars, true, env)
+    print(p, vars, true, env, guards)
 }
 
 pub(super) fn to_doc_discarding_all<'a>(
     p: &'a TypedPattern,
     vars: &mut Vec<&'a str>,
     env: &mut Env<'a>,
+    guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
-    print(p, vars, false, env)
+    print(p, vars, false, env, guards)
 }
 
 fn tag_tuple_pattern<'a>(
@@ -169,6 +170,7 @@ fn tag_tuple_pattern<'a>(
     vars: &mut Vec<&'a str>,
     define_variables: bool,
     env: &mut Env<'a>,
+    guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
     if args.is_empty() {
         atom_string(name.to_snake_case())
@@ -176,7 +178,7 @@ fn tag_tuple_pattern<'a>(
         tuple(
             [atom_string(name.to_snake_case())].into_iter().chain(
                 args.iter()
-                    .map(|p| print(&p.value, vars, define_variables, env)),
+                    .map(|p| print(&p.value, vars, define_variables, env, guards)),
             ),
         )
     }
@@ -188,6 +190,7 @@ fn pattern_segment<'a>(
     vars: &mut Vec<&'a str>,
     define_variables: bool,
     env: &mut Env<'a>,
+    guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
@@ -197,7 +200,7 @@ fn pattern_segment<'a>(
         Pattern::Discard { .. }
         | Pattern::Variable { .. }
         | Pattern::Int { .. }
-        | Pattern::Float { .. } => print(value, vars, define_variables, env),
+        | Pattern::Float { .. } => print(value, vars, define_variables, env, guards),
 
         // No other pattern variants are allowed in pattern bit array segments
         _ => panic!("Pattern segment match not recognised"),
@@ -206,7 +209,7 @@ fn pattern_segment<'a>(
     let size = |value: &'a TypedPattern, env: &mut Env<'a>| {
         Some(
             ":".to_doc()
-                .append(print(value, vars, define_variables, env)),
+                .append(print(value, vars, define_variables, env, guards)),
         )
     };
 
@@ -221,13 +224,14 @@ fn pattern_list<'a>(
     vars: &mut Vec<&'a str>,
     define_variables: bool,
     env: &mut Env<'a>,
+    guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
     let elements = join(
         elements
             .iter()
-            .map(|e| print(e, vars, define_variables, env)),
+            .map(|e| print(e, vars, define_variables, env, guards)),
         break_(",", ", "),
     );
-    let tail = tail.map(|tail| print(tail, vars, define_variables, env));
+    let tail = tail.map(|tail| print(tail, vars, define_variables, env, guards));
     list(elements, tail)
 }

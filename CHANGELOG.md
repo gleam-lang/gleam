@@ -154,6 +154,10 @@
   they referenced a non-existent type.
   ([Gears](https://github.com/gearsdatapacks))
 
+- Fixed a bug where the compiler would generate invalid Erlang when pattern
+  matching on strings with an `as` pattern.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.2.1 - 2024-05-30
 
 ### Bug Fixes

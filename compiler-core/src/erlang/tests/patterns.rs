@@ -76,3 +76,49 @@ fn pattern_as() {
 }"
     );
 }
+
+#[test]
+fn string_prefix_as_pattern_with_multiple_subjects() {
+    assert_erl!(
+        "pub fn a(x) {
+  case x, x {
+    _, \"a\" as a <> _  -> a
+    _, _ -> \"a\"
+  }
+}"
+    );
+}
+
+#[test]
+fn string_prefix_as_pattern_with_multiple_subjects_and_guard() {
+    assert_erl!(
+        "pub fn a(x) {
+  case x, x {
+    _, \"a\" as a <> rest if rest == \"a\" -> a
+    _, _ -> \"a\"
+  }
+}"
+    );
+}
+
+#[test]
+fn string_prefix_as_pattern_with_list() {
+    assert_erl!(
+        "pub fn a(x) {
+  case x {
+    [\"a\" as a <> _, \"b\" as b <> _] -> a <> b
+    _ -> \"\"
+  }
+}"
+    );
+}
+
+#[test]
+fn string_prefix_as_pattern_with_assertion() {
+    assert_erl!(
+        "pub fn a(x) {
+  let assert \"a\" as a <> rest = \"wibble\"
+  a
+}"
+    );
+}
