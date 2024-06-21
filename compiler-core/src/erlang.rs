@@ -1767,6 +1767,7 @@ pub fn is_erlang_reserved_word(name: &str) -> bool {
             | "of"
             | "case"
             | "maybe"
+            | "else"
     )
 }
 
