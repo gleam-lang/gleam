@@ -414,7 +414,7 @@ where
         }
 
         // Importable modules
-        let import_location = self.first_import_line_in_module();
+        let (has_import, import_location) = self.first_import_line_in_module();
         for (module_full_name, module) in self.completable_modules_for_import() {
             // Do not try to import the prelude.
             if module_full_name == "gleam" {
@@ -447,7 +447,12 @@ where
                     insert_range,
                     TypeCompletionForm::Default,
                 );
-                add_import_to_completion(&mut completion, import_location, module_full_name);
+                add_import_to_completion(
+                    &mut completion,
+                    has_import,
+                    import_location,
+                    module_full_name,
+                );
                 completions.push(completion);
             }
         }
@@ -530,7 +535,7 @@ where
         }
 
         // Importable modules
-        let import_location = self.first_import_line_in_module();
+        let (has_import, import_location) = self.first_import_line_in_module();
         for (module_full_name, module) in self.completable_modules_for_import() {
             // Do not try to import the prelude.
             if module_full_name == "gleam" {
@@ -558,7 +563,12 @@ where
                 let mut completion =
                     value_completion(Some(qualifier), module_full_name, name, value, insert_range);
 
-                add_import_to_completion(&mut completion, import_location, module_full_name);
+                add_import_to_completion(
+                    &mut completion,
+                    has_import,
+                    import_location,
+                    module_full_name,
+                );
                 completions.push(completion);
             }
         }
@@ -586,30 +596,28 @@ where
     }
 
     // Gets the position of the line with the first import statement in the file.
-    fn first_import_line_in_module(&'a self) -> Position {
-        let import_location = self
-            .module
-            .ast
-            .definitions
-            .iter()
-            .find_map(get_import)
-            .map_or(0, |i| i.location.start);
+    fn first_import_line_in_module(&'a self) -> (bool, Position) {
+        let import_location = self.module.ast.definitions.iter().find_map(get_import);
+        let has_import = import_location.is_some();
+        let import_location = import_location.map_or(0, |i| i.location.start);
         let import_location = self.module_line_numbers.line_number(import_location);
-        Position::new(import_location - 1, 0)
+        (has_import, Position::new(import_location - 1, 0))
     }
 }
 
 fn add_import_to_completion(
     item: &mut CompletionItem,
+    has_import: bool,
     import_location: Position,
     module_full_name: &EcoString,
 ) {
+    let new_lines = if has_import { "\n" } else { "\n\n" };
     item.additional_text_edits = Some(vec![TextEdit {
         range: Range {
             start: import_location,
             end: import_location,
         },
-        new_text: ["import ", module_full_name, "\n"].concat(),
+        new_text: ["import ", module_full_name, new_lines].concat(),
     }]);
 }
 
