@@ -392,6 +392,7 @@ pub enum ValueConstructorVariant {
         field_map: Option<FieldMap>,
         module: EcoString,
         arity: usize,
+        arg_names: Vec<String>,
         location: SrcSpan,
         documentation: Option<EcoString>,
         implementations: Implementations,

@@ -471,6 +471,7 @@ fn module_fn_value() {
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
+                    arg_names: vec![],
                     documentation: Some("wobble!".into()),
                     name: "one".into(),
                     field_map: None,
@@ -518,6 +519,7 @@ fn deprecated_module_fn_value() {
                 },
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
+                    arg_names: vec![],
                     documentation: Some("wobble!".into()),
                     name: "one".into(),
                     field_map: None,
@@ -563,6 +565,7 @@ fn private_module_fn_value() {
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
+                    arg_names: vec![],
                     documentation: Some("wobble!".into()),
                     name: "one".into(),
                     field_map: None,
@@ -610,6 +613,7 @@ fn module_fn_value_regression() {
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
+                    arg_names: vec![],
                     documentation: Some("wabble!".into()),
                     name: "one".into(),
                     field_map: None,
@@ -656,6 +660,7 @@ fn module_fn_value_with_field_map() {
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
+                    arg_names: vec![],
                     documentation: Some("wubble!".into()),
                     name: "one".into(),
                     field_map: Some(FieldMap {
@@ -1278,6 +1283,7 @@ fn module_fn_value_with_external_implementations() {
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
+                    arg_names: vec![],
                     documentation: Some("wabble!".into()),
                     name: "one".into(),
                     field_map: None,
@@ -1324,6 +1330,7 @@ fn internal_module_fn() {
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
+                    arg_names: vec![],
                     documentation: Some("wabble!".into()),
                     name: "one".into(),
                     field_map: None,

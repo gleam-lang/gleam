@@ -24,26 +24,12 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
         preselect: None,
         sort_text: None,
         filter_text: None,
-        insert_text: None,
+        insert_text: Some(
+            "Wobble",
+        ),
         insert_text_format: None,
         insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                    },
-                    new_text: "Wobble",
-                },
-            ),
-        ),
+        text_edit: None,
         additional_text_edits: None,
         command: None,
         commit_characters: None,

@@ -4,7 +4,7 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
 ---
 [
     CompletionItem {
-        label: "dep.wobble",
+        label: "dep.wobble()",
         label_details: Some(
             CompletionItemLabelDetails {
                 detail: None,
@@ -24,26 +24,12 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
         preselect: None,
         sort_text: None,
         filter_text: None,
-        insert_text: None,
+        insert_text: Some(
+            "dep.wobble()",
+        ),
         insert_text_format: None,
         insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                    },
-                    new_text: "dep.wobble",
-                },
-            ),
-        ),
+        text_edit: None,
         additional_text_edits: Some(
             [
                 TextEdit {
@@ -67,7 +53,7 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
         tags: None,
     },
     CompletionItem {
-        label: "dep2.wobble",
+        label: "dep2.wobble()",
         label_details: Some(
             CompletionItemLabelDetails {
                 detail: None,
@@ -87,26 +73,12 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
         preselect: None,
         sort_text: None,
         filter_text: None,
-        insert_text: None,
+        insert_text: Some(
+            "dep2.wobble()",
+        ),
         insert_text_format: None,
         insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                    },
-                    new_text: "dep2.wobble",
-                },
-            ),
-        ),
+        text_edit: None,
         additional_text_edits: None,
         command: None,
         commit_characters: None,

@@ -1,8 +1,8 @@
 use ecow::EcoString;
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionItemLabelDetails, CompletionTextEdit,
-    Documentation, MarkupContent, MarkupKind, Position, Range, TextDocumentPositionParams,
-    TextEdit,
+    Documentation, InsertTextFormat, MarkupContent, MarkupKind, Position, Range,
+    TextDocumentPositionParams, TextEdit,
 };
 use strum::IntoEnumIterator;
 
@@ -246,7 +246,7 @@ where
             if already_imported_values.contains(name) {
                 continue;
             }
-            completions.push(value_completion(
+            completions.push(value_completion_import(
                 None,
                 &module_being_imported_from.name,
                 name,
@@ -457,21 +457,54 @@ where
 
     /// Provides completions for when the context being editted is a value.
     pub fn completion_values(&'a self) -> Vec<CompletionItem> {
-        let surrounding_completion = self.get_phrase_surrounding_completion();
+        // Current module if the completion is after ".", example: mymodule.foo|
+        let (_, module_select) = self.get_phrase_surrounding_completion();
         let mut completions = vec![];
         let mod_name = self.module.name.as_str();
 
-        let (insert_range, module_select) = surrounding_completion;
+        let not_variable_or_dot_char = |c: char| {
+            // Checks if a character is not a valid name/upname character or a dot.
+            !c.is_ascii_alphanumeric() && c != '.' && c != '_'
+        };
+
+        let cursor = self
+            .src_line_numbers
+            .byte_index(self.cursor_position.line, self.cursor_position.character)
+            as usize;
+        // True if completion is part of a pipeline, example: "  |> foo|".
+        let is_part_of_pipeline = self
+            .src
+            .get(..cursor)
+            .and_then(|t| t.rfind(not_variable_or_dot_char))
+            .and_then(|q| self.src.get(..q))
+            .map(|w| w.trim_end().ends_with("|>"))
+            .unwrap_or(false);
+        // True if completion is part of a pipeline, example: "  use _ <- foo|".
+        let is_part_of_use = self
+            .src
+            .get(..cursor)
+            .and_then(|t| t.rfind(not_variable_or_dot_char))
+            .and_then(|q| self.src.get(..q))
+            .map(|w| w.trim_end().ends_with("<-"))
+            .unwrap_or(false);
 
         // Module values
-        // Do not complete direct module values if the user has already started typing a module select.
-        // e.x. when the user has typed mymodule.| we know local module values are no longer relevant
+        // NOTE: Do not complete direct module values if the user has already started typing a module select.
+        //       e.x. when the user has typed mymodule.| we know local module values are no longer relevant
         if module_select.is_none() {
             for (name, value) in &self.module.ast.type_info.values {
                 // Here we do not check for the internal attribute: we always want
                 // to show autocompletions for values defined in the same module,
                 // even if those are internal.
-                completions.push(value_completion(None, mod_name, name, value, insert_range));
+                completions.push(value_completion(
+                    None,
+                    mod_name,
+                    name,
+                    value,
+                    module_select.is_some(),
+                    is_part_of_pipeline,
+                    is_part_of_use,
+                ));
             }
         }
 
@@ -502,14 +535,16 @@ where
                         mod_name,
                         name,
                         value,
-                        insert_range,
+                        module_select.is_some(),
+                        is_part_of_pipeline,
+                        is_part_of_use,
                     ));
                 }
             }
 
             // Unqualified values
-            // Do not complete unqualified values if the user has already started typing a module select.
-            // e.x. when the user has typed mymodule.| we know unqualified module values are no longer relevant.
+            // NOTE: Do not complete unqualified values if the user has already started typing a module select.
+            //       e.x. when the user has typed mymodule.| we know unqualified module values are no longer relevant.
             if module_select.is_none() {
                 for unqualified in &import.unqualified_values {
                     match module.get_public_value(&unqualified.name) {
@@ -520,7 +555,9 @@ where
                                 mod_name,
                                 name,
                                 value,
-                                insert_range,
+                                module_select.is_some(),
+                                is_part_of_pipeline,
+                                is_part_of_use,
                             ))
                         }
                         None => continue,
@@ -555,8 +592,15 @@ where
                     continue;
                 }
 
-                let mut completion =
-                    value_completion(Some(qualifier), module_full_name, name, value, insert_range);
+                let mut completion = value_completion(
+                    Some(qualifier),
+                    module_full_name,
+                    name,
+                    value,
+                    module_select.is_some(),
+                    is_part_of_pipeline,
+                    is_part_of_use,
+                );
 
                 add_import_to_completion(&mut completion, import_location, module_full_name);
                 completions.push(completion);
@@ -646,7 +690,7 @@ fn type_completion(
     }
 }
 
-fn value_completion(
+fn value_completion_import(
     module_qualifier: Option<&str>,
     module_name: &str,
     name: &str,
@@ -660,15 +704,6 @@ fn value_completion(
 
     let type_ = Printer::new().pretty_print(&value.type_, 0);
 
-    let kind = Some(match value.variant {
-        ValueConstructorVariant::LocalVariable { .. } => CompletionItemKind::VARIABLE,
-        ValueConstructorVariant::ModuleConstant { .. } => CompletionItemKind::CONSTANT,
-        ValueConstructorVariant::LocalConstant { .. } => CompletionItemKind::CONSTANT,
-        ValueConstructorVariant::ModuleFn { .. } => CompletionItemKind::FUNCTION,
-        ValueConstructorVariant::Record { arity: 0, .. } => CompletionItemKind::ENUM_MEMBER,
-        ValueConstructorVariant::Record { .. } => CompletionItemKind::CONSTRUCTOR,
-    });
-
     let documentation = value.get_documentation().map(|d| {
         Documentation::MarkupContent(MarkupContent {
             kind: MarkupKind::Markdown,
@@ -678,8 +713,8 @@ fn value_completion(
 
     CompletionItem {
         label: label.clone(),
-        kind,
-        detail: Some(type_),
+        kind: Some(variant_to_completion_kind(&value.variant)),
+        detail: Some(type_.clone()),
         label_details: Some(CompletionItemLabelDetails {
             detail: None,
             description: Some(module_name.into()),
@@ -693,9 +728,111 @@ fn value_completion(
     }
 }
 
+fn value_completion(
+    module_qualifier: Option<&str>,
+    module_name: &str,
+    name: &str,
+    value: &crate::type_::ValueConstructor,
+    is_module_select: bool,
+    is_part_of_pipeline: bool,
+    is_part_of_use: bool,
+) -> CompletionItem {
+    let mut label = match module_qualifier {
+        Some(module) => format!("{module}.{name}"),
+        None => name.to_string(),
+    };
+    let mut next_text = if is_module_select {
+        name.to_string()
+    } else {
+        label.clone()
+    };
+
+    let mut insert_text: Option<String> = Some(next_text.clone());
+    let mut insert_text_format: Option<InsertTextFormat> = None;
+
+    match value.variant {
+        // Add parenthises and argument names as SNIPPETs.
+        ValueConstructorVariant::ModuleFn { ref arg_names, .. } => {
+            if arg_names.is_empty() {
+                label.push_str("()");
+                next_text.push_str("()");
+                insert_text = Some(next_text);
+            } else {
+                let next_text_args =
+                    build_fn_args_completion(arg_names, is_part_of_pipeline, is_part_of_use);
+                label.push_str("(…)");
+                next_text.push_str(&format!("({next_text_args})"));
+                insert_text = Some(next_text);
+                insert_text_format = Some(InsertTextFormat::SNIPPET);
+            }
+        }
+        _ => (),
+    };
+
+    let type_ = Printer::new().pretty_print(&value.type_, 0);
+
+    let documentation = value.get_documentation().map(|d| {
+        Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: d.into(),
+        })
+    });
+
+    CompletionItem {
+        label,
+        kind: Some(variant_to_completion_kind(&value.variant)),
+        detail: Some(type_),
+        label_details: Some(CompletionItemLabelDetails {
+            detail: None,
+            description: Some(module_name.into()),
+        }),
+        documentation,
+        insert_text,
+        insert_text_format,
+        ..Default::default()
+    }
+}
+
 fn get_import(statement: &TypedDefinition) -> Option<&Import<EcoString>> {
     match statement {
         Definition::Import(import) => Some(import),
         _ => None,
     }
+}
+
+fn variant_to_completion_kind(variant: &ValueConstructorVariant) -> CompletionItemKind {
+    match variant {
+        ValueConstructorVariant::LocalVariable { .. } => CompletionItemKind::VARIABLE,
+        ValueConstructorVariant::ModuleConstant { .. } => CompletionItemKind::CONSTANT,
+        ValueConstructorVariant::LocalConstant { .. } => CompletionItemKind::CONSTANT,
+        ValueConstructorVariant::ModuleFn { .. } => CompletionItemKind::FUNCTION,
+        ValueConstructorVariant::Record { arity: 0, .. } => CompletionItemKind::ENUM_MEMBER,
+        ValueConstructorVariant::Record { .. } => CompletionItemKind::CONSTRUCTOR,
+    }
+}
+
+fn build_fn_args_completion(
+    arg_names: &Vec<String>,
+    is_part_of_pipeline: bool,
+    is_part_of_use: bool,
+) -> String {
+    let (skip_first, skip_last) = if is_part_of_pipeline {
+        // If pipeline "|>", do not autocomplete the first argument.
+        (1, 0)
+    } else if is_part_of_use {
+        // If a use syntax "use _ <-", do not autocomplete the last argument.
+        (0, 1)
+    } else {
+        (0, 0)
+    };
+    let filtered_arg_names = arg_names
+        .iter()
+        .skip(skip_first)
+        .take(arg_names.len() - skip_last);
+    filtered_arg_names
+        .enumerate()
+        // Build a snippet to allow tab stops, in format of: "${1:arg_name}"
+        .map(|(i, a)| format!("${{{}:{}}}", i + 1, a).to_string())
+        .collect::<Vec<String>>()
+        .join(", ")
 }

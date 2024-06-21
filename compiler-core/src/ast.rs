@@ -157,6 +157,10 @@ impl<A> Arg<A> {
         self.names.get_variable_name()
     }
 
+    pub fn get_name(&self) -> &EcoString {
+        self.names.get_name()
+    }
+
     pub fn is_capture_hole(&self) -> bool {
         match &self.names {
             ArgNames::Named { name } if name == CAPTURE_VARIABLE => true,
@@ -196,6 +200,13 @@ impl ArgNames {
         match self {
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
             ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name } => Some(name),
+        }
+    }
+
+    pub fn get_name(&self) -> &EcoString {
+        match self {
+            ArgNames::Discard { name, .. } | ArgNames::LabelledDiscard { name, .. } => name,
+            ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name } => name,
         }
     }
 }

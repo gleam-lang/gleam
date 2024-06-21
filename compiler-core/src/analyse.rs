@@ -537,6 +537,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             field_map,
             module: impl_module,
             arity: typed_args.len(),
+            arg_names: typed_args.iter().map(|a|  a.get_name().to_string()).collect(),
             location,
             implementations,
         };
@@ -1149,6 +1150,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             field_map,
             module: impl_module,
             arity: args.len(),
+            arg_names: args.iter().map(|a|  a.get_name().to_string()).collect(),
             location: *location,
             implementations: *implementations,
         };
@@ -1424,6 +1426,7 @@ fn generalise_function(
         field_map,
         module: impl_module,
         arity: args.len(),
+        arg_names: args.iter().map(|a|  a.get_name().to_string()).collect(),
         location,
         implementations,
     };

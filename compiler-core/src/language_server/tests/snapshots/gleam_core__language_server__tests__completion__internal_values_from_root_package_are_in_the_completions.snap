@@ -24,26 +24,12 @@ expression: "completion_at_default_position(TestProject::for_source(\"import dep
         preselect: None,
         sort_text: None,
         filter_text: None,
-        insert_text: None,
+        insert_text: Some(
+            "dep.Bar",
+        ),
         insert_text_format: None,
         insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                    },
-                    new_text: "dep.Bar",
-                },
-            ),
-        ),
+        text_edit: None,
         additional_text_edits: None,
         command: None,
         commit_characters: None,
@@ -71,26 +57,12 @@ expression: "completion_at_default_position(TestProject::for_source(\"import dep
         preselect: None,
         sort_text: None,
         filter_text: None,
-        insert_text: None,
+        insert_text: Some(
+            "dep.foo",
+        ),
         insert_text_format: None,
         insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                    },
-                    new_text: "dep.foo",
-                },
-            ),
-        ),
+        text_edit: None,
         additional_text_edits: None,
         command: None,
         commit_characters: None,
@@ -98,7 +70,7 @@ expression: "completion_at_default_position(TestProject::for_source(\"import dep
         tags: None,
     },
     CompletionItem {
-        label: "dep.main",
+        label: "dep.main()",
         label_details: Some(
             CompletionItemLabelDetails {
                 detail: None,
@@ -118,26 +90,12 @@ expression: "completion_at_default_position(TestProject::for_source(\"import dep
         preselect: None,
         sort_text: None,
         filter_text: None,
-        insert_text: None,
+        insert_text: Some(
+            "dep.main()",
+        ),
         insert_text_format: None,
         insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                    },
-                    new_text: "dep.main",
-                },
-            ),
-        ),
+        text_edit: None,
         additional_text_edits: None,
         command: None,
         commit_characters: None,
@@ -145,7 +103,7 @@ expression: "completion_at_default_position(TestProject::for_source(\"import dep
         tags: None,
     },
     CompletionItem {
-        label: "dep.random_float",
+        label: "dep.random_float()",
         label_details: Some(
             CompletionItemLabelDetails {
                 detail: None,
@@ -165,26 +123,12 @@ expression: "completion_at_default_position(TestProject::for_source(\"import dep
         preselect: None,
         sort_text: None,
         filter_text: None,
-        insert_text: None,
+        insert_text: Some(
+            "dep.random_float()",
+        ),
         insert_text_format: None,
         insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                    },
-                    new_text: "dep.random_float",
-                },
-            ),
-        ),
+        text_edit: None,
         additional_text_edits: None,
         command: None,
         commit_characters: None,

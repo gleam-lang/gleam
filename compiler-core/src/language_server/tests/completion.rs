@@ -19,7 +19,7 @@ fn completion_at_default_position(tester: TestProject<'_>) -> Vec<CompletionItem
     let tester = TestProject { src, ..tester };
     completion(tester, Position::new(1, 0))
         .into_iter()
-        .filter(|c| c.label != "typing_in_here")
+        .filter(|c| c.label != "typing_in_here()")
         .collect_vec()
 }
 
