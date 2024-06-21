@@ -642,3 +642,19 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3304
+#[test]
+fn type_named_else() {
+    assert_erl!(
+        "
+pub type Else {
+  Else
+}
+
+pub fn main() {
+  Else
+}
+"
+    );
+}

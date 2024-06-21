@@ -60,6 +60,11 @@
   reserved word in Erlang/OTP 27.
   ([Jake Barszcz](https://github.com/barszcz))
 
+- Functions, types and constructors named `maybe` and `else` are now
+  escaped in generated Erlang to avoid clashing with Erlang's keywords.
+  ([Jake Barszcz](https://github.com/barszcz)) and
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Non byte aligned arrays that use literals for size are now marked as an
   Unsupported feature for Javascript since they would already cause
   a runtime error on Javascript.
