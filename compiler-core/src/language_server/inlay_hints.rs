@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Definition, SrcSpan, Statement, TypedAssignment, TypedDefinition, TypedExpr, TypedModule,
-        TypedStatement,
+        visit::{self, Visit},
+        SrcSpan, TypedAssignment, TypedExpr, TypedModule,
     },
     line_numbers::LineNumbers,
     type_::pretty::Printer,
@@ -11,20 +11,6 @@ use crate::{
 pub struct InlayHint {
     pub label: String,
     pub offset: u32,
-}
-
-struct Buf<'a> {
-    hints: Vec<InlayHint>,
-    line_numbers: &'a LineNumbers,
-}
-
-impl<'a> Buf<'a> {
-    fn new(line_numbers: &'a LineNumbers) -> Buf<'a> {
-        Buf {
-            hints: vec![],
-            line_numbers,
-        }
-    }
 }
 
 fn is_simple_lit(expr: &TypedExpr) -> bool {
@@ -37,29 +23,28 @@ fn is_simple_lit(expr: &TypedExpr) -> bool {
     )
 }
 
-impl<'a> Buf<'a> {
-    pub fn push_inlay_hints_definition(&mut self, typed_def: TypedDefinition) {
-        if let Definition::Function(f) = typed_def {
-            for st in f.body {
-                self.push_inlay_hints_statement(st)
-            }
+struct InlayHintsVisitor<'a> {
+    hints: Vec<InlayHint>,
+    line_numbers: &'a LineNumbers,
+}
+
+impl<'a> InlayHintsVisitor<'a> {
+    fn new(line_numbers: &'a LineNumbers) -> InlayHintsVisitor<'a> {
+        InlayHintsVisitor {
+            hints: vec![],
+            line_numbers,
         }
     }
+}
 
-    fn push_inlay_hints_statement(&mut self, typed_st: TypedStatement) {
-        match typed_st {
-            Statement::Expression(e) => self.push_inlay_hints_expr(e),
-            Statement::Assignment(assig) => self.push_inlay_hints_expr(*assig.value),
-            Statement::Use(_) => (),
-        }
-    }
-
-    fn push_inlay_hints_pipeline(
+impl<'a, 'ast> Visit<'ast> for InlayHintsVisitor<'a> {
+    fn visit_typed_expr_pipeline(
         &mut self,
-        assignments: Vec<TypedAssignment>,
-        finally: &TypedExpr,
+        _location: &'ast SrcSpan,
+        assignments: &'ast [TypedAssignment],
+        finally: &'ast TypedExpr,
     ) {
-        fn get_this_line(this: &Buf<'_>, span: &SrcSpan) -> u32 {
+        fn get_this_line(this: &InlayHintsVisitor<'_>, span: &SrcSpan) -> u32 {
             this.line_numbers.line_and_column_number(span.end).line
         }
 
@@ -87,7 +72,8 @@ impl<'a> Buf<'a> {
                     Some(this_hint)
                 },
             ));
-            self.push_inlay_hints_expr(*assign.value);
+
+            visit::visit_typed_expr(self, &assign.value);
         }
 
         if let Some((prev_line, prev_hint)) = prev_hint {
@@ -103,105 +89,12 @@ impl<'a> Buf<'a> {
             }
         }
     }
-
-    fn push_inlay_hints_expr(&mut self, typed_st: TypedExpr) {
-        match typed_st {
-            TypedExpr::Int { .. }
-            | TypedExpr::Float { .. }
-            | TypedExpr::String { .. }
-            | TypedExpr::Todo { .. }
-            | TypedExpr::Panic { .. }
-            | TypedExpr::Var { .. }
-            | TypedExpr::BitArray { .. }
-            | TypedExpr::ModuleSelect { .. } => (),
-
-            TypedExpr::Pipeline {
-                location: _,
-                assignments,
-                finally,
-            } => {
-                self.push_inlay_hints_pipeline(assignments, &finally);
-                self.push_inlay_hints_expr(*finally);
-            }
-
-            TypedExpr::Case { clauses, .. } => {
-                // TODO iterate on clauses?
-                for clause in clauses {
-                    self.push_inlay_hints_expr(clause.then)
-                }
-            }
-
-            TypedExpr::Block { statements, .. } => {
-                for st in statements {
-                    self.push_inlay_hints_statement(st);
-                }
-            }
-
-            TypedExpr::Call { fun: _, args, .. } => {
-                // TODO should we iterate the caller?
-                for arg in args {
-                    self.push_inlay_hints_expr(arg.value);
-                }
-            }
-
-            TypedExpr::Fn { body, .. } => {
-                for st in body {
-                    self.push_inlay_hints_statement(st);
-                }
-            }
-
-            TypedExpr::List { elements, tail, .. } => {
-                for el in elements {
-                    self.push_inlay_hints_expr(el);
-                }
-                if let Some(tail) = tail {
-                    self.push_inlay_hints_expr(*tail);
-                }
-            }
-
-            TypedExpr::BinOp { left, right, .. } => {
-                self.push_inlay_hints_expr(*left);
-                self.push_inlay_hints_expr(*right);
-            }
-
-            TypedExpr::RecordAccess { record, .. } => {
-                self.push_inlay_hints_expr(*record);
-            }
-
-            TypedExpr::Tuple { elems, .. } => {
-                for el in elems {
-                    self.push_inlay_hints_expr(el);
-                }
-            }
-
-            TypedExpr::TupleIndex { tuple, .. } => {
-                self.push_inlay_hints_expr(*tuple);
-            }
-
-            TypedExpr::RecordUpdate { spread, args, .. } => {
-                for arg in args {
-                    self.push_inlay_hints_expr(arg.value);
-                }
-                self.push_inlay_hints_expr(*spread);
-            }
-
-            TypedExpr::NegateBool { value, .. } => {
-                self.push_inlay_hints_expr(*value);
-            }
-
-            TypedExpr::NegateInt { value, .. } => {
-                self.push_inlay_hints_expr(*value);
-            }
-        }
-    }
 }
 
 pub fn get_inlay_hints(typed_module: TypedModule, line_numbers: &LineNumbers) -> Vec<InlayHint> {
-    let mut buf = Buf::new(line_numbers);
-    for def in typed_module.definitions {
-        buf.push_inlay_hints_definition(def);
-    }
-    buf.hints
+    let mut visitor = InlayHintsVisitor::new(line_numbers);
+    visitor.visit_typed_module(&typed_module);
+    visitor.hints
 }
 
 #[cfg(test)]
