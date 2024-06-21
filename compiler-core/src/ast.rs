@@ -2,6 +2,7 @@ mod constant;
 mod typed;
 mod untyped;
 
+pub mod inlay_hints;
 #[cfg(test)]
 mod tests;
 pub mod visit;
