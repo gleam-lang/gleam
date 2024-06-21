@@ -1,14 +1,13 @@
 use crate::{
     ast::{
-        Arg, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction, TypedModule,
+        self, Arg, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction, TypedModule,
         TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        compiler::LspProjectCompiler, files::FileSystemProxy, inlay_hints::get_inlay_hints,
-        progress::ProgressReporter,
+        compiler::LspProjectCompiler, files::FileSystemProxy, progress::ProgressReporter,
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
@@ -278,7 +277,7 @@ where
 
             let line_numbers = LineNumbers::new(&module.code);
 
-            let hints = get_inlay_hints(module.ast.clone(), &line_numbers)
+            let hints = ast::inlay_hints::get_inlay_hints(module.ast.clone(), &line_numbers)
                 .iter()
                 .map(|hint| InlayHint {
                     position: src_offset_to_lsp_position(hint.offset, &line_numbers),
