@@ -1,6 +1,7 @@
 use crate::{
     ast::{
-        Definition, SrcSpan, Statement, TypedDefinition, TypedExpr, TypedModule, TypedStatement,
+        Definition, SrcSpan, Statement, TypedAssignment, TypedDefinition, TypedExpr, TypedModule,
+        TypedStatement,
     },
     line_numbers::LineNumbers,
     type_::pretty::Printer,
@@ -26,6 +27,16 @@ impl<'a> Buf<'a> {
     }
 }
 
+fn is_simple_lit(expr: &TypedExpr) -> bool {
+    matches!(
+        expr,
+        TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::BitArray { .. }
+    )
+}
+
 impl<'a> Buf<'a> {
     pub fn push_inlay_hints_definition(&mut self, typed_def: TypedDefinition) {
         if let Definition::Function(f) = typed_def {
@@ -40,6 +51,56 @@ impl<'a> Buf<'a> {
             Statement::Expression(e) => self.push_inlay_hints_expr(e),
             Statement::Assignment(assig) => self.push_inlay_hints_expr(*assig.value),
             Statement::Use(_) => (),
+        }
+    }
+
+    fn push_inlay_hints_pipeline(
+        &mut self,
+        assignments: Vec<TypedAssignment>,
+        finally: &TypedExpr,
+    ) {
+        fn get_this_line(this: &Buf<'_>, span: &SrcSpan) -> u32 {
+            this.line_numbers.line_and_column_number(span.end).line
+        }
+
+        let mut prev_hint: Option<(u32, Option<InlayHint>)> = None;
+        for assign in assignments {
+            let this_line = get_this_line(self, &assign.location);
+
+            if let Some((prev_line, prev_hint)) = prev_hint {
+                if prev_line != this_line {
+                    if let Some(prev_hint) = prev_hint {
+                        self.hints.push(prev_hint);
+                    }
+                }
+            };
+
+            let this_hint = InlayHint {
+                label: Printer::new().pretty_print(assign.type_().as_ref(), 0),
+                offset: assign.location.end,
+            };
+            prev_hint = Some((
+                this_line,
+                if is_simple_lit(&assign.value) {
+                    None
+                } else {
+                    Some(this_hint)
+                },
+            ));
+            self.push_inlay_hints_expr(*assign.value);
+        }
+
+        if let Some((prev_line, prev_hint)) = prev_hint {
+            let this_line = get_this_line(self, &finally.location());
+            if this_line != prev_line {
+                if let Some(prev_hint) = prev_hint {
+                    self.hints.push(prev_hint);
+                }
+                self.hints.push(InlayHint {
+                    label: Printer::new().pretty_print(finally.type_().as_ref(), 0),
+                    offset: finally.location().end,
+                });
+            }
         }
     }
 
@@ -59,42 +120,7 @@ impl<'a> Buf<'a> {
                 assignments,
                 finally,
             } => {
-                fn get_this_line(this: &Buf<'_>, span: &SrcSpan) -> u32 {
-                    this.line_numbers.line_and_column_number(span.end).line
-                }
-
-                let mut prev_hint = None;
-
-                for assign in assignments {
-                    let str_type = Printer::new().pretty_print(assign.type_().as_ref(), 0);
-
-                    let this_line = get_this_line(self, &assign.location);
-
-                    if let Some((prev_line, prev_hint)) = prev_hint {
-                        if prev_line != this_line {
-                            self.hints.push(prev_hint);
-                        }
-                    };
-
-                    let this_hint = InlayHint {
-                        label: str_type,
-                        offset: assign.location.end,
-                    };
-                    prev_hint = Some((this_line, this_hint));
-                    self.push_inlay_hints_expr(*assign.value);
-                }
-
-                let (prev_line, prev_hint) = prev_hint.expect("Expected a non-empty arr");
-                let this_line = get_this_line(self, &finally.location());
-                if this_line != prev_line {
-                    let str_type_finally = Printer::new().pretty_print(finally.type_().as_ref(), 0);
-                    self.hints.push(prev_hint);
-                    self.hints.push(InlayHint {
-                        label: str_type_finally,
-                        offset: finally.location().end,
-                    })
-                }
-
+                self.push_inlay_hints_pipeline(assignments, &finally);
                 self.push_inlay_hints_expr(*finally);
             }
 
@@ -212,8 +238,57 @@ mod tests {
     }
 
     #[test]
+    fn no_hints_when_value_is_literal() {
+        let src = r#"
+      pub fn ret_str(f1) {
+        "abc"
+        |> f1()
+      }
+
+      pub fn ret_int(f2) {
+        42
+        |> f2()
+      }
+
+      pub fn ret_float(f3) {
+        42.2
+        |> f3()
+      }
+
+      pub fn ret_bit_array(f4) {
+        <<1, 2>>
+        |> f4()
+      }
+  "#;
+
+        assert_inlay_hints(
+            src,
+            vec![
+                InlayHint {
+                    label: "a".to_string(),
+                    offset: index_of_end(src, "|> f1()"),
+                },
+                InlayHint {
+                    label: "a".to_string(),
+                    offset: index_of_end(src, "|> f2()"),
+                },
+                InlayHint {
+                    label: "a".to_string(),
+                    offset: index_of_end(src, "|> f3()"),
+                },
+                InlayHint {
+                    label: "a".to_string(),
+                    offset: index_of_end(src, "|> f4()"),
+                },
+            ],
+        );
+    }
+
+    #[test]
     fn show_many_hints() {
         let src = r#"
+            const int_val = 0
+
             fn identity(x) {
               x
             }
@@ -223,7 +298,7 @@ mod tests {
             }
 
             pub fn example_pipe() {
-              0
+              int_val
               |> ret_str()
               |> identity()
             }
@@ -234,7 +309,7 @@ mod tests {
             vec![
                 InlayHint {
                     label: "Int".to_string(),
-                    offset: index_of_end(src, "0"),
+                    offset: index_of_end(src, "  int_val"),
                 },
                 InlayHint {
                     label: "String".to_string(),
@@ -251,6 +326,8 @@ mod tests {
     #[test]
     fn hints_nested_in_case_block() {
         let src = r#"
+            const int_val = 0
+
             fn identity(x) {
               x
             }
@@ -258,7 +335,7 @@ mod tests {
             fn main(a) {
               case a {
                 _ -> {
-                    0
+                    int_val
                     |> identity()
                 }
               }
@@ -270,7 +347,7 @@ mod tests {
             vec![
                 InlayHint {
                     label: "Int".to_string(),
-                    offset: index_of_end(src, "0"),
+                    offset: index_of_end(src, "  int_val"),
                 },
                 InlayHint {
                     label: "Int".to_string(),
@@ -283,13 +360,15 @@ mod tests {
     #[test]
     fn hints_nested_for_apply_fn_let() {
         let src = r#"
+            const int_val = 0
+
             fn identity(x) {
               x
             }
 
             fn main() {
               let f = identity(fn() {
-                0
+                int_val
                 |> identity()
               })
             }
@@ -300,7 +379,7 @@ mod tests {
             vec![
                 InlayHint {
                     label: "Int".to_string(),
-                    offset: index_of_end(src, "0"),
+                    offset: index_of_end(src, "   int_val"),
                 },
                 InlayHint {
                     label: "Int".to_string(),
@@ -313,13 +392,15 @@ mod tests {
     #[test]
     fn hints_in_use() {
         let src = r#"
+            const int_val = 0
+
             fn identity(x) {
               x
             }
 
             fn main(f) {
               use a <- f()
-              0
+              int_val
               |> identity()
             }
         "#;
@@ -329,7 +410,7 @@ mod tests {
             vec![
                 InlayHint {
                     label: "Int".to_string(),
-                    offset: index_of_end(src, "0"),
+                    offset: index_of_end(src, "  int_val"),
                 },
                 InlayHint {
                     label: "Int".to_string(),
