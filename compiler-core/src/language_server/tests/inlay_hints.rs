@@ -8,10 +8,11 @@ use lsp_types::{
 #[test]
 fn render_inlay_hints() {
     let code = "
+  fn get_int() { 42 }
   fn to_str(x) { \"abc\" }
 
   fn main() {
-    42
+    get_int()
     |> to_str()
   }
   ";
@@ -19,8 +20,8 @@ fn render_inlay_hints() {
     expect_hints(
         code,
         vec![
-            default_hint(Position::new(4, 6), "Int"),
-            default_hint(Position::new(5, 15), "String"),
+            default_hint(Position::new(5, 13), "Int"),
+            default_hint(Position::new(6, 15), "String"),
         ],
     );
 }
