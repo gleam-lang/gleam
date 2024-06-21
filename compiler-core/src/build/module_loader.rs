@@ -155,14 +155,12 @@ where
 {
     let code: EcoString = io.read(&path)?.into();
 
-    let parsed = crate::parse::parse_module(
-        &code,
-        &TypeWarningEmitter::new(path.clone(), code.clone(), emitter),
-    )
-    .map_err(|error| Error::Parse {
-        path: path.clone(),
-        src: code.clone(),
-        error,
+    let parsed = crate::parse::parse_module(path.clone(), &code, &emitter).map_err(|error| {
+        Error::Parse {
+            path: path.clone(),
+            src: code.clone(),
+            error,
+        }
     })?;
     let mut ast = parsed.module;
     let extra = parsed.extra;

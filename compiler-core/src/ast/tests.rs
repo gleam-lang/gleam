@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
+use camino::Utf8PathBuf;
+
 use crate::analyse::TargetSupport;
 use crate::build::Target;
 use crate::config::PackageConfig;
 use crate::line_numbers::LineNumbers;
 use crate::type_::expression::FunctionDefinition;
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
+use crate::warning::WarningEmitter;
 use crate::{
     ast::{SrcSpan, TypedExpr},
     build::Located,
@@ -22,7 +25,8 @@ use super::{Publicity, Statement, TypedModule, TypedStatement};
 fn compile_module(src: &str) -> TypedModule {
     use crate::type_::build_prelude;
     let parsed =
-        crate::parse::parse_module(src, &TypeWarningEmitter::null()).expect("syntax error");
+        crate::parse::parse_module(Utf8PathBuf::from("test/path"), src, &WarningEmitter::null())
+            .expect("syntax error");
     let ast = parsed.module;
     let ids = UniqueIdGenerator::new();
     let mut config = PackageConfig::default();

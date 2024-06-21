@@ -108,6 +108,7 @@ impl UntypedModule {
 #[test]
 fn module_dependencies_test() {
     let parsed = crate::parse::parse_module(
+        camino::Utf8PathBuf::from("test/path"),
         "import one
          @target(erlang)
          import two
@@ -116,7 +117,7 @@ fn module_dependencies_test() {
          import three
 
          import four",
-        &crate::warning::TypeWarningEmitter::null(),
+        &crate::warning::WarningEmitter::null(),
     )
     .expect("syntax error");
     let module = parsed.module;

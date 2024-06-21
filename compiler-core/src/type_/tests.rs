@@ -164,25 +164,19 @@ macro_rules! assert_with_module_error {
     };
 }
 
-fn get_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> Vec<Warning> {
+fn get_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> Vec<crate::warning::Warning> {
     let warnings = VectorWarningEmitterIO::default();
     _ = compile_module("test_module", src, Some(Arc::new(warnings.clone())), deps).unwrap();
-    warnings
-        .take()
-        .into_iter()
-        .map(|warning| match warning {
-            crate::Warning::Type { warning, .. } => warning,
-            crate::Warning::InvalidSource { .. } => panic!("Invalid module file name"),
-        })
-        .collect_vec()
+    warnings.take().into_iter().collect_vec()
 }
 
 fn get_printed_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
-    let warnings = get_warnings(src, deps);
+    print_warnings(get_warnings(src, deps))
+}
+
+fn print_warnings(warnings: Vec<crate::warning::Warning>) -> String {
     let mut nocolor = termcolor::Buffer::no_color();
     for warning in warnings {
-        let path = Utf8PathBuf::from("/src/warning/wrn.gleam");
-        let warning = warning.into_warning(path, src.into());
         warning.pretty(&mut nocolor);
     }
     String::from_utf8(nocolor.into_inner()).expect("Error printing produced invalid utf8")
@@ -190,7 +184,7 @@ fn get_printed_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
 
 #[macro_export]
 macro_rules! assert_warnings_with_imports {
-    ($(($name:literal, $module_src:literal)),+; $src:literal, $($warning:expr),+) => {
+    ($(($name:literal, $module_src:literal)),+; $src:literal,) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![
@@ -198,7 +192,8 @@ macro_rules! assert_warnings_with_imports {
             ],
         );
         assert!(!warnings.is_empty());
-        assert_eq!(vec![$($warning),*], warnings);
+        let output = $crate::type_::tests::print_warnings(warnings);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
 
@@ -226,21 +221,6 @@ macro_rules! assert_warning {
         );
         assert!(!output.is_empty());
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    };
-
-    ($src:expr, $warning:expr $(,)?) => {
-        let warnings = $crate::type_::tests::get_warnings($src, vec![]);
-        assert!(!warnings.is_empty());
-        assert_eq!($warning, warnings[0]);
-    };
-
-    ($(($name:expr, $module_src:literal)),+, $src:expr, $warning:expr $(,)?) => {
-        let warnings = $crate::type_::tests::get_warnings(
-            $src,
-            vec![$(("thepackage", $name, $module_src)),*],
-        );
-        assert!(!warnings.is_empty());
-        assert_eq!($warning, warnings[0]);
     };
 }
 
@@ -373,12 +353,9 @@ pub fn compile_module_with_opts(
 ) -> Result<TypedModule, Vec<crate::type_::Error>> {
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
-    let warnings = TypeWarningEmitter::new(
-        Utf8PathBuf::new(),
-        "".into(),
-        WarningEmitter::new(
-            warnings.unwrap_or_else(|| Arc::new(VectorWarningEmitterIO::default())),
-        ),
+
+    let emitter = WarningEmitter::new(
+        warnings.unwrap_or_else(|| Arc::new(VectorWarningEmitterIO::default())),
     );
 
     // DUPE: preludeinsertion
@@ -389,7 +366,9 @@ pub fn compile_module_with_opts(
     let mut direct_dependencies = HashMap::from_iter(vec![]);
 
     for (package, name, module_src) in dep {
-        let parsed = crate::parse::parse_module(module_src, &warnings).expect("syntax error");
+        let parsed =
+            crate::parse::parse_module(Utf8PathBuf::from("test/path"), module_src, &emitter)
+                .expect("syntax error");
         let mut ast = parsed.module;
         ast.name = name.into();
         let line_numbers = LineNumbers::new(module_src);
@@ -414,11 +393,14 @@ pub fn compile_module_with_opts(
         }
     }
 
-    let parsed = crate::parse::parse_module(src, &warnings).expect("syntax error");
+    let parsed = crate::parse::parse_module(Utf8PathBuf::from("test/path"), src, &emitter)
+        .expect("syntax error");
     let mut ast = parsed.module;
     ast.name = module_name.into();
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
+
+    let warnings = TypeWarningEmitter::new("/src/warning/wrn.gleam".into(), src.into(), emitter);
     let inference_result = crate::analyse::ModuleAnalyzerConstructor::<()> {
         target,
         ids: &ids,
@@ -465,8 +447,9 @@ pub fn module_error_with_target(
 }
 
 pub fn syntax_error(src: &str) -> String {
-    let error = crate::parse::parse_module(src, &TypeWarningEmitter::null())
-        .expect_err("should trigger an error when parsing");
+    let error =
+        crate::parse::parse_module(Utf8PathBuf::from("test/path"), src, &WarningEmitter::null())
+            .expect_err("should trigger an error when parsing");
     let error = Error::Parse {
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),

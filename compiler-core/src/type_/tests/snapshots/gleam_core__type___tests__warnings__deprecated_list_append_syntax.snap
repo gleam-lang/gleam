@@ -3,7 +3,7 @@ source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n    pub fn main() {\n      let letters = [\"b\", \"c\"]\n      [\"a\"..letters]\n    }\n        "
 ---
 warning: Deprecated prepend syntax
-  ┌─ /src/warning/wrn.gleam:4:11
+  ┌─ test/path:4:11
   │
 4 │       ["a"..letters]
   │           ^^ This spread should be preceded by a comma
