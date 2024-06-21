@@ -651,25 +651,6 @@ pub enum Warning {
     RedundantPipeFunctionCapture {
         location: SrcSpan,
     },
-
-    /// If someone uses the deprecated syntax to append to a list:
-    /// `["a"..rest]`, notice how there's no comma!
-    DeprecatedListPrependSyntax {
-        location: SrcSpan,
-    },
-
-    /// If someone uses the deprecated syntax to pattern match on a list:
-    /// ```gleam
-    /// case list {
-    ///   [first..rest] -> todo
-    ///   //    ^^ notice there's no comma!
-    ///   _ ->
-    /// }
-    /// ```
-    ///
-    DeprecatedListPatternSyntax {
-        location: SrcSpan,
-    },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]

@@ -1,6 +1,9 @@
+use camino::Utf8PathBuf;
+
 use crate::analyse::TargetSupport;
 use crate::config::PackageConfig;
 use crate::type_::PRELUDE_MODULE_NAME;
+use crate::warning::WarningEmitter;
 use crate::{
     build::{Origin, Target},
     erlang::module,
@@ -44,8 +47,12 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
     if let Some((dep_package, dep_name, dep_src)) = dep {
         let mut dep_config = PackageConfig::default();
         dep_config.name = dep_package.into();
-        let parsed = crate::parse::parse_module(dep_src, &TypeWarningEmitter::null())
-            .expect("dep syntax error");
+        let parsed = crate::parse::parse_module(
+            Utf8PathBuf::from("test/path"),
+            dep_src,
+            &WarningEmitter::null(),
+        )
+        .expect("dep syntax error");
         let mut ast = parsed.module;
         ast.name = dep_name.into();
         let line_numbers = LineNumbers::new(dep_src);
@@ -66,7 +73,8 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         let _ = direct_dependencies.insert(dep_package.into(), ());
     }
     let parsed =
-        crate::parse::parse_module(src, &TypeWarningEmitter::null()).expect("syntax error");
+        crate::parse::parse_module(Utf8PathBuf::from("test/path"), src, &WarningEmitter::null())
+            .expect("syntax error");
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
     let mut ast = parsed.module;

@@ -68,8 +68,10 @@ use crate::ast::{
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
 use crate::type_::expression::Implementations;
-use crate::type_::{Deprecation, Warning};
-use crate::warning::TypeWarningEmitter;
+use crate::type_::Deprecation;
+use crate::warning::{DeprecatedSyntaxWarning, WarningEmitter};
+use crate::Warning;
+use camino::Utf8PathBuf;
 use ecow::EcoString;
 use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
@@ -128,14 +130,23 @@ impl Attributes {
 //
 // Public Interface
 //
-pub fn parse_module(src: &str, warnings: &TypeWarningEmitter) -> Result<Parsed, ParseError> {
+pub fn parse_module(
+    path: Utf8PathBuf,
+    src: &str,
+    warnings: &WarningEmitter,
+) -> Result<Parsed, ParseError> {
     let lex = lexer::make_tokenizer(src);
     let mut parser = Parser::new(lex);
     let mut parsed = parser.parse_module()?;
     parsed.extra = parser.extra;
 
+    let src = EcoString::from(src);
     for warning in parser.warnings {
-        warnings.emit(warning);
+        warnings.emit(Warning::DeprecatedSyntax {
+            path: path.clone(),
+            src: src.clone(),
+            warning,
+        });
     }
 
     Ok(parsed)
@@ -180,7 +191,7 @@ pub fn parse_const_value(src: &str) -> Result<Constant<(), ()>, ParseError> {
 pub struct Parser<T: Iterator<Item = LexResult>> {
     tokens: T,
     lex_errors: Vec<LexicalError>,
-    warnings: Vec<Warning>,
+    warnings: Vec<DeprecatedSyntaxWarning>,
     tok0: Option<Spanned>,
     tok1: Option<Spanned>,
     extra: ModuleExtra,
@@ -530,9 +541,10 @@ where
                     };
 
                     if tail.is_some() && !elements_end_with_comma {
-                        self.warnings.push(Warning::DeprecatedListPrependSyntax {
-                            location: SrcSpan { start, end },
-                        });
+                        self.warnings
+                            .push(DeprecatedSyntaxWarning::DeprecatedListPrepend {
+                                location: SrcSpan { start, end },
+                            });
                     }
                 }
 
@@ -1180,9 +1192,10 @@ where
                 let tail = if let Some((start, Token::DotDot, end)) = self.tok0 {
                     dot_dot_location = Some((start, end));
                     if !elements_end_with_comma {
-                        self.warnings.push(Warning::DeprecatedListPatternSyntax {
-                            location: SrcSpan { start, end },
-                        });
+                        self.warnings
+                            .push(DeprecatedSyntaxWarning::DeprecatedListPattern {
+                                location: SrcSpan { start, end },
+                            });
                     }
 
                     self.advance();
