@@ -478,7 +478,7 @@ where
                     Some(hover_for_function_head(fun, lines, module))
                 }
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
-                    Some(hover_for_module_constant(constant, lines, &module))
+                    Some(hover_for_module_constant(constant, lines, module))
                 }
                 Located::ModuleStatement(_) => None,
                 Located::UnqualifiedImport(UnqualifiedImport {
