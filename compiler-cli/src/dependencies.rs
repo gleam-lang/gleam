@@ -118,6 +118,45 @@ pub fn update() -> Result<()> {
     Ok(())
 }
 
+fn get_hexpm_version(package: &str) -> Requirement {
+    match package.find(|c: char| !(c.is_alphanumeric() || c == '_')) {
+        Some(pos) => {
+            // Consume whatever delimiter separates the package name and
+            // version.
+            let version = &package[pos..];
+
+            // Normalize the version to include MAJOR.MINOR.PATCH.
+            match version.matches('.').count() {
+                0 => Requirement::hex(&[version, "0", "0"].join(".")),
+                1 => Requirement::hex(&[version, "0"].join(".")),
+                _ => Requirement::hex(version),
+            }
+        }
+
+        None => Requirement::hex(">= 0.0.0"),
+    }
+}
+
+#[test]
+fn package_spec_to_hex() {
+    let packages = vec![
+        ("package_1==1", "==1.0.0"),
+        ("package_2>=1.0", ">=1.0.0"),
+        ("package_3~>1.0.0", "~>1.0.0"),
+    ];
+
+    for (provided, expected) in packages {
+        let version = get_hexpm_version(&provided);
+        match &version {
+            Requirement::Hex { version: v } => {
+                assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
+            }
+            _ => assert!(false, "failed hexpm version parse: {}", provided),
+        }
+        assert_eq!(version, Requirement::hex(expected))
+    }
+}
+
 pub fn download<Telem: Telemetry>(
     paths: &ProjectPaths,
     telemetry: Telem,
@@ -148,7 +187,7 @@ pub fn download<Telem: Telemetry>(
     // Insert the new packages to add, if it exists
     if let Some((packages, dev)) = new_package {
         for package in packages {
-            let version = Requirement::hex(">= 0.0.0");
+            let version = get_hexpm_version(&package);
             let _ = if dev {
                 config.dev_dependencies.insert(package.into(), version)
             } else {
