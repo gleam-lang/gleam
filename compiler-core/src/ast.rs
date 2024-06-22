@@ -211,14 +211,8 @@ pub struct RecordConstructor<T> {
 }
 
 impl<A> RecordConstructor<A> {
-    pub fn put_doc(&mut self, new_doc: EcoString) {
-        self.documentation = match self.documentation {
-            Some((doc_pos, _)) => Some((doc_pos, new_doc)),
-
-            // Work around the lack of a position by specifying that the docs
-            // start at the same position as the constructor itself.
-            None => Some((self.location.start, new_doc)),
-        };
+    pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
+        self.documentation = Some(new_doc);
     }
 }
 
@@ -234,14 +228,8 @@ pub struct RecordConstructorArg<T> {
 }
 
 impl<T: PartialEq> RecordConstructorArg<T> {
-    pub fn put_doc(&mut self, new_doc: EcoString) {
-        self.doc = match self.doc {
-            Some((doc_pos, _)) => Some((doc_pos, new_doc)),
-
-            // Work around the lack of a position by specifying that the docs
-            // start at the same position as the argument itself.
-            None => Some((self.location.start, new_doc)),
-        };
+    pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
+        self.doc = Some(new_doc);
     }
 }
 
@@ -830,52 +818,15 @@ impl<A, B, C, E> Definition<A, B, C, E> {
         matches!(self, Self::Function(..))
     }
 
-    pub fn put_doc(&mut self, new_doc: EcoString) {
+    pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
         match self {
             Definition::Import(Import { .. }) => (),
 
-            Definition::Function(Function {
-                documentation: Some((_, doc)),
-                ..
-            })
-            | Definition::TypeAlias(TypeAlias {
-                documentation: Some((_, doc)),
-                ..
-            })
-            | Definition::CustomType(CustomType {
-                documentation: Some((_, doc)),
-                ..
-            })
-            | Definition::ModuleConstant(ModuleConstant {
-                documentation: Some((_, doc)),
-                ..
-            }) => {
-                let _ = std::mem::replace(doc, new_doc);
-            }
-
-            Definition::Function(Function {
-                documentation,
-                location,
-                ..
-            })
-            | Definition::TypeAlias(TypeAlias {
-                documentation,
-                location,
-                ..
-            })
-            | Definition::CustomType(CustomType {
-                documentation,
-                location,
-                ..
-            })
-            | Definition::ModuleConstant(ModuleConstant {
-                documentation,
-                location,
-                ..
-            }) => {
-                // Work around the lack of a position by specifying that the docs
-                // start at the same position as the definition itself.
-                let _ = std::mem::replace(documentation, Some((location.start, new_doc)));
+            Definition::Function(Function { documentation, .. })
+            | Definition::TypeAlias(TypeAlias { documentation, .. })
+            | Definition::CustomType(CustomType { documentation, .. })
+            | Definition::ModuleConstant(ModuleConstant { documentation, .. }) => {
+                let _ = std::mem::replace(documentation, Some(new_doc));
             }
         }
     }

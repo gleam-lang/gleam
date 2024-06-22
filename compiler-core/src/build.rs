@@ -253,28 +253,28 @@ impl Module {
         // Doc Comments
         let mut doc_comments = self.extra.doc_comments.iter().peekable();
         for statement in &mut statements {
-            let docs: Vec<&str> =
+            let (docs_start, docs): (u32, Vec<&str>) =
                 comments_before(&mut doc_comments, statement.location().start, &self.code);
             if !docs.is_empty() {
                 let doc = docs.join("\n").into();
-                statement.put_doc(doc);
+                statement.put_doc((docs_start, doc));
             }
 
             if let Definition::CustomType(CustomType { constructors, .. }) = statement {
                 for constructor in constructors {
-                    let docs: Vec<&str> =
+                    let (docs_start, docs): (u32, Vec<&str>) =
                         comments_before(&mut doc_comments, constructor.location.start, &self.code);
                     if !docs.is_empty() {
                         let doc = docs.join("\n").into();
-                        constructor.put_doc(doc);
+                        constructor.put_doc((docs_start, doc));
                     }
 
                     for argument in constructor.arguments.iter_mut() {
-                        let docs: Vec<&str> =
+                        let (docs_start, docs): (u32, Vec<&str>) =
                             comments_before(&mut doc_comments, argument.location.start, &self.code);
                         if !docs.is_empty() {
                             let doc = docs.join("\n").into();
-                            argument.put_doc(doc);
+                            argument.put_doc((docs_start, doc));
                         }
                     }
                 }
@@ -398,19 +398,25 @@ fn comments_before<'a>(
     comment_spans: &mut Peekable<impl Iterator<Item = &'a SrcSpan>>,
     byte: u32,
     src: &'a str,
-) -> Vec<&'a str> {
+) -> (u32, Vec<&'a str>) {
     let mut comments = vec![];
+    let mut comment_start = u32::MAX;
     while let Some(SrcSpan { start, .. }) = comment_spans.peek() {
         if start <= &byte {
             let comment = comment_spans
                 .next()
                 .expect("Comment before accessing next span");
+
+            if comment.start < comment_start {
+                comment_start = comment.start;
+            }
+
             comments.push(Comment::from((comment, src)).content)
         } else {
             break;
         }
     }
-    comments
+    (comment_start, comments)
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
