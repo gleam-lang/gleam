@@ -108,6 +108,7 @@ impl UntypedModule {
 #[test]
 fn module_dependencies_test() {
     let parsed = crate::parse::parse_module(
+        camino::Utf8PathBuf::from("test/path"),
         "import one
          @target(erlang)
          import two
@@ -116,6 +117,7 @@ fn module_dependencies_test() {
          import three
 
          import four",
+        &crate::warning::WarningEmitter::null(),
     )
     .expect("syntax error");
     let module = parsed.module;
@@ -1448,6 +1450,13 @@ pub enum Pattern<Type> {
         /// The variable on the right hand side of the `<>`.
         right_side_assignment: AssignName,
     },
+
+    /// A placeholder pattern used to allow module analysis to continue
+    /// even when there are type errors. Should never end up in generated code.
+    Invalid {
+        location: SrcSpan,
+        type_: Type,
+    },
 }
 
 impl Default for Inferred<()> {
@@ -1498,7 +1507,8 @@ impl<A> Pattern<A> {
             | Pattern::Tuple { location, .. }
             | Pattern::Constructor { location, .. }
             | Pattern::StringPrefix { location, .. }
-            | Pattern::BitArray { location, .. } => *location,
+            | Pattern::BitArray { location, .. }
+            | Pattern::Invalid { location, .. } => *location,
         }
     }
 
@@ -1523,7 +1533,8 @@ impl TypedPattern {
             | Pattern::List { .. }
             | Pattern::Tuple { .. }
             | Pattern::BitArray { .. }
-            | Pattern::StringPrefix { .. } => None,
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => None,
 
             Pattern::Constructor { constructor, .. } => constructor.definition_location(),
         }
@@ -1541,7 +1552,8 @@ impl TypedPattern {
             | Pattern::List { .. }
             | Pattern::Tuple { .. }
             | Pattern::BitArray { .. }
-            | Pattern::StringPrefix { .. } => None,
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => None,
 
             Pattern::Constructor { constructor, .. } => constructor.get_documentation(),
         }
@@ -1558,7 +1570,8 @@ impl TypedPattern {
             Pattern::Variable { type_, .. }
             | Pattern::List { type_, .. }
             | Pattern::VarUsage { type_, .. }
-            | Pattern::Constructor { type_, .. } => type_.clone(),
+            | Pattern::Constructor { type_, .. }
+            | Pattern::Invalid { type_, .. } => type_.clone(),
 
             Pattern::Assign { pattern, .. } => pattern.type_(),
 
@@ -1589,7 +1602,8 @@ impl TypedPattern {
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::BitArray { .. }
-            | Pattern::StringPrefix { .. } => Some(Located::Pattern(self)),
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => Some(Located::Pattern(self)),
 
             Pattern::Constructor { arguments, .. } => {
                 arguments.iter().find_map(|arg| arg.find_node(byte_index))

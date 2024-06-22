@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n    pub fn main() {\n      let letters = [\"b\", \"c\"]\n      case letters {\n        [\"a\"..rest] -> rest\n        _ -> []\n      }\n    }\n        "
+---
+warning: Deprecated list pattern matching syntax
+  ┌─ test/path:5:13
+  │
+5 │         ["a"..rest] -> rest
+  │             ^^ This spread should be preceded by a comma
+
+This syntax for pattern matching on a list is deprecated.
+When matching on the rest of a list it should always be preceded by a
+comma, like this: `[item, ..list]`.

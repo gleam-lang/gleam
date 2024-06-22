@@ -262,6 +262,7 @@ where
             cached.name,
             self.package_name.clone(),
             mtime,
+            self.warnings.clone(),
         )
     }
 }

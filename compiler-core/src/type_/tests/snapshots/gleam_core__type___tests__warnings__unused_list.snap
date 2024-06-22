@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n    pub fn main() {\n        [1, 2, 3]\n\t\t\t\t2\n    }"
+---
+warning: Unused literal
+  ┌─ /src/warning/wrn.gleam:3:9
+  │
+3 │         [1, 2, 3]
+  │         ^^^^^^^^^ This value is never used
+
+Hint: You can safely remove it.

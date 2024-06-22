@@ -1,5 +1,5 @@
 use crate::{
-    ast::TodoKind,
+    ast::{SrcSpan, TodoKind},
     diagnostic::{self, Diagnostic, Location},
     error::wrap,
     type_::{
@@ -148,9 +148,34 @@ pub enum Warning {
         src: EcoString,
         warning: type_::Warning,
     },
+
     InvalidSource {
         path: Utf8PathBuf,
     },
+
+    DeprecatedSyntax {
+        path: Utf8PathBuf,
+        src: EcoString,
+        warning: DeprecatedSyntaxWarning,
+    },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
+pub enum DeprecatedSyntaxWarning {
+    /// If someone uses the deprecated syntax to append to a list:
+    /// `["a"..rest]`, notice how there's no comma!
+    DeprecatedListPrepend { location: SrcSpan },
+
+    /// If someone uses the deprecated syntax to pattern match on a list:
+    /// ```gleam
+    /// case list {
+    ///   [first..rest] -> todo
+    ///   //    ^^ notice there's no comma!
+    ///   _ ->
+    /// }
+    /// ```
+    ///
+    DeprecatedListPattern { location: SrcSpan },
 }
 
 impl Warning {
@@ -168,6 +193,56 @@ only lowercase alphanumeric characters or underscores."
                     "Rename `{path}` to be valid, or remove this file from the project source."
                 )),
             },
+
+            Warning::DeprecatedSyntax {
+                path,
+                src,
+                warning: DeprecatedSyntaxWarning::DeprecatedListPrepend { location },
+            } => Diagnostic {
+                title: "Deprecated prepend syntax".into(),
+                text: wrap(
+                    "This syntax for prepending to a list is deprecated.
+When prepending an item to a list it should be preceded by a comma, \
+like this: `[item, ..list]`.",
+                ),
+
+                hint: None,
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    label: diagnostic::Label {
+                        text: Some("This spread should be preceded by a comma".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            },
+
+            Warning::DeprecatedSyntax {
+                path,
+                src,
+                warning: DeprecatedSyntaxWarning::DeprecatedListPattern { location },
+            } => Diagnostic {
+                title: "Deprecated list pattern matching syntax".into(),
+                text: wrap(
+                    "This syntax for pattern matching on a list is deprecated.
+When matching on the rest of a list it should always be preceded by a comma, \
+like this: `[item, ..list]`.",
+                ),
+                hint: None,
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    label: diagnostic::Label {
+                        text: Some("This spread should be preceded by a comma".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            },
+
             Self::Type { path, warning, src } => match warning {
                 type_::Warning::Todo {
                     kind,
@@ -835,7 +910,7 @@ Your code will crash before reaching this point.",
                     title: "Redundant function capture".into(),
                     text: wrap(
                         "This function capture is redundant since the value is already piped as \
-                        the first argument of this call.
+the first argument of this call.
 
 See: https://tour.gleam.run/functions/pipelines/",
                     ),

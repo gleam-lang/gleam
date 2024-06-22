@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "fn main() { let [1, 2, ..x]: List(String) = [1,2,3] x }"
+expression: "fn main() { let assert [1, 2, ..x]: List(String) = [1,2,3] x }"
 ---
 error: Type mismatch
-  ┌─ /src/one/two.gleam:1:45
+  ┌─ /src/one/two.gleam:1:52
   │
-1 │ fn main() { let [1, 2, ..x]: List(String) = [1,2,3] x }
-  │                                             ^^^^^^^
+1 │ fn main() { let assert [1, 2, ..x]: List(String) = [1,2,3] x }
+  │                                                    ^^^^^^^
 
 Expected type:
 

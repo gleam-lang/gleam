@@ -93,6 +93,10 @@ where
     fn delete_file(&self, path: &Utf8Path) -> Result<()> {
         self.io.delete_file(path)
     }
+
+    fn exists(&self, path: &Utf8Path) -> bool {
+        self.io.exists(path)
+    }
 }
 
 impl<IO> FileSystemReader for FileSystemProxy<IO>

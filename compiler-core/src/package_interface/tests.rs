@@ -1,5 +1,6 @@
 use std::time::SystemTime;
 
+use camino::Utf8PathBuf;
 use ecow::EcoString;
 use globset::GlobBuilder;
 use hexpm::version::Identifier;
@@ -11,7 +12,7 @@ use crate::{
     line_numbers::LineNumbers,
     type_::PRELUDE_MODULE_NAME,
     uid::UniqueIdGenerator,
-    warning::TypeWarningEmitter,
+    warning::{TypeWarningEmitter, WarningEmitter},
 };
 
 use super::PackageInterface;
@@ -68,7 +69,12 @@ pub fn compile_package(
     );
     let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
     if let Some((dep_package, dep_name, dep_src)) = dep {
-        let parsed = crate::parse::parse_module(dep_src).expect("dep syntax error");
+        let parsed = crate::parse::parse_module(
+            Utf8PathBuf::from("test/path"),
+            dep_src,
+            &WarningEmitter::null(),
+        )
+        .expect("dep syntax error");
         let mut ast = parsed.module;
         ast.name = dep_name.into();
         let line_numbers = LineNumbers::new(dep_src);
@@ -90,7 +96,9 @@ pub fn compile_package(
         let _ = modules.insert(dep_name.into(), dep.type_info);
         let _ = direct_dependencies.insert(dep_package.into(), ());
     }
-    let parsed = crate::parse::parse_module(src).expect("syntax error");
+    let parsed =
+        crate::parse::parse_module(Utf8PathBuf::from("test/path"), src, &WarningEmitter::null())
+            .expect("syntax error");
 
     let mut ast = parsed.module;
     let module_name = module_name

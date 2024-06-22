@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub fn main() { 1.0 2 }"
+---
+warning: Unused literal
+  ┌─ /src/warning/wrn.gleam:1:17
+  │
+1 │ pub fn main() { 1.0 2 }
+  │                 ^^^ This value is never used
+
+Hint: You can safely remove it.

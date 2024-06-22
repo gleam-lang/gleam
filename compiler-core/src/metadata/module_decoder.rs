@@ -19,7 +19,7 @@ use crate::{
     uid::UniqueIdGenerator,
     Result,
 };
-use std::{collections::HashMap, io::BufRead, sync::Arc, u64};
+use std::{collections::HashMap, io::BufRead, sync::Arc};
 
 macro_rules! read_vec {
     ($reader:expr, $self:expr, $method:ident) => {{

@@ -1482,7 +1482,8 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
         | TypedExpr::BitArray { .. }
         | TypedExpr::RecordUpdate { .. }
         | TypedExpr::NegateBool { .. }
-        | TypedExpr::NegateInt { .. } => false,
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => false,
     }
 }
 
@@ -1626,6 +1627,8 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
                 .iter()
                 .map(|s| expr_segment(&s.value, &s.options, env)),
         ),
+
+        TypedExpr::Invalid { .. } => panic!("invalid expressions should not reach code generation"),
     }
 }
 
@@ -1764,6 +1767,7 @@ pub fn is_erlang_reserved_word(name: &str) -> bool {
             | "of"
             | "case"
             | "maybe"
+            | "else"
     )
 }
 

@@ -69,6 +69,9 @@ use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
 use crate::type_::expression::Implementations;
 use crate::type_::Deprecation;
+use crate::warning::{DeprecatedSyntaxWarning, WarningEmitter};
+use crate::Warning;
+use camino::Utf8PathBuf;
 use ecow::EcoString;
 use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
@@ -127,11 +130,25 @@ impl Attributes {
 //
 // Public Interface
 //
-pub fn parse_module(src: &str) -> Result<Parsed, ParseError> {
+pub fn parse_module(
+    path: Utf8PathBuf,
+    src: &str,
+    warnings: &WarningEmitter,
+) -> Result<Parsed, ParseError> {
     let lex = lexer::make_tokenizer(src);
     let mut parser = Parser::new(lex);
     let mut parsed = parser.parse_module()?;
     parsed.extra = parser.extra;
+
+    let src = EcoString::from(src);
+    for warning in parser.warnings {
+        warnings.emit(Warning::DeprecatedSyntax {
+            path: path.clone(),
+            src: src.clone(),
+            warning,
+        });
+    }
+
     Ok(parsed)
 }
 
@@ -174,6 +191,7 @@ pub fn parse_const_value(src: &str) -> Result<Constant<(), ()>, ParseError> {
 pub struct Parser<T: Iterator<Item = LexResult>> {
     tokens: T,
     lex_errors: Vec<LexicalError>,
+    warnings: Vec<DeprecatedSyntaxWarning>,
     tok0: Option<Spanned>,
     tok1: Option<Spanned>,
     extra: ModuleExtra,
@@ -187,6 +205,7 @@ where
         let mut parser = Parser {
             tokens: input,
             lex_errors: vec![],
+            warnings: vec![],
             tok0: None,
             tok1: None,
             extra: ModuleExtra::new(),
@@ -495,21 +514,24 @@ where
             // list
             Some((start, Token::LeftSquare, _)) => {
                 self.advance();
-                let elements =
-                    Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
+                let (elements, elements_end_with_comma) = self.series_of_has_trailing_separator(
+                    &Parser::parse_expression,
+                    Some(&Token::Comma),
+                )?;
 
                 // Parse an optional tail
                 let mut tail = None;
                 let mut elements_after_tail = None;
                 let mut dot_dot_location = None;
-                if let Some(location) = self.maybe_one(&Token::DotDot) {
-                    dot_dot_location = Some(location);
+
+                if let Some((start, end)) = self.maybe_one(&Token::DotDot) {
+                    dot_dot_location = Some((start, end));
                     tail = self.parse_expression()?.map(Box::new);
                     if self.maybe_one(&Token::Comma).is_some() {
                         // See if there's a list of items after the tail,
                         // like `[..wibble, wobble, wabble]`
                         let elements =
-                            Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma));
+                            self.series_of(&Parser::parse_expression, Some(&Token::Comma));
                         match elements {
                             Err(_) => {}
                             Ok(elements) => {
@@ -517,6 +539,13 @@ where
                             }
                         };
                     };
+
+                    if tail.is_some() && !elements_end_with_comma {
+                        self.warnings
+                            .push(DeprecatedSyntaxWarning::DeprecatedListPrepend {
+                                location: SrcSpan { start, end },
+                            });
+                    }
                 }
 
                 let (_, end) = self.expect_one(&Token::RightSquare)?;
@@ -1153,18 +1182,60 @@ where
             // List
             Some((start, Token::LeftSquare, _)) => {
                 self.advance();
-                let elements =
-                    Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
-                let tail = if let Some((_, Token::DotDot, _)) = self.tok0 {
+                let (elements, elements_end_with_comma) = self.series_of_has_trailing_separator(
+                    &Parser::parse_pattern,
+                    Some(&Token::Comma),
+                )?;
+
+                let mut elements_after_tail = None;
+                let mut dot_dot_location = None;
+                let tail = if let Some((start, Token::DotDot, end)) = self.tok0 {
+                    dot_dot_location = Some((start, end));
+                    if !elements_end_with_comma {
+                        self.warnings
+                            .push(DeprecatedSyntaxWarning::DeprecatedListPattern {
+                                location: SrcSpan { start, end },
+                            });
+                    }
+
                     self.advance();
                     let pat = self.parse_pattern()?;
-                    let _ = self.maybe_one(&Token::Comma);
+                    if self.maybe_one(&Token::Comma).is_some() {
+                        // See if there's a list of items after the tail,
+                        // like `[..wibble, wobble, wabble]`
+                        let elements =
+                            Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma));
+                        match elements {
+                            Err(_) => {}
+                            Ok(elements) => {
+                                elements_after_tail = Some(elements);
+                            }
+                        };
+                    };
                     Some(pat)
                 } else {
                     None
                 };
+
                 let (end, rsqb_e) =
                     self.expect_one_following_series(&Token::RightSquare, "a pattern")?;
+
+                // If there are elements after the tail, return an error
+                match elements_after_tail {
+                    Some(elements) if !elements.is_empty() => {
+                        let (start, end) = match (dot_dot_location, tail) {
+                            (Some((start, _)), Some(Some(tail))) => (start, tail.location().end),
+                            (Some((start, end)), Some(None)) => (start, end),
+                            (_, _) => (start, end),
+                        };
+                        return parse_error(
+                            ParseErrorType::ListPatternSpreadFollowedByElements,
+                            SrcSpan { start, end },
+                        );
+                    }
+                    _ => {}
+                }
+
                 let tail = match tail {
                     // There is a tail and it has a Pattern::Var or Pattern::Discard
                     Some(Some(pat @ (Pattern::Variable { .. } | Pattern::Discard { .. }))) => {
@@ -2846,12 +2917,27 @@ where
         parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
         sep: Option<&Token>,
     ) -> Result<Vec<A>, ParseError> {
+        let (res, _) = self.series_of_has_trailing_separator(parser, sep)?;
+        Ok(res)
+    }
+
+    /// Parse a series by repeating a parser, and a separator. Returns true if
+    /// the series ends with the trailing separator.
+    fn series_of_has_trailing_separator<A>(
+        &mut self,
+        parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
+        sep: Option<&Token>,
+    ) -> Result<(Vec<A>, bool), ParseError> {
         let mut results = vec![];
+        let mut ends_with_sep = false;
         while let Some(result) = parser(self)? {
             results.push(result);
             if let Some(sep) = sep {
                 if self.maybe_one(sep).is_none() {
+                    ends_with_sep = false;
                     break;
+                } else {
+                    ends_with_sep = true;
                 }
                 // Helpful error if extra separator
                 if let Some((start, end)) = self.maybe_one(sep) {
@@ -2860,7 +2946,7 @@ where
             }
         }
 
-        Ok(results)
+        Ok((results, ends_with_sep))
     }
 
     // If next token is a Name, consume it and return relevant info, otherwise, return none
@@ -2905,11 +2991,10 @@ where
         }
     }
 
-    // Error on the next token or EOF
+    // Unexpected token error on the next token or EOF
     fn next_tok_unexpected<A>(&mut self, expected: Vec<EcoString>) -> Result<A, ParseError> {
         match self.next_tok() {
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
-
             Some((start, _, end)) => parse_error(
                 ParseErrorType::UnexpectedToken {
                     expected,

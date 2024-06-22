@@ -336,7 +336,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
                 elements,
                 tail,
-                ..
             } => self.infer_list(elements, tail, location),
 
             UntypedExpr::Call {
@@ -518,7 +517,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     pub(crate) fn infer_statements(
         &mut self,
         untyped: Vec1<UntypedStatement>,
-    ) -> Result<Vec1<TypedStatement>, Error> {
+    ) -> Vec1<TypedStatement> {
         let count = untyped.len();
         let location = SrcSpan::new(
             untyped.first().location().start,
@@ -527,12 +526,39 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.infer_iter_statements(location, count, untyped.into_iter())
     }
 
+    // Helper to push a new error to the errors list with rigid names.
+    fn error_with_rigid_names(&mut self, error: Error) {
+        let rigid_names = self.hydrator.rigid_names();
+        self.errors
+            .push(error.with_unify_error_rigid_names(&rigid_names));
+    }
+
+    // Helper to push a new error to the errors list and return an invalid expression.
+    fn error_expr_with_rigid_names(&mut self, location: SrcSpan, error: Error) -> TypedExpr {
+        self.error_with_rigid_names(error);
+        TypedExpr::Invalid {
+            location,
+            typ: self.new_unbound_var(),
+        }
+    }
+
+    // Helper to push a new error to the errors list and return an invalid pattern.
+    fn error_pattern_with_rigid_names(
+        &mut self,
+        location: SrcSpan,
+        error: Error,
+        type_: Arc<Type>,
+    ) -> TypedPattern {
+        self.error_with_rigid_names(error);
+        Pattern::Invalid { location, type_ }
+    }
+
     fn infer_iter_statements<StatementsIter: Iterator<Item = UntypedStatement>>(
         &mut self,
         location: SrcSpan,
         count: usize,
         mut untyped: StatementsIter,
-    ) -> Result<Vec1<TypedStatement>, Error> {
+    ) -> Vec1<TypedStatement> {
         let mut i = 0;
         let mut statements: Vec<TypedStatement> = Vec::with_capacity(count);
 
@@ -541,13 +567,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             match statement {
                 Statement::Use(use_) => {
-                    let statement = self.infer_use(use_, location, untyped.collect())?;
+                    let statement = match self.infer_use(use_, location, untyped.collect()) {
+                        Ok(statement) => statement,
+                        Err(error) => {
+                            Statement::Expression(self.error_expr_with_rigid_names(location, error))
+                        }
+                    };
                     statements.push(statement);
                     break; // Inferring the use has consumed the rest of the exprs
                 }
 
                 Statement::Expression(expression) => {
-                    let expression = self.infer(expression)?;
+                    let location = expression.location();
+                    let expression = match self.infer(expression) {
+                        Ok(expression) => expression,
+                        Err(error) => self.error_expr_with_rigid_names(location, error),
+                    };
 
                     // This isn't the final expression in the sequence, so call the
                     // `expression_discarded` function to see if anything is being
@@ -559,13 +594,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
 
                 Statement::Assignment(assignment) => {
-                    let assignment = self.infer_assignment(assignment)?;
+                    let assignment = self.infer_assignment(assignment);
                     statements.push(Statement::Assignment(assignment));
                 }
             }
         }
 
-        Ok(Vec1::try_from_vec(statements).expect("empty sequence"))
+        Vec1::try_from_vec(statements).expect("empty sequence")
     }
 
     fn infer_use(
@@ -575,7 +610,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         mut following_expressions: Vec<UntypedStatement>,
     ) -> Result<TypedStatement, Error> {
         let use_call_location = use_.call.location();
-        let mut call = get_use_expression_call(*use_.call)?;
+        let mut call = get_use_expression_call(*use_.call);
         let assignments = UseAssignments::from_use_expression(use_.assignments);
 
         let mut statements = assignments.body_assignments;
@@ -1180,10 +1215,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .emit(Warning::InefficientEmptyListCheck { location, kind });
     }
 
-    fn infer_assignment(
-        &mut self,
-        assignment: UntypedAssignment,
-    ) -> Result<TypedAssignment, Error> {
+    fn infer_assignment(&mut self, assignment: UntypedAssignment) -> TypedAssignment {
         let Assignment {
             pattern,
             value,
@@ -1191,40 +1223,65 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             annotation,
             location,
         } = assignment;
-        let value = self.in_new_scope(|value_typer| value_typer.infer(*value))?;
+        let value_location = value.location();
+        let value = match self.in_new_scope(|value_typer| value_typer.infer(*value)) {
+            Ok(value) => value,
+            Err(error) => self.error_expr_with_rigid_names(value_location, error),
+        };
+
         let value_typ = value.type_();
 
         // Ensure the pattern matches the type of the value
-        let pattern = pattern::PatternTyper::new(self.environment, &self.hydrator)
-            .unify(pattern, value_typ.clone())?;
+        let pattern_location = pattern.location();
+        let pattern = match pattern::PatternTyper::new(self.environment, &self.hydrator)
+            .unify(pattern, value_typ.clone())
+        {
+            Ok(pattern) => pattern,
+            Err(error) => {
+                self.error_pattern_with_rigid_names(pattern_location, error, value_typ.clone())
+            }
+        };
 
         // Check that any type annotation is accurate.
         if let Some(annotation) = &annotation {
-            let ann_typ = self
+            match self
                 .type_from_ast(annotation)
-                .map(|t| self.instantiate(t, &mut hashmap![]))?;
-            unify(ann_typ, value_typ.clone())
-                .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
+                .map(|t| self.instantiate(t, &mut hashmap![]))
+            {
+                Ok(ann_typ) => {
+                    if let Err(error) = unify(ann_typ, value_typ.clone())
+                        .map_err(|e| convert_unify_error(e, value.type_defining_location()))
+                    {
+                        self.error_with_rigid_names(error);
+                    }
+                }
+                Err(error) => {
+                    self.error_with_rigid_names(error);
+                }
+            }
         }
 
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
         let exhaustiveness_check = self.check_let_exhaustiveness(location, value.type_(), &pattern);
-        match kind {
-            AssignmentKind::Let => exhaustiveness_check?,
-            AssignmentKind::Assert { location } if exhaustiveness_check.is_ok() => self
+        match (kind, exhaustiveness_check) {
+            (AssignmentKind::Let, Ok(_)) => {}
+            (AssignmentKind::Let, Err(e)) => {
+                self.error_with_rigid_names(e);
+            }
+            (AssignmentKind::Assert { location }, Ok(_)) => self
                 .environment
                 .warnings
                 .emit(Warning::RedundantAssertAssignment { location }),
-            AssignmentKind::Assert { .. } => {}
+            (AssignmentKind::Assert { .. }, _) => {}
         }
 
-        Ok(Assignment {
+        Assignment {
             location,
             annotation,
             kind,
             pattern,
             value: Box::new(value),
-        })
+        }
     }
 
     fn infer_case(
@@ -2753,12 +2810,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
 
             let body = body_typer.infer_statements(body);
-            let body_rigid_names = body_typer.hydrator.rigid_names();
-            let body = body.map_err(|e| e.with_unify_error_rigid_names(&body_rigid_names))?;
 
             // Check that any return type is accurate.
             if let Some(return_type) = return_type {
                 unify(return_type, body.last().type_()).map_err(|e| {
+                    let body_rigid_names = body_typer.hydrator.rigid_names();
                     e.return_annotation_mismatch()
                         .into_error(body.last().type_defining_location())
                         .with_unify_error_rigid_names(&body_rigid_names)
@@ -2775,7 +2831,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         self.in_new_scope(|typer| {
-            let statements = typer.infer_statements(statements)?;
+            let statements = typer.infer_statements(statements);
             Ok(TypedExpr::Block {
                 statements,
                 location,
@@ -2983,7 +3039,7 @@ struct UseCall {
     arguments: Vec<CallArg<UntypedExpr>>,
 }
 
-fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
+fn get_use_expression_call(call: UntypedExpr) -> UseCall {
     // Ensure that the use's call is of the right structure. i.e. it is a
     // call to a function.
     match call {
@@ -2991,15 +3047,15 @@ fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
             fun: function,
             arguments,
             ..
-        } => Ok(UseCall {
+        } => UseCall {
             arguments,
             function,
-        }),
+        },
 
-        other => Ok(UseCall {
+        other => UseCall {
             function: Box::new(other),
             arguments: vec![],
-        }),
+        },
     }
 }
 
@@ -3067,7 +3123,8 @@ impl UseAssignments {
                 | Pattern::Constructor { .. }
                 | Pattern::Tuple { .. }
                 | Pattern::BitArray { .. }
-                | Pattern::StringPrefix { .. }) => {
+                | Pattern::StringPrefix { .. }
+                | Pattern::Invalid { .. }) => {
                     let name: EcoString = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
                     assignments.function_arguments.push(Arg {
                         location,

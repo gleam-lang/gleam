@@ -551,6 +551,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 feature: "Bit array matching".into(),
                 location: *location,
             }),
+            Pattern::Invalid { .. } => panic!("invalid patterns should not reach code generation"),
         }
     }
 

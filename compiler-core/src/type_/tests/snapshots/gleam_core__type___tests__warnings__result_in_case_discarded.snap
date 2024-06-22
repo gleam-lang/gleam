@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main(x) {\n  case x {\n    _ -> Error(Nil)\n  }\n  Nil\n}"
+---
+warning: Unused result value
+  ┌─ /src/warning/wrn.gleam:3:3
+  │  
+3 │ ╭   case x {
+4 │ │     _ -> Error(Nil)
+5 │ │   }
+  │ ╰───^ The Result value created here is unused
+
+Hint: If you are sure you don't need it you can assign it to `_`.

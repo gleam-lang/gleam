@@ -1,5 +1,4 @@
 use super::*;
-use crate::ast::TodoKind;
 use crate::{assert_no_warnings, assert_warning, assert_warnings_with_imports};
 
 #[test]
@@ -14,16 +13,7 @@ fn unknown_label() {
 
 #[test]
 fn todo_warning_test() {
-    assert_warning!(
-        "fn main() { 1 == todo }",
-        Warning::Todo {
-            kind: TodoKind::Keyword,
-            location: SrcSpan { start: 17, end: 21 },
-            typ: Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
-            }),
-        },
-    );
+    assert_warning!("pub fn main() { 1 == todo }");
 }
 
 // https://github.com/gleam-lang/gleam/issues/1669
@@ -49,7 +39,8 @@ fn todo_with_known_type() {
 fn empty_func_warning_test() {
     assert_warning!(
         "pub fn main() { foo() }
-        pub fn foo() { }"
+pub fn foo() { }
+"
     );
 }
 
@@ -80,14 +71,11 @@ fn result_discard_warning_test() {
     // Implicitly discarded Results emit warnings
     assert_warning!(
         "
-fn foo() { Ok(5) }
-fn main() {
-		foo()
-		5
-}",
-        Warning::ImplicitlyDiscardedResult {
-            location: SrcSpan { start: 34, end: 39 }
-        }
+pub fn foo() { Ok(5) }
+pub fn main() {
+  foo()
+  5
+}"
     );
 }
 
@@ -103,35 +91,22 @@ pub fn main() { let _ = foo() 5 }",
 
 #[test]
 fn unused_int() {
-    assert_warning!(
-        "fn main() { 1 2 }",
-        Warning::UnusedLiteral {
-            location: SrcSpan { start: 12, end: 13 }
-        }
-    );
+    assert_warning!("pub fn main() { 1 2 }");
 }
 
 #[test]
 fn unused_float() {
-    assert_warning!(
-        "fn main() { 1.0 2 }",
-        Warning::UnusedLiteral {
-            location: SrcSpan { start: 12, end: 15 }
-        }
-    );
+    assert_warning!("pub fn main() { 1.0 2 }");
 }
 
 #[test]
 fn unused_string() {
     assert_warning!(
         "
-    fn main() {
+    pub fn main() {
         \"1\"
-				2
-    }",
-        Warning::UnusedLiteral {
-            location: SrcSpan { start: 25, end: 28 }
-        }
+                2
+    }"
     );
 }
 
@@ -139,13 +114,10 @@ fn unused_string() {
 fn unused_bit_array() {
     assert_warning!(
         "
-    fn main() {
+    pub fn main() {
         <<3>>
 				2
-    }",
-        Warning::UnusedLiteral {
-            location: SrcSpan { start: 25, end: 30 }
-        }
+    }"
     );
 }
 
@@ -153,13 +125,10 @@ fn unused_bit_array() {
 fn unused_tuple() {
     assert_warning!(
         "
-    fn main() {
+    pub fn main() {
         #(1.0, \"Hello world\")
 				2
-    }",
-        Warning::UnusedLiteral {
-            location: SrcSpan { start: 25, end: 46 }
-        }
+    }"
     );
 }
 
@@ -167,13 +136,10 @@ fn unused_tuple() {
 fn unused_list() {
     assert_warning!(
         "
-    fn main() {
+    pub fn main() {
         [1, 2, 3]
 				2
-    }",
-        Warning::UnusedLiteral {
-            location: SrcSpan { start: 25, end: 34 }
-        }
+    }"
     );
 }
 
@@ -205,13 +171,7 @@ fn record_update_warnings_test2() {
             let past = Person(\"Quinn\", 27)
             let present = Person(..past)
             present
-        }",
-        Warning::NoFieldsRecordUpdate {
-            location: SrcSpan {
-                start: 182,
-                end: 196
-            }
-        }
+        }"
     );
 }
 
@@ -227,27 +187,14 @@ fn record_update_warnings_test3() {
             let past = Person(\"Quinn\", 27)
             let present = Person(..past, name: \"Quinn\", age: 28)
             present
-        }",
-        Warning::AllFieldsRecordUpdate {
-            location: SrcSpan {
-                start: 182,
-                end: 220
-            }
-        }
+        }"
     );
 }
 
 #[test]
 fn unused_private_type_warnings_test() {
     // External type
-    assert_warning!(
-        "type X",
-        Warning::UnusedType {
-            name: "X".into(),
-            location: SrcSpan { start: 0, end: 6 },
-            imported: false
-        }
-    );
+    assert_warning!("type X");
 }
 
 #[test]
@@ -258,14 +205,7 @@ fn unused_private_type_warnings_test2() {
 #[test]
 fn unused_private_type_warnings_test3() {
     // Type alias
-    assert_warning!(
-        "type X = Int",
-        Warning::UnusedType {
-            name: "X".into(),
-            location: SrcSpan { start: 0, end: 12 },
-            imported: false
-        }
-    );
+    assert_warning!("type X = Int");
 }
 
 #[test]
@@ -281,14 +221,7 @@ fn unused_private_type_warnings_test5() {
 #[test]
 fn unused_private_type_warnings_test6() {
     // Custom type
-    assert_warning!(
-        "type X { X }",
-        Warning::UnusedConstructor {
-            name: "X".into(),
-            location: SrcSpan { start: 9, end: 10 },
-            imported: false
-        }
-    );
+    assert_warning!("type X { X }");
 }
 
 #[test]
@@ -313,13 +246,7 @@ pub fn a() {
 
 #[test]
 fn unused_private_fn_warnings_test() {
-    assert_warning!(
-        "fn a() { 1 }",
-        Warning::UnusedPrivateFunction {
-            name: "a".into(),
-            location: SrcSpan { start: 0, end: 6 },
-        }
-    );
+    assert_warning!("fn a() { 1 }");
 }
 
 #[test]
@@ -334,13 +261,7 @@ fn used_private_fn_warnings_test2() {
 
 #[test]
 fn unused_private_const_warnings_test() {
-    assert_warning!(
-        "const a = 1",
-        Warning::UnusedPrivateModuleConstant {
-            name: "a".into(),
-            location: SrcSpan { start: 6, end: 7 },
-        }
-    );
+    assert_warning!("const a = 1");
 }
 
 #[test]
@@ -356,13 +277,7 @@ fn used_private_const_warnings_test2() {
 #[test]
 fn unused_variable_warnings_test() {
     // function argument
-    assert_warning!(
-        "pub fn a(b) { 1 }",
-        Warning::UnusedVariable {
-            name: "b".into(),
-            location: SrcSpan { start: 9, end: 10 },
-        }
-    );
+    assert_warning!("pub fn a(b) { 1 }");
 }
 
 #[test]
@@ -373,13 +288,7 @@ fn used_variable_warnings_test() {
 #[test]
 fn unused_variable_warnings_test2() {
     // Simple let
-    assert_warning!(
-        "pub fn a() { let b = 1 5 }",
-        Warning::UnusedVariable {
-            name: "b".into(),
-            location: SrcSpan { start: 17, end: 18 },
-        }
-    );
+    assert_warning!("pub fn a() { let b = 1 5 }");
 }
 
 #[test]
@@ -389,13 +298,7 @@ fn used_variable_warnings_test2() {
 
 #[test]
 fn unused_variable_shadowing_test() {
-    assert_warning!(
-        "pub fn a() { let b = 1 let b = 2 b }",
-        Warning::UnusedVariable {
-            name: "b".into(),
-            location: SrcSpan { start: 17, end: 18 },
-        }
-    );
+    assert_warning!("pub fn a() { let b = 1 let b = 2 b }");
 }
 
 #[test]
@@ -406,13 +309,7 @@ fn used_variable_shadowing_test() {
 #[test]
 fn unused_destructure() {
     // Destructure
-    assert_warning!(
-        "pub fn a(b) { case b { #(c, _) -> 5 } }",
-        Warning::UnusedVariable {
-            name: "c".into(),
-            location: SrcSpan { start: 25, end: 26 },
-        }
-    );
+    assert_warning!("pub fn a(b) { case b { #(c, _) -> 5 } }");
 }
 
 #[test]
@@ -422,50 +319,23 @@ fn used_destructure() {
 
 #[test]
 fn unused_imported_module_warnings_test() {
-    assert_warning!(
-        ("gleam/foo", "pub fn bar() { 1 }"),
-        "import gleam/foo",
-        Warning::UnusedImportedModule {
-            name: "foo".into(),
-            location: SrcSpan { start: 0, end: 16 },
-        }
-    );
+    assert_warning!(("gleam/foo", "pub fn bar() { 1 }"), "import gleam/foo");
 }
 
 #[test]
 fn unused_imported_module_with_alias_warnings_test() {
     assert_warning!(
         ("gleam/foo", "pub fn bar() { 1 }"),
-        "import gleam/foo as bar",
-        Warning::UnusedImportedModule {
-            name: "bar".into(),
-            location: SrcSpan { start: 0, end: 23 },
-        }
+        "import gleam/foo as bar"
     );
 }
 
 // https://github.com/gleam-lang/gleam/issues/2326
 #[test]
 fn unused_imported_module_with_alias_and_unqualified_name_warnings_test() {
-    let warnings = get_warnings(
-        "import gleam/one.{two} as three",
-        vec![("thepackage", "gleam/one", "pub fn two() { 1 }")],
-    );
-    assert!(!warnings.is_empty());
-    assert_eq!(
-        Warning::UnusedImportedValue {
-            name: "two".into(),
-            location: SrcSpan { start: 18, end: 21 },
-        },
-        warnings[0]
-    );
-    assert_eq!(
-        Warning::UnusedImportedModuleAlias {
-            alias: "three".into(),
-            location: SrcSpan { start: 23, end: 31 },
-            module_name: "gleam/one".into()
-        },
-        warnings[1]
+    assert_warning!(
+        ("thepackage", "gleam/one", "pub fn two() { 1 }"),
+        "import gleam/one.{two} as three"
     );
 }
 
@@ -1089,11 +959,7 @@ fn const_bytes_option() {
 fn unused_module_wuth_alias_warning_test() {
     assert_warning!(
         ("gleam/foo", "pub const one = 1"),
-        "import gleam/foo as bar",
-        Warning::UnusedImportedModule {
-            name: "bar".into(),
-            location: SrcSpan { start: 0, end: 23 },
-        }
+        "import gleam/foo as bar"
     );
 }
 
@@ -1105,15 +971,6 @@ fn unused_alias_warning_test() {
             import gleam/foo.{one} as bar
             const one = one
         "#,
-        Warning::UnusedPrivateModuleConstant {
-            name: "one".into(),
-            location: SrcSpan { start: 61, end: 64 },
-        },
-        Warning::UnusedImportedModuleAlias {
-            alias:"bar".into(),
-            location: SrcSpan { start: 36, end: 42 },
-            module_name: "gleam/foo".into(),
-        }
     );
 }
 
@@ -1140,14 +997,6 @@ fn unused_alias_for_duplicate_module_no_warning_for_alias_test() {
             import b/foo as bar
             const one = foo.one
         "#,
-        Warning::UnusedPrivateModuleConstant {
-            name: "one".into(),
-            location: SrcSpan { start: 76, end: 79 },
-        },
-        Warning::UnusedImportedModule {
-            name: "bar".into(),
-            location: SrcSpan { start: 38, end: 57 },
-        }
     );
 }
 
@@ -1160,10 +1009,7 @@ pub fn main(x) {
     _ -> Error(Nil)
   }
   Nil
-}",
-        Warning::ImplicitlyDiscardedResult {
-            location: SrcSpan { start: 20, end: 52 }
-        }
+}"
     );
 }
 
@@ -2075,5 +1921,32 @@ fn redundant_function_capture_in_pipe_5() {
     1 |> wibble(2, _)
   }
 "
+    );
+}
+
+#[test]
+fn deprecated_list_append_syntax() {
+    assert_warning!(
+        r#"
+    pub fn main() {
+      let letters = ["b", "c"]
+      ["a"..letters]
+    }
+        "#
+    );
+}
+
+#[test]
+fn deprecated_list_pattern_syntax() {
+    assert_warning!(
+        r#"
+    pub fn main() {
+      let letters = ["b", "c"]
+      case letters {
+        ["a"..rest] -> rest
+        _ -> []
+      }
+    }
+        "#
     );
 }
