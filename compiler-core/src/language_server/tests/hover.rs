@@ -867,3 +867,39 @@ fn valid() { Nil }
         })
     );
 }
+
+#[test]
+fn hover_imported_type_in_fn_head() {
+    let code = "
+import example_module
+
+fn main() {
+  example_module.X
+}
+";
+
+    // hovering over "main"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(3, 6),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_imported_type_in_const() {
+    let code = "
+import example_module
+
+const my_const = example_module.X
+";
+
+    // hovering over "my_const"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(3, 7),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
