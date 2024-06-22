@@ -85,8 +85,8 @@
   statements in a function when there is an error in a previous one.
   ([Ameen Radwan](https://github.com/Acepie))
 
-- Fixed a bug where the compiler would unnecessarily generate `gleam.mjs`,
-  confusing build tools like Vite.
+- The JavaScript prelude is no-longer rewritten each time a project is compiled
+  to JavaScript.
   ([Ofek Doitch](https://github.com/ofekd))
 
 ### Formatter
@@ -144,7 +144,7 @@
   aliasing it and then using it in a constant expression would generate invalid
   JavaScript.
   ([Louis Pilfold](https://github.com/lpil))
-  
+
 - Fixed a bug where the compiler would crash because types weren't registered if
   they referenced a non-existent type.
   ([Gears](https://github.com/gearsdatapacks))
