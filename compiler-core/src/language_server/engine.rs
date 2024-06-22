@@ -13,8 +13,8 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        self, pretty::Printer, Deprecation, ModuleInterface, Type, TypeConstructor,
-        ValueConstructorVariant,
+        self, pretty::Printer, Deprecation, ModuleInterface, ModuleInterface, Type, Type,
+        TypeConstructor, TypeConstructor, ValueConstructorVariant, ValueConstructorVariant,
     },
     Error, Result, Warning,
 };
@@ -466,6 +466,12 @@ where
         self.respond(|this| {
             let params = params.text_document_position_params;
 
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(None);
+            };
+
+            let imports: Vec<pretty::Import> = (&module.ast).into();
+
             let (lines, found) = match this.node_at_position(&params) {
                 Some(value) => value,
                 None => return Ok(None),
@@ -473,9 +479,9 @@ where
 
             Ok(match found {
                 Located::Statement(_) => None, // TODO: hover for statement
-                Located::ModuleStatement(Definition::Function(fun)) => {
-                    Some(hover_for_function_head(fun, lines))
-                }
+                Located::ModuleStatement(Definition::Function(fun)) => Some(
+                    hover_for_function_head(fun, lines, module.name.clone(), imports),
+                ),
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
                     Some(hover_for_module_constant(constant, lines))
                 }
@@ -766,15 +772,22 @@ fn get_function_type(fun: &TypedFunction) -> Type {
     }
 }
 
-fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Hover {
+fn hover_for_function_head(
+    fun: &TypedFunction,
+    line_numbers: LineNumbers,
+    module: EcoString,
+    imports: Vec<pretty::Import>,
+) -> Hover {
     let empty_str = EcoString::from("");
-    let documentation = fun
-        .documentation
-        .as_ref()
-        .map(|(_, doc)| doc)
-        .unwrap_or(&empty_str);
-    let function_type = get_function_type(fun);
-    let formatted_type = Printer::new().pretty_print(&function_type, 0);
+    let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
+    let function_type = Type::Fn {
+        args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
+        retrn: fun.return_type.clone(),
+    };
+    let mut printer = Printer::new();
+    printer.with_context(module);
+    printer.with_imports(imports);
+    let formatted_type = printer.pretty_print(&function_type, 0);
     let contents = format!(
         "```gleam
 {formatted_type}

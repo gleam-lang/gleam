@@ -1,5 +1,6 @@
 use super::{Type, TypeVar};
 use crate::{
+    ast::{self, TypedModule},
     docvec,
     pretty::{nil, *},
 };
@@ -30,10 +31,44 @@ pub struct UnqualifiedImport {
     as_name: Option<EcoString>,
 }
 
+impl From<&ast::Import<EcoString>> for Import {
+    fn from(import_: &ast::Import<EcoString>) -> Self {
+        Self {
+            module: import_.module.clone(),
+            package: import_.package.clone(),
+            renaming: import_.as_name.clone().and_then(|(n, _)| match n {
+                ast::AssignName::Variable(name) => Some(name.into()),
+                ast::AssignName::Discard(_) => None,
+            }),
+            unqualified_types: import_
+                .unqualified_types
+                .iter()
+                .map(|u| UnqualifiedImport {
+                    name: u.name.clone(),
+                    as_name: u.as_name.clone(),
+                })
+                .collect(),
+        }
+    }
+}
+
+impl From<&TypedModule> for Vec<Import> {
+    fn from(module: &TypedModule) -> Self {
+        module
+            .definitions
+            .iter()
+            .filter_map(|d| match d {
+                crate::ast::Definition::Import(i) => Some(i),
+                _ => None,
+            })
+            .map(|i| i.into())
+            .collect()
+    }
+}
+
 #[derive(Debug)]
 struct PrinterContext {
     module: EcoString,
-    package: EcoString,
 }
 
 #[derive(Debug, Default)]
@@ -52,8 +87,8 @@ impl Printer {
         Default::default()
     }
 
-    pub fn with_context(&mut self, module: EcoString, package: EcoString) {
-        self.context = Some(PrinterContext { module, package });
+    pub fn with_context(&mut self, module: EcoString) {
+        self.context = Some(PrinterContext { module });
     }
 
     pub fn with_imports(&mut self, imports: Vec<Import>) {
@@ -520,7 +555,7 @@ fn qualify_external_imported_modules_qualified() {
     };
 
     let mut printer = Printer::new();
-    printer.with_context("my_module".into(), "my_package".into());
+    printer.with_context("my_module".into());
     printer.with_imports(vec![Import {
         module: "external_module".into(),
         package: "some_package".into(),
@@ -546,7 +581,7 @@ fn qualify_external_unimported_modules() {
     };
 
     let mut printer = Printer::new();
-    printer.with_context("my_module".into(), "my_package".into());
+    printer.with_context("my_module".into());
 
     assert_eq!(printer.pretty_print(&t, 0), "external_module.MyType")
 }
@@ -567,7 +602,7 @@ fn qualify_external_renamed_modules() {
     };
 
     let mut printer = Printer::new();
-    printer.with_context("my_module".into(), "my_package".into());
+    printer.with_context("my_module".into());
     printer.with_imports(vec![Import {
         module: "external_module".into(),
         package: "some_package".into(),
@@ -593,7 +628,7 @@ fn do_not_qualify_types_defined_in_same_module() {
     };
 
     let mut printer = Printer::new();
-    printer.with_context("my_module".into(), "my_package".into());
+    printer.with_context("my_module".into());
     printer.with_imports(vec![Import {
         module: "my_module".into(),
         package: "my_package".into(),
