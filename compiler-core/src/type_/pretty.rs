@@ -19,7 +19,6 @@ const INDENT: isize = 2;
 
 #[derive(Debug)]
 pub struct Import {
-    package: EcoString,
     module: EcoString,
     renaming: Option<EcoString>,
     unqualified_types: Vec<UnqualifiedImport>,
@@ -35,7 +34,6 @@ impl From<&ast::Import<EcoString>> for Import {
     fn from(import_: &ast::Import<EcoString>) -> Self {
         Self {
             module: import_.module.clone(),
-            package: import_.package.clone(),
             renaming: import_.as_name.clone().and_then(|(n, _)| match n {
                 ast::AssignName::Variable(name) => Some(name.into()),
                 ast::AssignName::Discard(_) => None,
@@ -122,11 +120,21 @@ impl Printer {
                         if module == "gleam" || &ctx.module == module {
                             Document::String(name.into())
                         } else {
-                            let renaming = ctx
-                                .imports
-                                .iter()
-                                .find(|i| &i.module == module)
-                                .and_then(|i| i.renaming.as_deref());
+                            let import_ = ctx.imports.iter().find(|i| &i.module == module);
+
+                            if let Some(import_) = import_ {
+                                let renamed_unqualified_import =
+                                    import_.unqualified_types.iter().find(|u| &u.name == name);
+
+                                if let Some(u) = renamed_unqualified_import {
+                                    return Document::String(match u.as_name {
+                                        Some(ref renaming) => renaming.into(),
+                                        None => name.into(),
+                                    });
+                                }
+                            }
+
+                            let renaming = import_.and_then(|i| i.renaming.as_deref());
 
                             let qualifier = renaming.unwrap_or(module);
                             qualify_type_name(qualifier, name)
@@ -555,7 +563,6 @@ fn qualify_external_imported_modules_qualified() {
         "my_module".into(),
         vec![Import {
             module: "external_module".into(),
-            package: "some_package".into(),
             renaming: Default::default(),
             unqualified_types: Default::default(),
         }],
@@ -603,7 +610,6 @@ fn qualify_external_renamed_modules() {
         "my_module".into(),
         vec![Import {
             module: "external_module".into(),
-            package: "some_package".into(),
             renaming: Some("renamed_module".into()),
             unqualified_types: Default::default(),
         }],
@@ -631,7 +637,6 @@ fn do_not_qualify_types_defined_in_same_module() {
         "my_module".into(),
         vec![Import {
             module: "my_module".into(),
-            package: "my_package".into(),
             renaming: Some("renamed_module".into()),
             unqualified_types: Default::default(),
         }],
@@ -647,6 +652,64 @@ fn do_not_qualify_gleam_prelude_types() {
     let mut printer = Printer::new();
     printer.with_imports_context("my_module".into(), vec![]);
     assert_eq!(printer.pretty_print(&t, 0), "Int")
+}
+
+/// ```gleam
+/// import external_module.{type MyType}
+/// MyType
+/// ```
+#[test]
+fn do_not_qualify_types_with_unqualified_imports() {
+    let t = Type::Named {
+        publicity: Publicity::Public,
+        name: "MyType".into(),
+        module: "external_module".into(),
+        package: "some_package".into(),
+        args: vec![],
+    };
+
+    let mut printer = Printer::new();
+    printer.with_imports_context(
+        "my_module".into(),
+        vec![Import {
+            module: "external_module".into(),
+            renaming: None,
+            unqualified_types: vec![UnqualifiedImport {
+                name: "MyType".into(),
+                as_name: None,
+            }],
+        }],
+    );
+    assert_eq!(printer.pretty_print(&t, 0), "MyType")
+}
+
+/// ```gleam
+/// import external_module.{type MyType as RenamedType}
+/// RenamedType
+/// ```
+#[test]
+fn do_not_qualify_types_with_unqualified_imports_and_rename() {
+    let t = Type::Named {
+        publicity: Publicity::Public,
+        name: "MyType".into(),
+        module: "external_module".into(),
+        package: "some_package".into(),
+        args: vec![],
+    };
+
+    let mut printer = Printer::new();
+    printer.with_imports_context(
+        "my_module".into(),
+        vec![Import {
+            module: "external_module".into(),
+            renaming: None,
+            unqualified_types: vec![UnqualifiedImport {
+                name: "MyType".into(),
+                as_name: Some("RenamedType".into()),
+            }],
+        }],
+    );
+    assert_eq!(printer.pretty_print(&t, 0), "RenamedType")
 }
 
 #[cfg(test)]
