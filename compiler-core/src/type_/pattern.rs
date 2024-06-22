@@ -1,5 +1,6 @@
 use im::hashmap;
 use itertools::Itertools;
+use name::NameChecker;
 
 /// Type inference and checking of patterns used in case expressions
 /// and variables bindings.
@@ -16,6 +17,8 @@ pub struct PatternTyper<'a, 'b> {
     hydrator: &'a Hydrator,
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
+    errors: &'a mut Vec<Error>,
+    bad_names: &'a mut Vec<(SrcSpan, EcoString)>,
 }
 
 enum PatternMode {
@@ -24,12 +27,19 @@ enum PatternMode {
 }
 
 impl<'a, 'b> PatternTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>, hydrator: &'a Hydrator) -> Self {
+    pub fn new(
+        environment: &'a mut Environment<'b>,
+        hydrator: &'a Hydrator,
+        errors: &'a mut Vec<Error>,
+        bad_names: &'a mut Vec<(SrcSpan, EcoString)>,
+    ) -> Self {
         Self {
             environment,
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
+            errors,
+            bad_names,
         }
     }
 
@@ -39,6 +49,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         typ: Arc<Type>,
         location: SrcSpan,
     ) -> Result<(), UnifyError> {
+        self.check_valid_name(location, &EcoString::from(name), BadNameKind::Variable);
+
         match &mut self.mode {
             PatternMode::Initial => {
                 // Register usage for the unused variable detection
@@ -207,11 +219,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         type_: Arc<Type>,
     ) -> Result<TypedPattern, Error> {
         match pattern {
-            Pattern::Discard { name, location, .. } => Ok(Pattern::Discard {
-                type_,
-                name,
-                location,
-            }),
+            Pattern::Discard { name, location, .. } => {
+                self.check_valid_discard_name(location, &name);
+                Ok(Pattern::Discard {
+                    type_,
+                    name,
+                    location,
+                })
+            }
             Pattern::Invalid { location, .. } => Ok(Pattern::Invalid { type_, location }),
 
             Pattern::Variable { name, location, .. } => {
@@ -274,6 +289,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 if let AssignName::Variable(right) = &right_side_assignment {
                     self.insert_variable(right.as_ref(), string(), right_location)
                         .map_err(|e| convert_unify_error(e, location))?;
+                } else if let AssignName::Discard(right) = &right_side_assignment {
+                    self.check_valid_discard_name(right_location, right);
                 };
 
                 Ok(Pattern::StringPrefix {
@@ -653,5 +670,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             }
         }
+    }
+}
+
+impl NameChecker for PatternTyper<'_, '_> {
+    fn push_bad_name(&mut self, error: Error, bad_name: (SrcSpan, EcoString)) {
+        self.errors.push(error);
+        self.bad_names.push(bad_name);
     }
 }
