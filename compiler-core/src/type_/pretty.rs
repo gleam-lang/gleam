@@ -35,7 +35,7 @@ impl From<&ast::Import<EcoString>> for Import {
         Self {
             module: import_.module.clone(),
             renaming: import_.as_name.clone().and_then(|(n, _)| match n {
-                ast::AssignName::Variable(name) => Some(name.into()),
+                ast::AssignName::Variable(name) => Some(name),
                 ast::AssignName::Discard(_) => None,
             }),
             unqualified_types: import_
@@ -56,7 +56,7 @@ impl From<&TypedModule> for Vec<Import> {
             .definitions
             .iter()
             .filter_map(|d| match d {
-                crate::ast::Definition::Import(i) => Some(i),
+                ast::Definition::Import(i) => Some(i),
                 _ => None,
             })
             .map(|i| i.into())
