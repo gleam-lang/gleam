@@ -893,3 +893,35 @@ fn main(argument) {
     .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
+
+#[test]
+fn hover_imported_type_in_annotation() {
+    let code = "
+import example_module
+
+fn main(x: example_module.T) {
+    x
+}
+";
+
+    // hovering over "T"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(3, 26),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_imported_type_in_import() {
+    let code = "import example_module.{X}";
+
+    // hovering over "X"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(0, 23),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}

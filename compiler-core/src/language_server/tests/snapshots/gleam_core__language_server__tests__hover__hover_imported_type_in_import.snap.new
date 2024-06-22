@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+assertion_line: 997
+expression: hover
+---
+Hover {
+    contents: Scalar(
+        String(
+            "```gleam\nexample_module.T\n```\n",
+        ),
+    ),
+    range: Some(
+        Range {
+            start: Position {
+                line: 0,
+                character: 23,
+            },
+            end: Position {
+                line: 0,
+                character: 24,
+            },
+        },
+    ),
+}

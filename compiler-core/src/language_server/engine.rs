@@ -483,7 +483,7 @@ where
                 Located::ModuleStatement(_) => None,
                 Located::UnqualifiedImport(UnqualifiedImport {
                     name,
-                    module,
+                    module: module_name,
                     is_type,
                     location,
                 }) => this
@@ -495,13 +495,13 @@ where
                                 hover_for_annotation(*location, t.type_.as_ref(), Some(t), lines)
                             })
                         } else {
-                            module.values.get(name).map(|v| {
-                                let m = if this.hex_deps.contains(&module.package) {
-                                    Some(module)
+                            module_interface.values.get(name).map(|v| {
+                                let m = if this.hex_deps.contains(&module_interface.package) {
+                                    Some(module_interface)
                                 } else {
                                     None
                                 };
-                                hover_for_imported_value(v, location, lines, m, name)
+                                hover_for_imported_value(v, location, module, lines, m, name)
                             })
                         }
                     }),
@@ -569,6 +569,7 @@ Unused labelled fields:
                         annotation,
                         &type_,
                         type_constructor,
+                        module,
                         lines,
                     ))
                 }
@@ -808,13 +809,14 @@ fn hover_for_annotation(
     location: SrcSpan,
     annotation_type: &Type,
     type_constructor: Option<&TypeConstructor>,
+    module: &Module,
     line_numbers: LineNumbers,
 ) -> Hover {
     let empty_str = EcoString::from("");
     let documentation = type_constructor
         .and_then(|t| t.documentation.as_ref())
         .unwrap_or(&empty_str);
-    let type_ = Printer::new().pretty_print(annotation_type, 0);
+    let type_ = printer_from_module(module).pretty_print(annotation_type, 0);
     let contents = format!(
         "```gleam
 {type_}
@@ -877,6 +879,7 @@ fn hover_for_expression(
 fn hover_for_imported_value(
     value: &type_::ValueConstructor,
     location: &SrcSpan,
+    module: &Module,
     line_numbers: LineNumbers,
     hex_module_imported_from: Option<&ModuleInterface>,
     name: &EcoString,
@@ -888,7 +891,7 @@ fn hover_for_imported_value(
     });
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new().pretty_print(value.type_.as_ref(), 0);
+    let type_ = printer_from_module(module).pretty_print(value.type_.as_ref(), 0);
     let contents = format!(
         "```gleam
 {type_}
