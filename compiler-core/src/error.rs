@@ -12,7 +12,7 @@ use crate::{
     type_::{pretty::Printer, UnifyErrorSituation},
 };
 use ecow::EcoString;
-use heck::{ToSnakeCase, ToUpperCamelCase};
+use heck::{ToSnakeCase, ToTitleCase, ToUpperCamelCase};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
 use pubgrub::package::Package;
@@ -2950,66 +2950,28 @@ See: https://tour.gleam.run/advanced-features/use/");
                         }),
                     }
                 },
-                TypeError::BadName { location, name } => {
-                    let label = "This is not a valid name";
 
-                let text = wrap_format!("Hint: Names start with a lowercase letter and contain a-z, 0-9, or _.
-Try: {}", name.to_snake_case());
+                TypeError::BadName { location, name, kind } => {
+                    let kind_str = kind.to_string();
+                    let label = format!("This is not a valid {kind_str} name");
+                    let text = if kind.is_discard() {
+                        wrap_format!("Hint: {} names start with _ and contain a-z, 0-9, or _.
+Try: _{}", kind_str.to_title_case(), name.to_snake_case())
+                    } else if kind.is_upname() {wrap_format!("Hint: {} names start with an uppercase letter and contain only lowercase letters, numbers, and uppercase letters.
+Try: {}", kind_str.to_title_case(), name.to_upper_camel_case())
+                    } else {
+                        wrap_format!("Hint: {} names start with a lowercase letter and contain a-z, 0-9, or _.
+Try: {}", kind_str.to_title_case(), name.to_snake_case())
+                    };
 
                 Diagnostic {
-                    title: "Invalid name".into(),
+                    title: format!("Invalid {kind_str} name"),
                     text,
                     hint: None,
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
-                            text: Some(label.to_string()),
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                }
-                },
-
-                TypeError::BadDiscardName { location, name } => {
-                    let label = "This is not a valid discard name";
-
-                let text = wrap_format!("Hint: Discard names start with _ and contain a-z, 0-9, or _.
-Try: _{}", name.to_snake_case());
-
-                Diagnostic {
-                    title: "Invalid discard name".into(),
-                    text,
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: Some(label.to_string()),
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                }
-                },
-
-                TypeError::BadUpName { location, name } => {
-                    let label = "This is not a valid upname";
-
-                let text = wrap_format!("Hint: Upnames start with an uppercase letter and contain only lowercase letters, numbers, and uppercase letters.
-Try: {}", name.to_upper_camel_case());
-
-                Diagnostic {
-                    title: "Invalid upname".into(),
-                    text,
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: Some(label.to_string()),
+                            text: Some(label),
                             span: *location,
                         },
                         path: path.clone(),
@@ -3019,8 +2981,7 @@ Try: {}", name.to_upper_camel_case());
                 }
                 },
             }
-                })
-                .collect_vec(),
+        }).collect_vec(),
 
 
             Error::Parse { path, src, error } => {

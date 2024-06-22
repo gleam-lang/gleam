@@ -2,12 +2,12 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "type MyType { Foo_Bar(Int) }"
 ---
-error: Invalid upname
+error: Invalid type variant name
   ┌─ /src/one/two.gleam:1:15
   │
 1 │ type MyType { Foo_Bar(Int) }
-  │               ^^^^^^^ This is not a valid upname
+  │               ^^^^^^^ This is not a valid type variant name
 
-Hint: Upnames start with an uppercase letter and contain only lowercase
-letters, numbers, and uppercase letters.
+Hint: Type Variant names start with an uppercase letter and contain only
+lowercase letters, numbers, and uppercase letters.
 Try: FooBar

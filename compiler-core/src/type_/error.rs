@@ -433,30 +433,7 @@ pub enum Error {
     /// ```
     BadName {
         location: SrcSpan,
-        name: EcoString,
-    },
-
-    /// When a name that is discarded doesn't follow the gleam naming conventions.
-    ///
-    /// For example:
-    ///
-    /// ```gleam
-    /// let _discardMe = 25
-    /// ```
-    BadDiscardName {
-        location: SrcSpan,
-        name: EcoString,
-    },
-
-    /// When the name assigned to a type doesn't follow the gleam naming conventions.
-    ///
-    /// For example:
-    ///
-    /// ```gleam
-    /// pub type Foo_Bar
-    /// ```
-    BadUpName {
-        location: SrcSpan,
+        kind: BadNameKind,
         name: EcoString,
     },
 }
@@ -484,6 +461,46 @@ pub enum LiteralCollectionKind {
     List,
     Tuple,
     Record,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BadNameKind {
+    Type,
+    TypeVariable,
+    CustomTypeVariant,
+    Variable,
+    Argument,
+    Label,
+    Constant,
+    Function,
+    Discard,
+}
+
+impl BadNameKind {
+    pub fn to_string(self) -> EcoString {
+        EcoString::from(match self {
+            BadNameKind::Type => "type",
+            BadNameKind::TypeVariable => "type alias",
+            BadNameKind::CustomTypeVariant => "type variant",
+            BadNameKind::Variable => "variable",
+            BadNameKind::Argument => "argument",
+            BadNameKind::Label => "label",
+            BadNameKind::Constant => "constant",
+            BadNameKind::Function => "function",
+            BadNameKind::Discard => "discard",
+        })
+    }
+
+    pub fn is_discard(&self) -> bool {
+        matches!(self, BadNameKind::Discard)
+    }
+
+    pub fn is_upname(&self) -> bool {
+        matches!(
+            self,
+            BadNameKind::Type | BadNameKind::TypeVariable | BadNameKind::CustomTypeVariant
+        )
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -773,9 +790,7 @@ impl Error {
             }
             | Error::UseFnDoesntTakeCallback { location, .. }
             | Error::UseFnIncorrectArity { location, .. }
-            | Error::BadName { location, .. }
-            | Error::BadDiscardName { location, .. }
-            | Error::BadUpName { location, .. } => location.start,
+            | Error::BadName { location, .. } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }

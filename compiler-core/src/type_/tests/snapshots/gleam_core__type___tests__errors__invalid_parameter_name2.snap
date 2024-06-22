@@ -2,11 +2,12 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "fn pass(label paramName: Bool) { paramName }"
 ---
-error: Invalid name
+error: Invalid argument name
   ┌─ /src/one/two.gleam:1:15
   │
 1 │ fn pass(label paramName: Bool) { paramName }
-  │               ^^^^^^^^^ This is not a valid name
+  │               ^^^^^^^^^ This is not a valid argument name
 
-Hint: Names start with a lowercase letter and contain a-z, 0-9, or _.
+Hint: Argument names start with a lowercase letter and contain a-z, 0-9,
+or _.
 Try: param_name
