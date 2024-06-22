@@ -785,8 +785,7 @@ fn hover_for_function_head(
         retrn: fun.return_type.clone(),
     };
     let mut printer = Printer::new();
-    printer.with_context(module);
-    printer.with_imports(imports);
+    printer.with_imports_context(module, imports);
     let formatted_type = printer.pretty_print(&function_type, 0);
     let contents = format!(
         "```gleam

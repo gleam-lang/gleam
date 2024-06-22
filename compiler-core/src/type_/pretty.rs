@@ -67,8 +67,9 @@ impl From<&TypedModule> for Vec<Import> {
 }
 
 #[derive(Debug)]
-struct PrinterContext {
+struct ImportContext {
     module: EcoString,
+    imports: Vec<Import>,
 }
 
 #[derive(Debug, Default)]
@@ -78,8 +79,7 @@ pub struct Printer {
     // A mapping of printd type names to the module that they are defined in.
     printed_types: im::HashMap<EcoString, EcoString>,
 
-    context: Option<PrinterContext>,
-    imports: Vec<Import>,
+    context: Option<ImportContext>,
 }
 
 impl Printer {
@@ -87,12 +87,8 @@ impl Printer {
         Default::default()
     }
 
-    pub fn with_context(&mut self, module: EcoString) {
-        self.context = Some(PrinterContext { module });
-    }
-
-    pub fn with_imports(&mut self, imports: Vec<Import>) {
-        self.imports = imports;
+    pub fn with_imports_context(&mut self, module: EcoString, imports: Vec<Import>) {
+        self.context = Some(ImportContext { module, imports });
     }
 
     pub fn with_names(&mut self, names: im::HashMap<u64, EcoString>) {
@@ -123,10 +119,10 @@ impl Printer {
             } => {
                 let doc = match &self.context {
                     Some(ctx) => {
-                        if &ctx.module == module {
+                        if module == "gleam" || &ctx.module == module {
                             Document::String(name.into())
                         } else {
-                            let renaming = self
+                            let renaming = ctx
                                 .imports
                                 .iter()
                                 .find(|i| &i.module == module)
@@ -555,13 +551,15 @@ fn qualify_external_imported_modules_qualified() {
     };
 
     let mut printer = Printer::new();
-    printer.with_context("my_module".into());
-    printer.with_imports(vec![Import {
-        module: "external_module".into(),
-        package: "some_package".into(),
-        renaming: Default::default(),
-        unqualified_types: Default::default(),
-    }]);
+    printer.with_imports_context(
+        "my_module".into(),
+        vec![Import {
+            module: "external_module".into(),
+            package: "some_package".into(),
+            renaming: Default::default(),
+            unqualified_types: Default::default(),
+        }],
+    );
 
     assert_eq!(printer.pretty_print(&t, 0), "external_module.MyType")
 }
@@ -581,8 +579,7 @@ fn qualify_external_unimported_modules() {
     };
 
     let mut printer = Printer::new();
-    printer.with_context("my_module".into());
-
+    printer.with_imports_context("my_module".into(), vec![]);
     assert_eq!(printer.pretty_print(&t, 0), "external_module.MyType")
 }
 
@@ -602,13 +599,15 @@ fn qualify_external_renamed_modules() {
     };
 
     let mut printer = Printer::new();
-    printer.with_context("my_module".into());
-    printer.with_imports(vec![Import {
-        module: "external_module".into(),
-        package: "some_package".into(),
-        renaming: Some("renamed_module".into()),
-        unqualified_types: Default::default(),
-    }]);
+    printer.with_imports_context(
+        "my_module".into(),
+        vec![Import {
+            module: "external_module".into(),
+            package: "some_package".into(),
+            renaming: Some("renamed_module".into()),
+            unqualified_types: Default::default(),
+        }],
+    );
 
     assert_eq!(printer.pretty_print(&t, 0), "renamed_module.MyType")
 }
@@ -628,15 +627,26 @@ fn do_not_qualify_types_defined_in_same_module() {
     };
 
     let mut printer = Printer::new();
-    printer.with_context("my_module".into());
-    printer.with_imports(vec![Import {
-        module: "my_module".into(),
-        package: "my_package".into(),
-        renaming: Some("renamed_module".into()),
-        unqualified_types: Default::default(),
-    }]);
+    printer.with_imports_context(
+        "my_module".into(),
+        vec![Import {
+            module: "my_module".into(),
+            package: "my_package".into(),
+            renaming: Some("renamed_module".into()),
+            unqualified_types: Default::default(),
+        }],
+    );
 
     assert_eq!(printer.pretty_print(&t, 0), "MyType")
+}
+
+#[test]
+fn do_not_qualify_gleam_prelude_types() {
+    let t = int();
+
+    let mut printer = Printer::new();
+    printer.with_imports_context("my_module".into(), vec![]);
+    assert_eq!(printer.pretty_print(&t, 0), "Int")
 }
 
 #[cfg(test)]
