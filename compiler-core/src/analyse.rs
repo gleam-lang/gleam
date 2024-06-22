@@ -361,7 +361,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             publicity,
             deprecation: deprecation.clone(),
             variant: ValueConstructorVariant::ModuleConstant {
-                documentation: doc.clone().map(|(_, doc)| doc),
+                documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
                 location,
                 literal: typed_expr.clone(),
                 module: self.module_name.clone(),
@@ -533,7 +533,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         let variant = ValueConstructorVariant::ModuleFn {
-            documentation: doc.clone().map(|(_, doc)| doc),
+            documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
             name: impl_function,
             field_map,
             module: impl_module,
@@ -876,7 +876,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 _ => fn_(args_types.clone(), typ.clone()),
             };
             let constructor_info = ValueConstructorVariant::Record {
-                documentation: constructor.documentation.clone().map(|(_, doc)| doc),
+                documentation: constructor
+                    .documentation
+                    .as_ref()
+                    .map(|(_, doc)| doc.clone()),
                 constructors_count: constructors.len() as u16,
                 name: constructor.name.clone(),
                 arity: constructor.arguments.len() as u16,
@@ -995,7 +998,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     parameters,
                     publicity,
                     typ,
-                    documentation: documentation.clone().map(|(_, doc)| doc),
+                    documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                 },
             )
             .expect("name uniqueness checked above");
@@ -1052,7 +1055,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     typ,
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
-                    documentation: documentation.clone().map(|(_, doc)| doc),
+                    documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                 },
             )?;
 
@@ -1147,7 +1150,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         );
         let (impl_module, impl_function) = implementation_names(external, &self.module_name, name);
         let variant = ValueConstructorVariant::ModuleFn {
-            documentation: documentation.clone().map(|(_, doc)| doc),
+            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
             name: impl_function,
             field_map,
             module: impl_module,
@@ -1349,7 +1352,7 @@ fn generalise_module_constant(
     let typ = type_.clone();
     let type_ = type_::generalise(typ);
     let variant = ValueConstructorVariant::ModuleConstant {
-        documentation: doc.clone().map(|(_, doc)| doc),
+        documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
         location,
         literal: *value.clone(),
         module: module_name.clone(),
@@ -1423,7 +1426,7 @@ fn generalise_function(
     let (impl_module, impl_function) = implementation_names(external, module_name, &name);
 
     let variant = ValueConstructorVariant::ModuleFn {
-        documentation: doc.clone().map(|(_, doc)| doc),
+        documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
         name: impl_function,
         field_map,
         module: impl_module,

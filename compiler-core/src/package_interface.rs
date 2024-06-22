@@ -406,7 +406,7 @@ impl ModuleInterface {
                     let _ = types.insert(
                         name.clone(),
                         TypeDefinitionInterface {
-                            documentation: documentation.clone().map(|(_, doc)| doc),
+                            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                             deprecation: DeprecationInterface::from_deprecation(deprecation),
                             parameters: typed_parameters.len(),
                             constructors: if *opaque {
@@ -417,8 +417,8 @@ impl ModuleInterface {
                                     .map(|constructor| TypeConstructorInterface {
                                         documentation: constructor
                                             .documentation
-                                            .clone()
-                                            .map(|(_, doc)| doc),
+                                            .as_ref()
+                                            .map(|(_, doc)| doc.clone()),
                                         name: constructor.name.clone(),
                                         parameters: constructor
                                             .arguments
@@ -451,7 +451,7 @@ impl ModuleInterface {
                     let _ = type_aliases.insert(
                         alias.clone(),
                         TypeAliasInterface {
-                            documentation: documentation.clone().map(|(_, doc)| doc),
+                            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                             deprecation: DeprecationInterface::from_deprecation(deprecation),
                             parameters: parameters.len(),
                             alias: TypeInterface::from_type(type_.as_ref()),
@@ -479,7 +479,7 @@ impl ModuleInterface {
                             ),
                             type_: TypeInterface::from_type(type_.as_ref()),
                             deprecation: DeprecationInterface::from_deprecation(deprecation),
-                            documentation: documentation.clone().map(|(_, doc)| doc),
+                            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                         },
                     );
                 }
@@ -509,7 +509,7 @@ impl ModuleInterface {
                                 implementations,
                             ),
                             deprecation: DeprecationInterface::from_deprecation(deprecation),
-                            documentation: documentation.clone().map(|(_, doc)| doc),
+                            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                             parameters: arguments
                                 .iter()
                                 .map(|arg| ParameterInterface {
