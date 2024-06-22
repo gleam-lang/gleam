@@ -832,3 +832,64 @@ const my_const = example_module.X
     .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
+
+#[test]
+fn hover_imported_type_in_expr() {
+    let code = "
+import example_module
+
+fn main() {
+    example_module.X
+}
+";
+
+    // hovering over "X"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(4, 19),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_imported_type_in_pattern() {
+    let code = "
+import example_module
+
+fn main() {
+    case example_module.X {
+        var -> Nil
+    }
+}
+";
+
+    // hovering over "var"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(5, 9),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_imported_type_in_param() {
+    let code = "
+import example_module
+
+fn main(argument) {
+    case argument {
+        example_module.X -> Nil
+    }
+}
+";
+
+    // hovering over "argument"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(3, 12),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
