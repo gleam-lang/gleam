@@ -1518,7 +1518,7 @@ fn get_compatible_record_fields<A>(
 
     'next_argument: for (index, first_argument) in first.arguments.iter().enumerate() {
         // Fields without labels do not have accessors
-        let label = match first_argument.label.as_ref() {
+        let first_label = match first_argument.label.as_ref() {
             Some((_, label)) => label,
             None => continue 'next_argument,
         };
@@ -1533,7 +1533,11 @@ fn get_compatible_record_fields<A>(
             };
 
             // The labels must be the same
-            if argument.label != first_argument.label {
+            if !argument
+                .label
+                .as_ref()
+                .is_some_and(|(_, arg_label)| arg_label == first_label)
+            {
                 continue 'next_argument;
             }
 
@@ -1546,7 +1550,7 @@ fn get_compatible_record_fields<A>(
         // The previous loop did not find any incompatible fields in the other
         // variants so this field is compatible across variants and we should
         // generate an accessor for it.
-        compatible.push((index, label, &first_argument.ast))
+        compatible.push((index, first_label, &first_argument.ast))
     }
 
     compatible
