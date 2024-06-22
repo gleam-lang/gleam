@@ -292,7 +292,12 @@ where
                         // For the full symbol range, have it end at the end of the body.
                         // Also include the documentation, if available.
                         let full_function_span = SrcSpan {
-                            start: function.doc_position.unwrap_or(function.location.start),
+                            start: function
+                                .documentation
+                                .as_ref()
+                                .map(|(doc_start, _)| *doc_start)
+                                .unwrap_or(function.location.start),
+
                             end: function.end_position,
                         };
 
@@ -315,22 +320,22 @@ where
 
                     #[allow(deprecated)]
                     Definition::TypeAlias(alias) => {
-                        let full_alias_span = match alias.doc_position {
-                            Some(doc_position) => SrcSpan::new(doc_position, alias.location.end),
+                        let full_alias_span = match alias.documentation {
+                            Some((doc_position, _)) => {
+                                SrcSpan::new(doc_position, alias.location.end)
+                            }
                             None => alias.location,
                         };
+                        let (name_location, name) = &alias.alias;
 
                         symbols.push(DocumentSymbol {
-                            name: alias.alias.to_string(),
+                            name: name.to_string(),
                             detail: Some(Printer::new().pretty_print(&alias.type_, 0)),
                             kind: SymbolKind::CLASS,
                             tags: make_deprecated_symbol_tag(&alias.deprecation),
                             deprecated: None,
                             range: src_span_to_lsp_range(full_alias_span, &line_numbers),
-                            selection_range: src_span_to_lsp_range(
-                                alias.alias_location,
-                                &line_numbers,
-                            ),
+                            selection_range: src_span_to_lsp_range(*name_location, &line_numbers),
                             children: None,
                         });
                     }
@@ -349,7 +354,12 @@ where
                         // constant value as well.
                         // Also include the documentation, if available.
                         let full_constant_span = SrcSpan {
-                            start: constant.doc_position.unwrap_or(constant.location.start),
+                            start: constant
+                                .documentation
+                                .as_ref()
+                                .map(|(doc_start, _)| *doc_start)
+                                .unwrap_or(constant.location.start),
+
                             end: constant.value.location().end,
                         };
 
@@ -517,12 +527,12 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
 
             // List named arguments as field symbols.
             for argument in &constructor.arguments {
-                let Some(label) = &argument.label else {
+                let Some((label_location, label)) = &argument.label else {
                     continue;
                 };
 
-                let full_arg_span = match argument.doc_position {
-                    Some(doc_position) => SrcSpan::new(doc_position, argument.location.end),
+                let full_arg_span = match argument.doc {
+                    Some((doc_position, _)) => SrcSpan::new(doc_position, argument.location.end),
                     None => argument.location,
                 };
 
@@ -534,10 +544,7 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
                     tags: None,
                     deprecated: None,
                     range: src_span_to_lsp_range(full_arg_span, line_numbers),
-                    selection_range: src_span_to_lsp_range(
-                        argument.label_location.unwrap_or(argument.location),
-                        line_numbers,
-                    ),
+                    selection_range: src_span_to_lsp_range(*label_location, line_numbers),
                     children: None,
                 });
             }
@@ -548,7 +555,9 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
             // Include documentation as well if it is available.
             let full_constructor_span = SrcSpan {
                 start: constructor
-                    .doc_position
+                    .documentation
+                    .as_ref()
+                    .map(|(doc_start, _)| *doc_start)
                     .unwrap_or(constructor.location.start),
 
                 end: constructor
@@ -580,19 +589,26 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
     // We need it to range to the end of its constructors instead for the full symbol range.
     // We also include documentation, if available, by LSP convention.
     let full_type_span = SrcSpan {
-        start: type_.doc_position.unwrap_or(type_.location.start),
+        start: type_
+            .documentation
+            .as_ref()
+            .map(|(doc_start, _)| *doc_start)
+            .unwrap_or(type_.location.start),
+
         end: type_.end_position,
     };
 
+    let (name_location, name) = &type_.name;
+
     #[allow(deprecated)]
     DocumentSymbol {
-        name: type_.name.to_string(),
+        name: name.to_string(),
         detail: None,
         kind: SymbolKind::CLASS,
         tags: make_deprecated_symbol_tag(&type_.deprecation),
         deprecated: None,
         range: src_span_to_lsp_range(full_type_span, line_numbers),
-        selection_range: src_span_to_lsp_range(type_.name_location, line_numbers),
+        selection_range: src_span_to_lsp_range(*name_location, line_numbers),
         children: Some(constructors),
     }
 }
@@ -623,7 +639,11 @@ fn get_function_type(fun: &TypedFunction) -> Type {
 
 fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Hover {
     let empty_str = EcoString::from("");
-    let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
+    let documentation = fun
+        .documentation
+        .as_ref()
+        .map(|(_, doc)| doc)
+        .unwrap_or(&empty_str);
     let function_type = get_function_type(fun);
     let formatted_type = Printer::new().pretty_print(&function_type, 0);
     let contents = format!(
@@ -676,7 +696,11 @@ fn hover_for_module_constant(
 ) -> Hover {
     let empty_str = EcoString::from("");
     let type_ = Printer::new().pretty_print(&constant.type_, 0);
-    let documentation = constant.documentation.as_ref().unwrap_or(&empty_str);
+    let documentation = constant
+        .documentation
+        .as_ref()
+        .map(|(_, doc)| doc)
+        .unwrap_or(&empty_str);
     let contents = format!("```gleam\n{type_}\n```\n{documentation}");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),

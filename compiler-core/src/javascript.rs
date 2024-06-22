@@ -268,7 +268,7 @@ impl<'a> Generator<'a> {
         fn parameter((i, arg): (usize, &TypedRecordConstructorArg)) -> Document<'_> {
             arg.label
                 .as_ref()
-                .map(|s| maybe_escape_identifier_doc(s))
+                .map(|(_, s)| maybe_escape_identifier_doc(s))
                 .unwrap_or_else(|| Document::String(format!("x{i}")))
         }
 
@@ -293,7 +293,7 @@ impl<'a> Generator<'a> {
                 let var = parameter((i, arg));
                 match &arg.label {
                     None => docvec!["this[", i, "] = ", var, ";"],
-                    Some(name) => docvec!["this.", name, " = ", var, ";"],
+                    Some((_, name)) => docvec!["this.", name, " = ", var, ";"],
                 }
             }),
             line(),

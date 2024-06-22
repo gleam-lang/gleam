@@ -338,7 +338,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     ) -> TypedDefinition {
         let ModuleConstant {
             documentation: doc,
-            doc_position,
             location,
             name,
             annotation,
@@ -362,7 +361,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             publicity,
             deprecation: deprecation.clone(),
             variant: ValueConstructorVariant::ModuleConstant {
-                documentation: doc.clone(),
+                documentation: doc.clone().map(|(_, doc)| doc),
                 location,
                 literal: typed_expr.clone(),
                 module: self.module_name.clone(),
@@ -386,7 +385,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         Definition::ModuleConstant(ModuleConstant {
             documentation: doc,
-            doc_position,
             location,
             name,
             annotation,
@@ -408,7 +406,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     ) -> TypedDefinition {
         let Function {
             documentation: doc,
-            doc_position,
             location,
             name,
             name_location,
@@ -536,7 +533,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         let variant = ValueConstructorVariant::ModuleFn {
-            documentation: doc.clone(),
+            documentation: doc.clone().map(|(_, doc)| doc),
             name: impl_function,
             field_map,
             module: impl_module,
@@ -555,7 +552,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         Definition::Function(Function {
             documentation: doc,
-            doc_position,
             location,
             name,
             name_location,
@@ -721,13 +717,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         let CustomType {
             documentation: doc,
-            doc_position,
             location,
             end_position,
             publicity,
             opaque,
-            name,
-            name_location,
+            name: (name_location, name),
             parameters,
             constructors,
             deprecation,
@@ -742,7 +736,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                      name,
                      arguments: args,
                      documentation,
-                     doc_position,
                  }| {
                     let preregistered_fn = environment
                         .get_variable(&name)
@@ -755,12 +748,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                                 .zip(&args_types)
                                 .map(|(argument, t)| RecordConstructorArg {
                                     label: argument.label,
-                                    label_location: argument.label_location,
                                     ast: argument.ast,
                                     location: argument.location,
                                     type_: t.clone(),
                                     doc: None,
-                                    doc_position: None,
                                 })
                                 .collect()
                         } else {
@@ -772,7 +763,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         name,
                         arguments: args,
                         documentation,
-                        doc_position,
                     }
                 },
             )
@@ -785,13 +775,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         Ok(Definition::CustomType(CustomType {
             documentation: doc,
-            doc_position,
             location,
             end_position,
             publicity,
             opaque,
-            name,
-            name_location,
+            name: (name_location, name),
             parameters,
             constructors,
             typed_parameters,
@@ -809,7 +797,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             location,
             publicity,
             opaque,
-            name,
+            name: (_, name),
             constructors,
             deprecation,
             ..
@@ -872,7 +860,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 args_types.push(t);
 
                 // Register the label for this parameter, if there is one
-                if let Some(label) = label {
+                if let Some((_, label)) = label {
                     field_map.insert(label.clone(), i as u32).map_err(|_| {
                         Error::DuplicateField {
                             label: label.clone(),
@@ -888,7 +876,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 _ => fn_(args_types.clone(), typ.clone()),
             };
             let constructor_info = ValueConstructorVariant::Record {
-                documentation: constructor.documentation.clone(),
+                documentation: constructor.documentation.clone().map(|(_, doc)| doc),
                 constructors_count: constructors.len() as u16,
                 name: constructor.name.clone(),
                 arity: constructor.arguments.len() as u16,
@@ -952,7 +940,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         environment: &mut Environment<'a>,
     ) -> Result<(), Error> {
         let CustomType {
-            name,
+            name: (_, name),
             publicity,
             parameters,
             location,
@@ -1007,7 +995,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     parameters,
                     publicity,
                     typ,
-                    documentation: documentation.clone(),
+                    documentation: documentation.clone().map(|(_, doc)| doc),
                 },
             )
             .expect("name uniqueness checked above");
@@ -1031,13 +1019,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             location,
             publicity,
             parameters: args,
-            alias: name,
-            alias_location: _,
+            alias: (_, name),
             type_ast: resolved_type,
             deprecation,
             type_: _,
             documentation,
-            doc_position: _,
         } = t;
 
         // A type alias must not have the same name as any other type in the module.
@@ -1066,7 +1052,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     typ,
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
-                    documentation: documentation.clone(),
+                    documentation: documentation.clone().map(|(_, doc)| doc),
                 },
             )?;
 
@@ -1127,7 +1113,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_annotation,
             publicity,
             documentation,
-            doc_position: _,
             external_erlang,
             external_javascript,
             deprecation,
@@ -1162,7 +1147,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         );
         let (impl_module, impl_function) = implementation_names(external, &self.module_name, name);
         let variant = ValueConstructorVariant::ModuleFn {
-            documentation: documentation.clone(),
+            documentation: documentation.clone().map(|(_, doc)| doc),
             name: impl_function,
             field_map,
             module: impl_module,
@@ -1252,11 +1237,9 @@ fn target_function_implementation<'a>(
 fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> TypedDefinition {
     let TypeAlias {
         documentation: doc,
-        doc_position,
         location,
         publicity,
-        alias,
-        alias_location,
+        alias: (alias_location, alias),
         parameters: args,
         type_ast: resolved_type,
         deprecation,
@@ -1273,11 +1256,9 @@ fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> Ty
     };
     Definition::TypeAlias(TypeAlias {
         documentation: doc,
-        doc_position,
         location,
         publicity,
-        alias,
-        alias_location,
+        alias: (alias_location, alias),
         parameters: args,
         type_ast: resolved_type,
         type_: typ,
@@ -1356,7 +1337,6 @@ fn generalise_module_constant(
 ) -> TypedDefinition {
     let ModuleConstant {
         documentation: doc,
-        doc_position,
         location,
         name,
         annotation,
@@ -1369,7 +1349,7 @@ fn generalise_module_constant(
     let typ = type_.clone();
     let type_ = type_::generalise(typ);
     let variant = ValueConstructorVariant::ModuleConstant {
-        documentation: doc.clone(),
+        documentation: doc.clone().map(|(_, doc)| doc),
         location,
         literal: *value.clone(),
         module: module_name.clone(),
@@ -1395,7 +1375,6 @@ fn generalise_module_constant(
 
     Definition::ModuleConstant(ModuleConstant {
         documentation: doc,
-        doc_position,
         location,
         name,
         annotation,
@@ -1414,7 +1393,6 @@ fn generalise_function(
 ) -> TypedDefinition {
     let Function {
         documentation: doc,
-        doc_position,
         location,
         name,
         name_location,
@@ -1445,7 +1423,7 @@ fn generalise_function(
     let (impl_module, impl_function) = implementation_names(external, module_name, &name);
 
     let variant = ValueConstructorVariant::ModuleFn {
-        documentation: doc.clone(),
+        documentation: doc.clone().map(|(_, doc)| doc),
         name: impl_function,
         field_map,
         module: impl_module,
@@ -1472,7 +1450,6 @@ fn generalise_function(
 
     Definition::Function(Function {
         documentation: doc,
-        doc_position,
         location,
         name,
         name_location,
@@ -1542,7 +1519,7 @@ fn get_compatible_record_fields<A>(
     'next_argument: for (index, first_argument) in first.arguments.iter().enumerate() {
         // Fields without labels do not have accessors
         let label = match first_argument.label.as_ref() {
-            Some(label) => label,
+            Some((_, label)) => label,
             None => continue 'next_argument,
         };
 
@@ -1619,7 +1596,10 @@ fn sorted_type_aliases(aliases: &Vec<TypeAlias<()>>) -> Result<Vec<&TypeAlias<()
     let mut deps: Vec<(EcoString, Vec<EcoString>)> = Vec::with_capacity(aliases.len());
 
     for alias in aliases {
-        deps.push((alias.alias.clone(), get_type_dependencies(&alias.type_ast)))
+        deps.push((
+            alias.alias.1.clone(),
+            get_type_dependencies(&alias.type_ast),
+        ))
     }
 
     let sorted_deps = dep_tree::toposort_deps(deps).map_err(|err| {
@@ -1628,7 +1608,7 @@ fn sorted_type_aliases(aliases: &Vec<TypeAlias<()>>) -> Result<Vec<&TypeAlias<()
         let last = cycle.last().expect("Cycle should not be empty");
         let alias = aliases
             .iter()
-            .find(|alias| alias.alias == *last)
+            .find(|alias| alias.alias.1 == *last)
             .expect("Could not find alias for cycle");
 
         Error::RecursiveTypeAlias {
@@ -1639,6 +1619,6 @@ fn sorted_type_aliases(aliases: &Vec<TypeAlias<()>>) -> Result<Vec<&TypeAlias<()
 
     Ok(aliases
         .iter()
-        .sorted_by_key(|alias| sorted_deps.iter().position(|x| x == &alias.alias))
+        .sorted_by_key(|alias| sorted_deps.iter().position(|x| x == &alias.alias.1))
         .collect())
 }

@@ -321,7 +321,7 @@ impl<'comments> Formatter<'comments> {
             Definition::Function(function) => self.statement_fn(function),
 
             Definition::TypeAlias(TypeAlias {
-                alias,
+                alias: (_, alias),
                 parameters: args,
                 type_ast: resolved_type,
                 publicity,
@@ -1562,7 +1562,7 @@ impl<'comments> Formatter<'comments> {
                      }| {
                         let arg_comments = self.pop_comments(location.start);
                         let arg = match label {
-                            Some(l) => l.to_doc().append(": ").append(self.type_ast(ast)),
+                            Some((_, l)) => l.to_doc().append(": ").append(self.type_ast(ast)),
                             None => self.type_ast(ast),
                         };
 
@@ -1595,10 +1595,10 @@ impl<'comments> Formatter<'comments> {
             .to_doc()
             .append(if ct.opaque { "opaque type " } else { "type " })
             .append(if ct.parameters.is_empty() {
-                Document::EcoString(ct.name.clone())
+                Document::EcoString(ct.name.1.clone())
             } else {
                 let args = ct.parameters.iter().map(|e| e.to_doc()).collect_vec();
-                Document::EcoString(ct.name.clone())
+                Document::EcoString(ct.name.1.clone())
                     .append(self.wrap_args(args, ct.location.end))
                     .group()
             });
