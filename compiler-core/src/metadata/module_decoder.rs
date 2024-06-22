@@ -80,7 +80,7 @@ impl ModuleDecoder {
             ),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
             unused_imports: read_vec!(reader.get_unused_imports()?, self, src_span),
-            bad_names: read_vec!(reader.get_bad_names()?, self, bad_name),
+            bad_names: Vec::new(),
             line_numbers: self.line_numbers(&reader.get_line_numbers()?)?,
             src_path: reader.get_src_path()?.into(),
         })
@@ -469,13 +469,6 @@ impl ModuleDecoder {
             start: reader.get_start(),
             end: reader.get_end(),
         })
-    }
-
-    fn bad_name(&self, reader: &bad_name::Reader<'_>) -> Result<(SrcSpan, EcoString)> {
-        Ok((
-            self.src_span(&reader.get_location()?)?,
-            reader.get_name()?.into(),
-        ))
     }
 
     fn module_fn_variant(
