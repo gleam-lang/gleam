@@ -16,17 +16,48 @@ use pretty_assertions::assert_eq;
 
 const INDENT: isize = 2;
 
+#[derive(Debug)]
+pub struct Import {
+    package: EcoString,
+    module: EcoString,
+    renaming: Option<EcoString>,
+    unqualified_types: Vec<UnqualifiedImport>,
+}
+
+#[derive(Debug)]
+pub struct UnqualifiedImport {
+    name: EcoString,
+    as_name: Option<EcoString>,
+}
+
+#[derive(Debug)]
+struct PrinterContext {
+    module: EcoString,
+    package: EcoString,
+}
+
 #[derive(Debug, Default)]
 pub struct Printer {
     names: im::HashMap<u64, EcoString>,
     uid: u64,
     // A mapping of printd type names to the module that they are defined in.
     printed_types: im::HashMap<EcoString, EcoString>,
+
+    context: Option<PrinterContext>,
+    imports: Vec<Import>,
 }
 
 impl Printer {
     pub fn new() -> Self {
         Default::default()
+    }
+
+    pub fn with_context(&mut self, module: EcoString, package: EcoString) {
+        self.context = Some(PrinterContext { module, package });
+    }
+
+    pub fn with_imports(&mut self, imports: Vec<Import>) {
+        self.imports = imports;
     }
 
     pub fn with_names(&mut self, names: im::HashMap<u64, EcoString>) {
@@ -55,12 +86,24 @@ impl Printer {
             Type::Named {
                 name, args, module, ..
             } => {
-                let doc = if self.name_clashes_if_unqualified(name, module) {
-                    qualify_type_name(module, name)
-                } else {
-                    let _ = self.printed_types.insert(name.clone(), module.clone());
-                    name.to_doc()
+                let doc = match &self.context {
+                    Some(ctx) => {
+                        if &ctx.module == module {
+                            todo!("eq")
+                        } else {
+                            qualify_type_name(module, name)
+                        }
+                    }
+                    None => {
+                        if self.name_clashes_if_unqualified(name, module) {
+                            qualify_type_name(module, name)
+                        } else {
+                            let _ = self.printed_types.insert(name.clone(), module.clone());
+                            name.to_doc()
+                        }
+                    }
                 };
+
                 if args.is_empty() {
                     doc
                 } else {
@@ -451,6 +494,54 @@ fn function_test() {
     #(Float, Float, Float, Float, Float, Float),
   )"
     );
+}
+
+/// qualify types that are imported from external modules
+/// with a qualified import
+/// ```gleam
+/// import external_module
+/// external_module.MyType
+/// ```
+#[test]
+fn qualify_external_imported_modules_qualified() {
+    let t = Type::Named {
+        publicity: Publicity::Public,
+        name: "MyType".into(),
+        module: "external_module".into(),
+        package: "some_package".into(),
+        args: vec![],
+    };
+
+    let mut printer = Printer::new();
+    printer.with_context("my_module".into(), "my_package".into());
+    printer.with_imports(vec![Import {
+        module: "external_module".into(),
+        package: "some_package".into(),
+        renaming: Default::default(),
+        unqualified_types: Default::default(),
+    }]);
+
+    assert_eq!(printer.pretty_print(&t, 0), "external_module.MyType")
+}
+
+/// qualify types that come from external modules but are not imported
+/// ```gleam
+/// external_module.MyType
+/// ```
+#[test]
+fn qualify_external_unimported_modules() {
+    let t = Type::Named {
+        publicity: Publicity::Public,
+        name: "MyType".into(),
+        module: "external_module".into(),
+        package: "some_package".into(),
+        args: vec![],
+    };
+
+    let mut printer = Printer::new();
+    printer.with_context("my_module".into(), "my_package".into());
+
+    assert_eq!(printer.pretty_print(&t, 0), "external_module.MyType")
 }
 
 #[cfg(test)]
