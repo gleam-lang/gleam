@@ -89,7 +89,7 @@ impl Printer {
                 let doc = match &self.context {
                     Some(ctx) => {
                         if &ctx.module == module {
-                            todo!("eq")
+                            Document::String(name.into())
                         } else {
                             let renaming = self
                                 .imports
@@ -576,6 +576,32 @@ fn qualify_external_renamed_modules() {
     }]);
 
     assert_eq!(printer.pretty_print(&t, 0), "renamed_module.MyType")
+}
+
+/// ```gleam
+/// type MyType {}
+/// MyType
+/// ```
+#[test]
+fn do_not_qualify_types_defined_in_same_module() {
+    let t = Type::Named {
+        publicity: Publicity::Public,
+        name: "MyType".into(),
+        module: "my_module".into(),
+        package: "my_package".into(),
+        args: vec![],
+    };
+
+    let mut printer = Printer::new();
+    printer.with_context("my_module".into(), "my_package".into());
+    printer.with_imports(vec![Import {
+        module: "my_module".into(),
+        package: "my_package".into(),
+        renaming: Some("renamed_module".into()),
+        unqualified_types: Default::default(),
+    }]);
+
+    assert_eq!(printer.pretty_print(&t, 0), "MyType")
 }
 
 #[cfg(test)]
