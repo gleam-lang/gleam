@@ -328,14 +328,14 @@ where
                             })
                         }
                     }),
-                Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
+                Located::Pattern(pattern) => Some(hover_for_pattern(pattern, module, lines)),
                 Located::Expression(expression) => Some(hover_for_expression(
                     expression,
                     lines,
                     module,
                     &this.hex_deps,
                 )),
-                Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
+                Located::Arg(arg) => Some(hover_for_function_argument(arg, module, lines)),
                 Located::FunctionBody(_) => None,
                 Located::Annotation(annotation, type_) => {
                     let type_constructor = type_constructor_from_modules(
@@ -398,11 +398,11 @@ where
     }
 }
 
-fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover {
+fn hover_for_pattern(pattern: &TypedPattern, module: &Module, line_numbers: LineNumbers) -> Hover {
     let documentation = pattern.get_documentation().unwrap_or_default();
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new().pretty_print(pattern.type_().as_ref(), 0);
+    let type_ = printer_from_module(module).pretty_print(pattern.type_().as_ref(), 0);
     let contents = format!(
         "```gleam
 {type_}
@@ -439,8 +439,12 @@ fn hover_for_function_head(
     }
 }
 
-fn hover_for_function_argument(argument: &Arg<Arc<Type>>, line_numbers: LineNumbers) -> Hover {
-    let type_ = Printer::new().pretty_print(&argument.type_, 0);
+fn hover_for_function_argument(
+    argument: &Arg<Arc<Type>>,
+    module: &Module,
+    line_numbers: LineNumbers,
+) -> Hover {
+    let type_ = printer_from_module(module).pretty_print(&argument.type_, 0);
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
@@ -469,12 +473,6 @@ fn hover_for_annotation(
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, &line_numbers)),
     }
-}
-
-fn printer_from_module(module: &Module) -> Printer {
-    let mut printer = Printer::new();
-    printer.with_imports_context(module.name.clone(), (&module.ast).into());
-    printer
 }
 
 fn hover_for_module_constant(
@@ -507,7 +505,7 @@ fn hover_for_expression(
         .unwrap_or("".to_string());
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
+    let type_ = printer_from_module(module).pretty_print(expression.type_().as_ref(), 0);
     let contents = format!(
         "```gleam
 {type_}
@@ -545,6 +543,12 @@ fn hover_for_imported_value(
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(*location, &line_numbers)),
     }
+}
+
+fn printer_from_module(module: &Module) -> Printer {
+    let mut printer = Printer::new();
+    printer.with_imports_context(module.name.clone(), (&module.ast).into());
+    printer
 }
 
 // Returns true if any part of either range overlaps with the other.
