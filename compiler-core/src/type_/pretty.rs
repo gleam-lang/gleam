@@ -91,7 +91,14 @@ impl Printer {
                         if &ctx.module == module {
                             todo!("eq")
                         } else {
-                            qualify_type_name(module, name)
+                            let renaming = self
+                                .imports
+                                .iter()
+                                .find(|i| &i.module == module)
+                                .and_then(|i| i.renaming.as_deref());
+
+                            let qualifier = renaming.unwrap_or(module);
+                            qualify_type_name(qualifier, name)
                         }
                     }
                     None => {
@@ -542,6 +549,33 @@ fn qualify_external_unimported_modules() {
     printer.with_context("my_module".into(), "my_package".into());
 
     assert_eq!(printer.pretty_print(&t, 0), "external_module.MyType")
+}
+
+/// qualify types that come from external modules that are renamed
+/// ```gleam
+/// import external_module as renamed_module
+/// renamed_module.MyType
+/// ```
+#[test]
+fn qualify_external_renamed_modules() {
+    let t = Type::Named {
+        publicity: Publicity::Public,
+        name: "MyType".into(),
+        module: "external_module".into(),
+        package: "some_package".into(),
+        args: vec![],
+    };
+
+    let mut printer = Printer::new();
+    printer.with_context("my_module".into(), "my_package".into());
+    printer.with_imports(vec![Import {
+        module: "external_module".into(),
+        package: "some_package".into(),
+        renaming: Some("renamed_module".into()),
+        unqualified_types: Default::default(),
+    }]);
+
+    assert_eq!(printer.pretty_print(&t, 0), "renamed_module.MyType")
 }
 
 #[cfg(test)]
