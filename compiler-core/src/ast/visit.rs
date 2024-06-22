@@ -469,7 +469,7 @@ where
             v.visit_typed_expr_negate_bool(location, value)
         }
         TypedExpr::NegateInt { location, value } => v.visit_typed_expr_negate_int(location, value),
-        TypedExpr::Invalid { location, typ } => v.visit_typed_expr_invalid(location, typ),
+        TypedExpr::Invalid { location, typ , is_call_argument: _} => v.visit_typed_expr_invalid(location, typ),
     }
 }
 

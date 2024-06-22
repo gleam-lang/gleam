@@ -534,11 +534,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     }
 
     // Helper to push a new error to the errors list and return an invalid expression.
-    fn error_expr_with_rigid_names(&mut self, location: SrcSpan, error: Error) -> TypedExpr {
+    fn error_expr_with_rigid_names(&mut self, location: SrcSpan, error: Error, is_call_argument: bool) -> TypedExpr {
         self.error_with_rigid_names(error);
         TypedExpr::Invalid {
             location,
             typ: self.new_unbound_var(),
+            is_call_argument,
         }
     }
 
@@ -570,7 +571,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     let statement = match self.infer_use(use_, location, untyped.collect()) {
                         Ok(statement) => statement,
                         Err(error) => {
-                            Statement::Expression(self.error_expr_with_rigid_names(location, error))
+                            Statement::Expression(self.error_expr_with_rigid_names(location, error, false))
                         }
                     };
                     statements.push(statement);
@@ -581,7 +582,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     let location = expression.location();
                     let expression = match self.infer(expression) {
                         Ok(expression) => expression,
-                        Err(error) => self.error_expr_with_rigid_names(location, error),
+                        Err(error) => self.error_expr_with_rigid_names(location, error, false),
                     };
 
                     // This isn't the final expression in the sequence, so call the
@@ -1226,7 +1227,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let value_location = value.location();
         let value = match self.in_new_scope(|value_typer| value_typer.infer(*value)) {
             Ok(value) => value,
-            Err(error) => self.error_expr_with_rigid_names(value_location, error),
+            Err(error) => self.error_expr_with_rigid_names(value_location, error, false),
         };
 
         let value_typ = value.type_();
@@ -2634,7 +2635,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Ensure that the given args have the correct types
         let args_count = args_types.len();
-        let args = args_types
+        let args: Vec<CallArg<TypedExpr>> = args_types
             .iter_mut()
             .zip(args)
             .enumerate()
@@ -2672,7 +2673,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     )
                 }
 
-                let value = self.infer_call_argument(value, typ.clone(), argument_kind)?;
+                let value = match self.infer_call_argument(value, typ.clone(), argument_kind) {
+                    Ok(v) => v,
+                    Err(error) => self.error_expr_with_rigid_names(location, error, true),
+                };
 
                 Ok(CallArg {
                     label,

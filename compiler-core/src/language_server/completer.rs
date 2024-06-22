@@ -456,7 +456,7 @@ where
     }
 
     /// Provides completions for when the context being editted is a value.
-    pub fn completion_values(&'a self) -> Vec<CompletionItem> {
+    pub fn completion_values(&'a self, is_call_argument: bool) -> Vec<CompletionItem> {
         // Current module if the completion is after ".", example: mymodule.foo|
         let (_, module_select) = self.get_phrase_surrounding_completion();
         let mut completions = vec![];
@@ -504,6 +504,7 @@ where
                     module_select.is_some(),
                     is_part_of_pipeline,
                     is_part_of_use,
+                    is_call_argument,
                 ));
             }
         }
@@ -538,6 +539,7 @@ where
                         module_select.is_some(),
                         is_part_of_pipeline,
                         is_part_of_use,
+                        is_call_argument,
                     ));
                 }
             }
@@ -558,6 +560,7 @@ where
                                 module_select.is_some(),
                                 is_part_of_pipeline,
                                 is_part_of_use,
+                                is_call_argument,
                             ))
                         }
                         None => continue,
@@ -600,6 +603,7 @@ where
                     module_select.is_some(),
                     is_part_of_pipeline,
                     is_part_of_use,
+                    is_call_argument,
                 );
 
                 add_import_to_completion(&mut completion, import_location, module_full_name);
@@ -736,6 +740,7 @@ fn value_completion(
     is_module_select: bool,
     is_part_of_pipeline: bool,
     is_part_of_use: bool,
+    is_call_argument: bool,
 ) -> CompletionItem {
     let mut label = match module_qualifier {
         Some(module) => format!("{module}.{name}"),
@@ -751,8 +756,8 @@ fn value_completion(
     let mut insert_text_format: Option<InsertTextFormat> = None;
 
     match value.variant {
-        // Add parenthises and argument names as SNIPPETs.
-        ValueConstructorVariant::ModuleFn { ref arg_names, .. } => {
+        // Add parenthises and argument names as SNIPPETs, if this is not a call argument.
+        ValueConstructorVariant::ModuleFn { ref arg_names, .. } if !is_call_argument => {
             if arg_names.is_empty() {
                 label.push_str("()");
                 next_text.push_str("()");

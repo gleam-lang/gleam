@@ -153,6 +153,7 @@ pub enum TypedExpr {
     Invalid {
         location: SrcSpan,
         typ: Arc<Type>,
+        is_call_argument: bool,
     },
 }
 
@@ -442,6 +443,17 @@ impl TypedExpr {
     pub fn is_var(&self) -> bool {
         match self {
             Self::Var { .. } => true,
+            _ => false,
+        }
+    }
+
+    /// Returns `true` if the expression is a [`CallArg`].
+    /// 
+    /// NOTE: It currently only supports Invalid expressions for autocomplete purpose.
+    #[must_use]
+    pub fn is_call_argument(&self) -> bool {
+        match self {
+            Self::Invalid { is_call_argument, .. } => is_call_argument.clone(),
             _ => false,
         }
     }

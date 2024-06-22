@@ -18,7 +18,7 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use lsp::CodeAction;
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
-use std::sync::Arc;
+use std::{cmp::max, sync::Arc};
 
 use super::{
     code_action::{CodeActionBuilder, RedundantTupleInCaseSubject},
@@ -199,9 +199,11 @@ where
                 return value;
             }
 
-            let byte_index = completer
+            let next_byte_index = completer
                 .module_line_numbers
                 .byte_index(params.position.line, params.position.character);
+            // Subtrack 1, because the editors provide the next character to be auto-completed.
+            let byte_index = max(next_byte_index, 1) - 1;
 
             let Some(found) = module.find_node(byte_index) else {
                 return Ok(None);
@@ -210,15 +212,17 @@ where
             let completions = match found {
                 Located::Pattern(_pattern) => None,
 
-                Located::Statement(_) | Located::Expression(_) => {
-                    Some(completer.completion_values())
+                Located::Expression(expr) => {
+                    Some(completer.completion_values(expr.is_call_argument()))
                 }
+
+                Located::Statement(_) => Some(completer.completion_values(false)),
 
                 Located::ModuleStatement(Definition::Function(_)) => {
                     Some(completer.completion_types())
                 }
 
-                Located::FunctionBody(_) => Some(completer.completion_values()),
+                Located::FunctionBody(_) => Some(completer.completion_values(false)),
 
                 Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_)) => {
                     Some(completer.completion_types())
