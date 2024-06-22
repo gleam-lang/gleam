@@ -316,7 +316,7 @@ where
 
     fn code_action(&mut self, params: lsp::CodeActionParams) -> (Json, Feedback) {
         let path = super::path(&params.text_document.uri);
-        self.respond_with_engine(path, |engine| engine.action(params))
+        self.respond_with_engine(path, |engine| engine.code_actions(params))
     }
 
     fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {

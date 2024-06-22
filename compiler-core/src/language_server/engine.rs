@@ -246,7 +246,10 @@ where
         })
     }
 
-    pub fn action(&mut self, params: lsp::CodeActionParams) -> Response<Option<Vec<CodeAction>>> {
+    pub fn code_actions(
+        &mut self,
+        params: lsp::CodeActionParams,
+    ) -> Response<Option<Vec<CodeAction>>> {
         self.respond(|this| {
             let mut actions = vec![];
             let Some(module) = this.module_for_uri(&params.text_document.uri) else {
