@@ -545,17 +545,24 @@ fn const_string_concatenate_argument<'a>(
     match value {
         Constant::String { value, .. } => docvec!['"', string_inner(value), "\"/utf8"],
 
-        Constant::Var { constructor: Some(constructor), .. } => {
-            match &constructor.variant {
-                ValueConstructorVariant::ModuleConstant { literal: Constant::String { value, ..}, .. } => docvec!['"', string_inner(value), "\"/utf8"],
-                ValueConstructorVariant::ModuleConstant { literal: concat_value @ Constant::StringConcatenation { .. }, .. } => docvec![const_inline(concat_value, env), "/binary"],
-                _ => panic!("Constant string concatenation argument can only be a string or const var at code generation time"),
-            }
-        }
+        Constant::Var {
+            constructor: Some(constructor),
+            ..
+        } => match &constructor.variant {
+            ValueConstructorVariant::ModuleConstant {
+                literal: Constant::String { value, .. },
+                ..
+            } => docvec!['"', string_inner(value), "\"/utf8"],
+            ValueConstructorVariant::ModuleConstant {
+                literal: concat_value @ Constant::StringConcatenation { .. },
+                ..
+            } => docvec![const_inline(concat_value, env), "/binary"],
+            _ => const_inline(value, env),
+        },
 
         Constant::StringConcatenation { .. } => docvec![const_inline(value, env), "/binary"],
 
-        _ => panic!("Constant string concatenation argument can only be a string or const var at code generation time"),
+        _ => const_inline(value, env),
     }
 }
 
