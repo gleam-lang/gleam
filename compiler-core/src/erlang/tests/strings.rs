@@ -438,3 +438,32 @@ pub fn main(x) {
 "#,
     );
 }
+
+#[test]
+fn assert_const_concat() {
+    assert_erl!(
+        r#"
+const foo = "foo"
+const bar = foo <> "bar"
+
+pub fn main() {
+  bar
+}
+"#
+    );
+}
+
+#[test]
+fn assert_const_concat_multiple() {
+    assert_erl!(
+        r#"
+const foo = "foo"
+const foobar = foo <> "bar"
+const foofoobarbaz = foo <> foobar <> "baz"
+
+pub fn main() {
+  foofoobarbaz
+}
+"#
+    );
+}
