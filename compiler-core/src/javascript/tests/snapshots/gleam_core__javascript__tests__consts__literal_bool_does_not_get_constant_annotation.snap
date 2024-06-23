@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/javascript/tests/consts.rs
+expression: "\n        pub const a = True\n        pub const b = False\n    "
+---
+export const a = true;
+
+export const b = false;

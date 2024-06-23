@@ -25,4 +25,4 @@ function destructure(x) {
   return raw;
 }
 
-const local = new Ip("0.0.0.0");
+const local = /* @__PURE__ */ new Ip("0.0.0.0");

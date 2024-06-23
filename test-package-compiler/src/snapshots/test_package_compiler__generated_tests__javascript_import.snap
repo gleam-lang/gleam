@@ -47,4 +47,4 @@ export const x: $two.A$;
 /// <reference types="./two.d.mts" />
 import * as $two from "./one/two.mjs";
 
-export const x = new $two.A();
+export const x = /* @__PURE__ */ new $two.A();

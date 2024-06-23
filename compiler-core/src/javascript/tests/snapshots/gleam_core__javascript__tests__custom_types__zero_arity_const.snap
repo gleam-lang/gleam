@@ -8,6 +8,6 @@ class This extends $CustomType {}
 
 class ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant extends $CustomType {}
 
-const this$ = new This();
+const this$ = /* @__PURE__ */ new This();
 
-const that = new ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant();
+const that = /* @__PURE__ */ new ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant();
