@@ -151,7 +151,9 @@ fn get_hexpm_version(package: &str) -> Result<Requirement> {
                 3 => Ok(Requirement::hex(version)),
                 n_parts => Err(Error::InvalidVersionFormat {
                     input: version.to_string(),
-                    error: format!("Expected up to 3 version numbers in specifier (MAJOR.MINOR.PATH), found {n_parts}"),
+                    error: format!(
+                        "Expected up to 3 numbers in version specifier (MAJOR.MINOR.PATCH), found {n_parts}"
+                    ),
                 }),
             }
         }
