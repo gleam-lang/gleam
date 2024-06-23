@@ -390,7 +390,7 @@ impl<'module> Generator<'module> {
     ) -> Output<'a> {
         match &constructor.variant {
             ValueConstructorVariant::LocalConstant { literal } => {
-                constant_expression(self.tracker, literal)
+                constant_expression(&mut ConstructorUsed::No, self.tracker, literal)
             }
             ValueConstructorVariant::Record { arity, .. } => {
                 Ok(self.record_constructor(constructor.type_.clone(), None, name, *arity))
@@ -1250,11 +1250,17 @@ pub(crate) fn guard_constant_expression<'a>(
             .map(|assignment| assignment.subject.clone().append(assignment.path.clone()))
             .unwrap_or_else(|| maybe_escape_identifier_doc(name))),
 
-        expression => constant_expression(tracker, expression),
+        expression => constant_expression(&mut ConstructorUsed::No, tracker, expression),
     }
 }
 
+pub enum ConstructorUsed {
+    Yes,
+    No,
+}
+
 pub(crate) fn constant_expression<'a>(
+    constructor_used: &mut ConstructorUsed,
     tracker: &mut UsageTracker,
     expression: &'a TypedConstant,
 ) -> Output<'a> {
@@ -1262,13 +1268,19 @@ pub(crate) fn constant_expression<'a>(
         Constant::Int { value, .. } => Ok(int(value)),
         Constant::Float { value, .. } => Ok(float(value)),
         Constant::String { value, .. } => Ok(string(value)),
-        Constant::Tuple { elements, .. } => {
-            array(elements.iter().map(|e| constant_expression(tracker, e)))
-        }
+        Constant::Tuple { elements, .. } => array(
+            elements
+                .iter()
+                .map(|e| constant_expression(constructor_used, tracker, e)),
+        ),
 
         Constant::List { elements, .. } => {
             tracker.list_used = true;
-            list(elements.iter().map(|e| constant_expression(tracker, e)))
+            list(
+                elements
+                    .iter()
+                    .map(|e| constant_expression(constructor_used, tracker, e)),
+            )
         }
 
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
@@ -1296,12 +1308,19 @@ pub(crate) fn constant_expression<'a>(
             }
             let field_values: Vec<_> = args
                 .iter()
-                .map(|arg| constant_expression(tracker, &arg.value))
+                .map(|arg| constant_expression(constructor_used, tracker, &arg.value))
                 .try_collect()?;
+
+            *constructor_used = ConstructorUsed::Yes;
             Ok(construct_record(module.as_deref(), name, field_values))
         }
 
-        Constant::BitArray { segments, .. } => bit_array(tracker, segments, constant_expression),
+        Constant::BitArray { segments, .. } => {
+            *constructor_used = ConstructorUsed::Yes;
+            bit_array(tracker, segments, |tracker, expr| {
+                constant_expression(constructor_used, tracker, expr)
+            })
+        }
 
         Constant::Var { name, module, .. } => Ok({
             match module {

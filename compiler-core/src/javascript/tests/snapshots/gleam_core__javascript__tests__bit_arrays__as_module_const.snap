@@ -4,7 +4,7 @@ expression: "\n          pub const data = <<\n            0x1,\n            2,\n
 ---
 import { toBitArray, sizedInt, stringBits, float64Bits } from "../gleam.mjs";
 
-export const data = toBitArray([
+export const data = /* @__PURE__ */ toBitArray([
   0x1,
   2,
   sizedInt(2, 16),

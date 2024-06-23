@@ -17,6 +17,7 @@ use crate::{
 };
 use camino::Utf8Path;
 use ecow::EcoString;
+use expression::ConstructorUsed;
 use itertools::Itertools;
 
 use self::import::{Imports, Member};
@@ -464,11 +465,21 @@ impl<'a> Generator<'a> {
         } else {
             "export const "
         };
+
+        let mut constructor_used = ConstructorUsed::No;
+        let document =
+            expression::constant_expression(&mut constructor_used, &mut self.tracker, value)?;
+
+        let equals = match constructor_used {
+            ConstructorUsed::Yes => " = /* @__PURE__ */ ",
+            ConstructorUsed::No => " = ",
+        };
+
         Ok(docvec![
             head,
             maybe_escape_identifier_doc(name),
-            " = ",
-            expression::constant_expression(&mut self.tracker, value)?,
+            equals,
+            document,
             ";",
         ])
     }

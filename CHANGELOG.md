@@ -130,6 +130,9 @@
 
   ([Rahul D. Ghosal](https://github.com/rdghosal))
 
+- When compiling to JavaScript constants will now be annotated as `@__PURE__`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Language Server
