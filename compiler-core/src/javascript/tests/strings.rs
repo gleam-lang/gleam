@@ -224,3 +224,32 @@ pub fn go(x) {
 "#,
     )
 }
+
+#[test]
+fn const_concat() {
+    assert_js!(
+        r#"
+const foo = "foo"
+const bar = foo <> "bar"
+
+pub fn main() {
+  bar
+}
+"#
+    );
+}
+
+#[test]
+fn const_concat_multiple() {
+    assert_js!(
+        r#"
+const foo = "foo"
+const foobar = foo <> "bar"
+const foofoobarbaz = foo <> foobar <> "baz"
+
+pub fn main() {
+  foofoobarbaz
+}
+"#
+    );
+}

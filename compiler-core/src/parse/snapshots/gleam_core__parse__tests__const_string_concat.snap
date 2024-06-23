@@ -1,0 +1,102 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nconst foo = \"foo\"\nconst bar = foo <> \"bar\"\n"
+---
+Parsed {
+    module: Module {
+        name: "",
+        documentation: [],
+        type_info: (),
+        definitions: [
+            TargetedDefinition {
+                definition: ModuleConstant(
+                    ModuleConstant {
+                        documentation: None,
+                        location: SrcSpan {
+                            start: 7,
+                            end: 10,
+                        },
+                        publicity: Private,
+                        name: "foo",
+                        annotation: None,
+                        value: String {
+                            location: SrcSpan {
+                                start: 13,
+                                end: 18,
+                            },
+                            value: "foo",
+                        },
+                        type_: (),
+                        deprecation: NotDeprecated,
+                        implementations: Implementations {
+                            gleam: true,
+                            can_run_on_erlang: true,
+                            can_run_on_javascript: true,
+                            uses_erlang_externals: false,
+                            uses_javascript_externals: false,
+                        },
+                    },
+                ),
+                target: None,
+            },
+            TargetedDefinition {
+                definition: ModuleConstant(
+                    ModuleConstant {
+                        documentation: None,
+                        location: SrcSpan {
+                            start: 25,
+                            end: 28,
+                        },
+                        publicity: Private,
+                        name: "bar",
+                        annotation: None,
+                        value: StringConcatenation {
+                            location: SrcSpan {
+                                start: 31,
+                                end: 43,
+                            },
+                            left: Var {
+                                location: SrcSpan {
+                                    start: 31,
+                                    end: 34,
+                                },
+                                module: None,
+                                name: "foo",
+                                constructor: None,
+                                typ: (),
+                            },
+                            right: String {
+                                location: SrcSpan {
+                                    start: 38,
+                                    end: 43,
+                                },
+                                value: "bar",
+                            },
+                        },
+                        type_: (),
+                        deprecation: NotDeprecated,
+                        implementations: Implementations {
+                            gleam: true,
+                            can_run_on_erlang: true,
+                            can_run_on_javascript: true,
+                            uses_erlang_externals: false,
+                            uses_javascript_externals: false,
+                        },
+                    },
+                ),
+                target: None,
+            },
+        ],
+    },
+    extra: ModuleExtra {
+        module_comments: [],
+        doc_comments: [],
+        comments: [],
+        empty_lines: [],
+        new_lines: [
+            0,
+            18,
+            43,
+        ],
+    },
+}

@@ -195,6 +195,11 @@ struct Constant {
       typ @12 :Type;
       constructor @13 :ValueConstructor;
     }
+
+    stringConcatenation :group {
+      left @14 :Constant;
+      right @15 :Constant;
+    }
   }
 }
 

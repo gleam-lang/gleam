@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nconst foo = 5\nconst bar = foo <> \"bar\"\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:13
+  │
+3 │ const bar = foo <> "bar"
+  │             ^^^
+
+The <> operator expects arguments of this type:
+
+    String
+
+But this argument has this type:
+
+    Int

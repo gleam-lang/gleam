@@ -454,6 +454,11 @@ impl<'a> CallGraphBuilder<'a> {
                     self.constant(&segment.value);
                 }
             }
+
+            Constant::StringConcatenation { left, right, .. } => {
+                self.constant(left);
+                self.constant(right);
+            }
         }
     }
 }

@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\nconst foo = \"foo\"\nconst foobar = foo <> \"bar\"\nconst foofoobarbaz = foo <> foobar <> \"baz\"\n\npub fn main() {\n  foofoobarbaz\n}\n"
+---
+const foo = "foo";
+
+const foobar = foo + "bar";
+
+const foofoobarbaz = foo + foobar + "baz";
+
+export function main() {
+  return foofoobarbaz;
+}

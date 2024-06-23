@@ -491,6 +491,12 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => docvec![module, ".", name],
 
+            Constant::StringConcatenation { left, right, .. } => self
+                .const_expr(left)
+                .append(break_("", "").append("<> ".to_doc()))
+                .nest(INDENT)
+                .append(self.const_expr(right)),
+
             Constant::Invalid { .. } => {
                 panic!("invalid constants can not be in an untyped ast")
             }
