@@ -493,8 +493,9 @@ impl<'comments> Formatter<'comments> {
 
             Constant::StringConcatenation { left, right, .. } => self
                 .const_expr(left)
-                .append(break_("", "").append("<> ".to_doc()))
+                .append(break_("", " ").append("<>".to_doc()))
                 .nest(INDENT)
+                .append(" ")
                 .append(self.const_expr(right)),
 
             Constant::Invalid { .. } => {
