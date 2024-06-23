@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## v3.1.0 - 2024-06-23
 
-- Added specific errors for missing minor or patch versions
+- Added specific errors for missing minor or patch versions.
 
 ## v3.0.0 - 2024-05-30
 
