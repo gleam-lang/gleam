@@ -229,11 +229,11 @@ pub fn go(x) {
 fn const_concat() {
     assert_js!(
         r#"
-const foo = "foo"
-const bar = foo <> "bar"
+const cute = "cute"
+const cute_bee = cute <> "bee"
 
 pub fn main() {
-  bar
+  cute_bee
 }
 "#
     );
@@ -243,12 +243,12 @@ pub fn main() {
 fn const_concat_multiple() {
     assert_js!(
         r#"
-const foo = "foo"
-const foobar = foo <> "bar"
-const foofoobarbaz = foo <> foobar <> "baz"
+const cute = "cute"
+const cute_bee = cute <> "bee"
+const cute_cute_bee_buzz = cute <> cute_bee <> "buzz"
 
 pub fn main() {
-  foofoobarbaz
+  cute_cute_bee_buzz
 }
 "#
     );

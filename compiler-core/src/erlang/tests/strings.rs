@@ -443,26 +443,38 @@ pub fn main(x) {
 fn assert_const_concat() {
     assert_erl!(
         r#"
-const foo = "foo"
-const bar = foo <> "bar"
+const cute = "cute"
+const cute_bee = cute <> "bee"
 
 pub fn main() {
-  bar
+  cute_bee
 }
 "#
     );
 }
 
 #[test]
-fn assert_const_concat_multiple() {
+fn assert_const_concat_many_strings() {
     assert_erl!(
         r#"
-const foo = "foo"
-const foobar = foo <> "bar"
-const foofoobarbaz = foo <> foobar <> "baz"
+const big_concat = "a" <> "b" <> "c" <> "d" <> "e" <> "f" <> "g" <> "h" <> "i" <> "j" <> "k" <> "l" <> "m" <> "n" <> "o" <> "p" <> "q" <> "r" <> "s" <> "t" <> "u" <> "v" <> "w" <> "x" <> "y" <> "z"
 
 pub fn main() {
-  foofoobarbaz
+  big_concat
+}
+"#
+    );
+}
+
+#[test]
+fn assert_const_concat_other_const_concat() {
+    assert_erl!(
+        r#"
+const cute_bee = "cute" <> "bee"
+const cute_cute_bee_buzz = cute_bee <> "buzz"
+
+pub fn main() {
+  cute_cute_bee_buzz
 }
 "#
     );

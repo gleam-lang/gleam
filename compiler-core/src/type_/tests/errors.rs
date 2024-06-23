@@ -1910,8 +1910,8 @@ fn leak_multiple_private_types() {
 fn const_string_concat_invalid_type() {
     assert_module_error!(
         "
-const foo = 5
-const bar = foo <> \"bar\"
+const some_int = 5
+const invalid_concat = some_int <> \"with_string\"
 "
     );
 }
