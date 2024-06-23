@@ -9,7 +9,7 @@ expression: "completion_at_default_position(TestProject::for_source(code))"
             CompletionItemLabelDetails {
                 detail: None,
                 description: Some(
-                    "app",
+                    "Direction",
                 ),
             },
         ),
@@ -63,7 +63,7 @@ expression: "completion_at_default_position(TestProject::for_source(code))"
             CompletionItemLabelDetails {
                 detail: None,
                 description: Some(
-                    "app",
+                    "Direction",
                 ),
             },
         ),

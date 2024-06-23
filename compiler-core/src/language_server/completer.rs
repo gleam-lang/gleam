@@ -246,13 +246,7 @@ where
             if already_imported_values.contains(name) {
                 continue;
             }
-            completions.push(value_completion(
-                None,
-                &module_being_imported_from.name,
-                name,
-                value,
-                insert_range,
-            ));
+            completions.push(value_completion(None, name, value, insert_range));
         }
 
         completions
@@ -459,19 +453,18 @@ where
     pub fn completion_values(&'a self) -> Vec<CompletionItem> {
         let surrounding_completion = self.get_phrase_surrounding_completion();
         let mut completions = vec![];
-        let mod_name = self.module.name.as_str();
 
         let (insert_range, module_select) = surrounding_completion;
 
         // Module values
-        // Do not complete direct module values if the user has already started typing a module select.
-        // e.x. when the user has typed mymodule.| we know local module values are no longer relevant
+        // NOTE: Do not complete direct module values if the user has already started typing a module select.
+        //       e.x. when the user has typed mymodule.| we know local module values are no longer relevant
         if module_select.is_none() {
             for (name, value) in &self.module.ast.type_info.values {
                 // Here we do not check for the internal attribute: we always want
                 // to show autocompletions for values defined in the same module,
                 // even if those are internal.
-                completions.push(value_completion(None, mod_name, name, value, insert_range));
+                completions.push(value_completion(None, name, value, insert_range));
             }
         }
 
@@ -497,13 +490,7 @@ where
                             continue;
                         }
                     }
-                    completions.push(value_completion(
-                        Some(&module),
-                        mod_name,
-                        name,
-                        value,
-                        insert_range,
-                    ));
+                    completions.push(value_completion(Some(&module), name, value, insert_range));
                 }
             }
 
@@ -515,13 +502,7 @@ where
                     match module.get_public_value(&unqualified.name) {
                         Some(value) => {
                             let name = unqualified.used_name();
-                            completions.push(value_completion(
-                                None,
-                                mod_name,
-                                name,
-                                value,
-                                insert_range,
-                            ))
+                            completions.push(value_completion(None, name, value, insert_range))
                         }
                         None => continue,
                     }
@@ -555,8 +536,7 @@ where
                     continue;
                 }
 
-                let mut completion =
-                    value_completion(Some(qualifier), module_full_name, name, value, insert_range);
+                let mut completion = value_completion(Some(qualifier), name, value, insert_range);
 
                 add_import_to_completion(&mut completion, import_location, module_full_name);
                 completions.push(completion);
@@ -648,7 +628,6 @@ fn type_completion(
 
 fn value_completion(
     module_qualifier: Option<&str>,
-    module_name: &str,
     name: &str,
     value: &crate::type_::ValueConstructor,
     insert_range: Range,
@@ -679,10 +658,10 @@ fn value_completion(
     CompletionItem {
         label: label.clone(),
         kind,
-        detail: Some(type_),
+        detail: Some(type_.clone()),
         label_details: Some(CompletionItemLabelDetails {
             detail: None,
-            description: Some(module_name.into()),
+            description: Some(type_),
         }),
         documentation,
         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
