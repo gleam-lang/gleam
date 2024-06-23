@@ -925,3 +925,25 @@ fn hover_imported_type_in_import() {
     .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
+
+#[test]
+fn hover_imported_alias() {
+    let code = "
+import mod2.{type T2}
+import mod1
+
+pub fn main() {
+    mod1.X
+}
+";
+
+    // hovering over "main"
+    let hover = hover(
+        TestProject::for_source(code)
+            .add_module("mod1", "pub type T1 { X }")
+            .add_module("mod2", "import mod1 \n pub type T2 = mod1.T1"),
+        Position::new(4, 9),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
