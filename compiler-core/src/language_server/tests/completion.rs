@@ -15,9 +15,18 @@ fn completion(tester: TestProject<'_>, position: Position) -> Vec<CompletionItem
 }
 
 fn completion_at_default_position(tester: TestProject<'_>) -> Vec<CompletionItem> {
-    let src = &format!("fn typing_in_here() {{\n  0\n}}\n {}", tester.src);
+    completion_with_prefix(tester, "")
+}
+
+fn completion_with_prefix(tester: TestProject<'_>, prefix: &str) -> Vec<CompletionItem> {
+    let src = &format!("{}fn typing_in_here() {{\n  0\n}}\n {}", prefix, tester.src);
     let tester = TestProject { src, ..tester };
-    completion(tester, Position::new(1, 0))
+    // Put the cursor inside the "typing_in_here" fn body.
+    let line = 1 + prefix.lines().count();
+    println!("line: {}", line);
+    println!("code:\n{}", src);
+    println!("code at line: {}", src.lines().nth(line).unwrap());
+    completion(tester, Position::new(line as u32, 0))
         .into_iter()
         .filter(|c| c.label != "typing_in_here")
         .collect_vec()
@@ -189,6 +198,42 @@ pub fn wobble() {
     assert_debug_snapshot!(completion_at_default_position(
         TestProject::for_source(code).add_module("a/b/dep", dep)
     ),);
+}
+
+#[test]
+fn importable_adds_extra_new_line_if_no_imports() {
+    let dep = "pub fn wobble() {\nNil\n}";
+    let code = "";
+    let prefix = "";
+
+    assert_debug_snapshot!(completion_with_prefix(
+        TestProject::for_source(code).add_module("dep", dep).add_module("foo", ""),
+        prefix
+    ));
+}
+
+#[test]
+fn importable_does_not_add_extra_new_line_if_imports_exist() {
+    let dep = "pub fn wobble() {\nNil\n}";
+    let code = "";
+    let prefix = "import foo\n\n";
+
+    assert_debug_snapshot!(completion_with_prefix(
+        TestProject::for_source(code).add_module("dep", dep).add_module("foo", ""),
+        prefix
+    ));
+}
+
+#[test]
+fn importable_does_not_add_extra_new_line_if_newline_exists() {
+    let dep = "pub fn wobble() {\nNil\n}";
+    let code = "";
+    let prefix = "\n";
+
+    assert_debug_snapshot!(completion_with_prefix(
+        TestProject::for_source(code).add_module("dep", dep).add_module("foo", ""),
+        prefix
+    ));
 }
 
 #[test]

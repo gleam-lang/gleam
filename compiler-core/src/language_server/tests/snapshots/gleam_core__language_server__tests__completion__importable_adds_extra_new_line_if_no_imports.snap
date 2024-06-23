@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "completion_at_default_position(TestProject::for_source(code).add_module(\"dep\",\n        dep))"
+expression: "completion_with_prefix(TestProject::for_source(code).add_module(\"dep\",\n            dep).add_module(\"foo\", \"\"), prefix)"
 ---
 [
     CompletionItem {
