@@ -246,6 +246,7 @@ impl ModuleDecoder {
             Which::Record(reader) => self.constant_record(&reader),
             Which::BitArray(reader) => self.constant_bit_array(&reader?),
             Which::Var(reader) => self.constant_var(&reader),
+            Which::StringConcatenation(reader) => self.constant_string_concatenation(&reader),
         }
     }
 
@@ -340,6 +341,17 @@ impl ModuleDecoder {
             name: name.into(),
             constructor: Some(Box::from(constructor)),
             typ: type_,
+        })
+    }
+
+    fn constant_string_concatenation(
+        &mut self,
+        reader: &constant::string_concatenation::Reader<'_>,
+    ) -> Result<TypedConstant> {
+        Ok(Constant::StringConcatenation {
+            location: Default::default(),
+            left: Box::new(self.constant(&reader.get_left()?)?),
+            right: Box::new(self.constant(&reader.get_right()?)?),
         })
     }
 

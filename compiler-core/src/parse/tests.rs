@@ -1209,3 +1209,22 @@ case 2, 3 {
 }"
     );
 }
+
+#[test]
+fn const_string_concat() {
+    assert_parse_module!(
+        "
+const foo = \"foo\"
+const bar = foo <> \"bar\"
+"
+    );
+}
+
+#[test]
+fn const_string_concat_naked_right() {
+    assert_module_error!(
+        "
+const foo = \"foo\" <>
+"
+    );
+}

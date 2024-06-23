@@ -2405,7 +2405,17 @@ where
     //   "hi"
     //   True
     //   [1,2,3]
+    //   foo <> "bar"
     fn parse_const_value(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
+        let constant_result = self.parse_const_value_unit();
+        if let Ok(Some(constant)) = constant_result {
+            self.parse_const_maybe_concatenation(constant)
+        } else {
+            constant_result
+        }
+    }
+
+    fn parse_const_value_unit(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
         match self.tok0.take() {
             Some((start, Token::String { value }, end)) => {
                 self.advance();
@@ -2556,6 +2566,40 @@ where
             t0 => {
                 self.tok0 = t0;
                 Ok(None)
+            }
+        }
+    }
+
+    fn parse_const_maybe_concatenation(
+        &mut self,
+        left: UntypedConstant,
+    ) -> Result<Option<UntypedConstant>, ParseError> {
+        match self.tok0.take() {
+            Some((op_start, Token::LtGt, op_end)) => {
+                self.advance();
+
+                if let Ok(Some(right_constant_value)) = self.parse_const_value() {
+                    Ok(Some(Constant::StringConcatenation {
+                        location: SrcSpan {
+                            start: left.location().start,
+                            end: right_constant_value.location().end,
+                        },
+                        left: Box::new(left),
+                        right: Box::new(right_constant_value),
+                    }))
+                } else {
+                    parse_error(
+                        ParseErrorType::OpNakedRight,
+                        SrcSpan {
+                            start: op_start,
+                            end: op_end,
+                        },
+                    )
+                }
+            }
+            t0 => {
+                self.tok0 = t0;
+                Ok(Some(left))
             }
         }
     }

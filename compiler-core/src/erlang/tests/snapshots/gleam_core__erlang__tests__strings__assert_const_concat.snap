@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+expression: "\nconst foo = \"foo\"\nconst bar = foo <> \"bar\"\n\npub fn main() {\n  bar\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-spec main() -> binary().
+main() ->
+    <<"foo"/utf8, "bar"/utf8>>.

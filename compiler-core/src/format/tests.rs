@@ -6156,3 +6156,19 @@ fn newlines_are_not_stripped_if_two_consecutive_anonymous_function_are_passed_as
 "#
     );
 }
+
+#[test]
+fn const_long_concat_string() {
+    assert_format_rewrite!(
+        r#"const long_string = "some" <> " very" <> " long" <> " string" <> " indeed" <> " please" <> " break"
+"#,
+        r#"const long_string = "some"
+  <> " very"
+  <> " long"
+  <> " string"
+  <> " indeed"
+  <> " please"
+  <> " break"
+"#
+    );
+}

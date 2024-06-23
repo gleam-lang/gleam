@@ -2637,6 +2637,29 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             }
 
+            Constant::StringConcatenation {
+                location,
+                left,
+                right,
+            } => {
+                let left = self.infer_const(&None, *left);
+                unify(string(), left.type_()).map_err(|e| {
+                    e.operator_situation(BinOp::Concatenate)
+                        .into_error(left.location())
+                })?;
+                let right = self.infer_const(&None, *right);
+                unify(string(), right.type_()).map_err(|e| {
+                    e.operator_situation(BinOp::Concatenate)
+                        .into_error(right.location())
+                })?;
+
+                Ok(Constant::StringConcatenation {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
             Constant::Invalid { .. } => panic!("invalid constants can not be in an untyped ast"),
         }
     }
