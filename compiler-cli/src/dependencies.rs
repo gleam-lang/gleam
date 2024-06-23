@@ -163,11 +163,16 @@ fn get_hexpm_version(package: &str) -> Result<Requirement> {
 
 #[test]
 fn hex_from_package_specifier() {
+    // Bad versions.
+    assert!(get_hexpm_version("package_1@1.2.3.4").is_err());
+    assert!(get_hexpm_version("package_2@not_a_version").is_err());
+
+    // Good versions.
     let packages = vec![
-        ("package_1", ">= 0.0.0"),
-        ("package_1@1", ">= 1.0.0 and < 2.0.0"),
-        ("package_1@1.2", ">= 1.2.0 and < 2.0.0"),
-        ("package_3@1.2.3", "1.2.3"),
+        ("package_3", ">= 0.0.0"),
+        ("package_4@1", ">= 1.0.0 and < 2.0.0"),
+        ("package_5@1.2", ">= 1.2.0 and < 2.0.0"),
+        ("package_6@1.2.3", "1.2.3"),
     ];
 
     for (provided, expected) in packages {
