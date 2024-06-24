@@ -94,6 +94,9 @@
   to JavaScript.
   ([Ofek Doitch](https://github.com/ofekd))
 
+- Compiler now supports arithmetic operations in guards.
+  ([Danielle Maywood](https://github.com/DanielleMaywood))
+
 ### Formatter
 
 ### Language Server
