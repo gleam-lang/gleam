@@ -1747,6 +1747,172 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             }
 
+            ClauseGuard::AddInt {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left)?;
+                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right)?;
+                unify(int(), right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::AddInt {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::AddFloat {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left)?;
+                unify(float(), left.type_())
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right)?;
+                unify(float(), right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::AddFloat {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::SubInt {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left)?;
+                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right)?;
+                unify(int(), right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::SubInt {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::SubFloat {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left)?;
+                unify(float(), left.type_())
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right)?;
+                unify(float(), right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::SubFloat {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::MultInt {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left)?;
+                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right)?;
+                unify(int(), right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::MultInt {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::MultFloat {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left)?;
+                unify(float(), left.type_())
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right)?;
+                unify(float(), right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::MultFloat {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::DivInt {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left)?;
+                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right)?;
+                unify(int(), right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::DivInt {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::DivFloat {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left)?;
+                unify(float(), left.type_())
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right)?;
+                unify(float(), right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::DivFloat {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::RemainderInt {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left)?;
+                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right)?;
+                unify(int(), right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::RemainderInt {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
             ClauseGuard::Constant(constant) => {
                 Ok(ClauseGuard::Constant(self.infer_const(&None, constant)))
             }

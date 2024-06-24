@@ -1121,3 +1121,14 @@ fn newline_tokens() {
         ]
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1756
+#[test]
+fn arithmetic_in_guards() {
+    assert_parse!(
+        "
+case 2, 3 {
+    x, y if x + y == 1 -> True
+}"
+    );
+}

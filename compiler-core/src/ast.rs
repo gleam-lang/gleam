@@ -1183,6 +1183,60 @@ pub enum ClauseGuard<Type, RecordTag> {
         right: Box<Self>,
     },
 
+    AddInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    AddFloat {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    SubInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    SubFloat {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    MultInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    MultFloat {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    DivInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    DivFloat {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    RemainderInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
     Or {
         location: SrcSpan,
         left: Box<Self>,
@@ -1251,6 +1305,15 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::GtFloat { location, .. }
             | ClauseGuard::GtEqFloat { location, .. }
             | ClauseGuard::LtFloat { location, .. }
+            | ClauseGuard::AddInt { location, .. }
+            | ClauseGuard::AddFloat { location, .. }
+            | ClauseGuard::SubInt { location, .. }
+            | ClauseGuard::SubFloat { location, .. }
+            | ClauseGuard::MultInt { location, .. }
+            | ClauseGuard::MultFloat { location, .. }
+            | ClauseGuard::DivInt { location, .. }
+            | ClauseGuard::DivFloat { location, .. }
+            | ClauseGuard::RemainderInt { location, .. }
             | ClauseGuard::FieldAccess { location, .. }
             | ClauseGuard::LtEqFloat { location, .. }
             | ClauseGuard::ModuleSelect { location, .. } => *location,
@@ -1279,6 +1342,15 @@ impl<A, B> ClauseGuard<A, B> {
             ClauseGuard::GtEqFloat { .. } => Some(BinOp::GtEqFloat),
             ClauseGuard::LtFloat { .. } => Some(BinOp::LtFloat),
             ClauseGuard::LtEqFloat { .. } => Some(BinOp::LtEqFloat),
+            ClauseGuard::AddInt { .. } => Some(BinOp::AddInt),
+            ClauseGuard::AddFloat { .. } => Some(BinOp::AddFloat),
+            ClauseGuard::SubInt { .. } => Some(BinOp::SubInt),
+            ClauseGuard::SubFloat { .. } => Some(BinOp::SubFloat),
+            ClauseGuard::MultInt { .. } => Some(BinOp::MultInt),
+            ClauseGuard::MultFloat { .. } => Some(BinOp::MultFloat),
+            ClauseGuard::DivInt { .. } => Some(BinOp::DivInt),
+            ClauseGuard::DivFloat { .. } => Some(BinOp::DivFloat),
+            ClauseGuard::RemainderInt { .. } => Some(BinOp::RemainderInt),
 
             ClauseGuard::Constant(_)
             | ClauseGuard::Var { .. }
@@ -1298,6 +1370,17 @@ impl TypedClauseGuard {
             ClauseGuard::FieldAccess { type_, .. } => type_.clone(),
             ClauseGuard::ModuleSelect { type_, .. } => type_.clone(),
             ClauseGuard::Constant(constant) => constant.type_(),
+
+            ClauseGuard::AddInt { .. }
+            | ClauseGuard::SubInt { .. }
+            | ClauseGuard::MultInt { .. }
+            | ClauseGuard::DivInt { .. }
+            | ClauseGuard::RemainderInt { .. } => type_::int(),
+
+            ClauseGuard::AddFloat { .. }
+            | ClauseGuard::SubFloat { .. }
+            | ClauseGuard::MultFloat { .. }
+            | ClauseGuard::DivFloat { .. } => type_::float(),
 
             ClauseGuard::Or { .. }
             | ClauseGuard::Not { .. }
