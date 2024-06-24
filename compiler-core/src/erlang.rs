@@ -1212,6 +1212,42 @@ fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Docu
             .append(" =< ")
             .append(clause_guard(right, env)),
 
+        ClauseGuard::AddInt { left, right, .. } => clause_guard(left, env)
+            .append(" + ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::AddFloat { left, right, .. } => clause_guard(left, env)
+            .append(" + ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::SubInt { left, right, .. } => clause_guard(left, env)
+            .append(" - ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::SubFloat { left, right, .. } => clause_guard(left, env)
+            .append(" - ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::MultInt { left, right, .. } => clause_guard(left, env)
+            .append(" * ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::MultFloat { left, right, .. } => clause_guard(left, env)
+            .append(" * ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::DivInt { left, right, .. } => clause_guard(left, env)
+            .append(" div ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::DivFloat { left, right, .. } => clause_guard(left, env)
+            .append(" / ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::RemainderInt { left, right, .. } => clause_guard(left, env)
+            .append(" rem ")
+            .append(clause_guard(right, env)),
+
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name),
@@ -1254,7 +1290,16 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
         | ClauseGuard::GtFloat { .. }
         | ClauseGuard::GtEqFloat { .. }
         | ClauseGuard::LtFloat { .. }
-        | ClauseGuard::LtEqFloat { .. } => "("
+        | ClauseGuard::LtEqFloat { .. }
+        | ClauseGuard::AddInt { .. }
+        | ClauseGuard::AddFloat { .. }
+        | ClauseGuard::SubInt { .. }
+        | ClauseGuard::SubFloat { .. }
+        | ClauseGuard::MultInt { .. }
+        | ClauseGuard::MultFloat { .. }
+        | ClauseGuard::DivInt { .. }
+        | ClauseGuard::DivFloat { .. }
+        | ClauseGuard::RemainderInt { .. } => "("
             .to_doc()
             .append(bare_clause_guard(guard, env))
             .append(")"),

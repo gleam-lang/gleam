@@ -106,6 +106,10 @@ impl Token {
             | Self::GreaterEqualDot
             | Self::GreaterDot => Some(4),
 
+            Self::Plus | Self::PlusDot | Self::Minus | Self::MinusDot => Some(5),
+
+            Self::Star | Self::StarDot | Self::Slash | Self::SlashDot | Self::Percent => Some(6),
+
             _ => None,
         }
     }

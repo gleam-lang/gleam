@@ -3425,6 +3425,60 @@ fn clause_guard_reduction(
             right,
         },
 
+        Token::Plus => ClauseGuard::AddInt {
+            location,
+            left,
+            right,
+        },
+
+        Token::PlusDot => ClauseGuard::AddFloat {
+            location,
+            left,
+            right,
+        },
+
+        Token::Minus => ClauseGuard::SubInt {
+            location,
+            left,
+            right,
+        },
+
+        Token::MinusDot => ClauseGuard::SubFloat {
+            location,
+            left,
+            right,
+        },
+
+        Token::Star => ClauseGuard::MultInt {
+            location,
+            left,
+            right,
+        },
+
+        Token::StarDot => ClauseGuard::MultFloat {
+            location,
+            left,
+            right,
+        },
+
+        Token::Slash => ClauseGuard::DivInt {
+            location,
+            left,
+            right,
+        },
+
+        Token::SlashDot => ClauseGuard::DivFloat {
+            location,
+            left,
+            right,
+        },
+
+        Token::Percent => ClauseGuard::RemainderInt {
+            location,
+            left,
+            right,
+        },
+
         _ => panic!("Token could not be converted to Guard Op."),
     }
 }

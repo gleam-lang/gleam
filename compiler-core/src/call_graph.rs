@@ -391,6 +391,15 @@ impl<'a> CallGraphBuilder<'a> {
             | ClauseGuard::GtEqFloat { left, right, .. }
             | ClauseGuard::LtFloat { left, right, .. }
             | ClauseGuard::LtEqFloat { left, right, .. }
+            | ClauseGuard::AddInt { left, right, .. }
+            | ClauseGuard::AddFloat { left, right, .. }
+            | ClauseGuard::SubInt { left, right, .. }
+            | ClauseGuard::SubFloat { left, right, .. }
+            | ClauseGuard::MultInt { left, right, .. }
+            | ClauseGuard::MultFloat { left, right, .. }
+            | ClauseGuard::DivInt { left, right, .. }
+            | ClauseGuard::DivFloat { left, right, .. }
+            | ClauseGuard::RemainderInt { left, right, .. }
             | ClauseGuard::Or { left, right, .. }
             | ClauseGuard::And { left, right, .. } => {
                 self.guard(left);
