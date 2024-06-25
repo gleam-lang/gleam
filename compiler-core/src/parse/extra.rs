@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use ecow::EcoString;
 
 use crate::ast::SrcSpan;
@@ -16,18 +18,21 @@ impl ModuleExtra {
         Default::default()
     }
 
+    /// Detects if a byte index is in a comment context
     pub fn is_within_comment(&self, byte_index: u32) -> bool {
-        self.comments
-            .binary_search_by(|span| span.cmp_byte_index(byte_index))
-            .is_ok()
-            || self
-                .doc_comments
-                .binary_search_by(|span| span.cmp_byte_index(byte_index))
-                .is_ok()
-            || self
-                .module_comments
-                .binary_search_by(|span| span.cmp_byte_index(byte_index))
-                .is_ok()
+        let cmp = |span: &SrcSpan| {
+            if byte_index < span.start {
+                Ordering::Less
+            } else if span.end < byte_index {
+                Ordering::Greater
+            } else {
+                Ordering::Equal
+            }
+        };
+
+        self.comments.binary_search_by(cmp).is_ok()
+            || self.doc_comments.binary_search_by(cmp).is_ok()
+            || self.module_comments.binary_search_by(cmp).is_ok()
     }
 }
 
