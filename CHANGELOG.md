@@ -158,6 +158,10 @@
   matching on strings with an `as` pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would warn that a module alias was unused when
+  it was only used in case patterns.
+  ([Michael Jones](https://github.com/michaeljones))
+
 ## v1.2.1 - 2024-05-30
 
 ### Bug Fixes
