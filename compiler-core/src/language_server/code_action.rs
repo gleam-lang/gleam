@@ -1,7 +1,7 @@
 use std::{iter, sync::Arc};
 
 use crate::{
-    ast::{self, visit::Visit as _, AssignmentKind, Pattern, SrcSpan},
+    ast::{self, visit::Visit as _, AssignName, AssignmentKind, Pattern, SrcSpan, TypedPattern},
     build::Module,
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
@@ -277,76 +277,80 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
     }
 }
 
-pub struct AssertResultToCase<'a> {
+// Builder for code action to convert `let assert` into a case expression
+pub struct LetAssertToCase<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     actions: Vec<CodeAction>,
     line_numbers: LineNumbers,
+    pattern_variables: Vec<EcoString>,
 }
 
-impl<'ast> ast::visit::Visit<'ast> for AssertResultToCase<'_> {
+impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
     fn visit_typed_assignment(&mut self, assignment: &'ast ast::TypedAssignment) {
         let range = src_span_to_lsp_range(assignment.location, &self.line_numbers);
 
+        // Only offer the code action if the cursor is over the statement
         if !overlaps(range, self.params.range) {
             return;
         }
 
+        // This pattern only applies to `let assert`
         if !matches!(assignment.kind, AssignmentKind::Assert { .. }) {
             return;
         };
 
-        let Pattern::Constructor {
-            name,
-            arguments,
-            type_,
-            ..
-        } = &assignment.pattern
-        else {
-            return;
+        // Get the source code for the tested expression
+        let location = assignment.value.location();
+        let expr = self
+            .module
+            .code
+            .get(location.start as usize..location.end as usize)
+            .expect("Location must be valid");
+
+        // Get the source code for the pattern
+        let pattern_location = assignment.pattern.location();
+        let pattern = self
+            .module
+            .code
+            .get(pattern_location.start as usize..pattern_location.end as usize)
+            .expect("Location must be valid");
+
+        let indent = " ".repeat(range.start.character as usize);
+
+        // Figure out which variables are assigned in the pattern
+        self.traverse_pattern(&assignment.pattern);
+        let variables = std::mem::take(&mut self.pattern_variables);
+
+        let assigned = match variables.len() {
+            0 => "",
+            1 => variables.first().expect("Variables is length one"),
+            _ => &format!("#({})", variables.join(", ")),
         };
 
-        if type_.is_result() && name == "Ok" {
-            let location = assignment.value.location();
-            let expr = self
-                .module
-                .code
-                .get(location.start as usize..location.end as usize)
-                .expect("Location must be valid");
+        let edit = TextEdit {
+            range,
+            new_text: format!(
+                "let {assigned} = case {expr} {{
+{indent}  {pattern} -> {assigned}
+{indent}  _ -> panic
+{indent}}}",
+                // "_" isn't a valid expression, so we just return Nil from the case expression
+                assigned = if assigned == "_" { "Nil" } else { assigned }
+            ),
+        };
 
-            let var = match (arguments.first(), arguments.last()) {
-                (Some(first), Some(last)) => self
-                    .module
-                    .code
-                    .get(first.location.start as usize..last.location.end as usize)
-                    .expect("Location must be valid"),
-                _ => "",
-            };
+        let uri = &self.params.text_document.uri;
 
-            let indent = " ".repeat(range.start.character as usize);
-
-            let edit = TextEdit {
-                range,
-                new_text: format!(
-                    "let {var} = case {expr} {{
-{indent}  Ok({var}) -> {var}
-{indent}  Error(e) -> panic as \"Expected Ok value\"
-{indent}}}"
-                ),
-            };
-
-            let uri = &self.params.text_document.uri;
-
-            CodeActionBuilder::new("Convert to case")
-                .kind(CodeActionKind::REFACTOR)
-                .changes(uri.clone(), vec![edit])
-                .preferred(true)
-                .push_to(&mut self.actions);
-        }
+        CodeActionBuilder::new("Convert to case")
+            .kind(CodeActionKind::REFACTOR)
+            .changes(uri.clone(), vec![edit])
+            .preferred(true)
+            .push_to(&mut self.actions);
     }
 }
 
-impl<'a> AssertResultToCase<'a> {
+impl<'a> LetAssertToCase<'a> {
     pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
         let line_numbers = LineNumbers::new(&module.code);
         Self {
@@ -354,11 +358,66 @@ impl<'a> AssertResultToCase<'a> {
             params,
             actions: Vec::new(),
             line_numbers,
+            pattern_variables: Vec::new(),
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
         self.actions
+    }
+
+    // Recursively traverses a pattern and finds which variables get bound
+    fn traverse_pattern(&mut self, pattern: &TypedPattern) {
+        println!("{pattern:#?}");
+        match pattern {
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::VarUsage { .. }
+            | Pattern::Discard { .. }
+            | Pattern::Invalid { .. }
+            | Pattern::String { .. } => {}
+            Pattern::Variable { name, .. } => self.pattern_variables.push(name.clone()),
+            Pattern::Assign { name, pattern, .. } => {
+                println!("Assign");
+                self.pattern_variables.push(name.clone());
+                self.traverse_pattern(pattern);
+            }
+            Pattern::List { elements, tail, .. } => {
+                for elem in elements {
+                    self.traverse_pattern(elem);
+                }
+                if let Some(tail) = tail {
+                    self.traverse_pattern(tail);
+                }
+            }
+            Pattern::Constructor { arguments, .. } => {
+                for arg in arguments {
+                    self.traverse_pattern(&arg.value);
+                }
+            }
+            Pattern::Tuple { elems, .. } => {
+                for elem in elems {
+                    self.traverse_pattern(elem);
+                }
+            }
+            Pattern::BitArray { segments, .. } => {
+                for segment in segments {
+                    self.traverse_pattern(&segment.value);
+                }
+            }
+            Pattern::StringPrefix {
+                left_side_assignment,
+                right_side_assignment,
+                ..
+            } => {
+                if let Some((name, _)) = left_side_assignment {
+                    self.pattern_variables.push(name.clone());
+                }
+                if let AssignName::Variable(name) = right_side_assignment {
+                    self.pattern_variables.push(name.clone());
+                }
+            }
+        }
     }
 }

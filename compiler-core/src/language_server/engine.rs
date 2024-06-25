@@ -22,7 +22,7 @@ use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
 use std::sync::Arc;
 
 use super::{
-    code_action::{AssertResultToCase, CodeActionBuilder, RedundantTupleInCaseSubject},
+    code_action::{CodeActionBuilder, LetAssertToCase, RedundantTupleInCaseSubject},
     completer::Completer,
     src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
@@ -273,6 +273,7 @@ where
             code_action_unused_imports(module, &params, &mut actions);
             code_action_fix_names(module, &params, &mut actions);
             actions.extend(AssertResultToCase::new(module, &params).code_actions());
+            actions.extend(LetAssertToCase::new(module, &params).code_actions());
             actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
 
             Ok(if actions.is_empty() {

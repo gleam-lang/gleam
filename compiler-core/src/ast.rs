@@ -1718,7 +1718,9 @@ impl AssignName {
 impl<A> Pattern<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Pattern::Assign { pattern, .. } => pattern.location(),
+            Pattern::Assign {
+                pattern, location, ..
+            } => SrcSpan::new(pattern.location().start, location.end),
             Pattern::Int { location, .. }
             | Pattern::Variable { location, .. }
             | Pattern::VarUsage { location, .. }

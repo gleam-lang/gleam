@@ -116,7 +116,7 @@
 - The language server no longer shows completions when inside a literal string.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- LSP can now suggest a code action to convert `let assert Ok` into a case expression:
+- LSP can now suggest a code action to convert `let assert` into a case expression:
 
   ```
   let assert Ok(foo) = bar()
@@ -127,7 +127,7 @@
   ```
   let foo = case bar() {
     Ok(foo) -> foo
-    Error(e) -> panic as "value was not ok"
+    _ -> panic
   }
   ```
 

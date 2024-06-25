@@ -595,22 +595,113 @@ fn test_convert_assert_result_to_case() {
 pub fn main() {
   let assert Ok(foo) = Ok(1)
 }
-";
-
-    insta::assert_snapshot!(apply_first_code_action_with_title(code, 2, CONVERT_TO_CASE));
+",
+        2,
+        CONVERT_TO_CASE
+    ));
 }
 
 #[test]
-fn test_convert_assert_result_to_case_indented() {
-    let code = "
+fn test_convert_let_assert_to_case_indented() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
 pub fn main() {
   {
     let assert Ok(foo) = Ok(1)
   }
 }
-";
+",
+        3,
+        CONVERT_TO_CASE
+    ));
+}
 
-    insta::assert_snapshot!(apply_first_code_action_with_title(code, 3, CONVERT_TO_CASE));
+#[test]
+fn test_convert_let_assert_to_case_multi_variables() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+  let assert [var1, var2, _var3, var4] = [1, 2, 3, 4]
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_to_case_no_variables() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+  let assert [_elem] = [6]
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_alias_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+  let assert 10 as ten = 10
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_tuple_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+   let assert #(first, 10, third) = #(5, 10, 15)
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_bit_array_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+  let assert <<bits1, bits2>> = <<73, 98>>
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_string_prefix_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        r#"
+pub fn main() {
+  let assert "_" <> thing = "_Hello"
+}"#,
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_string_prefix_pattern_alias_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        r#"pub fn main() {
+    let assert "123" as one_two_three <> rest = "123456"
+}"#,
+        1,
+        CONVERT_TO_CASE
+    ));
 }
 
 /* TODO: implement qualified unused location
