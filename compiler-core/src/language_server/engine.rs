@@ -278,7 +278,6 @@ where
     pub fn inlay_hints(&mut self, params: lsp::InlayHintParams) -> Response<Vec<InlayHint>> {
         self.respond(|this| {
             let Ok(config) = this.user_config.read() else {
-                // TODO trace?
                 return Ok(vec![]);
             };
 
@@ -293,10 +292,10 @@ where
             let line_numbers = LineNumbers::new(&module.code);
 
             let hints = ast::inlay_hints::get_inlay_hints(module.ast.clone(), &line_numbers)
-                .iter()
+                .into_iter()
                 .map(|hint| InlayHint {
                     position: src_offset_to_lsp_position(hint.offset, &line_numbers),
-                    label: InlayHintLabel::String(hint.label.to_string()),
+                    label: InlayHintLabel::String(hint.label),
                     kind: Some(InlayHintKind::TYPE),
                     text_edits: None,
                     tooltip: None,

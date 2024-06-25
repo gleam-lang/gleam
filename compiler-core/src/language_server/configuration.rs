@@ -13,6 +13,7 @@ pub struct Configuration {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InlayHintsConfig {
+    /// Whether to show type inlay hints of multiline pipelines
     #[serde(default = "InlayHintsConfig::default_pipelines")]
     pub pipelines: bool,
 }
