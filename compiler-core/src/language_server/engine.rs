@@ -37,6 +37,7 @@ use super::{
         RedundantTupleInCaseSubject,
     },
     completer::Completer,
+    configuration::SharedConfig,
     signature_help, src_offset_to_lsp_position, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
@@ -76,6 +77,9 @@ pub struct LanguageServerEngine<IO, Reporter> {
     /// Used to know if to show the "View on HexDocs" link
     /// when hovering on an imported value
     hex_deps: std::collections::HashSet<EcoString>,
+
+    /// Configuration the user has set in their editor.
+    pub(crate) user_config: SharedConfig,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -95,6 +99,7 @@ where
         progress_reporter: Reporter,
         io: FileSystemProxy<IO>,
         paths: ProjectPaths,
+        user_config: SharedConfig,
     ) -> Result<Self> {
         let locker = io.inner().make_locker(&paths, config.target)?;
 
@@ -131,6 +136,7 @@ where
             paths,
             error: None,
             hex_deps,
+            user_config,
         })
     }
 
@@ -448,6 +454,15 @@ where
 
     pub fn inlay_hints(&mut self, params: lsp::InlayHintParams) -> Response<Vec<InlayHint>> {
         self.respond(|this| {
+            let Ok(config) = this.user_config.read() else {
+                // TODO trace?
+                return Ok(vec![]);
+            };
+
+            if !config.inlay_hints.pipelines {
+                return Ok(vec![]);
+            }
+
             let Some(module) = this.module_for_uri(&params.text_document.uri) else {
                 return Ok(vec![]);
             };

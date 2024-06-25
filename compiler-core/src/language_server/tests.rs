@@ -9,7 +9,7 @@ mod signature_help;
 
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
     time::SystemTime,
 };
 
@@ -35,6 +35,8 @@ use crate::{
     requirement::Requirement,
     Result,
 };
+
+use super::configuration::{Configuration, InlayHintsConfig};
 
 pub const LSP_TEST_ROOT_PACKAGE_NAME: &str = "app";
 
@@ -357,6 +359,12 @@ fn add_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, n
     )
 }
 
+fn default_test_config() -> Configuration {
+    Configuration {
+        inlay_hints: InlayHintsConfig { pipelines: true },
+    }
+}
+
 fn setup_engine(
     io: &LanguageServerTestIO,
 ) -> LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO> {
@@ -367,6 +375,7 @@ fn setup_engine(
         io.clone(),
         FileSystemProxy::new(io.clone()),
         io.paths.clone(),
+        Arc::new(RwLock::new(default_test_config())),
     )
     .unwrap()
 }
