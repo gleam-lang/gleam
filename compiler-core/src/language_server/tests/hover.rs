@@ -867,3 +867,36 @@ fn valid() { Nil }
         })
     );
 }
+
+#[test]
+fn hover_for_pattern_spread_in_a_case_branch() {
+    let code = "
+pub type Model {
+  Model(
+    counter: Int,
+    greeting: String,
+    hobbies: List(String),
+    secret_to_life: Int,
+  )
+}
+
+pub fn main() {
+  case todo {
+    Model(counter: n, ..) -> todo
+  }
+}
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(12, 23)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "```gleam\nFIELDS: Int\n```".to_string()
+            )),
+            range: Some(Range {
+                start: Position::new(12, 22),
+                end: Position::new(12, 24)
+            }),
+        })
+    );
+}

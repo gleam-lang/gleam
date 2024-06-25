@@ -1100,7 +1100,7 @@ impl<'comments> Formatter<'comments> {
         name: &'a str,
         args: &'a [CallArg<UntypedPattern>],
         module: &'a Option<EcoString>,
-        with_spread: bool,
+        spread: Option<SrcSpan>,
         location: &SrcSpan,
     ) -> Document<'a> {
         fn is_breakable(expr: &UntypedPattern) -> bool {
@@ -1118,11 +1118,11 @@ impl<'comments> Formatter<'comments> {
             None => name.to_doc(),
         };
 
-        if args.is_empty() && with_spread {
+        if args.is_empty() && spread.is_some() {
             name.append("(..)")
         } else if args.is_empty() {
             name
-        } else if with_spread {
+        } else if spread.is_some() {
             let args = args.iter().map(|a| self.pattern_call_arg(a)).collect_vec();
             name.append(self.wrap_args_with_spread(args, location.end))
         } else {
@@ -2021,10 +2021,10 @@ impl<'comments> Formatter<'comments> {
                 name,
                 arguments: args,
                 module,
-                with_spread,
+                spread,
                 location,
                 ..
-            } => self.pattern_constructor(name, args, module, *with_spread, location),
+            } => self.pattern_constructor(name, args, module, *spread, location),
 
             Pattern::Tuple {
                 elems, location, ..

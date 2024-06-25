@@ -1416,7 +1416,7 @@ pub enum Pattern<Type> {
         arguments: Vec<CallArg<Self>>,
         module: Option<EcoString>,
         constructor: Inferred<PatternConstructor>,
-        with_spread: bool,
+        spread: Option<SrcSpan>,
         type_: Type,
     },
 
@@ -1595,9 +1595,21 @@ impl TypedPattern {
             | Pattern::StringPrefix { .. }
             | Pattern::Invalid { .. } => Some(Located::Pattern(self)),
 
-            Pattern::Constructor { arguments, .. } => {
-                arguments.iter().find_map(|arg| arg.find_node(byte_index))
-            }
+            Pattern::Constructor {
+                arguments,
+                spread,
+                module,
+                ..
+            } => match spread {
+                Some(spread_location) if spread_location.contains(byte_index) => {
+                    Some(Located::PatternSpread(
+                        *spread_location,
+                        // TODO)) Figure out what to do when the module is missing!!
+                        module.to_owned().unwrap_or("".into()),
+                    ))
+                }
+                Some(_) | None => arguments.iter().find_map(|arg| arg.find_node(byte_index)),
+            },
             Pattern::List { elements, tail, .. } => elements
                 .iter()
                 .find_map(|p| p.find_node(byte_index))

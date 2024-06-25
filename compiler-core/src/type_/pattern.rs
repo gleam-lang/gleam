@@ -420,7 +420,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 module,
                 name,
                 arguments: mut pattern_args,
-                with_spread,
+                spread,
                 ..
             } => {
                 // Register the value as seen for detection of unused values
@@ -434,24 +434,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 match cons.field_map() {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
                     Some(field_map) => {
-                        if with_spread {
+                        if let Some(spread_location) = spread {
                             // Using the spread operator when you have already provided variables for all of the
                             // record's fields throws an error
                             if pattern_args.len() == field_map.arity as usize {
                                 return Err(Error::UnnecessarySpreadOperator {
-                                    location: SrcSpan {
-                                        start: location.end - 3,
-                                        end: location.end - 1,
-                                    },
+                                    location: spread_location,
                                     arity: field_map.arity as usize,
                                 });
                             }
-
-                            // The location of the spread operator itself
-                            let spread_location = SrcSpan {
-                                start: location.end - 3,
-                                end: location.end - 1,
-                            };
 
                             // Insert discard variables to match the unspecified fields
                             // In order to support both positional and labelled arguments we have to insert
@@ -487,13 +478,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         // The fun has no field map and so we error if arguments have been labelled
                         assert_no_labelled_arguments(&pattern_args)?;
 
-                        if with_spread {
-                            // The location of the spread operator itself
-                            let spread_location = SrcSpan {
-                                start: location.end - 3,
-                                end: location.end - 1,
-                            };
-
+                        if let Some(spread_location) = spread {
                             if let ValueConstructorVariant::Record { arity, .. } = &cons.variant {
                                 while pattern_args.len() < usize::from(*arity) {
                                     pattern_args.push(CallArg {
@@ -582,7 +567,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 name,
                                 arguments: pattern_args,
                                 constructor: Inferred::Known(constructor),
-                                with_spread,
+                                spread,
                                 type_: retrn.clone(),
                             })
                         } else {
@@ -605,7 +590,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 name,
                                 arguments: vec![],
                                 constructor: Inferred::Known(constructor),
-                                with_spread,
+                                spread,
                                 type_: instantiated_constructor_type,
                             })
                         } else {

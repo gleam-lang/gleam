@@ -1505,7 +1505,7 @@ where
         module: Option<(u32, EcoString, u32)>,
     ) -> Result<UntypedPattern, ParseError> {
         let (mut start, name, end) = self.expect_upname()?;
-        let (args, with_spread, end) = self.parse_constructor_pattern_args(end)?;
+        let (args, spread, end) = self.parse_constructor_pattern_args(end)?;
         if let Some((s, _, _)) = module {
             start = s;
         }
@@ -1514,7 +1514,7 @@ where
             arguments: args,
             module: module.map(|(_, n, _)| n),
             name,
-            with_spread,
+            spread,
             constructor: Inferred::Unknown,
             type_: (),
         })
@@ -1525,21 +1525,24 @@ where
     fn parse_constructor_pattern_args(
         &mut self,
         upname_end: u32,
-    ) -> Result<(Vec<CallArg<UntypedPattern>>, bool, u32), ParseError> {
+    ) -> Result<(Vec<CallArg<UntypedPattern>>, Option<SrcSpan>, u32), ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args = Parser::series_of(
                 self,
                 &Parser::parse_constructor_pattern_arg,
                 Some(&Token::Comma),
             )?;
-            let with_spread = self.maybe_one(&Token::DotDot).is_some();
-            if with_spread {
+            let spread = self
+                .maybe_one(&Token::DotDot)
+                .map(|(start, end)| SrcSpan { start, end });
+
+            if spread.is_some() {
                 let _ = self.maybe_one(&Token::Comma);
             }
             let (_, end) = self.expect_one(&Token::RightParen)?;
-            Ok((args, with_spread, end))
+            Ok((args, spread, end))
         } else {
-            Ok((vec![], false, upname_end))
+            Ok((vec![], None, upname_end))
         }
     }
 
