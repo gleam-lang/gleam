@@ -294,6 +294,7 @@ pub struct UnqualifiedImport<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Located<'a> {
     Pattern(&'a TypedPattern),
+    PatternSpread(SrcSpan, EcoString),
     Statement(&'a TypedStatement),
     Expression(&'a TypedExpr),
     ModuleStatement(&'a TypedDefinition),
@@ -321,6 +322,7 @@ impl<'a> Located<'a> {
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
     ) -> Option<DefinitionLocation<'_>> {
         match self {
+            Self::PatternSpread(..) => None,
             Self::Pattern(pattern) => pattern.definition_location(),
             Self::Statement(statement) => statement.definition_location(),
             Self::FunctionBody(statement) => None,
