@@ -1292,7 +1292,7 @@ where
                 }
 
                 Pattern::List {
-                    location: SrcSpan { start, end },
+                    location: SrcSpan { start, end: rsqb_e },
                     elements,
                     tail: tail.map(Box::new),
                     type_: (),
