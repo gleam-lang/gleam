@@ -46,12 +46,9 @@ pub fn src_offset_to_lsp_position(offset: u32, line_numbers: &LineNumbers) -> Po
 }
 
 pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range {
-    let start = line_numbers.line_and_column_number(location.start);
-    let end = line_numbers.line_and_column_number(location.end);
-
     Range::new(
-        Position::new(start.line - 1, start.column - 1),
-        Position::new(end.line - 1, end.column - 1),
+        src_offset_to_lsp_position(location.start, line_numbers),
+        src_offset_to_lsp_position(location.end, line_numbers),
     )
 }
 

@@ -13,6 +13,8 @@ pub struct InlayHint {
     pub offset: u32,
 }
 
+/// Determines if the expression is a simple literal whose inlayHints must not be showed
+/// in a pipeline chain
 fn is_simple_lit(expr: &TypedExpr) -> bool {
     matches!(
         expr,
@@ -44,13 +46,12 @@ impl<'a, 'ast> Visit<'ast> for InlayHintsVisitor<'a> {
         assignments: &'ast [TypedAssignment],
         finally: &'ast TypedExpr,
     ) {
-        fn get_this_line(this: &InlayHintsVisitor<'_>, span: &SrcSpan) -> u32 {
-            this.line_numbers.line_and_column_number(span.end).line
-        }
-
         let mut prev_hint: Option<(u32, Option<InlayHint>)> = None;
         for assign in assignments {
-            let this_line = get_this_line(self, &assign.location);
+            let this_line: u32 = self
+                .line_numbers
+                .line_and_column_number(assign.location.end)
+                .line;
 
             if let Some((prev_line, prev_hint)) = prev_hint {
                 if prev_line != this_line {
@@ -77,7 +78,10 @@ impl<'a, 'ast> Visit<'ast> for InlayHintsVisitor<'a> {
         }
 
         if let Some((prev_line, prev_hint)) = prev_hint {
-            let this_line = get_this_line(self, &finally.location());
+            let this_line = self
+                .line_numbers
+                .line_and_column_number(finally.location().end)
+                .line;
             if this_line != prev_line {
                 if let Some(prev_hint) = prev_hint {
                     self.hints.push(prev_hint);
@@ -88,6 +92,8 @@ impl<'a, 'ast> Visit<'ast> for InlayHintsVisitor<'a> {
                 });
             }
         }
+
+        visit::visit_typed_expr(self, finally);
     }
 }
 

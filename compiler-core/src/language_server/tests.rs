@@ -7,19 +7,7 @@ mod hover;
 mod inlay_hints;
 mod signature_help;
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex, RwLock},
-    time::SystemTime,
-};
-
-use ecow::EcoString;
-use hexpm::version::{Range, Version};
-
-use camino::{Utf8Path, Utf8PathBuf};
-use itertools::Itertools;
-use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
-
+use super::configuration::{Configuration, InlayHintsConfig};
 use crate::{
     config::PackageConfig,
     io::{
@@ -35,8 +23,15 @@ use crate::{
     requirement::Requirement,
     Result,
 };
-
-use super::configuration::{Configuration, InlayHintsConfig};
+use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
+use hexpm::version::{Range, Version};
+use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex, RwLock},
+    time::SystemTime,
+};
 
 pub const LSP_TEST_ROOT_PACKAGE_NAME: &str = "app";
 
@@ -359,6 +354,7 @@ fn add_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, n
     )
 }
 
+/// For testing purposes, turn all the flags on
 fn default_test_config() -> Configuration {
     Configuration {
         inlay_hints: InlayHintsConfig { pipelines: true },
@@ -533,16 +529,16 @@ impl<'a> TestProject<'a> {
         engine
     }
 
-    pub fn build_path(&self, position: Position) -> TextDocumentPositionParams {
+    fn build_path() -> TextDocumentIdentifier {
         let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
             r"\\?\C:\src\app.gleam"
         } else {
             "/src/app.gleam"
         });
 
-        let url = Url::from_file_path(path).unwrap();
+        let url = Url::from_file_path(path).expect("valid path");
 
-        TextDocumentPositionParams::new(TextDocumentIdentifier::new(url), position)
+        TextDocumentIdentifier::new(url)
     }
 
     pub fn build_test_path(
@@ -576,7 +572,7 @@ impl<'a> TestProject<'a> {
 
         let _response = engine.compile_please();
 
-        let param = self.build_path(position);
+        let param = TextDocumentPositionParams::new(Self::build_path(), position);
 
         (engine, param)
     }

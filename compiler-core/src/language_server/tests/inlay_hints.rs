@@ -1,9 +1,5 @@
 use crate::language_server::tests::{setup_engine, LanguageServerTestIO};
-use camino::Utf8PathBuf;
-use lsp_types::{
-    InlayHint, InlayHintKind, InlayHintLabel, InlayHintParams, Position, Range,
-    TextDocumentIdentifier, Url,
-};
+use lsp_types::{InlayHint, InlayHintKind, InlayHintLabel, InlayHintParams, Position, Range};
 
 #[test]
 fn render_inlay_hints() {
@@ -57,16 +53,8 @@ fn inlay_hints(src: &str) -> Vec<InlayHint> {
     let response = engine.compile_please();
     assert!(response.result.is_ok());
 
-    let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-        r"\\?\C:\src\app.gleam"
-    } else {
-        "/src/app.gleam"
-    });
-
-    let url = Url::from_file_path(path).expect("should be valid path for url");
-
     let params = InlayHintParams {
-        text_document: TextDocumentIdentifier::new(url),
+        text_document: super::TestProject::build_path(),
         work_done_progress_params: Default::default(),
         range: Range::new(
             Position::new(0, 0),
@@ -76,7 +64,9 @@ fn inlay_hints(src: &str) -> Vec<InlayHint> {
             ),
         ),
     };
-    let response = engine.inlay_hints(params);
 
-    response.result.expect("inlay hint request should not fail")
+    engine
+        .inlay_hints(params)
+        .result
+        .expect("inlay hint request should not fail")
 }
