@@ -348,14 +348,6 @@ fn unused_imported_module_with_alias_and_unqualified_name_no_warnings_test() {
 }
 
 #[test]
-fn unused_imported_module_with_alias_no_warning_on_used_in_case_test() {
-    assert_no_warnings!(
-        ("thepackage", "gleam/foo", "pub type Foo { Foo(Int) }"),
-        "import gleam/foo as f\npub fn baz(a) { case a { f.Foo(int) -> { int } }  }",
-    );
-}
-
-#[test]
 fn unused_imported_module_no_warning_on_used_function_test() {
     assert_no_warnings!(
         ("thepackage", "gleam/foo", "pub fn bar() { 1 }"),
@@ -384,6 +376,15 @@ fn unused_imported_module_no_warning_on_used_unqualified_type_test() {
     assert_no_warnings!(
         ("thepackage", "gleam/foo", "pub type Foo = Int"),
         "import gleam/foo.{type Foo} pub fn baz(a: Foo) { a }",
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3313
+#[test]
+fn imported_module_with_alias_no_warning_when_only_used_in_case_test() {
+    assert_no_warnings!(
+        ("thepackage", "gleam/foo", "pub type Foo { Foo(Int) }"),
+        "import gleam/foo as f\npub fn baz(a) { case a { f.Foo(int) -> { int } }  }",
     );
 }
 
