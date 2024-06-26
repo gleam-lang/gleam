@@ -141,10 +141,12 @@
   and adds the import to the top of the file.
   ([Ameen Radwan](https://github.com/Acepie))
 
-- Diagnostics with extra labels now show the diagnostic in all locations including across multiple files.
+- Diagnostics with extra labels now show the diagnostic in all locations
+  including across multiple files.
   ([Ameen Radwan](https://github.com/Acepie))
 
-- LSP completions now use the "text_edit" language server API resulting in better/more accurate insertions.
+- LSP completions now use the "text_edit" language server API resulting in
+  better/more accurate insertions.
   ([Ameen Radwan](https://github.com/Acepie))
 
 ### Bug Fixes
