@@ -455,6 +455,52 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 .position(|a| a.label.is_some())
                                 .unwrap_or(pattern_args.len());
 
+                            // In Gleam we can pass in positional unlabelled args to a constructor
+                            // even if the field was defined as labelled
+                            //
+                            //     pub type Wibble {
+                            //       Wibble(Int, two: Int, three: Int, four: Int)
+                            //     }
+                            //     Wibble(1, 2, 3, 4)
+                            //
+                            // When using `..` to ignore some fields the compiler needs to add a
+                            // placeholder implicit discard pattern for each one of the ignored
+                            // arguments. To give those discards the proper missing label we need to
+                            // know how many of the labelled fields were provided as unlabelled.
+                            //
+                            // That's why we want to keep track of the number of unlabelled argument
+                            // that have been supplied to the pattern and all the labels that have
+                            // been explicitly supplied.
+                            //
+                            //     Wibble(a, b, four: c, ..)
+                            //            ┬───  ┬──────
+                            //            │     ╰ We supplied 1 labelled arg
+                            //            ╰ We supplied 2 unlabelled args
+                            //
+                            let supplied_unlabelled_args = index_of_first_labelled_arg;
+                            let supplied_labelled_args = pattern_args
+                                .iter()
+                                .filter_map(|l| l.label.clone())
+                                .collect::<HashSet<_>>();
+                            let constructor_unlabelled_args =
+                                field_map.arity - field_map.fields.len() as u32;
+                            let labelled_arguments_supplied_as_unlabelled =
+                                supplied_unlabelled_args
+                                    .saturating_sub(constructor_unlabelled_args as usize);
+
+                            let mut missing_labels = field_map
+                                .fields
+                                .iter()
+                                // We take the labels in order of definition in the constructor...
+                                .sorted_by_key(|(_, pos)| *pos)
+                                .map(|(label, _)| label.clone())
+                                // ...and then remove the ones that were supplied as unlabelled
+                                // positional arguments...
+                                .skip(labelled_arguments_supplied_as_unlabelled)
+                                // ... lastly we still need to remove all those labels that
+                                // were explicitly supplied in the pattern.
+                                .filter(|label| !supplied_labelled_args.contains(label));
+
                             while pattern_args.len() < field_map.arity as usize {
                                 let new_call_arg = CallArg {
                                     value: Pattern::Discard {
@@ -463,8 +509,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                         type_: (),
                                     },
                                     location: spread_location,
-                                    label: None,
-                                    implicit: false,
+                                    label: missing_labels.next(),
+                                    implicit: true,
                                 };
 
                                 pattern_args.insert(index_of_first_labelled_arg, new_call_arg);
@@ -510,7 +556,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         documentation: documentation.clone(),
                         name: name.clone(),
                         field_map: cons.field_map().cloned(),
-                        module: Some(module.clone()),
+                        module: module.clone(),
                         location: *location,
                         constructor_index: *constructor_index,
                     },

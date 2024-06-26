@@ -208,7 +208,7 @@ where
             };
 
             let completions = match found {
-                Located::PatternSpread(..) => None,
+                Located::PatternSpread { .. } => None,
                 Located::Pattern(_pattern) => None,
 
                 Located::Statement(_) | Located::Expression(_) => {
@@ -329,15 +329,41 @@ where
                         }
                     }),
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
-                Located::PatternSpread(spread_location, module) => this
-                    .compiler
-                    .get_module_inferface(module.as_str())
-                    .and_then(|module| todo!()),
-                //Some(Hover {
-                //    // TODO)) use get_module_inferface
-                //    contents: HoverContents::Scalar(MarkedString::String("FIELDS".into())),
-                //    range: Some(src_span_to_lsp_range(spread_location, &lines)),
-                //}),
+                Located::PatternSpread {
+                    spread_location,
+                    unused_fields,
+                } => {
+                    let range = Some(src_span_to_lsp_range(spread_location, &lines));
+
+                    let mut positional = vec![];
+                    let mut labelled = vec![];
+                    for (label, type_) in unused_fields {
+                        let type_ = Printer::new().pretty_print(type_.as_ref(), 0);
+                        match label {
+                            Some(label) => labelled.push(format!("- `{}: {}`", label, type_)),
+                            None => positional.push(format!("- `{}`", type_)),
+                        }
+                    }
+
+                    let positional = positional.join("\n");
+                    let labelled = labelled.join("\n");
+                    let content = match (positional.is_empty(), labelled.is_empty()) {
+                        (true, false) => format!("Unused labelled fields:\n{labelled}"),
+                        (false, true) => format!("Unused positional fields:\n{positional}"),
+                        (_, _) => format!(
+                            "Unused positional fields:
+{positional}
+
+Unused labelled fields:
+{labelled}"
+                        ),
+                    };
+
+                    Some(Hover {
+                        contents: HoverContents::Scalar(MarkedString::from_markdown(content)),
+                        range,
+                    })
+                }
                 Located::Expression(expression) => {
                     let module = this.module_for_uri(&params.text_document.uri);
 
