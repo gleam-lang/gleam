@@ -271,6 +271,6 @@ impl fmt::Display for Token {
             Token::Vbar => "|",
             Token::VbarVbar => "||",
         };
-        write!(f, "\"{s}\"")
+        write!(f, "`{s}`")
     }
 }
