@@ -200,7 +200,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     Token::CommentDoc { .. } => "a comment".to_string(),
                     Token::DiscardName { .. } => "a discard name".to_string(),
                     Token::Name { .. } | Token::UpName { .. } => "a name".to_string(),
-                    _ if found.is_reserved_word() => format!("the keyword {}", found.to_string()),
+                    _ if found.is_reserved_word() => format!("the keyword {}", found),
                     _ => found.to_string(),
                 };
 
