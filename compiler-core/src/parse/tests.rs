@@ -1059,6 +1059,19 @@ type A {
 }
 
 #[test]
+fn type_invalid_record() {
+    assert_module_error!(
+        "
+type A {
+    One
+    Two
+    3
+}
+"
+    );
+}
+
+#[test]
 fn function_type_invalid_param_type() {
     assert_module_error!(
         "
@@ -1066,6 +1079,17 @@ fn f(g: fn(Int, 1) -> Int) -> Int {
   g(0, 1)
 }
 "
+    );
+}
+
+#[test]
+fn function_invalid_signature() {
+    assert_module_error!(
+        r#"
+fn f(a, "b") -> String {
+    a <> b
+}
+"#
     );
 }
 
