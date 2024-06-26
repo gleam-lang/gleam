@@ -200,8 +200,14 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 hint,
             } => {
                 let found = match found {
-                    ParserErrorCause::Token(tok) => tok.to_string(),
                     ParserErrorCause::Descriptor(desc) => desc.to_string(),
+                    ParserErrorCause::Token(tok) => {
+                        let display = tok.to_string();
+                        match tok.is_reserved_word() {
+                            true => format!("the keyword `{}`", display.replace("\"", "")),
+                            false => display
+                        }
+                    },
                 };
 
                 let messages = std::iter::once(format!("Found {found}, expected one of: "))
