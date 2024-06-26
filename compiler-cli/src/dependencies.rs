@@ -164,29 +164,69 @@ fn parse_hex_requirement(package: &str) -> Result<Requirement> {
 }
 
 #[test]
-fn hex_from_package_specifier() {
-    // Bad versions.
-    assert!(parse_hex_requirement("package_1@1.2.3.4").is_err());
-    assert!(parse_hex_requirement("package_2@not_a_version").is_err());
+fn parse_hex_requirement_invalid_semver() {
+    assert!(parse_hex_requirement("some_package@1.2.3.4").is_err());
+}
 
-    // Good versions.
-    let packages = vec![
-        ("package_3", ">= 0.0.0"),
-        ("package_4@1", ">= 1.0.0 and < 2.0.0"),
-        ("package_5@1.2", ">= 1.2.0 and < 2.0.0"),
-        ("package_6@1.2.3", "1.2.3"),
-    ];
+#[test]
+fn parse_hex_requirement_non_numeric_version() {
+    assert!(parse_hex_requirement("some_package@not_a_version").is_err());
+}
 
-    for (provided, expected) in packages {
-        let version = parse_hex_requirement(&provided).unwrap();
-        match &version {
-            Requirement::Hex { version: v } => {
-                assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
-            }
-            _ => assert!(false, "failed hexpm version parse: {}", provided),
+#[test]
+fn parse_hex_requirement_default() {
+    let provided = "some_package";
+    let expected = ">= 0.0.0";
+    let version = parse_hex_requirement(&provided).unwrap();
+    match &version {
+        Requirement::Hex { version: v } => {
+            assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
         }
-        assert_eq!(version, Requirement::hex(expected))
+        _ => assert!(false, "failed hexpm version parse: {}", provided),
     }
+    assert_eq!(version, Requirement::hex(expected))
+}
+
+#[test]
+fn parse_hex_requirement_major_only() {
+    let provided = "some_package@1";
+    let expected = ">= 1.0.0 and < 2.0.0";
+    let version = parse_hex_requirement(&provided).unwrap();
+    match &version {
+        Requirement::Hex { version: v } => {
+            assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
+        }
+        _ => assert!(false, "failed hexpm version parse: {}", provided),
+    }
+    assert_eq!(version, Requirement::hex(expected))
+}
+
+#[test]
+fn parse_hex_requirement_major_and_minor() {
+    let provided = "some_package@1.2";
+    let expected = ">= 1.2.0 and < 2.0.0";
+    let version = parse_hex_requirement(&provided).unwrap();
+    match &version {
+        Requirement::Hex { version: v } => {
+            assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
+        }
+        _ => assert!(false, "failed hexpm version parse: {}", provided),
+    }
+    assert_eq!(version, Requirement::hex(expected))
+}
+
+#[test]
+fn parse_hex_requirement_major_minor_and_patch() {
+    let provided = "some_package@1.2.3";
+    let expected = "1.2.3";
+    let version = parse_hex_requirement(&provided).unwrap();
+    match &version {
+        Requirement::Hex { version: v } => {
+            assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
+        }
+        _ => assert!(false, "failed hexpm version parse: {}", provided),
+    }
+    assert_eq!(version, Requirement::hex(expected))
 }
 
 pub fn download<Telem: Telemetry>(
