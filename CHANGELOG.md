@@ -8,6 +8,18 @@
   exist as a dependency in the project.
   ([Changfeng Lou](https://github.com/hnlcf))
 
+- `gleam add` now takes an optional package version specifier,
+  separated by a `@`, that resolves as follows:
+
+  ```shell
+  gleam add lustre@1.2.3 # "1.2.3"
+  gleam add lustre@1.2   # ">= 1.2.0 and < 2.0.0"
+  gleam add lustre@1     # ">= 1.0.0 and < 2.0.0"
+  gleam add lustre       # ">= 0.0.0"
+  ```
+
+  ([Rahul D. Ghosal](https://github.com/rdghosal))
+
 ### Compiler
 
 - Added more an informative error message for when attempting to use the `..`
