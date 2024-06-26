@@ -1,4 +1,6 @@
 mod imports;
+pub(crate) mod name;
+
 #[cfg(test)]
 mod tests;
 
@@ -22,7 +24,6 @@ use crate::{
         expression::{ExprTyper, FunctionDefinition, Implementations},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
-        name::NameChecker,
         prelude::*,
         AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
         TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
@@ -35,6 +36,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
+use name::{check_valid_argument, check_valid_name, check_valid_upname};
 use std::{
     collections::HashMap,
     sync::{Arc, OnceLock},
@@ -350,7 +352,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             deprecation,
             ..
         } = c;
-        self.check_valid_name(location, &name, BadNameKind::Constant);
+        if let Some((error, bad_name)) = check_valid_name(location, &name, BadNameKind::Constant) {
+            self.errors.push(error);
+            self.bad_names.push(bad_name);
+        }
 
         let definition = FunctionDefinition {
             has_body: true,
@@ -755,7 +760,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                      arguments: args,
                      documentation,
                  }| {
-                    self.check_valid_upname(name_location, &name, BadNameKind::CustomTypeVariant);
+                    if let Some((error, bad_name)) =
+                        check_valid_upname(name_location, &name, BadNameKind::CustomTypeVariant)
+                    {
+                        self.errors.push(error);
+                        self.bad_names.push(bad_name);
+                    }
 
                     let preregistered_fn = environment
                         .get_variable(&name)
@@ -768,7 +778,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                                 .zip(&args_types)
                                 .map(|(argument, t)| {
                                     if let Some((label, location)) = &argument.label {
-                                        self.check_valid_name(*location, label, BadNameKind::Label);
+                                        if let Some((error, bad_name)) =
+                                            check_valid_name(*location, label, BadNameKind::Label)
+                                        {
+                                            self.errors.push(error);
+                                            self.bad_names.push(bad_name);
+                                        }
                                     }
 
                                     RecordConstructorArg {
@@ -988,7 +1003,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // could improve our approach here somewhat.
         environment.assert_unique_type_name(name, *location)?;
 
-        self.check_valid_upname(*name_location, name, BadNameKind::Type);
+        if let Some((error, bad_name)) = check_valid_upname(*name_location, name, BadNameKind::Type)
+        {
+            self.errors.push(error);
+            self.bad_names.push(bad_name);
+        }
 
         let mut hydrator = Hydrator::new();
         let parameters = self.make_type_vars(parameters, *location, &mut hydrator, environment);
@@ -1066,7 +1085,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return;
         }
 
-        self.check_valid_upname(*name_location, name, BadNameKind::TypeVariable);
+        if let Some((error, bad_name)) =
+            check_valid_upname(*name_location, name, BadNameKind::TypeVariable)
+        {
+            self.errors.push(error);
+            self.bad_names.push(bad_name);
+        }
 
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
         // in some fashion.
@@ -1156,14 +1180,21 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             implementations,
         } = f;
 
-        self.check_valid_name(*name_location, name, BadNameKind::Function);
+        if let Some((error, bad_name)) =
+            check_valid_name(*name_location, name, BadNameKind::Function)
+        {
+            self.errors.push(error);
+            self.bad_names.push(bad_name);
+        }
 
         let mut builder = FieldMapBuilder::new(args.len() as u32);
         for Arg {
             names, location, ..
         } in args.iter()
         {
-            self.check_valid_argument(names);
+            let (errors, bad_names) = check_valid_argument(names);
+            self.errors.extend(errors);
+            self.bad_names.extend(bad_names);
 
             builder.add(names.get_label(), *location)?;
         }
@@ -1217,13 +1248,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 leaked,
             });
         }
-    }
-}
-
-impl<A> NameChecker for ModuleAnalyzer<'_, A> {
-    fn push_bad_name(&mut self, error: Error, bad_name: (SrcSpan, EcoString)) {
-        self.errors.push(error);
-        self.bad_names.push(bad_name);
     }
 }
 
