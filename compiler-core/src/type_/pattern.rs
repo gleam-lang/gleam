@@ -1,13 +1,15 @@
 use im::hashmap;
 use itertools::Itertools;
-use name::NameChecker;
 
 /// Type inference and checking of patterns used in case expressions
 /// and variables bindings.
 ///
 use super::*;
 use crate::{
-    analyse::Inferred,
+    analyse::{
+        name::{check_valid_discard_name, check_valid_name},
+        Inferred,
+    },
     ast::{AssignName, Layer, UntypedPatternBitArraySegment},
 };
 use std::sync::Arc;
@@ -49,7 +51,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         typ: Arc<Type>,
         location: SrcSpan,
     ) -> Result<(), UnifyError> {
-        self.check_valid_name(location, &EcoString::from(name), BadNameKind::Variable);
+        if let Some((error, bad_name)) =
+            check_valid_name(location, &EcoString::from(name), BadNameKind::Variable)
+        {
+            self.errors.push(error);
+            self.bad_names.push(bad_name);
+        }
 
         match &mut self.mode {
             PatternMode::Initial => {
@@ -220,7 +227,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     ) -> Result<TypedPattern, Error> {
         match pattern {
             Pattern::Discard { name, location, .. } => {
-                self.check_valid_discard_name(location, &name);
+                if let Some((error, bad_name)) = check_valid_discard_name(location, &name) {
+                    self.errors.push(error);
+                    self.bad_names.push(bad_name);
+                }
                 Ok(Pattern::Discard {
                     type_,
                     name,
@@ -290,7 +300,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     self.insert_variable(right.as_ref(), string(), right_location)
                         .map_err(|e| convert_unify_error(e, location))?;
                 } else if let AssignName::Discard(right) = &right_side_assignment {
-                    self.check_valid_discard_name(right_location, right);
+                    if let Some((error, bad_name)) = check_valid_discard_name(right_location, right)
+                    {
+                        self.errors.push(error);
+                        self.bad_names.push(bad_name);
+                    }
                 };
 
                 Ok(Pattern::StringPrefix {
@@ -670,12 +684,5 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             }
         }
-    }
-}
-
-impl NameChecker for PatternTyper<'_, '_> {
-    fn push_bad_name(&mut self, error: Error, bad_name: (SrcSpan, EcoString)) {
-        self.errors.push(error);
-        self.bad_names.push(bad_name);
     }
 }

@@ -1,6 +1,6 @@
 use super::{pipe::PipeTyper, *};
 use crate::{
-    analyse::infer_bit_array_option,
+    analyse::{infer_bit_array_option, name::check_valid_argument},
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan, Statement,
@@ -16,7 +16,6 @@ use crate::{
 use id_arena::Arena;
 use im::hashmap;
 use itertools::Itertools;
-use name::NameChecker;
 use vec1::Vec1;
 
 #[derive(Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq, Serialize)]
@@ -746,7 +745,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         for Arg { names, .. } in args.iter() {
-            self.check_valid_argument(names);
+            let (errors, bad_names) = check_valid_argument(names);
+            self.errors.extend(errors);
+            self.bad_names.extend(bad_names);
         }
 
         let already_warned_for_unreachable_code = self.already_warned_for_unreachable_code;
@@ -3250,13 +3251,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         Ok(())
-    }
-}
-
-impl NameChecker for ExprTyper<'_, '_> {
-    fn push_bad_name(&mut self, error: Error, bad_name: (SrcSpan, EcoString)) {
-        self.errors.push(error);
-        self.bad_names.push(bad_name);
     }
 }
 
