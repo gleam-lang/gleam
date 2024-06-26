@@ -754,7 +754,7 @@ pub struct PatternConstructor {
     pub name: EcoString,
     pub field_map: Option<FieldMap>,
     pub documentation: Option<EcoString>,
-    pub module: Option<EcoString>,
+    pub module: EcoString,
     pub location: SrcSpan,
     pub constructor_index: u16,
 }
@@ -762,7 +762,7 @@ pub struct PatternConstructor {
 impl PatternConstructor {
     pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
         Some(DefinitionLocation {
-            module: Some(self.module.as_deref()?),
+            module: Some(self.module.as_str()),
             span: self.location,
         })
     }

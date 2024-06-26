@@ -20,6 +20,7 @@ use crate::type_::{
 use std::sync::Arc;
 
 use ecow::EcoString;
+use itertools::Itertools;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use vec1::Vec1;
@@ -1668,18 +1669,19 @@ impl TypedPattern {
             | Pattern::Invalid { .. } => Some(Located::Pattern(self)),
 
             Pattern::Constructor {
-                arguments,
-                spread,
-                module,
-                ..
+                arguments, spread, ..
             } => match spread {
                 Some(spread_location) if spread_location.contains(byte_index) => {
-                    Some(Located::PatternSpread(
-                        *spread_location,
-                        // TODO)) Figure out what to do when the module is missing!!
-                        module.to_owned().unwrap_or("".into()),
-                    ))
+                    Some(Located::PatternSpread {
+                        spread_location: *spread_location,
+                        unused_fields: arguments
+                            .iter()
+                            .filter(|arg| arg.implicit)
+                            .map(|arg| (arg.label.clone(), arg.value.type_()))
+                            .collect_vec(),
+                    })
                 }
+
                 Some(_) | None => arguments.iter().find_map(|arg| arg.find_node(byte_index)),
             },
             Pattern::List { elements, tail, .. } => elements
