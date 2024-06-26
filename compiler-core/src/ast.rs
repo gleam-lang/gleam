@@ -457,6 +457,10 @@ impl Publicity {
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A function definition
 ///
+/// Note that, for an anonymous function, the `name` field will be an empty string,
+/// and the `name_location` field will be `None`. Conversely, a named function
+/// will have a non-empty `name` field, and its `name_location` field will be `Some`.
+///
 /// # Example(s)
 ///
 /// ```gleam
@@ -464,6 +468,8 @@ impl Publicity {
 /// pub fn bar() -> String { ... }
 /// // Private function
 /// fn foo(x: Int) -> Int { ... }
+/// // Anonymous function
+/// fn(x: Int) { ... }
 /// ```
 pub struct Function<T, Expr> {
     pub location: SrcSpan,
