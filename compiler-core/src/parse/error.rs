@@ -10,12 +10,6 @@ pub struct LexicalError {
     pub location: SrcSpan,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum ParserErrorCause {
-    Token(Token),
-    Descriptor(EcoString),
-}
-
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum InvalidUnicodeEscapeError {
     MissingOpeningBrace,          // Expected '{'
@@ -200,14 +194,14 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 hint,
             } => {
                 let found = match found {
-                    ParserErrorCause::Descriptor(desc) => desc.to_string(),
-                    ParserErrorCause::Token(tok) => {
-                        let display = tok.to_string();
-                        match tok.is_reserved_word() {
-                            true => format!("the keyword {}", display),
-                            false => display,
-                        }
-                    }
+                    Token::Int { .. } => "an Int".to_string(),
+                    Token::Float { .. } => "a Float".to_string(),
+                    Token::String { .. } => "a String".to_string(),
+                    Token::CommentDoc { .. } => "a comment".to_string(),
+                    Token::DiscardName { .. } => "a discard name".to_string(),
+                    Token::Name { .. } | Token::UpName { .. } => "a name".to_string(),
+                    _ if found.is_reserved_word() => format!("the keyword {}", found.to_string()),
+                    _ => found.to_string(),
                 };
 
                 let messages = std::iter::once(format!("Found {found}, expected one of: "))
@@ -312,7 +306,7 @@ pub enum ParseErrorType {
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken {
-        found: ParserErrorCause,
+        found: Token,
         expected: Vec<EcoString>,
         hint: Option<EcoString>,
     },
