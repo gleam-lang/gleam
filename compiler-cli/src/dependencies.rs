@@ -130,7 +130,7 @@ fn parse_hex_requirement(package: &str) -> Result<Requirement> {
                 }),
             }?;
             let parts = version.split('.').collect::<Vec<_>>();
-            let major = match parts.get(0) {
+            let major = match parts.first() {
                 Some(major) => Ok(major),
                 None => Err(Error::InvalidVersionFormat {
                     input: package.to_string(),
