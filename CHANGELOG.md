@@ -149,6 +149,9 @@
   better/more accurate insertions.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- Completions are no longer provided inside comments.
+  ([Nicky Lim](https://github.com/nicklimmm))
+
 ### Bug Fixes
 
 - Fixed a bug where the compiler would output a confusing error message when
