@@ -457,9 +457,8 @@ impl Publicity {
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A function definition
 ///
-/// Note that, for an anonymous function, the `name` field will be an empty string,
-/// and the `name_location` field will be `None`. Conversely, a named function
-/// will have a non-empty `name` field, and its `name_location` field will be `Some`.
+/// Note that an anonymous function will have `None` as the name field, while a
+/// named function will have `Some`.
 ///
 /// # Example(s)
 ///
@@ -474,8 +473,7 @@ impl Publicity {
 pub struct Function<T, Expr> {
     pub location: SrcSpan,
     pub end_position: u32,
-    pub name: EcoString,
-    pub name_location: Option<SrcSpan>,
+    pub name: Option<(SrcSpan, EcoString)>,
     pub arguments: Vec<Arg<T>>,
     pub body: Vec1<Statement<T, Expr>>,
     pub publicity: Publicity,
@@ -641,7 +639,9 @@ pub enum Definition<T, Expr, ConstantRecordTag, PackageName> {
 impl TypedDefinition {
     pub fn main_function(&self) -> Option<&TypedFunction> {
         match self {
-            Definition::Function(f) if f.name == "main" => Some(f),
+            Definition::Function(f) if f.name.as_ref().is_some_and(|(_, name)| name == "main") => {
+                Some(f)
+            }
             _ => None,
         }
     }

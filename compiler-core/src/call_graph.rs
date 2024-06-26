@@ -42,7 +42,10 @@ impl<'a> CallGraphBuilder<'a> {
         &mut self,
         function: &'a UntypedFunction,
     ) -> Result<(), Error> {
-        let name = &function.name;
+        let (_, name) = function
+            .name
+            .as_ref()
+            .expect("A module's function must be named");
         let location = function.location;
 
         let index = self.graph.add_node(());
@@ -92,9 +95,16 @@ impl<'a> CallGraphBuilder<'a> {
 
     fn register_references(&mut self, function: &'a UntypedFunction) {
         let names = self.names.clone();
+
         self.current_function = self
             .names
-            .get(function.name.as_str())
+            .get(
+                function
+                    .name
+                    .as_ref()
+                    .map(|(_, name)| name.as_str())
+                    .expect("A module's function must be named"),
+            )
             .expect("Function must already have been registered as existing")
             .expect("Function must not be shadowed at module level")
             .0;

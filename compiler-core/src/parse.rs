@@ -1636,15 +1636,16 @@ where
         } else {
             self.take_documentation(start)
         };
-        let mut name = EcoString::from("");
-        let mut name_location = None;
+        let mut name = None;
         if !is_anon {
             let (name_start, n, name_end) = self.expect_name()?;
-            name = n;
-            name_location = Some(SrcSpan {
-                start: name_start,
-                end: name_end,
-            });
+            name = Some((
+                SrcSpan {
+                    start: name_start,
+                    end: name_end,
+                },
+                n,
+            ));
         }
         let _ = self.expect_one(&Token::LeftParen)?;
         let args = Parser::series_of(
@@ -1694,7 +1695,6 @@ where
         Ok(Some(Definition::Function(Function {
             documentation,
             location: SrcSpan { start, end },
-            name_location,
             end_position,
             publicity: self.publicity(public, attributes.internal)?,
             name,

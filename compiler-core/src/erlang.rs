@@ -243,7 +243,7 @@ fn register_imports(
     match s {
         Definition::Function(Function {
             publicity,
-            name,
+            name: Some((_, name)),
             arguments: args,
             implementations,
             ..
@@ -373,7 +373,11 @@ fn module_function<'a>(
         return None;
     }
 
-    let mut env = Env::new(module, &function.name, line_numbers);
+    let (_, name) = function
+        .name
+        .as_ref()
+        .expect("A module's function must be named");
+    let mut env = Env::new(module, name, line_numbers);
     let var_usages = collect_type_var_usages(
         HashMap::new(),
         std::iter::once(&function.return_type).chain(function.arguments.iter().map(|a| &a.type_)),
@@ -384,7 +388,7 @@ fn module_function<'a>(
         .iter()
         .map(|a| type_printer.print(&a.type_));
     let return_spec = type_printer.print(&function.return_type);
-    let spec = fun_spec(&function.name, args_spec, return_spec);
+    let spec = fun_spec(name, args_spec, return_spec);
     let arguments = fun_args(&function.arguments, &mut env);
 
     let body = function
@@ -394,7 +398,7 @@ fn module_function<'a>(
         .unwrap_or_else(|| statement_sequence(&function.body, &mut env));
 
     let doc = spec
-        .append(atom_string(function.name.to_string()))
+        .append(atom_string(name.to_string()))
         .append(arguments)
         .append(" ->")
         .append(line().append(body).nest(INDENT).group())

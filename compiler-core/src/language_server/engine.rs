@@ -300,13 +300,18 @@ where
                             end: function.end_position,
                         };
 
+                        let (name_location, name) = function
+                            .name
+                            .as_ref()
+                            .expect("Function in a definition must be named");
+
                         // The 'deprecated' field is deprecated, but we have to specify it anyway
                         // to be able to construct the 'DocumentSymbol' type, so
                         // we suppress the warning. We specify 'None' as specifying 'Some'
                         // is what is actually deprecated.
                         #[allow(deprecated)]
                         symbols.push(DocumentSymbol {
-                            name: function.name.to_string(),
+                            name: name.to_string(),
                             detail: Some(
                                 Printer::new().pretty_print(&get_function_type(function), 0),
                             ),
@@ -314,10 +319,7 @@ where
                             tags: make_deprecated_symbol_tag(&function.deprecation),
                             deprecated: None,
                             range: src_span_to_lsp_range(full_function_span, &line_numbers),
-                            selection_range: src_span_to_lsp_range(
-                                function.name_location.unwrap_or(function.location),
-                                &line_numbers,
-                            ),
+                            selection_range: src_span_to_lsp_range(*name_location, &line_numbers),
                             children: None,
                         });
                     }

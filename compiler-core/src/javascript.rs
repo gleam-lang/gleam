@@ -349,7 +349,7 @@ impl<'a> Generator<'a> {
                 }
 
                 Definition::Function(Function {
-                    name,
+                    name: Some((_, name)),
                     publicity,
                     external_javascript: Some((module, function)),
                     ..
@@ -478,6 +478,10 @@ impl<'a> Generator<'a> {
     }
 
     fn module_function(&mut self, function: &'a TypedFunction) -> Option<Output<'a>> {
+        let (_, name) = function
+            .name
+            .as_ref()
+            .expect("A module's function must be named");
         let argument_names = function
             .arguments
             .iter()
@@ -486,7 +490,7 @@ impl<'a> Generator<'a> {
         let mut generator = expression::Generator::new(
             self.module.name.clone(),
             self.line_numbers,
-            function.name.clone(),
+            name.clone(),
             argument_names,
             &mut self.tracker,
             self.module_scope.clone(),
@@ -514,7 +518,7 @@ impl<'a> Generator<'a> {
 
         let document = docvec![
             head,
-            maybe_escape_identifier_doc(function.name.as_str()),
+            maybe_escape_identifier_doc(name.as_str()),
             fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
             " {",
             docvec![line(), body].nest(INDENT).group(),
@@ -527,8 +531,15 @@ impl<'a> Generator<'a> {
     fn register_module_definitions_in_scope(&mut self) {
         for statement in self.module.definitions.iter() {
             match statement {
-                Definition::ModuleConstant(ModuleConstant { name, .. })
-                | Definition::Function(Function { name, .. }) => self.register_in_scope(name),
+                Definition::ModuleConstant(ModuleConstant { name, .. }) => {
+                    self.register_in_scope(name)
+                }
+
+                Definition::Function(Function { name, .. }) => self.register_in_scope(
+                    name.as_ref()
+                        .map(|(_, name)| name)
+                        .expect("Function in a definition must be named"),
+                ),
 
                 Definition::Import(Import {
                     unqualified_values: unqualified,

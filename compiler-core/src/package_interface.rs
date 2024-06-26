@@ -497,7 +497,6 @@ impl ModuleInterface {
                     documentation,
                     implementations,
                     location: _,
-                    name_location: _,
                     end_position: _,
                     body: _,
                     return_annotation: _,
@@ -505,6 +504,9 @@ impl ModuleInterface {
                     external_javascript: _,
                 }) => {
                     let mut id_map = IdMap::new();
+                    let (_, name) = name
+                        .as_ref()
+                        .expect("Function in a definition must be named");
                     let _ = functions.insert(
                         name.clone(),
                         FunctionInterface {

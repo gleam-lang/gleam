@@ -751,7 +751,13 @@ impl<'comments> Formatter<'comments> {
             .collect_vec();
         let signature = pub_(function.publicity)
             .append("fn ")
-            .append(&function.name)
+            .append(
+                &function
+                    .name
+                    .as_ref()
+                    .expect("Function in a statement must be named")
+                    .1,
+            )
             .append(self.wrap_args(args, function.location.end));
 
         // Add return annotation

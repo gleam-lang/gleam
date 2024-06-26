@@ -324,7 +324,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
             Definition::Function(Function {
                 arguments,
-                name,
+                name: Some((_, name)),
                 publicity,
                 return_type,
                 ..

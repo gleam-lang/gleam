@@ -525,21 +525,27 @@ fn function<'a>(
             location,
             deprecation,
             ..
-        }) => Some(DocsFunction {
-            name,
-            documentation: markdown_documentation(doc),
-            text_documentation: text_documentation(doc),
-            signature: print(
-                formatter
-                    .docs_fn_signature(Publicity::Public, name, args, ret.clone(), location)
-                    .group(),
-            ),
-            source_url: source_links.url(*location),
-            deprecation_message: match deprecation {
-                Deprecation::NotDeprecated => "".to_string(),
-                Deprecation::Deprecated { message } => message.to_string(),
-            },
-        }),
+        }) => {
+            let (_, name) = name
+                .as_ref()
+                .expect("Function in a definition must be named");
+
+            Some(DocsFunction {
+                name,
+                documentation: markdown_documentation(doc),
+                text_documentation: text_documentation(doc),
+                signature: print(
+                    formatter
+                        .docs_fn_signature(Publicity::Public, name, args, ret.clone(), location)
+                        .group(),
+                ),
+                source_url: source_links.url(*location),
+                deprecation_message: match deprecation {
+                    Deprecation::NotDeprecated => "".to_string(),
+                    Deprecation::Deprecated { message } => message.to_string(),
+                },
+            })
+        }
 
         _ => None,
     }

@@ -408,7 +408,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             documentation: doc,
             location,
             name,
-            name_location,
             publicity,
             arguments,
             body,
@@ -420,6 +419,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_type: (),
             implementations: _,
         } = f;
+        let (name_location, name) = name.expect("Function in a definition must be named");
         let target = environment.target;
         let body_location = body.last().location();
         let preregistered_fn = environment
@@ -553,8 +553,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         Definition::Function(Function {
             documentation: doc,
             location,
-            name,
-            name_location,
+            name: Some((name_location, name)),
             publicity,
             deprecation,
             arguments: typed_args,
@@ -1112,7 +1111,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name,
             arguments: args,
             location,
-            name_location: _,
             return_annotation,
             publicity,
             documentation,
@@ -1124,6 +1122,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_type: _,
             implementations,
         } = f;
+        let (_, name) = name.as_ref().expect("A module's function must be named");
         let mut builder = FieldMapBuilder::new(args.len() as u32);
         for arg in args.iter() {
             builder.add(arg.names.get_label(), arg.location)?;
@@ -1161,7 +1160,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         environment.insert_variable(name.clone(), variant, typ, *publicity, deprecation.clone());
         if publicity.is_private() {
             environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
-        };
+        }
         Ok(())
     }
 
@@ -1398,7 +1397,6 @@ fn generalise_function(
         documentation: doc,
         location,
         name,
-        name_location,
         publicity,
         deprecation,
         arguments: args,
@@ -1410,6 +1408,8 @@ fn generalise_function(
         external_javascript,
         implementations,
     } = function;
+
+    let (name_location, name) = name.expect("Function in a definition must be named");
 
     // Lookup the inferred function information
     let function = environment
@@ -1454,8 +1454,7 @@ fn generalise_function(
     Definition::Function(Function {
         documentation: doc,
         location,
-        name,
-        name_location,
+        name: Some((name_location, name)),
         publicity,
         deprecation,
         arguments: args,
