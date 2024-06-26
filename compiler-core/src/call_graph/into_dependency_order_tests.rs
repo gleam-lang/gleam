@@ -29,7 +29,11 @@ fn parse_and_order(
                 .collect_vec(),
             body: crate::parse::parse_statement_sequence(src).expect("syntax error"),
             location: Default::default(),
-            name_location: (!name.is_empty()).then_some(SrcSpan::default()),
+            name_location: if name.is_empty() {
+                None
+            } else {
+                Some(SrcSpan::default())
+            },
             return_annotation: None,
             publicity: Publicity::Public,
             deprecation: Deprecation::NotDeprecated,

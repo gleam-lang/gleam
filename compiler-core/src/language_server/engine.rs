@@ -286,7 +286,6 @@ where
 
             for definition in &module.ast.definitions {
                 match definition {
-                    #[allow(deprecated)]
                     Definition::Function(function) => {
                         // By default, the function's location ends right after the return type.
                         // For the full symbol range, have it end at the end of the body.
@@ -301,6 +300,11 @@ where
                             end: function.end_position,
                         };
 
+                        // The 'deprecated' field is deprecated, but we have to specify it anyway
+                        // to be able to construct the 'DocumentSymbol' type, so
+                        // we suppress the warning. We specify 'None' as specifying 'Some'
+                        // is what is actually deprecated.
+                        #[allow(deprecated)]
                         symbols.push(DocumentSymbol {
                             name: function.name.to_string(),
                             detail: Some(
@@ -318,7 +322,6 @@ where
                         });
                     }
 
-                    #[allow(deprecated)]
                     Definition::TypeAlias(alias) => {
                         let full_alias_span = match alias.documentation {
                             Some((doc_position, _)) => {
@@ -328,6 +331,7 @@ where
                         };
                         let (name_location, name) = &alias.alias;
 
+                        #[allow(deprecated)]
                         symbols.push(DocumentSymbol {
                             name: name.to_string(),
                             detail: Some(Printer::new().pretty_print(&alias.type_, 0)),
@@ -346,7 +350,6 @@ where
 
                     Definition::Import(_) => {}
 
-                    #[allow(deprecated)]
                     Definition::ModuleConstant(constant) => {
                         // `ModuleConstant.location` gives us the span of the constant's name.
                         // Therefore, it is only suitable for `selection_range` below.
@@ -363,6 +366,7 @@ where
                             end: constant.value.location().end,
                         };
 
+                        #[allow(deprecated)]
                         symbols.push(DocumentSymbol {
                             name: constant.name.to_string(),
                             detail: Some(Printer::new().pretty_print(&constant.type_, 0)),
