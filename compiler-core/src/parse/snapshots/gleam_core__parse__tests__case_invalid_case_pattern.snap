@@ -8,6 +8,6 @@ error: Syntax error
 4 │         -> -> 0
   │         ^^ I was not expecting this
 
-Found "->", expected one of: 
-"}"
+Found `->`, expected one of: 
+`}`
 a case clause

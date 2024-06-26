@@ -9,5 +9,5 @@ error: Syntax error
   │               ^^^ I was not expecting this
 
 Found the keyword `pub`, expected one of: 
-">>"
+`>>`
 a bit array segment pattern

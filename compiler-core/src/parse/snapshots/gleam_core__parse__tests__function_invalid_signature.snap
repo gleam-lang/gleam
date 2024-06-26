@@ -8,6 +8,6 @@ error: Syntax error
 2 │ fn f(a, "b") -> String {
   │         ^^^ I was not expecting this
 
-Found "b", expected one of: 
-")"
+Found `b`, expected one of: 
+`)`
 a function parameter

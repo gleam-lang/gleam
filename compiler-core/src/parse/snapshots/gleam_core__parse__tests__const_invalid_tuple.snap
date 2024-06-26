@@ -8,6 +8,6 @@ error: Syntax error
 2 │ const a = #(1, 2, <-)
   │                   ^^ I was not expecting this
 
-Found "<-", expected one of: 
-")"
+Found `<-`, expected one of: 
+`)`
 a constant value

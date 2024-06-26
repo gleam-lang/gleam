@@ -8,6 +8,6 @@ error: Syntax error
 5 │     3
   │     ^ I was not expecting this
 
-Found "3", expected one of: 
-"}"
+Found `3`, expected one of: 
+`}`
 a record constructor

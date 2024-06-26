@@ -204,7 +204,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     ParserErrorCause::Token(tok) => {
                         let display = tok.to_string();
                         match tok.is_reserved_word() {
-                            true => format!("the keyword `{}`", display.replace("\"", "")),
+                            true => format!("the keyword {}", display),
                             false => display,
                         }
                     }
