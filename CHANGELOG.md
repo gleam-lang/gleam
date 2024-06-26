@@ -127,6 +127,10 @@
   better/more accurate insertions.
   ([Ameen Radwan](https://github.com/Acepie)
 
+- The language server will now show all the ignored fields when hovering over
+  `..` in a record pattern.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug Fixes
 
 - Fixed a bug where the compiler would output a confusing error message when
