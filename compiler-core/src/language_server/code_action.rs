@@ -319,7 +319,8 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
         let indent = " ".repeat(range.start.character as usize);
 
         // Figure out which variables are assigned in the pattern
-        self.traverse_pattern(&assignment.pattern);
+        self.pattern_variables.clear();
+        self.visit_typed_pattern(&assignment.pattern);
         let variables = std::mem::take(&mut self.pattern_variables);
 
         let assigned = match variables.len() {
@@ -348,6 +349,42 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
             .preferred(true)
             .push_to(&mut self.actions);
     }
+
+    fn visit_typed_pattern_variable(
+        &mut self,
+        _location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        _type: &'ast Arc<Type>,
+    ) {
+        self.pattern_variables.push(name.clone());
+    }
+
+    fn visit_typed_pattern_assign(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        pattern: &'ast TypedPattern,
+    ) {
+        self.pattern_variables.push(name.clone());
+        ast::visit::visit_typed_pattern_assign(self, location, name, pattern);
+    }
+
+    fn visit_typed_pattern_string_prefix(
+        &mut self,
+        _location: &'ast SrcSpan,
+        _left_location: &'ast SrcSpan,
+        left_side_assignment: &'ast Option<(EcoString, SrcSpan)>,
+        _right_location: &'ast SrcSpan,
+        _left_side_string: &'ast EcoString,
+        right_side_assignment: &'ast AssignName,
+    ) {
+        if let Some((name, _)) = left_side_assignment {
+            self.pattern_variables.push(name.clone());
+        }
+        if let AssignName::Variable(name) = right_side_assignment {
+            self.pattern_variables.push(name.clone());
+        }
+    }
 }
 
 impl<'a> LetAssertToCase<'a> {
@@ -365,59 +402,5 @@ impl<'a> LetAssertToCase<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
         self.actions
-    }
-
-    // Recursively traverses a pattern and finds which variables get bound
-    fn traverse_pattern(&mut self, pattern: &TypedPattern) {
-        println!("{pattern:#?}");
-        match pattern {
-            Pattern::Int { .. }
-            | Pattern::Float { .. }
-            | Pattern::VarUsage { .. }
-            | Pattern::Discard { .. }
-            | Pattern::Invalid { .. }
-            | Pattern::String { .. } => {}
-            Pattern::Variable { name, .. } => self.pattern_variables.push(name.clone()),
-            Pattern::Assign { name, pattern, .. } => {
-                println!("Assign");
-                self.pattern_variables.push(name.clone());
-                self.traverse_pattern(pattern);
-            }
-            Pattern::List { elements, tail, .. } => {
-                for elem in elements {
-                    self.traverse_pattern(elem);
-                }
-                if let Some(tail) = tail {
-                    self.traverse_pattern(tail);
-                }
-            }
-            Pattern::Constructor { arguments, .. } => {
-                for arg in arguments {
-                    self.traverse_pattern(&arg.value);
-                }
-            }
-            Pattern::Tuple { elems, .. } => {
-                for elem in elems {
-                    self.traverse_pattern(elem);
-                }
-            }
-            Pattern::BitArray { segments, .. } => {
-                for segment in segments {
-                    self.traverse_pattern(&segment.value);
-                }
-            }
-            Pattern::StringPrefix {
-                left_side_assignment,
-                right_side_assignment,
-                ..
-            } => {
-                if let Some((name, _)) = left_side_assignment {
-                    self.pattern_variables.push(name.clone());
-                }
-                if let AssignName::Variable(name) = right_side_assignment {
-                    self.pattern_variables.push(name.clone());
-                }
-            }
-        }
     }
 }
