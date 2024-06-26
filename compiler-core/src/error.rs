@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Outcome, Runtime, Target};
-use crate::diagnostic::{Diagnostic, ExtraLocation, Label, Location};
+use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 use crate::type_::error::RecordVariants;
 use crate::type_::error::{MissingAnnotation, UnknownTypeHint};
 use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
@@ -1250,10 +1250,9 @@ modules cannot import them. Perhaps move the `{test_module}` module to the src d
                         }
                     });
                     let label = labels.next().expect("Unknown labels first label");
-                    let extra_labels = labels.map(|label| ExtraLocation {
-                      path: None,
-                      src: None,
-                      label,
+                    let extra_labels = labels.map(|label| ExtraLabel {
+                        src_info: None,
+                        label,
                     }).collect();
                     let text = if valid.is_empty() {
                         "This constructor does not accept any labelled arguments.".into()
@@ -1348,9 +1347,8 @@ Names in a Gleam module must be unique so one will need to be renamed."
                             },
                             path: path.clone(),
                             src: src.clone(),
-                            extra_labels: vec![ExtraLocation {
-                              path: None,
-                              src: None,
+                            extra_labels: vec![ExtraLabel {
+                              src_info: None,
                               label: Label {
                                   text: Some("First imported here".into()),
                                   span: *previous_location,
@@ -1387,9 +1385,8 @@ Names in a Gleam module must be unique so one will need to be renamed."
                             },
                             path: path.clone(),
                             src: src.clone(),
-                            extra_labels: vec![ExtraLocation {
-                              path: None,
-                              src: None,
+                            extra_labels: vec![ExtraLabel {
+                              src_info: None,
                               label: Label {
                                 text: Some("First defined here".into()),
                                 span: *first_location,
@@ -1421,9 +1418,8 @@ Names in a Gleam module must be unique so one will need to be renamed."
                             },
                             path: path.clone(),
                             src: src.clone(),
-                            extra_labels: vec![ExtraLocation {
-                              path: None,
-                              src: None,
+                            extra_labels: vec![ExtraLabel {
+                              src_info: None,
                               label: Label {
                                 text: Some("First defined here".into()),
                                 span: *previous_location,
@@ -2943,9 +2939,8 @@ See: https://tour.gleam.run/advanced-features/use/");
                             },
                             path: path.clone(),
                             src: src.clone(),
-                            extra_labels: vec![ExtraLocation {
-                              path: None,
-                              src: None,
+                            extra_labels: vec![ExtraLabel {
+                              src_info: None,
                               label: Label {
                                   text: Some(format!("Expected {expected}, got {given}")),
                                   span: *pattern_location
@@ -2990,13 +2985,12 @@ See: https://tour.gleam.run/advanced-features/use/");
 
             Error::ImportCycle { modules } => {
                 let first_location = &modules.first().1;
-                let rest_locations = modules.iter().skip(1).map(|(_, l)| ExtraLocation {
+                let rest_locations = modules.iter().skip(1).map(|(_, l)| ExtraLabel {
                     label: Label {
                         text: Some("Imported here".into()),
                         span: l.location
                     },
-                    path: Some(l.path.clone()),
-                    src: Some(l.src.clone()),
+                    src_info: Some((l.src.clone(), l.path.clone())),
                 }).collect_vec();
                 let mut text = "The import statements for these modules form a cycle:
 "
