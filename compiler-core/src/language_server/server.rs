@@ -464,13 +464,8 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
         .iter()
         .map(|extra| {
             let message = extra.label.text.clone().unwrap_or_default();
-            let location = if let Some(path) = &extra.path {
-                let line_numbers = LineNumbers::new(
-                    &extra
-                        .src
-                        .clone()
-                        .expect("different path must have source attached"),
-                );
+            let location = if let Some((src, path)) = &extra.src_info {
+                let line_numbers = LineNumbers::new(src);
                 lsp::Location {
                     uri: path_to_uri(path.clone()),
                     range: src_span_to_lsp_range(extra.label.span, &line_numbers),

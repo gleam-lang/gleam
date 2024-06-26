@@ -36,9 +36,8 @@ impl Label {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ExtraLocation {
-    pub src: Option<EcoString>,
-    pub path: Option<Utf8PathBuf>,
+pub struct ExtraLabel {
+    pub src_info: Option<(EcoString, Utf8PathBuf)>,
     pub label: Label,
 }
 
@@ -47,7 +46,7 @@ pub struct Location {
     pub src: EcoString,
     pub path: Utf8PathBuf,
     pub label: Label,
-    pub extra_labels: Vec<ExtraLocation>,
+    pub extra_labels: Vec<ExtraLabel>,
 }
 
 // TODO: split this into locationed diagnostics and locationless diagnostics
@@ -92,15 +91,10 @@ impl Diagnostic {
             .extra_labels
             .iter()
             .map(|l| {
-                let location_path = if let Some(p) = &l.path {
-                    p.as_str()
+                let (location_src, location_path) = if let Some(info) = &l.src_info {
+                    (info.0.as_str(), info.1.as_str())
                 } else {
-                    main_location_path
-                };
-                let location_src = if let Some(s) = &l.src {
-                    s.as_str()
-                } else {
-                    main_location_src
+                    (main_location_src, main_location_path)
                 };
                 match file_map.get(location_path) {
                     None => {
