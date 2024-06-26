@@ -1,8 +1,8 @@
 use crate::ast::SrcSpan;
 use crate::error::wrap;
+use crate::parse::Token;
 use ecow::EcoString;
 use heck::{ToSnakeCase, ToUpperCamelCase};
-use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LexicalError {
@@ -11,9 +11,9 @@ pub struct LexicalError {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct UnexpectedTokenInfo {
-    pub display: String,
-    pub is_keyword: bool,
+pub enum ParserErrorCause {
+    Token(Token),
+    Descriptor(EcoString),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -194,8 +194,17 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "Argument labels are not allowed for anonymous functions",
                 vec!["Please remove the argument label.".into()],
             ),
-            ParseErrorType::UnexpectedToken { found, expected, hint } => {
-                let messages = std::iter::once(format!("Found {}, expected one of: ", found))
+            ParseErrorType::UnexpectedToken {
+                found,
+                expected,
+                hint,
+            } => {
+                let found = match found {
+                    ParserErrorCause::Token(tok) => tok.to_string(),
+                    ParserErrorCause::Descriptor(desc) => desc.to_string(),
+                };
+
+                let messages = std::iter::once(format!("Found {found}, expected one of: "))
                     .chain(expected.iter().map(|s| s.to_string()));
 
                 let messages = match hint {
@@ -297,7 +306,7 @@ pub enum ParseErrorType {
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken {
-        found: UnexpectedTokenInfo,
+        found: ParserErrorCause,
         expected: Vec<EcoString>,
         hint: Option<EcoString>,
     },
@@ -402,17 +411,6 @@ impl LexicalError {
                     "See: https://tour.gleam.run/basics/equality".into(),
                 ],
             ),
-        }
-    }
-}
-
-impl fmt::Display for UnexpectedTokenInfo {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let base = self.display.replace("\"", "");
-        if self.is_keyword {
-            write!(f, "the keyword `{}`", base)
-        } else {
-            write!(f, "\"{}\"", base)
         }
     }
 }

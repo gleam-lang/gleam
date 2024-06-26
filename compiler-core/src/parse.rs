@@ -73,7 +73,7 @@ use crate::warning::{DeprecatedSyntaxWarning, WarningEmitter};
 use crate::Warning;
 use camino::Utf8PathBuf;
 use ecow::EcoString;
-use error::{LexicalError, ParseError, ParseErrorType, UnexpectedTokenInfo};
+use error::{LexicalError, ParseError, ParseErrorType, ParserErrorCause};
 use lexer::{LexResult, Spanned};
 use std::cmp::Ordering;
 use std::collections::VecDeque;
@@ -246,10 +246,7 @@ where
             let expected = vec!["An import, const, type, or function.".into()];
             return parse_error(
                 ParseErrorType::UnexpectedToken {
-                    found: UnexpectedTokenInfo {
-                        display: tok.to_string(),
-                        is_keyword: is_reserved_word(tok),
-                    },
+                    found: ParserErrorCause::Token(tok),
                     expected,
                     hint: None,
                 },
@@ -2482,10 +2479,7 @@ where
                     }
                     Some((start, tok, end)) => parse_error(
                         ParseErrorType::UnexpectedToken {
-                            found: UnexpectedTokenInfo {
-                                display: tok.to_string(),
-                                is_keyword: is_reserved_word(tok),
-                            },
+                            found: ParserErrorCause::Token(tok),
                             expected: vec!["UpName".into(), "Name".into()],
                             hint: None,
                         },
@@ -2978,10 +2972,7 @@ where
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
             Some((start, tok, end)) => parse_error(
                 ParseErrorType::UnexpectedToken {
-                    found: UnexpectedTokenInfo {
-                        display: tok.to_string(),
-                        is_keyword: is_reserved_word(tok),
-                    },
+                    found: ParserErrorCause::Token(tok),
                     expected,
                     hint: None,
                 },
@@ -3672,10 +3663,7 @@ pub fn make_call(
                 if name != "_" {
                     return parse_error(
                         ParseErrorType::UnexpectedToken {
-                            found: UnexpectedTokenInfo {
-                                display: name.into(),
-                                is_keyword: false,
-                            },
+                            found: ParserErrorCause::Descriptor("a name".into()),
                             expected: vec!["An expression".into(), "An underscore".into()],
 
                             hint: None,
