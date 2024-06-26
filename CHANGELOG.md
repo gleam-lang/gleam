@@ -119,14 +119,14 @@
 - LSP can now suggest a code action to convert `let assert` into a case expression:
 
   ```
-  let assert Ok(foo) = bar()
+  let assert Ok(value) = get_result()
   ```
 
   Becomes:
 
   ```
-  let foo = case bar() {
-    Ok(foo) -> foo
+  let value = case get_result() {
+    Ok(value) -> value
     _ -> panic
   }
   ```
