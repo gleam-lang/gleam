@@ -1523,6 +1523,7 @@ where
 
     // examples:
     //   ( args )
+    #[allow(clippy::type_complexity)]
     fn parse_constructor_pattern_args(
         &mut self,
         upname_end: u32,
