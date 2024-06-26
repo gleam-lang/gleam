@@ -118,7 +118,7 @@ pub fn update() -> Result<()> {
     Ok(())
 }
 
-fn get_hexpm_version(package: &str) -> Result<Requirement> {
+fn parse_hex_requirement(package: &str) -> Result<Requirement> {
     match package.find('@') {
         Some(pos) => {
             // Using the major version specifier, calculate the maximum
@@ -166,8 +166,8 @@ fn get_hexpm_version(package: &str) -> Result<Requirement> {
 #[test]
 fn hex_from_package_specifier() {
     // Bad versions.
-    assert!(get_hexpm_version("package_1@1.2.3.4").is_err());
-    assert!(get_hexpm_version("package_2@not_a_version").is_err());
+    assert!(parse_hex_requirement("package_1@1.2.3.4").is_err());
+    assert!(parse_hex_requirement("package_2@not_a_version").is_err());
 
     // Good versions.
     let packages = vec![
@@ -178,7 +178,7 @@ fn hex_from_package_specifier() {
     ];
 
     for (provided, expected) in packages {
-        let version = get_hexpm_version(&provided).unwrap();
+        let version = parse_hex_requirement(&provided).unwrap();
         match &version {
             Requirement::Hex { version: v } => {
                 assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
@@ -219,7 +219,7 @@ pub fn download<Telem: Telemetry>(
     // Insert the new packages to add, if it exists
     if let Some((packages, dev)) = new_package {
         for package in packages {
-            let version = get_hexpm_version(&package)?;
+            let version = parse_hex_requirement(&package)?;
             let _ = if dev {
                 config.dev_dependencies.insert(package.into(), version)
             } else {
