@@ -173,6 +173,10 @@
 - Completions are no longer provided inside comments.
   ([Nicky Lim](https://github.com/nicklimmm))
 
+- The language server will now show all the ignored fields when hovering over
+  `..` in a record pattern.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug Fixes
 
 - Fixed a bug where the compiler would output a confusing error message when
