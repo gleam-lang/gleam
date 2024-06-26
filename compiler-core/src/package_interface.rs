@@ -424,7 +424,10 @@ impl ModuleInterface {
                                             .arguments
                                             .iter()
                                             .map(|arg| ParameterInterface {
-                                                label: arg.label.clone().map(|(_, label)| label),
+                                                label: arg
+                                                    .label
+                                                    .as_ref()
+                                                    .map(|(_, label)| label.clone()),
                                                 // We share the same id_map between each step so that the
                                                 // incremental ids assigned are consisten with each other
                                                 type_: from_type_helper(&arg.type_, &mut id_map),
