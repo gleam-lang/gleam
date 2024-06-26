@@ -121,29 +121,41 @@ pub fn update() -> Result<()> {
 fn parse_hex_requirement(package: &str) -> Result<Requirement> {
     match package.find('@') {
         Some(pos) => {
+            // Parse the major and minor from the provided semantic version.
+            let version = match package.get(pos + 1..) {
+                Some(version) => Ok(version),
+                None => Err(Error::InvalidVersionFormat {
+                    input: package.to_string(),
+                    error: "Failed to parse version from specifier".to_string(),
+                }),
+            }?;
+            let parts = version.split('.').collect::<Vec<_>>();
+            let major = match parts.get(0) {
+                Some(major) => Ok(major),
+                None => Err(Error::InvalidVersionFormat {
+                    input: package.to_string(),
+                    error: "Failed to parse semantic major version".to_string(),
+                }),
+            }?;
+            let minor = match parts.get(1) {
+                Some(minor) => minor,
+                None => "0",
+            };
+
             // Using the major version specifier, calculate the maximum
             // allowable version (i.e., the next major version).
-            let version = &package[pos + 1..];
-            let parts = version.split(".").collect::<Vec<_>>();
-            let major = parts[0]
-                .parse::<usize>()
-                .map_err(|_| Error::InvalidVersionFormat {
+            let max_ver = match major.parse::<usize>() {
+                Ok(num) => Ok([&(num + 1).to_string(), "0", "0"].join(".")),
+                Err(_) => Err(Error::InvalidVersionFormat {
                     input: version.to_string(),
                     error: "Failed to parse semantic major version as integer".to_string(),
-                })?;
-            let max_ver = [&(major + 1).to_string(), "0", "0"].join(".");
+                }),
+            }?;
 
-            // Pad the provided version specifier with zeros and create Hex
-            // version.
+            // Pad the provided version specifier with zeros map to a Hex version.
             match parts.len() {
-                1 => {
-                    let min_ver = [&parts[0], "0", "0"].join(".");
-                    Ok(Requirement::hex(
-                        &[">=", &min_ver, "and", "<", &max_ver].join(" "),
-                    ))
-                }
-                2 => {
-                    let min_ver = [&parts[0], &parts[1], "0"].join(".");
+                1 | 2 => {
+                    let min_ver = [major, minor, "0"].join(".");
                     Ok(Requirement::hex(
                         &[">=", &min_ver, "and", "<", &max_ver].join(" "),
                     ))
