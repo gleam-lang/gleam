@@ -392,6 +392,9 @@ enum Docs {
         /// Opens the docs in a browser after rendering
         #[arg(long)]
         open: bool,
+
+        #[arg(short, long, ignore_case = true, help = target_doc())]
+        target: Option<Target>,
     },
 
     /// Publish HTML docs to HexDocs
@@ -436,7 +439,9 @@ fn main() {
 
         Command::Check { target } => command_check(target),
 
-        Command::Docs(Docs::Build { open }) => docs::build(docs::BuildOptions { open }),
+        Command::Docs(Docs::Build { open, target }) => {
+            docs::build(docs::BuildOptions { open, target })
+        }
 
         Command::Docs(Docs::Publish) => docs::publish(),
 
