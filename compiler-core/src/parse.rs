@@ -241,12 +241,12 @@ where
         parse_result: Result<A, ParseError>,
     ) -> Result<A, ParseError> {
         let parse_result = self.ensure_no_errors(parse_result)?;
-        if let Some((start, found, end)) = self.next_tok() {
+        if let Some((start, token, end)) = self.next_tok() {
             // there are still more tokens
             let expected = vec!["An import, const, type, or function.".into()];
             return parse_error(
                 ParseErrorType::UnexpectedToken {
-                    found,
+                    token,
                     expected,
                     hint: None,
                 },
@@ -2477,9 +2477,9 @@ where
                             })),
                         }
                     }
-                    Some((start, found, end)) => parse_error(
+                    Some((start, token, end)) => parse_error(
                         ParseErrorType::UnexpectedToken {
-                            found,
+                            token,
                             expected: vec!["UpName".into(), "Name".into()],
                             hint: None,
                         },
@@ -2970,9 +2970,9 @@ where
     fn next_tok_unexpected<A>(&mut self, expected: Vec<EcoString>) -> Result<A, ParseError> {
         match self.next_tok() {
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
-            Some((start, found, end)) => parse_error(
+            Some((start, token, end)) => parse_error(
                 ParseErrorType::UnexpectedToken {
-                    found,
+                    token,
                     expected,
                     hint: None,
                 },
@@ -3579,9 +3579,8 @@ pub fn make_call(
                 if name != "_" {
                     return parse_error(
                         ParseErrorType::UnexpectedToken {
-                            found: Token::Name { name },
+                            token: Token::Name { name },
                             expected: vec!["An expression".into(), "An underscore".into()],
-
                             hint: None,
                         },
                         location,
