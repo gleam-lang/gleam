@@ -189,19 +189,19 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 vec!["Please remove the argument label.".into()],
             ),
             ParseErrorType::UnexpectedToken {
-                found,
+                token,
                 expected,
                 hint,
             } => {
-                let found = match found {
+                let found = match token {
                     Token::Int { .. } => "an Int".to_string(),
                     Token::Float { .. } => "a Float".to_string(),
                     Token::String { .. } => "a String".to_string(),
                     Token::CommentDoc { .. } => "a comment".to_string(),
                     Token::DiscardName { .. } => "a discard name".to_string(),
                     Token::Name { .. } | Token::UpName { .. } => "a name".to_string(),
-                    _ if found.is_reserved_word() => format!("the keyword {}", found),
-                    _ => found.to_string(),
+                    _ if token.is_reserved_word() => format!("the keyword {}", token),
+                    _ => token.to_string(),
                 };
 
                 let messages = std::iter::once(format!("Found {found}, expected one of: "))
@@ -306,7 +306,7 @@ pub enum ParseErrorType {
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken {
-        found: Token,
+        token: Token,
         expected: Vec<EcoString>,
         hint: Option<EcoString>,
     },
