@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Outcome, Runtime, Target};
-use crate::diagnostic::{Diagnostic, Label, Location};
+use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 use crate::type_::error::RecordVariants;
 use crate::type_::error::{MissingAnnotation, UnknownTypeHint};
 use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
@@ -47,6 +47,13 @@ pub struct UnknownImportDetails {
     pub modules: Vec<EcoString>,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ImportCycleLocationDetails {
+    pub location: crate::ast::SrcSpan,
+    pub path: Utf8PathBuf,
+    pub src: EcoString,
+}
+
 #[derive(Debug, Eq, PartialEq, Error, Clone)]
 pub enum Error {
     #[error("failed to parse Gleam source code")]
@@ -81,7 +88,9 @@ pub enum Error {
     DuplicateSourceFile { file: String },
 
     #[error("cyclical module imports")]
-    ImportCycle { modules: Vec<EcoString> },
+    ImportCycle {
+        modules: Vec1<(EcoString, ImportCycleLocationDetails)>,
+    },
 
     #[error("cyclical package dependencies")]
     PackageCycle { packages: Vec<EcoString> },
@@ -166,6 +175,9 @@ pub enum Error {
     #[error("File(s) already exist in {}",
 file_names.iter().map(|x| x.as_str()).join(", "))]
     OutputFilesAlreadyExist { file_names: Vec<Utf8PathBuf> },
+
+    #[error("Packages not exist: {}", packages.iter().join(", "))]
+    RemovedPackagesNotExist { packages: Vec<String> },
 
     #[error("unable to find project root")]
     UnableToFindProjectRoot { path: String },
@@ -553,18 +565,18 @@ fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
                 _ => panic!("Index out of bounds"),
             };
 
-            let insertion = current.get(j - 1).map_or(std::usize::MAX, |&x| x + 1);
+            let insertion = current.get(j - 1).map_or(usize::MAX, |&x| x + 1);
 
             if let Some(value) = current.get_mut(j) {
                 *value = std::cmp::min(
                     // deletion
-                    prev.get(j).map_or(std::usize::MAX, |&x| x + 1),
+                    prev.get(j).map_or(usize::MAX, |&x| x + 1),
                     std::cmp::min(
                         // insertion
                         insertion,
                         // substitution
                         prev.get(j - 1)
-                            .map_or(std::usize::MAX, |&x| x + substitution_cost),
+                            .map_or(usize::MAX, |&x| x + substitution_cost),
                     ),
                 );
             }
@@ -595,7 +607,7 @@ fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
     // `prev` because we already rotated the buffers.
     let distance = match prev.get(b.len()) {
         Some(&d) => d,
-        None => std::usize::MAX,
+        None => usize::MAX,
     };
     (distance <= limit).then_some(distance)
 }
@@ -840,6 +852,26 @@ If you want to overwrite these files, delete them and run the command again.
                 hint: None,
                 location: None,
             }],
+
+            Error::RemovedPackagesNotExist { packages } => vec![
+                Diagnostic {
+                    title: "Package not found".into(),
+                    text: format!(
+"These packages are not dependencies of your package so they could not
+be removed.
+
+{}
+",
+                    packages
+                        .iter()
+                        .map(|p| format!("  - {}", p.as_str()))
+                        .join("\n")
+                    ),
+                    level: Level::Error,
+                    hint: None,
+                    location: None,
+                }
+            ],
 
             Error::CannotPublishTodo { unfinished } => vec![Diagnostic {
                 title: "Cannot publish unfinished code".into(),
@@ -1218,7 +1250,10 @@ modules cannot import them. Perhaps move the `{test_module}` module to the src d
                         }
                     });
                     let label = labels.next().expect("Unknown labels first label");
-                    let extra_labels = labels.collect();
+                    let extra_labels = labels.map(|label| ExtraLabel {
+                        src_info: None,
+                        label,
+                    }).collect();
                     let text = if valid.is_empty() {
                         "This constructor does not accept any labelled arguments.".into()
                     } else if other_labels.is_empty() {
@@ -1312,9 +1347,12 @@ Names in a Gleam module must be unique so one will need to be renamed."
                             },
                             path: path.clone(),
                             src: src.clone(),
-                            extra_labels: vec![Label {
-                                text: Some("First imported here".into()),
-                                span: *previous_location,
+                            extra_labels: vec![ExtraLabel {
+                              src_info: None,
+                              label: Label {
+                                  text: Some("First imported here".into()),
+                                  span: *previous_location,
+                              },
                             }],
                         }),
                     }
@@ -1347,9 +1385,12 @@ Names in a Gleam module must be unique so one will need to be renamed."
                             },
                             path: path.clone(),
                             src: src.clone(),
-                            extra_labels: vec![Label {
+                            extra_labels: vec![ExtraLabel {
+                              src_info: None,
+                              label: Label {
                                 text: Some("First defined here".into()),
                                 span: *first_location,
+                              },
                             }],
                         }),
                     }
@@ -1377,9 +1418,12 @@ Names in a Gleam module must be unique so one will need to be renamed."
                             },
                             path: path.clone(),
                             src: src.clone(),
-                            extra_labels: vec![Label {
+                            extra_labels: vec![ExtraLabel {
+                              src_info: None,
+                              label: Label {
                                 text: Some("First defined here".into()),
                                 span: *previous_location,
+                              }
                             }],
                         }),
                     }
@@ -2895,12 +2939,13 @@ See: https://tour.gleam.run/advanced-features/use/");
                             },
                             path: path.clone(),
                             src: src.clone(),
-                            extra_labels: vec![
-                                Label {
-                                    text: Some(format!("Expected {expected}, got {given}")),
-                                    span: *pattern_location
-                                }
-                            ],
+                            extra_labels: vec![ExtraLabel {
+                              src_info: None,
+                              label: Label {
+                                  text: Some(format!("Expected {expected}, got {given}")),
+                                  span: *pattern_location
+                              }
+                            }],
                         }),
                     }
                 },
@@ -2939,10 +2984,19 @@ See: https://tour.gleam.run/advanced-features/use/");
             }
 
             Error::ImportCycle { modules } => {
+                let first_location = &modules.first().1;
+                let rest_locations = modules.iter().skip(1).map(|(_, l)| ExtraLabel {
+                    label: Label {
+                        text: Some("Imported here".into()),
+                        span: l.location
+                    },
+                    src_info: Some((l.src.clone(), l.path.clone())),
+                }).collect_vec();
                 let mut text = "The import statements for these modules form a cycle:
 "
                 .into();
-                write_cycle(&mut text, modules);
+                let mod_names = modules.iter().map(|m| m.0.clone()).collect_vec();
+                write_cycle(&mut text, &mod_names);
                 text.push_str(
                     "Gleam doesn't support dependency cycles like these, please break the
 cycle to continue.",
@@ -2952,7 +3006,15 @@ cycle to continue.",
                     text,
                     hint: None,
                     level: Level::Error,
-                    location: None,
+                    location: Some(Location {
+                        label: Label {
+                            text: Some("Imported here".into()),
+                            span: first_location.location,
+                        },
+                        path: first_location.path.clone(),
+                        src: first_location.src.clone(),
+                        extra_labels: rest_locations,
+                    }),
                 }]
             }
 

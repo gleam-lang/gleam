@@ -16,17 +16,17 @@ fn main() {
 
 #[test]
 fn bit_arrays2() {
-    assert_error!("let <<x:utf8>> = <<1>> x");
+    assert_error!("let <<x:utf8>> = <<1>>");
 }
 
 #[test]
 fn bit_arrays3() {
-    assert_error!("let <<x:utf16>> = <<1>> x");
+    assert_error!("let <<x:utf16>> = <<1>>");
 }
 
 #[test]
 fn bit_arrays4() {
-    assert_error!("let <<x:utf32>> = <<1>> x");
+    assert_error!("let <<x:utf32>> = <<1>>");
 }
 
 #[test]
@@ -369,12 +369,12 @@ fn recursive_var() {
 
 #[test]
 fn true_fn() {
-    assert_error!("let True(x) = 1 x");
+    assert_error!("let True(x) = 1");
 }
 
 #[test]
 fn ok_2_args() {
-    assert_error!("let Ok(1, x) = 1 x");
+    assert_error!("let Ok(1, x) = 1");
 }
 
 #[test]
@@ -394,7 +394,7 @@ fn tuple_int_float() {
 
 #[test]
 fn tuple_int() {
-    assert_error!("let #(a, b) = 1 a");
+    assert_error!("let #(a, b) = 1");
 }
 
 #[test]
@@ -705,7 +705,7 @@ fn module_could_not_unify6() {
 
 #[test]
 fn module_could_not_unify7() {
-    assert_module_error!("fn main() { let assert 5: Int = \"\" 5 }");
+    assert_module_error!("fn main() { let assert 5 = \"\" }");
 }
 
 #[test]
@@ -715,7 +715,7 @@ fn module_could_not_unify8() {
 
 #[test]
 fn module_could_not_unify9() {
-    assert_module_error!("fn main() { let [1, 2, ..x]: List(String) = [1,2,3] x }");
+    assert_module_error!("fn main() { let assert [1, 2, ..x]: List(String) = [1,2,3] x }");
 }
 
 #[test]
@@ -889,7 +889,6 @@ type Triple {
 fn main() {
   let triple = Triple(1,2,3)
   let Triple(a, b, c, ..) = triple
-  a
 }"
     );
 }

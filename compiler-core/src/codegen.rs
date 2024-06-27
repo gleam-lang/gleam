@@ -192,11 +192,22 @@ impl<'a> JavaScript<'a> {
 
     fn write_prelude(&self, writer: &impl FileSystemWriter) -> Result<()> {
         let rexport = format!("export * from \"{}\";\n", self.prelude_location);
-        writer.write(&self.output_directory.join("gleam.mjs"), &rexport)?;
+        let prelude_path = &self.output_directory.join("gleam.mjs");
+
+        // This check skips unnecessary `gleam.mjs` writes which confuse
+        // watchers and HMR build tools
+        if !writer.exists(prelude_path) {
+            writer.write(prelude_path, &rexport)?;
+        }
 
         if self.typescript == TypeScriptDeclarations::Emit {
             let rexport = rexport.replace(".mjs", ".d.mts");
-            writer.write(&self.output_directory.join("gleam.d.mts"), &rexport)?;
+            let prelude_declaration_path = &self.output_directory.join("gleam.d.mts");
+
+            // Type decleration may trigger badly configured watchers
+            if !writer.exists(prelude_declaration_path) {
+                writer.write(prelude_declaration_path, &rexport)?;
+            }
         }
 
         Ok(())

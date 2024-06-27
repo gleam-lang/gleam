@@ -966,3 +966,23 @@ pub fn main(x: something) {
 "#
     );
 }
+
+#[test]
+fn reference_absent_type() {
+    // This test is here because this code previously caused the compiler
+    // to crash, and we want to make sure that it doesn't break again
+    assert_module_error!(
+        "
+type Foo {
+    Bar(Int)
+    Baz(Qux)
+}
+
+pub fn main(foo) {
+    case foo {
+        Bar(x) -> x
+    }
+}
+"
+    );
+}

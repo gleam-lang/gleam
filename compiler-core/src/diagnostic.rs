@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use camino::Utf8PathBuf;
 
 pub use codespan_reporting::diagnostic::{LabelStyle, Severity};
-use codespan_reporting::{diagnostic::Label as CodespanLabel, files::SimpleFile};
+use codespan_reporting::{diagnostic::Label as CodespanLabel, files::SimpleFiles};
 use ecow::EcoString;
 use termcolor::Buffer;
 
@@ -19,18 +21,32 @@ pub struct Label {
     pub span: SrcSpan,
 }
 
+impl Label {
+    fn to_codespan_label(&self, fileid: usize) -> CodespanLabel<usize> {
+        let label = CodespanLabel::new(
+            LabelStyle::Primary,
+            fileid,
+            (self.span.start as usize)..(self.span.end as usize),
+        );
+        match &self.text {
+            None => label,
+            Some(text) => label.with_message(text.clone()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExtraLabel {
+    pub src_info: Option<(EcoString, Utf8PathBuf)>,
+    pub label: Label,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Location {
     pub src: EcoString,
     pub path: Utf8PathBuf,
     pub label: Label,
-    pub extra_labels: Vec<Label>,
-}
-
-impl Location {
-    fn labels(&self) -> impl Iterator<Item = &Label> {
-        std::iter::once(&self.label).chain(self.extra_labels.iter())
-    }
+    pub extra_labels: Vec<ExtraLabel>,
 }
 
 // TODO: split this into locationed diagnostics and locationless diagnostics
@@ -61,21 +77,35 @@ impl Diagnostic {
     }
 
     fn write_span(&self, location: &Location, buffer: &mut Buffer) {
-        let file = SimpleFile::new(location.path.to_string(), location.src.as_str());
-        let labels = location
-            .labels()
+        let mut file_map = HashMap::new();
+        let mut files = SimpleFiles::new();
+
+        let main_location_path = location.path.as_str();
+        let main_location_src = location.src.as_str();
+        let main_file_id = files.add(main_location_path, main_location_src);
+        let _ = file_map.insert(main_location_path, main_file_id);
+
+        let mut labels = vec![location.label.to_codespan_label(main_file_id)];
+
+        location
+            .extra_labels
+            .iter()
             .map(|l| {
-                let label = CodespanLabel::new(
-                    LabelStyle::Primary,
-                    (),
-                    (l.span.start as usize)..(l.span.end as usize),
-                );
-                match &l.text {
-                    None => label,
-                    Some(text) => label.with_message(text.clone()),
+                let (location_src, location_path) = if let Some(info) = &l.src_info {
+                    (info.0.as_str(), info.1.as_str())
+                } else {
+                    (main_location_src, main_location_path)
+                };
+                match file_map.get(location_path) {
+                    None => {
+                        let file_id = files.add(location_path, location_src);
+                        let _ = file_map.insert(location_path, file_id);
+                        l.label.to_codespan_label(file_id)
+                    }
+                    Some(i) => l.label.to_codespan_label(*i),
                 }
             })
-            .collect();
+            .for_each(|l| labels.push(l));
 
         let severity = match self.level {
             Level::Error => Severity::Error,
@@ -86,7 +116,7 @@ impl Diagnostic {
             .with_message(&self.title)
             .with_labels(labels);
         let config = codespan_reporting::term::Config::default();
-        codespan_reporting::term::emit(buffer, &config, &file, &diagnostic)
+        codespan_reporting::term::emit(buffer, &config, &files, &diagnostic)
             .expect("write_diagnostic");
     }
 

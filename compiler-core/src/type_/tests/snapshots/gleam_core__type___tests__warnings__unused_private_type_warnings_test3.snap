@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: type X = Int
+---
+warning: Unused private type
+  ┌─ /src/warning/wrn.gleam:1:1
+  │
+1 │ type X = Int
+  │ ^^^^^^^^^^^^ This private type is never used
+
+Hint: You can safely remove it.

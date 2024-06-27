@@ -83,7 +83,7 @@ impl FileToCreate {
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/{project_name}/)
 
 ```sh
-gleam add {project_name}
+gleam add {project_name}@1
 ```
 ```gleam
 import {project_name}
@@ -100,7 +100,6 @@ Further documentation can be found at <https://hexdocs.pm/{project_name}>.
 ```sh
 gleam run   # Run the project
 gleam test  # Run the tests
-gleam shell # Run an Erlang shell
 ```
 "#,
             )),
@@ -149,8 +148,8 @@ version = "1.0.0"
 #
 # description = ""
 # licences = ["Apache-2.0"]
-# repository = {{ type = "github", user = "username", repo = "project" }}
-# links = [{{ title = "Website", href = "https://gleam.run" }}]
+# repository = {{ type = "github", user = "", repo = "" }}
+# links = [{{ title = "Website", href = "" }}]
 #
 # For a full reference of all the available options, you can have a look at
 # https://gleam.run/writing-gleam/gleam-toml/.

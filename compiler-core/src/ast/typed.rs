@@ -147,6 +147,13 @@ pub enum TypedExpr {
         location: SrcSpan,
         value: Box<Self>,
     },
+
+    /// A placeholder expression used to allow module analysis to continue
+    /// even when there are type errors. Should never end up in generated code.
+    Invalid {
+        location: SrcSpan,
+        typ: Arc<Type>,
+    },
 }
 
 impl TypedExpr {
@@ -172,7 +179,8 @@ impl TypedExpr {
             | Self::Panic { .. }
             | Self::Float { .. }
             | Self::String { .. }
-            | Self::ModuleSelect { .. } => self.self_if_contains_location(byte_index),
+            | Self::ModuleSelect { .. }
+            | Self::Invalid { .. } => self.self_if_contains_location(byte_index),
 
             Self::Pipeline {
                 assignments,
@@ -315,7 +323,8 @@ impl TypedExpr {
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
-            | Self::RecordUpdate { location, .. } => *location,
+            | Self::RecordUpdate { location, .. }
+            | Self::Invalid { location, .. } => *location,
         }
     }
 
@@ -340,7 +349,8 @@ impl TypedExpr {
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
-            | Self::RecordUpdate { location, .. } => *location,
+            | Self::RecordUpdate { location, .. }
+            | Self::Invalid { location, .. } => *location,
             Self::Block { statements, .. } => statements.last().location(),
         }
     }
@@ -364,7 +374,8 @@ impl TypedExpr {
             | TypedExpr::Pipeline { .. }
             | TypedExpr::BitArray { .. }
             | TypedExpr::TupleIndex { .. }
-            | TypedExpr::RecordAccess { .. } => None,
+            | TypedExpr::RecordAccess { .. }
+            | Self::Invalid { .. } => None,
 
             // TODO: test
             // TODO: definition
@@ -405,7 +416,8 @@ impl TypedExpr {
             | Self::TupleIndex { typ, .. }
             | Self::ModuleSelect { typ, .. }
             | Self::RecordAccess { typ, .. }
-            | Self::RecordUpdate { typ, .. } => typ.clone(),
+            | Self::RecordUpdate { typ, .. }
+            | Self::Invalid { typ, .. } => typ.clone(),
             Self::Pipeline { finally, .. } => finally.type_(),
             Self::Block { statements, .. } => statements.last().type_(),
         }
@@ -457,7 +469,8 @@ impl TypedExpr {
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::RecordAccess { .. }
             | TypedExpr::NegateBool { .. }
-            | TypedExpr::NegateInt { .. } => None,
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
         }
     }
 
@@ -517,10 +530,10 @@ impl TypedExpr {
             // pure value constructor and raise a warning for those as well.
             TypedExpr::Block { .. } | TypedExpr::Case { .. } => false,
 
-            // `panic` and `todo` are never considered pure value constructors,
+            // `panic`, `todo`, and placeholders are never considered pure value constructors,
             // we don't want to raise a warning for an unused value if it's one
-            // of those two.
-            TypedExpr::Todo { .. } | TypedExpr::Panic { .. } => false,
+            // of those.
+            TypedExpr::Todo { .. } | TypedExpr::Panic { .. } | TypedExpr::Invalid { .. } => false,
         }
     }
 

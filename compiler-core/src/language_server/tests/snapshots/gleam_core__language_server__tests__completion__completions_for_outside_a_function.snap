@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "completion(TestProject::for_source(code), Position::new(0, 0))"
+---
+[]

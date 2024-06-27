@@ -44,7 +44,7 @@ use crate::{
 use ecow::EcoString;
 use id_arena::Arena;
 use itertools::Itertools;
-use std::{cell::RefCell, collections::HashMap, sync::Arc, u64};
+use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 pub use self::pattern::PatternArena;
 

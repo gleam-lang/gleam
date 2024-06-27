@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: const a = 1
+---
+warning: Unused private constant
+  ┌─ /src/warning/wrn.gleam:1:7
+  │
+1 │ const a = 1
+  │       ^ This private constant is never used
+
+Hint: You can safely remove it.

@@ -28,7 +28,13 @@ fn write_src(fs: &InMemoryFileSystem, path: &str, seconds: u64, src: &str) {
     fs.set_modification_time(&path, SystemTime::UNIX_EPOCH + Duration::from_secs(seconds));
 }
 
-fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<EcoString>, src: &str) {
+fn write_cache(
+    fs: &InMemoryFileSystem,
+    name: &str,
+    seconds: u64,
+    deps: Vec<(EcoString, SrcSpan)>,
+    src: &str,
+) {
     let line_numbers = line_numbers::LineNumbers::new(src);
     let mtime = SystemTime::UNIX_EPOCH + Duration::from_secs(seconds);
     let cache_metadata = CacheMetadata {
@@ -190,7 +196,13 @@ fn module_is_stale_if_deps_are_stale() {
 
     // Cache is fresh but dep is stale
     write_src(&fs, "/src/two.gleam", 1, "import one");
-    write_cache(&fs, "two", 2, vec![EcoString::from("one")], "import one");
+    write_cache(
+        &fs,
+        "two",
+        2,
+        vec![(EcoString::from("one"), SrcSpan { start: 0, end: 0 })],
+        "import one",
+    );
 
     // Cache is fresh
     write_src(&fs, "/src/three.gleam", 1, TEST_SOURCE_1);

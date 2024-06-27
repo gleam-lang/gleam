@@ -24,7 +24,7 @@ use ecow::EcoString;
 use heck::ToSnakeCase;
 use im::HashSet;
 use itertools::Itertools;
-use pattern::{pattern, requires_guard};
+use pattern::pattern;
 use regex::{Captures, Regex};
 use std::sync::OnceLock;
 use std::{collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
@@ -871,10 +871,17 @@ fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>
         let definition = docvec![var.clone(), " = ", body, ",", line()];
         (var, definition)
     };
-    let check_pattern = pattern::to_doc_discarding_all(pat, &mut vars, env);
-    let assign_pattern = pattern::to_doc(pat, &mut vars, env);
+
+    let mut guards = vec![];
+    let check_pattern = pattern::to_doc_discarding_all(pat, &mut vars, env, &mut guards);
+    let clause_guard = optional_clause_guard(None, guards, env);
+
+    // We don't take the guards from the assign pattern or we would end up with
+    // all the same guards repeated twice!
+    let assign_pattern = pattern::to_doc(pat, &mut vars, env, &mut vec![]);
     let clauses = docvec![
         check_pattern.clone(),
+        clause_guard,
         " -> ",
         subject_var.clone(),
         ";",
@@ -908,7 +915,8 @@ fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>
 
 fn let_<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
     let body = maybe_block_expr(value, env).group();
-    pattern(pat, env).append(" = ").append(body)
+    let mut guards = vec![];
+    pattern(pat, env, &mut guards).append(" = ").append(body)
 }
 
 fn float<'a>(value: &str) -> Document<'a> {
@@ -1089,17 +1097,21 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
         std::iter::once(pat)
             .chain(alternative_patterns)
             .map(|patterns| {
+                let mut additional_guards = vec![];
                 env.erl_function_scope_vars = initial_erlang_vars.clone();
 
                 let patterns_doc = if patterns.len() == 1 {
                     let p = patterns.first().expect("Single pattern clause printing");
-                    pattern(p, env)
+                    pattern(p, env, &mut additional_guards)
                 } else {
-                    tuple(patterns.iter().map(|p| pattern(p, env)))
+                    tuple(
+                        patterns
+                            .iter()
+                            .map(|p| pattern(p, env, &mut additional_guards)),
+                    )
                 };
 
-                let new_guard = !patterns.iter().any(requires_guard);
-                let guard = optional_clause_guard(guard.as_ref(), new_guard, env);
+                let guard = optional_clause_guard(guard.as_ref(), additional_guards, env);
                 if then_doc.is_none() {
                     then_doc = Some(clause_consequence(then, env));
                     end_erlang_vars = env.erl_function_scope_vars.clone();
@@ -1127,20 +1139,25 @@ fn clause_consequence<'a>(consequence: &'a TypedExpr, env: &mut Env<'a>) -> Docu
 
 fn optional_clause_guard<'a>(
     guard: Option<&'a TypedClauseGuard>,
-    new: bool,
+    additional_guards: Vec<Document<'a>>,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    guard
-        .map(|guard| {
-            if new {
-                " when ".to_doc().append(bare_clause_guard(guard, env))
-            } else {
-                " andalso "
-                    .to_doc()
-                    .append(bare_clause_guard(guard, env).surround("(", ")"))
-            }
-        })
-        .unwrap_or_else(nil)
+    let guard_doc = guard.map(|guard| bare_clause_guard(guard, env));
+
+    let guards_count = guard_doc.iter().len() + additional_guards.len();
+    let guards_docs = additional_guards.into_iter().chain(guard_doc).map(|guard| {
+        if guards_count > 1 {
+            guard.surround("(", ")")
+        } else {
+            guard
+        }
+    });
+    let doc = join(guards_docs, " andalso ".to_doc());
+    if doc.is_empty() {
+        doc
+    } else {
+        " when ".to_doc().append(doc)
+    }
 }
 
 fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
@@ -1195,6 +1212,42 @@ fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Docu
             .append(" =< ")
             .append(clause_guard(right, env)),
 
+        ClauseGuard::AddInt { left, right, .. } => clause_guard(left, env)
+            .append(" + ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::AddFloat { left, right, .. } => clause_guard(left, env)
+            .append(" + ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::SubInt { left, right, .. } => clause_guard(left, env)
+            .append(" - ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::SubFloat { left, right, .. } => clause_guard(left, env)
+            .append(" - ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::MultInt { left, right, .. } => clause_guard(left, env)
+            .append(" * ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::MultFloat { left, right, .. } => clause_guard(left, env)
+            .append(" * ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::DivInt { left, right, .. } => clause_guard(left, env)
+            .append(" div ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::DivFloat { left, right, .. } => clause_guard(left, env)
+            .append(" / ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::RemainderInt { left, right, .. } => clause_guard(left, env)
+            .append(" rem ")
+            .append(clause_guard(right, env)),
+
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name),
@@ -1237,7 +1290,16 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
         | ClauseGuard::GtFloat { .. }
         | ClauseGuard::GtEqFloat { .. }
         | ClauseGuard::LtFloat { .. }
-        | ClauseGuard::LtEqFloat { .. } => "("
+        | ClauseGuard::LtEqFloat { .. }
+        | ClauseGuard::AddInt { .. }
+        | ClauseGuard::AddFloat { .. }
+        | ClauseGuard::SubInt { .. }
+        | ClauseGuard::SubFloat { .. }
+        | ClauseGuard::MultInt { .. }
+        | ClauseGuard::MultFloat { .. }
+        | ClauseGuard::DivInt { .. }
+        | ClauseGuard::DivFloat { .. }
+        | ClauseGuard::RemainderInt { .. } => "("
             .to_doc()
             .append(bare_clause_guard(guard, env))
             .append(")"),
@@ -1482,7 +1544,8 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
         | TypedExpr::BitArray { .. }
         | TypedExpr::RecordUpdate { .. }
         | TypedExpr::NegateBool { .. }
-        | TypedExpr::NegateInt { .. } => false,
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => false,
     }
 }
 
@@ -1626,6 +1689,8 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
                 .iter()
                 .map(|s| expr_segment(&s.value, &s.options, env)),
         ),
+
+        TypedExpr::Invalid { .. } => panic!("invalid expressions should not reach code generation"),
     }
 }
 
@@ -1764,6 +1829,7 @@ pub fn is_erlang_reserved_word(name: &str) -> bool {
             | "of"
             | "case"
             | "maybe"
+            | "else"
     )
 }
 

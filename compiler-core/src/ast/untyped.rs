@@ -179,7 +179,7 @@ impl UntypedExpr {
         match self {
             Self::BinOp { name, .. } => name.precedence(),
             Self::PipeLine { .. } => 5,
-            _ => std::u8::MAX,
+            _ => u8::MAX,
         }
     }
 

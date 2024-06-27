@@ -202,6 +202,10 @@ impl<'module> Generator<'module> {
             TypedExpr::NegateBool { value, .. } => self.negate_with("!", value),
 
             TypedExpr::NegateInt { value, .. } => self.negate_with("- ", value),
+
+            TypedExpr::Invalid { .. } => {
+                panic!("invalid expressions should not reach code generation")
+            }
         }?;
         Ok(if expression.handles_own_return() {
             document
@@ -228,6 +232,20 @@ impl<'module> Generator<'module> {
 
                 // Sized ints
                 [Opt::Size { value: size, .. }] => {
+                    let size_int = match *size.clone() {
+                        TypedExpr::Int {
+                            location: _,
+                            typ: _,
+                            value,
+                        } => value.parse().unwrap_or(0),
+                        _ => 0,
+                    };
+                    if size_int > 0 && size_int % 8 != 0 {
+                        return Err(Error::Unsupported {
+                            feature: "Non byte aligned array".into(),
+                            location: segment.location,
+                        });
+                    }
                     self.tracker.sized_integer_segment_used = true;
                     let size = self.not_in_tail_position(|gen| gen.wrap_expression(size))?;
                     Ok(docvec!["sizedInt(", value, ", ", size, ")"])
@@ -1262,10 +1280,11 @@ pub(crate) fn constant_expression<'a>(
         Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
 
         Constant::Record {
-            tag,
-            typ,
             args,
             module,
+            name,
+            tag,
+            typ,
             ..
         } => {
             if typ.is_result() {
@@ -1279,7 +1298,7 @@ pub(crate) fn constant_expression<'a>(
                 .iter()
                 .map(|arg| constant_expression(tracker, &arg.value))
                 .try_collect()?;
-            Ok(construct_record(module.as_deref(), tag, field_values))
+            Ok(construct_record(module.as_deref(), name, field_values))
         }
 
         Constant::BitArray { segments, .. } => bit_array(tracker, segments, constant_expression),
@@ -1317,6 +1336,16 @@ fn bit_array<'a>(
 
             // Sized ints
             [Opt::Size { value: size, .. }] => {
+                let size_int = match *size.clone() {
+                    Constant::Int { location: _, value } => value.parse().unwrap_or(0),
+                    _ => 0,
+                };
+                if size_int > 0 && size_int % 8 != 0 {
+                    return Err(Error::Unsupported {
+                        feature: "Non byte aligned array".into(),
+                        location: segment.location,
+                    });
+                }
                 tracker.sized_integer_segment_used = true;
                 let size = constant_expr_fun(tracker, size)?;
                 Ok(docvec!["sizedInt(", value, ", ", size, ")"])
@@ -1463,7 +1492,8 @@ impl TypedExpr {
             | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
-            | TypedExpr::NegateInt { .. } => false,
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => false,
         }
     }
 }
@@ -1527,7 +1557,8 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             TypedExpr::Todo { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::Panic { .. }
-            | TypedExpr::Pipeline { .. },
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Invalid { .. },
         ) => false,
 
         Statement::Assignment(_) => false,

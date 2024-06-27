@@ -27,7 +27,7 @@ expression: "./cases/imported_constants"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<316 byte binary>
+<324 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

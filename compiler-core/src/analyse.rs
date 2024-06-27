@@ -455,8 +455,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.ensure_annotations_present(&arguments, return_annotation.as_ref(), location);
         }
 
+        let has_body = !body.first().is_placeholder();
         let definition = FunctionDefinition {
-            has_body: !body.first().is_placeholder(),
+            has_body,
             has_erlang_external: external_erlang.is_some(),
             has_javascript_external: external_javascript.is_some(),
         };
@@ -519,6 +520,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             && publicity.is_importable()
             && environment.target_support.is_enforced()
             && !implementations.supports(target)
+            // We don't emit this error if there is a body
+            // since this would be caught at the statement level
+            && !has_body
         {
             self.errors.push(Error::UnsupportedPublicFunctionTarget {
                 name: name.clone(),
@@ -840,7 +844,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 constructor.arguments.iter().enumerate()
             {
                 // Build a type from the annotation AST
-                let t = hydrator.type_from_ast(ast, environment)?;
+                let t = match hydrator.type_from_ast(ast, environment) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        self.errors.push(e);
+                        continue;
+                    }
+                };
 
                 fields.push(TypeValueConstructorField { type_: t.clone() });
 

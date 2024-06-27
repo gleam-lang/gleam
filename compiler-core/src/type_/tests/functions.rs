@@ -247,3 +247,71 @@ pub fn two() -> Nil {
 "#
     );
 }
+
+#[test]
+fn multiple_bad_statement_assignment_fault_tolerance() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let a = 1 + 2.0
+  let b = 3 + 4.0
+  let c = a + b
+}
+"#
+    );
+}
+
+#[test]
+fn multiple_bad_statement_assignment_with_annotation_fault_tolerance() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let a: Int = "not an int"
+  let b: String = 1
+  let c = a + 2
+}
+"#
+    );
+}
+
+#[test]
+fn multiple_bad_statement_assignment_with_annotation_fault_tolerance2() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  // Since the value is invalid the type is the annotation
+  let a: Int = Junk
+  let b: String = 1
+  let c = a + 2
+}
+"#
+    );
+}
+
+#[test]
+fn multiple_bad_statement_assignment_with_pattern_fault_tolerance2() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  // Since the pattern is invalid no variable is created
+  let Junk(a) = 7
+  // Pattern is valid but does not type check
+  let Ok(b) = 1
+  let c = a + b
+}
+"#
+    );
+}
+
+#[test]
+fn multiple_bad_statement_expression_fault_tolerance() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  1 + 2.0
+  3 + 4.0
+  let c = 1 + 2
+}
+"#
+    );
+}

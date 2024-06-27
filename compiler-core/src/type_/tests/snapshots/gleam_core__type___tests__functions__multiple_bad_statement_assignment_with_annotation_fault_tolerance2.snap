@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\npub fn main() {\n  // Since the value is invalid the type is the annotation\n  let a: Int = Junk\n  let b: String = 1\n  let c = a + 2\n}\n"
+---
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:16
+  │
+4 │   let a: Int = Junk
+  │                ^^^^
+
+The name `Junk` is not in scope here.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:5:19
+  │
+5 │   let b: String = 1
+  │                   ^
+
+Expected type:
+
+    String
+
+Found type:
+
+    Int

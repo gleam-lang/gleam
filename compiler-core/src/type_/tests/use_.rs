@@ -479,3 +479,17 @@ fn apply(arg, fun) {
 "#
     );
 }
+
+#[test]
+fn multiple_bad_statement_use_fault_tolerance() {
+    assert_error!(
+        r#"
+let x = fn(f) { f() + 1 }
+use <- x()
+
+1 + 2.0
+3.0 + 4
+5
+"#
+    );
+}

@@ -12,6 +12,7 @@ use crate::{
     parse::extra::{Comment, ModuleExtra},
     pretty::{self, *},
     type_::{self, Type},
+    warning::WarningEmitter,
     Error, Result,
 };
 use ecow::EcoString;
@@ -25,11 +26,12 @@ use camino::Utf8Path;
 const INDENT: isize = 2;
 
 pub fn pretty(writer: &mut impl Utf8Writer, src: &EcoString, path: &Utf8Path) -> Result<()> {
-    let parsed = crate::parse::parse_module(src).map_err(|error| Error::Parse {
-        path: path.to_path_buf(),
-        src: src.clone(),
-        error,
-    })?;
+    let parsed = crate::parse::parse_module(path.to_owned(), src, &WarningEmitter::null())
+        .map_err(|error| Error::Parse {
+            path: path.to_path_buf(),
+            src: src.clone(),
+            error,
+        })?;
     let intermediate = Intermediate::from_extra(&parsed.extra, src);
     Formatter::with_comments(&intermediate)
         .module(&parsed.module)
@@ -2060,6 +2062,8 @@ impl<'comments> Formatter<'comments> {
                     None => docvec![left, " <> ", right],
                 }
             }
+
+            Pattern::Invalid { .. } => panic!("invalid patterns can not be in an untyped ast"),
         };
         commented(doc, comments)
     }
@@ -2184,6 +2188,33 @@ impl<'comments> Formatter<'comments> {
             }
             ClauseGuard::LtEqFloat { left, right, .. } => {
                 self.clause_guard_bin_op(&BinOp::LtEqFloat, left, right)
+            }
+            ClauseGuard::AddInt { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::AddInt, left, right)
+            }
+            ClauseGuard::AddFloat { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::AddFloat, left, right)
+            }
+            ClauseGuard::SubInt { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::SubInt, left, right)
+            }
+            ClauseGuard::SubFloat { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::SubFloat, left, right)
+            }
+            ClauseGuard::MultInt { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::MultInt, left, right)
+            }
+            ClauseGuard::MultFloat { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::MultFloat, left, right)
+            }
+            ClauseGuard::DivInt { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::DivInt, left, right)
+            }
+            ClauseGuard::DivFloat { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::DivFloat, left, right)
+            }
+            ClauseGuard::RemainderInt { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::RemainderInt, left, right)
             }
 
             ClauseGuard::Var { name, .. } => name.to_doc(),

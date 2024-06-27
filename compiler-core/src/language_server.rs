@@ -1,5 +1,6 @@
 mod code_action;
 mod compiler;
+mod completer;
 mod engine;
 mod feedback;
 mod files;

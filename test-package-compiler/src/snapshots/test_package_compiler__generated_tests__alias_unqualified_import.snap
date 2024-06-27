@@ -26,7 +26,7 @@ id(X) ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<80 byte binary>
+<88 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

@@ -49,7 +49,7 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
         },
     };
 
-    engine.action(params)
+    engine.code_actions(params)
 }
 
 const REMOVE_UNUSED_IMPORTS_TITLE: &str = "Remove unused imports";

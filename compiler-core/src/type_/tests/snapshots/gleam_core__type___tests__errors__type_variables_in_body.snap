@@ -15,3 +15,17 @@ Expected type:
 Found type:
 
     Box(b)
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:7:19
+  │
+7 │   let _: Box(b) = box1
+  │                   ^^^^
+
+Expected type:
+
+    Box(b)
+
+Found type:
+
+    Box(a)

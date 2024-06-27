@@ -281,13 +281,6 @@ impl Module {
             }
         }
     }
-
-    pub(crate) fn dependencies_list(&self) -> Vec<EcoString> {
-        self.dependencies
-            .iter()
-            .map(|(name, _)| name.clone())
-            .collect()
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

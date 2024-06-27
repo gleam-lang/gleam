@@ -277,6 +277,10 @@ pub trait Visit<'ast> {
         visit_typed_expr_negate_int(self, location, value)
     }
 
+    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, typ: &'ast Arc<Type>) {
+        visit_typed_expr_invalid(self, location, typ);
+    }
+
     fn visit_typed_statement(&mut self, stmt: &'ast TypedStatement) {
         visit_typed_statement(self, stmt);
     }
@@ -465,6 +469,7 @@ where
             v.visit_typed_expr_negate_bool(location, value)
         }
         TypedExpr::NegateInt { location, value } => v.visit_typed_expr_negate_int(location, value),
+        TypedExpr::Invalid { location, typ } => v.visit_typed_expr_invalid(location, typ),
     }
 }
 
@@ -825,4 +830,10 @@ where
             value: _,
         } => { /* TODO */ }
     }
+}
+
+pub fn visit_typed_expr_invalid<'a, V>(_v: &mut V, _location: &'a SrcSpan, _typ: &'a Arc<Type>)
+where
+    V: Visit<'a> + ?Sized,
+{
 }

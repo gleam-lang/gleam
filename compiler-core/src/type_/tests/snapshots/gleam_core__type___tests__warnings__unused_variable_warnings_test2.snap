@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub fn a() { let b = 1 5 }"
+---
+warning: Unused variable
+  ┌─ /src/warning/wrn.gleam:1:18
+  │
+1 │ pub fn a() { let b = 1 5 }
+  │                  ^ This variable is never used
+
+Hint: You can ignore it with an underscore: `_b`.

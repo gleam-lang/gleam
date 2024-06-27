@@ -147,6 +147,18 @@ fn import_cycle() {
 
 #[rustfmt::skip]
 #[test]
+fn import_cycle_multi() {
+    let output =
+        crate::prepare("./cases/import_cycle_multi");
+    insta::assert_snapshot!(
+        "import_cycle_multi",
+        output,
+        "./cases/import_cycle_multi"
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn import_shadowed_name_warning() {
     let output =
         crate::prepare("./cases/import_shadowed_name_warning");

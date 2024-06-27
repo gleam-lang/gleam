@@ -127,6 +127,10 @@ impl FileSystemWriter for InMemoryFileSystem {
             .insert(path.to_path_buf(), file);
         Ok(())
     }
+
+    fn exists(&self, path: &Utf8Path) -> bool {
+        self.files.deref().borrow().contains_key(path)
+    }
 }
 
 impl FileSystemReader for InMemoryFileSystem {

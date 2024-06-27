@@ -19,15 +19,27 @@ pub fn command(packages: Vec<String>) -> Result<()> {
         })?;
 
     // Remove the specified dependencies
+    let mut packages_not_exist = vec![];
     for package_to_remove in packages.iter() {
         #[allow(clippy::indexing_slicing)]
-        let _ = toml["dependencies"]
+        let maybe_removed_item = toml["dependencies"]
             .as_table_like_mut()
             .and_then(|deps| deps.remove(package_to_remove));
+
         #[allow(clippy::indexing_slicing)]
-        let _ = toml["dev-dependencies"]
+        let maybe_removed_dev_item = toml["dev-dependencies"]
             .as_table_like_mut()
             .and_then(|deps| deps.remove(package_to_remove));
+
+        if maybe_removed_item.or(maybe_removed_dev_item).is_none() {
+            packages_not_exist.push(package_to_remove.into());
+        }
+    }
+
+    if !packages_not_exist.is_empty() {
+        return Err(Error::RemovedPackagesNotExist {
+            packages: packages_not_exist,
+        });
     }
 
     // Write the updated config

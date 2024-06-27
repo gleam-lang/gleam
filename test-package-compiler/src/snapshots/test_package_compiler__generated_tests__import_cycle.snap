@@ -1,9 +1,12 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 141
 expression: "./cases/import_cycle"
 ---
 error: Import cycle
+  ┌─ src/one.gleam:1:1
+  │
+1 │ import one
+  │ ^ Imported here
 
 The import statements for these modules form a cycle:
 
@@ -12,4 +15,3 @@ The import statements for these modules form a cycle:
     └─────┘
 Gleam doesn't support dependency cycles like these, please break the
 cycle to continue.
-

@@ -7,6 +7,7 @@ pub(crate) mod pattern;
 pub(crate) mod pipe;
 pub(crate) mod prelude;
 pub mod pretty;
+pub(crate) mod printer;
 #[cfg(test)]
 pub mod tests;
 

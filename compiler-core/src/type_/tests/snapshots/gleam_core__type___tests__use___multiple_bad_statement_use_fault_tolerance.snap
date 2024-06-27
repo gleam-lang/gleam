@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+expression: "\nlet x = fn(f) { f() + 1 }\nuse <- x()\n\n1 + 2.0\n3.0 + 4\n5\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:5:5
+  │
+5 │ 1 + 2.0
+  │     ^^^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    Float
+
+Hint: the +. operator can be used with Floats
+
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:6:1
+  │
+6 │ 3.0 + 4
+  │ ^^^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    Float
+
+Hint: the +. operator can be used with Floats

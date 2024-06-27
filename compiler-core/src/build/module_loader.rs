@@ -16,7 +16,7 @@ use super::{
 use crate::{
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
-    warning::WarningEmitter,
+    warning::{TypeWarningEmitter, WarningEmitter},
     Error, Result,
 };
 
@@ -125,6 +125,7 @@ where
             name,
             self.package_name.clone(),
             mtime,
+            self.warnings.clone(),
         )
     }
 
@@ -147,16 +148,19 @@ pub(crate) fn read_source<IO>(
     name: EcoString,
     package_name: EcoString,
     mtime: SystemTime,
+    emitter: WarningEmitter,
 ) -> Result<UncompiledModule>
 where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
 {
     let code: EcoString = io.read(&path)?.into();
 
-    let parsed = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
-        path: path.clone(),
-        src: code.clone(),
-        error,
+    let parsed = crate::parse::parse_module(path.clone(), &code, &emitter).map_err(|error| {
+        Error::Parse {
+            path: path.clone(),
+            src: code.clone(),
+            error,
+        }
     })?;
     let mut ast = parsed.module;
     let extra = parsed.extra;
