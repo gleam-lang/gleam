@@ -2068,13 +2068,14 @@ impl<'a> TypePrinter<'a> {
                 let arg0 = self.print(args.first().expect("print_prelude_type list"));
                 "list(".to_doc().append(arg0).append(")")
             }
-            "Result" => {
-                let arg_ok = self.print(args.first().expect("print_prelude_type result ok"));
-                let arg_err = self.print(args.get(1).expect("print_prelude_type result err"));
-                let ok = tuple(["ok".to_doc(), arg_ok]);
-                let error = tuple(["error".to_doc(), arg_err]);
-                docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
-            }
+            "Result" => match args {
+                &[ref arg_ok, ref arg_err] => {
+                    let ok = tuple(["ok".to_doc(), self.print(arg_ok)]);
+                    let error = tuple(["error".to_doc(), self.print(arg_err)]);
+                    docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
+                }
+                _ => panic!("print_prelude_type result expects ok and err"),
+            },
             // Getting here should mean we either forgot a built-in type or there is a
             // compiler error
             name => panic!("{name} is not a built-in type."),
