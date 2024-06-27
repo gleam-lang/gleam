@@ -1,7 +1,7 @@
 use crate::assert_erl;
 
 #[test]
-fn named_args_count_once() {
+fn result_type_count_once() {
     assert_erl!(
         "
         pub fn wibble() -> Result(a, a) {
@@ -12,7 +12,7 @@ fn named_args_count_once() {
 }
 
 #[test]
-fn nested_named_args_count_once() {
+fn nested_result_type_count_once() {
     assert_erl!(
         "
         pub fn wibble() -> Result(a, Result(a, b)) {
