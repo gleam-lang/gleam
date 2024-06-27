@@ -1933,13 +1933,8 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
             TypeVar::Link { type_: typ } => type_var_ids(typ, ids),
         },
         Type::Named { args, .. } => {
-            let mut arg_ids = HashMap::new();
             for arg in args {
-                type_var_ids(arg, &mut arg_ids);
-            }
-            for (id, _count) in arg_ids.into_iter() {
-                let count = ids.entry(id).or_insert(0);
-                *count += 1;
+                type_var_ids(arg, ids)
             }
         }
         Type::Fn { args, retrn } => {
