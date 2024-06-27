@@ -4,7 +4,7 @@ use crate::assert_erl;
 fn named_args_count_once() {
     assert_erl!(
         "
-        pub fn foo() -> Result(a, a) {
+        pub fn wibble() -> Result(a, a) {
             todo
         }
         "
@@ -15,7 +15,7 @@ fn named_args_count_once() {
 fn nested_named_args_count_once() {
     assert_erl!(
         "
-        pub fn foo() -> Result(a, Result(a, b)) {
+        pub fn wibble() -> Result(a, Result(a, b)) {
             todo
         }
         "
@@ -26,7 +26,7 @@ fn nested_named_args_count_once() {
 fn tuple_type_params_count_twice() {
     assert_erl!(
         "
-        pub fn foo() -> #(a, Result(a, b)) {
+        pub fn wibble() -> #(a, Result(a, b)) {
             todo
         }
         "
@@ -41,7 +41,7 @@ fn custom_type_named_args_count_once() {
             Wibble(a, b)
         }
 
-        pub fn foo() -> Wibble(a, a) {
+        pub fn wibble() -> Wibble(a, a) {
             todo
         }
         "
@@ -56,7 +56,7 @@ fn custom_type_nested_named_args_count_once() {
             Wibble(a, b)
         }
 
-        pub fn foo() -> Wibble(a, Wibble(a, b)) {
+        pub fn wibble() -> Wibble(a, Wibble(a, b)) {
             todo
         }
         "
@@ -71,7 +71,7 @@ fn custom_type_tuple_type_params_count_twice() {
             Wibble(a, b)
         }
 
-        pub fn foo() -> #(a, Wibble(a, b)) {
+        pub fn wibble() -> #(a, Wibble(a, b)) {
             todo
         }
         "
