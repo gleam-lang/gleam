@@ -9,4 +9,4 @@ expression: "\nconst cute_bee = \"cute\" <> \"bee\"\nconst cute_cute_bee_buzz = 
 
 -spec main() -> binary().
 main() ->
-    <<<<"cute"/utf8, "bee"/utf8>>/binary, "buzz"/utf8>>.
+    <<"cute"/utf8, "bee"/utf8, "buzz"/utf8>>.
