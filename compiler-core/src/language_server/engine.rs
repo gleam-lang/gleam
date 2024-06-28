@@ -294,6 +294,10 @@ where
         self.respond(|this| {
             let params = params.text_document_position_params;
 
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(None);
+            };
+
             let (lines, found) = match this.node_at_position(&params) {
                 Some(value) => value,
                 None => return Ok(None),
@@ -302,48 +306,50 @@ where
             Ok(match found {
                 Located::Statement(_) => None, // TODO: hover for statement
                 Located::ModuleStatement(Definition::Function(fun)) => {
-                    Some(hover_for_function_head(fun, lines))
+                    Some(hover_for_function_head(fun, lines, module))
                 }
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
-                    Some(hover_for_module_constant(constant, lines))
+                    Some(hover_for_module_constant(constant, lines, module))
                 }
                 Located::ModuleStatement(_) => None,
                 Located::UnqualifiedImport(UnqualifiedImport {
                     name,
-                    module,
+                    module: module_name,
                     is_type,
                     location,
                 }) => this
                     .compiler
-                    .get_module_inferface(module.as_str())
-                    .and_then(|module| {
+                    .get_module_inferface(module_name.as_str())
+                    .and_then(|module_interface| {
                         if is_type {
-                            module.types.get(name).map(|t| {
-                                hover_for_annotation(*location, t.typ.as_ref(), Some(t), lines)
+                            module_interface.types.get(name).map(|t| {
+                                hover_for_annotation(
+                                    *location,
+                                    t.typ.as_ref(),
+                                    Some(t),
+                                    module,
+                                    lines,
+                                )
                             })
                         } else {
-                            module.values.get(name).map(|v| {
-                                let m = if this.hex_deps.contains(&module.package) {
-                                    Some(module)
+                            module_interface.values.get(name).map(|v| {
+                                let m = if this.hex_deps.contains(&module_interface.package) {
+                                    Some(module_interface)
                                 } else {
                                     None
                                 };
-                                hover_for_imported_value(v, location, lines, m, name)
+                                hover_for_imported_value(v, location, module, lines, m, name)
                             })
                         }
                     }),
-                Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
-                Located::Expression(expression) => {
-                    let module = this.module_for_uri(&params.text_document.uri);
-
-                    Some(hover_for_expression(
-                        expression,
-                        lines,
-                        module,
-                        &this.hex_deps,
-                    ))
-                }
-                Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
+                Located::Pattern(pattern) => Some(hover_for_pattern(pattern, module, lines)),
+                Located::Expression(expression) => Some(hover_for_expression(
+                    expression,
+                    lines,
+                    module,
+                    &this.hex_deps,
+                )),
+                Located::Arg(arg) => Some(hover_for_function_argument(arg, module, lines)),
                 Located::FunctionBody(_) => None,
                 Located::Annotation(annotation, type_) => {
                     let type_constructor = type_constructor_from_modules(
@@ -354,6 +360,7 @@ where
                         annotation,
                         &type_,
                         type_constructor,
+                        module,
                         lines,
                     ))
                 }
@@ -406,11 +413,11 @@ where
     }
 }
 
-fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover {
+fn hover_for_pattern(pattern: &TypedPattern, module: &Module, line_numbers: LineNumbers) -> Hover {
     let documentation = pattern.get_documentation().unwrap_or_default();
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new().pretty_print(pattern.type_().as_ref(), 0);
+    let type_ = printer_from_module(module).pretty_print(pattern.type_().as_ref(), 0);
     let contents = format!(
         "```gleam
 {type_}
@@ -423,14 +430,18 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover
     }
 }
 
-fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Hover {
+fn hover_for_function_head(
+    fun: &TypedFunction,
+    line_numbers: LineNumbers,
+    module: &Module,
+) -> Hover {
     let empty_str = EcoString::from("");
     let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
     let function_type = Type::Fn {
         args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
         retrn: fun.return_type.clone(),
     };
-    let formatted_type = Printer::new().pretty_print(&function_type, 0);
+    let formatted_type = printer_from_module(module).pretty_print(&function_type, 0);
     let contents = format!(
         "```gleam
 {formatted_type}
@@ -443,8 +454,12 @@ fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Ho
     }
 }
 
-fn hover_for_function_argument(argument: &Arg<Arc<Type>>, line_numbers: LineNumbers) -> Hover {
-    let type_ = Printer::new().pretty_print(&argument.type_, 0);
+fn hover_for_function_argument(
+    argument: &Arg<Arc<Type>>,
+    module: &Module,
+    line_numbers: LineNumbers,
+) -> Hover {
+    let type_ = printer_from_module(module).pretty_print(&argument.type_, 0);
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
@@ -456,13 +471,14 @@ fn hover_for_annotation(
     location: SrcSpan,
     annotation_type: &Type,
     type_constructor: Option<&TypeConstructor>,
+    module: &Module,
     line_numbers: LineNumbers,
 ) -> Hover {
     let empty_str = EcoString::from("");
     let documentation = type_constructor
         .and_then(|t| t.documentation.as_ref())
         .unwrap_or(&empty_str);
-    let type_ = Printer::new().pretty_print(annotation_type, 0);
+    let type_ = printer_from_module(module).pretty_print(annotation_type, 0);
     let contents = format!(
         "```gleam
 {type_}
@@ -478,9 +494,10 @@ fn hover_for_annotation(
 fn hover_for_module_constant(
     constant: &ModuleConstant<Arc<Type>, EcoString>,
     line_numbers: LineNumbers,
+    module: &Module,
 ) -> Hover {
     let empty_str = EcoString::from("");
-    let type_ = Printer::new().pretty_print(&constant.type_, 0);
+    let type_ = printer_from_module(module).pretty_print(&constant.type_, 0);
     let documentation = constant.documentation.as_ref().unwrap_or(&empty_str);
     let contents = format!("```gleam\n{type_}\n```\n{documentation}");
     Hover {
@@ -492,20 +509,19 @@ fn hover_for_module_constant(
 fn hover_for_expression(
     expression: &TypedExpr,
     line_numbers: LineNumbers,
-    module: Option<&Module>,
+    module: &Module,
     hex_deps: &std::collections::HashSet<EcoString>,
 ) -> Hover {
     let documentation = expression.get_documentation().unwrap_or_default();
 
-    let link_section = module
-        .and_then(|m: &Module| {
-            let (module_name, name) = get_expr_qualified_name(expression)?;
-            get_hexdocs_link_section(module_name, name, &m.ast, hex_deps)
+    let link_section = get_expr_qualified_name(expression)
+        .and_then(|(module_name, name)| {
+            get_hexdocs_link_section(module_name, name, &module.ast, hex_deps)
         })
         .unwrap_or("".to_string());
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
+    let type_ = printer_from_module(module).pretty_print(expression.type_().as_ref(), 0);
     let contents = format!(
         "```gleam
 {type_}
@@ -521,6 +537,7 @@ fn hover_for_expression(
 fn hover_for_imported_value(
     value: &crate::type_::ValueConstructor,
     location: &SrcSpan,
+    module: &Module,
     line_numbers: LineNumbers,
     hex_module_imported_from: Option<&ModuleInterface>,
     name: &EcoString,
@@ -532,7 +549,7 @@ fn hover_for_imported_value(
     });
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new().pretty_print(value.type_.as_ref(), 0);
+    let type_ = printer_from_module(module).pretty_print(value.type_.as_ref(), 0);
     let contents = format!(
         "```gleam
 {type_}
@@ -543,6 +560,12 @@ fn hover_for_imported_value(
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(*location, &line_numbers)),
     }
+}
+
+fn printer_from_module(module: &Module) -> Printer {
+    let mut printer = Printer::new();
+    printer.with_imports_context(module.name.clone(), (&module.ast).into());
+    printer
 }
 
 // Returns true if any part of either range overlaps with the other.

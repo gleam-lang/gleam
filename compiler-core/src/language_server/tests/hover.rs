@@ -867,3 +867,154 @@ fn valid() { Nil }
         })
     );
 }
+
+#[test]
+fn hover_imported_type_in_fn_head() {
+    let code = "
+import example_module
+
+fn main() {
+  example_module.X
+}
+";
+
+    // hovering over "main"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(3, 6),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_imported_type_in_const() {
+    let code = "
+import example_module
+
+const my_const = example_module.X
+";
+
+    // hovering over "my_const"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(3, 7),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_imported_type_in_expr() {
+    let code = "
+import example_module
+
+fn main() {
+    example_module.X
+}
+";
+
+    // hovering over "X"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(4, 19),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_imported_type_in_pattern() {
+    let code = "
+import example_module
+
+fn main() {
+    case example_module.X {
+        var -> Nil
+    }
+}
+";
+
+    // hovering over "var"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(5, 9),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_imported_type_in_param() {
+    let code = "
+import example_module
+
+fn main(argument) {
+    case argument {
+        example_module.X -> Nil
+    }
+}
+";
+
+    // hovering over "argument"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(3, 12),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_imported_type_in_annotation() {
+    let code = "
+import example_module
+
+fn main(x: example_module.T) {
+    x
+}
+";
+
+    // hovering over "T"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(3, 26),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_imported_type_in_import() {
+    let code = "import example_module.{X}";
+
+    // hovering over "X"
+    let hover = hover(
+        TestProject::for_source(code).add_module("example_module", "pub type T { X }"),
+        Position::new(0, 23),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
+
+#[test]
+fn hover_imported_alias() {
+    let code = "
+import mod2.{type T2}
+import mod1
+
+pub fn main() {
+    mod1.X
+}
+";
+
+    // hovering over "main"
+    let hover = hover(
+        TestProject::for_source(code)
+            .add_module("mod1", "pub type T1 { X }")
+            .add_module("mod2", "import mod1 \n pub type T2 = mod1.T1"),
+        Position::new(4, 9),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(hover);
+}
