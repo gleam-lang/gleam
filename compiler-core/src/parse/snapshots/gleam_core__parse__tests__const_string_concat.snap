@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-expression: "\nconst foo = \"foo\"\nconst bar = foo <> \"bar\"\n"
+expression: "\nconst cute = \"cute\"\nconst cute_bee = cute <> \"bee\"\n"
 ---
 Parsed {
     module: Module {
@@ -14,17 +14,17 @@ Parsed {
                         documentation: None,
                         location: SrcSpan {
                             start: 7,
-                            end: 10,
+                            end: 11,
                         },
                         publicity: Private,
-                        name: "foo",
+                        name: "cute",
                         annotation: None,
                         value: String {
                             location: SrcSpan {
-                                start: 13,
-                                end: 18,
+                                start: 14,
+                                end: 20,
                             },
-                            value: "foo",
+                            value: "cute",
                         },
                         type_: (),
                         deprecation: NotDeprecated,
@@ -44,33 +44,33 @@ Parsed {
                     ModuleConstant {
                         documentation: None,
                         location: SrcSpan {
-                            start: 25,
-                            end: 28,
+                            start: 27,
+                            end: 35,
                         },
                         publicity: Private,
-                        name: "bar",
+                        name: "cute_bee",
                         annotation: None,
                         value: StringConcatenation {
                             location: SrcSpan {
-                                start: 31,
-                                end: 43,
+                                start: 38,
+                                end: 51,
                             },
                             left: Var {
                                 location: SrcSpan {
-                                    start: 31,
-                                    end: 34,
+                                    start: 38,
+                                    end: 42,
                                 },
                                 module: None,
-                                name: "foo",
+                                name: "cute",
                                 constructor: None,
                                 typ: (),
                             },
                             right: String {
                                 location: SrcSpan {
-                                    start: 38,
-                                    end: 43,
+                                    start: 46,
+                                    end: 51,
                                 },
-                                value: "bar",
+                                value: "bee",
                             },
                         },
                         type_: (),
@@ -95,8 +95,8 @@ Parsed {
         empty_lines: [],
         new_lines: [
             0,
-            18,
-            43,
+            20,
+            51,
         ],
     },
 }
