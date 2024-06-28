@@ -528,6 +528,21 @@ fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
         .group()
 }
 
+fn const_string_concatenate_bit_array<'a>(
+    elems: impl IntoIterator<Item = Document<'a>>,
+) -> Document<'a> {
+    join(elems, break_(",", ", "))
+        // We want to align the utf8 string parts of the bit array
+        // <<"a"/utf8,
+        //   "b"/utf8>>
+        // instead of
+        // <<"a"/utf8,
+        // "b"/utf8>>
+        .set_nesting(INDENT + 2)
+        .surround("<<", ">>")
+        .group()
+}
+
 fn const_string_concatenate<'a>(
     left: &'a TypedConstant,
     right: &'a TypedConstant,
@@ -535,7 +550,17 @@ fn const_string_concatenate<'a>(
 ) -> Document<'a> {
     let left = const_string_concatenate_argument(left, env);
     let right = const_string_concatenate_argument(right, env);
-    bit_array([left, right])
+    const_string_concatenate_bit_array([left, right])
+}
+
+fn const_string_concatenate_inner<'a>(
+    left: &'a TypedConstant,
+    right: &'a TypedConstant,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let left = const_string_concatenate_argument(left, env);
+    let right = const_string_concatenate_argument(right, env);
+    join([left, right], break_(",", ", "))
 }
 
 fn const_string_concatenate_argument<'a>(
@@ -554,13 +579,15 @@ fn const_string_concatenate_argument<'a>(
                 ..
             } => docvec!['"', string_inner(value), "\"/utf8"],
             ValueConstructorVariant::ModuleConstant {
-                literal: concat_value @ Constant::StringConcatenation { .. },
+                literal: Constant::StringConcatenation { left, right, .. },
                 ..
-            } => docvec![const_inline(concat_value, env), "/binary"],
+            } => const_string_concatenate_inner(left, right, env),
             _ => const_inline(value, env),
         },
 
-        Constant::StringConcatenation { .. } => docvec![const_inline(value, env), "/binary"],
+        Constant::StringConcatenation { left, right, .. } => {
+            const_string_concatenate_inner(left, right, env)
+        }
 
         _ => const_inline(value, env),
     }
