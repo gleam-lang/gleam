@@ -1,8 +1,8 @@
-use crate::ast::SrcSpan;
+use crate::ast::{SrcSpan, TypeAst};
 use crate::error::wrap;
 use crate::parse::Token;
 use ecow::EcoString;
-use heck::{ToSnakeCase, ToUpperCamelCase};
+use heck::{ToPascalCase, ToSnakeCase, ToUpperCamelCase};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LexicalError {
@@ -261,6 +261,41 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://tour.gleam.run/flow-control/case-expressions/".into(),
                 ],
             ),
+            ParseErrorType::ExpectedRecordConstructor { type_name, field, type_ } => {
+                let (constructor, label, annotation) = match (field, type_) {
+                    (Some(f), Some(t)) => (
+                        type_name.to_owned(),
+                        format!("{f}: "),
+                        t.clone().to_annotation(),
+                    ),
+                    (Some(f), None) => (
+                        f.to_pascal_case().as_str().into(),
+                        "field_label: ".into(),
+                        "TypeAnnotation".into(),
+                    ),
+                    (None, Some(t)) => (
+                        type_name.to_owned(),
+                        "".into(),
+                        t.clone().to_annotation(),
+                    ),
+                    (None, None) => (
+                        type_name.to_owned(),
+                        "field_label: ".into(),
+                        "TypeAnnotation".into(),
+                    )
+                };
+                (
+                    "I was not expecting this",
+                    vec![
+                        "Each custom type variant must have a constructor:\n".into(),
+                        format!("type {type_name} {{"),
+                        format!("  {constructor}("),
+                        format!("    {label}{annotation},"),
+                        "  )".into(),
+                        "}".into()
+                    ],
+                )
+            }
         }
     }
 }
@@ -319,6 +354,11 @@ pub enum ParseErrorType {
     RedundantInternalAttribute,          // for a private definition marked as internal
     InvalidModuleTypePattern,            // for patterns that have a dot like: `name.thing`
     ListPatternSpreadFollowedByElements, // When there is a pattern after a spread [..rest, pattern]
+    ExpectedRecordConstructor {
+        type_name: EcoString,
+        field: Option<EcoString>,
+        type_: Option<TypeAst>,
+    },
 }
 
 impl LexicalError {

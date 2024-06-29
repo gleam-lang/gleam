@@ -414,6 +414,47 @@ impl TypeAst {
             TypeAst::Var(_) | TypeAst::Hole(_) => Some(Located::Annotation(self.location(), type_)),
         }
     }
+
+    /// Consumes a `TypeAst` to return the corresponding annotation.
+    pub fn to_annotation(self) -> EcoString {
+        match self {
+            TypeAst::Tuple(tuple) => {
+                let elems = tuple
+                    .elems
+                    .into_iter()
+                    .map(|e| e.to_annotation())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("#({elems})").into()
+            }
+            TypeAst::Fn(func) => {
+                let return_ = func.return_.to_annotation();
+                let args = func
+                    .arguments
+                    .into_iter()
+                    .map(|a| a.to_annotation())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("fn({args}) -> {return_}").into()
+            }
+            TypeAst::Constructor(constructor) => {
+                let name = constructor.name;
+                let args = constructor
+                    .arguments
+                    .into_iter()
+                    .map(|a| a.to_annotation())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                if args.is_empty() {
+                    name
+                } else {
+                    format!("{name}({args})").into()
+                }
+            }
+            TypeAst::Hole(hole) => hole.name,
+            TypeAst::Var(var) => var.name,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
