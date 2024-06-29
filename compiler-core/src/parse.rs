@@ -1429,6 +1429,21 @@ where
         }
     }
 
+    // checks if we have a function call after we find an invalid left paren
+    // Warning: this function will consume the tokens
+    // Returns the location of the right paren if we have a function call
+    fn is_invalid_call_in_case_clause_guard(&mut self) -> Option<u32> {
+        if self.parse_fn_args().is_err() {
+            return None;
+        }
+
+        if let Some((_, end)) = self.maybe_one(&Token::RightParen) {
+            Some(end)
+        } else {
+            None
+        }
+    }
+
     // examples
     // a
     // 1
@@ -1462,6 +1477,18 @@ where
                     name,
                 };
 
+                if let Some((l_paren_start, l_paren_end)) = self.maybe_one(&Token::LeftParen) {
+                    if let Some(end) = self.is_invalid_call_in_case_clause_guard() {
+                        return parse_error(
+                            ParseErrorType::CallInClauseGuard,
+                            SrcSpan { start, end },
+                        );
+                    } else {
+                        self.tok0 = Some((l_paren_start, Token::LeftParen, l_paren_end));
+                        return Ok(None);
+                    }
+                }
+
                 loop {
                     let dot_s = match self.maybe_one(&Token::Dot) {
                         Some((dot_s, _)) => dot_s,
@@ -1490,6 +1517,21 @@ where
                         }
 
                         Some((_, Token::Name { name: label }, int_e)) => {
+                            if let Some((l_paren_start, l_paren_end)) =
+                                self.maybe_one(&Token::LeftParen)
+                            {
+                                if let Some(end) = self.is_invalid_call_in_case_clause_guard() {
+                                    return parse_error(
+                                        ParseErrorType::CallInClauseGuard,
+                                        SrcSpan { start, end },
+                                    );
+                                } else {
+                                    self.tok0 =
+                                        Some((l_paren_start, Token::LeftParen, l_paren_end));
+                                    return Ok(None);
+                                }
+                            }
+
                             unit = ClauseGuard::FieldAccess {
                                 location: SrcSpan {
                                     start: dot_s,

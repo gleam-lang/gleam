@@ -292,6 +292,10 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     ],
                 )
             }
+            ParseErrorType::CallInClauseGuard => (
+                "Unsupported expression",
+                vec!["Functions cannot be called in clause guards.".into()],
+            ),
         }
     }
 }
@@ -357,6 +361,7 @@ pub enum ParseErrorType {
         field: EcoString,
         field_type: Option<TypeAst>,
     },
+    CallInClauseGuard,                   // case x { _ if f() -> 1 }
 }
 
 impl LexicalError {
