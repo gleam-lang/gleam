@@ -9,6 +9,10 @@ error: Syntax error
 4 │     type
   │     ^^^^ I was not expecting this
 
-Found the keyword `type`, expected one of: 
-- `}`
-- a record constructor
+Each custom type variant must have a constructor:
+
+type A {
+  Type(
+    field_label: TypeAnnotation,
+  )
+}

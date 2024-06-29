@@ -1036,6 +1036,21 @@ type A {
     );
 }
 
+// Tests whether diagnostic presents an example of how to formulate a proper
+// record constructor based off a common user error pattern.
+// https://github.com/gleam-lang/gleam/issues/3324
+
+#[test]
+fn type_invalid_variant_constructor() {
+    assert_module_error!(
+        "
+pub type User {
+    name: String,
+}
+"
+    );
+}
+
 #[test]
 fn type_invalid_type_name() {
     assert_module_error!(
