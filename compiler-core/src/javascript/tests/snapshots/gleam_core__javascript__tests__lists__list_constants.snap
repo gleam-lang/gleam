@@ -4,6 +4,6 @@ expression: "\nconst a = []\nconst b = [1, 2, 3]\n"
 ---
 import { toList } from "../gleam.mjs";
 
-const a = toList([]);
+const a = /* @__PURE__ */ toList([]);
 
-const b = toList([1, 2, 3]);
+const b = /* @__PURE__ */ toList([1, 2, 3]);
