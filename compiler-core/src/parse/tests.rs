@@ -1055,7 +1055,7 @@ pub type User {
 fn type_invalid_variant_constructor_without_field_with_type() {
     assert_module_error!(
         r#"
-pub type User {
+type User {
     "name": String,
 }
 "#
@@ -1066,7 +1066,7 @@ pub type User {
 fn type_invalid_variant_constructor_without_field_and_type() {
     assert_module_error!(
         r#"
-pub type User {
+pub opaque type User {
     "id": 123,
 }
 "#

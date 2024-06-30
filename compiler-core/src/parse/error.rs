@@ -261,9 +261,21 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://tour.gleam.run/flow-control/case-expressions/".into(),
                 ],
             ),
-            ParseErrorType::ExpectedRecordConstructor { type_name, field, type_ } => {
+            ParseErrorType::ExpectedRecordConstructor {
+                type_name,
+                is_public_type,
+                is_opaque_type,
+                field_name,
+                field_type,
+            } => {
+                let (accessor, opaque) = match *is_public_type {
+                    true if *is_opaque_type => ("pub ", "opaque "),
+                    true => ("pub ", ""),
+                    false => ("", ""),
+                };
+
                 let mut annotation = EcoString::new();
-                let (constructor, label) = match (field, type_) {
+                let (constructor, label) = match (field_name, field_type) {
                     (Some(f), Some(t)) => {
                         t.print(&mut annotation);
                         (type_name.to_owned(), format!("{f}: "))
@@ -272,7 +284,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                         t.print(&mut annotation);
                         (type_name.to_owned(), "".into())
                     }
-                    (Some(f), None) =>  {
+                    (Some(f), None) => {
                         annotation.push_str("TypeAnnotation");
                         (f.to_pascal_case().as_str().into(), "field_label: ".into())
                     }
@@ -281,15 +293,16 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                         (type_name.to_owned(), "field_label: ".into())
                     }
                 };
+
                 (
                     "I was not expecting this",
                     vec![
                         "Each custom type variant must have a constructor:\n".into(),
-                        format!("type {type_name} {{"),
+                        format!("{accessor}{opaque}type {type_name} {{"),
                         format!("  {constructor}("),
                         format!("    {label}{annotation},"),
                         "  )".into(),
-                        "}".into()
+                        "}".into(),
                     ],
                 )
             }
@@ -353,8 +366,10 @@ pub enum ParseErrorType {
     ListPatternSpreadFollowedByElements, // When there is a pattern after a spread [..rest, pattern]
     ExpectedRecordConstructor {
         type_name: EcoString,
-        field: Option<EcoString>,
-        type_: Option<TypeAst>,
+        is_public_type: bool,
+        is_opaque_type: bool,
+        field_name: Option<EcoString>,
+        field_type: Option<TypeAst>,
     },
 }
 

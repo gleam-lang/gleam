@@ -10,7 +10,7 @@ error: Syntax error
 
 Each custom type variant must have a constructor:
 
-type User {
+pub type User {
   User(
     name: String,
   )
