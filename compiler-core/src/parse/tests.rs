@@ -1054,11 +1054,11 @@ pub type User {
 #[test]
 fn type_invalid_variant_constructor_without_field_with_type() {
     assert_module_error!(
-        "
+        r#"
 pub type User {
-    1: String,
+    "name": String,
 }
-"
+"#
     );
 }
 
@@ -1067,7 +1067,7 @@ fn type_invalid_variant_constructor_without_field_and_type() {
     assert_module_error!(
         r#"
 pub type User {
-    1: "Not a type",
+    "id": 123,
 }
 "#
     );
