@@ -388,7 +388,7 @@ pub trait Visit<'ast> {
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<EcoString>,
         constructor: &'ast Inferred<PatternConstructor>,
-        with_spread: &'ast bool,
+        spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
         visit_typed_pattern_constructor(
@@ -398,7 +398,7 @@ pub trait Visit<'ast> {
             arguments,
             module,
             constructor,
-            with_spread,
+            spread,
             type_,
         );
     }
@@ -1003,7 +1003,7 @@ where
             arguments,
             module,
             constructor,
-            with_spread,
+            spread,
             type_,
         } => v.visit_typed_pattern_constructor(
             location,
@@ -1011,7 +1011,7 @@ where
             arguments,
             module,
             constructor,
-            with_spread,
+            spread,
             type_,
         ),
         Pattern::Tuple { location, elems } => v.visit_typed_pattern_tuple(location, elems),
@@ -1122,7 +1122,7 @@ pub fn visit_typed_pattern_constructor<'a, V>(
     arguments: &'a Vec<CallArg<TypedPattern>>,
     _module: &'a Option<EcoString>,
     _constructor: &'a Inferred<PatternConstructor>,
-    _with_spread: &'a bool,
+    _spread: &'a Option<SrcSpan>,
     _type: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
