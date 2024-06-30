@@ -15,7 +15,6 @@
   gleam add lustre@1.2.3 # "1.2.3"
   gleam add lustre@1.2   # ">= 1.2.0 and < 2.0.0"
   gleam add lustre@1     # ">= 1.0.0 and < 2.0.0"
-  gleam add lustre       # ">= 0.0.0"
   ```
 
   ([Rahul D. Ghosal](https://github.com/rdghosal))
