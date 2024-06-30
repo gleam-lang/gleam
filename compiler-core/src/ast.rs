@@ -21,7 +21,6 @@ use std::cmp::Ordering;
 use std::sync::Arc;
 
 use ecow::EcoString;
-use itertools::Itertools;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use vec1::Vec1;
@@ -1602,11 +1601,7 @@ impl TypedPattern {
                 Some(spread_location) if spread_location.contains(byte_index) => {
                     Some(Located::PatternSpread {
                         spread_location: *spread_location,
-                        unused_fields: arguments
-                            .iter()
-                            .filter(|arg| arg.implicit)
-                            .map(|arg| (arg.label.clone(), arg.value.type_()))
-                            .collect_vec(),
+                        arguments,
                     })
                 }
 
