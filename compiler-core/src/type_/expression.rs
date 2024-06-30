@@ -1,6 +1,9 @@
 use super::{pipe::PipeTyper, *};
 use crate::{
-    analyse::{infer_bit_array_option, name::check_valid_argument},
+    analyse::{
+        infer_bit_array_option,
+        name::{check_valid_argument, NameCorrection},
+    },
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan, Statement,
@@ -205,7 +208,7 @@ pub(crate) struct ExprTyper<'a, 'b> {
 
     // Accumulated errors found while typing the expression
     pub(crate) errors: &'a mut Vec<Error>,
-    pub(crate) bad_names: &'a mut Vec<(SrcSpan, EcoString)>,
+    pub(crate) name_corrections: &'a mut Vec<NameCorrection>,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
@@ -213,7 +216,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         environment: &'a mut Environment<'b>,
         definition: FunctionDefinition,
         errors: &'a mut Vec<Error>,
-        bad_names: &'a mut Vec<(SrcSpan, EcoString)>,
+        name_corrections: &'a mut Vec<NameCorrection>,
     ) -> Self {
         let mut hydrator = Hydrator::new();
 
@@ -237,7 +240,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             implementations,
             current_function_definition: definition,
             errors,
-            bad_names,
+            name_corrections,
         }
     }
 
@@ -745,9 +748,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         for Arg { names, .. } in args.iter() {
-            let (errors, bad_names) = check_valid_argument(names);
-            self.errors.extend(errors);
-            self.bad_names.extend(bad_names);
+            check_valid_argument(names, self.errors, self.name_corrections);
         }
 
         let already_warned_for_unreachable_code = self.already_warned_for_unreachable_code;
@@ -1281,7 +1282,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.environment,
             &self.hydrator,
             self.errors,
-            self.bad_names,
+            self.name_corrections,
         )
         .unify(pattern, value_typ.clone())
         {
@@ -1496,7 +1497,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.environment,
             &self.hydrator,
             self.errors,
-            self.bad_names,
+            self.name_corrections,
         );
         let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location)?;
 

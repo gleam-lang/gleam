@@ -15,6 +15,10 @@ Parsed {
                             start: 1,
                             end: 12,
                         },
+                        name_location: SrcSpan {
+                            start: 6,
+                            end: 12,
+                        },
                         end_position: 43,
                         name: "Wibble",
                         publicity: Private,
@@ -24,11 +28,21 @@ Parsed {
                                     start: 19,
                                     end: 41,
                                 },
+                                name_location: SrcSpan {
+                                    start: 19,
+                                    end: 25,
+                                },
                                 name: "Wibble",
                                 arguments: [
                                     RecordConstructorArg {
                                         label: Some(
-                                            "wibble",
+                                            (
+                                                "wibble",
+                                                SrcSpan {
+                                                    start: 26,
+                                                    end: 32,
+                                                },
+                                            ),
                                         ),
                                         ast: Constructor(
                                             TypeAstConstructor {
@@ -67,6 +81,10 @@ Parsed {
                         location: SrcSpan {
                             start: 45,
                             end: 56,
+                        },
+                        name_location: SrcSpan {
+                            start: 48,
+                            end: 54,
                         },
                         end_position: 75,
                         name: "wobble",

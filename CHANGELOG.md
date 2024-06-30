@@ -81,6 +81,21 @@
   module.
   ([Zhomart Mukhamejanov](https://github.com/Zhomart))
 
+- LSP now suggests a code a action to rename variables, types and functions when they
+  don't match the gleam naming conventions:
+
+  ```
+  let myNumber = 10
+  ```
+
+  Becomes:
+
+  ```
+  let my_number = 10
+  ```
+
+  ([Gears](https://github.com/gearsdatapacks))
+
 ### Bug Fixes
 
 - Functions, types and constructors named `module_info` are now escaped
@@ -100,21 +115,6 @@
 
 - The language server no longer shows completions when inside a literal string.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- LSP now suggests a code a action to rename variables, types and functions when they
-  don't match the gleam naming conventions:
-
-  ```
-  let fooBar = 10
-  ```
-
-  Becomes:
-
-  ```
-  let foo_bar = 10
-  ```
-
-  ([Gears](https://github.com/gearsdatapacks))
 
 ### Bug Fixes
 

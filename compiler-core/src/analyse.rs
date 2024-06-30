@@ -36,7 +36,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
-use name::{check_valid_argument, check_valid_name, check_valid_upname};
+use name::{check_valid_argument, check_valid_name, check_valid_upname, NameCorrection};
 use std::{
     collections::HashMap,
     sync::{Arc, OnceLock},
@@ -162,7 +162,7 @@ impl<'a, A> ModuleAnalyzerConstructor<'a, A> {
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
-            bad_names: vec![],
+            name_corrections: vec![],
         }
         .infer_module(module)
     }
@@ -181,7 +181,7 @@ struct ModuleAnalyzer<'a, A> {
     src_path: Utf8PathBuf,
     errors: Vec<Error>,
     value_names: HashMap<EcoString, SrcSpan>,
-    bad_names: Vec<(SrcSpan, EcoString)>,
+    name_corrections: Vec<NameCorrection>,
     hydrators: HashMap<EcoString, Hydrator>,
     module_name: EcoString,
 }
@@ -320,7 +320,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 package: self.package_config.name.clone(),
                 is_internal,
                 unused_imports,
-                bad_names: self.bad_names,
+                name_corrections: self.name_corrections,
                 contains_todo,
                 line_numbers: self.line_numbers,
                 src_path: self.src_path,
@@ -352,9 +352,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             deprecation,
             ..
         } = c;
-        if let Some((error, bad_name)) = check_valid_name(location, &name, BadNameKind::Constant) {
+        if let Some((error, correction)) = check_valid_name(location, &name, BadNameKind::Constant)
+        {
             self.errors.push(error);
-            self.bad_names.push(bad_name);
+            self.name_corrections.push(correction);
         }
 
         let definition = FunctionDefinition {
@@ -366,7 +367,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             environment,
             definition,
             &mut self.errors,
-            &mut self.bad_names,
+            &mut self.name_corrections,
         );
         let typed_expr = expr_typer.infer_const(&annotation, *value);
         let type_ = typed_expr.type_();
@@ -491,7 +492,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 environment,
                 definition,
                 &mut self.errors,
-                &mut self.bad_names,
+                &mut self.name_corrections,
             );
             expr_typer.hydrator = self
                 .hydrators
@@ -760,11 +761,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                      arguments: args,
                      documentation,
                  }| {
-                    if let Some((error, bad_name)) =
+                    if let Some((error, correction)) =
                         check_valid_upname(name_location, &name, BadNameKind::CustomTypeVariant)
                     {
                         self.errors.push(error);
-                        self.bad_names.push(bad_name);
+                        self.name_corrections.push(correction);
                     }
 
                     let preregistered_fn = environment
@@ -778,11 +779,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                                 .zip(&args_types)
                                 .map(|(argument, t)| {
                                     if let Some((label, location)) = &argument.label {
-                                        if let Some((error, bad_name)) =
+                                        if let Some((error, correction)) =
                                             check_valid_name(*location, label, BadNameKind::Label)
                                         {
                                             self.errors.push(error);
-                                            self.bad_names.push(bad_name);
+                                            self.name_corrections.push(correction);
                                         }
                                     }
 
@@ -1003,10 +1004,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // could improve our approach here somewhat.
         environment.assert_unique_type_name(name, *location)?;
 
-        if let Some((error, bad_name)) = check_valid_upname(*name_location, name, BadNameKind::Type)
+        if let Some((error, correction)) =
+            check_valid_upname(*name_location, name, BadNameKind::Type)
         {
             self.errors.push(error);
-            self.bad_names.push(bad_name);
+            self.name_corrections.push(correction);
         }
 
         let mut hydrator = Hydrator::new();
@@ -1085,11 +1087,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return;
         }
 
-        if let Some((error, bad_name)) =
+        if let Some((error, correction)) =
             check_valid_upname(*name_location, name, BadNameKind::TypeVariable)
         {
             self.errors.push(error);
-            self.bad_names.push(bad_name);
+            self.name_corrections.push(correction);
         }
 
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
@@ -1180,11 +1182,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             implementations,
         } = f;
 
-        if let Some((error, bad_name)) =
+        if let Some((error, correction)) =
             check_valid_name(*name_location, name, BadNameKind::Function)
         {
             self.errors.push(error);
-            self.bad_names.push(bad_name);
+            self.name_corrections.push(correction);
         }
 
         let mut builder = FieldMapBuilder::new(args.len() as u32);
@@ -1192,9 +1194,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             names, location, ..
         } in args.iter()
         {
-            let (errors, bad_names) = check_valid_argument(names);
-            self.errors.extend(errors);
-            self.bad_names.extend(bad_names);
+            check_valid_argument(names, &mut self.errors, &mut self.name_corrections);
 
             builder.add(names.get_label(), *location)?;
         }
