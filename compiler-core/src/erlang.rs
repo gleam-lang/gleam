@@ -532,13 +532,7 @@ fn const_string_concatenate_bit_array<'a>(
     elems: impl IntoIterator<Item = Document<'a>>,
 ) -> Document<'a> {
     join(elems, break_(",", ", "))
-        // We want to align the utf8 string parts of the bit array
-        // <<"a"/utf8,
-        //   "b"/utf8>>
-        // instead of
-        // <<"a"/utf8,
-        // "b"/utf8>>
-        .set_nesting(INDENT + 2)
+        .nest(INDENT)
         .surround("<<", ">>")
         .group()
 }
