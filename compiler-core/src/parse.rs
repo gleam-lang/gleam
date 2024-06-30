@@ -1944,7 +1944,7 @@ where
                 // No separator
                 None,
             )?;
-            let (_, close_end) = self.expect_custom_type_close(&name)?;
+            let (_, close_end) = self.expect_custom_type_close(&name, public, opaque)?;
             (constructors, close_end)
         } else if let Some((eq_s, eq_e)) = self.maybe_one(&Token::Equal) {
             // Type Alias
@@ -2836,25 +2836,29 @@ where
     fn expect_custom_type_close(
         &mut self,
         type_name: &EcoString,
+        public: bool,
+        opaque: bool,
     ) -> Result<(u32, u32), ParseError> {
         match self.maybe_one(&Token::RightBrace) {
             Some((start, end)) => Ok((start, end)),
             None => match self.next_tok() {
                 Some((start, token, end)) => {
-                    let field = match token {
+                    let field_name = match token {
                         Token::Name { name } => Some(name),
                         Token::Type => Some(token.to_string().into()),
                         _ => None,
                     };
-                    let type_ = match self.parse_type_annotation(&Token::Colon) {
+                    let field_type = match self.parse_type_annotation(&Token::Colon) {
                         Ok(Some(annotation)) => Some(annotation),
                         _ => None,
                     };
                     parse_error(
                         ParseErrorType::ExpectedRecordConstructor {
+                            field_name,
+                            field_type,
+                            is_public_type: public,
+                            is_opaque_type: opaque,
                             type_name: type_name.clone(),
-                            field,
-                            type_,
                         },
                         SrcSpan { start, end },
                     )

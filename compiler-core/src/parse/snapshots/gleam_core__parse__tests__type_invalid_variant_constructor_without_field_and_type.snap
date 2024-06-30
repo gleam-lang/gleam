@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-expression: "\npub type User {\n    \"id\": 123,\n}\n"
+expression: "\npub opaque type User {\n    \"id\": 123,\n}\n"
 ---
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:5
@@ -10,7 +10,7 @@ error: Syntax error
 
 Each custom type variant must have a constructor:
 
-type User {
+pub opaque type User {
   User(
     field_label: TypeAnnotation,
   )
