@@ -336,15 +336,22 @@ where
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
                 Located::PatternSpread {
                     spread_location,
-                    unused_fields,
+                    arguments,
                 } => {
                     let range = Some(src_span_to_lsp_range(spread_location, &lines));
 
                     let mut positional = vec![];
                     let mut labelled = vec![];
-                    for (label, type_) in unused_fields {
-                        let type_ = Printer::new().pretty_print(type_.as_ref(), 0);
-                        match label {
+                    for argument in arguments {
+                        // We only want to display the arguments that were ignored using `..`.
+                        // Any argument ignored that way is marked as implicit, so if it is
+                        // not implicit we just ignore it.
+                        if !argument.implicit {
+                            continue;
+                        }
+
+                        let type_ = Printer::new().pretty_print(argument.value.type_().as_ref(), 0);
+                        match &argument.label {
                             Some(label) => labelled.push(format!("- `{}: {}`", label, type_)),
                             None => positional.push(format!("- `{}`", type_)),
                         }
