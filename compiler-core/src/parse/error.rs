@@ -266,7 +266,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     (Some(f), Some(t)) => (
                         type_name.to_owned(),
                         format!("{f}: "),
-                        t.clone().to_annotation(),
+                        t.print(),
                     ),
                     (Some(f), None) => (
                         f.to_pascal_case().as_str().into(),
@@ -276,7 +276,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     (None, Some(t)) => (
                         type_name.to_owned(),
                         "".into(),
-                        t.clone().to_annotation(),
+                        t.print(),
                     ),
                     (None, None) => (
                         type_name.to_owned(),
