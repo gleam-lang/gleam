@@ -180,13 +180,13 @@
   don't match the gleam naming conventions:
 
   ```
-  let fooBar = 10
+  let myNumber = 10
   ```
 
   Becomes:
 
   ```
-  let foo_bar = 10
+  let my_number = 10
   ```
 
   ([Gears](https://github.com/gearsdatapacks))

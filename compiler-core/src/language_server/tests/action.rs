@@ -411,7 +411,7 @@ fn rename_invalid_parameter_discard_name3() {
 #[test]
 fn rename_invalid_parameter_label() {
     insta::assert_snapshot!(apply_first_code_action(
-        "fn foo(thisIsALabel param: Int) { param }",
+        "fn func(thisIsALabel param: Int) { param }",
         0
     ));
 }
@@ -426,7 +426,10 @@ fn rename_invalid_parameter_label2() {
 
 #[test]
 fn rename_invalid_constructor() {
-    insta::assert_snapshot!(apply_first_code_action("type MyType { Foo_Bar(Int) }", 0));
+    insta::assert_snapshot!(apply_first_code_action(
+        "type MyType { The_Constructor(Int) }",
+        0
+    ));
 }
 
 #[test]
@@ -525,7 +528,7 @@ fn rename_invalid_constructor_pattern() {
     insta::assert_snapshot!(apply_first_code_action(
         "pub type Box { Box(Int) }
 pub fn main() {
-    let Box(fooBar) = Box(203)
+    let Box(innerValue) = Box(203)
 }",
         2
     ));

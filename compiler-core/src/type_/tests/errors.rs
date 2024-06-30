@@ -1167,7 +1167,7 @@ fn invalid_parameter_discard_name3() {
 
 #[test]
 fn invalid_parameter_label() {
-    assert_module_error!("fn foo(thisIsALabel param: Int) { param }");
+    assert_module_error!("fn func(thisIsALabel param: Int) { param }");
 }
 
 #[test]
@@ -1177,7 +1177,7 @@ fn invalid_parameter_label2() {
 
 #[test]
 fn invalid_constructor_name() {
-    assert_module_error!("type MyType { Foo_Bar(Int) }");
+    assert_module_error!("type MyType { Int_Value(Int) }");
 }
 
 #[test]
@@ -1243,7 +1243,9 @@ fn invalid_list_pattern_discard_name() {
 
 #[test]
 fn invalid_constructor_pattern_name() {
-    assert_module_error!("pub type Box { Box(Int) } pub fn main() { let Box(fooBar) = Box(203) }");
+    assert_module_error!(
+        "pub type Box { Box(Int) } pub fn main() { let Box(innerValue) = Box(203) }"
+    );
 }
 
 #[test]
