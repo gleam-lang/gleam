@@ -183,7 +183,7 @@ where
         }
     }
 
-    pub fn get_module_inferface(&self, name: &str) -> Option<&ModuleInterface> {
+    pub fn get_module_interface(&self, name: &str) -> Option<&ModuleInterface> {
         self.project_compiler.get_importable_modules().get(name)
     }
 }
