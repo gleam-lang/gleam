@@ -87,9 +87,11 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/coder">Coder</a> -
   <a href="https://github.com/colelawrence">Cole Lawrence</a> -
   <a href="https://github.com/insanitybit">Colin</a> -
+  <a href="https://github.com/CollinBrennan">Collin</a> -
   <a href="https://github.com/Comamoca">Comamoca</a> -
   <a href="https://github.com/c-manakov">Constantine Manakov</a> -
   <a href="https://github.com/cristineguadelupe">Cristine Guadelupe</a> -
+  <a href="https://github.com/sdaigo">Daigo Shitara</a> -
   <a href="https://github.com/dvic">Damir Vandic</a> -
   <a href="https://github.com/ddresselhaus">Dan Dresselhaus</a> -
   <a href="https://github.com/danielelli">Daniel</a> -
@@ -139,6 +141,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/hexpm">Hex</a> -
   <a href="https://github.com/human154">human154</a> -
   <a href="https://github.com/hpiaia">Humberto Piaia</a> -
+  <a href="https://github.com/iainh">Iain H</a> -
   <a href="https://github.com/Ian-GL">Ian González</a> -
   <a href="https://github.com/ianmjones">Ian M. Jones</a> -
   <a href="https://github.com/igordsm">Igor Montagner</a> -
