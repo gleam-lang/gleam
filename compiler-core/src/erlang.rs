@@ -1918,16 +1918,7 @@ fn collect_type_var_usages<'a>(
     types: impl IntoIterator<Item = &'a Arc<Type>>,
 ) -> HashMap<u64, u64> {
     for typ in types {
-        match typ.as_ref() {
-            Type::Named {
-                name, module, args, ..
-            } if is_prelude_module(module) && name == "Result" => {
-                result_type_var_ids(&mut ids, args)
-            }
-            _ => {
-                type_var_ids(typ, &mut ids);
-            }
-        }
+        type_var_ids(typ, &mut ids);
     }
     ids
 }
@@ -1974,9 +1965,15 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
             }
             TypeVar::Link { type_: typ } => type_var_ids(typ, ids),
         },
-        Type::Named { args, .. } => {
-            for arg in args {
-                type_var_ids(arg, ids)
+        Type::Named {
+            args, module, name, ..
+        } => {
+            if is_prelude_module(module) && name == "Result" {
+                result_type_var_ids(ids, args)
+            } else {
+                for arg in args {
+                    type_var_ids(arg, ids)
+                }
             }
         }
         Type::Fn { args, retrn } => {
