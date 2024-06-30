@@ -23,6 +23,21 @@ fn nested_result_type_count_once() {
 }
 
 #[test]
+fn custom_type_nested_result_type_count_once() {
+    assert_erl!(
+        "
+        pub type Wibble(a) {
+            Oops
+        }
+
+        pub fn wibble() -> Result(a, Wibble(a)) {
+            todo
+        }
+        "
+    );
+}
+
+#[test]
 fn tuple_type_params_count_twice() {
     assert_erl!(
         "
