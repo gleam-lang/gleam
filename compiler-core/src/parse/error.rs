@@ -2,7 +2,7 @@ use crate::ast::{SrcSpan, TypeAst};
 use crate::error::wrap;
 use crate::parse::Token;
 use ecow::EcoString;
-use heck::{ToPascalCase, ToSnakeCase, ToUpperCamelCase};
+use heck::{ToSnakeCase, ToUpperCamelCase};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LexicalError {
@@ -262,45 +262,31 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ],
             ),
             ParseErrorType::ExpectedRecordConstructor {
-                type_name,
-                is_public_type,
-                is_opaque_type,
-                field_name,
+                name,
+                public,
+                opaque,
+                field,
                 field_type,
             } => {
-                let (accessor, opaque) = match *is_public_type {
-                    true if *is_opaque_type => ("pub ", "opaque "),
+                let (accessor, opaque) = match *public {
+                    true if *opaque => ("pub ", "opaque "),
                     true => ("pub ", ""),
                     false => ("", ""),
                 };
 
                 let mut annotation = EcoString::new();
-                let (constructor, label) = match (field_name, field_type) {
-                    (Some(f), Some(t)) => {
-                        t.print(&mut annotation);
-                        (type_name.to_owned(), format!("{f}: "))
-                    }
-                    (None, Some(t)) => {
-                        t.print(&mut annotation);
-                        (type_name.to_owned(), "".into())
-                    }
-                    (Some(f), None) => {
-                        annotation.push_str("TypeAnnotation");
-                        (f.to_pascal_case().as_str().into(), "field_label: ".into())
-                    }
-                    (None, None) => {
-                        annotation.push_str("TypeAnnotation");
-                        (type_name.to_owned(), "field_label: ".into())
-                    }
+                match field_type {
+                    Some(t) => t.print(&mut annotation),
+                    None => annotation.push_str("Type"),
                 };
 
                 (
                     "I was not expecting this",
                     vec![
                         "Each custom type variant must have a constructor:\n".into(),
-                        format!("{accessor}{opaque}type {type_name} {{"),
-                        format!("  {constructor}("),
-                        format!("    {label}{annotation},"),
+                        format!("{accessor}{opaque}type {name} {{"),
+                        format!("  {name}("),
+                        format!("    {field}: {annotation},"),
                         "  )".into(),
                         "}".into(),
                     ],
@@ -365,10 +351,10 @@ pub enum ParseErrorType {
     InvalidModuleTypePattern,            // for patterns that have a dot like: `name.thing`
     ListPatternSpreadFollowedByElements, // When there is a pattern after a spread [..rest, pattern]
     ExpectedRecordConstructor {
-        type_name: EcoString,
-        is_public_type: bool,
-        is_opaque_type: bool,
-        field_name: Option<EcoString>,
+        name: EcoString,
+        public: bool,
+        opaque: bool,
+        field: EcoString,
         field_type: Option<TypeAst>,
     },
 }
