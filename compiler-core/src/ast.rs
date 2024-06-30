@@ -415,44 +415,44 @@ impl TypeAst {
         }
     }
 
-    /// Consumes a `TypeAst` to return the corresponding annotation.
-    pub fn to_annotation(self) -> EcoString {
-        match self {
+    /// Generates an annotation corresponding to the type.
+    pub fn print(&self) -> EcoString {
+        match &self {
             TypeAst::Tuple(tuple) => {
                 let elems = tuple
                     .elems
-                    .into_iter()
-                    .map(|e| e.to_annotation())
+                    .iter()
+                    .map(|e| e.print())
                     .collect::<Vec<_>>()
                     .join(", ");
                 format!("#({elems})").into()
             }
             TypeAst::Fn(func) => {
-                let return_ = func.return_.to_annotation();
+                let return_ = func.return_.print();
                 let args = func
                     .arguments
-                    .into_iter()
-                    .map(|a| a.to_annotation())
+                    .iter()
+                    .map(|a| a.print())
                     .collect::<Vec<_>>()
                     .join(", ");
                 format!("fn({args}) -> {return_}").into()
             }
             TypeAst::Constructor(constructor) => {
-                let name = constructor.name;
+                let name = &constructor.name;
                 let args = constructor
                     .arguments
-                    .into_iter()
-                    .map(|a| a.to_annotation())
+                    .iter()
+                    .map(|a| a.print())
                     .collect::<Vec<_>>()
                     .join(", ");
                 if args.is_empty() {
-                    name
+                    name.clone()
                 } else {
                     format!("{name}({args})").into()
                 }
             }
-            TypeAst::Hole(hole) => hole.name,
-            TypeAst::Var(var) => var.name,
+            TypeAst::Hole(hole) => hole.name.clone(),
+            TypeAst::Var(var) => var.name.clone(),
         }
     }
 }
