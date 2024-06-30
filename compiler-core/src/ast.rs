@@ -416,43 +416,38 @@ impl TypeAst {
     }
 
     /// Generates an annotation corresponding to the type.
-    pub fn print(&self) -> EcoString {
+    pub fn print(&self, buffer: &mut EcoString) {
         match &self {
+            TypeAst::Var(var) => buffer.push_str(&var.name),
+            TypeAst::Hole(hole) => buffer.push_str(&hole.name),
             TypeAst::Tuple(tuple) => {
-                let elems = tuple
-                    .elems
-                    .iter()
-                    .map(|e| e.print())
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                format!("#({elems})").into()
+                buffer.push_str("#(");
+                for elem in tuple.elems.iter() {
+                    buffer.push_str(", ");
+                    elem.print(buffer);
+                }
+                buffer.push(')')
             }
             TypeAst::Fn(func) => {
-                let return_ = func.return_.print();
-                let args = func
-                    .arguments
-                    .iter()
-                    .map(|a| a.print())
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                format!("fn({args}) -> {return_}").into()
+                buffer.push_str("fn(");
+                for argument in func.arguments.iter() {
+                    buffer.push_str(", ");
+                    argument.print(buffer);
+                }
+                buffer.push_str(" -> ");
+                func.return_.print(buffer);
             }
             TypeAst::Constructor(constructor) => {
-                let name = &constructor.name;
-                let args = constructor
-                    .arguments
-                    .iter()
-                    .map(|a| a.print())
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                if args.is_empty() {
-                    name.clone()
-                } else {
-                    format!("{name}({args})").into()
+                buffer.push_str(&constructor.name);
+                if !constructor.arguments.is_empty() {
+                    buffer.push('(');
+                    for argument in constructor.arguments.iter() {
+                        buffer.push_str(", ");
+                        argument.print(buffer);
+                    }
+                    buffer.push(')');
                 }
             }
-            TypeAst::Hole(hole) => hole.name.clone(),
-            TypeAst::Var(var) => var.name.clone(),
         }
     }
 }

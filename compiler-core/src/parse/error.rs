@@ -262,27 +262,24 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ],
             ),
             ParseErrorType::ExpectedRecordConstructor { type_name, field, type_ } => {
-                let (constructor, label, annotation) = match (field, type_) {
-                    (Some(f), Some(t)) => (
-                        type_name.to_owned(),
-                        format!("{f}: "),
-                        t.print(),
-                    ),
-                    (Some(f), None) => (
-                        f.to_pascal_case().as_str().into(),
-                        "field_label: ".into(),
-                        "TypeAnnotation".into(),
-                    ),
-                    (None, Some(t)) => (
-                        type_name.to_owned(),
-                        "".into(),
-                        t.print(),
-                    ),
-                    (None, None) => (
-                        type_name.to_owned(),
-                        "field_label: ".into(),
-                        "TypeAnnotation".into(),
-                    )
+                let mut annotation = EcoString::new();
+                let (constructor, label) = match (field, type_) {
+                    (Some(f), Some(t)) => {
+                        t.print(&mut annotation);
+                        (type_name.to_owned(), format!("{f}: "))
+                    }
+                    (None, Some(t)) => {
+                        t.print(&mut annotation);
+                        (type_name.to_owned(), "".into())
+                    }
+                    (Some(f), None) =>  {
+                        annotation.push_str("TypeAnnotation");
+                        (f.to_pascal_case().as_str().into(), "field_label: ".into())
+                    }
+                    (None, None) => {
+                        annotation.push_str("TypeAnnotation");
+                        (type_name.to_owned(), "field_label: ".into())
+                    }
                 };
                 (
                     "I was not expecting this",
