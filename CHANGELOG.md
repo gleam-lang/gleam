@@ -94,6 +94,24 @@
   to JavaScript.
   ([Ofek Doitch](https://github.com/ofekd))
 
+- Error messages resulting from unexpected tokens now include information on
+  the found token's type. This updated message explains how the lexer handled
+  the token, so as to guide the user towards providing correct syntax.
+
+  Following is an example, where the error message indicates that the name of
+  the provided field conflicts with a keyword:
+
+  ```
+  3 │     A(type: String)
+    │       ^^^^ I was not expecting this
+
+  Found the keyword `type`, expected one of:
+  `)`
+  a constructor argument name
+  ```
+
+  ([Rahul D. Ghosal](https://github.com/rdghosal))
+
 ### Formatter
 
 ### Language Server
