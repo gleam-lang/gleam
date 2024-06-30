@@ -26,7 +26,7 @@ fn nested_result_type_count_once() {
 fn tuple_type_params_count_twice() {
     assert_erl!(
         "
-        pub fn wibble() -> #(a, Result(a, b)) {
+        pub fn wibble() -> #(a, b) {
             todo
         }
         "
