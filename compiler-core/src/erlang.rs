@@ -1918,9 +1918,51 @@ fn collect_type_var_usages<'a>(
     types: impl IntoIterator<Item = &'a Arc<Type>>,
 ) -> HashMap<u64, u64> {
     for typ in types {
-        type_var_ids(typ, &mut ids);
+        match typ.as_ref() {
+            Type::Named {
+                name, module, args, ..
+            } if is_prelude_module(module) && name == "Result" => {
+                result_type_var_ids(&mut ids, args)
+            }
+            _ => {
+                type_var_ids(typ, &mut ids);
+            }
+        }
     }
     ids
+}
+
+fn result_type_var_ids(ids: &mut HashMap<u64, u64>, args: &[Arc<Type>]) {
+    match args {
+        [ref arg_ok, ref arg_err] => {
+            let mut ok_ids = HashMap::new();
+            type_var_ids(arg_ok, &mut ok_ids);
+
+            let mut err_ids = HashMap::new();
+            type_var_ids(arg_err, &mut err_ids);
+
+            let mut result_counts = ok_ids;
+            for (id, count) in err_ids {
+                let _ = result_counts
+                    .entry(id)
+                    .and_modify(|current_count| {
+                        if *current_count < count {
+                            *current_count = count;
+                        }
+                    })
+                    .or_insert(count);
+            }
+            for (id, count) in result_counts {
+                let _ = ids
+                    .entry(id)
+                    .and_modify(|current_count| {
+                        *current_count += count;
+                    })
+                    .or_insert(count);
+            }
+        }
+        _ => panic!("result type expects ok and err"),
+    }
 }
 
 fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
