@@ -4,6 +4,10 @@
 
 ### Build tool
 
+- `gleam docs build` now takes an optional `--target` flag to specify the target
+  platform for the generated documentation.
+  ([Jiangda Wang](https://github.com/frank-iii))
+
 ### Compiler
 
 - The warning for the deprecated `[..]` pattern has been improved.
