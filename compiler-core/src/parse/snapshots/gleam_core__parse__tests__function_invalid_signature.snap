@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1087
 expression: "\nfn f(a, \"b\") -> String {\n    a <> b\n}\n"
 ---
 error: Syntax error
@@ -9,5 +10,5 @@ error: Syntax error
   │         ^^^ I was not expecting this
 
 Found a String, expected one of: 
-`)`
-a function parameter
+- `)`
+- a function parameter

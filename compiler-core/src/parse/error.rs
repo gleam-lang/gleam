@@ -205,7 +205,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 };
 
                 let messages = std::iter::once(format!("Found {found}, expected one of: "))
-                    .chain(expected.iter().map(|s| s.to_string()));
+                    .chain(expected.iter().map(|s| format!("- {}", s)));
 
                 let messages = match hint {
                     Some(hint_text) => messages

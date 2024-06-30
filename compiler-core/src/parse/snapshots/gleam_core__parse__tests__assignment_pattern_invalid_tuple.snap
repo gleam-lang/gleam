@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 993
 expression: "\nfn main() {\n    let #(a, case, c) = #(1, 2, 3)\n}\n"
 ---
 error: Syntax error
@@ -9,5 +10,5 @@ error: Syntax error
   │              ^^^^ I was not expecting this
 
 Found the keyword `case`, expected one of: 
-`)`
-a pattern
+- `)`
+- a pattern

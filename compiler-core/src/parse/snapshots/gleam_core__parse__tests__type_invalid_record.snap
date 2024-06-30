@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1063
 expression: "\ntype A {\n    One\n    Two\n    3\n}\n"
 ---
 error: Syntax error
@@ -9,5 +10,5 @@ error: Syntax error
   │     ^ I was not expecting this
 
 Found an Int, expected one of: 
-`}`
-a record constructor
+- `}`
+- a record constructor

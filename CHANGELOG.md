@@ -124,8 +124,8 @@
     │       ^^^^ I was not expecting this
 
   Found the keyword `type`, expected one of:
-  `)`
-  a constructor argument name
+  - `)`
+  - a constructor argument name
   ```
 
   ([Rahul D. Ghosal](https://github.com/rdghosal))

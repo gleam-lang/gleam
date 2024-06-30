@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1004
 expression: "\nfn main() {\n    let <<b1, pub>> = <<24, 3>>\n}\n"
 ---
 error: Syntax error
@@ -9,5 +10,5 @@ error: Syntax error
   │               ^^^ I was not expecting this
 
 Found the keyword `pub`, expected one of: 
-`>>`
-a bit array segment pattern
+- `>>`
+- a bit array segment pattern
