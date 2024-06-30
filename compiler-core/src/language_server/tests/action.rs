@@ -345,7 +345,7 @@ fn test_convert_let_assert_to_case() {
     insta::assert_snapshot!(apply_first_code_action_with_title(
         "
 pub fn main() {
-  let assert Ok(foo) = Ok(1)
+  let assert Ok(value) = Ok(1)
 }
 ",
         2,
@@ -359,7 +359,7 @@ fn test_convert_let_assert_to_case_indented() {
         "
 pub fn main() {
   {
-    let assert Ok(foo) = Ok(1)
+    let assert Ok(value) = Ok(1)
   }
 }
 ",
@@ -382,11 +382,24 @@ pub fn main() {
 }
 
 #[test]
-fn test_convert_let_assert_to_case_no_variables() {
+fn test_convert_let_assert_to_case_discard() {
     insta::assert_snapshot!(apply_first_code_action_with_title(
         "
 pub fn main() {
   let assert [_elem] = [6]
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_to_case_no_variables() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+  let assert [] = []
 }
 ",
         2,

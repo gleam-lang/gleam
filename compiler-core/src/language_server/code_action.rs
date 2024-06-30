@@ -324,7 +324,7 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
         let variables = std::mem::take(&mut self.pattern_variables);
 
         let assigned = match variables.len() {
-            0 => "",
+            0 => "_",
             1 => variables.first().expect("Variables is length one"),
             _ => &format!("#({})", variables.join(", ")),
         };
@@ -333,11 +333,11 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
             range,
             new_text: format!(
                 "let {assigned} = case {expr} {{
-{indent}  {pattern} -> {assigned}
+{indent}  {pattern} -> {value}
 {indent}  _ -> panic
 {indent}}}",
                 // "_" isn't a valid expression, so we just return Nil from the case expression
-                assigned = if assigned == "_" { "Nil" } else { assigned }
+                value = if assigned == "_" { "Nil" } else { assigned }
             ),
         };
 
