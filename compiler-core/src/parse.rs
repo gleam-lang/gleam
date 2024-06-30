@@ -1432,9 +1432,8 @@ where
         }
     }
 
-    // checks if we have a function call after we find an invalid left paren
-    // Warning: this function will consume the tokens
-    // Returns the location of the right paren if we have a function call
+    /// Checks if we have an unexpected left parenthesis and returns appropriate
+    /// error if it is a function call.
     fn parse_function_call_in_clause_guard(&mut self, start: u32) -> Result<(), ParseError> {
         if let Some((l_paren_start, l_paren_end)) = self.maybe_one(&Token::LeftParen) {
             if let Ok((_, end)) = self
