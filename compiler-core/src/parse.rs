@@ -1642,9 +1642,14 @@ where
             self.take_documentation(start)
         };
         let mut name = EcoString::from("");
+        let mut name_location = None;
         if !is_anon {
-            let (_, n, _) = self.expect_name()?;
+            let (name_start, n, name_end) = self.expect_name()?;
             name = n;
+            name_location = Some(SrcSpan {
+                start: name_start,
+                end: name_end,
+            });
         }
         let _ = self.expect_one(&Token::LeftParen)?;
         let args = Parser::series_of(
@@ -1694,6 +1699,7 @@ where
         Ok(Some(Definition::Function(Function {
             documentation,
             location: SrcSpan { start, end },
+            name_location,
             end_position,
             publicity: self.publicity(public, attributes.internal)?,
             name,
@@ -1888,7 +1894,8 @@ where
         attributes: &mut Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
-        let (_, name, parameters, end) = self.expect_type_name()?;
+        let (name_start, name, parameters, end) = self.expect_type_name()?;
+        let name_location = SrcSpan::new(name_start, end);
         let (constructors, end_position) = if self.maybe_one(&Token::LeftBrace).is_some() {
             // Custom Type
             let constructors = Parser::series_of(
@@ -1926,7 +1933,7 @@ where
                     documentation,
                     location: SrcSpan::new(start, type_end),
                     publicity: self.publicity(public, attributes.internal)?,
-                    alias: name,
+                    alias: (name_location, name),
                     parameters,
                     type_ast: t,
                     type_: (),
@@ -1944,7 +1951,7 @@ where
             end_position,
             publicity: self.publicity(public, attributes.internal)?,
             opaque,
-            name,
+            name: (name_location, name),
             parameters,
             constructors,
             typed_parameters: vec![],
@@ -1979,7 +1986,10 @@ where
             let args = Parser::series_of(
                 self,
                 &|p| match (p.tok0.take(), p.tok1.take()) {
-                    (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
+                    (
+                        Some((start, Token::Name { name }, name_end)),
+                        Some((_, Token::Colon, end)),
+                    ) => {
                         let _ = Parser::next_tok(p);
                         let _ = Parser::next_tok(p);
                         let doc = p.take_documentation(start);
@@ -1987,7 +1997,7 @@ where
                             Some(type_ast) => {
                                 let end = type_ast.location().end;
                                 Ok(Some(RecordConstructorArg {
-                                    label: Some(name),
+                                    label: Some((SrcSpan::new(start, name_end), name)),
                                     ast: type_ast,
                                     location: SrcSpan { start, end },
                                     type_: (),
@@ -2205,7 +2215,7 @@ where
             }
         }
 
-        let documentation = self.take_documentation(start);
+        let (_, documentation) = self.take_documentation(start).unzip();
 
         // Gather imports
         let mut unqualified_values = vec![];
@@ -3046,9 +3056,13 @@ where
         t
     }
 
-    fn take_documentation(&mut self, until: u32) -> Option<EcoString> {
+    fn take_documentation(&mut self, until: u32) -> Option<(u32, EcoString)> {
         let mut content = String::new();
+        let mut doc_start = u32::MAX;
         while let Some((start, line)) = self.doc_comments.front() {
+            if *start < doc_start {
+                doc_start = *start;
+            }
             if *start >= until {
                 break;
             }
@@ -3059,7 +3073,7 @@ where
         if content.is_empty() {
             None
         } else {
-            Some(content.into())
+            Some((doc_start, content.into()))
         }
     }
 

@@ -384,7 +384,7 @@ impl ModuleInterface {
                 // A public type definition.
                 Definition::CustomType(CustomType {
                     publicity: Publicity::Public,
-                    name,
+                    name: (_, name),
                     constructors,
                     documentation,
                     opaque,
@@ -406,7 +406,7 @@ impl ModuleInterface {
                     let _ = types.insert(
                         name.clone(),
                         TypeDefinitionInterface {
-                            documentation: documentation.clone(),
+                            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                             deprecation: DeprecationInterface::from_deprecation(deprecation),
                             parameters: typed_parameters.len(),
                             constructors: if *opaque {
@@ -415,13 +415,19 @@ impl ModuleInterface {
                                 constructors
                                     .iter()
                                     .map(|constructor| TypeConstructorInterface {
-                                        documentation: constructor.documentation.clone(),
+                                        documentation: constructor
+                                            .documentation
+                                            .as_ref()
+                                            .map(|(_, doc)| doc.clone()),
                                         name: constructor.name.clone(),
                                         parameters: constructor
                                             .arguments
                                             .iter()
                                             .map(|arg| ParameterInterface {
-                                                label: arg.label.clone(),
+                                                label: arg
+                                                    .label
+                                                    .as_ref()
+                                                    .map(|(_, label)| label.clone()),
                                                 // We share the same id_map between each step so that the
                                                 // incremental ids assigned are consisten with each other
                                                 type_: from_type_helper(&arg.type_, &mut id_map),
@@ -437,7 +443,7 @@ impl ModuleInterface {
                 // A public type alias definition
                 Definition::TypeAlias(TypeAlias {
                     publicity: Publicity::Public,
-                    alias,
+                    alias: (_, alias),
                     parameters,
                     type_,
                     documentation,
@@ -448,7 +454,7 @@ impl ModuleInterface {
                     let _ = type_aliases.insert(
                         alias.clone(),
                         TypeAliasInterface {
-                            documentation: documentation.clone(),
+                            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                             deprecation: DeprecationInterface::from_deprecation(deprecation),
                             parameters: parameters.len(),
                             alias: TypeInterface::from_type(type_.as_ref()),
@@ -476,7 +482,7 @@ impl ModuleInterface {
                             ),
                             type_: TypeInterface::from_type(type_.as_ref()),
                             deprecation: DeprecationInterface::from_deprecation(deprecation),
-                            documentation: documentation.clone(),
+                            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                         },
                     );
                 }
@@ -491,6 +497,7 @@ impl ModuleInterface {
                     documentation,
                     implementations,
                     location: _,
+                    name_location: _,
                     end_position: _,
                     body: _,
                     return_annotation: _,
@@ -505,7 +512,7 @@ impl ModuleInterface {
                                 implementations,
                             ),
                             deprecation: DeprecationInterface::from_deprecation(deprecation),
-                            documentation: documentation.clone(),
+                            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                             parameters: arguments
                                 .iter()
                                 .map(|arg| ParameterInterface {

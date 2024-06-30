@@ -176,6 +176,9 @@
   `..` in a record pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- LSP now supports listing document symbols, such as functions and constants, for the current Gleam file.
+  ([PgBiel](https://github.com/PgBiel))
+
 ### Bug Fixes
 
 - Fixed a bug where the compiler would output a confusing error message when

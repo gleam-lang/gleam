@@ -113,7 +113,9 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
                          type_,
                          ..
                      }| {
-                        label.as_deref().map(|label| (label, type_.clone()))
+                        label
+                            .as_ref()
+                            .map(|(_, label)| (label.as_str(), type_.clone()))
                     },
                 )
                 .collect::<Option<Vec<_>>>()
@@ -253,7 +255,7 @@ fn register_imports(
         }
 
         Definition::CustomType(CustomType {
-            name,
+            name: (_, name),
             constructors,
             typed_parameters,
             opaque,

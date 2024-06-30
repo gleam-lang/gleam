@@ -545,19 +545,19 @@ fn function<'a>(
     }
 }
 
-fn text_documentation(doc: &Option<EcoString>) -> String {
+fn text_documentation(doc: &Option<(u32, EcoString)>) -> String {
     let raw_text = doc
         .as_ref()
-        .map(|it| it.to_string())
+        .map(|(_, it)| it.to_string())
         .unwrap_or_else(|| "".into());
 
     // TODO: parse markdown properly and extract the text nodes
     raw_text.replace("```gleam", "").replace("```", "")
 }
 
-fn markdown_documentation(doc: &Option<EcoString>) -> String {
-    doc.as_deref()
-        .map(|doc| render_markdown(doc, MarkdownSource::Comment))
+fn markdown_documentation(doc: &Option<(u32, EcoString)>) -> String {
+    doc.as_ref()
+        .map(|(_, doc)| render_markdown(doc, MarkdownSource::Comment))
         .unwrap_or_default()
 }
 
@@ -593,7 +593,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
 
     match statement {
         Definition::CustomType(ct) if ct.publicity.is_importable() && !ct.opaque => Some(Type {
-            name: &ct.name,
+            name: &ct.name.1,
             // TODO: Don't use the same printer for docs as for the formatter.
             // We are not interested in showing the exact implementation in the
             // documentation and we could add things like colours, etc.
@@ -614,7 +614,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
                     arguments: constructor
                         .arguments
                         .iter()
-                        .filter_map(|arg| arg.label.as_ref().map(|label| (arg, label)))
+                        .filter_map(|arg| arg.label.as_ref().map(|(_, label)| (arg, label)))
                         .map(|(argument, label)| TypeConstructorArg {
                             name: label.trim_end().to_string(),
                             doc: markdown_documentation(&argument.doc),
@@ -630,7 +630,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
         Definition::CustomType(CustomType {
             publicity: Publicity::Public,
             opaque: true,
-            name,
+            name: (_, name),
             parameters,
             documentation: doc,
             location,
@@ -656,7 +656,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
 
         Definition::TypeAlias(TypeAlias {
             publicity: Publicity::Public,
-            alias: name,
+            alias: (_, name),
             type_ast: typ,
             documentation: doc,
             parameters: args,

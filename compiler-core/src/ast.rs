@@ -206,11 +206,11 @@ pub struct RecordConstructor<T> {
     pub location: SrcSpan,
     pub name: EcoString,
     pub arguments: Vec<RecordConstructorArg<T>>,
-    pub documentation: Option<EcoString>,
+    pub documentation: Option<(u32, EcoString)>,
 }
 
 impl<A> RecordConstructor<A> {
-    pub fn put_doc(&mut self, new_doc: EcoString) {
+    pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
         self.documentation = Some(new_doc);
     }
 }
@@ -219,15 +219,15 @@ pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructorArg<T> {
-    pub label: Option<EcoString>,
+    pub label: Option<(SrcSpan, EcoString)>,
     pub ast: TypeAst,
     pub location: SrcSpan,
     pub type_: T,
-    pub doc: Option<EcoString>,
+    pub doc: Option<(u32, EcoString)>,
 }
 
 impl<T: PartialEq> RecordConstructorArg<T> {
-    pub fn put_doc(&mut self, new_doc: EcoString) {
+    pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
         self.doc = Some(new_doc);
     }
 }
@@ -456,6 +456,10 @@ impl Publicity {
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A function definition
 ///
+/// Note that, for an anonymous function, the `name` field will be an empty string,
+/// and the `name_location` field will be `None`. Conversely, a named function
+/// will have a non-empty `name` field, and its `name_location` field will be `Some`.
+///
 /// # Example(s)
 ///
 /// ```gleam
@@ -463,18 +467,21 @@ impl Publicity {
 /// pub fn bar() -> String { ... }
 /// // Private function
 /// fn foo(x: Int) -> Int { ... }
+/// // Anonymous function
+/// fn(x: Int) { ... }
 /// ```
 pub struct Function<T, Expr> {
     pub location: SrcSpan,
     pub end_position: u32,
     pub name: EcoString,
+    pub name_location: Option<SrcSpan>,
     pub arguments: Vec<Arg<T>>,
     pub body: Vec1<Statement<T, Expr>>,
     pub publicity: Publicity,
     pub deprecation: Deprecation,
     pub return_annotation: Option<TypeAst>,
     pub return_type: T,
-    pub documentation: Option<EcoString>,
+    pub documentation: Option<(u32, EcoString)>,
     pub external_erlang: Option<(EcoString, EcoString)>,
     pub external_javascript: Option<(EcoString, EcoString)>,
     pub implementations: Implementations,
@@ -538,7 +545,7 @@ pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 /// pub const end_year = 2111
 /// ```
 pub struct ModuleConstant<T, ConstantRecordTag> {
-    pub documentation: Option<EcoString>,
+    pub documentation: Option<(u32, EcoString)>,
     pub location: SrcSpan,
     pub publicity: Publicity,
     pub name: EcoString,
@@ -570,10 +577,10 @@ pub type UntypedCustomType = CustomType<()>;
 pub struct CustomType<T> {
     pub location: SrcSpan,
     pub end_position: u32,
-    pub name: EcoString,
+    pub name: (SrcSpan, EcoString),
     pub publicity: Publicity,
     pub constructors: Vec<RecordConstructor<T>>,
-    pub documentation: Option<EcoString>,
+    pub documentation: Option<(u32, EcoString)>,
     pub deprecation: Deprecation,
     pub opaque: bool,
     /// The names of the type parameters.
@@ -605,12 +612,12 @@ pub type UntypedTypeAlias = TypeAlias<()>;
 /// ```
 pub struct TypeAlias<T> {
     pub location: SrcSpan,
-    pub alias: EcoString,
+    pub alias: (SrcSpan, EcoString),
     pub parameters: Vec<EcoString>,
     pub type_ast: TypeAst,
     pub type_: T,
     pub publicity: Publicity,
-    pub documentation: Option<EcoString>,
+    pub documentation: Option<(u32, EcoString)>,
     pub deprecation: Deprecation,
 }
 
@@ -816,23 +823,15 @@ impl<A, B, C, E> Definition<A, B, C, E> {
         matches!(self, Self::Function(..))
     }
 
-    pub fn put_doc(&mut self, new_doc: EcoString) {
+    pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
         match self {
             Definition::Import(Import { .. }) => (),
 
-            Definition::Function(Function {
-                documentation: doc, ..
-            })
-            | Definition::TypeAlias(TypeAlias {
-                documentation: doc, ..
-            })
-            | Definition::CustomType(CustomType {
-                documentation: doc, ..
-            })
-            | Definition::ModuleConstant(ModuleConstant {
-                documentation: doc, ..
-            }) => {
-                let _ = std::mem::replace(doc, Some(new_doc));
+            Definition::Function(Function { documentation, .. })
+            | Definition::TypeAlias(TypeAlias { documentation, .. })
+            | Definition::CustomType(CustomType { documentation, .. })
+            | Definition::ModuleConstant(ModuleConstant { documentation, .. }) => {
+                let _ = std::mem::replace(documentation, Some(new_doc));
             }
         }
     }

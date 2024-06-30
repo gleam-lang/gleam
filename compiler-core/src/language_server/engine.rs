@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Arg, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction, TypedModule,
-        TypedPattern,
+        Arg, CustomType, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction,
+        TypedModule, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
     config::PackageConfig,
@@ -11,13 +11,19 @@ use crate::{
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
-    type_::{pretty::Printer, ModuleInterface, Type, TypeConstructor, ValueConstructorVariant},
+    type_::{
+        pretty::Printer, Deprecation, ModuleInterface, Type, TypeConstructor,
+        ValueConstructorVariant,
+    },
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
+use itertools::Itertools;
 use lsp::CodeAction;
-use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
+use lsp_types::{
+    self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, SymbolKind, SymbolTag, Url,
+};
 use std::sync::Arc;
 
 use super::{
@@ -273,6 +279,121 @@ where
         })
     }
 
+    pub fn document_symbol(
+        &mut self,
+        params: lsp::DocumentSymbolParams,
+    ) -> Response<Vec<DocumentSymbol>> {
+        self.respond(|this| {
+            let mut symbols = vec![];
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(symbols);
+            };
+            let line_numbers = LineNumbers::new(&module.code);
+
+            for definition in &module.ast.definitions {
+                match definition {
+                    Definition::Function(function) => {
+                        // By default, the function's location ends right after the return type.
+                        // For the full symbol range, have it end at the end of the body.
+                        // Also include the documentation, if available.
+                        let full_function_span = SrcSpan {
+                            start: function
+                                .documentation
+                                .as_ref()
+                                .map(|(doc_start, _)| *doc_start)
+                                .unwrap_or(function.location.start),
+
+                            end: function.end_position,
+                        };
+
+                        // The 'deprecated' field is deprecated, but we have to specify it anyway
+                        // to be able to construct the 'DocumentSymbol' type, so
+                        // we suppress the warning. We specify 'None' as specifying 'Some'
+                        // is what is actually deprecated.
+                        #[allow(deprecated)]
+                        symbols.push(DocumentSymbol {
+                            name: function.name.to_string(),
+                            detail: Some(
+                                Printer::new().pretty_print(&get_function_type(function), 0),
+                            ),
+                            kind: SymbolKind::FUNCTION,
+                            tags: make_deprecated_symbol_tag(&function.deprecation),
+                            deprecated: None,
+                            range: src_span_to_lsp_range(full_function_span, &line_numbers),
+                            selection_range: src_span_to_lsp_range(
+                                function.name_location.unwrap_or(function.location),
+                                &line_numbers,
+                            ),
+                            children: None,
+                        });
+                    }
+
+                    Definition::TypeAlias(alias) => {
+                        let full_alias_span = match alias.documentation {
+                            Some((doc_position, _)) => {
+                                SrcSpan::new(doc_position, alias.location.end)
+                            }
+                            None => alias.location,
+                        };
+                        let (name_location, name) = &alias.alias;
+
+                        #[allow(deprecated)]
+                        symbols.push(DocumentSymbol {
+                            name: name.to_string(),
+                            detail: Some(Printer::new().pretty_print(&alias.type_, 0)),
+                            kind: SymbolKind::CLASS,
+                            tags: make_deprecated_symbol_tag(&alias.deprecation),
+                            deprecated: None,
+                            range: src_span_to_lsp_range(full_alias_span, &line_numbers),
+                            selection_range: src_span_to_lsp_range(*name_location, &line_numbers),
+                            children: None,
+                        });
+                    }
+
+                    Definition::CustomType(type_) => {
+                        symbols.push(custom_type_symbol(type_, &line_numbers));
+                    }
+
+                    Definition::Import(_) => {}
+
+                    Definition::ModuleConstant(constant) => {
+                        // `ModuleConstant.location` gives us the span of the constant's name.
+                        // Therefore, it is only suitable for `selection_range` below.
+                        // For the full symbol span, necessary for `range`, include the
+                        // constant value as well.
+                        // Also include the documentation, if available.
+                        let full_constant_span = SrcSpan {
+                            start: constant
+                                .documentation
+                                .as_ref()
+                                .map(|(doc_start, _)| *doc_start)
+                                .unwrap_or(constant.location.start),
+
+                            end: constant.value.location().end,
+                        };
+
+                        #[allow(deprecated)]
+                        symbols.push(DocumentSymbol {
+                            name: constant.name.to_string(),
+                            detail: Some(Printer::new().pretty_print(&constant.type_, 0)),
+                            kind: SymbolKind::CONSTANT,
+                            tags: make_deprecated_symbol_tag(&constant.deprecation),
+                            deprecated: None,
+                            range: src_span_to_lsp_range(full_constant_span, &line_numbers),
+                            selection_range: src_span_to_lsp_range(
+                                constant.location,
+                                &line_numbers,
+                            ),
+                            children: None,
+                        });
+                    }
+                }
+            }
+
+            Ok(symbols)
+        })
+    }
+
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
         let result = handler(self);
         let warnings = self.take_warnings();
@@ -449,6 +570,101 @@ Unused labelled fields:
     }
 }
 
+fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers) -> DocumentSymbol {
+    let constructors = type_
+        .constructors
+        .iter()
+        .map(|constructor| {
+            let mut arguments = vec![];
+
+            // List named arguments as field symbols.
+            for argument in &constructor.arguments {
+                let Some((label_location, label)) = &argument.label else {
+                    continue;
+                };
+
+                let full_arg_span = match argument.doc {
+                    Some((doc_position, _)) => SrcSpan::new(doc_position, argument.location.end),
+                    None => argument.location,
+                };
+
+                #[allow(deprecated)]
+                arguments.push(DocumentSymbol {
+                    name: label.to_string(),
+                    detail: Some(Printer::new().pretty_print(&argument.type_, 0)),
+                    kind: SymbolKind::FIELD,
+                    tags: None,
+                    deprecated: None,
+                    range: src_span_to_lsp_range(full_arg_span, line_numbers),
+                    selection_range: src_span_to_lsp_range(*label_location, line_numbers),
+                    children: None,
+                });
+            }
+
+            // The constructor's location only contains its name by default.
+            // For the full symbol range, take from the start of the name to right after
+            // the last argument.
+            // Include documentation as well if it is available.
+            let full_constructor_span = SrcSpan {
+                start: constructor
+                    .documentation
+                    .as_ref()
+                    .map(|(doc_start, _)| *doc_start)
+                    .unwrap_or(constructor.location.start),
+
+                end: constructor
+                    .arguments
+                    .last()
+                    .map(|last_arg| last_arg.location.end + 1)
+                    .unwrap_or(constructor.location.end),
+            };
+
+            #[allow(deprecated)]
+            DocumentSymbol {
+                name: constructor.name.to_string(),
+                detail: None,
+                kind: if constructor.arguments.is_empty() {
+                    SymbolKind::ENUM_MEMBER
+                } else {
+                    SymbolKind::CONSTRUCTOR
+                },
+                tags: None,
+                deprecated: None,
+                range: src_span_to_lsp_range(full_constructor_span, line_numbers),
+                selection_range: src_span_to_lsp_range(constructor.location, line_numbers),
+                children: Some(arguments),
+            }
+        })
+        .collect_vec();
+
+    // The type's location, by default, ranges from "(pub) type" to the end of its name.
+    // We need it to range to the end of its constructors instead for the full symbol range.
+    // We also include documentation, if available, by LSP convention.
+    let full_type_span = SrcSpan {
+        start: type_
+            .documentation
+            .as_ref()
+            .map(|(doc_start, _)| *doc_start)
+            .unwrap_or(type_.location.start),
+
+        end: type_.end_position,
+    };
+
+    let (name_location, name) = &type_.name;
+
+    #[allow(deprecated)]
+    DocumentSymbol {
+        name: name.to_string(),
+        detail: None,
+        kind: SymbolKind::CLASS,
+        tags: make_deprecated_symbol_tag(&type_.deprecation),
+        deprecated: None,
+        range: src_span_to_lsp_range(full_type_span, line_numbers),
+        selection_range: src_span_to_lsp_range(*name_location, line_numbers),
+        children: Some(constructors),
+    }
+}
+
 fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover {
     let documentation = pattern.get_documentation().unwrap_or_default();
 
@@ -466,13 +682,21 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover
     }
 }
 
-fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Hover {
-    let empty_str = EcoString::from("");
-    let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
-    let function_type = Type::Fn {
+fn get_function_type(fun: &TypedFunction) -> Type {
+    Type::Fn {
         args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
         retrn: fun.return_type.clone(),
-    };
+    }
+}
+
+fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Hover {
+    let empty_str = EcoString::from("");
+    let documentation = fun
+        .documentation
+        .as_ref()
+        .map(|(_, doc)| doc)
+        .unwrap_or(&empty_str);
+    let function_type = get_function_type(fun);
     let formatted_type = Printer::new().pretty_print(&function_type, 0);
     let contents = format!(
         "```gleam
@@ -524,7 +748,11 @@ fn hover_for_module_constant(
 ) -> Hover {
     let empty_str = EcoString::from("");
     let type_ = Printer::new().pretty_print(&constant.type_, 0);
-    let documentation = constant.documentation.as_ref().unwrap_or(&empty_str);
+    let documentation = constant
+        .documentation
+        .as_ref()
+        .map(|(_, doc)| doc)
+        .unwrap_or(&empty_str);
     let contents = format!("```gleam\n{type_}\n```\n{documentation}");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
@@ -701,4 +929,10 @@ fn get_hexdocs_link_section(
     })?;
 
     Some(format_hexdocs_link_section(package_name, module_name, name))
+}
+
+fn make_deprecated_symbol_tag(deprecation: &Deprecation) -> Option<Vec<SymbolTag>> {
+    deprecation
+        .is_deprecated()
+        .then(|| vec![SymbolTag::DEPRECATED])
 }
