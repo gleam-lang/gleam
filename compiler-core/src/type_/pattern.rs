@@ -7,7 +7,7 @@ use itertools::Itertools;
 use super::*;
 use crate::{
     analyse::{
-        name::{check_valid_discard_name, check_valid_name},
+        name::{check_valid_discard_name, check_valid_name, NameCorrection},
         Inferred,
     },
     ast::{AssignName, Layer, UntypedPatternBitArraySegment},
@@ -20,7 +20,7 @@ pub struct PatternTyper<'a, 'b> {
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
     errors: &'a mut Vec<Error>,
-    bad_names: &'a mut Vec<(SrcSpan, EcoString)>,
+    name_corrections: &'a mut Vec<NameCorrection>,
 }
 
 enum PatternMode {
@@ -33,7 +33,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         environment: &'a mut Environment<'b>,
         hydrator: &'a Hydrator,
         errors: &'a mut Vec<Error>,
-        bad_names: &'a mut Vec<(SrcSpan, EcoString)>,
+        name_corrections: &'a mut Vec<NameCorrection>,
     ) -> Self {
         Self {
             environment,
@@ -41,7 +41,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
             errors,
-            bad_names,
+            name_corrections,
         }
     }
 
@@ -51,11 +51,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         typ: Arc<Type>,
         location: SrcSpan,
     ) -> Result<(), UnifyError> {
-        if let Some((error, bad_name)) =
+        if let Some((error, correction)) =
             check_valid_name(location, &EcoString::from(name), BadNameKind::Variable)
         {
             self.errors.push(error);
-            self.bad_names.push(bad_name);
+            self.name_corrections.push(correction);
         }
 
         match &mut self.mode {
@@ -227,9 +227,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     ) -> Result<TypedPattern, Error> {
         match pattern {
             Pattern::Discard { name, location, .. } => {
-                if let Some((error, bad_name)) = check_valid_discard_name(location, &name) {
+                if let Some((error, correction)) = check_valid_discard_name(location, &name) {
                     self.errors.push(error);
-                    self.bad_names.push(bad_name);
+                    self.name_corrections.push(correction);
                 }
                 Ok(Pattern::Discard {
                     type_,
@@ -300,10 +300,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     self.insert_variable(right.as_ref(), string(), right_location)
                         .map_err(|e| convert_unify_error(e, location))?;
                 } else if let AssignName::Discard(right) = &right_side_assignment {
-                    if let Some((error, bad_name)) = check_valid_discard_name(right_location, right)
+                    if let Some((error, correction)) =
+                        check_valid_discard_name(right_location, right)
                     {
                         self.errors.push(error);
-                        self.bad_names.push(bad_name);
+                        self.name_corrections.push(correction);
                     }
                 };
 

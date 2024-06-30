@@ -1,4 +1,5 @@
 use crate::{
+    analyse::name::NameCorrection,
     ast::{
         Arg, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction, TypedModule,
         TypedPattern,
@@ -663,27 +664,30 @@ fn code_action_fix_names(
     actions: &mut Vec<CodeAction>,
 ) {
     let uri = &params.text_document.uri;
-    let bad_names = &module.ast.type_info.bad_names;
+    let name_corrections = &module.ast.type_info.name_corrections;
 
-    if bad_names.is_empty() {
+    if name_corrections.is_empty() {
         return;
     }
 
     // Convert src spans to lsp range
     let line_numbers = LineNumbers::new(&module.code);
 
-    for bad_name in bad_names {
-        let (location, name) = bad_name;
+    for name_correction in name_corrections {
+        let NameCorrection {
+            location,
+            correction,
+        } = name_correction;
 
         let range = src_span_to_lsp_range(*location, &line_numbers);
         // Check if the user's cursor is on the invalid name
         if overlaps(params.range, range) {
             let edit = lsp_types::TextEdit {
                 range,
-                new_text: name.to_string(),
+                new_text: correction.to_string(),
             };
 
-            CodeActionBuilder::new(&format!("Rename to {}", name))
+            CodeActionBuilder::new(&format!("Rename to {}", correction))
                 .kind(lsp_types::CodeActionKind::QUICKFIX)
                 .changes(uri.clone(), vec![edit])
                 .preferred(true)
