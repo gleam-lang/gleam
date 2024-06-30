@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 969
 expression: "\nfn main() {\n    case 1 {\n        -> -> 0\n    }\n}\n"
 ---
 error: Syntax error
@@ -8,6 +9,6 @@ error: Syntax error
 4 │         -> -> 0
   │         ^^ I was not expecting this
 
-Expected one of: 
-"}"
-a case clause
+Found `->`, expected one of: 
+- `}`
+- a case clause

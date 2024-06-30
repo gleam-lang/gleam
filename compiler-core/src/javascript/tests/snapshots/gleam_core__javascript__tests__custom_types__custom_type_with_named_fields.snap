@@ -41,6 +41,6 @@ function update(cat) {
   return box.occupant.withFields({ cuteness: box.occupant.cuteness + 1 });
 }
 
-const felix = new Cat("Felix", 12);
+const felix = /* @__PURE__ */ new Cat("Felix", 12);
 
-const tom = new Cat("Tom", 1);
+const tom = /* @__PURE__ */ new Cat("Tom", 1);

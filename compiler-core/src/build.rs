@@ -17,9 +17,10 @@ pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
-    CustomType, DefinitionLocation, TypeAst, TypedArg, TypedDefinition, TypedExpr, TypedFunction,
-    TypedPattern, TypedStatement,
+    CallArg, CustomType, DefinitionLocation, Pattern, TypeAst, TypedArg, TypedDefinition,
+    TypedExpr, TypedFunction, TypedPattern, TypedStatement,
 };
+use crate::type_::Type;
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},
     config::{self, PackageConfig},
@@ -34,6 +35,7 @@ use ecow::EcoString;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use std::sync::Arc;
 use std::time::SystemTime;
 use std::{collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, process};
 use strum::{Display, EnumIter, EnumString, EnumVariantNames, VariantNames};
@@ -294,12 +296,16 @@ pub struct UnqualifiedImport<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Located<'a> {
     Pattern(&'a TypedPattern),
+    PatternSpread {
+        spread_location: SrcSpan,
+        arguments: &'a Vec<CallArg<Pattern<Arc<Type>>>>,
+    },
     Statement(&'a TypedStatement),
     Expression(&'a TypedExpr),
     ModuleStatement(&'a TypedDefinition),
     FunctionBody(&'a TypedFunction),
     Arg(&'a TypedArg),
-    Annotation(SrcSpan, std::sync::Arc<type_::Type>),
+    Annotation(SrcSpan, std::sync::Arc<Type>),
     UnqualifiedImport(UnqualifiedImport<'a>),
 }
 
@@ -308,7 +314,7 @@ impl<'a> Located<'a> {
     fn type_location(
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
-        type_: std::sync::Arc<type_::Type>,
+        type_: std::sync::Arc<Type>,
     ) -> Option<DefinitionLocation<'_>> {
         type_constructor_from_modules(importable_modules, type_).map(|t| DefinitionLocation {
             module: Some(&t.module),
@@ -321,6 +327,7 @@ impl<'a> Located<'a> {
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
     ) -> Option<DefinitionLocation<'_>> {
         match self {
+            Self::PatternSpread { .. } => None,
             Self::Pattern(pattern) => pattern.definition_location(),
             Self::Statement(statement) => statement.definition_location(),
             Self::FunctionBody(statement) => None,
@@ -360,11 +367,11 @@ impl<'a> Located<'a> {
 // Looks up the type constructor for the given type
 pub fn type_constructor_from_modules(
     importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
-    type_: std::sync::Arc<type_::Type>,
+    type_: std::sync::Arc<Type>,
 ) -> Option<&type_::TypeConstructor> {
     let type_ = type_::collapse_links(type_);
     match type_.as_ref() {
-        type_::Type::Named { name, module, .. } => importable_modules
+        Type::Named { name, module, .. } => importable_modules
             .get(module)
             .and_then(|i| i.types.get(name)),
         _ => None,

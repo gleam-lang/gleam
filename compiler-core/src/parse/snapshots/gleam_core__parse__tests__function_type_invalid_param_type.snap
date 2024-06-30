@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1076
 expression: "\nfn f(g: fn(Int, 1) -> Int) -> Int {\n  g(0, 1)\n}\n"
 ---
 error: Syntax error
@@ -8,6 +9,6 @@ error: Syntax error
 2 │ fn f(g: fn(Int, 1) -> Int) -> Int {
   │                 ^ I was not expecting this
 
-Expected one of: 
-")"
-a type
+Found an Int, expected one of: 
+- `)`
+- a type

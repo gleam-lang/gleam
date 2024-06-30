@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/javascript/tests/consts.rs
+expression: pub const a = Nil
+---
+export const a = undefined;

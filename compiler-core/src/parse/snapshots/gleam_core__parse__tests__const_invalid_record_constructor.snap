@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1125
 expression: "\ntype A {\n    A(String, Int)\n}\nconst a = A(\"a\", let)\n"
 ---
 error: Syntax error
@@ -8,6 +9,6 @@ error: Syntax error
 5 │ const a = A("a", let)
   │                  ^^^ I was not expecting this
 
-Expected one of: 
-")"
-a constant record argument
+Found the keyword `let`, expected one of: 
+- `)`
+- a constant record argument

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 934
 expression: "\nfn main() {\n    #(1, 2, const)\n}\n"
 ---
 error: Syntax error
@@ -8,6 +9,6 @@ error: Syntax error
 3 │     #(1, 2, const)
   │             ^^^^^ I was not expecting this
 
-Expected one of: 
-")"
-an expression
+Found the keyword `const`, expected one of: 
+- `)`
+- an expression

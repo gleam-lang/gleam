@@ -4,4 +4,4 @@ expression: "import other\nconst x = other.Two\n"
 ---
 import * as $other from "../other.mjs";
 
-const x = new $other.Two();
+const x = /* @__PURE__ */ new $other.Two();

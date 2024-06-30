@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/consts.rs
+expression: "\npub type X {\n  X(Int, List(String))\n}\n\npub const x = #(X(1, [\"1\"]))\nconst y = #(X(1, [\"1\"]))\n        "
+---
+import { toList, CustomType as $CustomType } from "../gleam.mjs";
+
+export class X extends $CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+  }
+}
+
+export const x = /* @__PURE__ */ [new X(1, toList(["1"]))];
+
+const y = /* @__PURE__ */ [new X(1, toList(["1"]))];

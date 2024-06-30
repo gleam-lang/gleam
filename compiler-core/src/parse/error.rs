@@ -1,5 +1,6 @@
 use crate::ast::SrcSpan;
 use crate::error::wrap;
+use crate::parse::Token;
 use ecow::EcoString;
 use heck::{ToSnakeCase, ToUpperCamelCase};
 
@@ -187,9 +188,24 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "Argument labels are not allowed for anonymous functions",
                 vec!["Please remove the argument label.".into()],
             ),
-            ParseErrorType::UnexpectedToken { expected, hint } => {
-                let messages = std::iter::once("Expected one of: ".to_string())
-                    .chain(expected.iter().map(|s| s.to_string()));
+            ParseErrorType::UnexpectedToken {
+                token,
+                expected,
+                hint,
+            } => {
+                let found = match token {
+                    Token::Int { .. } => "an Int".to_string(),
+                    Token::Float { .. } => "a Float".to_string(),
+                    Token::String { .. } => "a String".to_string(),
+                    Token::CommentDoc { .. } => "a comment".to_string(),
+                    Token::DiscardName { .. } => "a discard name".to_string(),
+                    Token::Name { .. } | Token::UpName { .. } => "a name".to_string(),
+                    _ if token.is_reserved_word() => format!("the keyword {}", token),
+                    _ => token.to_string(),
+                };
+
+                let messages = std::iter::once(format!("Found {found}, expected one of: "))
+                    .chain(expected.iter().map(|s| format!("- {}", s)));
 
                 let messages = match hint {
                     Some(hint_text) => messages
@@ -290,6 +306,7 @@ pub enum ParseErrorType {
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken {
+        token: Token,
         expected: Vec<EcoString>,
         hint: Option<EcoString>,
     },

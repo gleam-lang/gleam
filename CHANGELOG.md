@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.3.0 - Unreleased
+## v1.3.0-rc1 - 2024-06-30
 
 ### Build tool
 
@@ -15,7 +15,6 @@
   gleam add lustre@1.2.3 # "1.2.3"
   gleam add lustre@1.2   # ">= 1.2.0 and < 2.0.0"
   gleam add lustre@1     # ">= 1.0.0 and < 2.0.0"
-  gleam add lustre       # ">= 0.0.0"
   ```
 
   ([Rahul D. Ghosal](https://github.com/rdghosal))
@@ -112,6 +111,27 @@
 - Import cycles now show the location where the import occur.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- Error messages resulting from unexpected tokens now include information on
+  the found token's type. This updated message explains how the lexer handled
+  the token, so as to guide the user towards providing correct syntax.
+
+  Following is an example, where the error message indicates that the name of
+  the provided field conflicts with a keyword:
+
+  ```
+  3 │     A(type: String)
+    │       ^^^^ I was not expecting this
+
+  Found the keyword `type`, expected one of:
+  - `)`
+  - a constructor argument name
+  ```
+
+  ([Rahul D. Ghosal](https://github.com/rdghosal))
+
+- When compiling to JavaScript constants will now be annotated as `@__PURE__`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Language Server
@@ -151,6 +171,10 @@
 
 - Completions are no longer provided inside comments.
   ([Nicky Lim](https://github.com/nicklimmm))
+
+- The language server will now show all the ignored fields when hovering over
+  `..` in a record pattern.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Bug Fixes
 

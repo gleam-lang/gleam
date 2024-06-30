@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 956
 expression: "\nfn main() {\n    case 1, type {\n        _, _ -> 0\n    }\n}\n"
 ---
 error: Syntax error
@@ -8,6 +9,6 @@ error: Syntax error
 3 │     case 1, type {
   │             ^^^^ I was not expecting this
 
-Expected one of: 
-"{"
-an expression
+Found the keyword `type`, expected one of: 
+- `{`
+- an expression
