@@ -2835,18 +2835,33 @@ where
     /// Used for mapping to a more specific error type and message.
     fn expect_custom_type_close(
         &mut self,
-        type_name: &EcoString,
+        name: &EcoString,
         public: bool,
         opaque: bool,
     ) -> Result<(u32, u32), ParseError> {
         match self.maybe_one(&Token::RightBrace) {
             Some((start, end)) => Ok((start, end)),
             None => match self.next_tok() {
+                None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
                 Some((start, token, end)) => {
-                    let field_name = match token {
-                        Token::Name { name } => Some(name),
-                        Token::Type => Some(token.to_string().into()),
-                        _ => None,
+                    // If provided a Name, map to a more detailed error
+                    // message to nudge the user.
+                    // Else, handle as an unexpected token.
+                    let field = match token {
+                        Token::Name { name } => name,
+                        _ => {
+                            return parse_error(
+                                ParseErrorType::UnexpectedToken {
+                                    token,
+                                    expected: vec![
+                                        Token::RightBrace.to_string().into(),
+                                        "a record constructor".into(),
+                                    ],
+                                    hint: None,
+                                },
+                                SrcSpan { start, end },
+                            )
+                        }
                     };
                     let field_type = match self.parse_type_annotation(&Token::Colon) {
                         Ok(Some(annotation)) => Some(annotation),
@@ -2854,16 +2869,15 @@ where
                     };
                     parse_error(
                         ParseErrorType::ExpectedRecordConstructor {
-                            field_name,
+                            name: name.clone(),
+                            public,
+                            opaque,
+                            field,
                             field_type,
-                            is_public_type: public,
-                            is_opaque_type: opaque,
-                            type_name: type_name.clone(),
                         },
                         SrcSpan { start, end },
                     )
                 }
-                None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
             },
         }
     }
