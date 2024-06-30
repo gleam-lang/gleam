@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub type User {\n    1: String,\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:5
+  │
+3 │     1: String,
+  │     ^ I was not expecting this
+
+Each custom type variant must have a constructor:
+
+type User {
+  User(
+    String,
+  )
+}

@@ -1041,7 +1041,7 @@ type A {
 // https://github.com/gleam-lang/gleam/issues/3324
 
 #[test]
-fn type_invalid_variant_constructor() {
+fn type_invalid_variant_constructor_with_field_and_type() {
     assert_module_error!(
         "
 pub type User {
@@ -1050,6 +1050,29 @@ pub type User {
 "
     );
 }
+
+#[test]
+fn type_invalid_variant_constructor_without_field_with_type() {
+    assert_module_error!(
+        "
+pub type User {
+    1: String,
+}
+"
+    );
+}
+
+#[test]
+fn type_invalid_variant_constructor_without_field_and_type() {
+    assert_module_error!(
+        r#"
+pub type User {
+    1: "Not a type",
+}
+"#
+    );
+}
+
 
 #[test]
 fn type_invalid_type_name() {
