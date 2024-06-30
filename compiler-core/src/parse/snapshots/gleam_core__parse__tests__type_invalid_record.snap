@@ -8,10 +8,6 @@ error: Syntax error
 5 │     3
   │     ^ I was not expecting this
 
-Each custom type variant must have a constructor:
-
-type A {
-  A(
-    field_label: TypeAnnotation,
-  )
-}
+Found an Int, expected one of: 
+- `}`
+- a record constructor

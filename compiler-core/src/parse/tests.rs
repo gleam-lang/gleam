@@ -1025,7 +1025,7 @@ fn main() {
 }
 
 #[test]
-fn type_invalid_variant_constructor_with_field_without_type() {
+fn type_invalid_constructor() {
     assert_module_error!(
         "
 type A {
@@ -1041,7 +1041,7 @@ type A {
 // https://github.com/gleam-lang/gleam/issues/3324
 
 #[test]
-fn type_invalid_variant_constructor_with_field_and_type() {
+fn type_invalid_record_constructor() {
     assert_module_error!(
         "
 pub type User {
@@ -1052,27 +1052,26 @@ pub type User {
 }
 
 #[test]
-fn type_invalid_variant_constructor_without_field_with_type() {
+fn type_invalid_record_constructor_without_field_type() {
     assert_module_error!(
-        r#"
-type User {
-    "name": String,
+        "
+pub opaque type User {
+    name
 }
-"#
+"
     );
 }
 
 #[test]
-fn type_invalid_variant_constructor_without_field_and_type() {
+fn type_invalid_record_constructor_invalid_field_type() {
     assert_module_error!(
         r#"
-pub opaque type User {
-    "id": 123,
+type User {
+    name: "Test User",
 }
 "#
     );
 }
-
 
 #[test]
 fn type_invalid_type_name() {
