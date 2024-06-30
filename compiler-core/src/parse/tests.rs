@@ -1025,7 +1025,7 @@ fn main() {
 }
 
 #[test]
-fn type_invalid_constructor() {
+fn type_invalid_variant_constructor_with_field_without_type() {
     assert_module_error!(
         "
 type A {
