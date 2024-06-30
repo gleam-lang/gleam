@@ -132,6 +132,38 @@
 - When compiling to JavaScript constants will now be annotated as `@__PURE__`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Error messages for invalid record constructors now contain a restructured
+  example of what the user likely intended. This is especially helpful for
+  users coming from other languages, like Rust or Go.
+
+  For example, provided a User type:
+
+  ```
+  pub type User {
+    name: String
+  }
+  ```
+
+  The compiler errors with the following message:
+
+  ```
+  error: Syntax error
+    ┌─ /src/parse/error.gleam:3:5
+    │
+  3 │     name: String,
+    │     ^^^^ I was not expecting this
+
+  Each custom type variant must have a constructor:
+
+  pub type User {
+    User(
+      name: String,
+    )
+  }
+  ```
+
+  ([Rahul D. Ghosal](https://github.com/rdghosal))
+
 ### Formatter
 
 ### Language Server
