@@ -8,6 +8,6 @@ error: Syntax error
 4 │     type
   │     ^^^^ I was not expecting this
 
-Expected one of: 
-"}"
+Found the keyword `type`, expected one of: 
+`}`
 a record constructor

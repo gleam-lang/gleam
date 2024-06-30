@@ -8,6 +8,6 @@ error: Syntax error
 2 │ fn f(g: fn(Int, 1) -> Int) -> Int {
   │                 ^ I was not expecting this
 
-Expected one of: 
-")"
+Found an Int, expected one of: 
+`)`
 a type

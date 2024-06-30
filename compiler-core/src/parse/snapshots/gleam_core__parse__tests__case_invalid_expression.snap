@@ -8,6 +8,6 @@ error: Syntax error
 3 │     case 1, type {
   │             ^^^^ I was not expecting this
 
-Expected one of: 
-"{"
+Found the keyword `type`, expected one of: 
+`{`
 an expression

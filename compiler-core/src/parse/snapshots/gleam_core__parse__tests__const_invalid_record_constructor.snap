@@ -8,6 +8,6 @@ error: Syntax error
 5 │ const a = A("a", let)
   │                  ^^^ I was not expecting this
 
-Expected one of: 
-")"
+Found the keyword `let`, expected one of: 
+`)`
 a constant record argument
