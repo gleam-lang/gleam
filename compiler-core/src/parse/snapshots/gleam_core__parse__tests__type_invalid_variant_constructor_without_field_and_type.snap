@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/parse/tests.rs
-expression: "\npub type User {\n    1: \"Not a type\",\n}\n"
+expression: "\npub type User {\n    \"id\": 123,\n}\n"
 ---
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:5
   │
-3 │     1: "Not a type",
-  │     ^ I was not expecting this
+3 │     "id": 123,
+  │     ^^^^ I was not expecting this
 
 Each custom type variant must have a constructor:
 
