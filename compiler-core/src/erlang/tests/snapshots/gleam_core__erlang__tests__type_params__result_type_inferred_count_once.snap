@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/erlang/tests/type_params.rs
+expression: "\n        fn wibble() {\n            let assert Ok(_) = wobble()\n        }\n\n        type Wobble(a) {\n            Wobble\n        }\n\n        fn wobble() -> Result(a, Wobble(a)) {\n            todo\n        }\n        "
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export_type([wobble/1]).
+
+-type wobble(I) :: wobble | {gleam_phantom, I}.
+
+-spec wobble() -> {ok, any()} | {error, wobble(any())}.
+wobble() ->
+    erlang:error(#{gleam_error => todo,
+            message => <<"This has not yet been implemented"/utf8>>,
+            module => <<"my/mod"/utf8>>,
+            function => <<"wobble"/utf8>>,
+            line => 11}).
+
+-spec wibble() -> {ok, any()} | {error, wobble(any())}.
+wibble() ->
+    _assert_subject = wobble(),
+    {ok, _} = case _assert_subject of
+        {ok, _} -> _assert_subject;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Assertion pattern match failed"/utf8>>,
+                        value => _assert_fail,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"wibble"/utf8>>,
+                        line => 3})
+    end.

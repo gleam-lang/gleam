@@ -29,6 +29,7 @@ mod records;
 mod reserved;
 mod strings;
 mod todo;
+mod type_params;
 mod use_;
 mod variables;
 

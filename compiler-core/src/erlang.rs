@@ -1923,6 +1923,34 @@ fn collect_type_var_usages<'a>(
     ids
 }
 
+fn result_type_var_ids(ids: &mut HashMap<u64, u64>, arg_ok: &Type, arg_err: &Type) {
+    let mut ok_ids = HashMap::new();
+    type_var_ids(arg_ok, &mut ok_ids);
+
+    let mut err_ids = HashMap::new();
+    type_var_ids(arg_err, &mut err_ids);
+
+    let mut result_counts = ok_ids;
+    for (id, count) in err_ids {
+        let _ = result_counts
+            .entry(id)
+            .and_modify(|current_count| {
+                if *current_count < count {
+                    *current_count = count;
+                }
+            })
+            .or_insert(count);
+    }
+    for (id, count) in result_counts {
+        let _ = ids
+            .entry(id)
+            .and_modify(|current_count| {
+                *current_count += count;
+            })
+            .or_insert(count);
+    }
+}
+
 fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
     match type_ {
         Type::Var { type_: typ } => match typ.borrow().deref() {
@@ -1932,11 +1960,18 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
             }
             TypeVar::Link { type_: typ } => type_var_ids(typ, ids),
         },
-        Type::Named { args, .. } => {
-            for arg in args {
-                type_var_ids(arg, ids)
+        Type::Named {
+            args, module, name, ..
+        } => match args[..] {
+            [ref arg_ok, ref arg_err] if is_prelude_module(module) && name == "Result" => {
+                result_type_var_ids(ids, arg_ok, arg_err)
             }
-        }
+            _ => {
+                for arg in args {
+                    type_var_ids(arg, ids)
+                }
+            }
+        },
         Type::Fn { args, retrn } => {
             for arg in args {
                 type_var_ids(arg, ids)
@@ -2068,13 +2103,14 @@ impl<'a> TypePrinter<'a> {
                 let arg0 = self.print(args.first().expect("print_prelude_type list"));
                 "list(".to_doc().append(arg0).append(")")
             }
-            "Result" => {
-                let arg_ok = self.print(args.first().expect("print_prelude_type result ok"));
-                let arg_err = self.print(args.get(1).expect("print_prelude_type result err"));
-                let ok = tuple(["ok".to_doc(), arg_ok]);
-                let error = tuple(["error".to_doc(), arg_err]);
-                docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
-            }
+            "Result" => match args {
+                &[ref arg_ok, ref arg_err] => {
+                    let ok = tuple(["ok".to_doc(), self.print(arg_ok)]);
+                    let error = tuple(["error".to_doc(), self.print(arg_err)]);
+                    docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
+                }
+                _ => panic!("print_prelude_type result expects ok and err"),
+            },
             // Getting here should mean we either forgot a built-in type or there is a
             // compiler error
             name => panic!("{name} is not a built-in type."),
