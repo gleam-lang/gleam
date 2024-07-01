@@ -334,7 +334,7 @@ jobs:
           deno-version: v1.x
 
       - name: Install Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
 
       - name: Install Erlang
         uses: erlef/setup-beam@v1
