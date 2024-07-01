@@ -1,4 +1,4 @@
-use crate::ast::SrcSpan;
+use crate::ast::{SrcSpan, TypeAst};
 use crate::error::wrap;
 use crate::parse::Token;
 use ecow::EcoString;
@@ -261,6 +261,37 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://tour.gleam.run/flow-control/case-expressions/".into(),
                 ],
             ),
+            ParseErrorType::ExpectedRecordConstructor {
+                name,
+                public,
+                opaque,
+                field,
+                field_type,
+            } => {
+                let (accessor, opaque) = match *public {
+                    true if *opaque => ("pub ", "opaque "),
+                    true => ("pub ", ""),
+                    false => ("", ""),
+                };
+
+                let mut annotation = EcoString::new();
+                match field_type {
+                    Some(t) => t.print(&mut annotation),
+                    None => annotation.push_str("Type"),
+                };
+
+                (
+                    "I was not expecting this",
+                    vec![
+                        "Each custom type variant must have a constructor:\n".into(),
+                        format!("{accessor}{opaque}type {name} {{"),
+                        format!("  {name}("),
+                        format!("    {field}: {annotation},"),
+                        "  )".into(),
+                        "}".into(),
+                    ],
+                )
+            }
         }
     }
 }
@@ -319,6 +350,13 @@ pub enum ParseErrorType {
     RedundantInternalAttribute,          // for a private definition marked as internal
     InvalidModuleTypePattern,            // for patterns that have a dot like: `name.thing`
     ListPatternSpreadFollowedByElements, // When there is a pattern after a spread [..rest, pattern]
+    ExpectedRecordConstructor {
+        name: EcoString,
+        public: bool,
+        opaque: bool,
+        field: EcoString,
+        field_type: Option<TypeAst>,
+    },
 }
 
 impl LexicalError {

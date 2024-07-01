@@ -1911,8 +1911,7 @@ where
                 // No separator
                 None,
             )?;
-            let (_, close_end) =
-                self.expect_one_following_series(&Token::RightBrace, "a record constructor")?;
+            let (_, close_end) = self.expect_custom_type_close(&name, public, opaque)?;
             (constructors, close_end)
         } else if let Some((eq_s, eq_e)) = self.maybe_one(&Token::Equal) {
             // Type Alias
@@ -2794,6 +2793,59 @@ where
         match self.maybe_one(wanted) {
             Some((start, end)) => Ok((start, end)),
             None => self.next_tok_unexpected(vec![wanted.to_string().into(), series.into()]),
+        }
+    }
+
+    /// Expect the end to a custom type definiton or handle an incorrect
+    /// record constructor definition.
+    ///
+    /// Used for mapping to a more specific error type and message.
+    fn expect_custom_type_close(
+        &mut self,
+        name: &EcoString,
+        public: bool,
+        opaque: bool,
+    ) -> Result<(u32, u32), ParseError> {
+        match self.maybe_one(&Token::RightBrace) {
+            Some((start, end)) => Ok((start, end)),
+            None => match self.next_tok() {
+                None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
+                Some((start, token, end)) => {
+                    // If provided a Name, map to a more detailed error
+                    // message to nudge the user.
+                    // Else, handle as an unexpected token.
+                    let field = match token {
+                        Token::Name { name } => name,
+                        _ => {
+                            return parse_error(
+                                ParseErrorType::UnexpectedToken {
+                                    token,
+                                    expected: vec![
+                                        Token::RightBrace.to_string().into(),
+                                        "a record constructor".into(),
+                                    ],
+                                    hint: None,
+                                },
+                                SrcSpan { start, end },
+                            )
+                        }
+                    };
+                    let field_type = match self.parse_type_annotation(&Token::Colon) {
+                        Ok(Some(annotation)) => Some(annotation),
+                        _ => None,
+                    };
+                    parse_error(
+                        ParseErrorType::ExpectedRecordConstructor {
+                            name: name.clone(),
+                            public,
+                            opaque,
+                            field,
+                            field_type,
+                        },
+                        SrcSpan { start, end },
+                    )
+                }
+            },
         }
     }
 

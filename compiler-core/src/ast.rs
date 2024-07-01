@@ -414,6 +414,146 @@ impl TypeAst {
             TypeAst::Var(_) | TypeAst::Hole(_) => Some(Located::Annotation(self.location(), type_)),
         }
     }
+
+    /// Generates an annotation corresponding to the type.
+    pub fn print(&self, buffer: &mut EcoString) {
+        match &self {
+            TypeAst::Var(var) => buffer.push_str(&var.name),
+            TypeAst::Hole(hole) => buffer.push_str(&hole.name),
+            TypeAst::Tuple(tuple) => {
+                buffer.push_str("#(");
+                for (i, elem) in tuple.elems.iter().enumerate() {
+                    elem.print(buffer);
+                    if i < tuple.elems.len() - 1 {
+                        buffer.push_str(", ");
+                    }
+                }
+                buffer.push(')')
+            }
+            TypeAst::Fn(func) => {
+                buffer.push_str("fn(");
+                for (i, argument) in func.arguments.iter().enumerate() {
+                    argument.print(buffer);
+                    if i < func.arguments.len() - 1 {
+                        buffer.push_str(", ");
+                    }
+                }
+                buffer.push(')');
+                buffer.push_str(" -> ");
+                func.return_.print(buffer);
+            }
+            TypeAst::Constructor(constructor) => {
+                if let Some(module) = &constructor.module {
+                    buffer.push_str(module);
+                    buffer.push('.');
+                }
+                buffer.push_str(&constructor.name);
+                if !constructor.arguments.is_empty() {
+                    buffer.push('(');
+                    for (i, argument) in constructor.arguments.iter().enumerate() {
+                        argument.print(buffer);
+                        if i < constructor.arguments.len() - 1 {
+                            buffer.push_str(", ");
+                        }
+                    }
+                    buffer.push(')');
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn type_ast_print_fn() {
+    let mut buffer = EcoString::new();
+    let ast = TypeAst::Fn(TypeAstFn {
+        location: SrcSpan { start: 1, end: 1 },
+        arguments: vec![
+            TypeAst::Var(TypeAstVar {
+                location: SrcSpan { start: 1, end: 1 },
+                name: "String".into(),
+            }),
+            TypeAst::Var(TypeAstVar {
+                location: SrcSpan { start: 1, end: 1 },
+                name: "Bool".into(),
+            }),
+        ],
+        return_: Box::new(TypeAst::Var(TypeAstVar {
+            location: SrcSpan { start: 1, end: 1 },
+            name: "Int".into(),
+        })),
+    });
+    ast.print(&mut buffer);
+    assert_eq!(&buffer, "fn(String, Bool) -> Int")
+}
+
+#[test]
+fn type_ast_print_constructor() {
+    let mut buffer = EcoString::new();
+    let ast = TypeAst::Constructor(TypeAstConstructor {
+        name: "SomeType".into(),
+        module: Some("some_module".into()),
+        location: SrcSpan { start: 1, end: 1 },
+        arguments: vec![
+            TypeAst::Var(TypeAstVar {
+                location: SrcSpan { start: 1, end: 1 },
+                name: "String".into(),
+            }),
+            TypeAst::Var(TypeAstVar {
+                location: SrcSpan { start: 1, end: 1 },
+                name: "Bool".into(),
+            }),
+        ],
+    });
+    ast.print(&mut buffer);
+    assert_eq!(&buffer, "some_module.SomeType(String, Bool)")
+}
+
+#[test]
+fn type_ast_print_tuple() {
+    let mut buffer = EcoString::new();
+    let ast = TypeAst::Tuple(TypeAstTuple {
+        location: SrcSpan { start: 1, end: 1 },
+        elems: vec![
+            TypeAst::Constructor(TypeAstConstructor {
+                name: "SomeType".into(),
+                module: Some("some_module".into()),
+                location: SrcSpan { start: 1, end: 1 },
+                arguments: vec![
+                    TypeAst::Var(TypeAstVar {
+                        location: SrcSpan { start: 1, end: 1 },
+                        name: "String".into(),
+                    }),
+                    TypeAst::Var(TypeAstVar {
+                        location: SrcSpan { start: 1, end: 1 },
+                        name: "Bool".into(),
+                    }),
+                ],
+            }),
+            TypeAst::Fn(TypeAstFn {
+                location: SrcSpan { start: 1, end: 1 },
+                arguments: vec![
+                    TypeAst::Var(TypeAstVar {
+                        location: SrcSpan { start: 1, end: 1 },
+                        name: "String".into(),
+                    }),
+                    TypeAst::Var(TypeAstVar {
+                        location: SrcSpan { start: 1, end: 1 },
+                        name: "Bool".into(),
+                    }),
+                ],
+                return_: Box::new(TypeAst::Var(TypeAstVar {
+                    location: SrcSpan { start: 1, end: 1 },
+                    name: "Int".into(),
+                })),
+            }),
+        ],
+    });
+    ast.print(&mut buffer);
+    assert_eq!(
+        &buffer,
+        "#(some_module.SomeType(String, Bool), fn(String, Bool) -> Int)"
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
