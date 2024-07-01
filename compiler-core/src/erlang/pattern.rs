@@ -192,30 +192,33 @@ fn pattern_segment<'a>(
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
-    let document = match value {
-        // Skip the normal <<value/utf8>> surrounds
-        Pattern::String { value, .. } => value.to_doc().surround("\"", "\""),
+    let mut print_pattern =
+        |pattern: &'a TypedPattern| print(pattern, vars, define_variables, env, guards);
 
-        // As normal
-        Pattern::Discard { .. }
-        | Pattern::Variable { .. }
-        | Pattern::Int { .. }
-        | Pattern::Float { .. } => print(value, vars, define_variables, env, guards),
+    let doc_value = |print_pattern: &mut dyn FnMut(&'a TypedPattern) -> Document<'a>| {
+        match value {
+            // Skip the normal <<value/utf8>> surrounds
+            Pattern::String { value, .. } => value.to_doc().surround("\"", "\""),
 
-        // No other pattern variants are allowed in pattern bit array segments
-        _ => panic!("Pattern segment match not recognised"),
+            // As normal
+            Pattern::Discard { .. }
+            | Pattern::Variable { .. }
+            | Pattern::Int { .. }
+            | Pattern::Float { .. } => print_pattern(value),
+
+            // No other pattern variants are allowed in pattern bit array segments
+            _ => panic!("Pattern segment match not recognised"),
+        }
     };
 
-    let size = |value: &'a TypedPattern, env: &mut Env<'a>| {
-        Some(
-            ":".to_doc()
-                .append(print(value, vars, define_variables, env, guards)),
-        )
+    let size = |value: &'a TypedPattern,
+                print_pattern: &mut dyn FnMut(&'a TypedPattern) -> Document<'a>| {
+        Some(":".to_doc().append(print_pattern(value)))
     };
 
     let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
-    bit_array_segment(document, options, size, unit, true, env)
+    bit_array_segment(doc_value, options, size, unit, true, &mut print_pattern)
 }
 
 fn pattern_list<'a>(

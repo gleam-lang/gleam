@@ -569,30 +569,34 @@ fn const_segment<'a>(
     options: &'a [BitArrayOption<TypedConstant>],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let document = match value {
-        // Skip the normal <<value/utf8>> surrounds
-        Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
+    let mut print_value = |value: &'a TypedConstant| const_inline(value, env);
 
-        // As normal
-        Constant::Int { .. } | Constant::Float { .. } | Constant::BitArray { .. } => {
-            const_inline(value, env)
+    let doc_value = |print_value: &mut dyn FnMut(&'a TypedConstant) -> Document<'a>| {
+        match value {
+            // Skip the normal <<value/utf8>> surrounds
+            Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
+
+            // As normal
+            Constant::Int { .. } | Constant::Float { .. } | Constant::BitArray { .. } => {
+                print_value(value)
+            }
+
+            // Wrap anything else in parentheses
+            value => print_value(value).surround("(", ")"),
         }
-
-        // Wrap anything else in parentheses
-        value => const_inline(value, env).surround("(", ")"),
     };
 
-    let size = |value: &'a TypedConstant, env: &mut Env<'a>| match value {
-        Constant::Int { .. } => Some(":".to_doc().append(const_inline(value, env))),
-        _ => Some(
-            ":".to_doc()
-                .append(const_inline(value, env).surround("(", ")")),
-        ),
+    let size = |value: &'a TypedConstant,
+                print_value: &mut dyn FnMut(&'a TypedConstant) -> Document<'a>| {
+        match value {
+            Constant::Int { .. } => Some(":".to_doc().append(print_value(value))),
+            _ => Some(":".to_doc().append(print_value(value).surround("(", ")"))),
+        }
     };
 
     let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
-    bit_array_segment(document, options, size, unit, true, env)
+    bit_array_segment(doc_value, options, size, unit, true, &mut print_value)
 }
 
 fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'a> {
@@ -610,67 +614,72 @@ fn expr_segment<'a>(
     options: &'a [BitArrayOption<TypedExpr>],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let mut value_is_a_string_literal = false;
+    let value_is_a_string_literal = matches!(value, TypedExpr::String { .. });
+    let mut print_expr = |value: &'a TypedExpr| expr(value, env);
 
-    let document = match value {
-        // Skip the normal <<value/utf8>> surrounds and set the string literal flag
-        TypedExpr::String { value, .. } => {
-            value_is_a_string_literal = true;
-            string_inner(value).surround("\"", "\"")
+    let doc_value = |print_expr: &mut dyn FnMut(&'a TypedExpr) -> Document<'a>| {
+        match value {
+            // Skip the normal <<value/utf8>> surrounds and set the string literal flag
+            TypedExpr::String { value, .. } => string_inner(value).surround("\"", "\""),
+
+            // As normal
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::BitArray { .. } => print_expr(value),
+
+            // Wrap anything else in parentheses
+            value => print_expr(value).surround("(", ")"),
         }
-
-        // As normal
-        TypedExpr::Int { .. }
-        | TypedExpr::Float { .. }
-        | TypedExpr::Var { .. }
-        | TypedExpr::BitArray { .. } => expr(value, env),
-
-        // Wrap anything else in parentheses
-        value => expr(value, env).surround("(", ")"),
     };
 
-    let size = |expression: &'a TypedExpr, env: &mut Env<'a>| match expression {
-        TypedExpr::Int { value, .. } => {
-            let v = value.replace("_", "");
-            let v = u64::from_str(&v).unwrap_or(0);
-            Some(Document::String(format!(":{v}")))
-        }
+    let size = |expression: &'a TypedExpr,
+                print_expr: &mut dyn FnMut(&'a TypedExpr) -> Document<'a>| {
+        match expression {
+            TypedExpr::Int { value, .. } => {
+                let v = value.replace("_", "");
+                let v = u64::from_str(&v).unwrap_or(0);
+                Some(Document::String(format!(":{v}")))
+            }
 
-        _ => {
-            let inner_expr = expr(expression, env).surround("(", ")");
-            // The value of size must be a non-negative integer, we use lists:max here to ensure
-            // it is at least 0;
-            let value_guard = ":(lists:max(["
-                .to_doc()
-                .append(inner_expr)
-                .append(", 0]))")
-                .group();
-            Some(value_guard)
+            _ => {
+                let inner_expr = print_expr(expression).surround("(", ")");
+                // The value of size must be a non-negative integer, we use lists:max here to ensure
+                // it is at least 0;
+                let value_guard = ":(lists:max(["
+                    .to_doc()
+                    .append(inner_expr)
+                    .append(", 0]))")
+                    .group();
+                Some(value_guard)
+            }
         }
     };
 
     let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
     bit_array_segment(
-        document,
+        doc_value,
         options,
         size,
         unit,
         value_is_a_string_literal,
-        env,
+        &mut print_expr,
     )
 }
 
-fn bit_array_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
-    mut document: Document<'a>,
+fn bit_array_segment<'a, Value: 'a, ValueType, ValueToDoc, SizeToDoc, UnitToDoc>(
+    mut value_to_doc: ValueToDoc,
     options: &'a [BitArrayOption<Value>],
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
     value_is_a_string_literal: bool,
-    env: &mut Env<'a>,
+    print_value: &mut dyn FnMut(&'a ValueType) -> Document<'a>,
 ) -> Document<'a>
 where
-    SizeToDoc: FnMut(&'a Value, &mut Env<'a>) -> Option<Document<'a>>,
+    ValueToDoc: FnMut(&mut dyn FnMut(&'a ValueType) -> Document<'a>) -> Document<'a>,
+    SizeToDoc:
+        FnMut(&'a Value, &mut dyn FnMut(&'a ValueType) -> Document<'a>) -> Option<Document<'a>>,
     UnitToDoc: FnMut(&'a u8) -> Option<Document<'a>>,
 {
     let mut size: Option<Document<'a>> = None;
@@ -707,11 +716,12 @@ where
             Opt::Big { .. } => others.push("big".to_doc()),
             Opt::Little { .. } => others.push("little".to_doc()),
             Opt::Native { .. } => others.push("native".to_doc()),
-            Opt::Size { value, .. } => size = size_to_doc(value, env),
+            Opt::Size { value, .. } => size = size_to_doc(value, print_value),
             Opt::Unit { value, .. } => unit = unit_to_doc(value),
         }
     }
 
+    let mut document = value_to_doc(print_value);
     document = document.append(size);
     let others_is_empty = others.is_empty();
 

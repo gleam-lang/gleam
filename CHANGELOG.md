@@ -21,6 +21,10 @@
 
 ### Compiler
 
+- Fixed an issue where the compiler would generate invalid Erlang when a varible
+  is used with a size value on a bit array that shadows the same varible value.
+ ([Antonio Iaccarino])[https://github.com/eingin]
+
 - Added more an informative error message for when attempting to use the `..`
   syntax to append to a list rather than prepend.
 

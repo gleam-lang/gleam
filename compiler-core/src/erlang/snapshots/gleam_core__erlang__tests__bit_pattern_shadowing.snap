@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "\npub fn main() {\n  let code = <<\"hello world\":utf8>>\n\n  let pre = 1\n  case code {\n    <<pre:bytes-size(pre), _:bytes>> -> pre\n    _ -> panic\n  }\n}        "
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-spec main() -> bitstring().
+main() ->
+    Code = <<"hello world"/utf8>>,
+    Pre = 1,
+    case Code of
+        <<Pre@1:Pre/binary, _/binary>> ->
+            Pre@1;
+
+        _ ->
+            erlang:error(#{gleam_error => panic,
+                    message => <<"panic expression evaluated"/utf8>>,
+                    module => <<"my/mod"/utf8>>,
+                    function => <<"main"/utf8>>,
+                    line => 8})
+    end.

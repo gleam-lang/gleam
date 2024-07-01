@@ -658,3 +658,20 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3315
+#[test]
+fn bit_pattern_shadowing() {
+    assert_erl!(
+        "
+pub fn main() {
+  let code = <<\"hello world\":utf8>>
+
+  let pre = 1
+  case code {
+    <<pre:bytes-size(pre), _:bytes>> -> pre
+    _ -> panic
+  }
+}        "
+    );
+}
