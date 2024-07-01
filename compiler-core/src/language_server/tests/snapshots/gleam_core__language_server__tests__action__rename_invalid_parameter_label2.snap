@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"fn ignore(thisIsALabel _ignore: Int) { 25 }\", 0)"
+---
+fn ignore(this_is_a_label _ignore: Int) { 25 }

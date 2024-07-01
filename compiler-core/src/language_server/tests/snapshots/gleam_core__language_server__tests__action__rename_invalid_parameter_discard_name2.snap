@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"fn ignore(labelled_discard _ignoreMe: Bool) { 98 }\",\n    0)"
+---
+fn ignore(labelled_discard _ignore_me: Bool) { 98 }

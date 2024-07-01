@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"pub fn main() {\n    let assert 42 as theAnswer = 42\n}\",\n    1)"
+---
+pub fn main() {
+    let assert 42 as the_answer = 42
+}

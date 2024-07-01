@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type MyType { Int_Value(Int) }"
+---
+error: Invalid type variant name
+  ┌─ /src/one/two.gleam:1:15
+  │
+1 │ type MyType { Int_Value(Int) }
+  │               ^^^^^^^^^ This is not a valid type variant name
+
+Hint: Type Variant names start with an uppercase letter and contain only
+lowercase letters, numbers, and uppercase letters.
+Try: IntValue

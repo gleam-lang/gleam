@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "let #(a, _secondValue) = #(1, 2)"
+---
+error: Invalid discard name
+  ┌─ /src/one/two.gleam:1:10
+  │
+1 │ let #(a, _secondValue) = #(1, 2)
+  │          ^^^^^^^^^^^^ This is not a valid discard name
+
+Hint: Discard names start with _ and contain a-z, 0-9, or _.
+Try: _second_value

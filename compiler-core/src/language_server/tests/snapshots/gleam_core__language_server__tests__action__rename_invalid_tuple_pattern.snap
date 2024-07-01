@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"pub fn main() {\n    let #(a, secondValue) = #(1, 2)\n}\",\n    1)"
+---
+pub fn main() {
+    let #(a, second_value) = #(1, 2)
+}

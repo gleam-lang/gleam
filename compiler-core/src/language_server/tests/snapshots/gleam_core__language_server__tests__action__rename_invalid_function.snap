@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"fn doStuff() {}\", 0)"
+---
+fn do_stuff() {}

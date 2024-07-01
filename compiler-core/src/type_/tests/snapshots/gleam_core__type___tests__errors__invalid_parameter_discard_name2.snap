@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn ignore(labelled_discard _ignoreMe: Bool) { 98 }"
+---
+error: Invalid discard name
+  ┌─ /src/one/two.gleam:1:28
+  │
+1 │ fn ignore(labelled_discard _ignoreMe: Bool) { 98 }
+  │                            ^^^^^^^^^ This is not a valid discard name
+
+Hint: Discard names start with _ and contain a-z, 0-9, or _.
+Try: _ignore_me

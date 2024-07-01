@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type IntWrapper { IntWrapper(innerInt: Int) }"
+---
+error: Invalid label name
+  ┌─ /src/one/two.gleam:1:30
+  │
+1 │ type IntWrapper { IntWrapper(innerInt: Int) }
+  │                              ^^^^^^^^ This is not a valid label name
+
+Hint: Label names start with a lowercase letter and contain a-z, 0-9, or _.
+Try: inner_int

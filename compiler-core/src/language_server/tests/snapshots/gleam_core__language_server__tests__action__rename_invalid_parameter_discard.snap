@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"fn ignore(_ignoreMe: Bool) { 98 }\", 0)"
+---
+fn ignore(_ignore_me: Bool) { 98 }

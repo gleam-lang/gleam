@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "let assert \"prefix\" as thePrefix <> _suffix = \"prefix-suffix\""
+---
+error: Invalid variable name
+  ┌─ /src/one/two.gleam:1:24
+  │
+1 │ let assert "prefix" as thePrefix <> _suffix = "prefix-suffix"
+  │                        ^^^^^^^^^ This is not a valid variable name
+
+Hint: Variable names start with a lowercase letter and contain a-z, 0-9,
+or _.
+Try: the_prefix

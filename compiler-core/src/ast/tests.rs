@@ -141,6 +141,7 @@ fn compile_expression(src: &str) -> TypedStatement {
         },
     );
     let errors = &mut vec![];
+    let name_corrections = &mut vec![];
     ExprTyper::new(
         &mut environment,
         FunctionDefinition {
@@ -149,6 +150,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             has_javascript_external: false,
         },
         errors,
+        name_corrections,
     )
     .infer_statements(ast)
     .first()

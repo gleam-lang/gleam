@@ -12,6 +12,7 @@ use crate::{
     type_::{pretty::Printer, UnifyErrorSituation},
 };
 use ecow::EcoString;
+use heck::{ToSnakeCase, ToTitleCase, ToUpperCamelCase};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
 use pubgrub::package::Package;
@@ -2949,9 +2950,39 @@ See: https://tour.gleam.run/advanced-features/use/");
                         }),
                     }
                 },
+
+                TypeError::BadName { location, name, kind } => {
+                    let kind_str = kind.to_string();
+                    let label = format!("This is not a valid {kind_str} name");
+                    let text = if kind.is_discard() {
+                        wrap_format!("Hint: {} names start with _ and contain a-z, 0-9, or _.
+Try: _{}", kind_str.to_title_case(), name.to_snake_case())
+                    } else if kind.is_upname() {wrap_format!("Hint: {} names start with an uppercase letter and contain only lowercase letters, numbers, and uppercase letters.
+Try: {}", kind_str.to_title_case(), name.to_upper_camel_case())
+                    } else {
+                        wrap_format!("Hint: {} names start with a lowercase letter and contain a-z, 0-9, or _.
+Try: {}", kind_str.to_title_case(), name.to_snake_case())
+                    };
+
+                Diagnostic {
+                    title: format!("Invalid {kind_str} name"),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: Some(label),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                }
+                },
             }
-                })
-                .collect_vec(),
+        }).collect_vec(),
+
 
             Error::Parse { path, src, error } => {
                 let (label, extra) = error.details();

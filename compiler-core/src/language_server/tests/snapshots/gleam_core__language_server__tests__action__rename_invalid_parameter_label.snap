@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"fn func(thisIsALabel param: Int) { param }\", 0)"
+---
+fn func(this_is_a_label param: Int) { param }

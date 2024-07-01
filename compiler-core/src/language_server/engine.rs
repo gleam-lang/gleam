@@ -1,4 +1,5 @@
 use crate::{
+    analyse::name::NameCorrection,
     ast::{
         Arg, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction, TypedModule,
         TypedPattern,
@@ -92,7 +93,7 @@ where
         // NOTE: This must come after the progress reporter has finished!
         let manifest = manifest?;
 
-        let compiler =
+        let compiler: LspProjectCompiler<FileSystemProxy<IO>> =
             LspProjectCompiler::new(manifest, config, paths.clone(), io.clone(), locker)?;
 
         let hex_deps = compiler
@@ -263,6 +264,7 @@ where
             };
 
             code_action_unused_imports(module, &params, &mut actions);
+            code_action_fix_names(module, &params, &mut actions);
             actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
 
             Ok(if actions.is_empty() {
@@ -647,6 +649,44 @@ fn code_action_unused_imports(
         .changes(uri.clone(), edits)
         .preferred(true)
         .push_to(actions);
+}
+
+fn code_action_fix_names(
+    module: &Module,
+    params: &lsp::CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let name_corrections = &module.ast.type_info.name_corrections;
+
+    if name_corrections.is_empty() {
+        return;
+    }
+
+    // Convert src spans to lsp range
+    let line_numbers = LineNumbers::new(&module.code);
+
+    for name_correction in name_corrections {
+        let NameCorrection {
+            location,
+            correction,
+        } = name_correction;
+
+        let range = src_span_to_lsp_range(*location, &line_numbers);
+        // Check if the user's cursor is on the invalid name
+        if overlaps(params.range, range) {
+            let edit = lsp_types::TextEdit {
+                range,
+                new_text: correction.to_string(),
+            };
+
+            CodeActionBuilder::new(&format!("Rename to {}", correction))
+                .kind(lsp_types::CodeActionKind::QUICKFIX)
+                .changes(uri.clone(), vec![edit])
+                .preferred(true)
+                .push_to(actions);
+        }
+    }
 }
 
 // Check if the edit empties a whole line; if so, delete the line.

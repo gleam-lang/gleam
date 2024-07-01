@@ -1,6 +1,9 @@
 use super::{pipe::PipeTyper, *};
 use crate::{
-    analyse::infer_bit_array_option,
+    analyse::{
+        infer_bit_array_option,
+        name::{check_valid_argument, NameCorrection},
+    },
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan, Statement,
@@ -205,6 +208,7 @@ pub(crate) struct ExprTyper<'a, 'b> {
 
     // Accumulated errors found while typing the expression
     pub(crate) errors: &'a mut Vec<Error>,
+    pub(crate) name_corrections: &'a mut Vec<NameCorrection>,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
@@ -212,6 +216,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         environment: &'a mut Environment<'b>,
         definition: FunctionDefinition,
         errors: &'a mut Vec<Error>,
+        name_corrections: &'a mut Vec<NameCorrection>,
     ) -> Self {
         let mut hydrator = Hydrator::new();
 
@@ -235,6 +240,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             implementations,
             current_function_definition: definition,
             errors,
+            name_corrections,
         }
     }
 
@@ -738,6 +744,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
+        for Arg { names, .. } in args.iter() {
+            check_valid_argument(names, self.errors, self.name_corrections);
+        }
+
         let already_warned_for_unreachable_code = self.already_warned_for_unreachable_code;
         self.already_warned_for_unreachable_code = false;
         self.previous_panics = false;
@@ -1233,8 +1243,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Ensure the pattern matches the type of the value
         let pattern_location = pattern.location();
-        let pattern = match pattern::PatternTyper::new(self.environment, &self.hydrator)
-            .unify(pattern, value_typ.clone())
+        let pattern = match pattern::PatternTyper::new(
+            self.environment,
+            &self.hydrator,
+            self.errors,
+            self.name_corrections,
+        )
+        .unify(pattern, value_typ.clone())
         {
             Ok(pattern) => pattern,
             Err(error) => {
@@ -1401,7 +1416,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         subjects: &[Arc<Type>],
         location: &SrcSpan,
     ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
-        let mut pattern_typer = pattern::PatternTyper::new(self.environment, &self.hydrator);
+        let mut pattern_typer = pattern::PatternTyper::new(
+            self.environment,
+            &self.hydrator,
+            self.errors,
+            self.name_corrections,
+        );
         let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location)?;
 
         // Each case clause has one or more patterns that may match the
@@ -2946,7 +2966,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.type_.clone())) {
                 match &arg.names {
-                    ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
+                    ArgNames::Named { name, .. } | ArgNames::NamedLabelled { name, .. } => {
                         // Check that this name has not already been used for
                         // another argument
                         if !argument_names.insert(name) {
@@ -3264,7 +3284,7 @@ impl UseAssignments {
                 // For discards we add a discard function arguments.
                 Pattern::Discard { name, .. } => assignments.function_arguments.push(Arg {
                     location,
-                    names: ArgNames::Discard { name },
+                    names: ArgNames::Discard { name, location },
                     annotation: None,
                     type_: (),
                 }),
@@ -3274,7 +3294,7 @@ impl UseAssignments {
                 Pattern::Variable { name, .. } => assignments.function_arguments.push(Arg {
                     location,
                     annotation,
-                    names: ArgNames::Named { name },
+                    names: ArgNames::Named { name, location },
                     type_: (),
                 }),
 
@@ -3294,7 +3314,10 @@ impl UseAssignments {
                     let name: EcoString = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
                     assignments.function_arguments.push(Arg {
                         location,
-                        names: ArgNames::Named { name: name.clone() },
+                        names: ArgNames::Named {
+                            name: name.clone(),
+                            location,
+                        },
                         annotation: None,
                         type_: (),
                     });

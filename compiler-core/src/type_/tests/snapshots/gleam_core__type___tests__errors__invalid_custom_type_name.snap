@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type Boxed_value { Box(Int) }"
+---
+error: Invalid type name
+  ┌─ /src/one/two.gleam:1:6
+  │
+1 │ type Boxed_value { Box(Int) }
+  │      ^^^^^^^^^^^ This is not a valid type name
+
+Hint: Type names start with an uppercase letter and contain only lowercase
+letters, numbers, and uppercase letters.
+Try: BoxedValue
