@@ -9,7 +9,7 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
             CompletionItemLabelDetails {
                 detail: None,
                 description: Some(
-                    "app",
+                    "fn(Int) -> Box",
                 ),
             },
         ),
@@ -56,7 +56,7 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
             CompletionItemLabelDetails {
                 detail: None,
                 description: Some(
-                    "app",
+                    "fn(Int) -> Box",
                 ),
             },
         ),
