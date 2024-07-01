@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+expression: "\nconst cute_bee = \"cute\" <> \"bee\"\nconst cute_cute_bee_buzz = cute_bee <> \"buzz\"\n\npub fn main() {\n  cute_cute_bee_buzz\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-spec main() -> binary().
+main() ->
+    <<"cute"/utf8, "bee"/utf8, "buzz"/utf8>>.

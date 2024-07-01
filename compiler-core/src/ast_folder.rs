@@ -878,6 +878,12 @@ pub trait UntypedConstantFolder {
                 typ: (),
             } => self.fold_constant_var(location, module, name),
 
+            Constant::StringConcatenation {
+                location,
+                left,
+                right,
+            } => self.fold_constant_string_concatenation(location, left, right),
+
             Constant::Invalid { location, typ: () } => self.fold_constant_invalid(location),
         }
     }
@@ -955,6 +961,19 @@ pub trait UntypedConstantFolder {
         }
     }
 
+    fn fold_constant_string_concatenation(
+        &mut self,
+        location: SrcSpan,
+        left: Box<UntypedConstant>,
+        right: Box<UntypedConstant>,
+    ) -> UntypedConstant {
+        Constant::StringConcatenation {
+            location,
+            left,
+            right,
+        }
+    }
+
     fn fold_constant_invalid(&mut self, location: SrcSpan) -> UntypedConstant {
         Constant::Invalid { location, typ: () }
     }
@@ -1021,6 +1040,20 @@ pub trait UntypedConstantFolder {
                     })
                     .collect();
                 Constant::BitArray { location, segments }
+            }
+
+            Constant::StringConcatenation {
+                location,
+                left,
+                right,
+            } => {
+                let left = Box::new(self.fold_constant(*left));
+                let right = Box::new(self.fold_constant(*right));
+                Constant::StringConcatenation {
+                    location,
+                    left,
+                    right,
+                }
             }
         }
     }

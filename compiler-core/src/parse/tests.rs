@@ -1156,3 +1156,22 @@ case 2, 3 {
 }"
     );
 }
+
+#[test]
+fn const_string_concat() {
+    assert_parse_module!(
+        "
+const cute = \"cute\"
+const cute_bee = cute <> \"bee\"
+"
+    );
+}
+
+#[test]
+fn const_string_concat_naked_right() {
+    assert_module_error!(
+        "
+const no_cute_bee = \"cute\" <>
+"
+    );
+}

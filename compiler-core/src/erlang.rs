@@ -512,6 +512,65 @@ fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
         .group()
 }
 
+fn const_string_concatenate_bit_array<'a>(
+    elems: impl IntoIterator<Item = Document<'a>>,
+) -> Document<'a> {
+    join(elems, break_(",", ", "))
+        .nest(INDENT)
+        .surround("<<", ">>")
+        .group()
+}
+
+fn const_string_concatenate<'a>(
+    left: &'a TypedConstant,
+    right: &'a TypedConstant,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let left = const_string_concatenate_argument(left, env);
+    let right = const_string_concatenate_argument(right, env);
+    const_string_concatenate_bit_array([left, right])
+}
+
+fn const_string_concatenate_inner<'a>(
+    left: &'a TypedConstant,
+    right: &'a TypedConstant,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let left = const_string_concatenate_argument(left, env);
+    let right = const_string_concatenate_argument(right, env);
+    join([left, right], break_(",", ", "))
+}
+
+fn const_string_concatenate_argument<'a>(
+    value: &'a TypedConstant,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    match value {
+        Constant::String { value, .. } => docvec!['"', string_inner(value), "\"/utf8"],
+
+        Constant::Var {
+            constructor: Some(constructor),
+            ..
+        } => match &constructor.variant {
+            ValueConstructorVariant::ModuleConstant {
+                literal: Constant::String { value, .. },
+                ..
+            } => docvec!['"', string_inner(value), "\"/utf8"],
+            ValueConstructorVariant::ModuleConstant {
+                literal: Constant::StringConcatenation { left, right, .. },
+                ..
+            } => const_string_concatenate_inner(left, right, env),
+            _ => const_inline(value, env),
+        },
+
+        Constant::StringConcatenation { left, right, .. } => {
+            const_string_concatenate_inner(left, right, env)
+        }
+
+        _ => const_inline(value, env),
+    }
+}
+
 fn string_concatenate<'a>(
     left: &'a TypedExpr,
     right: &'a TypedExpr,
@@ -1059,6 +1118,10 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
                 .expect("This is guaranteed to hold a value."),
             env,
         ),
+
+        Constant::StringConcatenation { left, right, .. } => {
+            const_string_concatenate(left, right, env)
+        }
 
         Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
     }
@@ -2149,6 +2212,11 @@ fn find_referenced_private_functions(
         TypedConstant::Record { args, .. } => args
             .iter()
             .for_each(|arg| find_referenced_private_functions(&arg.value, already_found)),
+
+        TypedConstant::StringConcatenation { left, right, .. } => {
+            find_referenced_private_functions(left, already_found);
+            find_referenced_private_functions(right, already_found);
+        }
 
         Constant::Tuple { elements, .. } | Constant::List { elements, .. } => elements
             .iter()

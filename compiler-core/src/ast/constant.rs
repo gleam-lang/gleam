@@ -55,6 +55,12 @@ pub enum Constant<T, RecordTag> {
         typ: T,
     },
 
+    StringConcatenation {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
     /// A placeholder constant used to allow module analysis to continue
     /// even when there are type errors. Should never end up in generated code.
     Invalid {
@@ -68,7 +74,7 @@ impl TypedConstant {
         match self {
             Constant::Int { .. } => type_::int(),
             Constant::Float { .. } => type_::float(),
-            Constant::String { .. } => type_::string(),
+            Constant::String { .. } | Constant::StringConcatenation { .. } => type_::string(),
             Constant::BitArray { .. } => type_::bits(),
             Constant::Tuple { elements, .. } => {
                 type_::tuple(elements.iter().map(|e| e.type_()).collect())
@@ -98,7 +104,8 @@ impl<A, B> Constant<A, B> {
             | Constant::Record { location, .. }
             | Constant::BitArray { location, .. }
             | Constant::Var { location, .. }
-            | Constant::Invalid { location, .. } => *location,
+            | Constant::Invalid { location, .. }
+            | Constant::StringConcatenation { location, .. } => *location,
         }
     }
 

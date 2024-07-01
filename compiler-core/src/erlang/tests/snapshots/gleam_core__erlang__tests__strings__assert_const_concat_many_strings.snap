@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+expression: "\nconst big_concat = \"a\" <> \"b\" <> \"c\" <> \"d\" <> \"e\" <> \"f\" <> \"g\" <> \"h\" <> \"i\" <> \"j\" <> \"k\" <> \"l\" <> \"m\" <> \"n\" <> \"o\" <> \"p\" <> \"q\" <> \"r\" <> \"s\" <> \"t\" <> \"u\" <> \"v\" <> \"w\" <> \"x\" <> \"y\" <> \"z\"\n\npub fn main() {\n  big_concat\n}\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+
+-spec main() -> binary().
+main() ->
+    <<"a"/utf8,
+        "b"/utf8,
+        "c"/utf8,
+        "d"/utf8,
+        "e"/utf8,
+        "f"/utf8,
+        "g"/utf8,
+        "h"/utf8,
+        "i"/utf8,
+        "j"/utf8,
+        "k"/utf8,
+        "l"/utf8,
+        "m"/utf8,
+        "n"/utf8,
+        "o"/utf8,
+        "p"/utf8,
+        "q"/utf8,
+        "r"/utf8,
+        "s"/utf8,
+        "t"/utf8,
+        "u"/utf8,
+        "v"/utf8,
+        "w"/utf8,
+        "x"/utf8,
+        "y"/utf8,
+        "z"/utf8>>.
