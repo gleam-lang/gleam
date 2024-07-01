@@ -1923,36 +1923,31 @@ fn collect_type_var_usages<'a>(
     ids
 }
 
-fn result_type_var_ids(ids: &mut HashMap<u64, u64>, args: &[Arc<Type>]) {
-    match args {
-        [ref arg_ok, ref arg_err] => {
-            let mut ok_ids = HashMap::new();
-            type_var_ids(arg_ok, &mut ok_ids);
+fn result_type_var_ids(ids: &mut HashMap<u64, u64>, arg_ok: &Type, arg_err: &Type) {
+    let mut ok_ids = HashMap::new();
+    type_var_ids(arg_ok, &mut ok_ids);
 
-            let mut err_ids = HashMap::new();
-            type_var_ids(arg_err, &mut err_ids);
+    let mut err_ids = HashMap::new();
+    type_var_ids(arg_err, &mut err_ids);
 
-            let mut result_counts = ok_ids;
-            for (id, count) in err_ids {
-                let _ = result_counts
-                    .entry(id)
-                    .and_modify(|current_count| {
-                        if *current_count < count {
-                            *current_count = count;
-                        }
-                    })
-                    .or_insert(count);
-            }
-            for (id, count) in result_counts {
-                let _ = ids
-                    .entry(id)
-                    .and_modify(|current_count| {
-                        *current_count += count;
-                    })
-                    .or_insert(count);
-            }
-        }
-        _ => panic!("result type expects ok and err"),
+    let mut result_counts = ok_ids;
+    for (id, count) in err_ids {
+        let _ = result_counts
+            .entry(id)
+            .and_modify(|current_count| {
+                if *current_count < count {
+                    *current_count = count;
+                }
+            })
+            .or_insert(count);
+    }
+    for (id, count) in result_counts {
+        let _ = ids
+            .entry(id)
+            .and_modify(|current_count| {
+                *current_count += count;
+            })
+            .or_insert(count);
     }
 }
 
@@ -1967,15 +1962,16 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
         },
         Type::Named {
             args, module, name, ..
-        } => {
-            if is_prelude_module(module) && name == "Result" {
-                result_type_var_ids(ids, args)
-            } else {
+        } => match args[..] {
+            [ref arg_ok, ref arg_err] if is_prelude_module(module) && name == "Result" => {
+                result_type_var_ids(ids, arg_ok, arg_err)
+            }
+            _ => {
                 for arg in args {
                     type_var_ids(arg, ids)
                 }
             }
-        }
+        },
         Type::Fn { args, retrn } => {
             for arg in args {
                 type_var_ids(arg, ids)
