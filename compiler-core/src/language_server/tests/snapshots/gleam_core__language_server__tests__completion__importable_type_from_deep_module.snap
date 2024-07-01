@@ -266,7 +266,7 @@ expression: "completion(TestProject::for_source(code).add_module(\"a/b/dep\", de
                             character: 0,
                         },
                     },
-                    new_text: "import a/b/dep\n",
+                    new_text: "import a/b/dep\n\n",
                 },
             ],
         ),
