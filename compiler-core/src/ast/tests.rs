@@ -1,3 +1,5 @@
+mod inlay_hints;
+
 use std::sync::Arc;
 
 use camino::Utf8PathBuf;

@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        Arg, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction, TypedModule,
+        self, Arg, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction, TypedModule,
         TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
@@ -17,13 +17,16 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use lsp::CodeAction;
-use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
+use lsp_types::{
+    self as lsp, Hover, HoverContents, InlayHint, InlayHintKind, InlayHintLabel, MarkedString, Url,
+};
 use std::sync::Arc;
 
 use super::{
     code_action::{CodeActionBuilder, RedundantTupleInCaseSubject},
     completer::Completer,
-    src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+    configuration::SharedConfig,
+    src_offset_to_lsp_position, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -61,6 +64,9 @@ pub struct LanguageServerEngine<IO, Reporter> {
     /// Used to know if to show the "View on HexDocs" link
     /// when hovering on an imported value
     hex_deps: std::collections::HashSet<EcoString>,
+
+    /// Configuration the user has set in their editor.
+    pub(crate) user_config: SharedConfig,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -80,6 +86,7 @@ where
         progress_reporter: Reporter,
         io: FileSystemProxy<IO>,
         paths: ProjectPaths,
+        user_config: SharedConfig,
     ) -> Result<Self> {
         let locker = io.inner().make_locker(&paths, config.target)?;
 
@@ -115,6 +122,7 @@ where
             compiler,
             paths,
             hex_deps,
+            user_config,
         })
     }
 
@@ -270,6 +278,40 @@ where
             } else {
                 Some(actions)
             })
+        })
+    }
+
+    pub fn inlay_hints(&mut self, params: lsp::InlayHintParams) -> Response<Vec<InlayHint>> {
+        self.respond(|this| {
+            let Ok(config) = this.user_config.read() else {
+                return Ok(vec![]);
+            };
+
+            if !config.inlay_hints.pipelines {
+                return Ok(vec![]);
+            }
+
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(vec![]);
+            };
+
+            let line_numbers = LineNumbers::new(&module.code);
+
+            let hints = ast::inlay_hints::get_inlay_hints(module.ast.clone(), &line_numbers)
+                .into_iter()
+                .map(|hint| InlayHint {
+                    position: src_offset_to_lsp_position(hint.offset, &line_numbers),
+                    label: InlayHintLabel::String(hint.label),
+                    kind: Some(InlayHintKind::TYPE),
+                    text_edits: None,
+                    tooltip: None,
+                    padding_left: Some(true),
+                    padding_right: None,
+                    data: None,
+                })
+                .collect();
+
+            Ok(hints)
         })
     }
 
