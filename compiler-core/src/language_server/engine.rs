@@ -234,7 +234,7 @@ where
                 // we should try to provide completions for unqualified values
                 Located::ModuleStatement(Definition::Import(import)) => this
                     .compiler
-                    .get_module_inferface(import.module.as_str())
+                    .get_module_interface(import.module.as_str())
                     .map(|importing_module| {
                         completer.unqualified_completions_from_module(importing_module)
                     }),
@@ -316,7 +316,7 @@ where
                     location,
                 }) => this
                     .compiler
-                    .get_module_inferface(module.as_str())
+                    .get_module_interface(module.as_str())
                     .and_then(|module| {
                         if is_type {
                             module.types.get(name).map(|t| {
