@@ -69,7 +69,7 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             use-cross: false
-          - os: macos-11
+          - os: macos-12
             target: aarch64-apple-darwin
             use-cross: false
           - os: windows-latest
