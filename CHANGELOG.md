@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Formatter
+
+- Fixed a bug when multiple subjects in a case would be split even if not
+  necessary.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.3.0-rc1 - 2024-06-30
 
 ### Build tool

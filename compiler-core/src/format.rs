@@ -1267,7 +1267,7 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         let subjects_doc = break_("case", "case ")
             .append(join(
-                subjects.iter().map(|s| self.expr(s)),
+                subjects.iter().map(|s| self.expr(s).group()),
                 break_(",", ", "),
             ))
             .nest(INDENT)
