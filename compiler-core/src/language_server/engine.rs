@@ -660,7 +660,11 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
                 deprecated: None,
                 range: src_span_to_lsp_range(full_constructor_span, line_numbers),
                 selection_range: src_span_to_lsp_range(constructor.location, line_numbers),
-                children: Some(arguments),
+                children: if arguments.is_empty() {
+                    None
+                } else {
+                    Some(arguments)
+                },
             }
         })
         .collect_vec();
@@ -693,7 +697,11 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
         deprecated: None,
         range: src_span_to_lsp_range(full_type_span, line_numbers),
         selection_range: src_span_to_lsp_range(*name_location, line_numbers),
-        children: Some(constructors),
+        children: if constructors.is_empty() {
+            None
+        } else {
+            Some(constructors)
+        },
     }
 }
 
