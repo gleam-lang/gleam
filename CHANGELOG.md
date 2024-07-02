@@ -42,7 +42,7 @@
   match on the start of the list instead.
   ```
 
-  ([Antonio Iaccarino])[https://github.com/eingin]
+  ([Antonio Iaccarino](https://github.com/eingin))
 
 - The compiler now emits a warning for redundant function captures in a
   pipeline:
