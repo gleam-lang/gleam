@@ -38,7 +38,10 @@
 //! }
 //! ```
 
-use crate::type_::{ModuleValueConstructor, TypedCallArg, ValueConstructor};
+use crate::{
+    analyse::Inferred,
+    type_::{ModuleValueConstructor, PatternConstructor, TypedCallArg, ValueConstructor},
+};
 use std::sync::Arc;
 
 use ecow::EcoString;
@@ -46,9 +49,10 @@ use ecow::EcoString;
 use crate::type_::Type;
 
 use super::{
-    BinOp, BitArrayOption, Definition, SrcSpan, Statement, TypeAst, TypedArg, TypedAssignment,
-    TypedClause, TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule,
-    TypedRecordUpdateArg, TypedStatement, Use,
+    AssignName, BinOp, BitArrayOption, BitArraySegment, CallArg, Definition, Pattern, SrcSpan,
+    Statement, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
+    TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern, TypedRecordUpdateArg,
+    TypedStatement, Use,
 };
 
 pub trait Visit<'ast> {
@@ -312,6 +316,128 @@ pub trait Visit<'ast> {
     fn visit_typed_bit_array_option(&mut self, option: &'ast BitArrayOption<TypedExpr>) {
         visit_typed_bit_array_option(self, option);
     }
+
+    fn visit_typed_pattern(&mut self, pattern: &'ast TypedPattern) {
+        visit_typed_pattern(self, pattern);
+    }
+
+    fn visit_typed_pattern_int(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
+        visit_typed_pattern_int(self, location, value);
+    }
+
+    fn visit_typed_pattern_float(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
+        visit_typed_pattern_float(self, location, value);
+    }
+
+    fn visit_typed_pattern_string(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
+        visit_typed_pattern_string(self, location, value);
+    }
+
+    fn visit_typed_pattern_variable(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        type_: &'ast Arc<Type>,
+    ) {
+        visit_typed_pattern_variable(self, location, name, type_);
+    }
+
+    fn visit_typed_pattern_var_usage(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        constructor: &'ast Option<ValueConstructor>,
+        type_: &'ast Arc<Type>,
+    ) {
+        visit_typed_pattern_var_usage(self, location, name, constructor, type_);
+    }
+
+    fn visit_typed_pattern_assign(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        pattern: &'ast TypedPattern,
+    ) {
+        visit_typed_pattern_assign(self, location, name, pattern);
+    }
+
+    fn visit_typed_pattern_discard(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        type_: &'ast Arc<Type>,
+    ) {
+        visit_typed_pattern_discard(self, location, name, type_)
+    }
+
+    fn visit_typed_pattern_list(
+        &mut self,
+        location: &'ast SrcSpan,
+        elements: &'ast Vec<TypedPattern>,
+        tail: &'ast Option<Box<TypedPattern>>,
+        type_: &'ast Arc<Type>,
+    ) {
+        visit_typed_pattern_list(self, location, elements, tail, type_);
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn visit_typed_pattern_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<TypedPattern>>,
+        module: &'ast Option<EcoString>,
+        constructor: &'ast Inferred<PatternConstructor>,
+        spread: &'ast Option<SrcSpan>,
+        type_: &'ast Arc<Type>,
+    ) {
+        visit_typed_pattern_constructor(
+            self,
+            location,
+            name,
+            arguments,
+            module,
+            constructor,
+            spread,
+            type_,
+        );
+    }
+
+    fn visit_typed_pattern_tuple(
+        &mut self,
+        location: &'ast SrcSpan,
+        elems: &'ast Vec<TypedPattern>,
+    ) {
+        visit_typed_pattern_tuple(self, location, elems);
+    }
+
+    fn visit_typed_pattern_bit_array(
+        &mut self,
+        location: &'ast SrcSpan,
+        segments: &'ast Vec<BitArraySegment<TypedPattern, Arc<Type>>>,
+    ) {
+        visit_typed_pattern_bit_array(self, location, segments);
+    }
+
+    fn visit_typed_pattern_string_prefix(
+        &mut self,
+        location: &'ast SrcSpan,
+        left_location: &'ast SrcSpan,
+        left_side_assignment: &'ast Option<(EcoString, SrcSpan)>,
+        right_location: &'ast SrcSpan,
+        left_side_string: &'ast EcoString,
+        right_side_assignment: &'ast AssignName,
+    ) {
+        visit_typed_pattern_string_prefix(
+            self,
+            location,
+            left_location,
+            left_side_assignment,
+            right_location,
+            left_side_string,
+            right_side_assignment,
+        );
+    }
 }
 
 pub fn visit_typed_module<'a, V>(v: &mut V, module: &'a TypedModule)
@@ -329,7 +455,7 @@ where
 {
     match def {
         Definition::Function(fun) => v.visit_typed_function(fun),
-        Definition::TypeAlias(_type_alias) => { /* TODO */ }
+        Definition::TypeAlias(_typealias) => { /* TODO */ }
         Definition::CustomType(_custom_type) => { /* TODO */ }
         Definition::Import(_import) => { /* TODO */ }
         Definition::ModuleConstant(_module_constant) => { /* TODO */ }
@@ -678,7 +804,7 @@ pub fn visit_typed_expr_todo<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     message: &'a Option<Box<TypedExpr>>,
-    _type_: &'a Arc<Type>,
+    _type: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -691,7 +817,7 @@ pub fn visit_typed_expr_panic<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     message: &'a Option<Box<TypedExpr>>,
-    _type_: &'a Arc<Type>,
+    _type: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -758,6 +884,7 @@ where
     V: Visit<'a> + ?Sized,
 {
     v.visit_typed_expr(&assignment.value);
+    v.visit_typed_pattern(&assignment.pattern);
 }
 
 pub fn visit_use<'a, V>(_v: &mut V, _use_: &'a Use)
@@ -778,6 +905,9 @@ pub fn visit_typed_clause<'a, V>(v: &mut V, clause: &'a TypedClause)
 where
     V: Visit<'a> + ?Sized,
 {
+    for pattern in clause.pattern.iter() {
+        v.visit_typed_pattern(pattern);
+    }
     v.visit_typed_expr(&clause.then);
 }
 
@@ -830,6 +960,213 @@ where
             value: _,
         } => { /* TODO */ }
     }
+}
+
+pub fn visit_typed_pattern<'a, V>(v: &mut V, pattern: &'a TypedPattern)
+where
+    V: Visit<'a> + ?Sized,
+{
+    match pattern {
+        Pattern::Int { location, value } => v.visit_typed_pattern_int(location, value),
+        Pattern::Float { location, value } => v.visit_typed_pattern_float(location, value),
+        Pattern::String { location, value } => v.visit_typed_pattern_string(location, value),
+        Pattern::Variable {
+            location,
+            name,
+            type_,
+        } => v.visit_typed_pattern_variable(location, name, type_),
+        Pattern::VarUsage {
+            location,
+            name,
+            constructor,
+            type_,
+        } => v.visit_typed_pattern_var_usage(location, name, constructor, type_),
+        Pattern::Assign {
+            location,
+            name,
+            pattern,
+        } => v.visit_typed_pattern_assign(location, name, pattern),
+        Pattern::Discard {
+            location,
+            name,
+            type_,
+        } => v.visit_typed_pattern_discard(location, name, type_),
+        Pattern::List {
+            location,
+            elements,
+            tail,
+            type_,
+        } => v.visit_typed_pattern_list(location, elements, tail, type_),
+        Pattern::Constructor {
+            location,
+            name,
+            arguments,
+            module,
+            constructor,
+            spread,
+            type_,
+        } => v.visit_typed_pattern_constructor(
+            location,
+            name,
+            arguments,
+            module,
+            constructor,
+            spread,
+            type_,
+        ),
+        Pattern::Tuple { location, elems } => v.visit_typed_pattern_tuple(location, elems),
+        Pattern::BitArray { location, segments } => {
+            v.visit_typed_pattern_bit_array(location, segments)
+        }
+        Pattern::StringPrefix {
+            location,
+            left_location,
+            left_side_assignment,
+            right_location,
+            left_side_string,
+            right_side_assignment,
+        } => v.visit_typed_pattern_string_prefix(
+            location,
+            left_location,
+            left_side_assignment,
+            right_location,
+            left_side_string,
+            right_side_assignment,
+        ),
+        Pattern::Invalid { location, type_ } => v.visit_typed_expr_invalid(location, type_),
+    }
+}
+
+fn visit_typed_pattern_int<'a, V>(_v: &mut V, _location: &'a SrcSpan, _value: &'a EcoString)
+where
+    V: Visit<'a> + ?Sized,
+{
+}
+
+pub fn visit_typed_pattern_float<'a, V>(_v: &mut V, _location: &'a SrcSpan, _value: &'a EcoString)
+where
+    V: Visit<'a> + ?Sized,
+{
+}
+
+pub fn visit_typed_pattern_string<'a, V>(_v: &mut V, _location: &'a SrcSpan, _value: &'a EcoString)
+where
+    V: Visit<'a> + ?Sized,
+{
+}
+
+pub fn visit_typed_pattern_variable<'a, V>(
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _name: &'a EcoString,
+    _type: &'a Arc<Type>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+}
+
+pub fn visit_typed_pattern_var_usage<'a, V>(
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _name: &'a EcoString,
+    _constructor: &'a Option<ValueConstructor>,
+    _type: &'a Arc<Type>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+}
+
+pub fn visit_typed_pattern_assign<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    _name: &'a EcoString,
+    pattern: &'a TypedPattern,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    v.visit_typed_pattern(pattern);
+}
+
+pub fn visit_typed_pattern_discard<'a, V>(
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _name: &'a EcoString,
+    _type: &'a Arc<Type>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+}
+
+pub fn visit_typed_pattern_list<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    elements: &'a Vec<TypedPattern>,
+    tail: &'a Option<Box<TypedPattern>>,
+    _type: &'a Arc<Type>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    for element in elements {
+        v.visit_typed_pattern(element);
+    }
+    if let Some(tail) = tail {
+        v.visit_typed_pattern(tail);
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn visit_typed_pattern_constructor<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    _name: &'a EcoString,
+    arguments: &'a Vec<CallArg<TypedPattern>>,
+    _module: &'a Option<EcoString>,
+    _constructor: &'a Inferred<PatternConstructor>,
+    _spread: &'a Option<SrcSpan>,
+    _type: &'a Arc<Type>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    for argument in arguments {
+        v.visit_typed_pattern(&argument.value);
+    }
+}
+
+pub fn visit_typed_pattern_tuple<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    elems: &'a Vec<TypedPattern>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    for elem in elems {
+        v.visit_typed_pattern(elem);
+    }
+}
+
+pub fn visit_typed_pattern_bit_array<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    segments: &'a Vec<BitArraySegment<TypedPattern, Arc<Type>>>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    for segment in segments {
+        v.visit_typed_pattern(&segment.value);
+    }
+}
+
+pub fn visit_typed_pattern_string_prefix<'a, V>(
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _left_location: &'a SrcSpan,
+    _left_side_assignment: &'a Option<(EcoString, SrcSpan)>,
+    _right_location: &'a SrcSpan,
+    _left_side_string: &'a EcoString,
+    _right_side_assignment: &'a AssignName,
+) where
+    V: Visit<'a> + ?Sized,
+{
 }
 
 pub fn visit_typed_expr_invalid<'a, V>(_v: &mut V, _location: &'a SrcSpan, _typ: &'a Arc<Type>)

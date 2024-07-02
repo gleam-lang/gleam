@@ -176,6 +176,23 @@
   `..` in a record pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- LSP can now suggest a code action to convert `let assert` into a case expression:
+
+  ```
+  let assert Ok(value) = get_result()
+  ```
+
+  Becomes:
+
+  ```
+  let value = case get_result() {
+    Ok(value) -> value
+    _ -> panic
+  }
+  ```
+
+  ([Gears](https://github.com/gearsdatapacks))
+
 ### Bug Fixes
 
 - Fixed a bug where the compiler would output a confusing error message when

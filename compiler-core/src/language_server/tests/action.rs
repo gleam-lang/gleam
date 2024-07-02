@@ -54,6 +54,7 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
 
 const REMOVE_UNUSED_IMPORTS_TITLE: &str = "Remove unused imports";
 const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
+const CONVERT_TO_CASE: &str = "Convert to case";
 
 fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> String {
     let response = engine_response(src, line)
@@ -91,13 +92,14 @@ fn apply_code_edit(
             panic!("Unknown url {}", change_url)
         }
         for edit in change {
-            let start =
-                line_numbers.byte_index(edit.range.start.line, edit.range.start.character) - offset;
-            let end =
-                line_numbers.byte_index(edit.range.end.line, edit.range.end.character) - offset;
+            let start = line_numbers.byte_index(edit.range.start.line, edit.range.start.character)
+                as i32
+                - offset;
+            let end = line_numbers.byte_index(edit.range.end.line, edit.range.end.character) as i32
+                - offset;
             let range = (start as usize)..(end as usize);
             offset += end - start;
-            offset -= edit.new_text.len() as u32;
+            offset -= edit.new_text.len() as i32;
             result.replace_range(range, &edit.new_text);
         }
     }
@@ -336,6 +338,135 @@ pub fn main() {
         apply_first_code_action_with_title(code, 11, REMOVE_REDUNDANT_TUPLES),
         expected
     );
+}
+
+#[test]
+fn test_convert_let_assert_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+  let assert Ok(value) = Ok(1)
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_to_case_indented() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+  {
+    let assert Ok(value) = Ok(1)
+  }
+}
+",
+        3,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_to_case_multi_variables() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+  let assert [var1, var2, _var3, var4] = [1, 2, 3, 4]
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_to_case_discard() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+  let assert [_elem] = [6]
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_to_case_no_variables() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+  let assert [] = []
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_alias_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+  let assert 10 as ten = 10
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_tuple_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+   let assert #(first, 10, third) = #(5, 10, 15)
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_bit_array_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub fn main() {
+  let assert <<bits1, bits2>> = <<73, 98>>
+}
+",
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_string_prefix_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        r#"
+pub fn main() {
+  let assert "_" <> thing = "_Hello"
+}"#,
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_let_assert_string_prefix_pattern_alias_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        r#"pub fn main() {
+    let assert "123" as one_two_three <> rest = "123456"
+}"#,
+        1,
+        CONVERT_TO_CASE
+    ));
 }
 
 /* TODO: implement qualified unused location
