@@ -625,10 +625,8 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
                 });
             }
 
-            // The constructor's location only contains its name by default.
-            // For the full symbol range, take from the start of the name to right after
-            // the last argument.
-            // Include documentation as well if it is available.
+            // Start from the documentation if available, otherwise from the constructor's name,
+            // all the way to the end of its arguments.
             let full_constructor_span = SrcSpan {
                 start: constructor
                     .documentation
@@ -636,11 +634,7 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
                     .map(|(doc_start, _)| *doc_start)
                     .unwrap_or(constructor.location.start),
 
-                end: constructor
-                    .arguments
-                    .last()
-                    .map(|last_arg| last_arg.location.end + 1)
-                    .unwrap_or(constructor.location.end),
+                end: constructor.location.end,
             };
 
             // The 'deprecated' field is deprecated, but we have to specify it anyway
@@ -659,7 +653,7 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
                 tags: None,
                 deprecated: None,
                 range: src_span_to_lsp_range(full_constructor_span, line_numbers),
-                selection_range: src_span_to_lsp_range(constructor.location, line_numbers),
+                selection_range: src_span_to_lsp_range(constructor.name_location, line_numbers),
                 children: if arguments.is_empty() {
                     None
                 } else {
