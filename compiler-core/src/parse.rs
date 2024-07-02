@@ -1286,6 +1286,13 @@ where
         }
     }
 
+    fn add_multi_line_clause_hint(&self, mut err: ParseError) -> ParseError {
+        if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = err.error {
+            *hint = Some("Did you mean to wrap a multi line clause in curly braces?".into());
+        }
+        err
+    }
+
     // examples:
     //   pattern -> expr
     //   pattern, pattern if -> expr
@@ -1301,13 +1308,9 @@ where
                 alternative_patterns.push(self.parse_patterns()?);
             }
             let guard = self.parse_case_clause_guard(false)?;
-            let (arr_s, arr_e) = self.expect_one(&Token::RArrow).map_err(|mut e| {
-                if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = e.error {
-                    *hint =
-                        Some("Did you mean to wrap a multi line clause in curly braces?".into());
-                }
-                e
-            })?;
+            let (arr_s, arr_e) = self
+                .expect_one(&Token::RArrow)
+                .map_err(|e| self.add_multi_line_clause_hint(e))?;
             let then = self.parse_expression()?;
             if let Some(then) = then {
                 Ok(Some(Clause {
@@ -1396,6 +1399,33 @@ where
         }
     }
 
+    /// Checks if we have an unexpected left parenthesis and returns appropriate
+    /// error if it is a function call.
+    fn parse_function_call_in_clause_guard(&mut self, start: u32) -> Result<(), ParseError> {
+        if let Some((l_paren_start, l_paren_end)) = self.maybe_one(&Token::LeftParen) {
+            if let Ok((_, end)) = self
+                .parse_fn_args()
+                .and(self.expect_one(&Token::RightParen))
+            {
+                return parse_error(ParseErrorType::CallInClauseGuard, SrcSpan { start, end });
+            }
+
+            return parse_error(
+                ParseErrorType::UnexpectedToken {
+                    expected: vec![Token::RArrow.to_string().into()],
+                    hint: None,
+                },
+                SrcSpan {
+                    start: l_paren_start,
+                    end: l_paren_end,
+                },
+            )
+            .map_err(|e| self.add_multi_line_clause_hint(e));
+        }
+
+        Ok(())
+    }
+
     // examples
     // a
     // 1
@@ -1429,6 +1459,8 @@ where
                     name,
                 };
 
+                self.parse_function_call_in_clause_guard(start)?;
+
                 loop {
                     let dot_s = match self.maybe_one(&Token::Dot) {
                         Some((dot_s, _)) => dot_s,
@@ -1457,6 +1489,8 @@ where
                         }
 
                         Some((_, Token::Name { name: label }, int_e)) => {
+                            self.parse_function_call_in_clause_guard(start)?;
+
                             unit = ClauseGuard::FieldAccess {
                                 location: SrcSpan {
                                     start: dot_s,

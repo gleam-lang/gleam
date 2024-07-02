@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nlet my_string = \"hello\"\ncase my_string {\n    _ if string.length(my_string) > 2 -> io.debug(\"doesn't work')\n}"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:4:10
+  │
+4 │     _ if string.length(my_string) > 2 -> io.debug("doesn't work')
+  │          ^^^^^^^^^^^^^^^^^^^^^^^^ Unsupported expression
+
+Functions cannot be called in clause guards.

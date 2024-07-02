@@ -261,6 +261,10 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://tour.gleam.run/flow-control/case-expressions/".into(),
                 ],
             ),
+            ParseErrorType::CallInClauseGuard => (
+                "Unsupported expression",
+                vec!["Functions cannot be called in clause guards.".into()],
+            ),
         }
     }
 }
@@ -319,6 +323,7 @@ pub enum ParseErrorType {
     RedundantInternalAttribute,          // for a private definition marked as internal
     InvalidModuleTypePattern,            // for patterns that have a dot like: `name.thing`
     ListPatternSpreadFollowedByElements, // When there is a pattern after a spread [..rest, pattern]
+    CallInClauseGuard,                   // case x { _ if f() -> 1 }
 }
 
 impl LexicalError {

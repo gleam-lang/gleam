@@ -1156,3 +1156,36 @@ case 2, 3 {
 }"
     );
 }
+
+#[test]
+fn function_call_in_case_clause_guard() {
+    assert_error!(
+        r#"
+let my_string = "hello"
+case my_string {
+    _ if length(my_string) > 2 -> io.debug("doesn't work')
+}"#
+    );
+}
+
+#[test]
+fn dot_access_function_call_in_case_clause_guard() {
+    assert_error!(
+        r#"
+let my_string = "hello"
+case my_string {
+    _ if string.length(my_string) > 2 -> io.debug("doesn't work')
+}"#
+    );
+}
+
+#[test]
+fn invalid_left_paren_in_case_clause_guard() {
+    assert_error!(
+        r#"
+let my_string = "hello"
+case my_string {
+    _ if string.length( > 2 -> io.debug("doesn't work')
+}"#
+    );
+}
