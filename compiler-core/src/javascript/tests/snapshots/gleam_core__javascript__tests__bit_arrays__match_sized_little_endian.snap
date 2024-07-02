@@ -1,11 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  let assert <<258:16>> = x\n}\n"
+assertion_line: 324
+expression: "\nfn go(x) {\n  let assert <<a:16-little>> = x\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
 
 function go(x) {
-  if (x.intFromSlice(0, 2, true, false) !== 258 || !(x.length == 2)) {
+  if (!(x.length == 2)) {
     throw makeError(
       "assignment_no_match",
       "my/mod",
@@ -15,5 +16,6 @@ function go(x) {
       { value: x }
     )
   }
+  let a = x.intFromSlice(0, 2, false, false);
   return x;
 }

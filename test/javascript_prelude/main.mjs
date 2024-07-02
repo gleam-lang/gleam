@@ -346,12 +346,29 @@ assertNotEqual(hasEqualsField, hasEqualsField2);
 
 assertEqual(new BitArray(new Uint8Array([1, 2, 3])).byteAt(0), 1);
 assertEqual(new BitArray(new Uint8Array([1, 2, 3])).byteAt(2), 3);
+assertEqual(new BitArray(new Uint8Array([1, 2, 3])).intFromSlice(0, 1, true, false), 1);
+assertEqual(new BitArray(new Uint8Array([160, 2, 3])).intFromSlice(0, 1, false, true), -96);
+assertEqual(new BitArray(new Uint8Array([1, 2, 3])).intFromSlice(0, 2, true, false), 258);
+assertEqual(new BitArray(new Uint8Array([1, 2, 3])).intFromSlice(0, 2, false, false), 513);
+assertEqual(new BitArray(new Uint8Array([1, 160, 3])).intFromSlice(0, 2, false, true), -24575);
+assertEqual(new BitArray(new Uint8Array([160, 2, 3])).intFromSlice(0, 2, true, false), 40962);
+assertEqual(new BitArray(new Uint8Array([160, 2, 3])).intFromSlice(0, 2, true, true), -24574);
 assertEqual(
-  new BitArray(new Uint8Array([63, 240, 0, 0, 0, 0, 0, 0])).floatAt(0),
+  new BitArray(new Uint8Array([63, 240, 0, 0, 0, 0, 0, 0])).floatFromSlice(0, 8, true),
   1.0,
 );
-assertEqual(new BitArray(new Uint8Array([1, 2, 3])).intFromSlice(0, 1), 1);
-assertEqual(new BitArray(new Uint8Array([1, 2, 3])).intFromSlice(0, 2), 258);
+assertEqual(
+  new BitArray(new Uint8Array([0, 0, 0, 0, 0, 0, 240, 63])).floatFromSlice(0, 8, false),
+  1.0,
+);
+assertEqual(
+  new BitArray(new Uint8Array([0xC9, 0x74, 0x24, 0x00])).floatFromSlice(0, 4, true),
+  -1000000.0,
+);
+assertEqual(
+  new BitArray(new Uint8Array([0x00, 0x24, 0x74, 0xC9])).floatFromSlice(0, 4, false),
+  -1000000.0,
+);
 assertEqual(
   new BitArray(new Uint8Array([1, 2, 3])).sliceAfter(1),
   new BitArray(new Uint8Array([2, 3])),

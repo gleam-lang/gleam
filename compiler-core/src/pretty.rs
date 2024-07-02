@@ -39,6 +39,12 @@ pub trait Documentable<'a> {
     fn to_doc(self) -> Document<'a>;
 }
 
+impl<'a> Documentable<'a> for bool {
+    fn to_doc(self) -> Document<'a> {
+        Document::Str(if self { "true" } else { "false" })
+    }
+}
+
 impl<'a> Documentable<'a> for char {
     fn to_doc(self) -> Document<'a> {
         Document::String(format!("{self}"))

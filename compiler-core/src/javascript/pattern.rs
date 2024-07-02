@@ -1,10 +1,11 @@
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use super::{expression::is_js_scalar, *};
 use crate::{
     analyse::Inferred,
+    javascript::endianness::Endianness,
     strings::convert_string_escape_chars,
-    type_::{FieldMap, PatternConstructor},
+    type_::{FieldMap, PatternConstructor, Type},
 };
 
 pub static ASSIGNMENT_VAR: &str = "$";
@@ -14,8 +15,17 @@ enum Index<'a> {
     Int(usize),
     String(&'a str),
     ByteAt(usize),
-    IntFromSlice(usize, usize),
-    FloatAt(usize),
+    IntFromSlice {
+        start: usize,
+        end: usize,
+        endianness: Endianness,
+        is_signed: bool,
+    },
+    FloatFromSlice {
+        start: usize,
+        end: usize,
+        endianness: Endianness,
+    },
     BinaryFromSlice(usize, usize),
     SliceAfter(usize),
     StringPrefixSlice(usize),
@@ -50,6 +60,13 @@ impl Offset {
     pub fn set_open_ended(&mut self) {
         self.open_ended = true
     }
+}
+
+#[derive(Debug)]
+struct SizedBitArraySegmentDetails {
+    size: usize,
+    endianness: Endianness,
+    is_signed: bool,
 }
 
 impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, 'a> {
@@ -88,12 +105,27 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.path.push(Index::ByteAt(i));
     }
 
-    fn push_int_from_slice(&mut self, start: usize, end: usize) {
-        self.path.push(Index::IntFromSlice(start, end));
+    fn push_int_from_slice(
+        &mut self,
+        start: usize,
+        end: usize,
+        endianness: Endianness,
+        is_signed: bool,
+    ) {
+        self.path.push(Index::IntFromSlice {
+            start,
+            end,
+            endianness,
+            is_signed,
+        });
     }
 
-    fn push_float_at(&mut self, i: usize) {
-        self.path.push(Index::FloatAt(i));
+    fn push_float_from_slice(&mut self, start: usize, end: usize, endianness: Endianness) {
+        self.path.push(Index::FloatFromSlice {
+            start,
+            end,
+            endianness,
+        });
     }
 
     fn push_binary_from_slice(&mut self, start: usize, end: usize) {
@@ -126,8 +158,35 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             // TODO: escape string if needed
             Index::String(s) => docvec!(".", s),
             Index::ByteAt(i) => docvec!(".byteAt(", i, ")"),
-            Index::IntFromSlice(start, end) => docvec!(".intFromSlice(", start, ", ", end, ")"),
-            Index::FloatAt(i) => docvec!(".floatAt(", i, ")"),
+            Index::IntFromSlice {
+                start,
+                end,
+                endianness,
+                is_signed,
+            } => docvec!(
+                ".intFromSlice(",
+                start,
+                ", ",
+                end,
+                ", ",
+                endianness.is_big(),
+                ", ",
+                is_signed,
+                ")"
+            ),
+            Index::FloatFromSlice {
+                start,
+                end,
+                endianness,
+            } => docvec!(
+                ".floatFromSlice(",
+                start,
+                ", ",
+                end,
+                ", ",
+                endianness.is_big(),
+                ")"
+            ),
             Index::BinaryFromSlice(start, end) => {
                 docvec!(".binaryFromSlice(", start, ", ", end, ")")
             }
@@ -510,78 +569,71 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
                 let mut offset = Offset::new();
                 for segment in segments {
-                    match segment.options.as_slice() {
-                        [] | [Opt::Int { .. }] => {
-                            self.push_byte_at(offset.bytes);
-                            self.traverse_pattern(subject, &segment.value)?;
-                            self.pop();
-                            offset.increment(1);
-                            Ok(())
-                        }
+                    if segment.type_ == crate::type_::int()
+                        || segment.type_ == crate::type_::float()
+                    {
+                        let details = Self::sized_bit_array_segment_details(segment)?;
 
-                        [Opt::Size { value: size, .. }] => match &**size {
-                            Pattern::Int { value, .. } => {
-                                let start = offset.bytes;
-                                let increment = value
-                                    .parse::<usize>()
-                                    .expect("part of an Int node should always parse as integer");
-                                offset.increment(increment / 8);
-                                let end = offset.bytes;
+                        let start = offset.bytes;
+                        let increment = details.size / 8;
+                        let end = offset.bytes + increment;
 
-                                self.push_int_from_slice(start, end);
-                                self.traverse_pattern(subject, &segment.value)?;
-                                self.pop();
-                                Ok(())
+                        if segment.type_ == crate::type_::int() {
+                            if details.size == 8 && !details.is_signed {
+                                self.push_byte_at(offset.bytes);
+                            } else {
+                                self.push_int_from_slice(
+                                    start,
+                                    end,
+                                    details.endianness,
+                                    details.is_signed,
+                                );
                             }
-                            _ => Err(Error::Unsupported {
-                                feature: "This bit array size option in patterns".into(),
-                                location: segment.location,
-                            }),
-                        },
-
-                        [Opt::Float { .. }] => {
-                            self.push_float_at(offset.bytes);
-                            self.traverse_pattern(subject, &segment.value)?;
-                            self.pop();
-                            offset.increment(8);
-                            Ok(())
+                        } else {
+                            self.push_float_from_slice(start, end, details.endianness);
                         }
 
-                        [Opt::Bytes { .. }] => {
-                            self.push_rest_from(offset.bytes);
-                            self.traverse_pattern(subject, &segment.value)?;
-                            self.pop();
-                            offset.set_open_ended();
-                            Ok(())
-                        }
-
-                        [Opt::Bytes { .. }, Opt::Size { value: size, .. }]
-                        | [Opt::Size { value: size, .. }, Opt::Bytes { .. }] => match &**size {
-                            Pattern::Int { value, .. } => {
-                                let start = offset.bytes;
-                                let increment = value
-                                    .parse::<usize>()
-                                    .expect("part of an Int node should always parse as integer");
-                                offset.increment(increment);
-                                let end = offset.bytes;
-
-                                self.push_binary_from_slice(start, end);
+                        self.traverse_pattern(subject, &segment.value)?;
+                        self.pop();
+                        offset.increment(increment);
+                    } else {
+                        match segment.options.as_slice() {
+                            [Opt::Bytes { .. }] => {
+                                self.push_rest_from(offset.bytes);
                                 self.traverse_pattern(subject, &segment.value)?;
                                 self.pop();
+                                offset.set_open_ended();
                                 Ok(())
                             }
 
+                            [Opt::Bytes { .. }, Opt::Size { value: size, .. }]
+                            | [Opt::Size { value: size, .. }, Opt::Bytes { .. }] => match &**size {
+                                Pattern::Int { value, .. } => {
+                                    let start = offset.bytes;
+                                    let increment = value.parse::<usize>().expect(
+                                        "part of an Int node should always parse as integer",
+                                    );
+                                    offset.increment(increment);
+                                    let end = offset.bytes;
+
+                                    self.push_binary_from_slice(start, end);
+                                    self.traverse_pattern(subject, &segment.value)?;
+                                    self.pop();
+                                    Ok(())
+                                }
+
+                                _ => Err(Error::Unsupported {
+                                    feature: "This bit array size option in patterns".into(),
+                                    location: segment.location,
+                                }),
+                            },
+
                             _ => Err(Error::Unsupported {
-                                feature: "This bit array size option in patterns".into(),
+                                feature: "This bit array segment option in patterns".into(),
                                 location: segment.location,
                             }),
-                        },
-
-                        _ => Err(Error::Unsupported {
-                            feature: "This bit array segment option in patterns".into(),
-                            location: segment.location,
-                        }),
-                    }?;
+                        }?;
+                    }
                 }
 
                 self.push_bit_array_length_check(subject.clone(), offset.bytes, offset.open_ended);
@@ -593,6 +645,78 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             }),
             Pattern::Invalid { .. } => panic!("invalid patterns should not reach code generation"),
         }
+    }
+
+    fn sized_bit_array_segment_details(
+        segment: &BitArraySegment<Pattern<Arc<Type>>, Arc<Type>>,
+    ) -> Result<SizedBitArraySegmentDetails, Error> {
+        use BitArrayOption as Opt;
+
+        if segment
+            .options
+            .iter()
+            .any(|x| matches!(x, Opt::Native { .. }))
+        {
+            return Err(Error::Unsupported {
+                feature: "This bit array segment option".into(),
+                location: segment.location,
+            });
+        }
+
+        let endianness = if segment
+            .options
+            .iter()
+            .any(|x| matches!(x, Opt::Little { .. }))
+        {
+            Endianness::Little
+        } else {
+            Endianness::Big
+        };
+
+        let size = match segment
+            .options
+            .iter()
+            .find(|x| matches!(x, Opt::Size { .. }))
+        {
+            Some(Opt::Size { value: size, .. }) => match &**size {
+                Pattern::Int { value, .. } => Ok(value
+                    .parse::<usize>()
+                    .expect("part of an Int node should always parse as integer")),
+                _ => Err(Error::Unsupported {
+                    feature: "This bit array size option in patterns".into(),
+                    location: segment.location,
+                }),
+            },
+
+            _ => {
+                let default_size = if segment.type_ == crate::type_::int() {
+                    8usize
+                } else {
+                    64usize
+                };
+
+                Ok(default_size)
+            }
+        }?;
+
+        // 16-bit floats are not supported
+        if segment.type_ == crate::type_::float() && size == 16usize {
+            return Err(Error::Unsupported {
+                feature: "This bit array size option in patterns".into(),
+                location: segment.location,
+            });
+        }
+
+        let is_signed = segment
+            .options
+            .iter()
+            .any(|x| matches!(x, Opt::Signed { .. }));
+
+        Ok(SizedBitArraySegmentDetails {
+            size,
+            endianness,
+            is_signed,
+        })
     }
 
     fn push_assignment(&mut self, subject: Document<'a>, name: &'a EcoString) {

@@ -25,8 +25,13 @@ export class BitArray {
   buffer: Uint8Array;
   get length(): number;
   byteAt(index: number): number;
-  floatAt(index: number): number;
-  intFromSlice(start: number, end: number): number;
+  floatFromSlice(index: number, end: number, isBigEndian: boolean): number;
+  intFromSlice(
+    start: number,
+    end: number,
+    isBigEndian: boolean,
+    isSigned: boolean
+  ): number;
   binaryFromSlice(state: number, end: number): BitArray;
   sliceAfter(index: number): BitArray;
 }
@@ -37,17 +42,36 @@ export class UtfCodepoint {
 
 export function toBitArray(segments: Array<number | Uint8Array>): BitArray;
 
-export function sizedInt(int: number, size: number): Uint8Array;
+export function sizedInt(
+  int: number,
+  size: number,
+  isBigEndian: boolean
+): Uint8Array;
 
-export function byteArrayToInt(byteArray: Uint8Array): number;
+export function byteArrayToInt(
+  byteArray: Uint8Array,
+  start: number,
+  end: number,
+  isBigEndian: boolean,
+  isSigned: boolean
+): number;
 
-export function byteArrayToFloat(byteArray: Uint8Array): number;
+export function byteArrayToFloat(
+  byteArray: Uint8Array,
+  start: number,
+  end: number,
+  isBigEndian: boolean
+): number;
 
 export function stringBits(string: string): Uint8Array;
 
 export function codepointBits(codepoint: UtfCodepoint): Uint8Array;
 
-export function float64Bits(float: number): Uint8Array;
+export function sizedFloat(
+  float: number,
+  size: number,
+  isBigEndian: boolean
+): Uint8Array;
 
 export class Result<T, E> extends CustomType {
   static isResult(data: unknown): boolean;
