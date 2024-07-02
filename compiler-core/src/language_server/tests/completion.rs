@@ -1145,3 +1145,60 @@ pub fn main() {
         Position::new(2, 16)
     ),);
 }
+
+#[test]
+fn ignore_completions_in_empty_comment() {
+    // Reproducing issue #2161
+    let code = "
+pub fn main() {
+  case 0 {
+    //
+    _ -> 1
+  }
+}
+";
+
+    // End of the comment (right after the last `/`)
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(3, 6)),
+        vec![],
+    );
+}
+
+#[test]
+fn ignore_completions_in_middle_of_comment() {
+    // Reproducing issue #2161
+    let code = "
+pub fn main() {
+  case 0 {
+    // comment
+    _ -> 1
+  }
+}
+";
+
+    // At `c`
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(3, 7)),
+        vec![],
+    );
+}
+
+#[test]
+fn ignore_completions_in_end_of_comment() {
+    // Reproducing issue #2161
+    let code = "
+pub fn main() {
+  case 0 {
+    // comment
+    _ -> 1
+  }
+}
+";
+
+    // End of the comment (after `t`)
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(3, 14)),
+        vec![],
+    );
+}

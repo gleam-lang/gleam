@@ -379,6 +379,15 @@ fn unused_imported_module_no_warning_on_used_unqualified_type_test() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/3313
+#[test]
+fn imported_module_with_alias_no_warning_when_only_used_in_case_test() {
+    assert_no_warnings!(
+        ("thepackage", "gleam/foo", "pub type Foo { Foo(Int) }"),
+        "import gleam/foo as f\npub fn baz(a) { case a { f.Foo(int) -> { int } }  }",
+    );
+}
+
 #[test]
 fn module_access_registers_import_usage() {
     assert_no_warnings!(

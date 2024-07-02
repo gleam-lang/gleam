@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1052
 expression: "\ntype A {\n    A(type: String)\n}\n"
 ---
 error: Syntax error
@@ -8,6 +9,6 @@ error: Syntax error
 3 │     A(type: String)
   │       ^^^^ I was not expecting this
 
-Expected one of: 
-")"
-a constructor argument name
+Found the keyword `type`, expected one of: 
+- `)`
+- a constructor argument name

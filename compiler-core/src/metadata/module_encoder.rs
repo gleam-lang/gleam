@@ -211,7 +211,7 @@ impl<'a> ModuleEncoder<'a> {
         builder: type_value_constructor_parameter::Builder<'_>,
         parameter: &type_::TypeValueConstructorField,
     ) {
-        self.build_type(builder.init_type(), parameter.type_.as_ref())
+        self.build_type(builder.init_type(), parameter.type_.as_ref());
     }
 
     fn build_value_constructor(

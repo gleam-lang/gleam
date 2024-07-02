@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1041
 expression: "\ntype A(a, type) {\n    A\n}\n"
 ---
 error: Syntax error
@@ -8,6 +9,6 @@ error: Syntax error
 2 │ type A(a, type) {
   │           ^^^^ I was not expecting this
 
-Expected one of: 
-")"
-a name
+Found the keyword `type`, expected one of: 
+- `)`
+- a name

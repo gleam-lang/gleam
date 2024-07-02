@@ -1059,6 +1059,19 @@ type A {
 }
 
 #[test]
+fn type_invalid_record() {
+    assert_module_error!(
+        "
+type A {
+    One
+    Two
+    3
+}
+"
+    );
+}
+
+#[test]
 fn function_type_invalid_param_type() {
     assert_module_error!(
         "
@@ -1066,6 +1079,17 @@ fn f(g: fn(Int, 1) -> Int) -> Int {
   g(0, 1)
 }
 "
+    );
+}
+
+#[test]
+fn function_invalid_signature() {
+    assert_module_error!(
+        r#"
+fn f(a, "b") -> String {
+    a <> b
+}
+"#
     );
 }
 
@@ -1119,5 +1143,16 @@ fn newline_tokens() {
             Ok((3, Token::Int { value: "2".into() }, 4)),
             Ok((4, Token::NewLine, 5))
         ]
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1756
+#[test]
+fn arithmetic_in_guards() {
+    assert_parse!(
+        "
+case 2, 3 {
+    x, y if x + y == 1 -> True
+}"
     );
 }

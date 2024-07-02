@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1029
 expression: "\ntype A {\n    A(String)\n    type\n}\n"
 ---
 error: Syntax error
@@ -8,6 +9,6 @@ error: Syntax error
 4 │     type
   │     ^^^^ I was not expecting this
 
-Expected one of: 
-"}"
-a record constructor
+Found the keyword `type`, expected one of: 
+- `}`
+- a record constructor

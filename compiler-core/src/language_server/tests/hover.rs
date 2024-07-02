@@ -867,3 +867,114 @@ fn valid() { Nil }
         })
     );
 }
+
+#[test]
+fn hover_for_pattern_spread_ignoring_all_fields() {
+    let code = "
+pub type Model {
+  Model(
+    Int,
+    Float,
+    label1: Int,
+    label2: String,
+  )
+}
+
+pub fn main() {
+  case todo {
+    Model(..) -> todo
+  }
+}
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(12, 10)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "Unused positional fields:
+- `Int`
+- `Float`
+
+Unused labelled fields:
+- `label1: Int`
+- `label2: String`"
+                    .into()
+            )),
+            range: Some(Range {
+                start: Position::new(12, 10),
+                end: Position::new(12, 12)
+            }),
+        })
+    );
+}
+
+#[test]
+fn hover_for_pattern_spread_ignoring_some_fields() {
+    let code = "
+pub type Model {
+  Model(
+    Int,
+    Float,
+    label1: Int,
+    label2: String,
+  )
+}
+
+pub fn main() {
+  case todo {
+    Model(_, label1: _, ..) -> todo
+  }
+}
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(12, 25)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "Unused positional fields:
+- `Float`
+
+Unused labelled fields:
+- `label2: String`"
+                    .into()
+            )),
+            range: Some(Range {
+                start: Position::new(12, 24),
+                end: Position::new(12, 26)
+            }),
+        })
+    );
+}
+
+#[test]
+fn hover_for_pattern_spread_ignoring_all_positional_fields() {
+    let code = "
+pub type Model {
+  Model(
+    Int,
+    Float,
+    label1: Int,
+    label2: String,
+  )
+}
+
+pub fn main() {
+  case todo {
+    Model(_, _, _, ..) -> todo
+  }
+}
+";
+
+    assert_eq!(
+        hover(TestProject::for_source(code), Position::new(12, 19)),
+        Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(
+                "Unused labelled fields:\n- `label2: String`".into()
+            )),
+            range: Some(Range {
+                start: Position::new(12, 19),
+                end: Position::new(12, 21)
+            }),
+        })
+    );
+}

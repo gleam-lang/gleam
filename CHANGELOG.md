@@ -1,12 +1,23 @@
 # Changelog
 
-## v1.3.0 - Unreleased
+## v1.3.0-rc1 - 2024-06-30
 
 ### Build tool
 
 - `gleam remove` will now present an error if a package being removed does not
   exist as a dependency in the project.
   ([Changfeng Lou](https://github.com/hnlcf))
+
+- `gleam add` now takes an optional package version specifier,
+  separated by a `@`, that resolves as follows:
+
+  ```shell
+  gleam add lustre@1.2.3 # "1.2.3"
+  gleam add lustre@1.2   # ">= 1.2.0 and < 2.0.0"
+  gleam add lustre@1     # ">= 1.0.0 and < 2.0.0"
+  ```
+
+  ([Rahul D. Ghosal](https://github.com/rdghosal))
 
 ### Compiler
 
@@ -31,7 +42,7 @@
   match on the start of the list instead.
   ```
 
-  ([Antonio Iaccarino])[https://github.com/eingin]
+  ([Antonio Iaccarino](https://github.com/eingin))
 
 - The compiler now emits a warning for redundant function captures in a
   pipeline:
@@ -94,6 +105,33 @@
   to JavaScript.
   ([Ofek Doitch](https://github.com/ofekd))
 
+- Compiler now supports arithmetic operations in guards.
+  ([Danielle Maywood](https://github.com/DanielleMaywood))
+
+- Import cycles now show the location where the import occur.
+  ([Ameen Radwan](https://github.com/Acepie))
+
+- Error messages resulting from unexpected tokens now include information on
+  the found token's type. This updated message explains how the lexer handled
+  the token, so as to guide the user towards providing correct syntax.
+
+  Following is an example, where the error message indicates that the name of
+  the provided field conflicts with a keyword:
+
+  ```
+  3 │     A(type: String)
+    │       ^^^^ I was not expecting this
+
+  Found the keyword `type`, expected one of:
+  - `)`
+  - a constructor argument name
+  ```
+
+  ([Rahul D. Ghosal](https://github.com/rdghosal))
+
+- When compiling to JavaScript constants will now be annotated as `@__PURE__`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Language Server
@@ -121,11 +159,22 @@
 
 - LSP can now suggest completions for values and types from importable modules
   and adds the import to the top of the file.
-  ([Ameen Radwan](https://github.com/Acepie)
+  ([Ameen Radwan](https://github.com/Acepie))
+
+- Diagnostics with extra labels now show the diagnostic in all locations
+  including across multiple files.
+  ([Ameen Radwan](https://github.com/Acepie))
 
 - LSP completions now use the "text_edit" language server API resulting in
   better/more accurate insertions.
-  ([Ameen Radwan](https://github.com/Acepie)
+  ([Ameen Radwan](https://github.com/Acepie))
+
+- Completions are no longer provided inside comments.
+  ([Nicky Lim](https://github.com/nicklimmm))
+
+- The language server will now show all the ignored fields when hovering over
+  `..` in a record pattern.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - LSP now supports listing document symbols, such as functions and constants, for the current Gleam file.
   ([PgBiel](https://github.com/PgBiel))
@@ -156,6 +205,14 @@
 - Fixed a bug where the compiler would crash because types weren't registered if
   they referenced a non-existent type.
   ([Gears](https://github.com/gearsdatapacks))
+
+- Fixed a bug where the compiler would generate invalid Erlang when pattern
+  matching on strings with an `as` pattern.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would warn that a module alias was unused when
+  it was only used in case patterns.
+  ([Michael Jones](https://github.com/michaeljones))
 
 ## v1.2.1 - 2024-05-30
 

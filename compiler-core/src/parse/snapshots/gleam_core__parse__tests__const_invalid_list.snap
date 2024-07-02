@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1107
 expression: "\nconst a = [1, 2, <-]\n"
 ---
 error: Syntax error
@@ -8,6 +9,6 @@ error: Syntax error
 2 │ const a = [1, 2, <-]
   │                  ^^ I was not expecting this
 
-Expected one of: 
-"]"
-a constant value
+Found `<-`, expected one of: 
+- `]`
+- a constant value

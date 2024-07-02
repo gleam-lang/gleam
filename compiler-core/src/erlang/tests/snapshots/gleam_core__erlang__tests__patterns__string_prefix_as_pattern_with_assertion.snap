@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/erlang/tests/patterns.rs
+expression: "pub fn a(x) {\n  let assert \"a\" as a <> rest = \"wibble\"\n  a\n}"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([a/1]).
+
+-spec a(any()) -> binary().
+a(X) ->
+    _assert_subject = <<"wibble"/utf8>>,
+    <<A@1:1/binary, Rest/binary>> = case _assert_subject of
+        <<A:1/binary, _/binary>> when A =:= <<"a"/utf8>> -> _assert_subject;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Assertion pattern match failed"/utf8>>,
+                        value => _assert_fail,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"a"/utf8>>,
+                        line => 2})
+    end,
+    A@1.

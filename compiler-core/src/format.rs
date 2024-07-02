@@ -1106,7 +1106,7 @@ impl<'comments> Formatter<'comments> {
         name: &'a str,
         args: &'a [CallArg<UntypedPattern>],
         module: &'a Option<EcoString>,
-        with_spread: bool,
+        spread: Option<SrcSpan>,
         location: &SrcSpan,
     ) -> Document<'a> {
         fn is_breakable(expr: &UntypedPattern) -> bool {
@@ -1124,11 +1124,11 @@ impl<'comments> Formatter<'comments> {
             None => name.to_doc(),
         };
 
-        if args.is_empty() && with_spread {
+        if args.is_empty() && spread.is_some() {
             name.append("(..)")
         } else if args.is_empty() {
             name
-        } else if with_spread {
+        } else if spread.is_some() {
             let args = args.iter().map(|a| self.pattern_call_arg(a)).collect_vec();
             name.append(self.wrap_args_with_spread(args, location.end))
         } else {
@@ -2027,10 +2027,10 @@ impl<'comments> Formatter<'comments> {
                 name,
                 arguments: args,
                 module,
-                with_spread,
+                spread,
                 location,
                 ..
-            } => self.pattern_constructor(name, args, module, *with_spread, location),
+            } => self.pattern_constructor(name, args, module, *spread, location),
 
             Pattern::Tuple {
                 elems, location, ..
@@ -2194,6 +2194,33 @@ impl<'comments> Formatter<'comments> {
             }
             ClauseGuard::LtEqFloat { left, right, .. } => {
                 self.clause_guard_bin_op(&BinOp::LtEqFloat, left, right)
+            }
+            ClauseGuard::AddInt { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::AddInt, left, right)
+            }
+            ClauseGuard::AddFloat { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::AddFloat, left, right)
+            }
+            ClauseGuard::SubInt { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::SubInt, left, right)
+            }
+            ClauseGuard::SubFloat { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::SubFloat, left, right)
+            }
+            ClauseGuard::MultInt { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::MultInt, left, right)
+            }
+            ClauseGuard::MultFloat { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::MultFloat, left, right)
+            }
+            ClauseGuard::DivInt { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::DivInt, left, right)
+            }
+            ClauseGuard::DivFloat { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::DivFloat, left, right)
+            }
+            ClauseGuard::RemainderInt { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::RemainderInt, left, right)
             }
 
             ClauseGuard::Var { name, .. } => name.to_doc(),

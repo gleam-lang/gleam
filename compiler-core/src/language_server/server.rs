@@ -17,6 +17,7 @@ use crate::{
 };
 use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
+use itertools::Itertools;
 use lsp_types::{
     self as lsp, HoverProviderCapability, InitializeParams, Position, PublishDiagnosticsParams,
     Range, TextEdit, Url,
@@ -461,15 +462,42 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
         .location
         .expect("Diagnostic given to LSP without location");
     let line_numbers = LineNumbers::new(&location.src);
+    let path = path_to_uri(location.path);
+    let range = src_span_to_lsp_range(location.label.span, &line_numbers);
+
+    let related_info = location
+        .extra_labels
+        .iter()
+        .map(|extra| {
+            let message = extra.label.text.clone().unwrap_or_default();
+            let location = if let Some((src, path)) = &extra.src_info {
+                let line_numbers = LineNumbers::new(src);
+                lsp::Location {
+                    uri: path_to_uri(path.clone()),
+                    range: src_span_to_lsp_range(extra.label.span, &line_numbers),
+                }
+            } else {
+                lsp::Location {
+                    uri: path.clone(),
+                    range: src_span_to_lsp_range(extra.label.span, &line_numbers),
+                }
+            };
+            lsp::DiagnosticRelatedInformation { location, message }
+        })
+        .collect_vec();
 
     let main = lsp::Diagnostic {
-        range: src_span_to_lsp_range(location.label.span, &line_numbers),
+        range,
         severity: Some(severity),
         code: None,
         code_description: None,
         source: None,
         message: text,
-        related_information: None,
+        related_information: if related_info.is_empty() {
+            None
+        } else {
+            Some(related_info)
+        },
         tags: None,
         data: None,
     };

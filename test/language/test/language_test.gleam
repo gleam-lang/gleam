@@ -657,6 +657,55 @@ fn clause_guard_tests() -> List(Test) {
         _ -> 1
       })
     }),
+    "1 + 1 == 2"
+    |> example(fn() {
+      assert_equal(0, case Nil {
+        _ if 1 + 1 == 2 -> 0
+        _ -> 1
+      })
+    }),
+    "47 % 5 == 2"
+    |> example(fn() {
+      assert_equal(0, case Nil {
+        _ if 47 % 5 == 2 -> 0
+        _ -> 1
+      })
+    }),
+    "3 * 5 == 15"
+    |> example(fn() {
+      assert_equal(0, case Nil {
+        _ if 3 * 5 == 15 -> 0
+        _ -> 1
+      })
+    }),
+    "3 * 5 + 1 == 16"
+    |> example(fn() {
+      assert_equal(0, case Nil {
+        _ if 3 * 5 + 1 == 16 -> 0
+        _ -> 1
+      })
+    }),
+    "1 + 3 * 5 == 16"
+    |> example(fn() {
+      assert_equal(0, case Nil {
+        _ if 1 + 3 * 5 == 16 -> 0
+        _ -> 1
+      })
+    }),
+    "1 - 15 / 5 == -2"
+    |> example(fn() {
+      assert_equal(0, case Nil {
+        _ if 1 - 15 / 5 == -2 -> 0
+        _ -> 1
+      })
+    }),
+    "15 / 5 - 1 == 2"
+    |> example(fn() {
+      assert_equal(0, case Nil {
+        _ if 15 / 5 - 1 == 2 -> 0
+        _ -> 1
+      })
+    }),
     "#(True, False).0"
     |> example(fn() {
       assert_equal(0, case Nil {
@@ -1570,7 +1619,7 @@ fn tuple_access_tests() {
       assert_equal(
         {
           let tup = #(
-            Person("Quinn", 27, "Canada"), 
+            Person("Quinn", 27, "Canada"),
             Person("Nikita", 99, "Internet"),
           )
           tup.0.name

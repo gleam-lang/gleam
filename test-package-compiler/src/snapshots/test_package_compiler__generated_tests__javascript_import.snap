@@ -12,7 +12,7 @@ expression: "./cases/javascript_import"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<72 byte binary>
+<80 byte binary>
 
 //// /out/lib/the_package/gleam.d.mts
 export * from "../prelude.d.mts";
@@ -47,4 +47,4 @@ export const x: $two.A$;
 /// <reference types="./two.d.mts" />
 import * as $two from "./one/two.mjs";
 
-export const x = new $two.A();
+export const x = /* @__PURE__ */ new $two.A();

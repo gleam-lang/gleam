@@ -183,6 +183,15 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             | ClauseGuard::GtEqFloat { .. }
             | ClauseGuard::LtFloat { .. }
             | ClauseGuard::LtEqFloat { .. }
+            | ClauseGuard::AddInt { .. }
+            | ClauseGuard::AddFloat { .. }
+            | ClauseGuard::SubInt { .. }
+            | ClauseGuard::SubFloat { .. }
+            | ClauseGuard::MultInt { .. }
+            | ClauseGuard::MultFloat { .. }
+            | ClauseGuard::DivInt { .. }
+            | ClauseGuard::DivFloat { .. }
+            | ClauseGuard::RemainderInt { .. }
             | ClauseGuard::Or { .. }
             | ClauseGuard::And { .. }
             | ClauseGuard::ModuleSelect { .. } => Ok(docvec!("(", self.guard(guard)?, ")")),
@@ -241,6 +250,37 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
                 docvec!(left, " <= ", right)
+            }
+
+            ClauseGuard::AddFloat { left, right, .. } | ClauseGuard::AddInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                docvec!(left, " + ", right)
+            }
+
+            ClauseGuard::SubFloat { left, right, .. } | ClauseGuard::SubInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                docvec!(left, " - ", right)
+            }
+
+            ClauseGuard::MultFloat { left, right, .. }
+            | ClauseGuard::MultInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                docvec!(left, " * ", right)
+            }
+
+            ClauseGuard::DivFloat { left, right, .. } | ClauseGuard::DivInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                docvec!(left, " / ", right)
+            }
+
+            ClauseGuard::RemainderInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                docvec!(left, " % ", right)
             }
 
             ClauseGuard::Or { left, right, .. } => {

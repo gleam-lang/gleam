@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 1063
+expression: "\ntype A {\n    One\n    Two\n    3\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:5:5
+  │
+5 │     3
+  │     ^ I was not expecting this
+
+Found an Int, expected one of: 
+- `}`
+- a record constructor
