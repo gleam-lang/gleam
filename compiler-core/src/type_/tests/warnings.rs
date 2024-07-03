@@ -38,8 +38,8 @@ fn todo_with_known_type() {
 #[test]
 fn empty_func_warning_test() {
     assert_warning!(
-        "pub fn main() { foo() }
-pub fn foo() { }
+        "pub fn main() { wibble() }
+pub fn wibble() { }
 "
     );
 }
@@ -48,8 +48,8 @@ pub fn foo() { }
 fn warning_variable_never_used_test() {
     assert_warning!(
         "
-pub fn foo() { Ok(5) }
-pub fn main() { let five = foo() }"
+pub fn wibble() { Ok(5) }
+pub fn main() { let five = wibble() }"
     );
 }
 
@@ -71,9 +71,9 @@ fn result_discard_warning_test() {
     // Implicitly discarded Results emit warnings
     assert_warning!(
         "
-pub fn foo() { Ok(5) }
+pub fn wibble() { Ok(5) }
 pub fn main() {
-  foo()
+  wibble()
   5
 }"
     );
@@ -84,8 +84,8 @@ fn result_discard_warning_test2() {
     // Explicitly discarded Results do not emit warnings
     assert_no_warnings!(
         "
-pub fn foo() { Ok(5) }
-pub fn main() { let _ = foo() 5 }",
+pub fn wibble() { Ok(5) }
+pub fn main() { let _ = wibble() 5 }",
     );
 }
 
@@ -319,14 +319,17 @@ fn used_destructure() {
 
 #[test]
 fn unused_imported_module_warnings_test() {
-    assert_warning!(("gleam/foo", "pub fn bar() { 1 }"), "import gleam/foo");
+    assert_warning!(
+        ("gleam/wibble", "pub fn wobble() { 1 }"),
+        "import gleam/wibble"
+    );
 }
 
 #[test]
 fn unused_imported_module_with_alias_warnings_test() {
     assert_warning!(
-        ("gleam/foo", "pub fn bar() { 1 }"),
-        "import gleam/foo as bar"
+        ("gleam/wibble", "pub fn wobble() { 1 }"),
+        "import gleam/wibble as wobble"
     );
 }
 
@@ -343,39 +346,39 @@ fn unused_imported_module_with_alias_and_unqualified_name_warnings_test() {
 fn unused_imported_module_with_alias_and_unqualified_name_no_warnings_test() {
     assert_warning!(
         ("package", "gleam/one", "pub fn two() { 1 }"),
-        "import gleam/one.{two} as three\npub fn baz() { two() }"
+        "import gleam/one.{two} as three\npub fn wibble() { two() }"
     );
 }
 
 #[test]
 fn unused_imported_module_no_warning_on_used_function_test() {
     assert_no_warnings!(
-        ("thepackage", "gleam/foo", "pub fn bar() { 1 }"),
-        "import gleam/foo pub fn baz() { foo.bar() }",
+        ("thepackage", "gleam/wibble", "pub fn wobble() { 1 }"),
+        "import gleam/wibble pub fn wibble() { wibble.wobble() }",
     );
 }
 
 #[test]
 fn unused_imported_module_no_warning_on_used_type_test() {
     assert_no_warnings!(
-        ("thepackage", "gleam/foo", "pub type Foo = Int"),
-        "import gleam/foo pub fn baz(a: foo.Foo) { a }",
+        ("thepackage", "gleam/wibble", "pub type Wibble = Int"),
+        "import gleam/wibble pub fn wibble(a: wibble.Wibble) { a }",
     );
 }
 
 #[test]
 fn unused_imported_module_no_warning_on_used_unqualified_function_test() {
     assert_no_warnings!(
-        ("thepackage", "gleam/foo", "pub fn bar() { 1 }"),
-        "import gleam/foo.{bar} pub fn baz() { bar() }",
+        ("thepackage", "gleam/wibble", "pub fn wobble() { 1 }"),
+        "import gleam/wibble.{wobble} pub fn wibble() { wobble() }",
     );
 }
 
 #[test]
 fn unused_imported_module_no_warning_on_used_unqualified_type_test() {
     assert_no_warnings!(
-        ("thepackage", "gleam/foo", "pub type Foo = Int"),
-        "import gleam/foo.{type Foo} pub fn baz(a: Foo) { a }",
+        ("thepackage", "gleam/wibble", "pub type Wibble = Int"),
+        "import gleam/wibble.{type Wibble} pub fn wibble(a: Wibble) { a }",
     );
 }
 
@@ -383,8 +386,12 @@ fn unused_imported_module_no_warning_on_used_unqualified_type_test() {
 #[test]
 fn imported_module_with_alias_no_warning_when_only_used_in_case_test() {
     assert_no_warnings!(
-        ("thepackage", "gleam/foo", "pub type Foo { Foo(Int) }"),
-        "import gleam/foo as f\npub fn baz(a) { case a { f.Foo(int) -> { int } }  }",
+        (
+            "thepackage",
+            "gleam/wibble",
+            "pub type Wibble { Wibble(Int) }"
+        ),
+        "import gleam/wibble as f\npub fn wibble(a) { case a { f.Wibble(int) -> { int } }  }",
     );
 }
 
@@ -967,17 +974,17 @@ fn const_bytes_option() {
 #[test]
 fn unused_module_wuth_alias_warning_test() {
     assert_warning!(
-        ("gleam/foo", "pub const one = 1"),
-        "import gleam/foo as bar"
+        ("gleam/wibble", "pub const one = 1"),
+        "import gleam/wibble as wobble"
     );
 }
 
 #[test]
 fn unused_alias_warning_test() {
     assert_warnings_with_imports!(
-        ("gleam/foo", "pub const one = 1");
+        ("gleam/wibble", "pub const one = 1");
         r#"
-            import gleam/foo.{one} as bar
+            import gleam/wibble.{one} as wobble
             const one = one
         "#,
     );
@@ -986,25 +993,28 @@ fn unused_alias_warning_test() {
 #[test]
 fn used_type_with_import_alias_no_warning_test() {
     assert_no_warnings!(
-        ("gleam", "gleam/foo", "pub const one = 1"),
-        "import gleam/foo as _bar"
+        ("gleam", "gleam/wibble", "pub const one = 1"),
+        "import gleam/wibble as _wobble"
     );
 }
 
 #[test]
 fn discarded_module_no_warnings_test() {
-    assert_no_warnings!(("gleam", "foo", "pub const one = 1"), "import foo as _bar");
+    assert_no_warnings!(
+        ("gleam", "wibble", "pub const one = 1"),
+        "import wibble as _wobble"
+    );
 }
 
 #[test]
 fn unused_alias_for_duplicate_module_no_warning_for_alias_test() {
     assert_warnings_with_imports!(
-        ("a/foo", "pub const one = 1"),
-        ("b/foo", "pub const two = 2");
+        ("a/wibble", "pub const one = 1"),
+        ("b/wibble", "pub const two = 2");
         r#"
-            import a/foo
-            import b/foo as bar
-            const one = foo.one
+            import a/wibble
+            import b/wibble as wobble
+            const one = wibble.one
         "#,
     );
 }

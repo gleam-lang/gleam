@@ -228,9 +228,9 @@ pub enum NestMode {
     /// to exactly the specified value.
     ///
     /// `doc.nest(2).set_nesting(0)`
-    /// "foo
-    /// bar    <- no indentation is added!
-    /// baz"
+    /// "wibble
+    /// wobble    <- no indentation is added!
+    /// wubble"
     Set,
 }
 

@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-expression: "\n        import foo.{println}\n        pub fn main() {\n          let println =\n            \"oh dear\"\n            |> println\n          println\n        }"
+expression: "\n        import wibble.{println}\n        pub fn main() {\n          let println =\n            \"oh dear\"\n            |> println\n          println\n        }"
 ---
-import * as $foo from "../foo.mjs";
-import { println } from "../foo.mjs";
+import * as $wibble from "../wibble.mjs";
+import { println } from "../wibble.mjs";
 
 export function main() {
   let println$1 = (() => {

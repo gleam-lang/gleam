@@ -370,9 +370,9 @@ pub fn version(n) {
 #[test]
 fn pipe_shadow_import() {
     assert_js!(
-        (CURRENT_PACKAGE, "foo", "pub fn println(x: String) {  }"),
+        (CURRENT_PACKAGE, "wibble", "pub fn println(x: String) {  }"),
         r#"
-        import foo.{println}
+        import wibble.{println}
         pub fn main() {
           let println =
             "oh dear"

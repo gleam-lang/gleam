@@ -73,9 +73,9 @@ fn anonymous_function_with_multi_line_long_breakable_body_as_final_function_argu
     assert_format!(
         r#"pub fn main() {
   some_function(123, 456, fn(x) {
-    call_to_other_function(a, b, c, d, e, f, g, case foo {
-      Bar -> 1
-      Baz -> 2
+    call_to_other_function(a, b, c, d, e, f, g, case wibble {
+      Wibble -> 1
+      Wobble -> 2
     })
   })
 }
@@ -166,7 +166,7 @@ fn nested_breakable_lists_in_function_calls() {
     assert_format!(
         r#"pub fn main() {
   html([attribute("lang", "en")], [
-    head([attribute("foo", "bar")], [
+    head([attribute("wibble", "wobble")], [
       title([], [text("Hello this is some HTML")]),
     ]),
     body([], [h1([], [text("Hello, world!")])]),
@@ -181,7 +181,7 @@ fn nested_breakable_tuples_in_function_calls() {
     assert_format!(
         r#"pub fn main() {
   html(#(attribute("lang", "en")), #(
-    head(#(attribute("foo", "bar")), #(
+    head(#(attribute("wibble", "wobble")), #(
       title(#(), #(text("Hello this is some HTML"))),
       body(#(), #(text("Hello this is some HTML"))),
     )),

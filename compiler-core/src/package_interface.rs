@@ -162,7 +162,7 @@ pub struct ImplementationsInterface {
     /// Consider the following function:
     ///
     /// ```gleam
-    /// @external(erlang, "foo", "bar")
+    /// @external(erlang, "wibble", "wobble")
     /// pub fn a_random_number() -> Int {
     ///   4
     ///   // This is a default implementation.
@@ -205,7 +205,7 @@ pub struct ImplementationsInterface {
     /// Let's have a look at an example:
     ///
     /// ```gleam
-    /// @external(javascript, "foo", "bar")
+    /// @external(javascript, "wibble", "wobble")
     /// pub fn javascript_only() -> Int
     /// ```
     ///
@@ -308,8 +308,8 @@ pub enum TypeInterface {
     },
     /// A type variable.
     /// ```gleam
-    /// pub fn foo(value: a) -> a {}
-    /// //                ^ This is a type variable.
+    /// pub fn wibble(value: a) -> a {}
+    /// //                   ^ This is a type variable.
     /// ```
     Variable { id: u64 },
     /// A custom named type.
@@ -613,7 +613,7 @@ fn from_type_helper(type_: &Type, id_map: &mut IdMap) -> TypeInterface {
 /// After type inference the ids associated with type variables can be quite
 /// high and are not the best to produce a human/machine readable output.
 ///
-/// Imagine a function like this one: `pub fn foo(item: a, rest: b) -> c`
+/// Imagine a function like this one: `pub fn wibble(item: a, rest: b) -> c`
 /// What we want here is for type variables to have increasing ids starting from
 /// 0: `a` with id `0`, `b` with id `1` and `c` with id `2`.
 ///

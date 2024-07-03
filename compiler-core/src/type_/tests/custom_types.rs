@@ -64,7 +64,7 @@ type Three(a, a) {
 fn conflict_with_import() {
     // We cannot declare a type with the same name as an imported type
     assert_with_module_error!(
-        ("foo", "pub type A { B }"),
-        "import foo.{type A} type A { C }",
+        ("wibble", "pub type A { B }"),
+        "import wibble.{type A} type A { C }",
     );
 }

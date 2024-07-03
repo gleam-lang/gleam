@@ -27,8 +27,8 @@ pub struct Implementations {
     /// Imagine this scenario:
     ///
     /// ```gleam
-    /// @external(javascript, "foo", "bar")
-    /// @external(erlang, "foo", "bar")
+    /// @external(javascript, "wibble", "wobble")
+    /// @external(erlang, "wibble", "wobble")
     /// pub fn func() -> Int
     /// ```
     ///
@@ -122,7 +122,7 @@ impl Implementations {
         //
         // For example:
         // ```gleam
-        // @external(erlang, "foo", "bar")
+        // @external(erlang, "wibble", "wobble")
         // pub fn erlang_only_with_pure_gleam_default() -> Int {
         //   1 + 1
         // }

@@ -107,13 +107,13 @@ fn print<'a>(
 
             match left_side_assignment {
                 Some((left_name, _)) => {
-                    // "foo" as prefix <> rest
-                    //       ^^^^^^^^^ In case the left prefix of the pattern matching is given an alias
-                    //                 we bind it to a local variable so that it can be correctly
-                    //                 referenced inside the case branch.
+                    // "wibble" as prefix <> rest
+                    //             ^^^^^^^^^ In case the left prefix of the pattern matching is given an alias
+                    //                       we bind it to a local variable so that it can be correctly
+                    //                       referenced inside the case branch.
                     //
-                    // <<Prefix:3/binary, Rest/binary>> when Prefix =:= <<"foo">>
-                    //   ^^^^^^^^                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+                    // <<Prefix:3/binary, Rest/binary>> when Prefix =:= <<"wibble">>
+                    //   ^^^^^^^^                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                     //   since erlang's binary pattern matching doesn't allow direct string assignment
                     //   to variables within the pattern, we first match the expected prefix length in
                     //   bytes, then use a guard clause to verify the content.

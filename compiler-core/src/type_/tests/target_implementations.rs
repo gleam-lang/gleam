@@ -72,7 +72,7 @@ pub fn pure_gleam_2() { pure_gleam_1() * 2 }
 pub fn erlang_only_function() {
     assert_targets!(
         r#"
-@external(erlang, "foo", "bar")
+@external(erlang, "wibble", "wobble")
 pub fn erlang_only_1() -> Int
 
 pub fn erlang_only_2() { erlang_only_1() * 2 }
@@ -106,8 +106,8 @@ pub fn erlang_only_2() { erlang_only_1() * 2 }
 pub fn externals_only_function() {
     assert_targets!(
         r#"
-@external(erlang, "foo", "bar")
-@external(javascript, "foo", "bar")
+@external(erlang, "wibble", "wobble")
+@external(javascript, "wibble", "wobble")
 pub fn all_externals_1() -> Int
 
 pub fn all_externals_2() { all_externals_1() * 2 }
@@ -141,10 +141,10 @@ pub fn all_externals_2() { all_externals_1() * 2 }
 pub fn externals_with_pure_gleam_body() {
     assert_targets!(
         r#"
-@external(javascript, "foo", "bar")
+@external(javascript, "wibble", "wobble")
 pub fn javascript_external_and_pure_body() -> Int { 1 + 1 }
 
-@external(erlang, "foo", "bar")
+@external(erlang, "wibble", "wobble")
 pub fn erlang_external_and_pure_body() -> Int { 1 + 1 }
 
 pub fn pure_gleam() {
@@ -190,10 +190,10 @@ pub fn pure_gleam() {
 pub fn erlang_external_with_javascript_body() {
     assert_targets!(
         r#"
-@external(javascript, "foo", "bar")
+@external(javascript, "wibble", "wobble")
 fn javascript_only() -> Int
 
-@external(erlang, "foo", "bar")
+@external(erlang, "wibble", "wobble")
 pub fn erlang_external_and_javascript_body() -> Int { javascript_only() }
 
 pub fn all_externals() -> Int { erlang_external_and_javascript_body() }
@@ -237,10 +237,10 @@ pub fn all_externals() -> Int { erlang_external_and_javascript_body() }
 pub fn javascript_external_with_erlang_body() {
     assert_targets!(
         r#"
-@external(erlang, "foo", "bar")
+@external(erlang, "wibble", "wobble")
 pub fn erlang_only() -> Int
 
-@external(javascript, "foo", "bar")
+@external(javascript, "wibble", "wobble")
 pub fn javascript_external_and_erlang_body() -> Int { erlang_only() }
 
 pub fn all_externals() -> Int { javascript_external_and_erlang_body() }
@@ -284,10 +284,10 @@ pub fn all_externals() -> Int { javascript_external_and_erlang_body() }
 pub fn function_with_no_valid_implementations() {
     assert_module_error!(
         r#"
-@external(javascript, "foo", "bar")
+@external(javascript, "wibble", "wobble")
 fn javascript_only() -> Int
 
-@external(erlang, "foo", "bar")
+@external(erlang, "wibble", "wobble")
 fn erlang_only() -> Int
 
 pub fn main() {
@@ -301,11 +301,11 @@ pub fn main() {
 #[test]
 pub fn invalid_both_and_one_called_from_erlang() {
     let src = r#"
-@external(erlang, "foo", "bar")
-@external(javascript, "foo", "bar")
+@external(erlang, "wibble", "wobble")
+@external(javascript, "wibble", "wobble")
 fn both_external() -> Int
 
-@external(javascript, "foo", "bar")
+@external(javascript, "wibble", "wobble")
 fn javascript_only() -> Int
 
 pub fn no_valid_erlang_impl() {
@@ -327,11 +327,11 @@ pub fn no_valid_erlang_impl() {
 #[test]
 pub fn invalid_both_and_one_called_from_javascript() {
     let src = r#"
-@external(erlang, "foo", "bar")
-@external(javascript, "foo", "bar")
+@external(erlang, "wibble", "wobble")
+@external(javascript, "wibble", "wobble")
 fn both_external() -> Int
 
-@external(erlang, "foo", "bar")
+@external(erlang, "wibble", "wobble")
 fn erlang_only() -> Int
 
 pub fn no_valid_javascript_impl() {
@@ -353,11 +353,11 @@ pub fn no_valid_javascript_impl() {
 #[test]
 pub fn invalid_both_and_one_called_from_erlang_flipped() {
     let src = r#"
-@external(erlang, "foo", "bar")
-@external(javascript, "foo", "bar")
+@external(erlang, "wibble", "wobble")
+@external(javascript, "wibble", "wobble")
 fn both_external() -> Int
 
-@external(javascript, "foo", "bar")
+@external(javascript, "wibble", "wobble")
 fn javascript_only() -> Int
 
 pub fn no_valid_erlang_impl() {
@@ -379,11 +379,11 @@ pub fn no_valid_erlang_impl() {
 #[test]
 pub fn invalid_both_and_one_called_from_javascript_flipped() {
     let src = r#"
-@external(erlang, "foo", "bar")
-@external(javascript, "foo", "bar")
+@external(erlang, "wibble", "wobble")
+@external(javascript, "wibble", "wobble")
 fn both_external() -> Int
 
-@external(erlang, "foo", "bar")
+@external(erlang, "wibble", "wobble")
 fn erlang_only() -> Int
 
 pub fn no_valid_javascript_impl() {
@@ -405,7 +405,7 @@ pub fn no_valid_javascript_impl() {
 #[test]
 pub fn invalid_erlang_with_external() {
     let src = r#"
-@external(javascript, "foo", "bar")
+@external(javascript, "wibble", "wobble")
 fn javascript_only() -> Int
 
 @external(javascript, "one", "two")
@@ -427,7 +427,7 @@ pub fn no_valid_erlang_impl() {
 #[test]
 pub fn invalid_javascript_with_external() {
     let src = r#"
-@external(erlang, "foo", "bar")
+@external(erlang, "wibble", "wobble")
 fn erlang_only() -> Int
 
 @external(erlang, "one", "two")

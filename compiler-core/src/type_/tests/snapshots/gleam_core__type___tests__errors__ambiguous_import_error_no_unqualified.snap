@@ -1,14 +1,14 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\n        import foo/sub\n        import foo2/sub\n        pub fn main() {\n            sub.bar()\n        }\n        "
+expression: "\n        import wibble/sub\n        import wibble2/sub\n        pub fn main() {\n            sub.wobble()\n        }\n        "
 ---
 error: Duplicate import
   ┌─ /src/one/two.gleam:2:9
   │
-2 │         import foo/sub
-  │         ^^^^^^^^^^^^^^ First imported here
-3 │         import foo2/sub
-  │         ^^^^^^^^^^^^^^^ Reimported here
+2 │         import wibble/sub
+  │         ^^^^^^^^^^^^^^^^^ First imported here
+3 │         import wibble2/sub
+  │         ^^^^^^^^^^^^^^^^^^ Reimported here
 
 `sub` has been imported multiple times.
 Names in a Gleam module must be unique so one will need to be renamed.

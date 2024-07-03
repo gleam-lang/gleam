@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\nfn bar(x: Int) -> Int {\n    x * 5\n}\n\nfn run(one: fn(String) -> Int) {\n    one(\"one.\")\n}\n\nfn demo() {\n    run(bar)\n}"
+expression: "\nfn wobble(x: Int) -> Int {\n    x * 5\n}\n\nfn run(one: fn(String) -> Int) {\n    one(\"one.\")\n}\n\nfn demo() {\n    run(wobble)\n}"
 ---
 error: Type mismatch
    ┌─ /src/one/two.gleam:11:9
    │
-11 │     run(bar)
-   │         ^^^
+11 │     run(wobble)
+   │         ^^^^^^
 
 Expected type:
 

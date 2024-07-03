@@ -370,16 +370,16 @@ fn name2() {
 #[test]
 fn triple_equals() {
     assert_error!(
-        "let bar:Int = 32
-        bar === 42",
+        "let wobble:Int = 32
+        wobble === 42",
         ParseError {
             error: ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::InvalidTripleEqual,
-                    location: SrcSpan { start: 29, end: 32 },
+                    location: SrcSpan { start: 35, end: 38 },
                 }
             },
-            location: SrcSpan { start: 29, end: 32 },
+            location: SrcSpan { start: 35, end: 38 },
         }
     );
 }
@@ -387,11 +387,11 @@ fn triple_equals() {
 #[test]
 fn triple_equals_with_whitespace() {
     assert_error!(
-        "let bar:Int = 32
-        bar ==     = 42",
+        "let wobble:Int = 32
+        wobble ==     = 42",
         ParseError {
             error: ParseErrorType::NoLetBinding,
-            location: SrcSpan { start: 36, end: 37 },
+            location: SrcSpan { start: 42, end: 43 },
         }
     );
 }
@@ -437,9 +437,9 @@ fn anonymous_function_labeled_arguments() {
 #[test]
 fn no_let_binding() {
     assert_error!(
-        "foo = 32",
+        "wibble = 32",
         ParseError {
-            location: SrcSpan { start: 4, end: 5 },
+            location: SrcSpan { start: 7, end: 8 },
             error: ParseErrorType::NoLetBinding
         }
     );
@@ -448,9 +448,9 @@ fn no_let_binding() {
 #[test]
 fn no_let_binding1() {
     assert_error!(
-        "foo:Int = 32",
+        "wibble:Int = 32",
         ParseError {
-            location: SrcSpan { start: 3, end: 4 },
+            location: SrcSpan { start: 6, end: 7 },
             error: ParseErrorType::NoLetBinding
         }
     );
@@ -459,10 +459,10 @@ fn no_let_binding1() {
 #[test]
 fn no_let_binding2() {
     assert_error!(
-        "let bar:Int = 32
-        bar = 42",
+        "let wobble:Int = 32
+        wobble = 42",
         ParseError {
-            location: SrcSpan { start: 29, end: 30 },
+            location: SrcSpan { start: 35, end: 36 },
             error: ParseErrorType::NoLetBinding
         }
     );
@@ -482,9 +482,9 @@ fn no_let_binding3() {
 #[test]
 fn no_eq_after_binding() {
     assert_error!(
-        "let foo",
+        "let wibble",
         ParseError {
-            location: SrcSpan { start: 4, end: 7 },
+            location: SrcSpan { start: 4, end: 10 },
             error: ParseErrorType::ExpectedEqual
         }
     );
@@ -493,10 +493,10 @@ fn no_eq_after_binding() {
 #[test]
 fn no_eq_after_binding1() {
     assert_error!(
-        "let foo
-        foo = 4",
+        "let wibble
+        wibble = 4",
         ParseError {
-            location: SrcSpan { start: 4, end: 7 },
+            location: SrcSpan { start: 4, end: 10 },
             error: ParseErrorType::ExpectedEqual
         }
     );
@@ -504,31 +504,31 @@ fn no_eq_after_binding1() {
 
 #[test]
 fn no_let_binding_snapshot_1() {
-    assert_error!("foo = 4");
+    assert_error!("wibble = 4");
 }
 
 #[test]
 fn no_let_binding_snapshot_2() {
-    assert_error!("foo:Int = 4");
+    assert_error!("wibble:Int = 4");
 }
 
 #[test]
 fn no_let_binding_snapshot_3() {
     assert_error!(
-        "let bar:Int = 32
-        bar = 42"
+        "let wobble:Int = 32
+        wobble = 42"
     );
 }
 
 #[test]
 fn no_eq_after_binding_snapshot_1() {
-    assert_error!("let foo");
+    assert_error!("let wibble");
 }
 #[test]
 fn no_eq_after_binding_snapshot_2() {
     assert_error!(
-        "let foo
-        foo = 4"
+        "let wibble
+        wibble = 4"
     );
 }
 

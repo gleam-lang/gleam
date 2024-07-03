@@ -74,8 +74,8 @@ fn last_comments_are_not_moved_out_of_blocks() {
 
     assert_format!(
         r#"fn main() {
-  case foo {
-    bar -> {
+  case wibble {
+    wobble -> {
       1
       // Hope I can stay inside this clause
     }

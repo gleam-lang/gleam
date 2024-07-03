@@ -37,19 +37,19 @@ fn variable_renaming() {
     assert_js!(
         r#"
 
-fn go(x, foo) {
+fn go(x, wibble) {
   let a = 1
-  foo(a)
+  wibble(a)
   let a = 2
-  foo(a)
+  wibble(a)
   let assert #(a, 3) = x
   let b = a
-  foo(b)
+  wibble(b)
   let c = {
     let a = a
     #(a, b)
   }
-  foo(a)
+  wibble(a)
   // make sure arguments are counted in initial state
   let x = c
   x
@@ -97,10 +97,10 @@ fn rebound_argument() {
 #[test]
 fn rebound_function() {
     assert_js!(
-        r#"pub fn x() { 
+        r#"pub fn x() {
   Nil
 }
-        
+
 pub fn main() {
   let x = False
   x
@@ -112,10 +112,10 @@ pub fn main() {
 #[test]
 fn rebound_function_and_arg() {
     assert_js!(
-        r#"pub fn x() { 
+        r#"pub fn x() {
   Nil
 }
-        
+
 pub fn main(x) {
   let x = False
   x
@@ -153,7 +153,7 @@ fn module_const_var() {
     assert_js!(
         r#"
 pub const int = 42
-pub const int_alias = int 
+pub const int_alias = int
 pub fn use_int_alias() { int_alias }
 
 pub const compound: #(Int, Int) = #(int, int_alias)
@@ -167,7 +167,7 @@ fn module_const_var1() {
     assert_ts_def!(
         r#"
 pub const int = 42
-pub const int_alias = int 
+pub const int_alias = int
 pub const compound: #(Int, Int) = #(int, int_alias)
 "#
     );
