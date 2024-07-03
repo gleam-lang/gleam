@@ -12,6 +12,6 @@ export class X extends $CustomType {
   }
 }
 
-export const x = /* @__PURE__ */ [new X(1, toList(["1"]))];
+export const x = [/* @__PURE__ */ new X(1, /* @__PURE__ */ toList(["1"]))];
 
-const y = /* @__PURE__ */ [new X(1, toList(["1"]))];
+const y = [/* @__PURE__ */ new X(1, /* @__PURE__ */ toList(["1"]))];
