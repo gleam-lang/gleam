@@ -1,11 +1,14 @@
 ---
 source: compiler-core/src/language_server/tests/hover.rs
-expression: "\nimport example_module\nfn main() {\n  example_module.my_fn\n}\n"
+expression: "\nfn my_fn() {\n  Nil\n}\n\nfn main() {\n  my_fn\n}\n"
 ---
-import example_module
+fn my_fn() {
+  Nil
+}
+
 fn main() {
-  example_module.my_fn
-                ▔▔▔↑▔▔
+  my_fn
+  ▔↑▔▔▔
 }
 
 

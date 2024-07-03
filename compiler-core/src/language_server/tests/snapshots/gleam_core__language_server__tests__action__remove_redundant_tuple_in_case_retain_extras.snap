@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: result
+expression: "\npub fn main() {\n  case\n    #(\n      // first comment\n      1,\n      // second comment\n      2,\n      3 // third comment before comma\n\n      ,\n\n      // fourth comment after comma\n\n    )\n  {\n    #(\n      // first comment\n      a,\n      // second comment\n      b,\n      c // third comment before comma\n\n      ,\n\n      // fourth comment after comma\n\n    ) -> 0\n  }\n}\n"
 ---
 pub fn main() {
   case

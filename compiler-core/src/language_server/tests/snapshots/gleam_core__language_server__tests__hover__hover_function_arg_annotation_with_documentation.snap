@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\n/// Exciting documentation\n/// Maybe even multiple lines\ntype Wibble {\n    Wibble(arg: String)\n}\n\nfn identity(x: Wibble) -> Wibble {\n  x\n}\n"
+---
+/// Exciting documentation
+/// Maybe even multiple lines
+type Wibble {
+    Wibble(arg: String)
+}
+
+fn identity(x: Wibble) -> Wibble {
+               ▔▔▔▔▔↑             
+  x
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nWibble\n```\n Exciting documentation\n Maybe even multiple lines\n",
+    ),
+)

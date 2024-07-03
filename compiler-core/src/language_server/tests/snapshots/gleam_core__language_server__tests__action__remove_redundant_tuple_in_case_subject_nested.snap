@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  case #(case #(0) { #(a) -> 0 }) { #(b) -> 0 }\n}\n"
+---
+pub fn main() {
+  case case 0 { a -> 0 } { b -> 0 }
+}
