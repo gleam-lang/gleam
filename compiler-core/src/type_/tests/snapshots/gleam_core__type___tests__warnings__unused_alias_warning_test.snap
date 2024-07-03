@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-expression: "\n            import gleam/foo.{one} as bar\n            const one = one\n        "
+expression: "\n            import gleam/wibble.{one} as wobble\n            const one = one\n        "
 ---
 warning: Unused private constant
   ┌─ /src/warning/wrn.gleam:3:19
@@ -11,11 +11,11 @@ warning: Unused private constant
 Hint: You can safely remove it.
 
 warning: Unused imported module alias
-  ┌─ /src/warning/wrn.gleam:2:36
+  ┌─ /src/warning/wrn.gleam:2:39
   │
-2 │             import gleam/foo.{one} as bar
-  │                                    ^^^^^^ This alias is never used
+2 │             import gleam/wibble.{one} as wobble
+  │                                       ^^^^^^^^^ This alias is never used
 
 Hint: You can safely remove it.
 
-    import gleam/foo as _
+    import gleam/wibble as _

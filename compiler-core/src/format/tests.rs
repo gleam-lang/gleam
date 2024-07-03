@@ -2627,7 +2627,7 @@ fn pattern_discard() {
 
     assert_format!(
         r#"fn main() {
-  let _foo = 1
+  let _wibble = 1
   Nil
 }
 "#
@@ -2851,10 +2851,10 @@ fn expr_case() {
         r#"fn main() {
   case bool {
     True -> {
-      "Foo"
+      "Wibble"
       |> io.println
 
-      "Bar"
+      "Wobble"
       |> io.println
 
       Nil
@@ -4598,9 +4598,9 @@ fn empty_lines_work_with_trailing_space_and_eol_normalisation() {
 fn single_empty_line_between_comments() {
     // empty line isn't added if it's not already present
     assert_format!(
-        "pub fn foo() {
-  // foo
-  // bar
+        "pub fn wibble() {
+  // wibble
+  // wobble
   123
 }
 "
@@ -4611,10 +4611,10 @@ fn single_empty_line_between_comments() {
 fn single_empty_line_between_comments1() {
     // single empty line between comments/statement preserved
     assert_format!(
-        "pub fn foo() {
-  // foo
+        "pub fn wibble() {
+  // wibble
 
-  // bar
+  // wobble
 
   123
 }
@@ -4626,20 +4626,20 @@ fn single_empty_line_between_comments1() {
 fn single_empty_line_between_comments2() {
     // multiple consecutive empty lines condensed into one
     assert_format_rewrite!(
-        "pub fn foo() {
-  // foo
+        "pub fn wibble() {
+  // wibble
 
 
-  // bar
+  // wobble
 
 
   123
 }
 ",
-        "pub fn foo() {
-  // foo
+        "pub fn wibble() {
+  // wibble
 
-  // bar
+  // wobble
 
   123
 }
@@ -4651,9 +4651,9 @@ fn single_empty_line_between_comments2() {
 fn single_empty_line_between_comments3() {
     // freestanding comments keep empty lines
     assert_format!(
-        "// foo
+        "// wibble
 
-// bar
+// wobble
 "
     );
 }
@@ -4662,14 +4662,14 @@ fn single_empty_line_between_comments3() {
 fn single_empty_line_between_comments4() {
     // freestanding comments condense consecutive empty lines
     assert_format_rewrite!(
-        "// foo
+        "// wibble
 
 
-// bar
+// wobble
 ",
-        "// foo
+        "// wibble
 
-// bar
+// wobble
 ",
     );
 }
@@ -4678,8 +4678,8 @@ fn single_empty_line_between_comments4() {
 #[test]
 fn no_newline_before_comments() {
     assert_format!(
-        "// foo
-// bar
+        "// wibble
+// wobble
 "
     );
 }
@@ -4785,9 +4785,9 @@ fn do_not_remove_required_braces_case_guard() {
 
     assert_format!(
         "fn main() {
-  let foo = True
-  case foo {
-    foo if True != { 1 == 2 } -> Nil
+  let wibble = True
+  case wibble {
+    wibble if True != { 1 == 2 } -> Nil
     _ -> Nil
   }
 }
@@ -4796,10 +4796,10 @@ fn do_not_remove_required_braces_case_guard() {
 
     assert_format!(
         "fn main() {
-  let foo = True
-  let bar = False
-  case foo {
-    foo if True != { 1 == { bar == foo } } -> Nil
+  let wibble = True
+  let wobble = False
+  case wibble {
+    wibble if True != { 1 == { wobble == wibble } } -> Nil
     _ -> Nil
   }
 }
@@ -4808,9 +4808,9 @@ fn do_not_remove_required_braces_case_guard() {
 
     assert_format!(
         "fn main() {
-  let foo = #(10, [0])
-  case foo {
-    foo if True && { foo.0 == 10 || foo.0 == 1 } -> Nil
+  let wibble = #(10, [0])
+  case wibble {
+    wibble if True && { wibble.0 == 10 || wibble.0 == 1 } -> Nil
     _ -> Nil
   }
 }
@@ -4851,17 +4851,17 @@ fn remove_braces_case_guard() {
 fn remove_braces_case_guard_2() {
     assert_format_rewrite!(
         "fn main() {
-  let foo = #(10, [0])
-  case foo {
-    foo if True && { foo.0 == 10 } -> Nil
+  let wibble = #(10, [0])
+  case wibble {
+    wibble if True && { wibble.0 == 10 } -> Nil
     _ -> Nil
   }
 }
 ",
         "fn main() {
-  let foo = #(10, [0])
-  case foo {
-    foo if True && foo.0 == 10 -> Nil
+  let wibble = #(10, [0])
+  case wibble {
+    wibble if True && wibble.0 == 10 -> Nil
     _ -> Nil
   }
 }
@@ -5550,7 +5550,7 @@ fn function_call_close_to_line_limit() {
 fn multiline_string_are_not_broken_with_string_concatenation_if_they_fit() {
     assert_format!(
         r#"pub fn main() {
-  "pub fn foo(" <> arg <> ") ->" <> type_ <> "{
+  "pub fn wibble(" <> arg <> ") ->" <> type_ <> "{
     body
 }"
 }
@@ -5581,13 +5581,13 @@ fn nesting_goes_back_to_normal_after_multiline_string() {
 fn multiline_string_get_broken_on_newlines_as_function_arguments() {
     assert_format!(
         r#"pub fn main() {
-  foo(
-    bar,
-    "bar
-  asd
-       baz",
-    foo,
-    bar,
+  wibble(
+    wobble,
+    "wobble
+  wibble
+       wobble",
+    wibble,
+    wobble,
   )
 }
 "#
@@ -5598,11 +5598,11 @@ fn multiline_string_get_broken_on_newlines_as_function_arguments() {
 fn pipeline_used_as_function_arguments_gets_nested() {
     assert_format!(
         r#"pub fn main() {
-  foo(
+  wibble(
     a_variable_with_a_long_name
       |> another_variable_with_a_long_name
       |> yet_another_variable_with_a_long_name,
-    bar,
+    wobble,
   )
 }
 "#
@@ -5613,7 +5613,7 @@ fn pipeline_used_as_function_arguments_gets_nested() {
 fn pipeline_used_as_function_arguments_is_not_nested_if_it_is_the_only_argument() {
     assert_format!(
         r#"pub fn main() {
-  foo(
+  wibble(
     a_variable_with_a_long_name
     |> another_variable_with_a_long_name
     |> yet_another_variable_with_a_long_name,
@@ -5628,7 +5628,7 @@ fn pipeline_inside_list_gets_nested() {
     assert_format!(
         r#"pub fn main() {
   [
-    foo,
+    wibble,
     a_variable_with_a_long_name
       |> another_variable_with_a_long_name
       |> yet_another_variable_with_a_long_name,
@@ -5657,7 +5657,7 @@ fn pipeline_inside_tuple_gets_nested() {
     assert_format!(
         r#"pub fn main() {
   #(
-    foo,
+    wibble,
     a_variable_with_a_long_name
       |> another_variable_with_a_long_name
       |> yet_another_variable_with_a_long_name,
@@ -5841,7 +5841,7 @@ fn piped_blocks_are_not_needlessly_indented() {
     {
       "long enough to need to wrap. blah blah blah blah blah blah blah blah blah"
     }
-      |> foo,
+      |> wibble,
     3,
   )
 }

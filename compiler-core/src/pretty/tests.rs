@@ -293,25 +293,28 @@ fn empty_documents() {
 
     // strings
     assert!("".to_doc().is_empty());
-    assert!(!"foo".to_doc().is_empty());
+    assert!(!"wibble".to_doc().is_empty());
     assert!(!" ".to_doc().is_empty());
     assert!(!"\n".to_doc().is_empty());
 
     // containers
     assert!("".to_doc().nest(2).is_empty());
-    assert!(!"foo".to_doc().nest(2).is_empty());
+    assert!(!"wibble".to_doc().nest(2).is_empty());
     assert!("".to_doc().group().is_empty());
-    assert!(!"foo".to_doc().group().is_empty());
+    assert!(!"wibble".to_doc().group().is_empty());
     assert!(break_("", "").is_empty());
-    assert!(!break_("foo", "foo").is_empty());
-    assert!(!break_("foo\nbar", "foo bar").is_empty());
+    assert!(!break_("wibble", "wibble").is_empty());
+    assert!(!break_("wibble\nwobble", "wibble wobble").is_empty());
     assert!("".to_doc().append("".to_doc()).is_empty());
-    assert!(!"foo".to_doc().append("".to_doc()).is_empty());
-    assert!(!"".to_doc().append("foo".to_doc()).is_empty());
+    assert!(!"wibble".to_doc().append("".to_doc()).is_empty());
+    assert!(!"".to_doc().append("wibble".to_doc()).is_empty());
 }
 
 #[test]
 fn set_nesting() {
-    let doc = Vec(vec!["foo".to_doc(), break_("", " "), "bar".to_doc()]).group();
-    assert_eq!("foo\nbar", doc.set_nesting(0).nest(2).to_pretty_string(1));
+    let doc = Vec(vec!["wibble".to_doc(), break_("", " "), "wobble".to_doc()]).group();
+    assert_eq!(
+        "wibble\nwobble",
+        doc.set_nesting(0).nest(2).to_pretty_string(1)
+    );
 }

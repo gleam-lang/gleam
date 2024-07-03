@@ -201,8 +201,8 @@ pub fn internal_definitions_are_not_included() {
         "
 @internal pub const float = 1.1
 @internal pub fn main() {}
-@internal pub type Foo
-@internal pub type Bar = Int
+@internal pub type Wibble
+@internal pub type Wobble = Int
 "
     );
 }
@@ -223,8 +223,8 @@ pub fn type_definition() {
         "
 /// Wibble's documentation
 pub type Wibble(a, b) {
-  Wob
-  Baz
+  Wibble
+  Wobble
 }
 "
     )

@@ -670,8 +670,8 @@ fn internal_values_from_root_package_are_in_the_completions() {
 @external(erlang, "rand", "uniform")
 @internal pub fn random_float() -> Float
 @internal pub fn main() { 0 }
-@internal pub type Foo { Bar }
-@internal pub const foo = 1
+@internal pub type Wibble { Wobble }
+@internal pub const wibble = 1
 "#;
 
     assert_debug_snapshot!(completion_at_default_position(
@@ -705,8 +705,8 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
 @external(erlang, "rand", "uniform")
 @internal pub fn random_float() -> Float
 @internal pub fn main() { 0 }
-@internal pub type Foo { Bar }
-@internal pub const foo = 1
+@internal pub type Wibble { Wobble }
+@internal pub const wibble = 1
 "#;
 
     assert_debug_snapshot!(completion_at_default_position(TestProject::for_source(
@@ -719,7 +719,7 @@ fn internal_types_from_the_same_module_are_in_the_completions() {
     let code = "
 @internal pub type Alias = Result(Int, String)
 @internal pub type AnotherType {
-  Bar
+  Wibble
 }
 ";
 
@@ -756,8 +756,8 @@ fn internal_values_from_a_dependency_are_ignored() {
 @external(erlang, "rand", "uniform")
 @internal pub fn random_float() -> Float
 @internal pub fn main() { 0 }
-@internal pub type Foo { Bar }
-@internal pub const foo = 1
+@internal pub type Wibble { Wobble }
+@internal pub const wibble = 1
 "#;
 
     assert_debug_snapshot!(completion_at_default_position(

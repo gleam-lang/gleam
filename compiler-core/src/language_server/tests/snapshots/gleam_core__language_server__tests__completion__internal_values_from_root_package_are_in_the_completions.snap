@@ -4,7 +4,7 @@ expression: "completion_at_default_position(TestProject::for_source(\"import dep
 ---
 [
     CompletionItem {
-        label: "dep.Bar",
+        label: "dep.Wobble",
         label_details: Some(
             CompletionItemLabelDetails {
                 detail: None,
@@ -17,7 +17,7 @@ expression: "completion_at_default_position(TestProject::for_source(\"import dep
             EnumMember,
         ),
         detail: Some(
-            "Foo",
+            "Wibble",
         ),
         documentation: None,
         deprecated: None,
@@ -40,54 +40,7 @@ expression: "completion_at_default_position(TestProject::for_source(\"import dep
                             character: 0,
                         },
                     },
-                    new_text: "dep.Bar",
-                },
-            ),
-        ),
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "dep.foo",
-        label_details: Some(
-            CompletionItemLabelDetails {
-                detail: None,
-                description: Some(
-                    "app",
-                ),
-            },
-        ),
-        kind: Some(
-            Constant,
-        ),
-        detail: Some(
-            "Int",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: None,
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                    },
-                    new_text: "dep.foo",
+                    new_text: "dep.Wobble",
                 },
             ),
         ),
@@ -182,6 +135,53 @@ expression: "completion_at_default_position(TestProject::for_source(\"import dep
                         },
                     },
                     new_text: "dep.random_float",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "dep.wibble",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Constant,
+        ),
+        detail: Some(
+            "Int",
+        ),
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 1,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 1,
+                            character: 0,
+                        },
+                    },
+                    new_text: "dep.wibble",
                 },
             ),
         ),

@@ -1,15 +1,15 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\n@external(erlang, \"module1\", \"function1\")\nfn foo() -> Float\n@external(erlang, \"module2\", \"function2\")\nfn foo() -> Float\n"
+expression: "\n@external(erlang, \"module1\", \"function1\")\nfn wibble() -> Float\n@external(erlang, \"module2\", \"function2\")\nfn wibble() -> Float\n"
 ---
 error: Duplicate definition
   ┌─ /src/one/two.gleam:3:1
   │
-3 │ fn foo() -> Float
-  │ ^^^^^^^^ First defined here
+3 │ fn wibble() -> Float
+  │ ^^^^^^^^^^^ First defined here
 4 │ @external(erlang, "module2", "function2")
-5 │ fn foo() -> Float
-  │ ^^^^^^^^ Redefined here
+5 │ fn wibble() -> Float
+  │ ^^^^^^^^^^^ Redefined here
 
-`foo` has been defined multiple times.
+`wibble` has been defined multiple times.
 Names in a Gleam module must be unique so one will need to be renamed.

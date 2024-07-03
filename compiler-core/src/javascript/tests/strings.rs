@@ -125,7 +125,7 @@ fn string_prefix_utf16() {
     assert_js!(
         r#"
 pub fn go(x) {
-  case "Θ foo bar" {
+  case "Θ wibble wobble" {
     "Θ" <> rest -> rest
     _ -> ""
   }

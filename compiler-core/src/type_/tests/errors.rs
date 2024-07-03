@@ -666,7 +666,7 @@ pub fn x() { id(1, 1.0) }"
 fn module_could_not_unify4() {
     assert_module_error!(
         "
-fn bar() -> Int {
+fn wobble() -> Int {
     5
 }
 
@@ -675,7 +675,7 @@ fn run(one: fn() -> String) {
 }
 
 fn demo() {
-    run(bar)
+    run(wobble)
 }"
     );
 }
@@ -684,7 +684,7 @@ fn demo() {
 fn module_could_not_unify5() {
     assert_module_error!(
         "
-fn bar(x: Int) -> Int {
+fn wobble(x: Int) -> Int {
     x * 5
 }
 
@@ -693,7 +693,7 @@ fn run(one: fn(String) -> Int) {
 }
 
 fn demo() {
-    run(bar)
+    run(wobble)
 }"
     );
 }
@@ -1045,16 +1045,16 @@ fn duplicate() { 2 }"
 #[test]
 fn duplicate_const_const() {
     assert_module_error!(
-        "const foo = 1
-const foo = 2"
+        "const wibble = 1
+const wibble = 2"
     );
 }
 
 #[test]
 fn duplicate_fn_fn() {
     assert_module_error!(
-        "fn foo() { 1 }
-fn foo() { 2 }"
+        "fn wibble() { 1 }
+fn wibble() { 2 }"
     );
 }
 
@@ -1063,9 +1063,9 @@ fn duplicate_extfn_extfn() {
     assert_module_error!(
         r#"
 @external(erlang, "module1", "function1")
-fn foo() -> Float
+fn wibble() -> Float
 @external(erlang, "module2", "function2")
-fn foo() -> Float
+fn wibble() -> Float
 "#
     );
 }
@@ -1075,19 +1075,19 @@ fn duplicate_extfn_fn() {
     assert_module_error!(
         "
 @external(erlang, \"module1\", \"function1\")
-fn foo() -> Float
+fn wibble() -> Float
 
-fn foo() { 2 }"
+fn wibble() { 2 }"
     );
 }
 
 #[test]
 fn duplicate_fn_extfn() {
     assert_module_error!(
-        "fn foo() { 1 }
+        "fn wibble() { 1 }
 
 @external(erlang, \"module2\", \"function2\")
-fn foo() -> Float
+fn wibble() -> Float
 "
     );
 }
@@ -1095,10 +1095,10 @@ fn foo() -> Float
 #[test]
 fn duplicate_const_extfn() {
     assert_module_error!(
-        "const foo = 1
+        "const wibble = 1
 
 @external(erlang, \"module2\", \"function2\")
-fn foo() -> Float
+fn wibble() -> Float
 "
     );
 }
@@ -1108,25 +1108,25 @@ fn duplicate_extfn_const() {
     assert_module_error!(
         "
 @external(erlang, \"module1\", \"function1\")
-fn foo() -> Float
+fn wibble() -> Float
 
-const foo = 2"
+const wibble = 2"
     );
 }
 
 #[test]
 fn duplicate_const_fn() {
     assert_module_error!(
-        "const foo = 1
-fn foo() { 2 }"
+        "const wibble = 1
+fn wibble() { 2 }"
     );
 }
 
 #[test]
 fn duplicate_fn_const() {
     assert_module_error!(
-        "fn foo() { 1 }
-const foo = 2"
+        "fn wibble() { 1 }
+const wibble = 2"
     );
 }
 
@@ -1264,9 +1264,9 @@ fn wrong_type_var() {
     // A unification error should show the type var as named by user
     // See https://github.com/gleam-lang/gleam/issues/1256
     assert_module_error!(
-        r#"fn foo(x: String) { x }
+        r#"fn wibble(x: String) { x }
 fn multi_result(x: some_name) {
-  foo(x)
+  wibble(x)
 }"#
     );
 }
@@ -1275,9 +1275,9 @@ fn multi_result(x: some_name) {
 fn wrong_type_arg() {
     assert_module_error!(
         r#"
-fn foo(x: List(Int)) { x }
+fn wibble(x: List(Int)) { x }
 fn main(y: List(something)) {
-  foo(y)
+  wibble(y)
 }"#
     );
 }
@@ -1522,10 +1522,10 @@ fn negate_string() {
 #[test]
 fn ambiguous_type_error() {
     assert_with_module_error!(
-        ("foo", "pub type Thing { Thing }"),
-        "import foo pub type Thing { Thing }
+        ("wibble", "pub type Thing { Thing }"),
+        "import wibble pub type Thing { Thing }
         pub fn main() {
-            [Thing] == [foo.Thing]
+            [Thing] == [wibble.Thing]
         }",
     );
 }
@@ -1533,13 +1533,13 @@ fn ambiguous_type_error() {
 #[test]
 fn ambiguous_import_error_no_unqualified() {
     assert_with_module_error!(
-        ("foo/sub", "pub fn bar() { 1 }"),
-        ("foo2/sub", "pub fn bar() { 1 }"),
+        ("wibble/sub", "pub fn wobble() { 1 }"),
+        ("wibble2/sub", "pub fn wobble() { 1 }"),
         "
-        import foo/sub
-        import foo2/sub
+        import wibble/sub
+        import wibble2/sub
         pub fn main() {
-            sub.bar()
+            sub.wobble()
         }
         ",
     );
@@ -1548,13 +1548,13 @@ fn ambiguous_import_error_no_unqualified() {
 #[test]
 fn ambiguous_import_error_with_unqualified() {
     assert_with_module_error!(
-        ("foo/sub", "pub fn bar() { 1 }"),
-        ("foo2/sub", "pub fn bar() { 1 }"),
+        ("wibble/sub", "pub fn wobble() { 1 }"),
+        ("wibble2/sub", "pub fn wobble() { 1 }"),
         "
-        import foo/sub
-        import foo2/sub.{bar}
+        import wibble/sub
+        import wibble2/sub.{wobble}
         pub fn main() {
-            sub.bar()
+            sub.wobble()
         }
         ",
     );
@@ -1564,16 +1564,16 @@ fn ambiguous_import_error_with_unqualified() {
 fn same_imports_multiple_times() {
     assert_with_module_error!(
         (
-            "gleam/foo",
+            "gleam/wibble",
             "
-            pub fn bar() { 1 }
+            pub fn wobble() { 1 }
             pub fn zoo() { 1 }
             "
         ),
         "
-        import gleam/foo.{bar}
-        import gleam/foo.{zoo}
-        pub fn go() { bar() + zoo() }
+        import gleam/wibble.{wobble}
+        import gleam/wibble.{zoo}
+        pub fn go() { wobble() + zoo() }
         "
     );
 }
@@ -1804,12 +1804,12 @@ pub fn main(_x: two.Thing) {
 fn value_imported_as_type() {
     assert_with_module_error!(
         (
-            "gleam/foo",
-            "pub type Bar {
-               Baz
+            "gleam/wibble",
+            "pub type Wibble {
+               Wobble
              }"
         ),
-        "import gleam/foo.{type Baz}"
+        "import gleam/wibble.{type Wobble}"
     );
 }
 
@@ -1817,12 +1817,12 @@ fn value_imported_as_type() {
 fn type_imported_as_value() {
     assert_with_module_error!(
         (
-            "gleam/foo",
-            "pub type Bar {
-               Baz
+            "gleam/wibble",
+            "pub type Wibble {
+               Wobble
              }"
         ),
-        "import gleam/foo.{Bar}"
+        "import gleam/wibble.{Wibble}"
     );
 }
 
@@ -1880,7 +1880,7 @@ fn list() {
 
 #[test]
 fn mismatched_list_tail() {
-    assert_error!("[\"foo\", ..[1, 2]]");
+    assert_error!("[\"wibble\", ..[1, 2]]");
 }
 
 #[test]

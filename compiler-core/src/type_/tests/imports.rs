@@ -281,10 +281,10 @@ fn deprecated_type_import_conflict_two_modules() {
 #[test]
 fn imported_constructor_instead_of_type() {
     assert_with_module_error!(
-        ("module", "pub type Foo { Foo }"),
-        "import module.{Foo}
+        ("module", "pub type Wibble { Wibble }"),
+        "import module.{Wibble}
 
-pub fn main(x: Foo) {
+pub fn main(x: Wibble) {
   todo
 }",
     );

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-expression: "\n/// Wibble's documentation\npub type Wibble(a, b) {\n  Wob\n  Baz\n}\n"
+expression: "\n/// Wibble's documentation\npub type Wibble(a, b) {\n  Wibble\n  Wobble\n}\n"
 ---
 {
   "name": "my_package",
@@ -18,12 +18,12 @@ expression: "\n/// Wibble's documentation\npub type Wibble(a, b) {\n  Wob\n  Baz
           "constructors": [
             {
               "documentation": null,
-              "name": "Wob",
+              "name": "Wibble",
               "parameters": []
             },
             {
               "documentation": null,
-              "name": "Baz",
+              "name": "Wobble",
               "parameters": []
             }
           ]

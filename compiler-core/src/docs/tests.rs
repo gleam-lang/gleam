@@ -175,13 +175,13 @@ fn internal_definitions_are_not_included() {
         "app.gleam",
         r#"
 @internal
-pub const foo = 1
+pub const wibble = 1
 
 @internal
-pub type Foo = Int
+pub type Wibble = Int
 
 @internal
-pub type Bar { Bar }
+pub type Wobble { Wobble }
 
 @internal
 pub fn one() { 1 }

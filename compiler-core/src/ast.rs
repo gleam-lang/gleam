@@ -460,9 +460,9 @@ impl Publicity {
 ///
 /// ```gleam
 /// // Public function
-/// pub fn bar() -> String { ... }
+/// pub fn wobble() -> String { ... }
 /// // Private function
-/// fn foo(x: Int) -> Int { ... }
+/// fn wibble(x: Int) -> Int { ... }
 /// ```
 pub struct Function<T, Expr> {
     pub location: SrcSpan,
