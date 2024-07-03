@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nfn add1(num: Int) -> Int {\n  num + 1\n}\n\npub fn main() {\n  add1(1)\n\n  1\n  |> add1\n  |> add1\n  |> add1\n}\n"
+---
+fn add1(num: Int) -> Int {
+  num + 1
+}
+
+pub fn main() {
+  add1(1)
+
+  1
+  |> add1
+     ▔▔↑▔
+  |> add1
+  |> add1
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nfn(Int) -> Int\n```\n",
+    ),
+)

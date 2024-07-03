@@ -1,5 +1,3 @@
-use std::assert_eq;
-
 use crate::{language_server::engine, line_numbers::LineNumbers};
 use lsp_types::{
     CodeActionContext, CodeActionParams, PartialResultParams, Position, Range,
@@ -52,7 +50,7 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
     engine.code_actions(params)
 }
 
-const REMOVE_UNUSED_IMPORTS_TITLE: &str = "Remove unused imports";
+const REMOVE_UNUSED_IMPORTS: &str = "Remove unused imports";
 const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
 
 fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> String {
@@ -104,9 +102,20 @@ fn apply_code_edit(
     result
 }
 
+#[macro_export]
+macro_rules! assert_code_action {
+    ($line:expr, $title:expr, $src:expr $(,)?) => {
+        let output = apply_first_code_action_with_title($src, $line, $title);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
 #[test]
 fn test_remove_unused_simple() {
-    let code = "
+    assert_code_action!(
+        2,
+        REMOVE_UNUSED_IMPORTS,
+        "
 // test
 import // comment
   list as lispy
@@ -116,45 +125,31 @@ import option
 pub fn main() {
   result.is_ok
 }
-";
-    let expected = "
-// test
-import result
-
-pub fn main() {
-  result.is_ok
-}
-";
-    assert_eq!(
-        apply_first_code_action_with_title(code, 2, REMOVE_UNUSED_IMPORTS_TITLE),
-        expected.to_string()
-    )
+"
+    );
 }
 
 #[test]
 fn test_remove_unused_start_of_file() {
-    let code = "import option
+    assert_code_action!(
+        2,
+        REMOVE_UNUSED_IMPORTS,
+        "import option
 import result
 
 pub fn main() {
   result.is_ok
 }
-";
-    let expected = "import result
-
-pub fn main() {
-  result.is_ok
-}
-";
-    assert_eq!(
-        apply_first_code_action_with_title(code, 2, REMOVE_UNUSED_IMPORTS_TITLE),
-        expected.to_string()
-    )
+"
+    );
 }
 
 #[test]
 fn test_remove_unused_alias() {
-    let code = "
+    assert_code_action!(
+        2,
+        REMOVE_UNUSED_IMPORTS,
+        "
 // test
 import result.{is_ok} as res
 import option
@@ -162,64 +157,46 @@ import option
 pub fn main() {
   is_ok
 }
-";
-    let expected = "
-// test
-import result.{is_ok}%SPACE%
-
-pub fn main() {
-  is_ok
-}
-";
-    assert_eq!(
-        apply_first_code_action_with_title(code, 2, REMOVE_UNUSED_IMPORTS_TITLE),
-        expected.replace("%SPACE%", " ")
-    )
+"
+    );
 }
 
 #[test]
 fn test_remove_redundant_tuple_in_case_subject_simple() {
-    let code = "
+    assert_code_action!(
+        2,
+        REMOVE_REDUNDANT_TUPLES,
+        "
 pub fn main() {
   case #(1) { #(a) -> 0 }
   case #(1, 2) { #(a, b) -> 0 }
 }
-";
-
-    let expected = "
-pub fn main() {
-  case 1 { a -> 0 }
-  case 1, 2 { a, b -> 0 }
-}
-";
-
-    assert_eq!(
-        apply_first_code_action_with_title(code, 7, REMOVE_REDUNDANT_TUPLES),
-        expected
+"
     );
 }
 
 #[test]
 fn test_remove_redundant_tuple_with_catch_all_pattern() {
-    let code = "
+    assert_code_action!(
+        4,
+        REMOVE_REDUNDANT_TUPLES,
+        "
 pub fn main() {
   case #(1, 2) {
     #(1, 2) -> 0
     _ -> 1
   }
 }
-";
-
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        code,
-        4,
-        REMOVE_REDUNDANT_TUPLES
-    ));
+"
+    );
 }
 
 #[test]
 fn test_remove_multiple_redundant_tuple_with_catch_all_pattern() {
-    let code = "
+    assert_code_action!(
+        4,
+        REMOVE_REDUNDANT_TUPLES,
+        "
 pub fn main() {
   case #(1, 2), #(3, 4) {
     #(2, 2), #(2, 2) -> 0
@@ -228,38 +205,29 @@ pub fn main() {
     _, _ -> 1
   }
 }
-";
-
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        code,
-        4,
-        REMOVE_REDUNDANT_TUPLES
-    ));
+"
+    );
 }
 
 #[test]
 fn test_remove_redundant_tuple_in_case_subject_nested() {
-    let code = "
+    assert_code_action!(
+        2,
+        REMOVE_REDUNDANT_TUPLES,
+        "
 pub fn main() {
   case #(case #(0) { #(a) -> 0 }) { #(b) -> 0 }
 }
-";
-
-    let expected = "
-pub fn main() {
-  case case 0 { a -> 0 } { b -> 0 }
-}
-";
-
-    assert_eq!(
-        apply_first_code_action_with_title(code, 7, REMOVE_REDUNDANT_TUPLES),
-        expected
+"
     );
 }
 
 #[test]
 fn test_remove_redundant_tuple_in_case_retain_extras() {
-    let code = "
+    assert_code_action!(
+        7,
+        REMOVE_REDUNDANT_TUPLES,
+        "
 pub fn main() {
   case
     #(
@@ -289,11 +257,8 @@ pub fn main() {
     ) -> 0
   }
 }
-";
-
-    let result = apply_first_code_action_with_title(code, 20, REMOVE_REDUNDANT_TUPLES);
-
-    insta::assert_snapshot!(result);
+"
+    );
 }
 
 #[test]
@@ -312,7 +277,10 @@ pub fn main() {
 
 #[test]
 fn test_remove_redundant_tuple_in_case_subject_only_safe_remove() {
-    let code = "
+    assert_code_action!(
+        2,
+        REMOVE_REDUNDANT_TUPLES,
+        "
 pub fn main() {
   case #(0), #(1) {
     #(1), #(b) -> 0
@@ -320,21 +288,7 @@ pub fn main() {
     #(a), #(b) -> 2
   }
 }
-";
-
-    let expected = "
-pub fn main() {
-  case #(0), 1 {
-    #(1), b -> 0
-    a, 0 -> 1 // The first of this clause is not a tuple
-    #(a), b -> 2
-  }
-}
-";
-
-    assert_eq!(
-        apply_first_code_action_with_title(code, 11, REMOVE_REDUNDANT_TUPLES),
-        expected
+"
     );
 }
 

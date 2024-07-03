@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nfn add_2(x) {\n  x + 2\n}\n"
+---
+fn add_2(x) {
+▔▔▔↑▔▔▔▔▔▔▔  
+  x + 2
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nfn(Int) -> Int\n```\n",
+    ),
+)

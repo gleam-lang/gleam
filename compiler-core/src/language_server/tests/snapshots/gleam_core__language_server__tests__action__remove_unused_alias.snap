@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\n// test\nimport result.{is_ok} as res\nimport option\n\npub fn main() {\n  is_ok\n}\n"
+---
+// test
+import result.{is_ok} 
+
+pub fn main() {
+  is_ok
+}

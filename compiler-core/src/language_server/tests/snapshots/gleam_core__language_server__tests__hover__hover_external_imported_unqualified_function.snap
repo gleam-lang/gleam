@@ -1,23 +1,17 @@
 ---
 source: compiler-core/src/language_server/tests/hover.rs
-expression: hover
+expression: "\nimport example_module.{my_fn}\nfn main() {\n  my_fn\n}\n"
 ---
-Hover {
-    contents: Scalar(
-        String(
-            "```gleam\nfn() -> Nil\n```\n\nView on [HexDocs](https://hexdocs.pm/hex/example_module.html#my_fn)",
-        ),
-    ),
-    range: Some(
-        Range {
-            start: Position {
-                line: 3,
-                character: 2,
-            },
-            end: Position {
-                line: 3,
-                character: 7,
-            },
-        },
-    ),
+import example_module.{my_fn}
+fn main() {
+  my_fn
+  ▔▔▔↑▔
 }
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nfn() -> Nil\n```\n\nView on [HexDocs](https://hexdocs.pm/hex/example_module.html#my_fn)",
+    ),
+)

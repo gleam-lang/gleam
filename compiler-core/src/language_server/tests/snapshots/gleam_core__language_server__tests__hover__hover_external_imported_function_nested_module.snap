@@ -1,23 +1,17 @@
 ---
 source: compiler-core/src/language_server/tests/hover.rs
-expression: hover
+expression: "\nimport my/nested/example_module\nfn main() {\n    example_module.my_fn\n}\n"
 ---
-Hover {
-    contents: Scalar(
-        String(
-            "```gleam\nfn() -> Nil\n```\n\nView on [HexDocs](https://hexdocs.pm/hex/my/nested/example_module.html#my_fn)",
-        ),
-    ),
-    range: Some(
-        Range {
-            start: Position {
-                line: 3,
-                character: 18,
-            },
-            end: Position {
-                line: 3,
-                character: 24,
-            },
-        },
-    ),
+import my/nested/example_module
+fn main() {
+    example_module.my_fn
+                  ▔▔▔▔↑▔
 }
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nfn() -> Nil\n```\n\nView on [HexDocs](https://hexdocs.pm/hex/my/nested/example_module.html#my_fn)",
+    ),
+)
